@@ -11,4 +11,5 @@
 * 模板语法采用 Mustache 的改良版
 * 底层基于 snabbdom 提供的 Virtual DOM
 * 面向指令的扩展机制
+* 重点是上手非常简单
 
