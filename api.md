@@ -28,7 +28,6 @@
 
 触发事件，事件流带上指定的数据。
 
-
 ### watch(keypath, watcher)
 
 监听数据变化
