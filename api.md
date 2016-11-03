@@ -14,15 +14,20 @@
 
 ### on(type, listener)
 
-监听事件
+监听事件。
 
 ### off(type, listener)
 
-取消监听事件
+取消监听事件。
 
 ### once(type, listener)
 
-监听一次事件就取消
+监听一次事件就取消。
+
+### fire(type, data)
+
+触发事件，事件流带上指定的数据。
+
 
 ### watch(keypath, watcher)
 
