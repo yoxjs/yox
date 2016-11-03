@@ -1,14 +1,16 @@
 ### get(keypath)
 
-获取数据
+获取数据。
 
 ### set(keypath, value)
 
-设置一项数据
+设置一项数据。
 
 ### set(data)
 
-设置多项数据，如果需要多次调用 `set`，建议用 `set(data)` 的形式，避免多次渲染。
+设置多项数据。
+
+如果需要多次调用 `set`，建议用 `set(data)` 的形式，避免多次渲染。
 
 ### on(type, listener)
 
