@@ -30,9 +30,12 @@
 
 ### watch(keypath, watcher)
 
-监听数据变化
+监听数据变化。
 
 ### watchOnce(keypath, watcher)
 
-监听一次数据变化就取消
+监听一次数据变化就取消。
 
+### toggle(keypath)
+
+取反 `keypath` 对应的数据。
