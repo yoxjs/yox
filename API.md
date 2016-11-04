@@ -26,7 +26,7 @@
 
 ### fire(type, data, bubble)
 
-触发事件，事件流带上指定的数据。
+触发事件，事件可携带数据，也可指定是否冒泡到根组件。
 
 ### watch(keypath, watcher)
 
