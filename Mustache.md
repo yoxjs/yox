@@ -1,4 +1,4 @@
-在众多模板引擎中，`Mustache` 是比较有群众基础的那个，简单罗列几个家族成员：
+在众多模板引擎中，`Mustache` 可能是最有群众基础的那个，简单罗列几个家族成员：
 
 * [Mustache](http://mustache.github.io/)
 * [Hogan](http://twitter.github.io/hogan.js/)
