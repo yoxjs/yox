@@ -40,6 +40,14 @@
 
 取反 `keypath` 对应的数据。
 
+### updateModel(data)
+
+只更新数据，不更新视图。
+
+### updateView()
+
+只更新视图，不更新数据。
+
 ### dispose()
 
 销毁组件。
