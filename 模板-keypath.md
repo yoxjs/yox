@@ -43,7 +43,7 @@
 users.1 Object {name: "John"}
 ```
 
-概括的说，`keypath` 表示当前的数据层级。
+概括的说，`keypath` 表示的是**当前的数据层级**。
 
 
 
