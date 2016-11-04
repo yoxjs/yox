@@ -24,7 +24,7 @@
 
 监听一次事件就取消。
 
-### fire(type, data)
+### fire(type, data, bubble)
 
 触发事件，事件流带上指定的数据。
 
