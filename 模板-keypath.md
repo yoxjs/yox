@@ -21,12 +21,12 @@
         ]
     },
     select: function (keypath) {
-        console.log(this.get(keypath));
+        console.log(keypath, this.get(keypath));
     }
 }
 ```
 
-我们渲染这个列表时，给每个用户添加一个按钮，我们希望点击按钮能知道当前是哪个用户：
+渲染用户列表时，我们给每个用户添加一个按钮，并且希望点击按钮能知道是点了哪个用户：
 
 ```html
 {{#each users}}
@@ -36,6 +36,8 @@
     </button>
 {{/each}}
 ```
+
+这样
 
 
 
