@@ -1,6 +1,6 @@
 顾名思义，`keypath` 表示 key 的路径，如 `user.profile.name`。
 
-渲染模板需要数据，而数据通常是带有层次结构的，比如用户列表：
+渲染模板需要数据，而数据通常是带有层级结构的，比如用户列表：
 
 ```javascript
 {
@@ -43,6 +43,7 @@
 users.1 Object {name: "John"}
 ```
 
+概括的说，`keypath` 表示当前的数据层级。
 
 
 
