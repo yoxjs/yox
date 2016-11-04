@@ -2,7 +2,7 @@
 
 * [Mustache](http://mustache.github.io/)
 * [Hogan](http://twitter.github.io/hogan.js/)
-* Handlebars
+* [Handlebars](http://handlebarsjs.com)
 
 有这么多热衷于改造 `Mustache` 的轮子，可见其基因的优秀。
  
