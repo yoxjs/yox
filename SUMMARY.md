@@ -1,7 +1,7 @@
 # Summary
 
 * [简介](README.md)
-* [组件](组件生命周期.md)
+* [组件](组件)
 * [Mustache](Mustache.md)
 * [表达式](表达式.md)
 * [计算属性](计算属性.md)
