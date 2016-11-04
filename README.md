@@ -11,7 +11,7 @@
 * 提供 Mustache 风格的模板引擎
 * 提供面向指令的扩展机制
 * 基于 [Snabbdom](https://github.com/snabbdom/snabbdom) 实现的 Virtual DOM
-* **上手非常简单**
+* 简单！简单！它真的非常简单！
 
 ## Why
 
