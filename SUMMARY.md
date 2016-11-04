@@ -2,7 +2,7 @@
 
 * [简介](README.md)
 * [组件](组件生命周期.md)
-* [Mustache](模板语法.md)
+* [Mustache](Mustache.md)
 * [表达式](表达式.md)
 * [计算属性](计算属性.md)
 * [Keypath](模板-keypath.md)
