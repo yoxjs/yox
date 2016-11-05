@@ -20,8 +20,10 @@
             }
         ]
     },
-    select: function (keypath) {
-        console.log(keypath, this.get(keypath));
+    methods: {
+        select: function (keypath) {
+            console.log(keypath, this.get(keypath));
+        }
     }
 }
 ```
