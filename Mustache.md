@@ -153,6 +153,8 @@ Mustache 原版设计了 `.` 语法来获取当前 context，可是我觉得这�
 <Component{{#each props:key}} {{key}}="{{this}}"{{/each}} />
 ```
 
+> 注意：York 的属性值必须有引号
+
 ### 定义子模板
 
 对于一些比较独立的模板，比如 `loading`，做成子模板在各个组件间共享，使用起来非常方便。
