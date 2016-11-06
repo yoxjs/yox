@@ -1,6 +1,7 @@
 # Summary
 
 * [简介](README.md)
+* [缘起](缘起.md)
 * [起步](起步.md)
 * [Mustache](Mustache.md)
 * [表达式](表达式.md)
@@ -14,5 +15,4 @@
 * [组件](组件.md)
 * [API](API.md)
 * [全局配置](全局配置.md)
-* [常见问题](常见问题.md)
 
