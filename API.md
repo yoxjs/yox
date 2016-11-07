@@ -14,6 +14,13 @@
 
 如果需要多次调用 `set`，建议用 `set(data)` 的形式，避免多次渲染。
 
+### updateModel(data)
+
+只更新数据，不更新视图。
+
+### updateView()
+
+只更新视图，不更新数据。
 
 ## 事件处理
 
@@ -47,13 +54,7 @@
 
 取反 `keypath` 对应的数据。
 
-### updateModel(data)
 
-只更新数据，不更新视图。
-
-### updateView()
-
-只更新视图，不更新数据。
 
 ### dispose()
 
