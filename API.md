@@ -1,3 +1,5 @@
+## 数据操作
+
 ### get(keypath)
 
 获取数据。
@@ -11,6 +13,9 @@
 设置多项数据。
 
 如果需要多次调用 `set`，建议用 `set(data)` 的形式，避免多次渲染。
+
+
+## 事件处理
 
 ### on(type, listener)
 
@@ -27,6 +32,8 @@
 ### fire(type, data, bubble)
 
 触发事件，事件可携带数据，也可指定是否冒泡到根组件。
+
+## 数据监听
 
 ### watch(keypath, watcher)
 
