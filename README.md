@@ -1,8 +1,6 @@
-# York
+# Yox
 
 轻量、好用、简单的 MVVM 框架。
-
-> 你懂的，命名很难，偶尔想到纽约，于是 new York() ^_^
 
 ## 特性
 
@@ -32,3 +30,4 @@
 ## 感谢
 
 感谢来自 [Vue](http://vuejs.org) 和 [Ractive](http://www.ractivejs.org/) 的灵感。
+
