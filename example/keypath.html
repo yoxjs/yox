@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Keypath</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div id="app"></div>
+    <script id="template" type="plain/text">
+
+        <div>
+        {{#each users}}
+
+            <p>
+                name: {{name}}
+            </p>
+            <p>
+                {{$keypath}}
+            </p>
+            <button on-click="select($keypath)">
+                Select
+            </button>
+
+        {{/each}}
+        </div>
+
+    </script>
+    <script src="../dist/yox.js"></script>
+    <script>
+        var instance = new Yox({
+            el: '#app',
+            template: '#template',
+            data: {
+                users: [
+                    {
+                        name: 'Jake'
+                    },
+                    {
+                        name: 'John'
+                    },
+                    {
+                        name: 'Mike'
+                    }
+                ],
+                today: new Date()
+            },
+            methods: {
+                select: function (keypath) {
+                    console.log(keypath, this.get(keypath));
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>

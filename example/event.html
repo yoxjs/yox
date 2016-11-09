@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>事件</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div id="app"></div>
+    <script id="template" type="plain/text">
+
+        <div>
+            <button on-click="submit"{{#if disabled}} disabled{{/if}}>
+                submit
+            </button>
+            <button on-click="submit-1">
+                submit-1
+            </button>
+            <button on-click="submit2($event)">
+                submit-2
+            </button>
+            <button on-click="submit3(user.name)">
+                submit-3
+            </button>
+            <button on-click="submit-4">
+                submit-4
+            </button>
+        </div>
+
+    </script>
+    <script src="../dist/yox.js"></script>
+    <script>
+        var instance = new Yox({
+            el: '#app',
+            template: '#template',
+            data: {
+                disabled: false,
+                user: {
+                    name: 'musicode'
+                }
+            },
+            events: {
+                submit: function () {
+                    console.log(this, arguments);
+                    this.toggle('disabled');
+                    setTimeout(
+                        function () {
+                            instance.toggle('disabled');
+                        },
+                        1000
+                    )
+                },
+                'submit-1': function () {
+                    console.log(this, arguments);
+                }
+            },
+            methods: {
+                submit2: function (event) {
+                    console.log(this, event);
+                },
+                submit3: function (name) {
+                    console.log(this, name);
+                }
+            },
+            onattach: function () {
+                this.on('submit-1', function () {
+                    console.log(this, arguments);
+                });
+                this.on('submit-4', function () {
+                    console.log(this);
+                });
+            }
+        });
+
+    </script>
+</body>
+</html>

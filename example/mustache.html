@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>demo</title>
+</head>
+<body>
+    <div id="app"></div>
+    <script id="template" type="plain/text">
+
+        <div>
+            {{#partial hello}}
+                hi, {{user.name}}.
+            {{/partial}}
+
+            <p>
+                {{title}}
+            </p>
+
+            <p>
+                {{{title}}}
+            </p>
+
+            <p>
+                {{#if title}}
+                    {{title}}
+                {{/if}}
+            </p>
+
+            <p>
+                {{#each users:index}}
+                    {{name}}
+                    {{#if index < users.length - 1}}
+                        -
+                    {{/if}}
+                {{/each}}
+            </p>
+
+            <p>
+                {{#each users:index}}
+                    {{this.name}}
+                    {{#if index < users.length - 1}}
+                        -
+                    {{/if}}
+                {{/each}}
+            </p>
+
+            <p>
+                {{#each user:key}}
+                    [{{key}}: "{{this}}"]
+                    {{$keypath}}
+                    <br>
+                {{/each}}
+            </p>
+
+            <p>
+                {{> hello}}
+            </p>
+
+            <p>
+                {{formatDate(today)}}
+            </p>
+
+        </div>
+
+    </script>
+    <script src="../dist/yox.js"></script>
+    <script>
+        var instance = new Yox({
+            el: '#app',
+            template: '#template',
+            data: {
+                title: '<strong>York</strong>',
+
+                user: {
+                    name: 'musicode',
+                    age: 10,
+                    title: 'FE Enginer'
+                },
+                users: [
+                    {
+                        name: 'Jake'
+                    },
+                    {
+                        name: 'John'
+                    },
+                    {
+                        name: 'Mike'
+                    }
+                ],
+                today: new Date()
+            },
+            filters: {
+                formatDate: function (value) {
+                    return value.getTime();
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>

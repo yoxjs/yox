@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>组件事件</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div id="app"></div>
+    <script src="../dist/yox.js"></script>
+    <script>
+
+        let Custom = {
+            template: `
+                <div id="custom-component">
+                    <button on-click="click1">
+                        click1
+                    </button>
+                    <button on-click="click2()">
+                        click2
+                    </button>
+                    <button on-click="bubble()">
+                        bubble
+                    </button>
+                </div>
+            `,
+            methods: {
+                click2: function () {
+                    this.fire('click2', { name: 'component' });
+                },
+                bubble: function (event) {
+                    this.fire('bubble', event, true);
+                }
+            }
+        };
+
+        var instance = new Yox({
+            el: '#app',
+            template: `
+                <div id="root">
+                    <Custom on-click1="click1" on-click2="click2" />
+                </div>
+            `,
+            components: {
+                Custom: Custom
+            },
+            events: {
+                click1: function () {
+                    console.log(this, arguments);
+                },
+                click2: function () {
+                    console.log(this, arguments);
+                },
+                bubble: function () {
+                    console.log(this, arguments);
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>

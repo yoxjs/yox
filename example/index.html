@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>demo</title>
+</head>
+<body>
+    <div id="app"></div>
+    <script src="../dist/yox.js"></script>
+    <script>
+
+        let Custom = {
+            template: `
+                <div id="custom-component">
+                    <ul>
+                        <li>title: {{title}}</li>
+                        <li>name: {{name}}</li>
+                        <li>age: {{age}}</li>
+                    </ul>
+                    <button on-click="click($event)">
+                        click
+                    </button>
+                </div>
+            `,
+            data: function () {
+                return {
+                    title: 'custom component',
+                    // 外部传入
+                    name: ''
+                };
+            },
+            methods: {
+                click: function (event) {
+                    console.log(this, 'click', event);
+                    this.fire('click', { name: 'component' });
+                }
+            },
+            oncreate: function (e) {
+                console.log('  ', this, 'create', e);
+            },
+            oncompile: function (e) {
+                console.log('  ', this, 'compile', e);
+            },
+            onattach: function (e) {
+                console.log('  ', this, 'attach', e);
+            },
+            onupdate: function (e) {
+                console.log('  ', this, 'update', e);
+            },
+            ondetach: function (e) {
+                console.log('  ', this, 'detach', e);
+            }
+        };
+
+        var instance = new Yox({
+            el: '#app',
+            data: {
+                id: 'xxx',
+                link: 'baidu.com',
+                name: 'musicode',
+                counter: 0,
+                user: {
+                    name: 'haha',
+                    age: 10,
+                },
+                list: [
+                    {
+                        name: 'jay1'
+                    },
+                    {
+                        name: '<h1>jay2</h1>'
+                    },
+                    {
+                        name: 'jay3'
+                    },
+                ],
+                date: new Date()
+            },
+            computed: {
+                welcome: {
+                    cache: true,
+                    get: function () {
+                        return 'hi, ' + this.get('name');
+                    }
+                },
+                bye: {
+                    get: function () {
+                        return '11';
+                    }
+                }
+            },
+            template: `
+              <div id="root">
+                  <a href="http://{{link}}" {{id}}="{{id}}">
+                      link
+                  </a>
+                  {{#if counter % 2 === 0}}
+                      <Custom @ref="custom"{{#each user:key}} {{key}}="{{this}}"{{/each}} on-click="clickFromComponent($event)"/>
+                  {{/if}}
+              </div>
+            `,
+            components: {
+                Custom: Custom
+            },
+            filters: {
+                formatDate: function (date) {
+                    return this.get(name) + date.getTime();
+                }
+            },
+            watchers: {
+                'user.age': function (newValue, oldValue) {
+                    console.log(newValue, oldValue);
+                },
+                '*.age': function (newValue, oldValue, who) {
+                    console.log(newValue, oldValue, who);
+                },
+                'user.*': function (newValue, oldValue, name) {
+                    console.log(newValue, oldValue, name);
+                }
+            },
+            methods: {
+                add: function () {
+                    this.set(
+                        'counter',
+                        this.get('counter') + 1
+                    );
+                },
+                clickFromComponent: function (event) {
+                    console.log('clickFromComponent', event);
+                }
+            },
+            oncreate: function (e) {
+                console.log(this, 'create', e);
+            },
+            oncompile: function (e) {
+                console.log(this, 'compile', e);
+            },
+            onattach: function (e) {
+                console.log(this, 'attach', e);
+            },
+            onupdate: function (e) {
+                console.log(this, 'update', e);
+            },
+            ondetach: function (e) {
+                console.log(this, 'detach', e);
+            }
+        });
+
+    </script>
+</body>
+</html>

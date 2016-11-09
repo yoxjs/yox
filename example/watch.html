@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>demo</title>
+</head>
+<body>
+    <div id="app"></div>
+    <script src="../dist/yox.js"></script>
+    <script>
+        var instance = new Yox({
+            el: '#app',
+            data: {
+                user: {
+                    name: 'musicode'
+                },
+                users: [
+                    {
+                        name: 'Jake'
+                    },
+                    {
+                        name: 'John'
+                    },
+                    {
+                        name: 'Mike'
+                    }
+                ]
+            },
+            template: '<div></div>',
+            watchers: {
+                'user.name': function (newValue, oldValue) {
+                    console.log(this, newValue, oldValue);
+                },
+                'users.*.name': function (newValue, oldValue, index) {
+                    console.log(index, newValue);
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>
