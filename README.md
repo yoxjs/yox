@@ -29,5 +29,5 @@
 
 ## 感谢
 
-感谢来自 [Vue](http://vuejs.org) 和 [Ractive](http://www.ractivejs.org/) 的灵感。
+感谢来自[ React](http://facebook.github.io/react) [Vue](http://vuejs.org) 和 [Ractive](http://www.ractivejs.org/) 的灵感。
 
