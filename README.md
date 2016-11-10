@@ -31,5 +31,5 @@
 
 * [React](http://facebook.github.io/react): **不可变数据**和**单向数据流**
 * [Vue](http://vuejs.org)：清晰的 API 结构
-* [Ractive](http://www.ractivejs.org/)：Mustache 语法设计和各种人性化设计
+* [Ractive](http://www.ractivejs.org/)：易学的 Mustache 语法设计和各种人性化设计
 
