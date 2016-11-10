@@ -68,7 +68,7 @@ module.exports = class Scanner {
 
   forward(offset) {
     this.pos += offset
-    this.tail = this.tail.substr(offset)
+    this.tail = this.tail.slice(offset)
   }
 
   charAt(index) {

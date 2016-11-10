@@ -416,7 +416,7 @@ export function parse(content) {
 
   function parseOperator(sortedOperatorList) {
     skipWhitespace()
-    value = matchBestToken(content.substr(index), sortedOperatorList)
+    value = matchBestToken(content.slice(index), sortedOperatorList)
     if (value) {
       index += value.length
       return value

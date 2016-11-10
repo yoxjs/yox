@@ -120,12 +120,12 @@ export function create(node, instance) {
 
             let directiveName
             if (name.startsWith(DIRECTIVE_EVENT_PREFIX)) {
-              name = name.substr(DIRECTIVE_EVENT_PREFIX.length)
+              name = name.slice(DIRECTIVE_EVENT_PREFIX.length)
               directiveName = 'event'
             }
             else {
               name =
-              directiveName = name.substr(DIRECTIVE_PREFIX.length)
+              directiveName = name.slice(DIRECTIVE_PREFIX.length)
             }
 
             directives.push({

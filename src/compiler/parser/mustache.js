@@ -75,7 +75,7 @@ const parsers = [
       return source.startsWith(syntax.EACH)
     },
     create: function (source) {
-      let terms = source.substr(syntax.EACH.length).trim().split(':')
+      let terms = source.slice(syntax.EACH.length).trim().split(':')
       let name = terms[0].trim()
       let index
       if (terms[1]) {
@@ -89,7 +89,7 @@ const parsers = [
        return source.startsWith(syntax.IMPORT)
     },
     create: function (source) {
-      let name = source.substr(syntax.IMPORT.length).trim()
+      let name = source.slice(syntax.IMPORT.length).trim()
       if (name) {
         return new Import(name)
       }
@@ -100,7 +100,7 @@ const parsers = [
        return source.startsWith(syntax.PARTIAL)
     },
     create: function (source) {
-      let name = source.substr(syntax.PARTIAL.length).trim()
+      let name = source.slice(syntax.PARTIAL.length).trim()
       return name
         ? new Partial(name)
         : 'Expected legal partial name'
@@ -111,7 +111,7 @@ const parsers = [
        return source.startsWith(syntax.IF)
     },
     create: function (source) {
-      let expr = source.substr(syntax.IF.length).trim()
+      let expr = source.slice(syntax.IF.length).trim()
       return expr
         ? new If(parseExpression(expr))
         : 'Expected expression'
@@ -122,7 +122,7 @@ const parsers = [
       return source.startsWith(syntax.ELSE_IF)
     },
     create: function (source, popStack) {
-      let expr = source.substr(syntax.ELSE_IF.length)
+      let expr = source.slice(syntax.ELSE_IF.length)
       if (expr) {
         popStack()
         return new ElseIf(parseExpression(expr))
@@ -147,7 +147,7 @@ const parsers = [
       let safe = TRUE
       if (source.startsWith('{')) {
         safe = FALSE
-        source = source.substr(1)
+        source = source.slice(1)
       }
       return new Expression(parseExpression(source), safe)
     }
@@ -345,7 +345,7 @@ export function parse(template, getPartial, setPartial) {
               // 属性值开头部分是字面量
               if (attributeValueStartPattern.test(content)) {
                 quote = content.charAt(1)
-                content = content.substr(2)
+                content = content.slice(2)
               }
               // 没有属性值
               else {
@@ -358,7 +358,7 @@ export function parse(template, getPartial, setPartial) {
           if (!attrLike[currentNode.type]) {
             // 下一个属性的开始
             while (match = attributePattern.exec(content)) {
-              content = content.substr(match.index + match[0].length)
+              content = content.slice(match.index + match[0].length)
 
               name = match[1]
 
@@ -446,7 +446,7 @@ export function parse(template, getPartial, setPartial) {
     // 结束标签
     if (mainScanner.charAt(1) === '/') {
       content = mainScanner.nextAfter(elementPattern)
-      name = content.substr(2)
+      name = content.slice(2)
 
       if (mainScanner.charAt(0) !== '>') {
         return parseError(template, 'Illegal tag name', errorIndex)
@@ -461,7 +461,7 @@ export function parse(template, getPartial, setPartial) {
     // 开始标签
     else {
       content = mainScanner.nextAfter(elementPattern)
-      name = content.substr(1)
+      name = content.slice(1)
       isComponent = pattern.componentName.test(name)
       isSelfClosingTag = isComponent || pattern.selfClosingTagName.test(name)
 
