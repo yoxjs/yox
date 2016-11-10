@@ -23,7 +23,7 @@ let html = `
 
 html = `
 <div>
-  <button @options="{event: 'haha'}">
+  <button @press="press" @options="{{hidden}}">
     click
   </button>
 </div>

@@ -226,6 +226,10 @@ export function parse(template, getPartial, setPartial) {
     match,
     errorIndex
 
+  let attrLike = { }
+  attrLike[ATTRIBUTE] = TRUE
+  attrLike[DIRECTIVE] = TRUE
+
   let pushStack = function (node) {
     nodeStack.push(currentNode)
     currentNode = node
@@ -327,7 +331,7 @@ export function parse(template, getPartial, setPartial) {
 
           // 当前节点是 ATTRIBUTE
           // 表示至少已经有了属性名
-          if (currentNode.type === ATTRIBUTE) {
+          if (attrLike[currentNode.type]) {
 
             // 走进这里，只可能是以下几种情况
             // 1. 属性名是字面量，属性值已包含表达式
@@ -351,7 +355,7 @@ export function parse(template, getPartial, setPartial) {
 
           }
 
-          if (currentNode.type !== ATTRIBUTE) {
+          if (!attrLike[currentNode.type]) {
             // 下一个属性的开始
             while (match = attributePattern.exec(content)) {
               content = content.substr(match.index + match[0].length)
@@ -408,7 +412,7 @@ export function parse(template, getPartial, setPartial) {
                 }
                 if (isAttributesParsing
                   && node.type === EXPRESSION
-                  && currentNode.type !== ATTRIBUTE
+                  && !attrLike[currentNode.type]
                 ) {
                   node = new Attribute(node)
                 }

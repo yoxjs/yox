@@ -1499,6 +1499,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	      match = void 0,
 	      errorIndex = void 0;
 
+	  var attrLike = {};
+	  attrLike[_nodeType.ATTRIBUTE] = _env.TRUE;
+	  attrLike[_nodeType.DIRECTIVE] = _env.TRUE;
+
 	  var pushStack = function pushStack(node) {
 	    nodeStack.push(currentNode);
 	    currentNode = node;
@@ -1598,7 +1602,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	          // 当前节点是 ATTRIBUTE
 	          // 表示至少已经有了属性名
-	          if (currentNode.type === _nodeType.ATTRIBUTE) {
+	          if (attrLike[currentNode.type]) {
 
 	            // 走进这里，只可能是以下几种情况
 	            // 1. 属性名是字面量，属性值已包含表达式
@@ -1620,7 +1624,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            }
 	          }
 
-	          if (currentNode.type !== _nodeType.ATTRIBUTE) {
+	          if (!attrLike[currentNode.type]) {
 	            // 下一个属性的开始
 	            while (match = attributePattern.exec(content)) {
 	              content = content.substr(match.index + match[0].length);
@@ -1665,7 +1669,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	              if ((0, _is.isString)(node)) {
 	                (0, _string.parseError)(template, node, errorIndex);
 	              }
-	              if (isAttributesParsing && node.type === _nodeType.EXPRESSION && currentNode.type !== _nodeType.ATTRIBUTE) {
+	              if (isAttributesParsing && node.type === _nodeType.EXPRESSION && !attrLike[currentNode.type]) {
 	                node = new _Attribute2["default"](node);
 	              }
 	              addChild(node);
