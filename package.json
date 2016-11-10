@@ -1,20 +1,12 @@
 {
   "name": "yox",
-  "version": "0.0.9",
+  "version": "0.10.0",
   "description": "A lightweight mvvm framework",
   "main": "dist/yox.min.js",
-  "scripts": {
-    "server": "webpack-dev-server --hot --inline",
-    "test": "jasmine JASMINE_CONFIG_PATH=test/jasmine.json",
-    "dev": "WEBPACK_ENV=dev webpack --progress --watch",
-    "source": "WEBPACK_ENV=source webpack",
-    "release": "WEBPACK_ENV=release webpack"
+  "directories": {
+    "example": "example",
+    "test": "test"
   },
-  "author": "musicode",
-  "repository": "https://github.com/yoxjs/yox",
-  "homepage": "https://github.com/yoxjs/yox#readme",
-  "license": "MIT",
-  "readme": "README.md",
   "devDependencies": {
     "babel": "^6.5.2",
     "babel-cli": "^6.14.0",
@@ -27,9 +19,29 @@
     "babel-plugin-transform-es2015-modules-umd": "^6.12.0",
     "babel-register": "^6.14.0",
     "es3ify-loader": "^0.2.0",
-    "snabbdom": "^0.5.4",
-    "jasmine": "^2.5.2",
+    "hammerjs": "^2.0.8",
     "webpack": "^1.13.3",
     "webpack-dev-server": "^1.16.2"
-  }
+  },
+  "scripts": {
+    "server": "webpack-dev-server --hot --inline",
+    "test": "jasmine JASMINE_CONFIG_PATH=test/jasmine.json",
+    "dev": "WEBPACK_ENV=dev webpack --progress --watch",
+    "source": "WEBPACK_ENV=source webpack",
+    "release": "WEBPACK_ENV=release webpack"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yoxjs/yox.git"
+  },
+  "keywords": [
+    "lightweight",
+    "mvvm"
+  ],
+  "author": "musicode",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yoxjs/yox/issues"
+  },
+  "homepage": "https://github.com/yoxjs/yox#readme"
 }
