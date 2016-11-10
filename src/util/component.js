@@ -106,7 +106,7 @@ export function testKeypath(instance, keypath, name) {
 
 }
 
-export function get(instance, type, name) {
+export function get(instance, type, name, silent) {
   let prop = `$${type}s`
   if (instance[prop] && has(instance[prop], name)) {
     return instance[prop][name]
@@ -116,7 +116,7 @@ export function get(instance, type, name) {
     if (value) {
       return value
     }
-    else {
+    else if (!silent) {
       logger.error(`${name} ${type} is not found.`)
     }
   }

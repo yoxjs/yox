@@ -60,7 +60,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _class, _temp;
 
-	// 5 个内建指令，其他指令通过扩展实现
+	// 4 个内建指令，其他指令通过扩展实现
 
 
 	var _cache = __webpack_require__(1);
@@ -117,19 +117,15 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _ref2 = _interopRequireDefault(_ref);
 
-	var _lazy = __webpack_require__(50);
-
-	var _lazy2 = _interopRequireDefault(_lazy);
-
-	var _event2 = __webpack_require__(51);
+	var _event2 = __webpack_require__(50);
 
 	var _event3 = _interopRequireDefault(_event2);
 
-	var _model = __webpack_require__(52);
+	var _model = __webpack_require__(51);
 
 	var _model2 = _interopRequireDefault(_model);
 
-	var _component2 = __webpack_require__(54);
+	var _component2 = __webpack_require__(53);
 
 	var _component3 = _interopRequireDefault(_component2);
 
@@ -140,7 +136,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 	registry.directive.set({
-	  ref: _ref2["default"], lazy: _lazy2["default"], event: _event3["default"], model: _model2["default"], component: _component3["default"]
+	  ref: _ref2["default"], event: _event3["default"], model: _model2["default"], component: _component3["default"]
 	});
 
 	module.exports = (_temp = _class = function () {
@@ -607,7 +603,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }, {
 	    key: 'getDirective',
 	    value: function getDirective(name) {
-	      return (0, _component.get)(this, 'directive', name);
+	      return (0, _component.get)(this, 'directive', name, true);
 	    }
 	  }, {
 	    key: 'getPartial',
@@ -634,7 +630,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	  registry.partial.set(id, value);
 	}, _class.nextTick = function (fn) {
 	  (0, _nextTask.add)(fn);
-	}, _temp);
+	}, _class.use = function (plugin) {
+	  plugin.install(Yox);
+	}, _class.Event = _event.Event, _temp);
 
 	/**
 	 * [TODO]
@@ -4299,7 +4297,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  } while (terms.length || keypath.indexOf('.') > 0);
 	}
 
-	function get(instance, type, name) {
+	function get(instance, type, name, silent) {
 	  var prop = '$' + type + 's';
 	  if (instance[prop] && (0, _object.has)(instance[prop], name)) {
 	    return instance[prop][name];
@@ -4307,7 +4305,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var value = registry[type].get(name);
 	    if (value) {
 	      return value;
-	    } else {
+	    } else if (!silent) {
 	      logger.error(name + ' ' + type + ' is not found.');
 	    }
 	  }
@@ -5277,20 +5275,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 /***/ },
 /* 50 */
-/***/ function(module, exports) {
-
-	"use strict";
-
-	/**
-	 * 没有逻辑，lazy 主要是配合 model 使用
-	 *
-	 * <input @model="name" @lazy>
-	 */
-
-	module.exports = {};
-
-/***/ },
-/* 51 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -5336,7 +5320,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 52 */
+/* 51 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -5357,7 +5341,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _is = __webpack_require__(8);
 
-	var _debounce = __webpack_require__(53);
+	var _debounce = __webpack_require__(52);
 
 	var _debounce2 = _interopRequireDefault(_debounce);
 
@@ -5520,7 +5504,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 53 */
+/* 52 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -5564,7 +5548,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 54 */
+/* 53 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';

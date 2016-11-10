@@ -18,6 +18,7 @@ import {
 } from './compiler/parser/mustache'
 
 import {
+  Event,
   Emitter,
 } from './util/event'
 
@@ -70,15 +71,14 @@ import {
   create,
 } from './platform/web/vdom'
 
-// 5 个内建指令，其他指令通过扩展实现
+// 4 个内建指令，其他指令通过扩展实现
 import ref from './directive/ref'
-import lazy from './directive/lazy'
 import event from './directive/event'
 import model from './directive/model'
 import component from './directive/component'
 
 registry.directive.set({
-  ref, lazy, event, model, component
+  ref, event, model, component
 })
 
 module.exports = class Yox {
@@ -123,6 +123,12 @@ module.exports = class Yox {
   static nextTick = function (fn) {
     addTask(fn)
   }
+
+  static use = function (plugin) {
+    plugin.install(Yox)
+  }
+
+  static Event = Event
 
   /**
    * 配置项
@@ -623,7 +629,7 @@ module.exports = class Yox {
   }
 
   getDirective(name) {
-    return componentGet(this, 'directive', name)
+    return componentGet(this, 'directive', name, true)
   }
 
   getPartial(name) {

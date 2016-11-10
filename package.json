@@ -1,6 +1,6 @@
 {
   "name": "yox",
-  "version": "0.0.5",
+  "version": "0.0.7",
   "description": "A lightweight mvvm framework",
   "main": "dist/yox.min.js",
   "scripts": {
@@ -24,7 +24,6 @@
     "babel-preset-stage-0": "^6.5.0",
     "babel-plugin-add-module-exports": "^0.2.1",
     "babel-plugin-external-helpers": "^6.8.0",
-    "babel-plugin-transform-es2015-modules-amd": "^6.18.0",
     "babel-plugin-transform-es2015-modules-umd": "^6.12.0",
     "babel-register": "^6.14.0",
     "es3ify-loader": "^0.2.0",
