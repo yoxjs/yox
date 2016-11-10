@@ -7,6 +7,7 @@
 export const TRUE = true
 export const FALSE = false
 export const NULL = null
+export const UNDEFINED = undefined
 
 /**
  * 浏览器环境下的 window 对象
@@ -22,9 +23,3 @@ export const win = window
  */
 export const doc = document
 
-/**
- * 全局使用的空函数
- *
- * @return {Function}
- */
-export const noop = function () {}

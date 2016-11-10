@@ -3,6 +3,7 @@ import {
   TRUE,
   FALSE,
   NULL,
+  UNDEFINED,
 } from '../config/env'
 
 import * as cache from '../config/cache'
@@ -108,7 +109,7 @@ const keywords = {
   'true': TRUE,
   'false': FALSE,
   'null': NULL,
-  'undefined': undefined,
+  'undefined': UNDEFINED,
 }
 
 /**

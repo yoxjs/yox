@@ -16,6 +16,10 @@ import {
 } from '../util/component'
 
 import {
+  copy,
+} from '../util/object'
+
+import {
   hasItem,
   removeItem,
 } from '../util/array'
@@ -66,7 +70,7 @@ const controlTypes = {
         else {
           removeItem(array, el.value, FALSE)
         }
-        instance.set(keypath, [ ...array ])
+        instance.set(keypath, copy(array))
       }
       else {
         instance.set(keypath, el.checked)
@@ -75,33 +79,41 @@ const controlTypes = {
   }
 }
 
+function getEventInfo(el, lazyDirective) {
+
+  let name = 'change', interval
+
+  let { type, tagName } = el
+  if (tagName === 'INPUT' && hasItem(supportInputTypes, type)
+    || tagName === 'TEXTAREA'
+  ) {
+    if (lazyDirective) {
+      let value = lazyDirective.node.getValue()
+      if (isNumeric(value) && value >= 0) {
+        name = 'input'
+        interval = value
+      }
+    }
+    else {
+      name = 'input'
+    }
+  }
+
+  return {
+    name,
+    interval,
+    control: controlTypes[type] || controlTypes.normal,
+  }
+}
+
 module.exports = {
 
   attach: function ({ el, node, instance, directives }) {
 
-    let eventName = 'change', eventInterval, value
-
-    let { type, tagName } = el
-
-    if (tagName === 'INPUT' && hasItem(supportInputTypes, type)
-      || tagName === 'TEXTAREA'
-    ) {
-      let lazyDirective = directives.lazy
-      if (lazyDirective) {
-        value = lazyDirective.node.getValue()
-        if (isNumeric(value) && value >= 0) {
-          eventName = 'input'
-          eventInterval = value
-        }
-      }
-      else {
-        eventName = 'input'
-      }
-    }
-
-    value = node.getValue()
-
+    let { name, interval, control } = getEventInfo(el, directives.lazy)
     let { keypath } = node
+
+    let value = node.getValue()
     let result = testKeypath(instance, keypath, value)
     if (!result) {
       logger.error(`The ${keypath} being used for two-way binding is ambiguous.`)
@@ -109,42 +121,39 @@ module.exports = {
 
     keypath = result.keypath
 
-    let target = controlTypes[type] || controlTypes.normal
     let data = {
       el,
       keypath,
       instance,
     }
-    target.set(data)
+    control.set(data)
 
     instance.watch(
       keypath,
       function () {
-        target.set(data)
+        control.set(data)
       }
     )
 
-    let eventListener = function () {
-      target.sync(data)
+    let listener = function () {
+      control.sync(data)
     }
 
-    if (eventInterval) {
-      eventListener = debounce(eventListener, eventInterval)
+    if (interval) {
+      listener = debounce(listener, interval)
     }
 
-    el.$model = {
-      eventName,
-      eventListener,
+    el.$model = function () {
+      off(el, name, listener)
+      el.$model = NULL
     }
 
-    on(el, eventName, eventListener)
+    on(el, name, listener)
 
   },
 
   detach: function ({ el }) {
-    let { $model } = el
-    off(el, $model.eventName, $model.eventListener)
-    el.$model = NULL
+    el.$model()
   }
 
 }

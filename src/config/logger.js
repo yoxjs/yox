@@ -1,8 +1,4 @@
 
-import {
-  noop,
-} from './env'
-
 import * as switcher from './switcher'
 
 /**
@@ -18,21 +14,19 @@ const hasConsole = typeof console !== 'undefined'
  *
  * @param {string} msg
  */
-export const warn = hasConsole
-  ? function (msg) {
-    if (switcher.debug) {
-      console.warn(msg)
-    }
+export const warn = function (msg) {
+  if (switcher.debug && hasConsole) {
+    console.warn(msg)
   }
-  : noop
+}
 
 /**
  * 打印错误日志
  *
  * @param {string} msg
  */
-export const error = hasConsole
-  ? function (msg) {
+export const error = function (msg) {
+  if (hasConsole) {
     console.error(msg)
   }
-  : noop
+}

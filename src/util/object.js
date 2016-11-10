@@ -59,7 +59,7 @@ export function copy(object, deep) {
     arrayEach(
       object,
       function (item, index) {
-        result[index] = depp ? copy(item) : item
+        result[index] = deep ? copy(item) : item
       }
     )
   }

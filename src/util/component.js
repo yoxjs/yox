@@ -31,7 +31,6 @@ import {
 import * as registry from '../config/registry'
 
 export function compileAttr(instance, keypath, value) {
-  value = value.trim()
   if (value.indexOf('(') > 0) {
     let ast = parse(value)
     if (ast.type === CALL) {

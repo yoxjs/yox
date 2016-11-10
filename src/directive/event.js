@@ -20,8 +20,8 @@ module.exports = {
       }
       else {
         on(el, name, listener)
+        el[`$${name}`] = listener
       }
-      el[`$${name}`] = listener
     }
 
   },
@@ -29,14 +29,9 @@ module.exports = {
   detach: function ({ el, name, node }) {
     let listener = `$${name}`
     if (el[listener]) {
-      let { $component } = el
-      if ($component) {
-        $component.off(name, el[listener])
-      }
-      else {
-        off(el, name, el[listener])
-      }
+      off(el, name, el[listener])
       el[listener] = NULL
     }
   }
+
 }

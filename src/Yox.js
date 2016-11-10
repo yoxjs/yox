@@ -70,7 +70,7 @@ import {
   create,
 } from './platform/web/vdom'
 
-// 4 个内建指令，其他指令通过扩展实现
+// 5 个内建指令，其他指令通过扩展实现
 import ref from './directive/ref'
 import lazy from './directive/lazy'
 import event from './directive/event'
@@ -631,6 +631,8 @@ module.exports = class Yox {
   }
 
   dispose() {
+    this.$watchEmitter.off()
+    this.$eventEmitter.off()
     this.fire(lifecycle.DETACH)
   }
 
