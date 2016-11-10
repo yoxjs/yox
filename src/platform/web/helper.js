@@ -1,34 +1,19 @@
 
-import {
-  doc,
-  FALSE,
-} from '../../config/env'
+import * as env from '../../config/env'
 
-import {
-  Event,
-  Emitter,
-} from '../../util/event'
-
-import {
-  each,
-} from '../../util/array'
-
-import {
-  keys,
-} from '../../util/object'
-
-import {
-  isString,
-} from '../../util/is'
+import * as is from '../../util/is'
+import * as event from '../../util/event'
+import * as array from '../../util/array'
+import * as object from '../../util/object'
 
 import camelCase from '../../function/camelCase'
 
 export function nativeAddEventListener(element, type, listener) {
-  element.addEventListener(type, listener, FALSE)
+  element.addEventListener(type, listener, env.FALSE)
 }
 
 export function nativeRemoveEventListener(element, type, listener) {
-  element.removeEventListener(type, listener, FALSE)
+  element.removeEventListener(type, listener, env.FALSE)
 }
 
 export function createEvent(nativeEvent) {
@@ -42,7 +27,10 @@ export function createEvent(nativeEvent) {
  * @param {?HTMLElement} context
  * @return {?HTMLElement}
  */
-export function find(selector, context = doc) {
+export function find(selector, context) {
+  if (!context) {
+    context = env.doc
+  }
   return context.querySelector(selector)
 }
 
@@ -54,10 +42,10 @@ export function find(selector, context = doc) {
  * @param {Function} listener
  */
 export function on(element, type, listener) {
-  let $emitter = element.$emitter || (element.$emitter = new Emitter())
+  let $emitter = element.$emitter || (element.$emitter = new event.Emitter())
   if (!$emitter.has(type)) {
     let nativeListener = function (e) {
-      let event = new Event(createEvent(e, element))
+      let event = new event.Event(createEvent(e, element))
       $emitter.fire(event.type, event)
     }
     $emitter[type] = nativeListener
@@ -75,11 +63,11 @@ export function on(element, type, listener) {
  */
 export function off(element, type, listener) {
   let { $emitter } = element
-  let types = keys($emitter.listeners)
+  let types = object.keys($emitter.listeners)
   // emitter 会根据 type 和 listener 参数进行适当的删除
   $emitter.off(type, listener)
   // 根据 emitter 的删除结果来操作这里的事件 listener
-  each(
+  array.each(
     types,
     function (type) {
       if ($emitter[type] && !$emitter.has(type)) {
@@ -99,10 +87,10 @@ export function off(element, type, listener) {
 export function parseStyle(str) {
   let result = { }
 
-  if (isString(str)) {
+  if (is.string(str)) {
     let pairs, name, value
 
-    each(
+    array.each(
       str.split(';'),
       function (term) {
         if (term && term.trim()) {

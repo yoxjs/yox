@@ -1,15 +1,8 @@
 
 import * as cache from '../config/cache'
 
-import {
-  each,
-} from './array'
-
-import {
-  parse as parseExpression,
-  LITERAL,
-  IDENTIFIER,
-} from './expression'
+import * as array from './array'
+import * as expression from './expression'
 
 /**
  * 把 obj['name'] 的形式转成 obj.name
@@ -24,7 +17,7 @@ export function normalize(keypath) {
   if (!keypathNormalize[keypath]) {
     keypathNormalize[keypath] = keypath.indexOf('[') < 0
       ? keypath
-      : stringify(parseExpression(keypath))
+      : stringify(expression.parse(keypath))
   }
 
   return keypathNormalize[keypath]
@@ -70,7 +63,7 @@ export function getWildcardMatches(keypath) {
     let toWildcard = function (isTrue, index) {
       return isTrue ? '*' : terms[index]
     }
-    each(
+    array.each(
       getBoolCombinations(terms.length),
       function (items) {
         result.push(
@@ -100,7 +93,7 @@ export function getWildcardNames(keypath, wildcardKeypath) {
   }
 
   let list = keypath.split('.')
-  each(
+  array.each(
     wildcardKeypath.split('.'),
     function (name, index) {
       if (name === '*') {

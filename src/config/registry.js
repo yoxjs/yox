@@ -1,11 +1,6 @@
 
-import {
-  isObject,
-} from '../util/is'
-
-import {
-  each,
-} from '../util/object'
+import * as is from '../util/is'
+import * as object from '../util/object'
 
 class Store {
 
@@ -19,8 +14,8 @@ class Store {
 
   set(key, value) {
     let { data } = this
-    if (isObject(key)) {
-      each(
+    if (is.object(key)) {
+      object.each(
         key,
         function (value, name) {
           data[name] = value

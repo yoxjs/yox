@@ -1,10 +1,8 @@
 
-import {
-  isString,
-} from './is'
+import * as is from './is'
 
 export function encode(html) {
-  if (html && isString(html)) {
+  if (html && is.string(html)) {
     return html
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')

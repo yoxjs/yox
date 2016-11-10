@@ -1,9 +1,7 @@
 
 import nextTick from '../function/nextTick'
 
-import {
-  each,
-} from './array'
+import * as array from './array'
 
 let nextTasks = [ ]
 
@@ -23,7 +21,7 @@ export function add(task) {
  * 立即执行已添加的任务
  */
 export function run() {
-  each(
+  array.each(
     nextTasks,
     function (task) {
       task()

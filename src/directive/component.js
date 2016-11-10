@@ -1,12 +1,6 @@
 
-import {
-  TRUE,
-  NULL,
-} from '../config/env'
-
-import {
-  copy,
-} from '../util/object'
+import * as env from '../config/env'
+import * as object from '../util/object'
 
 module.exports = {
 
@@ -15,21 +9,21 @@ module.exports = {
       instance.getComponent(node.custom),
       {
         el,
-        props: copy(node.getAttributes(), true),
-        replace: TRUE,
+        props: object.copy(node.getAttributes(), true),
+        replace: env.TRUE,
       }
     )
   },
 
   update: function ({ el, node }) {
     el.$component.set(
-      copy(node.getAttributes(), true)
+      object.copy(node.getAttributes(), true)
     )
   },
 
   detach: function ({ el }) {
     el.$component.dispose()
-    el.$component = NULL
+    el.$component = env.NULL
   }
 
 }

@@ -1,7 +1,5 @@
 
-import {
-  FALSE,
-} from '../config/env'
+import * as env from '../config/env'
 
 const toString = Object.prototype.toString
 
@@ -9,35 +7,34 @@ function is(arg, type) {
   return toString.call(arg).toLowerCase() === `[object ${type}]`
 }
 
-export function isFunction (arg) {
+export function func(arg) {
   return typeof arg === 'function'
 }
 
-export function isArray(arg) {
+export function array(arg) {
   return is(arg, 'array')
 }
 
-export function isObject(arg) {
-  if (!arg) {
-    return FALSE
-  }
+export function object(arg) {
   // new String() 算 object
   // 因此这里不能用 is 函数
-  return typeof arg === 'object'
+  return arg
+    ? typeof arg === 'object'
+    : env.FALSE
 }
 
-export function isString(arg) {
+export function string(arg) {
   return is(arg, 'string')
 }
 
-export function isNumber(arg) {
+export function number(arg) {
   return is(arg, 'number')
 }
 
-export function isBoolean(arg) {
+export function boolean(arg) {
   return is(arg, 'boolean')
 }
 
-export function isNumeric(arg) {
+export function numeric(arg) {
   return !isNaN(parseFloat(arg)) && isFinite(arg)
 }

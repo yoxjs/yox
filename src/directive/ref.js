@@ -3,22 +3,18 @@
  * <Component @ref="component" />
  */
 
-import {
-  NULL,
-} from '../config/env'
+import * as env from '../config/env'
 
-import {
-  set,
-} from '../util/component'
+import * as component from '../util/component'
 
 module.exports = {
 
   attach: function ({ el, node, instance }) {
 
-    let component = el[`$component`]
+    let child = el[`$component`]
     let value = node.getValue()
-    if (component && value) {
-      set(instance, 'ref', value, component)
+    if (child && value) {
+      component.set(instance, 'ref', value, child)
       el.$ref = value
     }
 
@@ -28,7 +24,7 @@ module.exports = {
 
     if (el.$ref) {
       delete instance.$refs[el.$ref]
-      el.$ref = NULL
+      el.$ref = env.NULL
     }
 
   }

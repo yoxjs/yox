@@ -340,7 +340,7 @@ export function parse(template, getPartial, setPartial) {
                 : new Attribute(name)
               )
 
-              if (is.isString(match[2])) {
+              if (is.string(match[2])) {
                 quote = match[2].charAt(1)
                 content = parseAttributeValue(content)
                 // else 可能跟了一个表达式
@@ -378,7 +378,7 @@ export function parse(template, getPartial, setPartial) {
             function (parser) {
               if (parser.test(content)) {
                 node = parser.create(content, popStack)
-                if (is.isString(node)) {
+                if (is.string(node)) {
                   string.parseError(template, node, errorIndex)
                 }
                 if (isAttributesParsing

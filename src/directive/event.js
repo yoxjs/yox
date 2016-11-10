@@ -1,12 +1,6 @@
 
-import {
-  on,
-  off,
-} from '../platform/web/helper'
-
-import {
-  NULL,
-} from '../config/env'
+import * as env from '../config/env'
+import * as helper from '../platform/web/helper'
 
 module.exports = {
 
@@ -19,7 +13,7 @@ module.exports = {
         $component.on(name, listener)
       }
       else {
-        on(el, name, listener)
+        helper.on(el, name, listener)
         el[`$${name}`] = listener
       }
     }
@@ -29,8 +23,8 @@ module.exports = {
   detach: function ({ el, name, node }) {
     let listener = `$${name}`
     if (el[listener]) {
-      off(el, name, el[listener])
-      el[listener] = NULL
+      helper.off(el, name, el[listener])
+      el[listener] = env.NULL
     }
   }
 

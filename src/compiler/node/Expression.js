@@ -31,12 +31,12 @@ module.exports = class Expression extends Node {
       content = ''
     }
 
-    if (is.isFunction(content) && content.computed) {
+    if (is.func(content) && content.computed) {
       content = content()
     }
 
     // 处理需要不转义的
-    if (!this.safe && is.isString(content) && pattern.tag.test(content)) {
+    if (!this.safe && is.string(content) && pattern.tag.test(content)) {
       array.each(
         data.parse(content),
         function (node) {

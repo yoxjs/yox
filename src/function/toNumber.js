@@ -1,9 +1,8 @@
-import {
-  isNumeric,
-} from '../util/is'
+
+import * as is from '../util/is'
 
 module.exports = function (str, defaultValue) {
-  if (isNumeric(str)) {
+  if (is.numeric(str)) {
     return +str
   }
   return arguments.length === 2 ? defaultValue : 0

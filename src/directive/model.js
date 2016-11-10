@@ -1,33 +1,13 @@
 
-import {
-  on,
-  off,
-} from '../platform/web/helper'
+import * as helper from '../platform/web/helper'
 
-import {
-  NULL,
-  FALSE,
-} from '../config/env'
-
+import * as env from '../config/env'
 import * as logger from '../config/logger'
 
-import {
-  testKeypath,
-} from '../util/component'
-
-import {
-  copy,
-} from '../util/object'
-
-import {
-  hasItem,
-  removeItem,
-} from '../util/array'
-
-import {
-  isArray,
-  isNumeric,
-} from '../util/is'
+import * as is from '../util/is'
+import * as array from '../util/array'
+import * as object from '../util/object'
+import * as component from '../util/component'
 
 import debounce from '../function/debounce'
 
@@ -57,20 +37,20 @@ const controlTypes = {
   checkbox: {
     set: function ({ el, keypath, instance }) {
       let value = instance.get(keypath)
-      el.checked = isArray(value)
-        ? hasItem(value, el.value, FALSE)
+      el.checked = is.array(value)
+        ? array.hasItem(value, el.value, env.FALSE)
         : !!value
     },
     sync: function ({ el, keypath, instance }) {
       let array = instance.get(keypath)
-      if (isArray(array)) {
+      if (is.array(array)) {
         if (el.checked) {
           array.push(el.value)
         }
         else {
-          removeItem(array, el.value, FALSE)
+          array.removeItem(array, el.value, env.FALSE)
         }
-        instance.set(keypath, copy(array))
+        instance.set(keypath, object.copy(array))
       }
       else {
         instance.set(keypath, el.checked)
@@ -84,12 +64,12 @@ function getEventInfo(el, lazyDirective) {
   let name = 'change', interval
 
   let { type, tagName } = el
-  if (tagName === 'INPUT' && hasItem(supportInputTypes, type)
+  if (tagName === 'INPUT' && array.hasItem(supportInputTypes, type)
     || tagName === 'TEXTAREA'
   ) {
     if (lazyDirective) {
       let value = lazyDirective.node.getValue()
-      if (isNumeric(value) && value >= 0) {
+      if (is.numeric(value) && value >= 0) {
         name = 'input'
         interval = value
       }
@@ -114,7 +94,7 @@ module.exports = {
     let { keypath } = node
 
     let value = node.getValue()
-    let result = testKeypath(instance, keypath, value)
+    let result = component.testKeypath(instance, keypath, value)
     if (!result) {
       logger.error(`The ${keypath} being used for two-way binding is ambiguous.`)
     }
@@ -144,11 +124,11 @@ module.exports = {
     }
 
     el.$model = function () {
-      off(el, name, listener)
-      el.$model = NULL
+      helper.off(el, name, listener)
+      el.$model = env.NULL
     }
 
-    on(el, name, listener)
+    helper.on(el, name, listener)
 
   },
 

@@ -32,10 +32,10 @@ module.exports = class Each extends Node {
     let iterator = context.get(name)
 
     let each
-    if (is.isArray(iterator)) {
+    if (is.array(iterator)) {
       each = array.each
     }
-    else if (is.isObject(iterator)) {
+    else if (is.object(iterator)) {
       each = object.each
     }
 

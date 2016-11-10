@@ -1,27 +1,17 @@
 
 import toString from '../function/toString'
 
-import {
-  TRUE,
-  FALSE,
-  NULL,
-} from '../config/env'
+import * as env from '../config/env'
 
-import {
-  isArray,
-  isObject,
-} from './is'
-
-import {
-  each as arrayEach,
-} from './array'
+import * as is from './is'
+import * as array from './array'
 
 export function keys(object) {
   return Object.keys(object)
 }
 
 export function each(object, callback) {
-  arrayEach(
+  array.each(
     keys(object),
     function (key) {
       return callback(object[key], key)
@@ -40,7 +30,7 @@ export function has(object, name) {
 export function extend() {
   let args = arguments, result = args[0]
   for (let i = 1, len = args.length; i < len; i++) {
-    if (isObject(args[i])) {
+    if (is.object(args[i])) {
       each(
         args[i],
         function (value, key) {
@@ -54,16 +44,16 @@ export function extend() {
 
 export function copy(object, deep) {
   let result = object
-  if (isArray(object)) {
+  if (is.array(object)) {
     result = [ ]
-    arrayEach(
+    array.each(
       object,
       function (item, index) {
         result[index] = deep ? copy(item) : item
       }
     )
   }
-  else if (isObject(object)) {
+  else if (is.object(object)) {
     result = { }
     each(
       object,
@@ -104,13 +94,13 @@ export function get(object, keypath) {
   }
 }
 
-export function set(object, keypath, value, autoFill = TRUE) {
+export function set(object, keypath, value, autoFill = env.TRUE) {
   keypath = toString(keypath)
   if (keypath.indexOf('.') > 0) {
     let originalObject = object
     let list = keypath.split('.')
     let prop = list.pop()
-    arrayEach(
+    array.each(
       list,
       function (item, index) {
         if (object[item]) {
@@ -120,8 +110,8 @@ export function set(object, keypath, value, autoFill = TRUE) {
           object = object[item] = {}
         }
         else {
-          object = NULL
-          return FALSE
+          object = env.NULL
+          return env.FALSE
         }
       }
     )

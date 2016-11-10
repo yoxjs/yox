@@ -1,13 +1,7 @@
 
-import {
-  TRUE,
-  FALSE,
-  NULL,
-} from '../config/env'
+import * as env from '../config/env'
 
-import {
-  isArray,
-} from './is'
+import * as is from './is'
 
 let {
   slice,
@@ -15,14 +9,14 @@ let {
 
 export function each(array, callback) {
   for (let i = 0, len = array.length; i < len; i++) {
-    if (callback(array[i], i) === FALSE) {
+    if (callback(array[i], i) === env.FALSE) {
       break
     }
   }
 }
 
 // array.reduce 如果是空数组，不传 initialValue 居然会报错，所以封装一下
-export function reduce(array, callback, initialValue = NULL) {
+export function reduce(array, callback, initialValue = env.NULL) {
   return array.reduce(callback, initialValue)
 }
 
@@ -47,7 +41,7 @@ export function toArray(array) {
   catch (e) {
     return []
   }
-  return isArray(array) ? array : slice.call(array)
+  return is.array(array) ? array : slice.call(array)
 }
 
 export function toObject(array, key) {
@@ -61,8 +55,8 @@ export function toObject(array, key) {
   return result
 }
 
-export function indexOf(array, item, strict = TRUE) {
-  if (strict) {
+export function indexOf(array, item, strict) {
+  if (strict !== env.FALSE) {
     return array.indexOf(item)
   }
   else {
@@ -72,7 +66,7 @@ export function indexOf(array, item, strict = TRUE) {
       function (value, i) {
         if (item == value) {
           index = i
-          return FALSE
+          return env.FALSE
         }
       }
     )
@@ -80,7 +74,7 @@ export function indexOf(array, item, strict = TRUE) {
   }
 }
 
-export function hasItem(array, item, strict = TRUE) {
+export function hasItem(array, item, strict) {
   return indexOf(array, item, strict) >= 0
 }
 
@@ -88,7 +82,7 @@ export function lastItem(array) {
   return array[array.length - 1]
 }
 
-export function removeItem(array, item, strict = TRUE) {
+export function removeItem(array, item, strict) {
   let index = indexOf(array, item, strict)
   if (index >= 0) {
     array.splice(index, 1)

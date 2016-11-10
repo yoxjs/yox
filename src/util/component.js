@@ -1,42 +1,24 @@
 
-import {
-  NULL,
-} from '../config/env'
-
 import * as logger from '../config/logger'
 import * as syntax from '../config/syntax'
+import * as registry from '../config/registry'
 
-import {
-  get as objectGet,
-  has,
-  copy,
-} from './object'
+import * as object from './object'
+import * as expression from './expression'
 
-import {
-  CALL,
-  MEMBER,
-  LITERAL,
-  IDENTIFIER,
-  parse,
-} from './expression'
-
-import {
-  Event,
-} from './event'
+import * as event from './event'
 
 import {
   stringify,
 } from './keypath'
 
-import * as registry from '../config/registry'
-
 export function compileAttr(instance, keypath, value) {
   if (value.indexOf('(') > 0) {
-    let ast = parse(value)
-    if (ast.type === CALL) {
+    let ast = expression.parse(value)
+    if (ast.type === expression.CALL) {
       return function (event) {
-        let isEvent = event instanceof Event
-        let args = copy(ast.arguments)
+        let isEvent = event instanceof event.Event
+        let args = object.copy(ast.arguments)
         if (!args.length) {
           if (isEvent) {
             args.push(event)
@@ -46,10 +28,10 @@ export function compileAttr(instance, keypath, value) {
           args = args.map(
             function (item) {
               let { name, type } = item
-              if (type === LITERAL) {
+              if (type === expression.LITERAL) {
                 return item.value
               }
-              if (type === IDENTIFIER) {
+              if (type === expression.IDENTIFIER) {
                 if (name === syntax.SPECIAL_EVENT) {
                   if (isEvent) {
                     return event
@@ -59,7 +41,7 @@ export function compileAttr(instance, keypath, value) {
                   return keypath
                 }
               }
-              else if (type === MEMBER) {
+              else if (type === expression.MEMBER) {
                 name = stringify(item)
               }
 
@@ -93,7 +75,7 @@ export function testKeypath(instance, keypath, name) {
   do {
     terms.push(name)
     keypath = terms.join('.')
-    result = objectGet(data, keypath)
+    result = object.get(data, keypath)
     if (result) {
       return {
         keypath,
@@ -108,7 +90,7 @@ export function testKeypath(instance, keypath, name) {
 
 export function get(instance, type, name, silent) {
   let prop = `$${type}s`
-  if (instance[prop] && has(instance[prop], name)) {
+  if (instance[prop] && object.has(instance[prop], name)) {
     return instance[prop][name]
   }
   else {

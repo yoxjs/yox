@@ -1,26 +1,11 @@
 
-import {
-  TRUE,
-  FALSE,
-  NULL,
-  UNDEFINED,
-} from '../config/env'
-
+import * as env from '../config/env'
 import * as cache from '../config/cache'
 import * as logger from '../config/logger'
 
-import {
-  each,
-} from './array'
-
-import {
-  keys,
-} from './object'
-
-import {
-  isString,
-  isFunction,
-} from './is'
+import * as is from './is'
+import * as array from './array'
+import * as object from './object'
 
 /**
  * 仅支持一句表达式，即不支持 `a + b, b + c`
@@ -60,7 +45,7 @@ const COLON  = 58 // :
  * @return {Array.<string>}
  */
 function sortKeys(obj) {
-  return keys(obj).sort(
+  return object.keys(obj).sort(
     function (a, b) {
       return b.length - a.length
     }
@@ -69,10 +54,10 @@ function sortKeys(obj) {
 
 // 用于判断是否是一元操作符
 const unaryOperatorMap = {
-  '+': TRUE,
-  '-': TRUE,
-  '!': TRUE,
-  '~': TRUE,
+  '+': env.TRUE,
+  '-': env.TRUE,
+  '!': env.TRUE,
+  '~': env.TRUE,
 }
 
 const sortedUnaryOperatorList = sortKeys(unaryOperatorMap)
@@ -108,10 +93,10 @@ const sortedBinaryOperatorList = sortKeys(binaryOperatorMap)
 // 举个例子：a === true
 // 从解析器的角度来说，a 和 true 是一样的 token
 const keywords = {
-  'true': TRUE,
-  'false': FALSE,
-  'null': NULL,
-  'undefined': UNDEFINED,
+  'true': env.TRUE,
+  'false': env.FALSE,
+  'null': env.NULL,
+  'undefined': env.UNDEFINED,
 }
 
 /**
@@ -172,10 +157,10 @@ function isIdentifierPart(charCode) {
  */
 function matchBestToken(content, sortedTokens) {
   let result
-  each(sortedTokens, function (token) {
+  array.each(sortedTokens, function (token) {
     if (content.startsWith(token)) {
       result = token
-      return FALSE
+      return env.FALSE
     }
   })
   return result
@@ -304,7 +289,7 @@ export function parse(content) {
     return content.charAt(index)
   }
   function getCharCode(i) {
-    return content.charCodeAt(i != NULL ? i : index)
+    return content.charCodeAt(i != env.NULL ? i : index)
   }
 
   function skipWhitespace() {
@@ -325,7 +310,7 @@ export function parse(content) {
     while (index < length) {
       index++
       if (getCharCode(index - 1) === quote) {
-        closed = TRUE
+        closed = env.TRUE
         break
       }
     }
@@ -398,7 +383,7 @@ export function parse(content) {
       charCode = getCharCode()
       if (charCode === delimiter) {
         index++
-        closed = TRUE
+        closed = env.TRUE
       }
       else if (charCode === COMMA) {
         index++
@@ -608,7 +593,7 @@ export function compile(ast) {
 
   let content
 
-  if (isString(ast)) {
+  if (is.string(ast)) {
     content = ast
     ast = parse(content)
   }
@@ -634,7 +619,7 @@ export function compile(ast) {
             args.push(node.name)
           }
           else if (node.type === THIS) {
-            hasThis = TRUE
+            hasThis = env.TRUE
             args.push(THIS_ARG)
           }
         }
@@ -664,7 +649,7 @@ export function compile(ast) {
 export function traverse(ast, options = {}) {
 
   // enter 返回 false 可阻止继续遍历
-  if (isFunction(options.enter) && options.enter(ast) === FALSE) {
+  if (is.func(options.enter) && options.enter(ast) === env.FALSE) {
     return
   }
 
@@ -692,7 +677,7 @@ export function traverse(ast, options = {}) {
 
     case CALL:
       traverse(ast.callee, options)
-      each(
+      array.each(
         ast.arguments,
         function (arg) {
           traverse(arg, options)
@@ -701,7 +686,7 @@ export function traverse(ast, options = {}) {
       break
 
     case ARRAY:
-      each(
+      array.each(
         ast.elements,
         function (element) {
           traverse(element, options)
@@ -711,7 +696,7 @@ export function traverse(ast, options = {}) {
 
   }
 
-  if (isFunction(options.leave)) {
+  if (is.func(options.leave)) {
     options.leave(ast)
   }
 

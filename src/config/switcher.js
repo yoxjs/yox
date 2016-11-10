@@ -1,8 +1,5 @@
 
-import {
-  TRUE,
-  FALSE,
-} from './env'
+import * as env from './env'
 
 /**
  * 是否是调试状态
@@ -11,11 +8,11 @@ import {
  *
  * @type {boolean}
  */
-export const debug = FALSE
+export const debug = env.FALSE
 
 /**
  * 是否同步更新
  *
  * @type {boolean}
  */
-export const sync = TRUE
+export const sync = env.TRUE

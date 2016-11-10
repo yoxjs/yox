@@ -1,4 +1,5 @@
 
+import * as env from './config/env'
 import * as cache from './config/cache'
 import * as logger from './config/logger'
 import * as syntax from './config/syntax'
@@ -7,78 +8,24 @@ import * as registry from './config/registry'
 import * as switcher from './config/switcher'
 import * as lifecycle from './config/lifecycle'
 
-import {
-  TRUE,
-  NULL,
-} from './config/env'
+import * as mustache from './compiler/parser/mustache'
 
-import {
-  parse as parseTemplate,
-  render as renderTemplate,
-} from './compiler/parser/mustache'
+import * as is from './util/is'
+import * as event from './util/event'
+import * as array from './util/array'
+import * as object from './util/object'
+import * as keypath from './util/keypath'
+import * as nextTask from './util/nextTask'
+import * as component from './util/component'
 
-import {
-  Event,
-  Emitter,
-} from './util/event'
-
-import {
-  add as addTask,
-} from './util/nextTask'
-
-import {
-  getWildcardNames,
-  getWildcardMatches,
-} from './util/keypath'
-
-import {
-  has as objectHas,
-  get as objectGet,
-  set as objectSet,
-  each as objectEach,
-  count as objectCount,
-  extend as objectExtend,
-} from './util/object'
-
-import {
-  each,
-  merge,
-  hasItem,
-  lastItem,
-  removeItem,
-  toArray,
-} from './util/array'
-
-import {
-  isArray,
-  isString,
-  isObject,
-  isFunction,
-} from './util/is'
-
-import {
-  get as componentGet,
-  set as componentSet,
-  compileAttr as componentCompileAttr,
-} from './util/component'
-
-import {
-  find,
-} from './platform/web/helper'
-
-import {
-  patch,
-  create,
-} from './platform/web/vdom'
-
-// 4 个内建指令，其他指令通过扩展实现
-import ref from './directive/ref'
-import event from './directive/event'
-import model from './directive/model'
-import component from './directive/component'
+import * as vdom from './platform/web/vdom'
+import * as helper from './platform/web/helper'
 
 registry.directive.set({
-  ref, event, model, component
+  ref: require('./directive/ref'),
+  event: require('./directive/event'),
+  model: require('./directive/model'),
+  component: require('./directive/component'),
 })
 
 module.exports = class Yox {
@@ -121,14 +68,14 @@ module.exports = class Yox {
   }
 
   static nextTick = function (fn) {
-    addTask(fn)
+    nextTask.add(fn)
   }
 
   static use = function (plugin) {
     plugin.install(Yox)
   }
 
-  static Event = Event
+  static Event = event.Event
 
   /**
    * 配置项
@@ -158,16 +105,16 @@ module.exports = class Yox {
     // el 和 template 都可以传选择器
     template = pattern.tag.test(template)
       ? template
-      : find(template).innerHTML
+      : helper.find(template).innerHTML
 
-    el = isString(el)
-      ? find(el)
+    el = is.string(el)
+      ? helper.find(el)
       : el
 
     if (!el || el.nodeType !== 1) {
       logger.error('Passing a `el` option must be a html element.')
     }
-    if (props && (isObject(data) || isArray(data))) {
+    if (props && (is.object(data) || is.array(data))) {
       logger.warn('Passing a `data` option with object and array to component is discouraged.')
     }
 
@@ -184,7 +131,7 @@ module.exports = class Yox {
 
     // 拆分实例方法和生命周期函数
     let hooks = { }
-    objectEach(
+    object.each(
       lifecycle,
       function (name) {
         hooks[`on${name}`] = name
@@ -192,12 +139,12 @@ module.exports = class Yox {
     )
 
     // 监听各种事件
-    instance.$eventEmitter = new Emitter()
+    instance.$eventEmitter = new event.Emitter()
 
-    objectEach(
+    object.each(
       hooks,
       function (value, key) {
-        if (isFunction(options[key])) {
+        if (is.func(options[key])) {
           instance.on(value, options[key])
         }
       }
@@ -205,8 +152,8 @@ module.exports = class Yox {
 
     instance.fire(lifecycle.INIT)
 
-    if (isObject(methods)) {
-      objectEach(
+    if (is.object(methods)) {
+      object.each(
         methods,
         function (value, key) {
           instance[key] = value
@@ -214,31 +161,31 @@ module.exports = class Yox {
       )
     }
 
-    data = isFunction(data) ? data.call(instance) : data
-    if (isObject(props)) {
-      if (!isObject(data)) {
+    data = is.func(data) ? data.call(instance) : data
+    if (is.object(props)) {
+      if (!is.object(data)) {
         data = { }
       }
-      objectExtend(data, props)
+      object.extend(data, props)
     }
     if (data) {
       instance.$data = data
     }
 
-    if (isObject(components)) {
+    if (is.object(components)) {
       instance.$components = components
     }
-    if (isObject(directives)) {
+    if (is.object(directives)) {
       instance.$directives = directives
     }
-    if (isObject(filters)) {
+    if (is.object(filters)) {
       instance.$filters = filters
     }
-    if (isObject(partials)) {
+    if (is.object(partials)) {
       instance.$partials = partials
     }
 
-    if (isObject(computed)) {
+    if (is.object(computed)) {
 
       // 把计算属性拆为 getter 和 setter
       let $computedGetters =
@@ -262,21 +209,21 @@ module.exports = class Yox {
       let $computedDeps =
       instance.$computedDeps = { }
 
-      objectEach(
+      object.each(
         computed,
         function (item, keypath) {
-          let get, set, cache = TRUE
-          if (isFunction(item)) {
+          let get, set, cache = env.TRUE
+          if (is.func(item)) {
             get = item
           }
-          else if (isObject(item)) {
-            if (objectHas(item, 'cache')) {
+          else if (is.object(item)) {
+            if (object.has(item, 'cache')) {
               cache = item.cache
             }
-            if (isFunction(item.get)) {
+            if (is.func(item.get)) {
               get = item.get
             }
-            if (isFunction(item.set)) {
+            if (is.func(item.set)) {
               set = item.set
             }
           }
@@ -284,7 +231,7 @@ module.exports = class Yox {
           if (get) {
             let getter = function () {
 
-              if (cache && objectHas($computedCache, keypath)) {
+              if (cache && object.has($computedCache, keypath)) {
                 return $computedCache[keypath]
               }
 
@@ -300,12 +247,12 @@ module.exports = class Yox {
               // 增加了哪些依赖，删除了哪些依赖
               let addedDeps = [ ]
               let removedDeps = [ ]
-              if (isArray(oldDeps)) {
-                each(
-                  merge(oldDeps, newDeps),
+              if (is.array(oldDeps)) {
+                array.each(
+                  array.merge(oldDeps, newDeps),
                   function (dep) {
-                    let oldExisted = hasItem(oldDeps, dep)
-                    let newExisted = hasItem(newDeps, dep)
+                    let oldExisted = array.hasItem(oldDeps, dep)
+                    let newExisted = array.hasItem(newDeps, dep)
                     if (oldExisted && !newExisted) {
                       removedDeps.push(dep)
                     }
@@ -319,20 +266,20 @@ module.exports = class Yox {
                 addedDeps = newDeps
               }
 
-              each(
+              array.each(
                 addedDeps,
                 function (dep) {
-                  if (!isArray($computedWatchers[dep])) {
+                  if (!is.array($computedWatchers[dep])) {
                     $computedWatchers[dep] = []
                   }
                   $computedWatchers[dep].push(keypath)
                 }
               )
 
-              each(
+              array.each(
                 removedDeps,
                 function (dep) {
-                  removeItem($computedWatchers[dep], keypath)
+                  array.removeItem($computedWatchers[dep], keypath)
                 }
               )
 
@@ -342,7 +289,7 @@ module.exports = class Yox {
 
               return result
             }
-            getter.computed = TRUE
+            getter.computed = env.TRUE
             $computedGetters[keypath] = getter
           }
 
@@ -354,11 +301,11 @@ module.exports = class Yox {
       )
     }
 
-    if (isObject(events)) {
-      objectEach(
+    if (is.object(events)) {
+      object.each(
         events,
         function (listener, type) {
-          if (isFunction(listener)) {
+          if (is.func(listener)) {
             instance.on(type, listener)
           }
         }
@@ -366,10 +313,10 @@ module.exports = class Yox {
     }
 
     // 监听数据变化
-    instance.$watchEmitter = new Emitter()
+    instance.$watchEmitter = new event.Emitter()
 
-    if (isObject(watchers)) {
-      objectEach(
+    if (is.object(watchers)) {
+      object.each(
         watchers,
         function (watcher, keypath) {
           instance.watch(keypath, watcher)
@@ -381,13 +328,13 @@ module.exports = class Yox {
     instance.fire(lifecycle.CREATE)
 
     // 编译结果
-    instance.$template = parseTemplate(
+    instance.$template = mustache.parse(
       template,
       function (name) {
         return instance.getPartial(name)
       },
       function (name, node) {
-        componentSet(instance, 'partial', name, node)
+        component.set(instance, 'partial', name, node)
       }
     )
 
@@ -406,8 +353,8 @@ module.exports = class Yox {
       $computedGetters,
     } = this
 
-    if (isArray($computedStack)) {
-      let deps = lastItem($computedStack)
+    if (is.array($computedStack)) {
+      let deps = array.lastItem($computedStack)
       if (deps) {
         deps.push(keypath)
       }
@@ -418,7 +365,7 @@ module.exports = class Yox {
       }
     }
 
-    let result = objectGet($data, keypath)
+    let result = object.get($data, keypath)
     if (result) {
       return result.value
     }
@@ -427,7 +374,7 @@ module.exports = class Yox {
 
   set(keypath, value) {
     let model = keypath
-    if (isString(keypath)) {
+    if (is.string(keypath)) {
       model = { }
       model[keypath] = value
     }
@@ -437,8 +384,8 @@ module.exports = class Yox {
         instance.updateView()
       }
       else if (!instance.$syncing) {
-        instance.$syncing = TRUE
-        addTask(function () {
+        instance.$syncing = env.TRUE
+        nextTask.add(function () {
           delete instance.$syncing
           instance.updateView()
         })
@@ -459,12 +406,12 @@ module.exports = class Yox {
   }
 
   fire(type, data, bubble) {
-    if (arguments.length === 2 && data === TRUE) {
-      bubble = TRUE
-      data = NULL
+    if (arguments.length === 2 && data === env.TRUE) {
+      bubble = env.TRUE
+      data = env.NULL
     }
-    if (data && objectHas(data, 'length') && !isArray(data)) {
-      data = toArray(data)
+    if (data && object.has(data, 'length') && !is.array(data)) {
+      data = array.toArray(data)
     }
     let instance = this
     let { $parent, $eventEmitter } = instance
@@ -502,24 +449,24 @@ module.exports = class Yox {
       $computedSetters,
     } = instance
 
-    let hasComputed = isObject($computedWatchers),
+    let hasComputed = is.object($computedWatchers),
       changes = { },
       setter,
       oldValue
 
-    objectEach(
+    object.each(
       model,
-      function (value, keypath) {
-        oldValue = instance.get(keypath)
+      function (value, key) {
+        oldValue = instance.get(key)
         if (value !== oldValue) {
 
-          changes[keypath] = [ value, oldValue ]
+          changes[key] = [ value, oldValue ]
 
-          if (hasComputed && isArray($computedWatchers[keypath])) {
-            each(
-              $computedWatchers[keypath],
+          if (hasComputed && is.array($computedWatchers[key])) {
+            array.each(
+              $computedWatchers[key],
               function (watcher) {
-                if (objectHas($computedCache, watcher)) {
+                if (object.has($computedCache, watcher)) {
                   delete $computedCache[watcher]
                 }
               }
@@ -528,29 +475,29 @@ module.exports = class Yox {
 
           // 计算属性优先
           if (hasComputed) {
-            setter = $computedSetters[keypath]
+            setter = $computedSetters[key]
             if (setter) {
               setter(value)
               return
             }
           }
 
-          objectSet($data, keypath, value)
+          object.set($data, key, value)
 
         }
       }
     )
 
-    if (objectCount(changes)) {
-      objectEach(
+    if (object.count(changes)) {
+      object.each(
         changes,
-        function (args, keypath) {
-          each(
-            getWildcardMatches(keypath),
+        function (args, key) {
+          array.each(
+            keypath.getWildcardMatches(key),
             function (wildcardKeypath) {
               $watchEmitter.fire(
                 wildcardKeypath,
-                merge(args, getWildcardNames(keypath, wildcardKeypath)),
+                array.merge(args, keypath.getWildcardNames(key, wildcardKeypath)),
                 instance
               )
             }
@@ -577,31 +524,31 @@ module.exports = class Yox {
     let context = { }
 
     // 在 data 中也能写函数
-    objectExtend(context, registry.filter.data, $data, $filters)
-    objectEach(
+    object.extend(context, registry.filter.data, $data, $filters)
+    object.each(
       context,
       function (value, key) {
-        if (isFunction(value)) {
+        if (is.func(value)) {
           context[key] = value.bind(instance)
         }
       }
     )
 
-    if (isObject($computedGetters)) {
-      objectExtend(context, $computedGetters)
+    if (is.object($computedGetters)) {
+      object.extend(context, $computedGetters)
     }
 
-    let newNode = create(
-      renderTemplate($template, context),
+    let newNode = vdom.create(
+      mustache.render($template, context),
       instance
     )
 
     if ($currentNode) {
-      $currentNode = patch($currentNode, newNode)
+      $currentNode = vdom.patch($currentNode, newNode)
       instance.fire(lifecycle.UDPATE)
     }
     else {
-      $currentNode = patch(el, newNode)
+      $currentNode = vdom.patch(el, newNode)
       instance.$el = $currentNode.elm
       instance.fire(lifecycle.ATTACH)
     }
@@ -611,29 +558,29 @@ module.exports = class Yox {
   }
 
   create(options, extra) {
-    options = objectExtend({ }, options, extra)
+    options = object.extend({ }, options, extra)
     options.parent = this
     return new Yox(options)
   }
 
   compileAttr(keypath, value) {
-    return componentCompileAttr(this, keypath, value)
+    return component.compileAttr(this, keypath, value)
   }
 
   getComponent(name) {
-    return componentGet(this, 'component', name)
+    return component.get(this, 'component', name)
   }
 
   getFilter(name) {
-    return componentGet(this, 'filter', name)
+    return component.get(this, 'filter', name)
   }
 
   getDirective(name) {
-    return componentGet(this, 'directive', name, true)
+    return component.get(this, 'directive', name, true)
   }
 
   getPartial(name) {
-    return componentGet(this, 'partial', name)
+    return component.get(this, 'partial', name)
   }
 
   dispose() {
@@ -653,7 +600,7 @@ module.exports = class Yox {
  * 5. 计算属性是否可以 watch（不可以）
  * 6. 需要转义的文本节点如果出现在属性值里，是否需要 encode
  * 7. 数组方法的劫持（不需要劫持，改完再 set 即可）
- * 8. 属性延展（用 #each 遍历数据）
+ * 8. 属性延展（用 #array.each 遍历数据）
  * 9. 报错信息完善
  * 10. SEO友好
  */

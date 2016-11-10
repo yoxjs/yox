@@ -1,13 +1,6 @@
 
-import {
-  has,
-  get,
-  set,
-} from '../../util/object'
-
-import {
-  THIS_ARG,
-} from '../../util/expression'
+import * as object from '../../util/object'
+import * as expression from '../../util/expression'
 
 module.exports = class Context {
 
@@ -20,7 +13,7 @@ module.exports = class Context {
     instance.data = data
     instance.parent = parent
     instance.cache = {}
-    instance.cache[THIS_ARG] = data
+    instance.cache[expression.THIS_ARG] = data
   }
 
   push(data) {
@@ -29,13 +22,13 @@ module.exports = class Context {
 
   set(keypath, value) {
     let { data, cache } = this
-    if (has(cache, keypath)) {
+    if (object.has(cache, keypath)) {
       delete cache[keypath]
     }
     if (keypath.indexOf('.') > 0) {
       let terms = keypath.split('.')
       let prop = terms.pop()
-      let result = get(data, terms.join('.'))
+      let result = object.get(data, terms.join('.'))
       if (result) {
         result.value[prop] = value
       }
@@ -49,10 +42,10 @@ module.exports = class Context {
 
     let instance = this
     let { cache } = instance
-    if (!has(cache, keypath)) {
+    if (!object.has(cache, keypath)) {
       let result
       while (instance) {
-        result = get(instance.data, keypath)
+        result = object.get(instance.data, keypath)
         if (result) {
           cache[keypath] = result.value
           break

@@ -1,25 +1,9 @@
 
-import {
-  TRUE,
-  FALSE,
-  NULL,
-} from '../config/env'
+import * as env from '../config/env'
 
-import {
-  isArray,
-  isString,
-  isFunction,
-} from './is'
-
-import {
-  each,
-  hasItem,
-  removeItem,
-} from './array'
-
-import {
-  each as objectEach
-} from './object'
+import * as is from './is'
+import * as array from './array'
+import * as object from './object'
 
 export class Event {
 
@@ -36,20 +20,20 @@ export class Event {
   prevent() {
     if (!this.isPrevented) {
       let { originalEvent } = this
-      if (originalEvent && isFunction(originalEvent.preventDefault)) {
+      if (originalEvent && is.func(originalEvent.preventDefault)) {
         originalEvent.preventDefault()
       }
-      this.isPrevented = TRUE
+      this.isPrevented = env.TRUE
     }
   }
 
   stop() {
     if (!this.isStoped) {
       let { originalEvent } = this
-      if (originalEvent && isFunction(originalEvent.stopPropagation)) {
+      if (originalEvent && is.func(originalEvent.stopPropagation)) {
         originalEvent.stopPropagation()
       }
-      this.isStoped = TRUE
+      this.isStoped = env.TRUE
     }
   }
 
@@ -78,11 +62,11 @@ export class Emitter {
 
   off(type, listener) {
     let { listeners } = this
-    if (type == NULL) {
-      objectEach(
+    if (type == env.NULL) {
+      object.each(
         listeners,
         function (list, type) {
-          if (isArray(listeners[type])) {
+          if (is.array(listeners[type])) {
             listeners[type].length = 0
           }
         }
@@ -90,53 +74,53 @@ export class Emitter {
     }
     else {
       let list = listeners[type]
-      if (isArray(list)) {
-        if (listener == NULL) {
+      if (is.array(list)) {
+        if (listener == env.NULL) {
           list.length = 0
         }
         else {
-          removeItem(list, listener)
+          array.removeItem(list, listener)
         }
       }
     }
   }
 
-  fire(type, data, context = NULL) {
+  fire(type, data, context = env.NULL) {
 
     let list = this.listeners[type], isStoped
 
-    if (isArray(list)) {
-      each(
+    if (is.array(list)) {
+      array.each(
         list,
         function (listener) {
           let result
-          if (isArray(data)) {
+          if (is.array(data)) {
             result = listener.apply(context, data)
           }
           else {
-            result = data != NULL
+            result = data != env.NULL
               ? listener.call(context, data)
               : listener.call(context)
           }
           let { $once } = listener
-          if (isFunction($once)) {
+          if (is.func($once)) {
             $once()
           }
 
           // 如果没有返回 false，而是调用了 event.stop 也算是返回 false
           let event = data && data[0]
           if (event && event instanceof Event) {
-            if (result === FALSE) {
+            if (result === env.FALSE) {
               event.prevent()
               event.stop()
             }
             else if (event.isStoped) {
-              result = FALSE
+              result = env.FALSE
             }
           }
 
-          if (result === FALSE) {
-            isStoped = TRUE
+          if (result === env.FALSE) {
+            isStoped = env.TRUE
             return result
           }
         }
@@ -149,12 +133,12 @@ export class Emitter {
 
   has(type, listener) {
     let list = this.listeners[type]
-    if (listener == NULL) {
+    if (listener == env.NULL) {
       // 是否注册过 type 事件
-      return isArray(list) && list.length > 0
+      return is.array(list) && list.length > 0
     }
-    return isArray(list)
-      ? hasItem(list, listener)
-      : FALSE
+    return is.array(list)
+      ? array.hasItem(list, listener)
+      : env.FALSE
   }
 }

@@ -4,39 +4,16 @@ import h from 'snabbdom/h'
 import style from 'snabbdom/modules/style'
 import attributes from 'snabbdom/modules/attributes'
 
+import * as helper from './helper'
+
+import * as env from '../../config/env'
 import * as syntax from '../../config/syntax'
 import * as lifecycle from '../../config/lifecycle'
 
-import {
-  NULL,
-  FALSE,
-} from '../../config/env'
-
-import {
-  parseStyle,
-} from './helper'
-
-import {
-  each,
-  toObject,
-} from '../../util/array'
-
-import {
-  each as objectEach,
-} from '../../util/object'
-
-import {
-  isArray,
-  isFunction,
-} from '../../util/is'
-
-import {
-  TEXT,
-  ATTRIBUTE,
-  DIRECTIVE,
-  ELEMENT,
-} from '../../compiler/nodeType'
-
+import * as is from '../../util/is'
+import * as array from '../../util/array'
+import * as object from '../../util/object'
+import * as nodeType from '../../compiler/nodeType'
 
 export let patch = snabbdom.init([ attributes, style ])
 
@@ -51,17 +28,17 @@ export function create(node, instance) {
 
   let traverse = function (node, enter, leave) {
 
-    if (enter(node) === FALSE) {
+    if (enter(node) === env.FALSE) {
       return
     }
 
     let children = [ ]
-    if (isArray(node.children)) {
-      each(
+    if (is.array(node.children)) {
+      array.each(
         node.children,
         function (item) {
           item = traverse(item, enter, leave)
-          if (item != NULL) {
+          if (item != env.NULL) {
             children.push(item)
           }
         }
@@ -76,13 +53,13 @@ export function create(node, instance) {
     node,
     function (node) {
       counter++
-      if (node.type === ATTRIBUTE || node.type === DIRECTIVE) {
-        return FALSE
+      if (node.type === nodeType.ATTRIBUTE || node.type === nodeType.DIRECTIVE) {
+        return env.FALSE
       }
     },
     function (node, children) {
       counter--
-      if (node.type === ELEMENT) {
+      if (node.type === nodeType.ELEMENT) {
 
         let attrs = { }, directives = [ ], styles
 
@@ -100,11 +77,11 @@ export function create(node, instance) {
           })
         }
         else {
-          objectEach(
+          object.each(
             node.getAttributes(),
             function (value, key) {
               if (key === 'style') {
-                styles = parseStyle(value)
+                styles = helper.parseStyle(value)
               }
               else {
                 attrs[key] = value
@@ -113,7 +90,7 @@ export function create(node, instance) {
           )
         }
 
-        each(
+        array.each(
           node.directives,
           function (node) {
             let { name } = node
@@ -145,14 +122,14 @@ export function create(node, instance) {
         if (!counter || directives.length) {
 
           // 方便指令内查询
-          let map = toObject(directives, 'name')
+          let map = array.toObject(directives, 'name')
 
           let notify = function (vnode, type) {
-            each(
+            array.each(
               directives,
               function (item) {
                 let { directive } = item
-                if (directive && isFunction(directive[type])) {
+                if (directive && is.func(directive[type])) {
                   directive[type]({
                     el: vnode.elm,
                     node: item.node,
@@ -180,7 +157,7 @@ export function create(node, instance) {
 
         return h(node.name, data, children)
       }
-      else if (node.type === TEXT) {
+      else if (node.type === nodeType.TEXT) {
         return node.content
       }
     }

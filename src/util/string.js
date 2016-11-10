@@ -1,8 +1,5 @@
 
-import {
-  NULL,
-} from '../config/env'
-
+import * as env from '../config/env'
 import * as logger from '../config/logger'
 
 import getLocationByIndex from '../function/getLocationByIndex'
@@ -29,7 +26,7 @@ export function matchByQuote(str, nonQuote) {
 }
 
 export function parseError(str, errorMsg, errorIndex) {
-  if (errorIndex == NULL) {
+  if (errorIndex == env.NULL) {
     errorMsg += '.'
   }
   else {
