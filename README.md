@@ -29,5 +29,7 @@
 
 ## 感谢
 
-感谢来自[ React](http://facebook.github.io/react) [Vue](http://vuejs.org) 和 [Ractive](http://www.ractivejs.org/) 的灵感。
+* [React](http://facebook.github.io/react): **不可变数据**和**单向数据流**
+* [Vue](http://vuejs.org)：清晰的 API 结构
+* [Ractive](http://www.ractivejs.org/)：Mustache 语法设计和各种人性化设计
 
