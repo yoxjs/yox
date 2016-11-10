@@ -46,13 +46,15 @@ module.exports = class Node {
   }
 
   execute(context) {
-    // 这里可能是任何类型的结果
-    return execute(
-      compile(this.expr),
+    let fn = compile(this.expr)
+    // 可能是任何类型的结果
+    return fn.apply(
       context.data,
-      function (name) {
-        return context.get(name)
-      }
+      fn.$arguments.map(
+        function (name) {
+          return context.get(name)
+        }
+      )
     )
   }
 

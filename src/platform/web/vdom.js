@@ -151,8 +151,9 @@ export function create(node, instance) {
             each(
               directives,
               function (item) {
-                if (isFunction(item.directive[type])) {
-                  item.directive[type]({
+                let { directive } = item
+                if (directive && isFunction(directive[type])) {
+                  directive[type]({
                     el: vnode.elm,
                     node: item.node,
                     name: item.name,

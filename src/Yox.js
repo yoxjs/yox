@@ -45,6 +45,7 @@ import {
   hasItem,
   lastItem,
   removeItem,
+  toArray,
 } from './util/array'
 
 import {
@@ -57,7 +58,7 @@ import {
 import {
   get as componentGet,
   set as componentSet,
-  bind as componentBind,
+  compileAttr as componentCompileAttr,
 } from './util/component'
 
 import {
@@ -69,7 +70,7 @@ import {
   create,
 } from './platform/web/vdom'
 
-// 5 个内建指令，其他指令通过扩展实现
+// 4 个内建指令，其他指令通过扩展实现
 import ref from './directive/ref'
 import lazy from './directive/lazy'
 import event from './directive/event'
@@ -456,6 +457,9 @@ module.exports = class Yox {
       bubble = TRUE
       data = NULL
     }
+    if (data && objectHas(data, 'length') && !isArray(data)) {
+      data = toArray(data)
+    }
     let instance = this
     let { $parent, $eventEmitter } = instance
     if (!$eventEmitter.fire(type, data, instance)) {
@@ -547,7 +551,6 @@ module.exports = class Yox {
           )
         }
       )
-
       return changes
     }
 
@@ -605,6 +608,10 @@ module.exports = class Yox {
     options = objectExtend({ }, options, extra)
     options.parent = this
     return new Yox(options)
+  }
+
+  compileAttr(keypath, value) {
+    return componentCompileAttr(this, keypath, value)
   }
 
   getComponent(name) {

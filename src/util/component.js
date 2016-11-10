@@ -1,12 +1,86 @@
 
 import {
+  NULL,
+} from '../config/env'
+
+import * as logger from '../config/logger'
+import * as syntax from '../config/syntax'
+
+import {
   get as objectGet,
   has,
-  each,
-  extend,
+  copy,
 } from './object'
 
+import {
+  CALL,
+  MEMBER,
+  LITERAL,
+  IDENTIFIER,
+  parse,
+} from './expression'
+
+import {
+  Event,
+} from './event'
+
+import {
+  stringify,
+} from './keypath'
+
 import * as registry from '../config/registry'
+
+export function compileAttr(instance, keypath, value) {
+  value = value.trim()
+  if (value.indexOf('(') > 0) {
+    let ast = parse(value)
+    if (ast.type === CALL) {
+      return function (event) {
+        let isEvent = event instanceof Event
+        let args = copy(ast.arguments)
+        if (!args.length) {
+          if (isEvent) {
+            args.push(event)
+          }
+        }
+        else {
+          args = args.map(
+            function (item) {
+              let { name, type } = item
+              if (type === LITERAL) {
+                return item.value
+              }
+              if (type === IDENTIFIER) {
+                if (name === syntax.SPECIAL_EVENT) {
+                  if (isEvent) {
+                    return event
+                  }
+                }
+                else if (name === syntax.SPECIAL_KEYPATH) {
+                  return keypath
+                }
+              }
+              else if (type === MEMBER) {
+                name = stringify(item)
+              }
+
+              let result = testKeypath(instance, keypath, name)
+              if (result) {
+                return result.value
+              }
+            }
+          )
+        }
+        instance[ast.callee.name].apply(instance, args)
+      }
+    }
+  }
+  else {
+    return function () {
+      instance.fire(value, arguments)
+    }
+  }
+}
 
 export function testKeypath(instance, keypath, name) {
 
@@ -44,7 +118,7 @@ export function get(instance, type, name) {
       return value
     }
     else {
-      throw new Error(`${name} ${type} is not found.`)
+      logger.error(`${name} ${type} is not found.`)
     }
   }
 }
