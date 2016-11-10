@@ -73,7 +73,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /******/ 	}
 
 /******/ 	var hotApplyOnUpdate = true;
-/******/ 	var hotCurrentHash = "80bae032e44ed082fd93"; // eslint-disable-line no-unused-vars
+/******/ 	var hotCurrentHash = "fdbbae199c2cd601db09"; // eslint-disable-line no-unused-vars
 /******/ 	var hotCurrentModuleData = {};
 /******/ 	var hotCurrentParents = []; // eslint-disable-line no-unused-vars
 
@@ -597,14 +597,15 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _class, _temp;
 
-	// 4 个内建指令，其他指令通过扩展实现
+	var _env = __webpack_require__(1);
 
+	var env = _interopRequireWildcard(_env);
 
-	var _cache = __webpack_require__(1);
+	var _cache = __webpack_require__(2);
 
 	var cache = _interopRequireWildcard(_cache);
 
-	var _logger = __webpack_require__(2);
+	var _logger = __webpack_require__(3);
 
 	var logger = _interopRequireWildcard(_logger);
 
@@ -620,7 +621,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var registry = _interopRequireWildcard(_registry);
 
-	var _switcher = __webpack_require__(3);
+	var _switcher = __webpack_require__(4);
 
 	var switcher = _interopRequireWildcard(_switcher);
 
@@ -628,52 +629,55 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var lifecycle = _interopRequireWildcard(_lifecycle);
 
-	var _env = __webpack_require__(4);
-
 	var _mustache = __webpack_require__(13);
 
-	var _event = __webpack_require__(32);
-
-	var _nextTask = __webpack_require__(33);
-
-	var _keypath = __webpack_require__(37);
-
-	var _object = __webpack_require__(9);
-
-	var _array = __webpack_require__(11);
+	var mustache = _interopRequireWildcard(_mustache);
 
 	var _is = __webpack_require__(8);
 
+	var is = _interopRequireWildcard(_is);
+
+	var _event = __webpack_require__(32);
+
+	var event = _interopRequireWildcard(_event);
+
+	var _array = __webpack_require__(11);
+
+	var array = _interopRequireWildcard(_array);
+
+	var _object = __webpack_require__(9);
+
+	var object = _interopRequireWildcard(_object);
+
+	var _keypath = __webpack_require__(33);
+
+	var keypath = _interopRequireWildcard(_keypath);
+
+	var _nextTask = __webpack_require__(34);
+
+	var nextTask = _interopRequireWildcard(_nextTask);
+
 	var _component = __webpack_require__(38);
 
-	var _helper = __webpack_require__(39);
+	var component = _interopRequireWildcard(_component);
 
-	var _vdom = __webpack_require__(41);
+	var _vdom = __webpack_require__(39);
 
-	var _ref = __webpack_require__(49);
+	var vdom = _interopRequireWildcard(_vdom);
 
-	var _ref2 = _interopRequireDefault(_ref);
+	var _helper = __webpack_require__(47);
 
-	var _event2 = __webpack_require__(50);
-
-	var _event3 = _interopRequireDefault(_event2);
-
-	var _model = __webpack_require__(51);
-
-	var _model2 = _interopRequireDefault(_model);
-
-	var _component2 = __webpack_require__(53);
-
-	var _component3 = _interopRequireDefault(_component2);
-
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
+	var helper = _interopRequireWildcard(_helper);
 
 	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj["default"] = obj; return newObj; } }
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 	registry.directive.set({
-	  ref: _ref2["default"], event: _event3["default"], model: _model2["default"], component: _component3["default"]
+	  ref: __webpack_require__(49),
+	  event: __webpack_require__(50),
+	  model: __webpack_require__(51),
+	  component: __webpack_require__(53)
 	});
 
 	module.exports = (_temp = _class = function () {
@@ -718,14 +722,14 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    // el 和 template 都可以传选择器
 
-	    template = pattern.tag.test(template) ? template : (0, _helper.find)(template).innerHTML;
+	    template = pattern.tag.test(template) ? template : helper.find(template).innerHTML;
 
-	    el = (0, _is.isString)(el) ? (0, _helper.find)(el) : el;
+	    el = is.string(el) ? helper.find(el) : el;
 
 	    if (!el || el.nodeType !== 1) {
 	      logger.error('Passing a `el` option must be a html element.');
 	    }
-	    if (props && ((0, _is.isObject)(data) || (0, _is.isArray)(data))) {
+	    if (props && (is.object(data) || is.array(data))) {
 	      logger.warn('Passing a `data` option with object and array to component is discouraged.');
 	    }
 
@@ -742,52 +746,52 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    // 拆分实例方法和生命周期函数
 	    var hooks = {};
-	    (0, _object.each)(lifecycle, function (name) {
+	    object.each(lifecycle, function (name) {
 	      hooks['on' + name] = name;
 	    });
 
 	    // 监听各种事件
-	    instance.$eventEmitter = new _event.Emitter();
+	    instance.$eventEmitter = new event.Emitter();
 
-	    (0, _object.each)(hooks, function (value, key) {
-	      if ((0, _is.isFunction)(options[key])) {
+	    object.each(hooks, function (value, key) {
+	      if (is.func(options[key])) {
 	        instance.on(value, options[key]);
 	      }
 	    });
 
 	    instance.fire(lifecycle.INIT);
 
-	    if ((0, _is.isObject)(methods)) {
-	      (0, _object.each)(methods, function (value, key) {
+	    if (is.object(methods)) {
+	      object.each(methods, function (value, key) {
 	        instance[key] = value;
 	      });
 	    }
 
-	    data = (0, _is.isFunction)(data) ? data.call(instance) : data;
-	    if ((0, _is.isObject)(props)) {
-	      if (!(0, _is.isObject)(data)) {
+	    data = is.func(data) ? data.call(instance) : data;
+	    if (is.object(props)) {
+	      if (!is.object(data)) {
 	        data = {};
 	      }
-	      (0, _object.extend)(data, props);
+	      object.extend(data, props);
 	    }
 	    if (data) {
 	      instance.$data = data;
 	    }
 
-	    if ((0, _is.isObject)(components)) {
+	    if (is.object(components)) {
 	      instance.$components = components;
 	    }
-	    if ((0, _is.isObject)(directives)) {
+	    if (is.object(directives)) {
 	      instance.$directives = directives;
 	    }
-	    if ((0, _is.isObject)(filters)) {
+	    if (is.object(filters)) {
 	      instance.$filters = filters;
 	    }
-	    if ((0, _is.isObject)(partials)) {
+	    if (is.object(partials)) {
 	      instance.$partials = partials;
 	    }
 
-	    if ((0, _is.isObject)(computed)) {
+	    if (is.object(computed)) {
 	      (function () {
 
 	        // 把计算属性拆为 getter 和 setter
@@ -806,20 +810,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	        // computed => [ dep1, dep2, ... ]
 	        var $computedDeps = instance.$computedDeps = {};
 
-	        (0, _object.each)(computed, function (item, keypath) {
+	        object.each(computed, function (item, keypath) {
 	          var get = void 0,
 	              set = void 0,
-	              cache = _env.TRUE;
-	          if ((0, _is.isFunction)(item)) {
+	              cache = env.TRUE;
+	          if (is.func(item)) {
 	            get = item;
-	          } else if ((0, _is.isObject)(item)) {
-	            if ((0, _object.has)(item, 'cache')) {
+	          } else if (is.object(item)) {
+	            if (object.has(item, 'cache')) {
 	              cache = item.cache;
 	            }
-	            if ((0, _is.isFunction)(item.get)) {
+	            if (is.func(item.get)) {
 	              get = item.get;
 	            }
-	            if ((0, _is.isFunction)(item.set)) {
+	            if (is.func(item.set)) {
 	              set = item.set;
 	            }
 	          }
@@ -827,7 +831,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	          if (get) {
 	            var getter = function getter() {
 
-	              if (cache && (0, _object.has)($computedCache, keypath)) {
+	              if (cache && object.has($computedCache, keypath)) {
 	                return $computedCache[keypath];
 	              }
 
@@ -843,10 +847,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	              // 增加了哪些依赖，删除了哪些依赖
 	              var addedDeps = [];
 	              var removedDeps = [];
-	              if ((0, _is.isArray)(oldDeps)) {
-	                (0, _array.each)((0, _array.merge)(oldDeps, newDeps), function (dep) {
-	                  var oldExisted = (0, _array.hasItem)(oldDeps, dep);
-	                  var newExisted = (0, _array.hasItem)(newDeps, dep);
+	              if (is.array(oldDeps)) {
+	                array.each(array.merge(oldDeps, newDeps), function (dep) {
+	                  var oldExisted = array.hasItem(oldDeps, dep);
+	                  var newExisted = array.hasItem(newDeps, dep);
 	                  if (oldExisted && !newExisted) {
 	                    removedDeps.push(dep);
 	                  } else if (!oldExisted && newExisted) {
@@ -857,15 +861,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	                addedDeps = newDeps;
 	              }
 
-	              (0, _array.each)(addedDeps, function (dep) {
-	                if (!(0, _is.isArray)($computedWatchers[dep])) {
+	              array.each(addedDeps, function (dep) {
+	                if (!is.array($computedWatchers[dep])) {
 	                  $computedWatchers[dep] = [];
 	                }
 	                $computedWatchers[dep].push(keypath);
 	              });
 
-	              (0, _array.each)(removedDeps, function (dep) {
-	                (0, _array.removeItem)($computedWatchers[dep], keypath);
+	              array.each(removedDeps, function (dep) {
+	                array.removeItem($computedWatchers[dep], keypath);
 	              });
 
 	              // 不论是否开启 computed cache，获取 oldValue 时还有用
@@ -874,7 +878,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	              return result;
 	            };
-	            getter.computed = _env.TRUE;
+	            getter.computed = env.TRUE;
 	            $computedGetters[keypath] = getter;
 	          }
 
@@ -885,19 +889,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	      })();
 	    }
 
-	    if ((0, _is.isObject)(events)) {
-	      (0, _object.each)(events, function (listener, type) {
-	        if ((0, _is.isFunction)(listener)) {
+	    if (is.object(events)) {
+	      object.each(events, function (listener, type) {
+	        if (is.func(listener)) {
 	          instance.on(type, listener);
 	        }
 	      });
 	    }
 
 	    // 监听数据变化
-	    instance.$watchEmitter = new _event.Emitter();
+	    instance.$watchEmitter = new event.Emitter();
 
-	    if ((0, _is.isObject)(watchers)) {
-	      (0, _object.each)(watchers, function (watcher, keypath) {
+	    if (is.object(watchers)) {
+	      object.each(watchers, function (watcher, keypath) {
 	        instance.watch(keypath, watcher);
 	      });
 	    }
@@ -906,10 +910,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	    instance.fire(lifecycle.CREATE);
 
 	    // 编译结果
-	    instance.$template = (0, _mustache.parse)(template, function (name) {
+	    instance.$template = mustache.parse(template, function (name) {
 	      return instance.getPartial(name);
 	    }, function (name, node) {
-	      (0, _component.set)(instance, 'partial', name, node);
+	      component.set(instance, 'partial', name, node);
 	    });
 
 	    instance.fire(lifecycle.COMPILE);
@@ -933,8 +937,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	          $computedGetters = this.$computedGetters;
 
 
-	      if ((0, _is.isArray)($computedStack)) {
-	        var deps = (0, _array.lastItem)($computedStack);
+	      if (is.array($computedStack)) {
+	        var deps = array.lastItem($computedStack);
 	        if (deps) {
 	          deps.push(keypath);
 	        }
@@ -945,7 +949,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        }
 	      }
 
-	      var result = (0, _object.get)($data, keypath);
+	      var result = object.get($data, keypath);
 	      if (result) {
 	        return result.value;
 	      }
@@ -954,7 +958,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    key: 'set',
 	    value: function set(keypath, value) {
 	      var model = keypath;
-	      if ((0, _is.isString)(keypath)) {
+	      if (is.string(keypath)) {
 	        model = {};
 	        model[keypath] = value;
 	      }
@@ -963,8 +967,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	        if (switcher.sync) {
 	          instance.updateView();
 	        } else if (!instance.$syncing) {
-	          instance.$syncing = _env.TRUE;
-	          (0, _nextTask.add)(function () {
+	          instance.$syncing = env.TRUE;
+	          nextTask.add(function () {
 	            delete instance.$syncing;
 	            instance.updateView();
 	          });
@@ -989,12 +993,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }, {
 	    key: 'fire',
 	    value: function fire(type, data, bubble) {
-	      if (arguments.length === 2 && data === _env.TRUE) {
-	        bubble = _env.TRUE;
-	        data = _env.NULL;
+	      if (arguments.length === 2 && data === env.TRUE) {
+	        bubble = env.TRUE;
+	        data = env.NULL;
 	      }
-	      if (data && (0, _object.has)(data, 'length') && !(0, _is.isArray)(data)) {
-	        data = (0, _array.toArray)(data);
+	      if (data && object.has(data, 'length') && !is.array(data)) {
+	        data = array.toArray(data);
 	      }
 	      var instance = this;
 	      var $parent = instance.$parent,
@@ -1034,20 +1038,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	          $computedSetters = instance.$computedSetters;
 
 
-	      var hasComputed = (0, _is.isObject)($computedWatchers),
+	      var hasComputed = is.object($computedWatchers),
 	          changes = {},
 	          setter = void 0,
 	          oldValue = void 0;
 
-	      (0, _object.each)(model, function (value, keypath) {
-	        oldValue = instance.get(keypath);
+	      object.each(model, function (value, key) {
+	        oldValue = instance.get(key);
 	        if (value !== oldValue) {
 
-	          changes[keypath] = [value, oldValue];
+	          changes[key] = [value, oldValue];
 
-	          if (hasComputed && (0, _is.isArray)($computedWatchers[keypath])) {
-	            (0, _array.each)($computedWatchers[keypath], function (watcher) {
-	              if ((0, _object.has)($computedCache, watcher)) {
+	          if (hasComputed && is.array($computedWatchers[key])) {
+	            array.each($computedWatchers[key], function (watcher) {
+	              if (object.has($computedCache, watcher)) {
 	                delete $computedCache[watcher];
 	              }
 	            });
@@ -1055,21 +1059,21 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	          // 计算属性优先
 	          if (hasComputed) {
-	            setter = $computedSetters[keypath];
+	            setter = $computedSetters[key];
 	            if (setter) {
 	              setter(value);
 	              return;
 	            }
 	          }
 
-	          (0, _object.set)($data, keypath, value);
+	          object.set($data, key, value);
 	        }
 	      });
 
-	      if ((0, _object.count)(changes)) {
-	        (0, _object.each)(changes, function (args, keypath) {
-	          (0, _array.each)((0, _keypath.getWildcardMatches)(keypath), function (wildcardKeypath) {
-	            $watchEmitter.fire(wildcardKeypath, (0, _array.merge)(args, (0, _keypath.getWildcardNames)(keypath, wildcardKeypath)), instance);
+	      if (object.count(changes)) {
+	        object.each(changes, function (args, key) {
+	          array.each(keypath.getWildcardMatches(key), function (wildcardKeypath) {
+	            $watchEmitter.fire(wildcardKeypath, array.merge(args, keypath.getWildcardNames(key, wildcardKeypath)), instance);
 	          });
 	        });
 	        return changes;
@@ -1091,24 +1095,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	      var context = {};
 
 	      // 在 data 中也能写函数
-	      (0, _object.extend)(context, registry.filter.data, $data, $filters);
-	      (0, _object.each)(context, function (value, key) {
-	        if ((0, _is.isFunction)(value)) {
+	      object.extend(context, registry.filter.data, $data, $filters);
+	      object.each(context, function (value, key) {
+	        if (is.func(value)) {
 	          context[key] = value.bind(instance);
 	        }
 	      });
 
-	      if ((0, _is.isObject)($computedGetters)) {
-	        (0, _object.extend)(context, $computedGetters);
+	      if (is.object($computedGetters)) {
+	        object.extend(context, $computedGetters);
 	      }
 
-	      var newNode = (0, _vdom.create)((0, _mustache.render)($template, context), instance);
+	      var newNode = vdom.create(mustache.render($template, context), instance);
 
 	      if ($currentNode) {
-	        $currentNode = (0, _vdom.patch)($currentNode, newNode);
+	        $currentNode = vdom.patch($currentNode, newNode);
 	        instance.fire(lifecycle.UDPATE);
 	      } else {
-	        $currentNode = (0, _vdom.patch)(el, newNode);
+	        $currentNode = vdom.patch(el, newNode);
 	        instance.$el = $currentNode.elm;
 	        instance.fire(lifecycle.ATTACH);
 	      }
@@ -1118,34 +1122,34 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }, {
 	    key: 'create',
 	    value: function create(options, extra) {
-	      options = (0, _object.extend)({}, options, extra);
+	      options = object.extend({}, options, extra);
 	      options.parent = this;
 	      return new Yox(options);
 	    }
 	  }, {
 	    key: 'compileAttr',
 	    value: function compileAttr(keypath, value) {
-	      return (0, _component.compileAttr)(this, keypath, value);
+	      return component.compileAttr(this, keypath, value);
 	    }
 	  }, {
 	    key: 'getComponent',
 	    value: function getComponent(name) {
-	      return (0, _component.get)(this, 'component', name);
+	      return component.get(this, 'component', name);
 	    }
 	  }, {
 	    key: 'getFilter',
 	    value: function getFilter(name) {
-	      return (0, _component.get)(this, 'filter', name);
+	      return component.get(this, 'filter', name);
 	    }
 	  }, {
 	    key: 'getDirective',
 	    value: function getDirective(name) {
-	      return (0, _component.get)(this, 'directive', name, true);
+	      return component.get(this, 'directive', name, true);
 	    }
 	  }, {
 	    key: 'getPartial',
 	    value: function getPartial(name) {
-	      return (0, _component.get)(this, 'partial', name);
+	      return component.get(this, 'partial', name);
 	    }
 	  }, {
 	    key: 'dispose',
@@ -1166,10 +1170,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	}, _class.partial = function (id, value) {
 	  registry.partial.set(id, value);
 	}, _class.nextTick = function (fn) {
-	  (0, _nextTask.add)(fn);
+	  nextTask.add(fn);
 	}, _class.use = function (plugin) {
 	  plugin.install(Yox);
-	}, _class.Event = _event.Event, _temp);
+	}, _class.Event = event.Event, _temp);
 
 	/**
 	 * [TODO]
@@ -1180,13 +1184,47 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * 5. 计算属性是否可以 watch（不可以）
 	 * 6. 需要转义的文本节点如果出现在属性值里，是否需要 encode
 	 * 7. 数组方法的劫持（不需要劫持，改完再 set 即可）
-	 * 8. 属性延展（用 #each 遍历数据）
+	 * 8. 属性延展（用 #array.each 遍历数据）
 	 * 9. 报错信息完善
 	 * 10. SEO友好
 	 */
 
 /***/ },
 /* 1 */
+/***/ function(module, exports) {
+
+	"use strict";
+
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+
+	/**
+	 * 为了压缩定义的三个常量
+	 *
+	 * @type {boolean}
+	 */
+	var TRUE = exports.TRUE = true;
+	var FALSE = exports.FALSE = false;
+	var NULL = exports.NULL = null;
+	var UNDEFINED = exports.UNDEFINED = undefined;
+
+	/**
+	 * 浏览器环境下的 window 对象
+	 *
+	 * @type {?Window}
+	 */
+	var win = exports.win = window;
+
+	/**
+	 * 浏览器环境下的 document 对象
+	 *
+	 * @type {?Document}
+	 */
+	var doc = exports.doc = document;
+
+/***/ },
+/* 2 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -1207,7 +1245,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var keypathWildcardMatches = exports.keypathWildcardMatches = {};
 
 /***/ },
-/* 2 */
+/* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -1217,7 +1255,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	});
 	exports.error = exports.warn = undefined;
 
-	var _switcher = __webpack_require__(3);
+	var _switcher = __webpack_require__(4);
 
 	var switcher = _interopRequireWildcard(_switcher);
 
@@ -1254,7 +1292,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 3 */
+/* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -1264,7 +1302,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	});
 	exports.sync = exports.debug = undefined;
 
-	var _env = __webpack_require__(4);
+	var _env = __webpack_require__(1);
+
+	var env = _interopRequireWildcard(_env);
+
+	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj["default"] = obj; return newObj; } }
 
 	/**
 	 * 是否是调试状态
@@ -1273,48 +1315,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	 *
 	 * @type {boolean}
 	 */
-	var debug = exports.debug = _env.FALSE;
+	var debug = exports.debug = env.FALSE;
 
 	/**
 	 * 是否同步更新
 	 *
 	 * @type {boolean}
 	 */
-	var sync = exports.sync = _env.TRUE;
-
-/***/ },
-/* 4 */
-/***/ function(module, exports) {
-
-	"use strict";
-
-	Object.defineProperty(exports, "__esModule", {
-	  value: true
-	});
-
-	/**
-	 * 为了压缩定义的三个常量
-	 *
-	 * @type {boolean}
-	 */
-	var TRUE = exports.TRUE = true;
-	var FALSE = exports.FALSE = false;
-	var NULL = exports.NULL = null;
-	var UNDEFINED = exports.UNDEFINED = undefined;
-
-	/**
-	 * 浏览器环境下的 window 对象
-	 *
-	 * @type {?Window}
-	 */
-	var win = exports.win = window;
-
-	/**
-	 * 浏览器环境下的 document 对象
-	 *
-	 * @type {?Document}
-	 */
-	var doc = exports.doc = document;
+	var sync = exports.sync = env.TRUE;
 
 /***/ },
 /* 5 */
@@ -1385,7 +1393,13 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _is = __webpack_require__(8);
 
+	var is = _interopRequireWildcard(_is);
+
 	var _object = __webpack_require__(9);
+
+	var object = _interopRequireWildcard(_object);
+
+	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj["default"] = obj; return newObj; } }
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -1406,8 +1420,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    value: function set(key, value) {
 	      var data = this.data;
 
-	      if ((0, _is.isObject)(key)) {
-	        (0, _object.each)(key, function (value, name) {
+	      if (is.object(key)) {
+	        object.each(key, function (value, name) {
 	          data[name] = value;
 	        });
 	      } else {
@@ -1436,15 +1450,19 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
-	exports.isFunction = isFunction;
-	exports.isArray = isArray;
-	exports.isObject = isObject;
-	exports.isString = isString;
-	exports.isNumber = isNumber;
-	exports.isBoolean = isBoolean;
-	exports.isNumeric = isNumeric;
+	exports.func = func;
+	exports.array = array;
+	exports.object = object;
+	exports.string = string;
+	exports.number = number;
+	exports["boolean"] = boolean;
+	exports.numeric = numeric;
 
-	var _env = __webpack_require__(4);
+	var _env = __webpack_require__(1);
+
+	var env = _interopRequireWildcard(_env);
+
+	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj["default"] = obj; return newObj; } }
 
 	var toString = Object.prototype.toString;
 
@@ -1452,36 +1470,33 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return toString.call(arg).toLowerCase() === '[object ' + type + ']';
 	}
 
-	function isFunction(arg) {
+	function func(arg) {
 	  return typeof arg === 'function';
 	}
 
-	function isArray(arg) {
+	function array(arg) {
 	  return is(arg, 'array');
 	}
 
-	function isObject(arg) {
-	  if (!arg) {
-	    return _env.FALSE;
-	  }
+	function object(arg) {
 	  // new String() 算 object
 	  // 因此这里不能用 is 函数
-	  return (typeof arg === 'undefined' ? 'undefined' : _typeof(arg)) === 'object';
+	  return arg ? (typeof arg === 'undefined' ? 'undefined' : _typeof(arg)) === 'object' : env.FALSE;
 	}
 
-	function isString(arg) {
+	function string(arg) {
 	  return is(arg, 'string');
 	}
 
-	function isNumber(arg) {
+	function number(arg) {
 	  return is(arg, 'number');
 	}
 
-	function isBoolean(arg) {
+	function boolean(arg) {
 	  return is(arg, 'boolean');
 	}
 
-	function isNumeric(arg) {
+	function numeric(arg) {
 	  return !isNaN(parseFloat(arg)) && isFinite(arg);
 	}
 
@@ -1507,11 +1522,19 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _toString2 = _interopRequireDefault(_toString);
 
-	var _env = __webpack_require__(4);
+	var _env = __webpack_require__(1);
+
+	var env = _interopRequireWildcard(_env);
 
 	var _is = __webpack_require__(8);
 
+	var is = _interopRequireWildcard(_is);
+
 	var _array = __webpack_require__(11);
+
+	var array = _interopRequireWildcard(_array);
+
+	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj["default"] = obj; return newObj; } }
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
 
@@ -1520,7 +1543,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	function each(object, callback) {
-	  (0, _array.each)(keys(object), function (key) {
+	  array.each(keys(object), function (key) {
 	    return callback(object[key], key);
 	  });
 	}
@@ -1537,7 +1560,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var args = arguments,
 	      result = args[0];
 	  for (var i = 1, len = args.length; i < len; i++) {
-	    if ((0, _is.isObject)(args[i])) {
+	    if (is.object(args[i])) {
 	      each(args[i], function (value, key) {
 	        result[key] = value;
 	      });
@@ -1548,12 +1571,12 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	function copy(object, deep) {
 	  var result = object;
-	  if ((0, _is.isArray)(object)) {
+	  if (is.array(object)) {
 	    result = [];
-	    (0, _array.each)(object, function (item, index) {
+	    array.each(object, function (item, index) {
 	      result[index] = deep ? copy(item) : item;
 	    });
-	  } else if ((0, _is.isObject)(object)) {
+	  } else if (is.object(object)) {
 	    result = {};
 	    each(object, function (value, key) {
 	      result[key] = deep ? copy(value) : value;
@@ -1591,21 +1614,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	function set(object, keypath, value) {
-	  var autoFill = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : _env.TRUE;
+	  var autoFill = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : env.TRUE;
 
 	  keypath = (0, _toString2["default"])(keypath);
 	  if (keypath.indexOf('.') > 0) {
 	    var originalObject = object;
 	    var list = keypath.split('.');
 	    var prop = list.pop();
-	    (0, _array.each)(list, function (item, index) {
+	    array.each(list, function (item, index) {
 	      if (object[item]) {
 	        object = object[item];
 	      } else if (autoFill) {
 	        object = object[item] = {};
 	      } else {
-	        object = _env.NULL;
-	        return _env.FALSE;
+	        object = env.NULL;
+	        return env.FALSE;
 	      }
 	    });
 	    if (object && object !== originalObject) {
@@ -1624,11 +1647,15 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _is = __webpack_require__(8);
 
+	var is = _interopRequireWildcard(_is);
+
+	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj["default"] = obj; return newObj; } }
+
 	module.exports = function (str, defaultValue) {
-	  if ((0, _is.isString)(str)) {
+	  if (is.string(str)) {
 	    return str;
 	  }
-	  if ((0, _is.isNumeric)(str)) {
+	  if (is.numeric(str)) {
 	    return '' + str;
 	  }
 	  return arguments.length === 2 ? defaultValue : '';
@@ -1653,23 +1680,27 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.lastItem = lastItem;
 	exports.removeItem = removeItem;
 
-	var _env = __webpack_require__(4);
+	var _env = __webpack_require__(1);
+
+	var env = _interopRequireWildcard(_env);
 
 	var _is = __webpack_require__(8);
+
+	var is = _interopRequireWildcard(_is);
+
+	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj["default"] = obj; return newObj; } }
 
 	var slice = Array.prototype.slice;
 	function each(array, callback) {
 	  for (var i = 0, len = array.length; i < len; i++) {
-	    if (callback(array[i], i) === _env.FALSE) {
+	    if (callback(array[i], i) === env.FALSE) {
 	      break;
 	    }
 	  }
 	}
 
 	// array.reduce 如果是空数组，不传 initialValue 居然会报错，所以封装一下
-	function reduce(array, callback) {
-	  var initialValue = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : _env.NULL;
-
+	function reduce(array, callback, initialValue) {
 	  return array.reduce(callback, initialValue);
 	}
 
@@ -1690,7 +1721,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  } catch (e) {
 	    return [];
 	  }
-	  return (0, _is.isArray)(array) ? array : slice.call(array);
+	  return is.array(array) ? array : slice.call(array);
 	}
 
 	function toObject(array, key) {
@@ -1701,26 +1732,22 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return result;
 	}
 
-	function indexOf(array, item) {
-	  var strict = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : _env.TRUE;
-
-	  if (strict) {
+	function indexOf(array, item, strict) {
+	  if (strict !== env.FALSE) {
 	    return array.indexOf(item);
 	  } else {
 	    var index = -1;
 	    each(array, function (value, i) {
 	      if (item == value) {
 	        index = i;
-	        return _env.FALSE;
+	        return env.FALSE;
 	      }
 	    });
 	    return index;
 	  }
 	}
 
-	function hasItem(array, item) {
-	  var strict = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : _env.TRUE;
-
+	function hasItem(array, item, strict) {
 	  return indexOf(array, item, strict) >= 0;
 	}
 
@@ -1728,9 +1755,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return array[array.length - 1];
 	}
 
-	function removeItem(array, item) {
-	  var strict = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : _env.TRUE;
-
+	function removeItem(array, item, strict) {
 	  var index = indexOf(array, item, strict);
 	  if (index >= 0) {
 	    array.splice(index, 1);
@@ -1802,15 +1827,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.parse = undefined;
 	exports.render = render;
 
-	var _env = __webpack_require__(4);
+	var _env = __webpack_require__(1);
 
 	var env = _interopRequireWildcard(_env);
 
-	var _cache = __webpack_require__(1);
+	var _cache = __webpack_require__(2);
 
 	var cache = _interopRequireWildcard(_cache);
 
-	var _logger = __webpack_require__(2);
+	var _logger = __webpack_require__(3);
 
 	var logger = _interopRequireWildcard(_logger);
 
@@ -2184,7 +2209,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	              addChild(name.startsWith(syntax.DIRECTIVE_PREFIX) || name.startsWith(syntax.DIRECTIVE_EVENT_PREFIX) ? new _Directive2["default"](name) : new _Attribute2["default"](name));
 
-	              if (is.isString(match[2])) {
+	              if (is.string(match[2])) {
 	                quote = match[2].charAt(1);
 	                content = parseAttributeValue(content);
 	                // else 可能跟了一个表达式
@@ -2217,7 +2242,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	          array.each(parsers, function (parser) {
 	            if (parser.test(content)) {
 	              node = parser.create(content, popStack);
-	              if (is.isString(node)) {
+	              if (is.string(node)) {
 	                string.parseError(template, node, errorIndex);
 	              }
 	              if (isAttributesParsing && node.type === nodeType.EXPRESSION && !attrLike[currentNode.type]) {
@@ -2310,7 +2335,13 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _object = __webpack_require__(9);
 
+	var object = _interopRequireWildcard(_object);
+
 	var _expression = __webpack_require__(15);
+
+	var expression = _interopRequireWildcard(_expression);
+
+	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj["default"] = obj; return newObj; } }
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -2327,7 +2358,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    instance.data = data;
 	    instance.parent = parent;
 	    instance.cache = {};
-	    instance.cache[_expression.THIS_ARG] = data;
+	    instance.cache[expression.THIS_ARG] = data;
 	  }
 
 	  _createClass(Context, [{
@@ -2341,13 +2372,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	      var data = this.data,
 	          cache = this.cache;
 
-	      if ((0, _object.has)(cache, keypath)) {
+	      if (object.has(cache, keypath)) {
 	        delete cache[keypath];
 	      }
 	      if (keypath.indexOf('.') > 0) {
 	        var terms = keypath.split('.');
 	        var prop = terms.pop();
-	        var result = (0, _object.get)(data, terms.join('.'));
+	        var result = object.get(data, terms.join('.'));
 	        if (result) {
 	          result.value[prop] = value;
 	        }
@@ -2363,10 +2394,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	      var _instance = instance,
 	          cache = _instance.cache;
 
-	      if (!(0, _object.has)(cache, keypath)) {
+	      if (!object.has(cache, keypath)) {
 	        var result = void 0;
 	        while (instance) {
-	          result = (0, _object.get)(instance.data, keypath);
+	          result = object.get(instance.data, keypath);
 	          if (result) {
 	            cache[keypath] = result.value;
 	            break;
@@ -2397,21 +2428,29 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.compile = compile;
 	exports.traverse = traverse;
 
-	var _env = __webpack_require__(4);
+	var _env = __webpack_require__(1);
 
-	var _cache = __webpack_require__(1);
+	var env = _interopRequireWildcard(_env);
+
+	var _cache = __webpack_require__(2);
 
 	var cache = _interopRequireWildcard(_cache);
 
-	var _logger = __webpack_require__(2);
+	var _logger = __webpack_require__(3);
 
 	var logger = _interopRequireWildcard(_logger);
 
+	var _is = __webpack_require__(8);
+
+	var is = _interopRequireWildcard(_is);
+
 	var _array = __webpack_require__(11);
+
+	var array = _interopRequireWildcard(_array);
 
 	var _object = __webpack_require__(9);
 
-	var _is = __webpack_require__(8);
+	var object = _interopRequireWildcard(_object);
 
 	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj["default"] = obj; return newObj; } }
 
@@ -2453,17 +2492,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @return {Array.<string>}
 	 */
 	function sortKeys(obj) {
-	  return (0, _object.keys)(obj).sort(function (a, b) {
+	  return object.keys(obj).sort(function (a, b) {
 	    return b.length - a.length;
 	  });
 	}
 
 	// 用于判断是否是一元操作符
 	var unaryOperatorMap = {
-	  '+': _env.TRUE,
-	  '-': _env.TRUE,
-	  '!': _env.TRUE,
-	  '~': _env.TRUE
+	  '+': env.TRUE,
+	  '-': env.TRUE,
+	  '!': env.TRUE,
+	  '~': env.TRUE
 	};
 
 	var sortedUnaryOperatorList = sortKeys(unaryOperatorMap);
@@ -2499,10 +2538,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	// 举个例子：a === true
 	// 从解析器的角度来说，a 和 true 是一样的 token
 	var keywords = {
-	  'true': _env.TRUE,
-	  'false': _env.FALSE,
-	  'null': _env.NULL,
-	  'undefined': _env.UNDEFINED
+	  'true': env.TRUE,
+	  'false': env.FALSE,
+	  'null': env.NULL,
+	  'undefined': env.UNDEFINED
 	};
 
 	/**
@@ -2563,10 +2602,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	 */
 	function matchBestToken(content, sortedTokens) {
 	  var result = void 0;
-	  (0, _array.each)(sortedTokens, function (token) {
+	  array.each(sortedTokens, function (token) {
 	    if (content.startsWith(token)) {
 	      result = token;
-	      return _env.FALSE;
+	      return env.FALSE;
 	    }
 	  });
 	  return result;
@@ -2695,7 +2734,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return content.charAt(index);
 	  }
 	  function getCharCode(i) {
-	    return content.charCodeAt(i != _env.NULL ? i : index);
+	    return content.charCodeAt(i != env.NULL ? i : index);
 	  }
 
 	  function skipWhitespace() {
@@ -2717,7 +2756,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    while (index < length) {
 	      index++;
 	      if (getCharCode(index - 1) === quote) {
-	        closed = _env.TRUE;
+	        closed = env.TRUE;
 	        break;
 	      }
 	    }
@@ -2780,7 +2819,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      charCode = getCharCode();
 	      if (charCode === delimiter) {
 	        index++;
-	        closed = _env.TRUE;
+	        closed = env.TRUE;
 	      } else if (charCode === COMMA) {
 	        index++;
 	      } else {
@@ -2967,7 +3006,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  var content = void 0;
 
-	  if ((0, _is.isString)(ast)) {
+	  if (is.string(ast)) {
 	    content = ast;
 	    ast = parse(content);
 	  } else if (ast) {
@@ -2991,7 +3030,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	          if (node.type === IDENTIFIER) {
 	            args.push(node.name);
 	          } else if (node.type === THIS) {
-	            hasThis = _env.TRUE;
+	            hasThis = env.TRUE;
 	            args.push(THIS_ARG);
 	          }
 	        }
@@ -3022,7 +3061,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 	  // enter 返回 false 可阻止继续遍历
-	  if ((0, _is.isFunction)(options.enter) && options.enter(ast) === _env.FALSE) {
+	  if (is.func(options.enter) && options.enter(ast) === env.FALSE) {
 	    return;
 	  }
 
@@ -3050,20 +3089,20 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    case CALL:
 	      traverse(ast.callee, options);
-	      (0, _array.each)(ast.arguments, function (arg) {
+	      array.each(ast.arguments, function (arg) {
 	        traverse(arg, options);
 	      });
 	      break;
 
 	    case ARRAY:
-	      (0, _array.each)(ast.elements, function (element) {
+	      array.each(ast.elements, function (element) {
 	        traverse(element, options);
 	      });
 	      break;
 
 	  }
 
-	  if ((0, _is.isFunction)(options.leave)) {
+	  if (is.func(options.leave)) {
 	    options.leave(ast);
 	  }
 	}
@@ -3338,7 +3377,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-	var _env = __webpack_require__(4);
+	var _env = __webpack_require__(1);
 
 	var env = _interopRequireWildcard(_env);
 
@@ -3556,9 +3595,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	      var iterator = context.get(name);
 
 	      var each = void 0;
-	      if (is.isArray(iterator)) {
+	      if (is.array(iterator)) {
 	        each = array.each;
-	      } else if (is.isObject(iterator)) {
+	      } else if (is.object(iterator)) {
 	        each = object.each;
 	      }
 
@@ -3812,7 +3851,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var is = _interopRequireWildcard(_is);
 
-	var _env = __webpack_require__(4);
+	var _env = __webpack_require__(1);
 
 	var env = _interopRequireWildcard(_env);
 
@@ -3863,12 +3902,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	        content = '';
 	      }
 
-	      if (is.isFunction(content) && content.computed) {
+	      if (is.func(content) && content.computed) {
 	        content = content();
 	      }
 
 	      // 处理需要不转义的
-	      if (!this.safe && is.isString(content) && pattern.tag.test(content)) {
+	      if (!this.safe && is.string(content) && pattern.tag.test(content)) {
 	        array.each(data.parse(content), function (node) {
 	          node.render(data);
 	        });
@@ -3894,7 +3933,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _Node3 = _interopRequireDefault(_Node2);
 
-	var _env = __webpack_require__(4);
+	var _env = __webpack_require__(1);
 
 	var env = _interopRequireWildcard(_env);
 
@@ -3954,7 +3993,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _Node3 = _interopRequireDefault(_Node2);
 
-	var _env = __webpack_require__(4);
+	var _env = __webpack_require__(1);
 
 	var env = _interopRequireWildcard(_env);
 
@@ -4019,7 +4058,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _Node3 = _interopRequireDefault(_Node2);
 
-	var _env = __webpack_require__(4);
+	var _env = __webpack_require__(1);
 
 	var env = _interopRequireWildcard(_env);
 
@@ -4117,9 +4156,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.matchByQuote = matchByQuote;
 	exports.parseError = parseError;
 
-	var _env = __webpack_require__(4);
+	var _env = __webpack_require__(1);
 
-	var _logger = __webpack_require__(2);
+	var env = _interopRequireWildcard(_env);
+
+	var _logger = __webpack_require__(3);
 
 	var logger = _interopRequireWildcard(_logger);
 
@@ -4151,7 +4192,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	function parseError(str, errorMsg, errorIndex) {
-	  if (errorIndex == _env.NULL) {
+	  if (errorIndex == env.NULL) {
 	    errorMsg += '.';
 	  } else {
 	    var _getLocationByIndex = (0, _getLocationByIndex3["default"])(str, errorIndex),
@@ -4169,7 +4210,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 
-	var _env = __webpack_require__(4);
+	var _env = __webpack_require__(1);
 
 	var _array = __webpack_require__(11);
 
@@ -4212,13 +4253,23 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-	var _env = __webpack_require__(4);
+	var _env = __webpack_require__(1);
+
+	var env = _interopRequireWildcard(_env);
 
 	var _is = __webpack_require__(8);
 
+	var is = _interopRequireWildcard(_is);
+
 	var _array = __webpack_require__(11);
 
+	var array = _interopRequireWildcard(_array);
+
 	var _object = __webpack_require__(9);
+
+	var object = _interopRequireWildcard(_object);
+
+	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj["default"] = obj; return newObj; } }
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -4240,10 +4291,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	      if (!this.isPrevented) {
 	        var originalEvent = this.originalEvent;
 
-	        if (originalEvent && (0, _is.isFunction)(originalEvent.preventDefault)) {
+	        if (originalEvent && is.func(originalEvent.preventDefault)) {
 	          originalEvent.preventDefault();
 	        }
-	        this.isPrevented = _env.TRUE;
+	        this.isPrevented = env.TRUE;
 	      }
 	    }
 	  }, {
@@ -4252,10 +4303,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	      if (!this.isStoped) {
 	        var originalEvent = this.originalEvent;
 
-	        if (originalEvent && (0, _is.isFunction)(originalEvent.stopPropagation)) {
+	        if (originalEvent && is.func(originalEvent.stopPropagation)) {
 	          originalEvent.stopPropagation();
 	        }
-	        this.isStoped = _env.TRUE;
+	        this.isStoped = env.TRUE;
 	      }
 	    }
 	  }]);
@@ -4293,19 +4344,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	    value: function off(type, listener) {
 	      var listeners = this.listeners;
 
-	      if (type == _env.NULL) {
-	        (0, _object.each)(listeners, function (list, type) {
-	          if ((0, _is.isArray)(listeners[type])) {
+	      if (type == env.NULL) {
+	        object.each(listeners, function (list, type) {
+	          if (is.array(listeners[type])) {
 	            listeners[type].length = 0;
 	          }
 	        });
 	      } else {
 	        var list = listeners[type];
-	        if ((0, _is.isArray)(list)) {
-	          if (listener == _env.NULL) {
+	        if (is.array(list)) {
+	          if (listener == env.NULL) {
 	            list.length = 0;
 	          } else {
-	            (0, _array.removeItem)(list, listener);
+	            array.removeItem(list, listener);
 	          }
 	        }
 	      }
@@ -4313,39 +4364,39 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }, {
 	    key: 'fire',
 	    value: function fire(type, data) {
-	      var context = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : _env.NULL;
+	      var context = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : env.NULL;
 
 
 	      var list = this.listeners[type],
 	          isStoped = void 0;
 
-	      if ((0, _is.isArray)(list)) {
-	        (0, _array.each)(list, function (listener) {
+	      if (is.array(list)) {
+	        array.each(list, function (listener) {
 	          var result = void 0;
-	          if ((0, _is.isArray)(data)) {
+	          if (is.array(data)) {
 	            result = listener.apply(context, data);
 	          } else {
-	            result = data != _env.NULL ? listener.call(context, data) : listener.call(context);
+	            result = data != env.NULL ? listener.call(context, data) : listener.call(context);
 	          }
 	          var $once = listener.$once;
 
-	          if ((0, _is.isFunction)($once)) {
+	          if (is.func($once)) {
 	            $once();
 	          }
 
 	          // 如果没有返回 false，而是调用了 event.stop 也算是返回 false
 	          var event = data && data[0];
 	          if (event && event instanceof Event) {
-	            if (result === _env.FALSE) {
+	            if (result === env.FALSE) {
 	              event.prevent();
 	              event.stop();
 	            } else if (event.isStoped) {
-	              result = _env.FALSE;
+	              result = env.FALSE;
 	            }
 	          }
 
-	          if (result === _env.FALSE) {
-	            isStoped = _env.TRUE;
+	          if (result === env.FALSE) {
+	            isStoped = env.TRUE;
 	            return result;
 	          }
 	        });
@@ -4357,11 +4408,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	    key: 'has',
 	    value: function has(type, listener) {
 	      var list = this.listeners[type];
-	      if (listener == _env.NULL) {
+	      if (listener == env.NULL) {
 	        // 是否注册过 type 事件
-	        return (0, _is.isArray)(list) && list.length > 0;
+	        return is.array(list) && list.length > 0;
 	      }
-	      return (0, _is.isArray)(list) ? (0, _array.hasItem)(list, listener) : _env.FALSE;
+	      return is.array(list) ? array.hasItem(list, listener) : env.FALSE;
 	    }
 	  }]);
 
@@ -4377,14 +4428,158 @@ return /******/ (function(modules) { // webpackBootstrap
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
+	exports.normalize = normalize;
+	exports.stringify = stringify;
+	exports.getWildcardMatches = getWildcardMatches;
+	exports.getWildcardNames = getWildcardNames;
+
+	var _cache = __webpack_require__(2);
+
+	var cache = _interopRequireWildcard(_cache);
+
+	var _array = __webpack_require__(11);
+
+	var array = _interopRequireWildcard(_array);
+
+	var _expression = __webpack_require__(15);
+
+	var expression = _interopRequireWildcard(_expression);
+
+	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj["default"] = obj; return newObj; } }
+
+	/**
+	 * 把 obj['name'] 的形式转成 obj.name
+	 *
+	 * @param {string} keypath
+	 * @return {string}
+	 */
+	function normalize(keypath) {
+	  var keypathNormalize = cache.keypathNormalize;
+
+
+	  if (!keypathNormalize[keypath]) {
+	    keypathNormalize[keypath] = keypath.indexOf('[') < 0 ? keypath : stringify(expression.parse(keypath));
+	  }
+
+	  return keypathNormalize[keypath];
+	}
+
+	/**
+	 * 把 member 表达式节点解析成 keypath
+	 *
+	 * @param {Object} node
+	 * @return {string}
+	 */
+	function stringify(node) {
+	  var result = [];
+	  do {
+	    var _node = node,
+	        name = _node.name,
+	        property = _node.property;
+
+	    if (property) {
+	      result.push(property.value);
+	    } else if (name) {
+	      result.push(name);
+	    }
+	  } while (node = node.object);
+	  return result.length > 0 ? result.reverse().join('.') : '';
+	}
+
+	/**
+	 * 获取可能的 keypath
+	 *
+	 * @param {string} keypath
+	 * @return {string}
+	 */
+	function getWildcardMatches(keypath) {
+	  var keypathWildcardMatches = cache.keypathWildcardMatches;
+
+
+	  if (!keypathWildcardMatches[keypath]) {
+	    (function () {
+	      var result = [];
+	      var terms = normalize(keypath).split('.');
+	      var toWildcard = function toWildcard(isTrue, index) {
+	        return isTrue ? '*' : terms[index];
+	      };
+	      array.each(getBoolCombinations(terms.length), function (items) {
+	        result.push(items.map(toWildcard).join('.'));
+	      });
+	      keypathWildcardMatches[keypath] = result;
+	    })();
+	  }
+
+	  return keypathWildcardMatches[keypath];
+	}
+
+	/**
+	 * 匹配通配符中的具体名称，如 ('user.name', 'user.*') 返回 ['name']
+	 *
+	 * @param {string} keypath
+	 * @param {string} wildcardKeypath
+	 * @return {Array.<string>}
+	 */
+	function getWildcardNames(keypath, wildcardKeypath) {
+
+	  var result = [];
+	  if (wildcardKeypath.indexOf('*') < 0) {
+	    return result;
+	  }
+
+	  var list = keypath.split('.');
+	  array.each(wildcardKeypath.split('.'), function (name, index) {
+	    if (name === '*') {
+	      result.push(list[index]);
+	    }
+	  });
+
+	  return result;
+	}
+
+	function getBoolCombinations(num) {
+	  var result = [];
+	  var toBool = function toBool(value) {
+	    return value == 1;
+	  };
+	  var length = parseInt(new Array(num + 1).join('1'), 2);
+	  for (var i = 0, binary, j, item; i <= length; i++) {
+	    // 补零
+	    binary = i.toString(2);
+	    if (binary.length < num) {
+	      binary = '0' + binary;
+	    }
+	    // 把 binary 转成布尔值表示
+	    item = [];
+	    for (j = 0; j < num; j++) {
+	      item.push(toBool(binary[j]));
+	    }
+	    result.push(item);
+	  }
+	  return result;
+	}
+
+/***/ },
+/* 34 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
 	exports.add = add;
 	exports.run = run;
 
-	var _nextTick = __webpack_require__(34);
+	var _nextTick = __webpack_require__(35);
 
 	var _nextTick2 = _interopRequireDefault(_nextTick);
 
 	var _array = __webpack_require__(11);
+
+	var array = _interopRequireWildcard(_array);
+
+	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj["default"] = obj; return newObj; } }
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
 
@@ -4406,19 +4601,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * 立即执行已添加的任务
 	 */
 	function run() {
-	  (0, _array.each)(nextTasks, function (task) {
+	  array.each(nextTasks, function (task) {
 	    task();
 	  });
 	  nextTasks.length = 0;
 	}
 
 /***/ },
-/* 34 */
+/* 35 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(setImmediate) {'use strict';
 
-	var _env = __webpack_require__(4);
+	var _env = __webpack_require__(1);
 
 	var nextTick = void 0;
 
@@ -4442,15 +4637,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	module.exports = nextTick;
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(35).setImmediate))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(36).setImmediate))
 
 /***/ },
-/* 35 */
+/* 36 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(setImmediate, clearImmediate) {"use strict";
 
-	var nextTick = __webpack_require__(36).nextTick;
+	var nextTick = __webpack_require__(37).nextTick;
 	var apply = Function.prototype.apply;
 	var slice = Array.prototype.slice;
 	var immediateIds = {};
@@ -4526,10 +4721,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate : function (id) {
 	  delete immediateIds[id];
 	};
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(35).setImmediate, __webpack_require__(35).clearImmediate))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(36).setImmediate, __webpack_require__(36).clearImmediate))
 
 /***/ },
-/* 36 */
+/* 37 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -4715,142 +4910,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 37 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	Object.defineProperty(exports, "__esModule", {
-	  value: true
-	});
-	exports.normalize = normalize;
-	exports.stringify = stringify;
-	exports.getWildcardMatches = getWildcardMatches;
-	exports.getWildcardNames = getWildcardNames;
-
-	var _cache = __webpack_require__(1);
-
-	var cache = _interopRequireWildcard(_cache);
-
-	var _array = __webpack_require__(11);
-
-	var _expression = __webpack_require__(15);
-
-	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj["default"] = obj; return newObj; } }
-
-	/**
-	 * 把 obj['name'] 的形式转成 obj.name
-	 *
-	 * @param {string} keypath
-	 * @return {string}
-	 */
-	function normalize(keypath) {
-	  var keypathNormalize = cache.keypathNormalize;
-
-
-	  if (!keypathNormalize[keypath]) {
-	    keypathNormalize[keypath] = keypath.indexOf('[') < 0 ? keypath : stringify((0, _expression.parse)(keypath));
-	  }
-
-	  return keypathNormalize[keypath];
-	}
-
-	/**
-	 * 把 member 表达式节点解析成 keypath
-	 *
-	 * @param {Object} node
-	 * @return {string}
-	 */
-	function stringify(node) {
-	  var result = [];
-	  do {
-	    var _node = node,
-	        name = _node.name,
-	        property = _node.property;
-
-	    if (property) {
-	      result.push(property.value);
-	    } else if (name) {
-	      result.push(name);
-	    }
-	  } while (node = node.object);
-	  return result.length > 0 ? result.reverse().join('.') : '';
-	}
-
-	/**
-	 * 获取可能的 keypath
-	 *
-	 * @param {string} keypath
-	 * @return {string}
-	 */
-	function getWildcardMatches(keypath) {
-	  var keypathWildcardMatches = cache.keypathWildcardMatches;
-
-
-	  if (!keypathWildcardMatches[keypath]) {
-	    (function () {
-	      var result = [];
-	      var terms = normalize(keypath).split('.');
-	      var toWildcard = function toWildcard(isTrue, index) {
-	        return isTrue ? '*' : terms[index];
-	      };
-	      (0, _array.each)(getBoolCombinations(terms.length), function (items) {
-	        result.push(items.map(toWildcard).join('.'));
-	      });
-	      keypathWildcardMatches[keypath] = result;
-	    })();
-	  }
-
-	  return keypathWildcardMatches[keypath];
-	}
-
-	/**
-	 * 匹配通配符中的具体名称，如 ('user.name', 'user.*') 返回 ['name']
-	 *
-	 * @param {string} keypath
-	 * @param {string} wildcardKeypath
-	 * @return {Array.<string>}
-	 */
-	function getWildcardNames(keypath, wildcardKeypath) {
-
-	  var result = [];
-	  if (wildcardKeypath.indexOf('*') < 0) {
-	    return result;
-	  }
-
-	  var list = keypath.split('.');
-	  (0, _array.each)(wildcardKeypath.split('.'), function (name, index) {
-	    if (name === '*') {
-	      result.push(list[index]);
-	    }
-	  });
-
-	  return result;
-	}
-
-	function getBoolCombinations(num) {
-	  var result = [];
-	  var toBool = function toBool(value) {
-	    return value == 1;
-	  };
-	  var length = parseInt(new Array(num + 1).join('1'), 2);
-	  for (var i = 0, binary, j, item; i <= length; i++) {
-	    // 补零
-	    binary = i.toString(2);
-	    if (binary.length < num) {
-	      binary = '0' + binary;
-	    }
-	    // 把 binary 转成布尔值表示
-	    item = [];
-	    for (j = 0; j < num; j++) {
-	      item.push(toBool(binary[j]));
-	    }
-	    result.push(item);
-	  }
-	  return result;
-	}
-
-/***/ },
 /* 38 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -4867,9 +4926,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.get = get;
 	exports.set = set;
 
-	var _env = __webpack_require__(4);
-
-	var _logger = __webpack_require__(2);
+	var _logger = __webpack_require__(3);
 
 	var logger = _interopRequireWildcard(_logger);
 
@@ -4877,29 +4934,35 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var syntax = _interopRequireWildcard(_syntax);
 
-	var _object = __webpack_require__(9);
-
-	var _expression = __webpack_require__(15);
-
-	var _event = __webpack_require__(32);
-
-	var _keypath = __webpack_require__(37);
-
 	var _registry = __webpack_require__(7);
 
 	var registry = _interopRequireWildcard(_registry);
+
+	var _object = __webpack_require__(9);
+
+	var object = _interopRequireWildcard(_object);
+
+	var _expression = __webpack_require__(15);
+
+	var expression = _interopRequireWildcard(_expression);
+
+	var _event = __webpack_require__(32);
+
+	var event = _interopRequireWildcard(_event);
+
+	var _keypath = __webpack_require__(33);
 
 	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj["default"] = obj; return newObj; } }
 
 	function compileAttr(instance, keypath, value) {
 	  if (value.indexOf('(') > 0) {
 	    var _ret = function () {
-	      var ast = (0, _expression.parse)(value);
-	      if (ast.type === _expression.CALL) {
+	      var ast = expression.parse(value);
+	      if (ast.type === expression.CALL) {
 	        return {
-	          v: function v(event) {
-	            var isEvent = event instanceof _event.Event;
-	            var args = (0, _object.copy)(ast.arguments);
+	          v: function v(e) {
+	            var isEvent = e instanceof event.Event;
+	            var args = object.copy(ast.arguments);
 	            if (!args.length) {
 	              if (isEvent) {
 	                args.push(event);
@@ -4909,18 +4972,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	                var name = item.name,
 	                    type = item.type;
 
-	                if (type === _expression.LITERAL) {
+	                if (type === expression.LITERAL) {
 	                  return item.value;
 	                }
-	                if (type === _expression.IDENTIFIER) {
+	                if (type === expression.IDENTIFIER) {
 	                  if (name === syntax.SPECIAL_EVENT) {
 	                    if (isEvent) {
-	                      return event;
+	                      return e;
 	                    }
 	                  } else if (name === syntax.SPECIAL_KEYPATH) {
 	                    return keypath;
 	                  }
-	                } else if (type === _expression.MEMBER) {
+	                } else if (type === expression.MEMBER) {
 	                  name = (0, _keypath.stringify)(item);
 	                }
 
@@ -4957,7 +5020,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  do {
 	    terms.push(name);
 	    keypath = terms.join('.');
-	    result = (0, _object.get)(data, keypath);
+	    result = object.get(data, keypath);
 	    if (result) {
 	      return {
 	        keypath: keypath,
@@ -4970,7 +5033,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	function get(instance, type, name, silent) {
 	  var prop = '$' + type + 's';
-	  if (instance[prop] && (0, _object.has)(instance[prop], name)) {
+	  if (instance[prop] && object.has(instance[prop], name)) {
 	    return instance[prop][name];
 	  } else {
 	    var value = registry[type].get(name);
@@ -4999,172 +5062,35 @@ return /******/ (function(modules) { // webpackBootstrap
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.nativeAddEventListener = nativeAddEventListener;
-	exports.nativeRemoveEventListener = nativeRemoveEventListener;
-	exports.createEvent = createEvent;
-	exports.find = find;
-	exports.on = on;
-	exports.off = off;
-	exports.parseStyle = parseStyle;
-
-	var _env = __webpack_require__(4);
-
-	var _event = __webpack_require__(32);
-
-	var _array = __webpack_require__(11);
-
-	var _object = __webpack_require__(9);
-
-	var _is = __webpack_require__(8);
-
-	var _camelCase = __webpack_require__(40);
-
-	var _camelCase2 = _interopRequireDefault(_camelCase);
-
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
-
-	function nativeAddEventListener(element, type, listener) {
-	  element.addEventListener(type, listener, _env.FALSE);
-	}
-
-	function nativeRemoveEventListener(element, type, listener) {
-	  element.removeEventListener(type, listener, _env.FALSE);
-	}
-
-	function createEvent(nativeEvent) {
-	  return nativeEvent;
-	}
-
-	/**
-	 * 通过选择器查找元素
-	 *
-	 * @param {string} selector
-	 * @param {?HTMLElement} context
-	 * @return {?HTMLElement}
-	 */
-	function find(selector) {
-	  var context = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : _env.doc;
-
-	  return context.querySelector(selector);
-	}
-
-	/**
-	 * 绑定事件
-	 *
-	 * @param {HTMLElement} element
-	 * @param {string} type
-	 * @param {Function} listener
-	 */
-	function on(element, type, listener) {
-	  var $emitter = element.$emitter || (element.$emitter = new _event.Emitter());
-	  if (!$emitter.has(type)) {
-	    var nativeListener = function nativeListener(e) {
-	      var event = new _event.Event(createEvent(e, element));
-	      $emitter.fire(event.type, event);
-	    };
-	    $emitter[type] = nativeListener;
-	    nativeAddEventListener(element, type, nativeListener);
-	  }
-	  $emitter.on(type, listener);
-	}
-
-	/**
-	 * 解绑事件
-	 *
-	 * @param {HTMLElement} element
-	 * @param {string} type
-	 * @param {Function} listener
-	 */
-	function off(element, type, listener) {
-	  var $emitter = element.$emitter;
-
-	  var types = (0, _object.keys)($emitter.listeners);
-	  // emitter 会根据 type 和 listener 参数进行适当的删除
-	  $emitter.off(type, listener);
-	  // 根据 emitter 的删除结果来操作这里的事件 listener
-	  (0, _array.each)(types, function (type) {
-	    if ($emitter[type] && !$emitter.has(type)) {
-	      nativeRemoveEventListener(element, type, $emitter[type]);
-	      delete $emitter[type];
-	    }
-	  });
-	}
-
-	/**
-	 * 把 style-name: value 解析成对象的形式
-	 *
-	 * @param {string} str
-	 * @return {Object}
-	 */
-	function parseStyle(str) {
-	  var result = {};
-
-	  if ((0, _is.isString)(str)) {
-	    (function () {
-	      var pairs = void 0,
-	          name = void 0,
-	          value = void 0;
-
-	      (0, _array.each)(str.split(';'), function (term) {
-	        if (term && term.trim()) {
-	          pairs = term.split(':');
-	          if (pairs.length === 2) {
-	            name = pairs[0].trim();
-	            value = pairs[1].trim();
-	            if (name) {
-	              result[(0, _camelCase2["default"])(name)] = value;
-	            }
-	          }
-	        }
-	      });
-	    })();
-	  }
-
-	  return result;
-	}
-
-/***/ },
-/* 40 */
-/***/ function(module, exports) {
-
-	"use strict";
-
-	module.exports = function (name) {
-	  return name.replace(/-([a-z])/gi, function ($0, $1) {
-	    return $1.toUpperCase();
-	  });
-	};
-
-/***/ },
-/* 41 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	Object.defineProperty(exports, "__esModule", {
-	  value: true
-	});
 	exports.patch = undefined;
 
 	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 	exports.create = create;
 
-	var _snabbdom = __webpack_require__(42);
+	var _snabbdom = __webpack_require__(40);
 
 	var _snabbdom2 = _interopRequireDefault(_snabbdom);
 
-	var _h = __webpack_require__(46);
+	var _h = __webpack_require__(44);
 
 	var _h2 = _interopRequireDefault(_h);
 
-	var _style = __webpack_require__(47);
+	var _style = __webpack_require__(45);
 
 	var _style2 = _interopRequireDefault(_style);
 
-	var _attributes = __webpack_require__(48);
+	var _attributes = __webpack_require__(46);
 
 	var _attributes2 = _interopRequireDefault(_attributes);
+
+	var _helper = __webpack_require__(47);
+
+	var helper = _interopRequireWildcard(_helper);
+
+	var _env = __webpack_require__(1);
+
+	var env = _interopRequireWildcard(_env);
 
 	var _syntax = __webpack_require__(5);
 
@@ -5174,17 +5100,21 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var lifecycle = _interopRequireWildcard(_lifecycle);
 
-	var _env = __webpack_require__(4);
+	var _is = __webpack_require__(8);
 
-	var _helper = __webpack_require__(39);
+	var is = _interopRequireWildcard(_is);
 
 	var _array = __webpack_require__(11);
 
+	var array = _interopRequireWildcard(_array);
+
 	var _object = __webpack_require__(9);
 
-	var _is = __webpack_require__(8);
+	var object = _interopRequireWildcard(_object);
 
 	var _nodeType = __webpack_require__(17);
+
+	var nodeType = _interopRequireWildcard(_nodeType);
 
 	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj["default"] = obj; return newObj; } }
 
@@ -5202,15 +5132,15 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  var traverse = function traverse(node, enter, leave) {
 
-	    if (enter(node) === _env.FALSE) {
+	    if (enter(node) === env.FALSE) {
 	      return;
 	    }
 
 	    var children = [];
-	    if ((0, _is.isArray)(node.children)) {
-	      (0, _array.each)(node.children, function (item) {
+	    if (is.array(node.children)) {
+	      array.each(node.children, function (item) {
 	        item = traverse(item, enter, leave);
-	        if (item != _env.NULL) {
+	        if (item != env.NULL) {
 	          children.push(item);
 	        }
 	      });
@@ -5221,12 +5151,12 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  return traverse(node, function (node) {
 	    counter++;
-	    if (node.type === _nodeType.ATTRIBUTE || node.type === _nodeType.DIRECTIVE) {
-	      return _env.FALSE;
+	    if (node.type === nodeType.ATTRIBUTE || node.type === nodeType.DIRECTIVE) {
+	      return env.FALSE;
 	    }
 	  }, function (node, children) {
 	    counter--;
-	    if (node.type === _nodeType.ELEMENT) {
+	    if (node.type === nodeType.ELEMENT) {
 	      var _ret = function () {
 
 	        var attrs = {},
@@ -5246,16 +5176,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	            directive: instance.getDirective('component')
 	          });
 	        } else {
-	          (0, _object.each)(node.getAttributes(), function (value, key) {
+	          object.each(node.getAttributes(), function (value, key) {
 	            if (key === 'style') {
-	              styles = (0, _helper.parseStyle)(value);
+	              styles = helper.parseStyle(value);
 	            } else {
 	              attrs[key] = value;
 	            }
 	          });
 	        }
 
-	        (0, _array.each)(node.directives, function (node) {
+	        array.each(node.directives, function (node) {
 	          var name = node.name;
 
 
@@ -5284,13 +5214,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	          (function () {
 
 	            // 方便指令内查询
-	            var map = (0, _array.toObject)(directives, 'name');
+	            var map = array.toObject(directives, 'name');
 
 	            var notify = function notify(vnode, type) {
-	              (0, _array.each)(directives, function (item) {
+	              array.each(directives, function (item) {
 	                var directive = item.directive;
 
-	                if (directive && (0, _is.isFunction)(directive[type])) {
+	                if (directive && is.func(directive[type])) {
 	                  directive[type]({
 	                    el: vnode.elm,
 	                    node: item.node,
@@ -5322,23 +5252,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	      }();
 
 	      if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
-	    } else if (node.type === _nodeType.TEXT) {
+	    } else if (node.type === nodeType.TEXT) {
 	      return node.content;
 	    }
 	  });
 	}
 
 /***/ },
-/* 42 */
+/* 40 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// jshint newcap: false
 	/* global require, module, document, Node */
 	'use strict';
 
-	var VNode = __webpack_require__(43);
-	var is = __webpack_require__(44);
-	var domApi = __webpack_require__(45);
+	var VNode = __webpack_require__(41);
+	var is = __webpack_require__(42);
+	var domApi = __webpack_require__(43);
 
 	function isUndef(s) {
 	  return s === undefined;
@@ -5621,7 +5551,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = { init: init };
 
 /***/ },
-/* 43 */
+/* 41 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -5633,7 +5563,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 44 */
+/* 42 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -5646,7 +5576,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 45 */
+/* 43 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -5705,13 +5635,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 46 */
+/* 44 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var VNode = __webpack_require__(43);
-	var is = __webpack_require__(44);
+	var VNode = __webpack_require__(41);
+	var is = __webpack_require__(42);
 
 	function addNS(data, children, sel) {
 	  data.ns = 'http://www.w3.org/2000/svg';
@@ -5756,7 +5686,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 47 */
+/* 45 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -5850,7 +5780,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = { create: updateStyle, update: updateStyle, destroy: applyDestroyStyle, remove: applyRemoveStyle };
 
 /***/ },
-/* 48 */
+/* 46 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -5903,14 +5833,178 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = { create: updateAttrs, update: updateAttrs };
 
 /***/ },
+/* 47 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	exports.nativeAddEventListener = nativeAddEventListener;
+	exports.nativeRemoveEventListener = nativeRemoveEventListener;
+	exports.createEvent = createEvent;
+	exports.find = find;
+	exports.on = on;
+	exports.off = off;
+	exports.parseStyle = parseStyle;
+
+	var _env = __webpack_require__(1);
+
+	var env = _interopRequireWildcard(_env);
+
+	var _is = __webpack_require__(8);
+
+	var is = _interopRequireWildcard(_is);
+
+	var _event = __webpack_require__(32);
+
+	var event = _interopRequireWildcard(_event);
+
+	var _array = __webpack_require__(11);
+
+	var array = _interopRequireWildcard(_array);
+
+	var _object = __webpack_require__(9);
+
+	var object = _interopRequireWildcard(_object);
+
+	var _camelCase = __webpack_require__(48);
+
+	var _camelCase2 = _interopRequireDefault(_camelCase);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
+
+	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj["default"] = obj; return newObj; } }
+
+	function nativeAddEventListener(element, type, listener) {
+	  element.addEventListener(type, listener, env.FALSE);
+	}
+
+	function nativeRemoveEventListener(element, type, listener) {
+	  element.removeEventListener(type, listener, env.FALSE);
+	}
+
+	function createEvent(nativeEvent) {
+	  return nativeEvent;
+	}
+
+	/**
+	 * 通过选择器查找元素
+	 *
+	 * @param {string} selector
+	 * @param {?HTMLElement} context
+	 * @return {?HTMLElement}
+	 */
+	function find(selector, context) {
+	  if (!context) {
+	    context = env.doc;
+	  }
+	  return context.querySelector(selector);
+	}
+
+	/**
+	 * 绑定事件
+	 *
+	 * @param {HTMLElement} element
+	 * @param {string} type
+	 * @param {Function} listener
+	 */
+	function on(element, type, listener) {
+	  var $emitter = element.$emitter || (element.$emitter = new event.Emitter());
+	  if (!$emitter.has(type)) {
+	    var nativeListener = function nativeListener(e) {
+	      e = new event.Event(createEvent(e, element));
+	      $emitter.fire(e.type, e);
+	    };
+	    $emitter[type] = nativeListener;
+	    nativeAddEventListener(element, type, nativeListener);
+	  }
+	  $emitter.on(type, listener);
+	}
+
+	/**
+	 * 解绑事件
+	 *
+	 * @param {HTMLElement} element
+	 * @param {string} type
+	 * @param {Function} listener
+	 */
+	function off(element, type, listener) {
+	  var $emitter = element.$emitter;
+
+	  var types = object.keys($emitter.listeners);
+	  // emitter 会根据 type 和 listener 参数进行适当的删除
+	  $emitter.off(type, listener);
+	  // 根据 emitter 的删除结果来操作这里的事件 listener
+	  array.each(types, function (type) {
+	    if ($emitter[type] && !$emitter.has(type)) {
+	      nativeRemoveEventListener(element, type, $emitter[type]);
+	      delete $emitter[type];
+	    }
+	  });
+	}
+
+	/**
+	 * 把 style-name: value 解析成对象的形式
+	 *
+	 * @param {string} str
+	 * @return {Object}
+	 */
+	function parseStyle(str) {
+	  var result = {};
+
+	  if (is.string(str)) {
+	    (function () {
+	      var pairs = void 0,
+	          name = void 0,
+	          value = void 0;
+
+	      array.each(str.split(';'), function (term) {
+	        if (term && term.trim()) {
+	          pairs = term.split(':');
+	          if (pairs.length === 2) {
+	            name = pairs[0].trim();
+	            value = pairs[1].trim();
+	            if (name) {
+	              result[(0, _camelCase2["default"])(name)] = value;
+	            }
+	          }
+	        }
+	      });
+	    })();
+	  }
+
+	  return result;
+	}
+
+/***/ },
+/* 48 */
+/***/ function(module, exports) {
+
+	"use strict";
+
+	module.exports = function (name) {
+	  return name.replace(/-([a-z])/gi, function ($0, $1) {
+	    return $1.toUpperCase();
+	  });
+	};
+
+/***/ },
 /* 49 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var _env = __webpack_require__(4);
+	var _env = __webpack_require__(1);
+
+	var env = _interopRequireWildcard(_env);
 
 	var _component = __webpack_require__(38);
+
+	var component = _interopRequireWildcard(_component);
+
+	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj["default"] = obj; return newObj; } }
 
 	/**
 	 * <Component @ref="component" />
@@ -5924,10 +6018,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	        instance = _ref.instance;
 
 
-	    var component = el['$component'];
+	    var child = el['$component'];
 	    var value = node.getValue();
-	    if (component && value) {
-	      (0, _component.set)(instance, 'ref', value, component);
+	    if (child && value) {
+	      component.set(instance, 'ref', value, child);
 	      el.$ref = value;
 	    }
 	  },
@@ -5939,7 +6033,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    if (el.$ref) {
 	      delete instance.$refs[el.$ref];
-	      el.$ref = _env.NULL;
+	      el.$ref = env.NULL;
 	    }
 	  }
 	};
@@ -5950,9 +6044,15 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 
-	var _helper = __webpack_require__(39);
+	var _env = __webpack_require__(1);
 
-	var _env = __webpack_require__(4);
+	var env = _interopRequireWildcard(_env);
+
+	var _helper = __webpack_require__(47);
+
+	var helper = _interopRequireWildcard(_helper);
+
+	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj["default"] = obj; return newObj; } }
 
 	module.exports = {
 
@@ -5970,7 +6070,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      if ($component) {
 	        $component.on(name, listener);
 	      } else {
-	        (0, _helper.on)(el, name, listener);
+	        helper.on(el, name, listener);
 	        el['$' + name] = listener;
 	      }
 	    }
@@ -5983,8 +6083,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    var listener = '$' + name;
 	    if (el[listener]) {
-	      (0, _helper.off)(el, name, el[listener]);
-	      el[listener] = _env.NULL;
+	      helper.off(el, name, el[listener]);
+	      el[listener] = env.NULL;
 	    }
 	  }
 
@@ -5996,21 +6096,33 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 
-	var _helper = __webpack_require__(39);
+	var _helper = __webpack_require__(47);
 
-	var _env = __webpack_require__(4);
+	var helper = _interopRequireWildcard(_helper);
 
-	var _logger = __webpack_require__(2);
+	var _env = __webpack_require__(1);
+
+	var env = _interopRequireWildcard(_env);
+
+	var _logger = __webpack_require__(3);
 
 	var logger = _interopRequireWildcard(_logger);
 
-	var _component = __webpack_require__(38);
+	var _is = __webpack_require__(8);
 
-	var _object = __webpack_require__(9);
+	var is = _interopRequireWildcard(_is);
 
 	var _array = __webpack_require__(11);
 
-	var _is = __webpack_require__(8);
+	var array = _interopRequireWildcard(_array);
+
+	var _object = __webpack_require__(9);
+
+	var object = _interopRequireWildcard(_object);
+
+	var _component = __webpack_require__(38);
+
+	var component = _interopRequireWildcard(_component);
 
 	var _debounce = __webpack_require__(52);
 
@@ -6066,7 +6178,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	          instance = _ref5.instance;
 
 	      var value = instance.get(keypath);
-	      el.checked = (0, _is.isArray)(value) ? (0, _array.hasItem)(value, el.value, _env.FALSE) : !!value;
+	      el.checked = is.array(value) ? array.hasItem(value, el.value, env.FALSE) : !!value;
 	    },
 	    sync: function sync(_ref6) {
 	      var el = _ref6.el,
@@ -6074,13 +6186,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	          instance = _ref6.instance;
 
 	      var array = instance.get(keypath);
-	      if ((0, _is.isArray)(array)) {
+	      if (is.array(array)) {
 	        if (el.checked) {
 	          array.push(el.value);
 	        } else {
-	          (0, _array.removeItem)(array, el.value, _env.FALSE);
+	          array.removeItem(array, el.value, env.FALSE);
 	        }
-	        instance.set(keypath, (0, _object.copy)(array));
+	        instance.set(keypath, object.copy(array));
 	      } else {
 	        instance.set(keypath, el.checked);
 	      }
@@ -6096,10 +6208,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var type = el.type,
 	      tagName = el.tagName;
 
-	  if (tagName === 'INPUT' && (0, _array.hasItem)(supportInputTypes, type) || tagName === 'TEXTAREA') {
+	  if (tagName === 'INPUT' && array.hasItem(supportInputTypes, type) || tagName === 'TEXTAREA') {
 	    if (lazyDirective) {
 	      var value = lazyDirective.node.getValue();
-	      if ((0, _is.isNumeric)(value) && value >= 0) {
+	      if (is.numeric(value) && value >= 0) {
 	        name = 'input';
 	        interval = value;
 	      }
@@ -6132,7 +6244,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 	    var value = node.getValue();
-	    var result = (0, _component.testKeypath)(instance, keypath, value);
+	    var result = component.testKeypath(instance, keypath, value);
 	    if (!result) {
 	      logger.error('The ' + keypath + ' being used for two-way binding is ambiguous.');
 	    }
@@ -6159,11 +6271,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 
 	    el.$model = function () {
-	      (0, _helper.off)(el, name, listener);
-	      el.$model = _env.NULL;
+	      helper.off(el, name, listener);
+	      el.$model = env.NULL;
 	    };
 
-	    (0, _helper.on)(el, name, listener);
+	    helper.on(el, name, listener);
 	  },
 
 	  detach: function detach(_ref8) {
@@ -6180,7 +6292,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 
-	var _env = __webpack_require__(4);
+	var _env = __webpack_require__(1);
 
 	var _array = __webpack_require__(11);
 
@@ -6224,9 +6336,15 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 
-	var _env = __webpack_require__(4);
+	var _env = __webpack_require__(1);
+
+	var env = _interopRequireWildcard(_env);
 
 	var _object = __webpack_require__(9);
+
+	var object = _interopRequireWildcard(_object);
+
+	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj["default"] = obj; return newObj; } }
 
 	module.exports = {
 
@@ -6237,8 +6355,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	    el.$component = instance.create(instance.getComponent(node.custom), {
 	      el: el,
-	      props: (0, _object.copy)(node.getAttributes(), true),
-	      replace: _env.TRUE
+	      props: object.copy(node.getAttributes(), true),
+	      replace: env.TRUE
 	    });
 	  },
 
@@ -6246,14 +6364,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var el = _ref2.el,
 	        node = _ref2.node;
 
-	    el.$component.set((0, _object.copy)(node.getAttributes(), true));
+	    el.$component.set(object.copy(node.getAttributes(), true));
 	  },
 
 	  detach: function detach(_ref3) {
 	    var el = _ref3.el;
 
 	    el.$component.dispose();
-	    el.$component = _env.NULL;
+	    el.$component = env.NULL;
 	  }
 
 	};

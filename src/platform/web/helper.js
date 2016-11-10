@@ -45,8 +45,8 @@ export function on(element, type, listener) {
   let $emitter = element.$emitter || (element.$emitter = new event.Emitter())
   if (!$emitter.has(type)) {
     let nativeListener = function (e) {
-      let event = new event.Event(createEvent(e, element))
-      $emitter.fire(event.type, event)
+      e = new event.Event(createEvent(e, element))
+      $emitter.fire(e.type, e)
     }
     $emitter[type] = nativeListener
     nativeAddEventListener(element, type, nativeListener)

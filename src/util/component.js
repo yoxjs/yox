@@ -16,8 +16,8 @@ export function compileAttr(instance, keypath, value) {
   if (value.indexOf('(') > 0) {
     let ast = expression.parse(value)
     if (ast.type === expression.CALL) {
-      return function (event) {
-        let isEvent = event instanceof event.Event
+      return function (e) {
+        let isEvent = e instanceof event.Event
         let args = object.copy(ast.arguments)
         if (!args.length) {
           if (isEvent) {
@@ -34,7 +34,7 @@ export function compileAttr(instance, keypath, value) {
               if (type === expression.IDENTIFIER) {
                 if (name === syntax.SPECIAL_EVENT) {
                   if (isEvent) {
-                    return event
+                    return e
                   }
                 }
                 else if (name === syntax.SPECIAL_KEYPATH) {

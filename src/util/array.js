@@ -16,7 +16,7 @@ export function each(array, callback) {
 }
 
 // array.reduce 如果是空数组，不传 initialValue 居然会报错，所以封装一下
-export function reduce(array, callback, initialValue = env.NULL) {
+export function reduce(array, callback, initialValue) {
   return array.reduce(callback, initialValue)
 }
 
@@ -39,7 +39,7 @@ export function toArray(array) {
     'length' in array
   }
   catch (e) {
-    return []
+    return [ ]
   }
   return is.array(array) ? array : slice.call(array)
 }
