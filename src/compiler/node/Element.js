@@ -1,28 +1,25 @@
 
-import {
-  ELEMENT,
-} from '../nodeType'
-
 import Node from './Node'
 
-import {
-  each,
-} from '../../util/array'
+import * as nodeType from '../nodeType'
+import * as array from '../../util/array'
+import * as object from '../../util/object'
 
 /**
  * 元素节点
  *
  * @param {string} name
+ * @param {string} custom
  */
 module.exports = class Element extends Node {
 
   constructor(name, custom) {
     super()
-    this.type = ELEMENT
+    this.type = nodeType.ELEMENT
     this.name = name
     this.custom = custom
-    this.attrs = []
-    this.directives = []
+    this.attrs = [ ]
+    this.directives = [ ]
   }
 
   addAttr(node) {
@@ -35,7 +32,7 @@ module.exports = class Element extends Node {
 
   getAttributes() {
     let result = { }
-    each(
+    array.each(
       this.attrs,
       function (node) {
         result[node.name] = node.getValue()
@@ -44,16 +41,17 @@ module.exports = class Element extends Node {
     return result
   }
 
-  render(parent, context, keys, parseTemplate) {
+  render(data) {
 
     let instance = this
     let node = new Element(instance.name, instance.custom)
-    node.keypath = keys.join('.')
-    parent.addChild(node)
+    node.keypath = data.keys.join('.')
+    data.parent.addChild(node)
 
-    instance.renderChildren(node, context, keys, parseTemplate, instance.attrs)
-    instance.renderChildren(node, context, keys, parseTemplate, instance.directives)
-    instance.renderChildren(node, context, keys, parseTemplate)
+    data = object.extend({ }, data, { parent: node })
+    instance.renderChildren(data, instance.attrs)
+    instance.renderChildren(data, instance.directives)
+    instance.renderChildren(data)
 
   }
 

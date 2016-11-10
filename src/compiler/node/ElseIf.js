@@ -1,27 +1,25 @@
 
-import {
-  ELSE_IF,
-} from '../nodeType'
-
 import Node from './Node'
+
+import * as nodeType from '../nodeType'
 
 /**
  * else if 节点
  *
- * @param {string} expr 判断条件
+ * @param {Expression} expr 判断条件
  */
 module.exports = class ElseIf extends Node {
 
   constructor(expr) {
     super()
-    this.type = ELSE_IF
+    this.type = nodeType.ELSE_IF
     this.expr = expr
   }
 
-  render(parent, context, keys, parseTemplate, prev) {
+  render(data, prev) {
     if (prev) {
-      if (this.execute(context)) {
-        this.renderChildren(parent, context, keys, parseTemplate)
+      if (this.execute(data.context)) {
+        this.renderChildren(data)
       }
       else {
         return prev

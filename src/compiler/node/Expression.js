@@ -1,26 +1,13 @@
 
-import {
-  EXPRESSION,
-} from '../nodeType'
-
 import Node from './Node'
 import Text from './Text'
 
+import * as nodeType from '../nodeType'
+
+import * as is from '../../util/is'
+import * as env from '../../config/env'
+import * as array from '../../util/array'
 import * as pattern from '../../config/pattern'
-
-import {
-  NULL,
-  FALSE,
-} from '../../config/env'
-
-import {
-  each,
-} from '../../util/array'
-
-import {
-  isString,
-  isFunction,
-} from '../../util/is'
 
 /**
  * 表达式节点
@@ -31,35 +18,35 @@ import {
 module.exports = class Expression extends Node {
 
   constructor(expr, safe) {
-    super(FALSE)
-    this.type = EXPRESSION
+    super(env.FALSE)
+    this.type = nodeType.EXPRESSION
     this.expr = expr
     this.safe = safe
   }
 
-  render(parent, context, keys, parseTemplate) {
+  render(data) {
 
-    let content = this.execute(context)
-    if (content == NULL) {
+    let content = this.execute(data.context)
+    if (content == env.NULL) {
       content = ''
     }
 
-    if (isFunction(content) && content.computed) {
+    if (is.isFunction(content) && content.computed) {
       content = content()
     }
 
     // 处理需要不转义的
-    if (!this.safe && isString(content) && pattern.tag.test(content)) {
-      each(
-        parseTemplate(content),
+    if (!this.safe && is.isString(content) && pattern.tag.test(content)) {
+      array.each(
+        data.parse(content),
         function (node) {
-          node.render(parent, context, keys, parseTemplate)
+          node.render(data)
         }
       )
     }
     else {
       let node = new Text(content)
-      node.render(parent, context, keys)
+      node.render(data)
     }
 
   }

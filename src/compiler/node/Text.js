@@ -1,32 +1,26 @@
 
-import {
-  TEXT,
-} from '../nodeType'
-
 import Node from './Node'
 
-import {
-  FALSE,
-} from '../../config/env'
-
+import * as env from '../../config/env'
+import * as nodeType from '../nodeType'
 
 /**
  * 文本节点
  *
- * @param {string} content
+ * @param {*} content
  */
 module.exports = class Text extends Node {
 
   constructor(content) {
-    super(FALSE)
-    this.type = TEXT
+    super(env.FALSE)
+    this.type = nodeType.TEXT
     this.content = content
   }
 
-  render(parent, context, keys) {
+  render(data) {
     let node = new Text(this.content)
-    node.keypath = keys.join('.')
-    parent.addChild(node)
+    node.keypath = data.keys.join('.')
+    data.parent.addChild(node)
   }
 
 }

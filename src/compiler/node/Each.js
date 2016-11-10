@@ -1,68 +1,57 @@
 
-import {
-  EACH,
-} from '../nodeType'
-
 import Node from './Node'
 
-import {
-  isArray,
-  isObject,
-} from '../../util/is'
+import * as nodeType from '../nodeType'
 
-import {
-  each as arrayEach,
-} from '../../util/array'
-
-import {
-  each as objectEach,
-} from '../../util/object'
-
-import {
-  SPECIAL_KEYPATH,
-} from '../../config/syntax'
+import * as is from '../../util/is'
+import * as array from '../../util/array'
+import * as object from '../../util/object'
+import * as syntax from '../../config/syntax'
 
 /**
  * each 节点
  *
- * {{ #each name:index }}
- *
- * @param {string} literal 字面量，如 list:index
+ * @param {string} name
+ * @param {string} index
  */
 module.exports = class Each extends Node {
 
   constructor(name, index) {
     super()
-    this.type = EACH
+    this.type = nodeType.EACH
     this.name = name
     this.index = index
   }
 
-  render(parent, context, keys, parseTemplate) {
+  render(data) {
 
     let instance = this
     let { name, index } = instance
-    let data = context.get(name)
+    let { context, keys } = data
+
+    let iterator = context.get(name)
 
     let each
-    if (isArray(data)) {
-      each = arrayEach
+    if (is.isArray(iterator)) {
+      each = array.each
     }
-    else if (isObject(data)) {
-      each = objectEach
+    else if (is.isObject(iterator)) {
+      each = object.each
     }
 
     if (each) {
       keys.push(name)
       each(
-        data,
+        iterator,
         function (item, i) {
           if (index) {
             context.set(index, i)
           }
           keys.push(i)
-          context.set(SPECIAL_KEYPATH, keys.join('.'))
-          instance.renderChildren(parent, context.push(item), keys, parseTemplate)
+          context.set(syntax.SPECIAL_KEYPATH, keys.join('.'))
+          instance.renderChildren(
+            object.extend({}, data, { context: context.push(item) })
+          )
           keys.pop()
         }
       )

@@ -1,16 +1,14 @@
 
+import * as env from '../../config/env'
 import * as cache from '../../config/cache'
 import * as logger from '../../config/logger'
 import * as syntax from '../../config/syntax'
 import * as pattern from '../../config/pattern'
 
-import {
-  TRUE,
-  FALSE,
-} from '../../config/env'
-
 import Context from '../helper/Context'
 import Scanner from '../helper/Scanner'
+
+import * as nodeType from '../nodeType'
 
 import Attribute from '../node/Attribute'
 import Directive from '../node/Directive'
@@ -24,41 +22,10 @@ import Import from '../node/Import'
 import Partial from '../node/Partial'
 import Text from '../node/Text'
 
-import {
-  IF,
-  ELSE_IF,
-  ELSE,
-  EACH,
-  DIRECTIVE,
-  EXPRESSION,
-  IMPORT,
-  PARTIAL,
-  TEXT,
-  ELEMENT,
-  ATTRIBUTE,
-} from '../nodeType'
-
-import {
-  isArray,
-  isString,
-  isFunction,
-} from '../../util/is'
-
-import {
-  each,
-  lastItem,
-} from '../../util/array'
-
-import {
-  parseError,
-  isBreakLine,
-  trimBreakline,
-  matchByQuote,
-} from '../../util/string'
-
-import {
-  parse as parseExpression,
-} from '../../util/expression'
+import * as is from '../../util/is'
+import * as array from '../../util/array'
+import * as string from '../../util/string'
+import * as expression from '../../util/expression'
 
 const openingDelimiterPattern = /\{\{\s*/
 const closingDelimiterPattern = /\s*\}\}/
@@ -90,9 +57,9 @@ const parsers = [
     },
     create: function (source) {
       let name = source.slice(syntax.IMPORT.length).trim()
-      if (name) {
-        return new Import(name)
-      }
+      return name
+        ? new Import(name)
+        : 'Expected legal partial name'
     }
   },
   {
@@ -113,7 +80,7 @@ const parsers = [
     create: function (source) {
       let expr = source.slice(syntax.IF.length).trim()
       return expr
-        ? new If(parseExpression(expr))
+        ? new If(expression.parse(expr))
         : 'Expected expression'
     }
   },
@@ -125,7 +92,7 @@ const parsers = [
       let expr = source.slice(syntax.ELSE_IF.length)
       if (expr) {
         popStack()
-        return new ElseIf(parseExpression(expr))
+        return new ElseIf(expression.parse(expr))
       }
       return 'Expected expression'
     }
@@ -144,12 +111,12 @@ const parsers = [
       return !source.startsWith(syntax.COMMENT)
     },
     create: function (source) {
-      let safe = TRUE
+      let safe = env.TRUE
       if (source.startsWith('{')) {
-        safe = FALSE
+        safe = env.FALSE
         source = source.slice(1)
       }
-      return new Expression(parseExpression(source), safe)
+      return new Expression(expression.parse(source), safe)
     }
   }
 ]
@@ -170,15 +137,19 @@ export function render(ast, data) {
   let keys = [ ]
 
   // 非转义插值需要解析模板字符串
-  let parseTemplate = function (template) {
-    return parse(template).children
-  }
   let renderAst = function (node) {
-    node.render(rootElement, rootContext, keys, parseTemplate)
+    node.render({
+      keys,
+      parent: rootElement,
+      context: rootContext,
+      parse: function (template) {
+        return parse(template).children
+      },
+    })
   }
 
   if (ast.name === rootName) {
-    each(
+    array.each(
       ast.children,
       renderAst
     )
@@ -188,8 +159,8 @@ export function render(ast, data) {
   }
 
   let { children } = rootElement
-  if (children.length !== 1 || children[0].type !== ELEMENT) {
-    logger.error('Template must contains only one root element.')
+  if (children.length !== 1 || children[0].type !== nodeType.ELEMENT) {
+    logger.warn('Template should have only one root element.')
   }
 
   return children[0]
@@ -227,8 +198,8 @@ export function parse(template, getPartial, setPartial) {
     errorIndex
 
   let attrLike = { }
-  attrLike[ATTRIBUTE] = TRUE
-  attrLike[DIRECTIVE] = TRUE
+  attrLike[nodeType.ATTRIBUTE] = env.TRUE
+  attrLike[nodeType.DIRECTIVE] = env.TRUE
 
   let pushStack = function (node) {
     nodeStack.push(currentNode)
@@ -245,11 +216,11 @@ export function parse(template, getPartial, setPartial) {
     let { name, type, content, children } = node
 
     switch (type) {
-      case TEXT:
-        if (isBreakLine(content)) {
+      case nodeType.TEXT:
+        if (string.isBreakLine(content)) {
           return
         }
-        if (content = trimBreakline(content)) {
+        if (content = string.trimBreakline(content)) {
           node.content = content
         }
         else {
@@ -257,20 +228,20 @@ export function parse(template, getPartial, setPartial) {
         }
         break
 
-      case ATTRIBUTE:
+      case nodeType.ATTRIBUTE:
         if (currentNode.attrs) {
           action = 'addAttr'
         }
         break
 
-      case DIRECTIVE:
+      case nodeType.DIRECTIVE:
         if (currentNode.directives) {
           action = 'addDirective'
         }
         break
 
-      case IMPORT:
-        each(
+      case nodeType.IMPORT:
+        array.each(
           getPartial(name).children,
           function (node) {
             addChild(node)
@@ -278,7 +249,7 @@ export function parse(template, getPartial, setPartial) {
         )
         return
 
-      case PARTIAL:
+      case nodeType.PARTIAL:
         setPartial(name, node)
         pushStack(node)
         return
@@ -293,7 +264,7 @@ export function parse(template, getPartial, setPartial) {
   }
 
   let parseAttributeValue = function (content) {
-    match = matchByQuote(content, quote)
+    match = string.matchByQuote(content, quote)
     if (match) {
       addChild(
         new Text(match)
@@ -369,7 +340,7 @@ export function parse(template, getPartial, setPartial) {
                 : new Attribute(name)
               )
 
-              if (isString(match[2])) {
+              if (is.isString(match[2])) {
                 quote = match[2].charAt(1)
                 content = parseAttributeValue(content)
                 // else 可能跟了一个表达式
@@ -402,22 +373,22 @@ export function parse(template, getPartial, setPartial) {
           if (content.charAt(0) === '{' && helperScanner.charAt(0) === '}') {
             helperScanner.forward(1)
           }
-          each(
+          array.each(
             parsers,
             function (parser) {
               if (parser.test(content)) {
                 node = parser.create(content, popStack)
-                if (isString(node)) {
-                  parseError(template, node, errorIndex)
+                if (is.isString(node)) {
+                  string.parseError(template, node, errorIndex)
                 }
                 if (isAttributesParsing
-                  && node.type === EXPRESSION
+                  && node.type === nodeType.EXPRESSION
                   && !attrLike[currentNode.type]
                 ) {
                   node = new Attribute(node)
                 }
                 addChild(node)
-                return FALSE
+                return env.FALSE
               }
             }
           )
@@ -449,10 +420,10 @@ export function parse(template, getPartial, setPartial) {
       name = content.slice(2)
 
       if (mainScanner.charAt(0) !== '>') {
-        return parseError(template, 'Illegal tag name', errorIndex)
+        return string.parseError(template, 'Illegal tag name', errorIndex)
       }
       else if (name !== currentNode.name) {
-        return parseError(template, 'Unexpected closing tag', errorIndex)
+        return string.parseError(template, 'Unexpected closing tag', errorIndex)
       }
 
       popStack()
@@ -477,12 +448,12 @@ export function parse(template, getPartial, setPartial) {
       // 用于提取 attribute
       content = mainScanner.nextBefore(elementEndPattern)
       if (content) {
-        parseContent(content, TRUE)
+        parseContent(content, env.TRUE)
       }
 
       content = mainScanner.nextAfter(elementEndPattern)
       if (!content) {
-        return parseError(template, 'Illegal tag name', errorIndex)
+        return string.parseError(template, 'Illegal tag name', errorIndex)
       }
 
       if (isComponent || isSelfClosingTag) {
@@ -492,7 +463,7 @@ export function parse(template, getPartial, setPartial) {
   }
 
   if (nodeStack.length) {
-    return parseError(template, `Missing end tag (</${nodeStack[0].name}>)`, errorIndex)
+    return string.parseError(template, `Missing end tag (</${nodeStack[0].name}>)`, errorIndex)
   }
 
   templateParse[template] = rootNode

@@ -1,14 +1,11 @@
 
-import {
-  DIRECTIVE,
-} from '../nodeType'
-
 import Node from './Node'
+
+import * as nodeType from '../nodeType'
+import * as object from '../../util/object'
 
 /**
  * 指令节点
- *
- * on-click="submit()"
  *
  * @param {string} name 指令名
  */
@@ -16,17 +13,19 @@ module.exports = class Directive extends Node {
 
   constructor(name) {
     super()
-    this.type = DIRECTIVE
+    this.type = nodeType.DIRECTIVE
     this.name = name
   }
 
-  render(parent, context, keys, parseTemplate) {
+  render(data) {
 
     let node = new Directive(this.name)
-    node.keypath = keys.join('.')
-    parent.addDirective(node)
+    node.keypath = data.keys.join('.')
+    data.parent.addDirective(node)
 
-    this.renderChildren(node, context, keys, parseTemplate)
+    this.renderChildren(
+      object.extend({ }, data, { parent: node })
+    )
 
   }
 

@@ -1,9 +1,7 @@
 
-import {
-  ELSE,
-} from '../nodeType'
-
 import Node from './Node'
+
+import * as nodeType from '../nodeType'
 
 /**
  * else 节点
@@ -12,12 +10,12 @@ module.exports = class Else extends Node {
 
   constructor() {
     super()
-    this.type = ELSE
+    this.type = nodeType.ELSE
   }
 
-  render(parent, context, keys, parseTemplate, prev) {
+  render(data, prev) {
     if (prev) {
-      this.renderChildren(parent, context, keys, parseTemplate)
+      this.renderChildren(data)
     }
   }
 
