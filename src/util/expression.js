@@ -37,6 +37,8 @@ export const BINARY = 7
 export const CONDITIONAL = 8
 export const CALL = 9
 
+export const THIS_ARG = '$_$'
+
 // 分隔符
 const COMMA  = 44 // ,
 const SEMCOL = 59 // ;
@@ -597,7 +599,7 @@ export function parse(content) {
 }
 
 /**
- * 创建一个可执行的函数来运行该代码，为了支持表达式中的 this，调用函数时应用 fn.apply(context, args)
+ * 创建一个可执行的函数来运行该代码
  *
  * @param {string|Object} ast
  * @return {Function}
@@ -614,10 +616,15 @@ export function compile(ast) {
     content = ast.$raw
   }
 
+  // 如果函数是 function () { return this }
+  // 如果用 fn.call('')，返回的会是个 new String('')，不是字符串字面量
+  // 这里要把 this 强制改掉
+
   let { expressionCompile } = cache
 
   if (!expressionCompile[content]) {
     let args = [ ]
+    let hasThis
 
     traverse(
       ast,
@@ -626,9 +633,17 @@ export function compile(ast) {
           if (node.type === IDENTIFIER) {
             args.push(node.name)
           }
+          else if (node.type === THIS) {
+            hasThis = TRUE
+            args.push(THIS_ARG)
+          }
         }
       }
     )
+
+    if (hasThis) {
+      content = content.replace(/\bthis\b/, THIS_ARG)
+    }
 
     let fn = new Function(args.join(', '), `return ${content}`)
     fn.$arguments = args

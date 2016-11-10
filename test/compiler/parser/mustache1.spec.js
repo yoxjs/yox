@@ -1,5 +1,8 @@
 
-import Mustache from '../../../src/compiler/parser/Mustache'
+import {
+  parse,
+  render,
+} from '../../../src/compiler/parser/mustache'
 
 let html = `
 <div class="{{#if hidden}}hidden{{/if}}">
@@ -20,7 +23,9 @@ let html = `
 
 html = `
 <div>
-  <input type="text" value="{{name}}">
+  <button @options="{event: 'haha'}">
+    click
+  </button>
 </div>
 `
 
@@ -40,10 +45,9 @@ html = `
 
 describe('compiler/parser/Mustache', function () {
   it('Mustache', function () {
-    let parser = new Mustache()
     console.time('parse')
-    let ast = parser.parse(html)
-    let vd = parser.render(ast, { hidden: false, title: '123' })
+    let ast = parse(html)
+    let vd = render(ast, { hidden: false, title: '123' })
 
     console.timeEnd('parse')
 

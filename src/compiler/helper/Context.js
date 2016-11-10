@@ -5,6 +5,10 @@ import {
   set,
 } from '../../util/object'
 
+import {
+  THIS_ARG,
+} from '../../util/expression'
+
 module.exports = class Context {
 
   /**
@@ -12,11 +16,11 @@ module.exports = class Context {
    * @param {?Context} parent
    */
   constructor(data, parent) {
-    this.data = data
-    this.parent = parent
-    this.cache = {
-      'this': data
-    }
+    let instance = this
+    instance.data = data
+    instance.parent = parent
+    instance.cache = {}
+    instance.cache[THIS_ARG] = data
   }
 
   push(data) {
@@ -43,18 +47,18 @@ module.exports = class Context {
 
   get(keypath) {
 
-    let context = this
-    let { cache } = context
+    let instance = this
+    let { cache } = instance
     if (!has(cache, keypath)) {
       let result
-      while (context) {
-        result = get(context.data, keypath)
+      while (instance) {
+        result = get(instance.data, keypath)
         if (result) {
           cache[keypath] = result.value
           break
         }
         else {
-          context = context.parent
+          instance = instance.parent
         }
       }
     }

@@ -53,6 +53,7 @@ import {
   parseError,
   isBreakLine,
   trimBreakline,
+  matchByQuote,
 } from '../../util/string'
 
 import {
@@ -65,8 +66,7 @@ const closingDelimiterPattern = /\s*\}\}/
 const elementPattern = /<(?:\/)?[a-z]\w*/i
 const elementEndPattern = /(?:\/)?>/
 
-const attributeSuffixPattern = /^([^"']*)["']/
-const attributePattern = /([-:@a-z0-9]+)(?:=(["'])(?:([^'"]*))?)?/i
+const attributePattern = /([-:@a-z0-9]+)(=["'])?/i
 const attributeValueStartPattern = /^=["']/
 
 const parsers = [
@@ -219,6 +219,7 @@ export function parse(template, getPartial, setPartial) {
     nodeStack = [ ],
     node,
     name,
+    quote,
     content,
     isComponent,
     isSelfClosingTag,
@@ -287,6 +288,20 @@ export function parse(template, getPartial, setPartial) {
     }
   }
 
+  let parseAttributeValue = function (content) {
+    match = matchByQuote(content, quote)
+    if (match) {
+      addChild(
+        new Text(match)
+      )
+      content = content.substr(match.length)
+    }
+    if (content.charAt(0) === quote) {
+      popStack()
+    }
+    return content
+  }
+
   // 这个函数涉及分隔符和普通模板的深度解析
   // 是最核心的函数
   let parseContent = function (content, isAttributesParsing) {
@@ -320,20 +335,13 @@ export function parse(template, getPartial, setPartial) {
 
             // 当前属性的属性值是字面量结尾
             if (currentNode.children.length) {
-              if (match = content.match(attributeSuffixPattern)) {
-                if (match[1]) {
-                  addChild(
-                    new Text(match[1])
-                  )
-                }
-                content = content.replace(attributeSuffixPattern, '')
-                popStack()
-              }
+              content = parseAttributeValue(content)
             }
             else {
               // 属性值开头部分是字面量
               if (attributeValueStartPattern.test(content)) {
-                content = content.replace(attributeValueStartPattern, '')
+                quote = content.charAt(1)
+                content = content.substr(2)
               }
               // 没有属性值
               else {
@@ -357,18 +365,13 @@ export function parse(template, getPartial, setPartial) {
                 : new Attribute(name)
               )
 
-              if (isString(match[3])) {
-                addChild(
-                  new Text(match[3])
-                )
-                // 剩下的只可能是引号了
-                if (content) {
-                  popStack()
-                }
+              if (isString(match[2])) {
+                quote = match[2].charAt(1)
+                content = parseAttributeValue(content)
                 // else 可能跟了一个表达式
               }
               // 没有引号，即 checked、disabled 等
-              else if (!match[2]) {
+              else {
                 popStack()
               }
             }

@@ -57,11 +57,11 @@ describe('util/object', () => {
         }
       }
     }
-    expect(object.get(test, 'user')).toBe(test.user)
-    expect(object.get(test, 'user.name')).toBe(test.user.name)
-    expect(object.get(test, 'user.haha')).toBe(test.user.haha)
+    expect(object.get(test, 'user').value).toBe(test.user)
+    expect(object.get(test, 'user.name').value).toBe(test.user.name)
+    expect(object.get(test, 'user.haha')).toBe(undefined)
     expect(object.get(test, 'other.name')).toBe(undefined)
-    expect(object.get(test, 'user.extra.married')).toBe(test.user.extra.married)
+    expect(object.get(test, 'user.extra.married').value).toBe(test.user.extra.married)
   })
 
   it('set', () => {
@@ -75,13 +75,13 @@ describe('util/object', () => {
       }
     }
     object.set(test, 'user.name', 'haha')
-    expect(object.get(test, 'user.name')).toBe('haha')
+    expect(object.get(test, 'user.name').value).toBe('haha')
 
     object.set(test, 'a.b', 'haha', false)
     expect(object.get(test, 'a.b')).toBe(undefined)
 
     object.set(test, 'a.b', 'haha', true)
-    expect(object.get(test, 'a.b')).toBe('haha')
+    expect(object.get(test, 'a.b').value).toBe('haha')
 
   })
 })

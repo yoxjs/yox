@@ -1287,11 +1287,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _Context2 = _interopRequireDefault(_Context);
 
-	var _Scanner = __webpack_require__(15);
+	var _Scanner = __webpack_require__(16);
 
 	var _Scanner2 = _interopRequireDefault(_Scanner);
 
-	var _Attribute = __webpack_require__(16);
+	var _Attribute = __webpack_require__(17);
 
 	var _Attribute2 = _interopRequireDefault(_Attribute);
 
@@ -1335,7 +1335,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _Text2 = _interopRequireDefault(_Text);
 
-	var _nodeType = __webpack_require__(17);
+	var _nodeType = __webpack_require__(18);
 
 	var _is = __webpack_require__(8);
 
@@ -1343,7 +1343,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _string = __webpack_require__(30);
 
-	var _expression = __webpack_require__(19);
+	var _expression = __webpack_require__(15);
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
 
@@ -1355,8 +1355,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var elementPattern = /<(?:\/)?[a-z]\w*/i;
 	var elementEndPattern = /(?:\/)?>/;
 
-	var attributeSuffixPattern = /^([^"']*)["']/;
-	var attributePattern = /([-:@a-z0-9]+)(?:=(["'])(?:([^'"]*))?)?/i;
+	var attributePattern = /([-:@a-z0-9]+)(=["'])?/i;
 	var attributeValueStartPattern = /^=["']/;
 
 	var parsers = [{
@@ -1493,6 +1492,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      nodeStack = [],
 	      node = void 0,
 	      name = void 0,
+	      quote = void 0,
 	      content = void 0,
 	      isComponent = void 0,
 	      isSelfClosingTag = void 0,
@@ -1561,6 +1561,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  };
 
+	  var parseAttributeValue = function parseAttributeValue(content) {
+	    match = (0, _string.matchByQuote)(content, quote);
+	    if (match) {
+	      addChild(new _Text2["default"](match));
+	      content = content.substr(match.length);
+	    }
+	    if (content.charAt(0) === quote) {
+	      popStack();
+	    }
+	    return content;
+	  };
+
 	  // 这个函数涉及分隔符和普通模板的深度解析
 	  // 是最核心的函数
 	  var parseContent = function parseContent(content, isAttributesParsing) {
@@ -1594,17 +1606,12 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	            // 当前属性的属性值是字面量结尾
 	            if (currentNode.children.length) {
-	              if (match = content.match(attributeSuffixPattern)) {
-	                if (match[1]) {
-	                  addChild(new _Text2["default"](match[1]));
-	                }
-	                content = content.replace(attributeSuffixPattern, '');
-	                popStack();
-	              }
+	              content = parseAttributeValue(content);
 	            } else {
 	              // 属性值开头部分是字面量
 	              if (attributeValueStartPattern.test(content)) {
-	                content = content.replace(attributeValueStartPattern, '');
+	                quote = content.charAt(1);
+	                content = content.substr(2);
 	              }
 	              // 没有属性值
 	              else {
@@ -1622,16 +1629,13 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	              addChild(name.startsWith(syntax.DIRECTIVE_PREFIX) || name.startsWith(syntax.DIRECTIVE_EVENT_PREFIX) ? new _Directive2["default"](name) : new _Attribute2["default"](name));
 
-	              if ((0, _is.isString)(match[3])) {
-	                addChild(new _Text2["default"](match[3]));
-	                // 剩下的只可能是引号了
-	                if (content) {
-	                  popStack();
-	                }
+	              if ((0, _is.isString)(match[2])) {
+	                quote = match[2].charAt(1);
+	                content = parseAttributeValue(content);
 	                // else 可能跟了一个表达式
 	              }
 	              // 没有引号，即 checked、disabled 等
-	              else if (!match[2]) {
+	              else {
 	                  popStack();
 	                }
 	            }
@@ -1750,6 +1754,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _object = __webpack_require__(9);
 
+	var _expression = __webpack_require__(15);
+
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 	module.exports = function () {
@@ -1761,11 +1767,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	  function Context(data, parent) {
 	    _classCallCheck(this, Context);
 
-	    this.data = data;
-	    this.parent = parent;
-	    this.cache = {
-	      'this': data
-	    };
+	    var instance = this;
+	    instance.data = data;
+	    instance.parent = parent;
+	    instance.cache = {};
+	    instance.cache[_expression.THIS_ARG] = data;
 	  }
 
 	  _createClass(Context, [{
@@ -1797,19 +1803,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	    key: 'get',
 	    value: function get(keypath) {
 
-	      var context = this;
-	      var _context = context,
-	          cache = _context.cache;
+	      var instance = this;
+	      var _instance = instance,
+	          cache = _instance.cache;
 
 	      if (!(0, _object.has)(cache, keypath)) {
 	        var result = void 0;
-	        while (context) {
-	          result = (0, _object.get)(context.data, keypath);
+	        while (instance) {
+	          result = (0, _object.get)(instance.data, keypath);
 	          if (result) {
 	            cache[keypath] = result.value;
 	            break;
 	          } else {
-	            context = context.parent;
+	            instance = instance.parent;
 	          }
 	        }
 	      }
@@ -1823,339 +1829,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 /***/ },
 /* 15 */
-/***/ function(module, exports) {
-
-	'use strict';
-
-	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-	module.exports = function () {
-	  function Scanner(str) {
-	    _classCallCheck(this, Scanner);
-
-	    this.reset(str);
-	  }
-
-	  _createClass(Scanner, [{
-	    key: 'reset',
-	    value: function reset(str) {
-	      this.pos = 0;
-	      this.tail = str;
-	    }
-
-	    /**
-	     * 扫描是否结束
-	     *
-	     * @return {boolean}
-	     */
-
-	  }, {
-	    key: 'hasNext',
-	    value: function hasNext() {
-	      return this.tail;
-	    }
-
-	    /**
-	     * 从剩下的字符串中尝试匹配 pattern
-	     * pattern 必须位于字符串的开始位置
-	     * 匹配成功后，位置修改为匹配结果之后
-	     * 返回匹配字符串
-	     *
-	     * @param {RegExp} pattern
-	     * @return {string}
-	     */
-
-	  }, {
-	    key: 'nextAfter',
-	    value: function nextAfter(pattern) {
-	      var tail = this.tail;
-
-	      var matches = tail.match(pattern);
-	      if (!matches || matches.index) {
-	        return '';
-	      }
-	      var result = matches[0];
-	      this.forward(result.length);
-	      return result;
-	    }
-
-	    /**
-	     * 从剩下的字符串中尝试匹配 pattern
-	     * pattern 不要求一定要位于字符串的开始位置
-	     * 匹配成功后，位置修改为匹配结果之前
-	     * 返回上次位置和当前位置之间的字符串
-	     *
-	     * @param {RegExp} pattern
-	     * @return {string}
-	     */
-
-	  }, {
-	    key: 'nextBefore',
-	    value: function nextBefore(pattern) {
-	      var pos = this.pos,
-	          tail = this.tail;
-
-	      var matches = tail.match(pattern);
-	      if (matches) {
-	        var index = matches.index;
-
-	        if (!index) {
-	          return '';
-	        }
-	        var result = tail.substr(0, index);
-	        this.forward(index);
-	        return result;
-	      } else {
-	        this.forward(tail.length);
-	        return tail;
-	      }
-	    }
-	  }, {
-	    key: 'forward',
-	    value: function forward(offset) {
-	      this.pos += offset;
-	      this.tail = this.tail.substr(offset);
-	    }
-	  }, {
-	    key: 'charAt',
-	    value: function charAt(index) {
-	      return this.tail[index];
-	    }
-	  }]);
-
-	  return Scanner;
-	}();
-
-/***/ },
-/* 16 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-	var _nodeType = __webpack_require__(17);
-
-	var _Node2 = __webpack_require__(18);
-
-	var _Node3 = _interopRequireDefault(_Node2);
-
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
-
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-	/**
-	 * 属性节点
-	 *
-	 * @param {string} name 属性名
-	 */
-	module.exports = function (_Node) {
-	  _inherits(Attribute, _Node);
-
-	  function Attribute(name) {
-	    _classCallCheck(this, Attribute);
-
-	    var _this = _possibleConstructorReturn(this, (Attribute.__proto__ || Object.getPrototypeOf(Attribute)).call(this));
-
-	    _this.type = _nodeType.ATTRIBUTE;
-	    _this.name = name;
-	    return _this;
-	  }
-
-	  _createClass(Attribute, [{
-	    key: 'render',
-	    value: function render(parent, context, keys, parseTemplate) {
-	      var name = this.name;
-
-	      if (name.type === _nodeType.EXPRESSION) {
-	        name = name.execute(context);
-	      }
-
-	      var node = new Attribute(name);
-	      node.keypath = keys.join('.');
-	      parent.addAttr(node);
-
-	      this.renderChildren(node, context, keys, parseTemplate);
-	    }
-	  }]);
-
-	  return Attribute;
-	}(_Node3["default"]);
-
-/***/ },
-/* 17 */
-/***/ function(module, exports) {
-
-	"use strict";
-
-	Object.defineProperty(exports, "__esModule", {
-	  value: true
-	});
-
-	/**
-	 * if 节点
-	 *
-	 * @type {number}
-	 */
-	var IF = exports.IF = 1;
-
-	/**
-	 * else if 节点
-	 *
-	 * @type {number}
-	 */
-	var ELSE_IF = exports.ELSE_IF = 2;
-
-	/**
-	 * else 节点
-	 *
-	 * @type {number}
-	 */
-	var ELSE = exports.ELSE = 3;
-
-	/**
-	 * each 节点
-	 *
-	 * @type {number}
-	 */
-	var EACH = exports.EACH = 4;
-
-	/**
-	 * partial 节点
-	 *
-	 * @type {number}
-	 */
-	var PARTIAL = exports.PARTIAL = 5;
-
-	/**
-	 * import 节点
-	 *
-	 * @type {number}
-	 */
-	var IMPORT = exports.IMPORT = 6;
-
-	/**
-	 * 表达式 节点
-	 *
-	 * @type {number}
-	 */
-	var EXPRESSION = exports.EXPRESSION = 7;
-
-	/**
-	 * 指令 节点
-	 *
-	 * @type {number}
-	 */
-	var DIRECTIVE = exports.DIRECTIVE = 8;
-
-	/**
-	 * 元素 节点
-	 *
-	 * @type {number}
-	 */
-	var ELEMENT = exports.ELEMENT = 9;
-
-	/**
-	 * 属性 节点
-	 *
-	 * @type {number}
-	 */
-	var ATTRIBUTE = exports.ATTRIBUTE = 10;
-
-	/**
-	 * 文本 节点
-	 *
-	 * @type {number}
-	 */
-	var TEXT = exports.TEXT = 11;
-
-/***/ },
-/* 18 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-	var _env = __webpack_require__(4);
-
-	var _array = __webpack_require__(11);
-
-	var _expression = __webpack_require__(19);
-
-	var _nodeType = __webpack_require__(17);
-
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-	/**
-	 * 节点基类
-	 */
-	module.exports = function () {
-	  function Node() {
-	    var hasChildren = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : _env.TRUE;
-
-	    _classCallCheck(this, Node);
-
-	    if (hasChildren) {
-	      this.children = [];
-	    }
-	  }
-
-	  _createClass(Node, [{
-	    key: 'addChild',
-	    value: function addChild(node) {
-	      var children = this.children;
-
-	      if (node.type === _nodeType.TEXT) {
-	        var lastChild = (0, _array.lastItem)(children);
-	        if (lastChild && lastChild.type === _nodeType.TEXT) {
-	          lastChild.content += node.content;
-	          return;
-	        }
-	      }
-	      children.push(node);
-	    }
-	  }, {
-	    key: 'getValue',
-	    value: function getValue() {
-	      var children = this.children;
-
-	      return children[0] ? children[0].content : _env.TRUE;
-	    }
-	  }, {
-	    key: 'execute',
-	    value: function execute(context) {
-	      var fn = (0, _expression.compile)(this.expr);
-	      // 可能是任何类型的结果
-	      return fn.apply(context.data, fn.$arguments.map(function (name) {
-	        return context.get(name);
-	      }));
-	    }
-	  }, {
-	    key: 'render',
-	    value: function render() {
-	      // noop
-	    }
-	  }, {
-	    key: 'renderChildren',
-	    value: function renderChildren(parent, context, keys, parseTemplate, children) {
-	      (0, _array.reduce)(children || this.children, function (prev, current) {
-	        return current.render(parent, context, keys, parseTemplate, prev);
-	      });
-	    }
-	  }]);
-
-	  return Node;
-	}();
-
-/***/ },
-/* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -2163,7 +1836,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.CALL = exports.CONDITIONAL = exports.BINARY = exports.UNARY = exports.MEMBER = exports.THIS = exports.IDENTIFIER = exports.ARRAY = exports.LITERAL = undefined;
+	exports.THIS_ARG = exports.CALL = exports.CONDITIONAL = exports.BINARY = exports.UNARY = exports.MEMBER = exports.THIS = exports.IDENTIFIER = exports.ARRAY = exports.LITERAL = undefined;
 	exports.parse = parse;
 	exports.compile = compile;
 	exports.traverse = traverse;
@@ -2200,6 +1873,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	var BINARY = exports.BINARY = 7;
 	var CONDITIONAL = exports.CONDITIONAL = 8;
 	var CALL = exports.CALL = 9;
+
+	var THIS_ARG = exports.THIS_ARG = '$_$';
 
 	// 分隔符
 	var COMMA = 44; // ,
@@ -2727,7 +2402,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	/**
-	 * 创建一个可执行的函数来运行该代码，为了支持表达式中的 this，调用函数时应用 fn.apply(context, args)
+	 * 创建一个可执行的函数来运行该代码
 	 *
 	 * @param {string|Object} ast
 	 * @return {Function}
@@ -2743,20 +2418,32 @@ return /******/ (function(modules) { // webpackBootstrap
 	    content = ast.$raw;
 	  }
 
+	  // 如果函数是 function () { return this }
+	  // 如果用 fn.call('')，返回的会是个 new String('')，不是字符串字面量
+	  // 这里要把 this 强制改掉
+
 	  var expressionCompile = cache.expressionCompile;
 
 
 	  if (!expressionCompile[content]) {
 	    (function () {
 	      var args = [];
+	      var hasThis = void 0;
 
 	      traverse(ast, {
 	        enter: function enter(node) {
 	          if (node.type === IDENTIFIER) {
 	            args.push(node.name);
+	          } else if (node.type === THIS) {
+	            hasThis = _env.TRUE;
+	            args.push(THIS_ARG);
 	          }
 	        }
 	      });
+
+	      if (hasThis) {
+	        content = content.replace(/\bthis\b/, THIS_ARG);
+	      }
 
 	      var fn = new Function(args.join(', '), 'return ' + content);
 	      fn.$arguments = args;
@@ -2826,6 +2513,339 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 /***/ },
+/* 16 */
+/***/ function(module, exports) {
+
+	'use strict';
+
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	module.exports = function () {
+	  function Scanner(str) {
+	    _classCallCheck(this, Scanner);
+
+	    this.reset(str);
+	  }
+
+	  _createClass(Scanner, [{
+	    key: 'reset',
+	    value: function reset(str) {
+	      this.pos = 0;
+	      this.tail = str;
+	    }
+
+	    /**
+	     * 扫描是否结束
+	     *
+	     * @return {boolean}
+	     */
+
+	  }, {
+	    key: 'hasNext',
+	    value: function hasNext() {
+	      return this.tail;
+	    }
+
+	    /**
+	     * 从剩下的字符串中尝试匹配 pattern
+	     * pattern 必须位于字符串的开始位置
+	     * 匹配成功后，位置修改为匹配结果之后
+	     * 返回匹配字符串
+	     *
+	     * @param {RegExp} pattern
+	     * @return {string}
+	     */
+
+	  }, {
+	    key: 'nextAfter',
+	    value: function nextAfter(pattern) {
+	      var tail = this.tail;
+
+	      var matches = tail.match(pattern);
+	      if (!matches || matches.index) {
+	        return '';
+	      }
+	      var result = matches[0];
+	      this.forward(result.length);
+	      return result;
+	    }
+
+	    /**
+	     * 从剩下的字符串中尝试匹配 pattern
+	     * pattern 不要求一定要位于字符串的开始位置
+	     * 匹配成功后，位置修改为匹配结果之前
+	     * 返回上次位置和当前位置之间的字符串
+	     *
+	     * @param {RegExp} pattern
+	     * @return {string}
+	     */
+
+	  }, {
+	    key: 'nextBefore',
+	    value: function nextBefore(pattern) {
+	      var pos = this.pos,
+	          tail = this.tail;
+
+	      var matches = tail.match(pattern);
+	      if (matches) {
+	        var index = matches.index;
+
+	        if (!index) {
+	          return '';
+	        }
+	        var result = tail.substr(0, index);
+	        this.forward(index);
+	        return result;
+	      } else {
+	        this.forward(tail.length);
+	        return tail;
+	      }
+	    }
+	  }, {
+	    key: 'forward',
+	    value: function forward(offset) {
+	      this.pos += offset;
+	      this.tail = this.tail.substr(offset);
+	    }
+	  }, {
+	    key: 'charAt',
+	    value: function charAt(index) {
+	      return this.tail[index];
+	    }
+	  }]);
+
+	  return Scanner;
+	}();
+
+/***/ },
+/* 17 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+	var _nodeType = __webpack_require__(18);
+
+	var _Node2 = __webpack_require__(19);
+
+	var _Node3 = _interopRequireDefault(_Node2);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+	/**
+	 * 属性节点
+	 *
+	 * @param {string} name 属性名
+	 */
+	module.exports = function (_Node) {
+	  _inherits(Attribute, _Node);
+
+	  function Attribute(name) {
+	    _classCallCheck(this, Attribute);
+
+	    var _this = _possibleConstructorReturn(this, (Attribute.__proto__ || Object.getPrototypeOf(Attribute)).call(this));
+
+	    _this.type = _nodeType.ATTRIBUTE;
+	    _this.name = name;
+	    return _this;
+	  }
+
+	  _createClass(Attribute, [{
+	    key: 'render',
+	    value: function render(parent, context, keys, parseTemplate) {
+	      var name = this.name;
+
+	      if (name.type === _nodeType.EXPRESSION) {
+	        name = name.execute(context);
+	      }
+
+	      var node = new Attribute(name);
+	      node.keypath = keys.join('.');
+	      parent.addAttr(node);
+
+	      this.renderChildren(node, context, keys, parseTemplate);
+	    }
+	  }]);
+
+	  return Attribute;
+	}(_Node3["default"]);
+
+/***/ },
+/* 18 */
+/***/ function(module, exports) {
+
+	"use strict";
+
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+
+	/**
+	 * if 节点
+	 *
+	 * @type {number}
+	 */
+	var IF = exports.IF = 1;
+
+	/**
+	 * else if 节点
+	 *
+	 * @type {number}
+	 */
+	var ELSE_IF = exports.ELSE_IF = 2;
+
+	/**
+	 * else 节点
+	 *
+	 * @type {number}
+	 */
+	var ELSE = exports.ELSE = 3;
+
+	/**
+	 * each 节点
+	 *
+	 * @type {number}
+	 */
+	var EACH = exports.EACH = 4;
+
+	/**
+	 * partial 节点
+	 *
+	 * @type {number}
+	 */
+	var PARTIAL = exports.PARTIAL = 5;
+
+	/**
+	 * import 节点
+	 *
+	 * @type {number}
+	 */
+	var IMPORT = exports.IMPORT = 6;
+
+	/**
+	 * 表达式 节点
+	 *
+	 * @type {number}
+	 */
+	var EXPRESSION = exports.EXPRESSION = 7;
+
+	/**
+	 * 指令 节点
+	 *
+	 * @type {number}
+	 */
+	var DIRECTIVE = exports.DIRECTIVE = 8;
+
+	/**
+	 * 元素 节点
+	 *
+	 * @type {number}
+	 */
+	var ELEMENT = exports.ELEMENT = 9;
+
+	/**
+	 * 属性 节点
+	 *
+	 * @type {number}
+	 */
+	var ATTRIBUTE = exports.ATTRIBUTE = 10;
+
+	/**
+	 * 文本 节点
+	 *
+	 * @type {number}
+	 */
+	var TEXT = exports.TEXT = 11;
+
+/***/ },
+/* 19 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+	var _env = __webpack_require__(4);
+
+	var _array = __webpack_require__(11);
+
+	var _expression = __webpack_require__(15);
+
+	var _nodeType = __webpack_require__(18);
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	/**
+	 * 节点基类
+	 */
+	module.exports = function () {
+	  function Node() {
+	    var hasChildren = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : _env.TRUE;
+
+	    _classCallCheck(this, Node);
+
+	    if (hasChildren) {
+	      this.children = [];
+	    }
+	  }
+
+	  _createClass(Node, [{
+	    key: 'addChild',
+	    value: function addChild(node) {
+	      var children = this.children;
+
+	      if (node.type === _nodeType.TEXT) {
+	        var lastChild = (0, _array.lastItem)(children);
+	        if (lastChild && lastChild.type === _nodeType.TEXT) {
+	          lastChild.content += node.content;
+	          return;
+	        }
+	      }
+	      children.push(node);
+	    }
+	  }, {
+	    key: 'getValue',
+	    value: function getValue() {
+	      var children = this.children;
+
+	      return children[0] ? children[0].content : _env.TRUE;
+	    }
+	  }, {
+	    key: 'execute',
+	    value: function execute(context) {
+	      var fn = (0, _expression.compile)(this.expr);
+	      // 可能是任何类型的结果
+	      return fn.apply(_env.NULL, fn.$arguments.map(function (name) {
+	        return context.get(name);
+	      }));
+	    }
+	  }, {
+	    key: 'render',
+	    value: function render() {
+	      // noop
+	    }
+	  }, {
+	    key: 'renderChildren',
+	    value: function renderChildren(parent, context, keys, parseTemplate, children) {
+	      (0, _array.reduce)(children || this.children, function (prev, current) {
+	        return current.render(parent, context, keys, parseTemplate, prev);
+	      });
+	    }
+	  }]);
+
+	  return Node;
+	}();
+
+/***/ },
 /* 20 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -2833,9 +2853,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-	var _nodeType = __webpack_require__(17);
+	var _nodeType = __webpack_require__(18);
 
-	var _Node2 = __webpack_require__(18);
+	var _Node2 = __webpack_require__(19);
 
 	var _Node3 = _interopRequireDefault(_Node2);
 
@@ -2890,9 +2910,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-	var _nodeType = __webpack_require__(17);
+	var _nodeType = __webpack_require__(18);
 
-	var _Node2 = __webpack_require__(18);
+	var _Node2 = __webpack_require__(19);
 
 	var _Node3 = _interopRequireDefault(_Node2);
 
@@ -2977,9 +2997,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-	var _nodeType = __webpack_require__(17);
+	var _nodeType = __webpack_require__(18);
 
-	var _Node2 = __webpack_require__(18);
+	var _Node2 = __webpack_require__(19);
 
 	var _Node3 = _interopRequireDefault(_Node2);
 
@@ -3059,9 +3079,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-	var _nodeType = __webpack_require__(17);
+	var _nodeType = __webpack_require__(18);
 
-	var _Node2 = __webpack_require__(18);
+	var _Node2 = __webpack_require__(19);
 
 	var _Node3 = _interopRequireDefault(_Node2);
 
@@ -3108,9 +3128,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-	var _nodeType = __webpack_require__(17);
+	var _nodeType = __webpack_require__(18);
 
-	var _Node2 = __webpack_require__(18);
+	var _Node2 = __webpack_require__(19);
 
 	var _Node3 = _interopRequireDefault(_Node2);
 
@@ -3164,9 +3184,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-	var _nodeType = __webpack_require__(17);
+	var _nodeType = __webpack_require__(18);
 
-	var _Node2 = __webpack_require__(18);
+	var _Node2 = __webpack_require__(19);
 
 	var _Node3 = _interopRequireDefault(_Node2);
 
@@ -3250,9 +3270,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-	var _nodeType = __webpack_require__(17);
+	var _nodeType = __webpack_require__(18);
 
-	var _Node2 = __webpack_require__(18);
+	var _Node2 = __webpack_require__(19);
 
 	var _Node3 = _interopRequireDefault(_Node2);
 
@@ -3306,9 +3326,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _env = __webpack_require__(4);
 
-	var _nodeType = __webpack_require__(17);
+	var _nodeType = __webpack_require__(18);
 
-	var _Node2 = __webpack_require__(18);
+	var _Node2 = __webpack_require__(19);
 
 	var _Node3 = _interopRequireDefault(_Node2);
 
@@ -3363,9 +3383,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 
-	var _nodeType = __webpack_require__(17);
+	var _nodeType = __webpack_require__(18);
 
-	var _Node2 = __webpack_require__(18);
+	var _Node2 = __webpack_require__(19);
 
 	var _Node3 = _interopRequireDefault(_Node2);
 
@@ -3406,9 +3426,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 
-	var _nodeType = __webpack_require__(17);
+	var _nodeType = __webpack_require__(18);
 
-	var _Node2 = __webpack_require__(18);
+	var _Node2 = __webpack_require__(19);
 
 	var _Node3 = _interopRequireDefault(_Node2);
 
@@ -3452,6 +3472,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	});
 	exports.isBreakLine = isBreakLine;
 	exports.trimBreakline = trimBreakline;
+	exports.matchByQuote = matchByQuote;
 	exports.parseError = parseError;
 
 	var _env = __webpack_require__(4);
@@ -3471,12 +3492,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	var breaklinePrefixPattern = /^[ \t]*\n/;
 	var breaklineSuffixPattern = /\n[ \t]*$/;
 
+	var nonSingleQuotePattern = /^[^']*/;
+	var nonDoubleQuotePattern = /^[^"]*/;
+
 	function isBreakLine(str) {
 	  return str.indexOf('\n') >= 0 && !str.trim();
 	}
 
 	function trimBreakline(str) {
 	  return str.replace(breaklinePrefixPattern, '').replace(breaklineSuffixPattern, '');
+	}
+
+	function matchByQuote(str, nonQuote) {
+	  var match = str.match(nonQuote === '"' ? nonDoubleQuotePattern : nonSingleQuotePattern);
+	  return match ? match[0] : '';
 	}
 
 	function parseError(str, errorMsg, errorIndex) {
@@ -4063,7 +4092,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _array = __webpack_require__(11);
 
-	var _expression = __webpack_require__(19);
+	var _expression = __webpack_require__(15);
 
 	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj["default"] = obj; return newObj; } }
 
@@ -4208,7 +4237,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _object = __webpack_require__(9);
 
-	var _expression = __webpack_require__(19);
+	var _expression = __webpack_require__(15);
 
 	var _event = __webpack_require__(32);
 
@@ -4513,7 +4542,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _is = __webpack_require__(8);
 
-	var _nodeType = __webpack_require__(17);
+	var _nodeType = __webpack_require__(18);
 
 	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj["default"] = obj; return newObj; } }
 

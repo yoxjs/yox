@@ -22,4 +22,3 @@ export const win = window
  * @type {?Document}
  */
 export const doc = document
-

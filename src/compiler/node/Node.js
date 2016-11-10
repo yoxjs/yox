@@ -1,6 +1,7 @@
 
 import {
   TRUE,
+  NULL,
 } from '../../config/env'
 
 import {
@@ -49,7 +50,7 @@ module.exports = class Node {
     let fn = compile(this.expr)
     // 可能是任何类型的结果
     return fn.apply(
-      context.data,
+      NULL,
       fn.$arguments.map(
         function (name) {
           return context.get(name)
