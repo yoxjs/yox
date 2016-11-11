@@ -4,32 +4,14 @@
   (global.Yox = factory());
 }(this, (function () { 'use strict';
 
-/**
- * 为了压缩定义的三个常量
- *
- * @type {boolean}
- */
 var TRUE = true;
 var FALSE = false;
 var NULL = null;
 var UNDEFINED = undefined;
 
-/**
- * 浏览器环境下的 window 对象
- *
- * @type {?Window}
- */
 
 
-/**
- * 浏览器环境下的 document 对象
- *
- * @type {?Document}
- */
 var doc = document;
-
-// 提升性能用的 cache
-// 做成模块是为了给外部提供清除缓存的机会
 
 var templateParse = {};
 
@@ -47,20 +29,8 @@ var cache = Object.freeze({
 	keypathWildcardMatches: keypathWildcardMatches
 });
 
-/**
- * 是否是调试状态
- *
- * 调试状态下会打印很多消息
- *
- * @type {boolean}
- */
 var debug = FALSE;
 
-/**
- * 是否同步更新
- *
- * @type {boolean}
- */
 var sync = TRUE;
 
 var switcher = Object.freeze({
@@ -68,30 +38,14 @@ var switcher = Object.freeze({
 	sync: sync
 });
 
-/**
- * 是否有原生的日志特性，没有需要单独实现
- *
- * @inner
- * @param {boolean}
- */
 var hasConsole = typeof console !== 'undefined';
 
-/**
- * 打印警告日志
- *
- * @param {string} msg
- */
 var warn = function warn(msg) {
   if (debug && hasConsole) {
     console.warn(msg);
   }
 };
 
-/**
- * 打印错误日志
- *
- * @param {string} msg
- */
 var error$1 = function error$1(msg) {
   if (hasConsole) {
     console.error(msg);
@@ -126,25 +80,10 @@ var syntax = Object.freeze({
 	SPECIAL_KEYPATH: SPECIAL_KEYPATH
 });
 
-/**
- * 组件名称 - 包含大写字母或连字符
- *
- * @type {RegExp}
- */
 var componentName = /[-A-Z]/;
 
-/**
- * html 标签
- *
- * @type {RegExp}
- */
 var tag = /<[^>]+>/;
 
-/**
- * 自闭合的标签
- *
- * @type {RegExp}
- */
 var selfClosingTagName = /input|img|br/i;
 
 var toString = Object.prototype.toString;
@@ -212,7 +151,6 @@ function each$1(array$$1, callback) {
   }
 }
 
-// array.reduce 如果是空数组，不传 initialValue 居然会报错，所以封装一下
 function reduce(array$$1, callback, initialValue) {
   return array$$1.reduce(callback, initialValue);
 }
@@ -334,20 +272,15 @@ function copy(object$$1, deep) {
   return result;
 }
 
-/**
- * 返回需要区分是找不到还是值是 undefined
- */
 function get$1(object$$1, keypath) {
   keypath = toString$1(keypath);
 
-  // object 的 key 可能是 'a.b.c' 这样的
-  // 如 data['a.b.c'] = 1 是一个合法赋值
   if (has$1(object$$1, keypath)) {
     return {
       value: object$$1[keypath]
     };
   }
-  // 不能以 . 开头
+
   if (keypath.indexOf('.') > 0) {
     var list = keypath.split('.');
     for (var i = 0, len = list.length; i < len && object$$1; i++) {
@@ -682,47 +615,16 @@ var registry = Object.freeze({
 	partial: partial
 });
 
-/**
- * 数据监听、事件监听尚未初始化。
- *
- * @type {string}
- */
 var INIT = 'init';
 
-/**
- * 已创建计算属性，方法，数据监听，事件监听。
- * 但是还没有开始编译模板，$el 还不存在。
- *
- * @type {string}
- */
 var CREATE = 'create';
 
-/**
- * 在模板编译结束后调用。
- *
- * @type {string}
- */
 var COMPILE = 'compile';
 
-/**
- * 组件第一次加入 DOM 树调用。
- *
- * @type {string}
- */
 var ATTACH = 'attach';
 
-/**
- * 数据更新时调用。
- *
- * @type {string}
- */
 var UPDATE = 'update';
 
-/**
- * 组件从 DOM 树移除时调用。
- *
- * @type {string}
- */
 var DETACH = 'detach';
 
 var lifecycle = Object.freeze({
@@ -734,11 +636,6 @@ var lifecycle = Object.freeze({
 	DETACH: DETACH
 });
 
-/**
- * 仅支持一句表达式，即不支持 `a + b, b + c`
- */
-
-// 节点类型
 var LITERAL = 1;
 var ARRAY = 2;
 var IDENTIFIER = 3;
@@ -751,32 +648,22 @@ var CALL = 9;
 
 var THIS_ARG = '$_$';
 
-// 分隔符
-var COMMA = 44; // ,
-var PERIOD = 46; // .
-var SQUOTE = 39; // '
-var DQUOTE = 34; // "
-var OPAREN = 40; // (
-var CPAREN = 41; // )
-var OBRACK = 91; // [
-var CBRACK = 93; // ]
-var QUMARK = 63; // ?
-var COLON = 58; // :
-
-/**
- * 倒排对象的 key
- *
- * @inner
- * @param {Object} obj
- * @return {Array.<string>}
- */
+var COMMA = 44;
+var PERIOD = 46;
+var SQUOTE = 39;
+var DQUOTE = 34;
+var OPAREN = 40;
+var CPAREN = 41;
+var OBRACK = 91;
+var CBRACK = 93;
+var QUMARK = 63;
+var COLON = 58;
 function sortKeys(obj) {
   return keys(obj).sort(function (a, b) {
     return b.length - a.length;
   });
 }
 
-// 用于判断是否是一元操作符
 var unaryOperatorMap = {
   '+': TRUE,
   '-': TRUE,
@@ -786,7 +673,6 @@ var unaryOperatorMap = {
 
 var sortedUnaryOperatorList = sortKeys(unaryOperatorMap);
 
-// 操作符和对应的优先级，数字越大优先级越高
 var binaryOperatorMap = {
   '||': 1,
   '&&': 2,
@@ -813,9 +699,6 @@ var binaryOperatorMap = {
 
 var sortedBinaryOperatorList = sortKeys(binaryOperatorMap);
 
-// 区分关键字和普通变量
-// 举个例子：a === true
-// 从解析器的角度来说，a 和 true 是一样的 token
 var keywords = {
   'true': TRUE,
   'false': FALSE,
@@ -823,62 +706,22 @@ var keywords = {
   'undefined': UNDEFINED
 };
 
-/**
- * 是否是数字
- *
- * @inner
- * @param {string} charCode
- * @return {boolean}
- */
 function isNumber(charCode) {
-  return charCode >= 48 && charCode <= 57; // 0...9
+  return charCode >= 48 && charCode <= 57;
 }
 
-/**
- * 是否是空白符
- *
- * @inner
- * @param {string} charCode
- * @return {boolean}
- */
 function isWhitespace(charCode) {
-  return charCode === 32 // space
-  || charCode === 9; // tab
+  return charCode === 32 || charCode === 9;
 }
 
-/**
- * 变量开始字符必须是 字母、下划线、$
- *
- * @inner
- * @param {string} charCode
- * @return {boolean}
- */
 function isIdentifierStart(charCode) {
-  return charCode === 36 // $
-  || charCode === 95 // _
-  || charCode >= 97 && charCode <= 122 // a...z
-  || charCode >= 65 && charCode <= 90; // A...Z
+  return charCode === 36 || charCode === 95 || charCode >= 97 && charCode <= 122 || charCode >= 65 && charCode <= 90;
 }
 
-/**
- * 变量剩余的字符必须是 字母、下划线、$、数字
- *
- * @inner
- * @param {string} charCode
- * @return {boolean}
- */
 function isIdentifierPart(charCode) {
   return isIdentifierStart(charCode) || isNumber(charCode);
 }
 
-/**
- * 用倒排 token 去匹配 content 的开始内容
- *
- * @inner
- * @param {string} content
- * @param {Array.<string>} sortedTokens 数组长度从大到小排序
- * @return {string}
- */
 function matchBestToken(content, sortedTokens) {
   var result = void 0;
   each$1(sortedTokens, function (token) {
@@ -890,26 +733,10 @@ function matchBestToken(content, sortedTokens) {
   return result;
 }
 
-/**
- * 懒得说各种细节错误，表达式都输出了看不出原因我也没办法
- *
- * @inner
- * @param {string} expression
- * @return {Error}
- */
 function throwError(expression) {
   error$1('Failed to parse expression: [' + expression + '].');
 }
 
-/**
- * 创建一个三目运算
- *
- * @inner
- * @param {Object} test
- * @param {Object} consequent
- * @param {Object} alternate
- * @return {Object}
- */
 function createConditional(test, consequent, alternate) {
   return {
     type: CONDITIONAL,
@@ -919,15 +746,6 @@ function createConditional(test, consequent, alternate) {
   };
 }
 
-/**
- * 创建一个二元表达式
- *
- * @inner
- * @param {Object} right
- * @param {string} operator
- * @param {Object} left
- * @return {Object}
- */
 function createBinary(right, operator, left) {
   return {
     type: BINARY,
@@ -937,14 +755,6 @@ function createBinary(right, operator, left) {
   };
 }
 
-/**
- * 创建一个一元表达式
- *
- * @inner
- * @param {string} operator
- * @param {Object} argument
- * @return {Object}
- */
 function createUnary(operator, argument) {
   return {
     type: UNARY,
@@ -996,12 +806,6 @@ function createCall(callee, args) {
   };
 }
 
-/**
- * 表达式解析成抽象语法树
- *
- * @param {string} content 表达式字符串
- * @return {Object}
- */
 function parse$1(content) {
   var length = content.length;
 
@@ -1045,8 +849,6 @@ function parse$1(content) {
   }
 
   function skipIdentifier() {
-    // 第一个字符一定是经过 isIdentifierStart 判断的
-    // 因此循环至少要执行一次
     do {
       index++;
     } while (isIdentifierPart(getCharCode()));
@@ -1123,20 +925,16 @@ function parse$1(content) {
     value = parseIdentifier();
 
     while (index < length) {
-      // a(x)
       charCode = getCharCode();
       if (charCode === OPAREN) {
         index++;
         value = createCall(value, parseTuple(CPAREN));
         break;
       } else {
-        // a.x
         if (charCode === PERIOD) {
           index++;
           value = createMember(value, createLiteral(parseIdentifier().name));
-        }
-        // a[x]
-        else if (charCode === OBRACK) {
+        } else if (charCode === OBRACK) {
             index++;
             value = createMember(value, parseSubexpression(CBRACK));
           } else {
@@ -1152,21 +950,15 @@ function parse$1(content) {
     skipWhitespace();
 
     charCode = getCharCode();
-    // 'xx' 或 "xx"
+
     if (charCode === SQUOTE || charCode === DQUOTE) {
       return parseString();
-    }
-    // 1.1 或 .1
-    else if (isNumber(charCode) || charCode === PERIOD) {
+    } else if (isNumber(charCode) || charCode === PERIOD) {
         return parseNumber();
-      }
-      // [xx, xx]
-      else if (charCode === OBRACK) {
+      } else if (charCode === OBRACK) {
           index++;
           return createArray(parseTuple(CBRACK));
-        }
-        // (xx, xx)
-        else if (charCode === OPAREN) {
+        } else if (charCode === OPAREN) {
             index++;
             return parseSubexpression(CPAREN);
           } else if (isIdentifierStart(charCode)) {
@@ -1196,8 +988,6 @@ function parse$1(content) {
     var stack = [left, operator, binaryOperatorMap[operator], right];
 
     while (operator = parseOperator(sortedBinaryOperatorList)) {
-
-      // 处理左边
       if (stack.length > 3 && binaryOperatorMap[operator] < stack[stack.length - 2]) {
         stack.push(createBinary(stack.pop(), (stack.pop(), stack.pop()), stack.pop()));
       }
@@ -1209,11 +999,6 @@ function parse$1(content) {
       stack.push(operator, binaryOperatorMap[operator], right);
     }
 
-    // 处理右边
-    // 右边只有等到所有 token 解析完成才能开始
-    // 比如 a + b * c / d
-    // 此时右边的优先级 >= 左边的优先级，因此可以脑残的直接逆序遍历
-
     right = stack.pop();
     while (stack.length > 1) {
       right = createBinary(right, (stack.pop(), stack.pop()), stack.pop());
@@ -1222,7 +1007,6 @@ function parse$1(content) {
     return right;
   }
 
-  // (xx) 和 [xx] 都可能是子表达式，因此
   function parseSubexpression(delimiter) {
     value = parseExpression();
     if (getCharCode() === delimiter) {
@@ -1234,10 +1018,6 @@ function parse$1(content) {
   }
 
   function parseExpression() {
-
-    // 主要是区分三元和二元表达式
-    // 三元表达式可以认为是 3 个二元表达式组成的
-    // test ? consequent : alternate
 
     var test = parseBinary();
 
@@ -1253,7 +1033,6 @@ function parse$1(content) {
 
         var alternate = parseBinary();
 
-        // 保证调用 parseExpression() 之后无需再次调用 skipWhitespace()
         skipWhitespace();
         return createConditional(test, consequent, alternate);
       } else {
@@ -1275,12 +1054,6 @@ function parse$1(content) {
   return expressionParse$$1[content];
 }
 
-/**
- * 创建一个可执行的函数来运行该代码
- *
- * @param {string|Object} ast
- * @return {Function}
- */
 function compile(ast) {
 
   var content = void 0;
@@ -1291,10 +1064,6 @@ function compile(ast) {
   } else if (ast) {
     content = ast.$raw;
   }
-
-  // 如果函数是 function () { return this }
-  // 如果用 fn.call('')，返回的会是个 new String('')，不是字符串字面量
-  // 这里要把 this 强制改掉
 
   var expressionCompile$$1 = expressionCompile;
 
@@ -1328,18 +1097,9 @@ function compile(ast) {
   return expressionCompile$$1[content];
 }
 
-/**
- * 遍历抽象语法树
- *
- * @param {Object} ast
- * @param {Function?} options.enter
- * @param {Function?} options.leave
- */
 function traverse(ast) {
   var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
-
-  // enter 返回 false 可阻止继续遍历
   if (func(options.enter) && options.enter(ast) === FALSE) {
     return;
   }
@@ -1387,11 +1147,6 @@ function traverse(ast) {
 }
 
 var Context = function () {
-
-  /**
-   * @param {Object} data
-   * @param {?Context} parent
-   */
   function Context(data, parent) {
     classCallCheck(this, Context);
 
@@ -1467,29 +1222,11 @@ var Scanner = function () {
       this.pos = 0;
       this.tail = str;
     }
-
-    /**
-     * 扫描是否结束
-     *
-     * @return {boolean}
-     */
-
   }, {
     key: 'hasNext',
     value: function hasNext() {
       return this.tail;
     }
-
-    /**
-     * 从剩下的字符串中尝试匹配 pattern
-     * pattern 必须位于字符串的开始位置
-     * 匹配成功后，位置修改为匹配结果之后
-     * 返回匹配字符串
-     *
-     * @param {RegExp} pattern
-     * @return {string}
-     */
-
   }, {
     key: 'nextAfter',
     value: function nextAfter(pattern) {
@@ -1503,17 +1240,6 @@ var Scanner = function () {
       this.forward(result.length);
       return result;
     }
-
-    /**
-     * 从剩下的字符串中尝试匹配 pattern
-     * pattern 不要求一定要位于字符串的开始位置
-     * 匹配成功后，位置修改为匹配结果之前
-     * 返回上次位置和当前位置之间的字符串
-     *
-     * @param {RegExp} pattern
-     * @return {string}
-     */
-
   }, {
     key: 'nextBefore',
     value: function nextBefore(pattern) {
@@ -1550,86 +1276,27 @@ var Scanner = function () {
   return Scanner;
 }();
 
-/**
- * if 节点
- *
- * @type {number}
- */
 var IF$1 = 1;
 
-/**
- * else if 节点
- *
- * @type {number}
- */
 var ELSE_IF$1 = 2;
 
-/**
- * else 节点
- *
- * @type {number}
- */
 var ELSE$1 = 3;
 
-/**
- * each 节点
- *
- * @type {number}
- */
 var EACH$1 = 4;
 
-/**
- * partial 节点
- *
- * @type {number}
- */
 var PARTIAL$1 = 5;
 
-/**
- * import 节点
- *
- * @type {number}
- */
 var IMPORT$1 = 6;
 
-/**
- * 表达式 节点
- *
- * @type {number}
- */
 var EXPRESSION = 7;
 
-/**
- * 指令 节点
- *
- * @type {number}
- */
 var DIRECTIVE = 8;
 
-/**
- * 元素 节点
- *
- * @type {number}
- */
 var ELEMENT = 9;
 
-/**
- * 属性 节点
- *
- * @type {number}
- */
 var ATTRIBUTE = 10;
 
-/**
- * 文本 节点
- *
- * @type {number}
- */
 var TEXT = 11;
-
-/**
- * 节点基类
- */
 
 var Node = function () {
   function Node(hasChildren) {
@@ -1665,16 +1332,14 @@ var Node = function () {
     key: 'execute',
     value: function execute(context) {
       var fn = compile(this.expr);
-      // 可能是任何类型的结果
+
       return fn.apply(NULL, fn.$arguments.map(function (name) {
         return context.get(name);
       }));
     }
   }, {
     key: 'render',
-    value: function render() {
-      // noop
-    }
+    value: function render() {}
   }, {
     key: 'renderChildren',
     value: function renderChildren(data, children) {
@@ -1685,12 +1350,6 @@ var Node = function () {
   }]);
   return Node;
 }();
-
-/**
- * 属性节点
- *
- * @param {string|Expression} name 属性名
- */
 
 var Attribute = function (_Node) {
   inherits(Attribute, _Node);
@@ -1724,12 +1383,6 @@ var Attribute = function (_Node) {
   return Attribute;
 }(Node);
 
-/**
- * 指令节点
- *
- * @param {string} name 指令名
- */
-
 var Directive = function (_Node) {
   inherits(Directive, _Node);
 
@@ -1756,13 +1409,6 @@ var Directive = function (_Node) {
   }]);
   return Directive;
 }(Node);
-
-/**
- * each 节点
- *
- * @param {string} name
- * @param {string} index
- */
 
 var Each = function (_Node) {
   inherits(Each, _Node);
@@ -1815,13 +1461,6 @@ var Each = function (_Node) {
   }]);
   return Each;
 }(Node);
-
-/**
- * 元素节点
- *
- * @param {string} name
- * @param {string} custom
- */
 
 var Element = function (_Node) {
   inherits(Element, _Node);
@@ -1876,10 +1515,6 @@ var Element = function (_Node) {
   return Element;
 }(Node);
 
-/**
- * else 节点
- */
-
 var Else = function (_Node) {
   inherits(Else, _Node);
 
@@ -1902,12 +1537,6 @@ var Else = function (_Node) {
   }]);
   return Else;
 }(Node);
-
-/**
- * else if 节点
- *
- * @param {Expression} expr 判断条件
- */
 
 var ElseIf = function (_Node) {
   inherits(ElseIf, _Node);
@@ -1937,12 +1566,6 @@ var ElseIf = function (_Node) {
   return ElseIf;
 }(Node);
 
-/**
- * 文本节点
- *
- * @param {*} content
- */
-
 var Text = function (_Node) {
   inherits(Text, _Node);
 
@@ -1966,13 +1589,6 @@ var Text = function (_Node) {
   }]);
   return Text;
 }(Node);
-
-/**
- * 表达式节点
- *
- * @param {string} expr
- * @param {boolean} safe
- */
 
 var Expression = function (_Node) {
   inherits(Expression, _Node);
@@ -2001,7 +1617,6 @@ var Expression = function (_Node) {
         content = content();
       }
 
-      // 处理需要不转义的
       if (!this.safe && string(content) && tag.test(content)) {
         each$1(data.parse(content), function (node) {
           node.render(data);
@@ -2014,12 +1629,6 @@ var Expression = function (_Node) {
   }]);
   return Expression;
 }(Node);
-
-/**
- * if 节点
- *
- * @param {Expression} expr 判断条件
- */
 
 var If = function (_Node) {
   inherits(If, _Node);
@@ -2037,11 +1646,6 @@ var If = function (_Node) {
   createClass(If, [{
     key: 'render',
     value: function render(data) {
-
-      // if 是第一个判断
-      // 当它为假时，需要跟进后续的条件分支
-      // 这里用到 reduce 的机制非常合适
-      // 即如果前一个分支不满足，返回 true，告知后续的要执行
       if (this.execute(data.context)) {
         this.renderChildren(data);
       } else {
@@ -2051,12 +1655,6 @@ var If = function (_Node) {
   }]);
   return If;
 }(Node);
-
-/**
- * import 节点
- *
- * @param {string} name
- */
 
 var Import = function (_Node) {
   inherits(Import, _Node);
@@ -2073,12 +1671,6 @@ var Import = function (_Node) {
 
   return Import;
 }(Node);
-
-/**
- * partial 节点
- *
- * @param {string} name
- */
 
 var Partial = function (_Node) {
   inherits(Partial, _Node);
@@ -2236,20 +1828,12 @@ var parsers = [{
 
 var rootName = 'root';
 
-/**
- * 把抽象语法树渲染成 Virtual DOM
- *
- * @param {Object} ast
- * @param {Object} data
- * @return {Object}
- */
 function render$1(ast, data) {
 
   var rootElement = new Element(rootName);
   var rootContext = new Context(data);
   var keys = [];
 
-  // 非转义插值需要解析模板字符串
   var renderAst = function renderAst(node) {
     node.render({
       keys: keys,
@@ -2276,14 +1860,6 @@ function render$1(ast, data) {
   return children[0];
 }
 
-/**
- * 把模板解析为抽象语法树
- *
- * @param {string} template
- * @param {Function} getPartial 当解析到 IMPORT 节点时，需要获取模板片段
- * @param {Function} setPartial 当解析到 PARTIAL 节点时，需要注册模板片段
- * @return {Object}
- */
 function _parse(template, getPartial, setPartial) {
   var templateParse$$1 = templateParse;
 
@@ -2384,55 +1960,31 @@ function _parse(template, getPartial, setPartial) {
     return content;
   };
 
-  // 这个函数涉及分隔符和普通模板的深度解析
-  // 是最核心的函数
   var parseContent = function parseContent(content, isAttributesParsing) {
 
     helperScanner.reset(content);
 
     while (helperScanner.hasNext()) {
-
-      // 分隔符之前的内容
       content = helperScanner.nextBefore(openingDelimiterPattern);
       helperScanner.nextAfter(openingDelimiterPattern);
 
       if (content) {
 
-        // 支持以下 5 种 attribute
-        // name
-        // {{name}}
-        // name="value"
-        // name="{{value}}"
-        // {{name}}="{{value}}"
-
         if (isAttributesParsing) {
-
-          // 当前节点是 ATTRIBUTE
-          // 表示至少已经有了属性名
           if (attrLike[currentNode.type]) {
-
-            // 走进这里，只可能是以下几种情况
-            // 1. 属性名是字面量，属性值已包含表达式
-            // 2. 属性名是表达式，属性值不确定是否存在
-
-            // 当前属性的属性值是字面量结尾
             if (currentNode.children.length) {
               content = parseAttributeValue(content);
             } else {
-              // 属性值开头部分是字面量
               if (attributeValueStartPattern.test(content)) {
                 quote = content.charAt(1);
                 content = content.slice(2);
-              }
-              // 没有属性值
-              else {
+              } else {
                   popStack();
                 }
             }
           }
 
           if (!attrLike[currentNode.type]) {
-            // 下一个属性的开始
             while (match = attributePattern.exec(content)) {
               content = content.slice(match.index + match[0].length);
 
@@ -2443,10 +1995,7 @@ function _parse(template, getPartial, setPartial) {
               if (string(match[2])) {
                 quote = match[2].charAt(1);
                 content = parseAttributeValue(content);
-                // else 可能跟了一个表达式
-              }
-              // 没有引号，即 checked、disabled 等
-              else {
+              } else {
                   popStack();
                 }
             }
@@ -2459,7 +2008,6 @@ function _parse(template, getPartial, setPartial) {
         }
       }
 
-      // 分隔符之间的内容
       content = helperScanner.nextBefore(closingDelimiterPattern);
       helperScanner.nextAfter(closingDelimiterPattern);
 
@@ -2492,19 +2040,15 @@ function _parse(template, getPartial, setPartial) {
     content = mainScanner.nextBefore(elementPattern);
 
     if (content.trim()) {
-      // 处理标签之间的内容
       parseContent(content);
     }
 
-    // 接下来必须是 < 开头（标签）
-    // 如果不是标签，那就该结束了
     if (mainScanner.charAt(0) !== '<') {
       break;
     }
 
     errorIndex = mainScanner.pos;
 
-    // 结束标签
     if (mainScanner.charAt(1) === '/') {
       content = mainScanner.nextAfter(elementPattern);
       name = content.slice(2);
@@ -2517,19 +2061,14 @@ function _parse(template, getPartial, setPartial) {
 
       popStack();
       mainScanner.forward(1);
-    }
-    // 开始标签
-    else {
+    } else {
         content = mainScanner.nextAfter(elementPattern);
         name = content.slice(1);
         isComponent = componentName.test(name);
         isSelfClosingTag = isComponent || selfClosingTagName.test(name);
 
-        // 低版本浏览器不支持自定义标签，因此需要转成 div
         addChild(new Element(isComponent ? 'div' : name, isComponent ? name : ''));
 
-        // 截取 <name 和 > 之间的内容
-        // 用于提取 attribute
         content = mainScanner.nextBefore(elementEndPattern);
         if (content) {
           parseContent(content, TRUE);
@@ -2665,7 +2204,6 @@ var Emitter = function () {
             $once();
           }
 
-          // 如果没有返回 false，而是调用了 event.stop 也算是返回 false
           var event = data && data[0];
           if (event && event instanceof Event) {
             if (result === FALSE) {
@@ -2690,7 +2228,6 @@ var Emitter = function () {
     value: function has(type, listener) {
       var list = this.listeners[type];
       if (listener == NULL) {
-        // 是否注册过 type 事件
         return array(list) && list.length > 0;
       }
       return array(list) ? hasItem(list, listener) : FALSE;
@@ -2706,12 +2243,6 @@ var event = Object.freeze({
 	Emitter: Emitter
 });
 
-/**
- * 把 obj['name'] 的形式转成 obj.name
- *
- * @param {string} keypath
- * @return {string}
- */
 function normalize(keypath) {
   var keypathNormalize$$1 = keypathNormalize;
 
@@ -2723,12 +2254,6 @@ function normalize(keypath) {
   return keypathNormalize$$1[keypath];
 }
 
-/**
- * 把 member 表达式节点解析成 keypath
- *
- * @param {Object} node
- * @return {string}
- */
 function stringify(node) {
   var result = [];
   do {
@@ -2745,12 +2270,6 @@ function stringify(node) {
   return result.length > 0 ? result.reverse().join('.') : '';
 }
 
-/**
- * 获取可能的 keypath
- *
- * @param {string} keypath
- * @return {string}
- */
 function getWildcardMatches(keypath) {
   var keypathWildcardMatches$$1 = keypathWildcardMatches;
 
@@ -2772,13 +2291,6 @@ function getWildcardMatches(keypath) {
   return keypathWildcardMatches$$1[keypath];
 }
 
-/**
- * 匹配通配符中的具体名称，如 ('user.name', 'user.*') 返回 ['name']
- *
- * @param {string} keypath
- * @param {string} wildcardKeypath
- * @return {Array.<string>}
- */
 function getWildcardNames(keypath, wildcardKeypath) {
 
   var result = [];
@@ -2803,12 +2315,11 @@ function getBoolCombinations(num) {
   };
   var length = parseInt(new Array(num + 1).join('1'), 2);
   for (var i = 0, binary, j, item; i <= length; i++) {
-    // 补零
     binary = i.toString(2);
     if (binary.length < num) {
       binary = '0' + binary;
     }
-    // 把 binary 转成布尔值表示
+
     item = [];
     for (j = 0; j < num; j++) {
       item.push(toBool(binary[j]));
@@ -2843,11 +2354,6 @@ var nextTick$1 = nextTick;
 
 var nextTasks = [];
 
-/**
- * 添加异步任务
- *
- * @param {Function} task
- */
 function add(task) {
   if (!nextTasks.length) {
     nextTick$1(run);
@@ -2855,9 +2361,6 @@ function add(task) {
   nextTasks.push(task);
 }
 
-/**
- * 立即执行已添加的任务
- */
 function run() {
   each$1(nextTasks, function (task) {
     task();
@@ -2964,7 +2467,7 @@ function set$3(instance, type, name, value) {
   instance[prop][name] = value;
 }
 
-var vnode = function vnode(sel, data, children, text, elm) {
+var vnode = function (sel, data, children, text, elm) {
   var key = data === undefined ? undefined : data.key;
   return { sel: sel, data: data, children: children,
     text: text, elm: elm, key: key };
@@ -3102,7 +2605,6 @@ function init(modules, api) {
         children = vnode$$1.children,
         sel = vnode$$1.sel;
     if (isDef(sel)) {
-      // Parse selector
       var hashIdx = sel.indexOf('#');
       var dotIdx = sel.indexOf('.', hashIdx);
       var hash = hashIdx > 0 ? hashIdx : sel.length;
@@ -3120,7 +2622,7 @@ function init(modules, api) {
       }
       for (i = 0; i < cbs.create.length; ++i) {
         cbs.create[i](emptyNode, vnode$$1);
-      }i = vnode$$1.data.hook; // Reuse variable
+      }i = vnode$$1.data.hook;
       if (isDef(i)) {
         if (i.create) i.create(emptyNode, vnode$$1);
         if (i.insert) insertedVnodeQueue.push(vnode$$1);
@@ -3172,7 +2674,6 @@ function init(modules, api) {
             rm();
           }
         } else {
-          // Text node
           api.removeChild(parentElm, ch.elm);
         }
       }
@@ -3192,7 +2693,7 @@ function init(modules, api) {
 
     while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
       if (isUndef(oldStartVnode)) {
-        oldStartVnode = oldCh[++oldStartIdx]; // Vnode has been moved left
+        oldStartVnode = oldCh[++oldStartIdx];
       } else if (isUndef(oldEndVnode)) {
         oldEndVnode = oldCh[--oldEndIdx];
       } else if (sameVnode(oldStartVnode, newStartVnode)) {
@@ -3204,13 +2705,11 @@ function init(modules, api) {
         oldEndVnode = oldCh[--oldEndIdx];
         newEndVnode = newCh[--newEndIdx];
       } else if (sameVnode(oldStartVnode, newEndVnode)) {
-        // Vnode moved right
         patchVnode(oldStartVnode, newEndVnode, insertedVnodeQueue);
         api.insertBefore(parentElm, oldStartVnode.elm, api.nextSibling(oldEndVnode.elm));
         oldStartVnode = oldCh[++oldStartIdx];
         newEndVnode = newCh[--newEndIdx];
       } else if (sameVnode(oldEndVnode, newStartVnode)) {
-        // Vnode moved left
         patchVnode(oldEndVnode, newStartVnode, insertedVnodeQueue);
         api.insertBefore(parentElm, oldEndVnode.elm, oldStartVnode.elm);
         oldEndVnode = oldCh[--oldEndIdx];
@@ -3219,7 +2718,6 @@ function init(modules, api) {
         if (isUndef(oldKeyToIdx)) oldKeyToIdx = createKeyToOldIdx(oldCh, oldStartIdx, oldEndIdx);
         idxInOld = oldKeyToIdx[newStartVnode.key];
         if (isUndef(idxInOld)) {
-          // New element
           api.insertBefore(parentElm, createElm(newStartVnode, insertedVnodeQueue), oldStartVnode.elm);
           newStartVnode = newCh[++newStartIdx];
         } else {
@@ -3471,7 +2969,6 @@ function updateAttrs(oldVnode, vnode) {
   oldAttrs = oldAttrs || {};
   attrs = attrs || {};
 
-  // update modified attributes, add new attributes
   for (key in attrs) {
     cur = attrs[key];
     old = oldAttrs[key];
@@ -3482,9 +2979,7 @@ function updateAttrs(oldVnode, vnode) {
       }
     }
   }
-  //remove removed attributes
-  // use `in` operator since the previous `for` iteration uses it (.i.e. add even attributes with undefined value)
-  // the other option is to remove all attributes with value == undefined
+
   for (key in oldAttrs) {
     if (!(key in attrs)) {
       elm.removeAttribute(key);
@@ -3512,13 +3007,6 @@ function createEvent(nativeEvent) {
   return nativeEvent;
 }
 
-/**
- * 通过选择器查找元素
- *
- * @param {string} selector
- * @param {?HTMLElement} context
- * @return {?HTMLElement}
- */
 function find(selector, context) {
   if (!context) {
     context = doc;
@@ -3526,30 +3014,10 @@ function find(selector, context) {
   return context.querySelector(selector);
 }
 
-/**
- * 绑定事件
- *
- * @param {HTMLElement} element
- * @param {string} type
- * @param {Function} listener
- */
 
 
-/**
- * 解绑事件
- *
- * @param {HTMLElement} element
- * @param {string} type
- * @param {Function} listener
- */
 
 
-/**
- * 把 style-name: value 解析成对象的形式
- *
- * @param {string} str
- * @return {Object}
- */
 function parseStyle(str) {
   var result = {};
 
@@ -3620,12 +3088,6 @@ function create$1(node, instance) {
             directives = [],
             styles = void 0;
 
-        // 指令的创建要确保顺序
-        // 组件必须第一个执行
-        // 因为如果在组件上写了 on-click="xx" 其实是监听从组件 fire 出的 click 事件
-        // 因此 component 必须在 event 指令之前执行
-
-        // 组件的 attrs 作为 props 传入组件，不需要写到元素上
         if (node.custom) {
           directives.push({
             name: 'component',
@@ -3669,8 +3131,6 @@ function create$1(node, instance) {
 
         if (!counter || directives.length) {
           (function () {
-
-            // 方便指令内查询
             var map = toObject(directives, 'name');
 
             var notify = function notify(vnode, type) {
@@ -3723,13 +3183,6 @@ directive.set({
 });
 
 var Yox = function () {
-
-  /**
-   * 配置项
-   *
-   * @constructor
-   * @param {Object} options
-   */
   function Yox(options) {
     classCallCheck(this, Yox);
     var el = options.el,
@@ -3746,8 +3199,6 @@ var Yox = function () {
         filters = options.filters,
         methods = options.methods,
         partials = options.partials;
-
-    // el 和 template 都可以传选择器
 
     template = tag.test(template) ? template : find(template).innerHTML;
 
@@ -3771,13 +3222,11 @@ var Yox = function () {
       instance.$parent = parent;
     }
 
-    // 拆分实例方法和生命周期函数
     var hooks = {};
     each$$1(lifecycle, function (name) {
       hooks['on' + name] = name;
     });
 
-    // 监听各种事件
     instance.$eventEmitter = new Emitter();
 
     each$$1(hooks, function (value, key) {
@@ -3820,21 +3269,16 @@ var Yox = function () {
 
     if (object(computed)) {
       (function () {
-
-        // 把计算属性拆为 getter 和 setter
         var $computedGetters = instance.$computedGetters = {};
 
         var $computedSetters = instance.$computedSetters = {};
 
-        // 存储计算属性的值，提升性能
         var $computedCache = instance.$computedCache = {};
 
-        // 辅助获取计算属性的依赖
         var $computedStack = instance.$computedStack = [];
-        // 计算属性的依赖关系
-        // dep => [ computed1, computed2, ... ]
+
         var $computedWatchers = instance.$computedWatchers = {};
-        // computed => [ dep1, dep2, ... ]
+
         var $computedDeps = instance.$computedDeps = {};
 
         each$$1(computed, function (item, keypath) {
@@ -3862,16 +3306,13 @@ var Yox = function () {
                 return $computedCache[keypath];
               }
 
-              // 新推一个依赖收集数组
               $computedStack.push([]);
               var result = get$$1.call(instance);
 
-              // 处理收集好的依赖
               var newDeps = $computedStack.pop();
               var oldDeps = $computedDeps[keypath];
               $computedDeps[keypath] = newDeps;
 
-              // 增加了哪些依赖，删除了哪些依赖
               var addedDeps = [];
               var removedDeps = [];
               if (array(oldDeps)) {
@@ -3899,8 +3340,6 @@ var Yox = function () {
                 removeItem($computedWatchers[dep], keypath);
               });
 
-              // 不论是否开启 computed cache，获取 oldValue 时还有用
-              // 因此要存一下
               $computedCache[keypath] = result;
 
               return result;
@@ -3924,7 +3363,6 @@ var Yox = function () {
       });
     }
 
-    // 监听数据变化
     instance.$watchEmitter = new Emitter();
 
     if (object(watchers)) {
@@ -3933,10 +3371,8 @@ var Yox = function () {
       });
     }
 
-    // 准备就绪
     instance.fire(CREATE);
 
-    // 编译结果
     instance.$template = _parse(template, function (name) {
       return instance.getPartial(name);
     }, function (name, node) {
@@ -3945,7 +3381,6 @@ var Yox = function () {
 
     instance.fire(COMPILE);
 
-    // 第一次渲染组件
     instance.updateView(el);
   }
 
@@ -4077,7 +3512,6 @@ var Yox = function () {
             });
           }
 
-          // 计算属性优先
           if (hasComputed) {
             setter = $computedSetters[key];
             if (setter) {
@@ -4114,7 +3548,6 @@ var Yox = function () {
 
       var context = {};
 
-      // 在 data 中也能写函数
       extend(context, filter.data, $data, $filters);
       each$$1(context, function (value, key) {
         if (func(value)) {
@@ -4184,18 +3617,8 @@ var Yox = function () {
 
 Yox.switcher = switcher;
 
-/**
- * 模板语法配置
- *
- * @type {Object}
- */
 Yox.syntax = syntax;
 
-/**
- * 全局缓存，方便外部清缓存
- *
- * @type {Object}
- */
 Yox.cache = cache;
 
 Yox.component = function (id, value) {
@@ -4226,20 +3649,6 @@ Yox.is = is$1;
 Yox.event = event;
 Yox.array = array$1;
 Yox.object = object$1;
-
-/**
- * [TODO]
- * 1. snabbdom prop 和 attr 的区分
- * 2. 组件之间的事件传递（解决）
- * 3. Emitter 的事件广播、冒泡（解决）
- * 4. 组件属性的组织形式（解决）
- * 5. 计算属性是否可以 watch（不可以）
- * 6. 需要转义的文本节点如果出现在属性值里，是否需要 encode
- * 7. 数组方法的劫持（不需要劫持，改完再 set 即可）
- * 8. 属性延展（用 #array.each 遍历数据）
- * 9. 报错信息完善
- * 10. SEO友好
- */
 
 return Yox;
 

@@ -10,17 +10,18 @@ export default {
   format: 'umd',
   moduleName: 'Yox',
   plugins: [
+    babel({
+      presets: [ 'es2015-rollup' ],
+      babelrc: false,
+      comments: false,
+      runtimeHelpers: true
+    }),
     resolve({
       jsnext: true,
       main: true,
       browser: true,
     }),
     commonjs(),
-    babel({
-      presets: ['es2015-rollup'],
-      runtimeHelpers: true,
-      babelrc: false,
-    }),
     (minify && uglify()),
   ],
   dest: minify ? 'dist/yox.min.js' : 'dist/yox.js'
