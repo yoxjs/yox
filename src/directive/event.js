@@ -2,7 +2,7 @@
 import * as env from '../config/env'
 import * as helper from '../platform/web/helper'
 
-module.exports = {
+export default {
 
   attach: function({ el, name, node, instance }) {
 

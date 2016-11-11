@@ -8,7 +8,7 @@ import * as nodeType from '../nodeType'
  *
  * @param {Expression} expr 判断条件
  */
-module.exports = class ElseIf extends Node {
+export default class ElseIf extends Node {
 
   constructor(expr) {
     super()

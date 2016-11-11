@@ -2,7 +2,7 @@
 import * as object from '../../util/object'
 import * as expression from '../../util/expression'
 
-module.exports = class Context {
+export default class Context {
 
   /**
    * @param {Object} data

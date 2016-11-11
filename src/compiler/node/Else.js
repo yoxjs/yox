@@ -6,7 +6,7 @@ import * as nodeType from '../nodeType'
 /**
  * else 节点
  */
-module.exports = class Else extends Node {
+export default class Else extends Node {
 
   constructor() {
     super()

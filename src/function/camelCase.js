@@ -1,5 +1,5 @@
 
-module.exports = function (name) {
+export default function (name) {
   return name.replace(
     /-([a-z])/gi,
     function ($0, $1) {

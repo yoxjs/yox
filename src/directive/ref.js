@@ -7,7 +7,7 @@ import * as env from '../config/env'
 
 import * as component from '../util/component'
 
-module.exports = {
+export default {
 
   attach: function ({ el, node, instance }) {
 

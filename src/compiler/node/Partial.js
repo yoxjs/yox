@@ -8,7 +8,7 @@ import * as nodeType from '../nodeType'
  *
  * @param {string} name
  */
-module.exports = class Partial extends Node {
+export default class Partial extends Node {
 
   constructor(name) {
     super()

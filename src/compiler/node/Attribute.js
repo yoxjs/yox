@@ -9,7 +9,7 @@ import * as object from '../../util/object'
  *
  * @param {string|Expression} name 属性名
  */
-module.exports = class Attribute extends Node {
+export default class Attribute extends Node {
 
   constructor(name) {
     super()

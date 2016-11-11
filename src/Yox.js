@@ -28,54 +28,7 @@ registry.directive.set({
   component: require('./directive/component'),
 })
 
-module.exports = class Yox {
-
-  /**
-   * 开关配置
-   *
-   * @type {Object}
-   */
-  static switcher = switcher
-
-  /**
-   * 模板语法配置
-   *
-   * @type {Object}
-   */
-  static syntax = syntax
-
-  /**
-   * 全局缓存，方便外部清缓存
-   *
-   * @type {Object}
-   */
-  static cache = cache
-
-  static component = function (id, value) {
-    registry.component.set(id, value)
-  }
-
-  static directive = function (id, value) {
-    registry.directive.set(id, value)
-  }
-
-  static filter = function (id, value) {
-    registry.filter.set(id, value)
-  }
-
-  static partial = function (id, value) {
-    registry.partial.set(id, value)
-  }
-
-  static nextTick = function (fn) {
-    nextTask.add(fn)
-  }
-
-  static use = function (plugin) {
-    plugin.install(Yox)
-  }
-
-  static Event = event.Event
+export default class Yox {
 
   /**
    * 配置项
@@ -545,7 +498,7 @@ module.exports = class Yox {
 
     if ($currentNode) {
       $currentNode = vdom.patch($currentNode, newNode)
-      instance.fire(lifecycle.UDPATE)
+      instance.fire(lifecycle.UPDATE)
     }
     else {
       $currentNode = vdom.patch(el, newNode)
@@ -590,6 +543,56 @@ module.exports = class Yox {
   }
 
 }
+
+/**
+ * 开关配置
+ *
+ * @type {Object}
+ */
+Yox.switcher = switcher
+
+/**
+ * 模板语法配置
+ *
+ * @type {Object}
+ */
+Yox.syntax = syntax
+
+/**
+ * 全局缓存，方便外部清缓存
+ *
+ * @type {Object}
+ */
+Yox.cache = cache
+
+Yox.component = function (id, value) {
+  registry.component.set(id, value)
+}
+
+Yox.directive = function (id, value) {
+  registry.directive.set(id, value)
+}
+
+Yox.filter = function (id, value) {
+  registry.filter.set(id, value)
+}
+
+Yox.partial = function (id, value) {
+  registry.partial.set(id, value)
+}
+
+Yox.nextTick = function (fn) {
+  nextTask.add(fn)
+}
+
+Yox.use = function (plugin) {
+  plugin.install(Yox)
+}
+
+Yox.is = is
+Yox.event = event
+Yox.array = array
+Yox.object = object
 
 /**
  * [TODO]

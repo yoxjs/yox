@@ -9,7 +9,7 @@ import * as nodeType from '../nodeType'
  *
  * @param {string} name
  */
-module.exports = class Import extends Node {
+export default class Import extends Node {
 
   constructor(name) {
     super(env.FALSE)

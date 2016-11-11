@@ -15,7 +15,7 @@ import * as pattern from '../../config/pattern'
  * @param {string} expr
  * @param {boolean} safe
  */
-module.exports = class Expression extends Node {
+export default class Expression extends Node {
 
   constructor(expr, safe) {
     super(env.FALSE)

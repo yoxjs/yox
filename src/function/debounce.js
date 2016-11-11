@@ -15,7 +15,7 @@ import {
  * @param {boolean=} lazy 是否在最后调用
  * @return {Function}
  */
-module.exports = function (fn, delay, lazy) {
+export default function (fn, delay, lazy) {
 
   let prevTime, timer
 

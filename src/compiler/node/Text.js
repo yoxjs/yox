@@ -9,7 +9,7 @@ import * as nodeType from '../nodeType'
  *
  * @param {*} content
  */
-module.exports = class Text extends Node {
+export default class Text extends Node {
 
   constructor(content) {
     super(env.FALSE)

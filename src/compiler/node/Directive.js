@@ -9,7 +9,7 @@ import * as object from '../../util/object'
  *
  * @param {string} name 指令名
  */
-module.exports = class Directive extends Node {
+export default class Directive extends Node {
 
   constructor(name) {
     super()

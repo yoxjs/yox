@@ -7,7 +7,7 @@ import {
   each,
 } from '../util/array'
 
-module.exports = function (str, index) {
+export default function (str, index) {
 
   let line = 0, col = 0, pos = 0
 

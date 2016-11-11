@@ -1,7 +1,7 @@
 
 import * as is from '../util/is'
 
-module.exports = function (str, defaultValue) {
+export default function (str, defaultValue) {
   if (is.string(str)) {
     return str
   }

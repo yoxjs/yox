@@ -3,7 +3,9 @@ var env = process.env.WEBPACK_ENV;
 
 var libraryName = 'Yox';
 
-var plugins = [ ];
+var plugins = [
+    new webpack.optimize.DedupePlugin()
+];
 var outputFilename = '.js';
 
 var envVariables = { };
@@ -26,10 +28,6 @@ else if (env === 'dev') {
     );
 }
 
-plugins.push(
-    new webpack.DefinePlugin(envVariables)
-);
-
 module.exports = {
 
     entry: __dirname + '/src/' + libraryName + '.js',
@@ -47,6 +45,7 @@ module.exports = {
                 test: /\.js$/,
                 loader: 'babel-loader',
                 query: {
+                    plugins: ['transform-runtime'],
                     presets: ['es2015', 'stage-0']
                 }
             }

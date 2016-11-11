@@ -11,7 +11,7 @@ import * as object from '../../util/object'
  * @param {string} name
  * @param {string} custom
  */
-module.exports = class Element extends Node {
+export default class Element extends Node {
 
   constructor(name, custom) {
     super()

@@ -86,7 +86,7 @@ function getEventInfo(el, lazyDirective) {
   }
 }
 
-module.exports = {
+export default {
 
   attach: function ({ el, node, instance, directives }) {
 

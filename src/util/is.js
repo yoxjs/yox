@@ -8,7 +8,7 @@ function is(arg, type) {
 }
 
 export function func(arg) {
-  return typeof arg === 'function'
+  return is(arg, 'function')
 }
 
 export function array(arg) {
@@ -16,11 +16,7 @@ export function array(arg) {
 }
 
 export function object(arg) {
-  // new String() 算 object
-  // 因此这里不能用 is 函数
-  return arg
-    ? typeof arg === 'object'
-    : env.FALSE
+  return is(arg, 'object')
 }
 
 export function string(arg) {

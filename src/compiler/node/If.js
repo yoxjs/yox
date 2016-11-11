@@ -9,7 +9,7 @@ import * as nodeType from '../nodeType'
  *
  * @param {Expression} expr 判断条件
  */
-module.exports = class If extends Node {
+export default class If extends Node {
 
   constructor(expr) {
     super()

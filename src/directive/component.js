@@ -2,7 +2,7 @@
 import * as env from '../config/env'
 import * as object from '../util/object'
 
-module.exports = {
+export default {
 
   attach: function ({ el, node, instance }) {
     el.$component = instance.create(

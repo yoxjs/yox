@@ -7,7 +7,7 @@ import * as expression from '../../util/expression'
 /**
  * 节点基类
  */
-module.exports = class Node {
+export default class Node {
 
   constructor(hasChildren) {
     if (hasChildren !== env.FALSE) {

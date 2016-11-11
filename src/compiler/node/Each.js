@@ -14,7 +14,7 @@ import * as syntax from '../../config/syntax'
  * @param {string} name
  * @param {string} index
  */
-module.exports = class Each extends Node {
+export default class Each extends Node {
 
   constructor(name, index) {
     super()
