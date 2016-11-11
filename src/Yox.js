@@ -21,11 +21,16 @@ import * as component from './util/component'
 import * as vdom from './platform/web/vdom'
 import * as helper from './platform/web/helper'
 
+import * as refDir from './directive/ref'
+import * as eventDir from './directive/event'
+import * as modelDir from './directive/model'
+import * as componentDir from './directive/component'
+
 registry.directive.set({
-  ref: require('./directive/ref'),
-  event: require('./directive/event'),
-  model: require('./directive/model'),
-  component: require('./directive/component'),
+  ref: refDir,
+  event: eventDir,
+  model: modelDir,
+  component: componentDir,
 })
 
 export default class Yox {

@@ -31,11 +31,11 @@ var cache = Object.freeze({
 
 var debug = FALSE;
 
-var sync = TRUE;
+var sync$1 = TRUE;
 
 var switcher = Object.freeze({
 	debug: debug,
-	sync: sync
+	sync: sync$1
 });
 
 var hasConsole = typeof console !== 'undefined';
@@ -3014,9 +3014,33 @@ function find(selector, context) {
   return context.querySelector(selector);
 }
 
+function on$1(element, type, listener) {
+  var $emitter = element.$emitter || (element.$emitter = new Emitter());
+  if (!$emitter.has(type)) {
+    var nativeListener = function nativeListener(e) {
+      e = new Event(createEvent(e, element));
+      $emitter.fire(e.type, e);
+    };
+    $emitter[type] = nativeListener;
+    nativeAddEventListener(element, type, nativeListener);
+  }
+  $emitter.on(type, listener);
+}
 
+function off$1(element, type, listener) {
+  var $emitter = element.$emitter;
 
+  var types = keys($emitter.listeners);
 
+  $emitter.off(type, listener);
+
+  each$1(types, function (type) {
+    if ($emitter[type] && !$emitter.has(type)) {
+      nativeRemoveEventListener(element, type, $emitter[type]);
+      delete $emitter[type];
+    }
+  });
+}
 
 function parseStyle(str) {
   var result = {};
@@ -3175,11 +3199,299 @@ function create$1(node, instance) {
   });
 }
 
+var ref = {
+
+  attach: function attach(_ref) {
+    var el = _ref.el,
+        node = _ref.node,
+        instance = _ref.instance;
+
+
+    var child = el['$component'];
+    var value = node.getValue();
+    if (child && value) {
+      set$3(instance, 'ref', value, child);
+      el.$ref = value;
+    }
+  },
+
+  detach: function detach(_ref2) {
+    var el = _ref2.el,
+        instance = _ref2.instance;
+
+
+    if (el.$ref) {
+      delete instance.$refs[el.$ref];
+      el.$ref = NULL;
+    }
+  }
+};
+
+var refDir = Object.freeze({
+	default: ref
+});
+
+var event$1 = {
+
+  attach: function attach(_ref) {
+    var el = _ref.el,
+        name = _ref.name,
+        node = _ref.node,
+        instance = _ref.instance;
+
+
+    var listener = instance.compileAttr(node.keypath, node.getValue());
+    if (listener) {
+      var $component = el.$component;
+
+      if ($component) {
+        $component.on(name, listener);
+      } else {
+        on$1(el, name, listener);
+        el['$' + name] = listener;
+      }
+    }
+  },
+
+  detach: function detach(_ref2) {
+    var el = _ref2.el,
+        name = _ref2.name,
+        node = _ref2.node;
+
+    var listener = '$' + name;
+    if (el[listener]) {
+      off$1(el, name, el[listener]);
+      el[listener] = NULL;
+    }
+  }
+
+};
+
+var eventDir = Object.freeze({
+	default: event$1
+});
+
+var debounce = function (fn, delay, lazy) {
+
+  var prevTime = void 0,
+      timer = void 0;
+
+  function createTimer(args) {
+    timer = setTimeout(function () {
+      timer = NULL;
+      prevTime = Date.now();
+      fn.apply(NULL, toArray(args));
+    }, delay);
+  }
+
+  return function () {
+
+    if (lazy && prevTime > 0 && Date.now() - prevTime < delay) {
+      clearTimeout(timer);
+      timer = NULL;
+    }
+
+    if (!timer) {
+      createTimer(arguments);
+    }
+  };
+};
+
+var supportInputTypes = ['text', 'number', 'tel', 'url', 'email', 'search'];
+
+var controlTypes = {
+  normal: {
+    set: function set(_ref) {
+      var el = _ref.el,
+          keypath = _ref.keypath,
+          instance = _ref.instance;
+
+      el.value = instance.get(keypath);
+    },
+    sync: function sync(_ref2) {
+      var el = _ref2.el,
+          keypath = _ref2.keypath,
+          instance = _ref2.instance;
+
+      instance.set(keypath, el.value);
+    }
+  },
+  radio: {
+    set: function set(_ref3) {
+      var el = _ref3.el,
+          keypath = _ref3.keypath,
+          instance = _ref3.instance;
+
+      el.checked = el.value == instance.get(keypath);
+    },
+    sync: function sync(_ref4) {
+      var el = _ref4.el,
+          keypath = _ref4.keypath,
+          instance = _ref4.instance;
+
+      if (el.checked) {
+        instance.set(keypath, el.value);
+      }
+    }
+  },
+  checkbox: {
+    set: function set(_ref5) {
+      var el = _ref5.el,
+          keypath = _ref5.keypath,
+          instance = _ref5.instance;
+
+      var value = instance.get(keypath);
+      el.checked = array(value) ? hasItem(value, el.value, FALSE) : !!value;
+    },
+    sync: function sync(_ref6) {
+      var el = _ref6.el,
+          keypath = _ref6.keypath,
+          instance = _ref6.instance;
+
+      var array$$1 = instance.get(keypath);
+      if (array(array$$1)) {
+        if (el.checked) {
+          array$$1.push(el.value);
+        } else {
+          array$$1.removeItem(array$$1, el.value, FALSE);
+        }
+        instance.set(keypath, copy(array$$1));
+      } else {
+        instance.set(keypath, el.checked);
+      }
+    }
+  }
+};
+
+function getEventInfo(el, lazyDirective) {
+
+  var name = 'change',
+      interval = void 0;
+
+  var type = el.type,
+      tagName = el.tagName;
+
+  if (tagName === 'INPUT' && hasItem(supportInputTypes, type) || tagName === 'TEXTAREA') {
+    if (lazyDirective) {
+      var value = lazyDirective.node.getValue();
+      if (numeric(value) && value >= 0) {
+        name = 'input';
+        interval = value;
+      }
+    } else {
+      name = 'input';
+    }
+  }
+
+  return {
+    name: name,
+    interval: interval,
+    control: controlTypes[type] || controlTypes.normal
+  };
+}
+
+var model = {
+
+  attach: function attach(_ref7) {
+    var el = _ref7.el,
+        node = _ref7.node,
+        instance = _ref7.instance,
+        directives = _ref7.directives;
+
+    var _getEventInfo = getEventInfo(el, directives.lazy),
+        name = _getEventInfo.name,
+        interval = _getEventInfo.interval,
+        control = _getEventInfo.control;
+
+    var keypath = node.keypath;
+
+
+    var value = node.getValue();
+    var result = testKeypath(instance, keypath, value);
+    if (!result) {
+      error$1('The ' + keypath + ' being used for two-way binding is ambiguous.');
+    }
+
+    keypath = result.keypath;
+
+    var data = {
+      el: el,
+      keypath: keypath,
+      instance: instance
+    };
+    control.set(data);
+
+    instance.watch(keypath, function () {
+      control.set(data);
+    });
+
+    var listener = function listener() {
+      control.sync(data);
+    };
+
+    if (interval) {
+      listener = debounce(listener, interval);
+    }
+
+    el.$model = function () {
+      off$1(el, name, listener);
+      el.$model = NULL;
+    };
+
+    on$1(el, name, listener);
+  },
+
+  detach: function detach(_ref8) {
+    var el = _ref8.el;
+
+    el.$model();
+  }
+
+};
+
+var modelDir = Object.freeze({
+	default: model
+});
+
+var component$1 = {
+
+  attach: function attach(_ref) {
+    var el = _ref.el,
+        node = _ref.node,
+        instance = _ref.instance;
+
+    el.$component = instance.create(instance.getComponent(node.custom), {
+      el: el,
+      props: copy(node.getAttributes(), true),
+      replace: TRUE
+    });
+  },
+
+  update: function update(_ref2) {
+    var el = _ref2.el,
+        node = _ref2.node;
+
+    el.$component.set(copy(node.getAttributes(), true));
+  },
+
+  detach: function detach(_ref3) {
+    var el = _ref3.el;
+
+    el.$component.dispose();
+    el.$component = NULL;
+  }
+
+};
+
+var componentDir = Object.freeze({
+	default: component$1
+});
+
 directive.set({
-  ref: require('./directive/ref'),
-  event: require('./directive/event'),
-  model: require('./directive/model'),
-  component: require('./directive/component')
+  ref: refDir,
+  event: eventDir,
+  model: modelDir,
+  component: componentDir
 });
 
 var Yox = function () {
@@ -3419,7 +3731,7 @@ var Yox = function () {
       }
       var instance = this;
       if (instance.updateModel(model)) {
-        if (sync) {
+        if (sync$1) {
           instance.updateView();
         } else if (!instance.$syncing) {
           instance.$syncing = TRUE;
