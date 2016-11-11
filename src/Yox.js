@@ -11,7 +11,6 @@ import * as lifecycle from './config/lifecycle'
 import * as mustache from './compiler/parser/mustache'
 
 import * as is from './util/is'
-import * as event from './util/event'
 import * as array from './util/array'
 import * as object from './util/object'
 import * as keypath from './util/keypath'
@@ -25,6 +24,10 @@ import * as refDt from './directive/ref'
 import * as eventDt from './directive/event'
 import * as modelDt from './directive/model'
 import * as componentDt from './directive/component'
+
+import Store from './util/Store'
+import Event from './util/Event'
+import Emitter from './util/Emitter'
 
 registry.directive.set({
   ref: refDt,
@@ -97,7 +100,7 @@ export default class Yox {
     )
 
     // 监听各种事件
-    instance.$eventEmitter = new event.Emitter()
+    instance.$eventEmitter = new Emitter()
 
     object.each(
       hooks,
@@ -271,7 +274,7 @@ export default class Yox {
     }
 
     // 监听数据变化
-    instance.$watchEmitter = new event.Emitter()
+    instance.$watchEmitter = new Emitter()
 
     if (is.object(watchers)) {
       object.each(
@@ -554,7 +557,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.11.0'
+Yox.version = '0.11.1'
 
 /**
  * 开关配置
@@ -578,7 +581,7 @@ Yox.syntax = syntax
 Yox.cache = cache
 
 // 工具，便于扩展、插件使用
-Yox.utils = { is, event, array, object }
+Yox.utils = { is, array, object, Store, Emitter, Event }
 
 Yox.component = function (id, value) {
   registry.component.set(id, value)

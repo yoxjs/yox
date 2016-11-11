@@ -606,8 +606,6 @@ var directive = new Store();
 var filter = new Store();
 var partial = new Store();
 
-
-
 var registry = Object.freeze({
 	component: component,
 	directive: directive,
@@ -2094,155 +2092,6 @@ function _parse(template, getPartial, setPartial) {
   return rootNode;
 }
 
-var Event = function () {
-  function Event(event) {
-    classCallCheck(this, Event);
-
-    if (event.type) {
-      this.type = event.type;
-      this.originalEvent = event;
-    } else {
-      this.type = event;
-    }
-  }
-
-  createClass(Event, [{
-    key: 'prevent',
-    value: function prevent() {
-      if (!this.isPrevented) {
-        var originalEvent = this.originalEvent;
-
-        if (originalEvent && func(originalEvent.preventDefault)) {
-          originalEvent.preventDefault();
-        }
-        this.isPrevented = TRUE;
-      }
-    }
-  }, {
-    key: 'stop',
-    value: function stop() {
-      if (!this.isStoped) {
-        var originalEvent = this.originalEvent;
-
-        if (originalEvent && func(originalEvent.stopPropagation)) {
-          originalEvent.stopPropagation();
-        }
-        this.isStoped = TRUE;
-      }
-    }
-  }]);
-  return Event;
-}();
-
-var Emitter = function () {
-  function Emitter() {
-    classCallCheck(this, Emitter);
-
-    this.listeners = {};
-  }
-
-  createClass(Emitter, [{
-    key: 'on',
-    value: function on(type, listener) {
-      var listeners = this.listeners;
-
-      var list = listeners[type] || (listeners[type] = []);
-      list.push(listener);
-    }
-  }, {
-    key: 'once',
-    value: function once(type, listener) {
-      var instance = this;
-      listener.$once = function () {
-        instance.off(type, listener);
-        delete listener.$once;
-      };
-      instance.on(type, listener);
-    }
-  }, {
-    key: 'off',
-    value: function off(type, listener) {
-      var listeners = this.listeners;
-
-      if (type == NULL) {
-        each$$1(listeners, function (list, type) {
-          if (array(listeners[type])) {
-            listeners[type].length = 0;
-          }
-        });
-      } else {
-        var list = listeners[type];
-        if (array(list)) {
-          if (listener == NULL) {
-            list.length = 0;
-          } else {
-            removeItem(list, listener);
-          }
-        }
-      }
-    }
-  }, {
-    key: 'fire',
-    value: function fire(type, data) {
-      var context = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : NULL;
-
-
-      var list = this.listeners[type],
-          isStoped = void 0;
-
-      if (array(list)) {
-        each$1(list, function (listener) {
-          var result = void 0;
-          if (array(data)) {
-            result = listener.apply(context, data);
-          } else {
-            result = data != NULL ? listener.call(context, data) : listener.call(context);
-          }
-          var $once = listener.$once;
-
-          if (func($once)) {
-            $once();
-          }
-
-          var event = data && data[0];
-          if (event && event instanceof Event) {
-            if (result === FALSE) {
-              event.prevent();
-              event.stop();
-            } else if (event.isStoped) {
-              result = FALSE;
-            }
-          }
-
-          if (result === FALSE) {
-            isStoped = TRUE;
-            return result;
-          }
-        });
-      }
-
-      return isStoped;
-    }
-  }, {
-    key: 'has',
-    value: function has(type, listener) {
-      var list = this.listeners[type];
-      if (listener == NULL) {
-        return array(list) && list.length > 0;
-      }
-      return array(list) ? hasItem(list, listener) : FALSE;
-    }
-  }]);
-  return Emitter;
-}();
-
-
-
-var event = Object.freeze({
-	Event: Event,
-	Emitter: Emitter
-});
-
 function normalize(keypath) {
   var keypathNormalize$$1 = keypathNormalize;
 
@@ -2368,6 +2217,46 @@ function run() {
   nextTasks.length = 0;
 }
 
+var Event = function () {
+  function Event(event) {
+    classCallCheck(this, Event);
+
+    if (event.type) {
+      this.type = event.type;
+      this.originalEvent = event;
+    } else {
+      this.type = event;
+    }
+  }
+
+  createClass(Event, [{
+    key: 'prevent',
+    value: function prevent() {
+      if (!this.isPrevented) {
+        var originalEvent = this.originalEvent;
+
+        if (originalEvent && func(originalEvent.preventDefault)) {
+          originalEvent.preventDefault();
+        }
+        this.isPrevented = TRUE;
+      }
+    }
+  }, {
+    key: 'stop',
+    value: function stop() {
+      if (!this.isStoped) {
+        var originalEvent = this.originalEvent;
+
+        if (originalEvent && func(originalEvent.stopPropagation)) {
+          originalEvent.stopPropagation();
+        }
+        this.isStoped = TRUE;
+      }
+    }
+  }]);
+  return Event;
+}();
+
 function compileAttr$1(instance, keypath, value) {
   if (value.indexOf('(') > 0) {
     var _ret = function () {
@@ -2379,7 +2268,7 @@ function compileAttr$1(instance, keypath, value) {
             var args = copy(ast.arguments);
             if (!args.length) {
               if (isEvent) {
-                args.push(event);
+                args.push(e);
               }
             } else {
               args = args.map(function (item) {
@@ -2989,6 +2878,110 @@ function updateAttrs(oldVnode, vnode) {
 
 var attributes = { create: updateAttrs, update: updateAttrs };
 
+var Emitter = function () {
+  function Emitter() {
+    classCallCheck(this, Emitter);
+
+    this.listeners = {};
+  }
+
+  createClass(Emitter, [{
+    key: 'on',
+    value: function on(type, listener) {
+      var listeners = this.listeners;
+
+      var list = listeners[type] || (listeners[type] = []);
+      list.push(listener);
+    }
+  }, {
+    key: 'once',
+    value: function once(type, listener) {
+      var instance = this;
+      listener.$once = function () {
+        instance.off(type, listener);
+        delete listener.$once;
+      };
+      instance.on(type, listener);
+    }
+  }, {
+    key: 'off',
+    value: function off(type, listener) {
+      var listeners = this.listeners;
+
+      if (type == NULL) {
+        each$$1(listeners, function (list, type) {
+          if (array(listeners[type])) {
+            listeners[type].length = 0;
+          }
+        });
+      } else {
+        var list = listeners[type];
+        if (array(list)) {
+          if (listener == NULL) {
+            list.length = 0;
+          } else {
+            removeItem(list, listener);
+          }
+        }
+      }
+    }
+  }, {
+    key: 'fire',
+    value: function fire(type, data, context) {
+
+      if (arguments.length === 2) {
+        context = NULL;
+      }
+
+      var list = this.listeners[type],
+          isStoped = void 0;
+
+      if (array(list)) {
+        each$1(list, function (listener) {
+          var result = void 0;
+          if (array(data)) {
+            result = listener.apply(context, data);
+          } else {
+            result = data != NULL ? listener.call(context, data) : listener.call(context);
+          }
+          var $once = listener.$once;
+
+          if (func($once)) {
+            $once();
+          }
+
+          var event = data && data[0];
+          if (event && event instanceof Event) {
+            if (result === FALSE) {
+              event.prevent();
+              event.stop();
+            } else if (event.isStoped) {
+              result = FALSE;
+            }
+          }
+
+          if (result === FALSE) {
+            isStoped = TRUE;
+            return result;
+          }
+        });
+      }
+
+      return isStoped;
+    }
+  }, {
+    key: 'has',
+    value: function has(type, listener) {
+      var list = this.listeners[type];
+      if (listener == NULL) {
+        return array(list) && list.length > 0;
+      }
+      return array(list) ? hasItem(list, listener) : FALSE;
+    }
+  }]);
+  return Emitter;
+}();
+
 var camelCase = function (name) {
   return name.replace(/-([a-z])/gi, function ($0, $1) {
     return $1.toUpperCase();
@@ -3227,7 +3220,7 @@ var ref = {
   }
 };
 
-var refDir = Object.freeze({
+var refDt = Object.freeze({
 	default: ref
 });
 
@@ -3267,7 +3260,7 @@ var event$1 = {
 
 };
 
-var eventDir = Object.freeze({
+var eventDt = Object.freeze({
 	default: event$1
 });
 
@@ -3449,7 +3442,7 @@ var model = {
 
 };
 
-var modelDir = Object.freeze({
+var modelDt = Object.freeze({
 	default: model
 });
 
@@ -3483,15 +3476,15 @@ var component$1 = {
 
 };
 
-var componentDir = Object.freeze({
+var componentDt = Object.freeze({
 	default: component$1
 });
 
 directive.set({
-  ref: refDir,
-  event: eventDir,
-  model: modelDir,
-  component: componentDir
+  ref: refDt,
+  event: eventDt,
+  model: modelDt,
+  component: componentDt
 });
 
 var Yox = function () {
@@ -3927,11 +3920,15 @@ var Yox = function () {
   return Yox;
 }();
 
+Yox.version = '0.11.0';
+
 Yox.switcher = switcher;
 
 Yox.syntax = syntax;
 
 Yox.cache = cache;
+
+Yox.utils = { is: is$1, event: event, array: array$1, object: object$1 };
 
 Yox.component = function (id, value) {
   component.set(id, value);
@@ -3956,11 +3953,6 @@ Yox.nextTick = function (fn) {
 Yox.use = function (plugin) {
   plugin.install(Yox);
 };
-
-Yox.is = is$1;
-Yox.event = event;
-Yox.array = array$1;
-Yox.object = object$1;
 
 return Yox;
 

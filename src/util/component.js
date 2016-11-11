@@ -6,7 +6,7 @@ import * as registry from '../config/registry'
 import * as object from './object'
 import * as expression from './expression'
 
-import * as event from './event'
+import Event from './Event'
 
 import {
   stringify,
@@ -17,11 +17,11 @@ export function compileAttr(instance, keypath, value) {
     let ast = expression.parse(value)
     if (ast.type === expression.CALL) {
       return function (e) {
-        let isEvent = e instanceof event.Event
+        let isEvent = e instanceof Event
         let args = object.copy(ast.arguments)
         if (!args.length) {
           if (isEvent) {
-            args.push(event)
+            args.push(e)
           }
         }
         else {

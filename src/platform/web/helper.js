@@ -2,10 +2,11 @@
 import * as env from '../../config/env'
 
 import * as is from '../../util/is'
-import * as event from '../../util/event'
 import * as array from '../../util/array'
 import * as object from '../../util/object'
 
+import Event from '../../util/Event'
+import Emitter from '../../util/Emitter'
 import camelCase from '../../function/camelCase'
 
 export function nativeAddEventListener(element, type, listener) {
@@ -42,10 +43,10 @@ export function find(selector, context) {
  * @param {Function} listener
  */
 export function on(element, type, listener) {
-  let $emitter = element.$emitter || (element.$emitter = new event.Emitter())
+  let $emitter = element.$emitter || (element.$emitter = new Emitter())
   if (!$emitter.has(type)) {
     let nativeListener = function (e) {
-      e = new event.Event(createEvent(e, element))
+      e = new Event(createEvent(e, element))
       $emitter.fire(e.type, e)
     }
     $emitter[type] = nativeListener
