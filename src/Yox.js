@@ -21,16 +21,16 @@ import * as component from './util/component'
 import * as vdom from './platform/web/vdom'
 import * as helper from './platform/web/helper'
 
-import * as refDir from './directive/ref'
-import * as eventDir from './directive/event'
-import * as modelDir from './directive/model'
-import * as componentDir from './directive/component'
+import * as refDt from './directive/ref'
+import * as eventDt from './directive/event'
+import * as modelDt from './directive/model'
+import * as componentDt from './directive/component'
 
 registry.directive.set({
-  ref: refDir,
-  event: eventDir,
-  model: modelDir,
-  component: componentDir,
+  ref: refDt,
+  event: eventDt,
+  model: modelDt,
+  component: componentDt,
 })
 
 export default class Yox {
@@ -550,6 +550,13 @@ export default class Yox {
 }
 
 /**
+ * 版本
+ *
+ * @type {string}
+ */
+Yox.version = '0.11.0'
+
+/**
  * 开关配置
  *
  * @type {Object}
@@ -569,6 +576,9 @@ Yox.syntax = syntax
  * @type {Object}
  */
 Yox.cache = cache
+
+// 工具，便于扩展、插件使用
+Yox.utils = { is, event, array, object }
 
 Yox.component = function (id, value) {
   registry.component.set(id, value)
@@ -593,22 +603,3 @@ Yox.nextTick = function (fn) {
 Yox.use = function (plugin) {
   plugin.install(Yox)
 }
-
-Yox.is = is
-Yox.event = event
-Yox.array = array
-Yox.object = object
-
-/**
- * [TODO]
- * 1. snabbdom prop 和 attr 的区分
- * 2. 组件之间的事件传递（解决）
- * 3. Emitter 的事件广播、冒泡（解决）
- * 4. 组件属性的组织形式（解决）
- * 5. 计算属性是否可以 watch（不可以）
- * 6. 需要转义的文本节点如果出现在属性值里，是否需要 encode
- * 7. 数组方法的劫持（不需要劫持，改完再 set 即可）
- * 8. 属性延展（用 #array.each 遍历数据）
- * 9. 报错信息完善
- * 10. SEO友好
- */
