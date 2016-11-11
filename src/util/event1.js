@@ -85,7 +85,11 @@ export class Emitter {
     }
   }
 
-  fire(type, data, context = env.NULL) {
+  fire(type, data, context) {
+
+    if (arguments.length === 2) {
+      context = env.NULL
+    }
 
     let list = this.listeners[type], isStoped
 
