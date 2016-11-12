@@ -1,7 +1,6 @@
 
 import * as env from './config/env'
 import * as cache from './config/cache'
-import * as logger from './config/logger'
 import * as syntax from './config/syntax'
 import * as pattern from './config/pattern'
 import * as registry from './config/registry'
@@ -13,6 +12,7 @@ import * as mustache from './compiler/parser/mustache'
 import * as is from './util/is'
 import * as array from './util/array'
 import * as object from './util/object'
+import * as logger from './util/logger'
 import * as keypath from './util/keypath'
 import * as nextTask from './util/nextTask'
 import * as component from './util/component'
@@ -20,10 +20,10 @@ import * as component from './util/component'
 import * as vdom from './platform/web/vdom'
 import * as helper from './platform/web/helper'
 
-import * as refDt from './directive/ref'
-import * as eventDt from './directive/event'
-import * as modelDt from './directive/model'
-import * as componentDt from './directive/component'
+import refDt from './directive/ref'
+import eventDt from './directive/event'
+import modelDt from './directive/model'
+import componentDt from './directive/component'
 
 import Store from './util/Store'
 import Event from './util/Event'
@@ -557,7 +557,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.11.1'
+Yox.version = '0.11.2'
 
 /**
  * 开关配置
@@ -581,7 +581,7 @@ Yox.syntax = syntax
 Yox.cache = cache
 
 // 工具，便于扩展、插件使用
-Yox.utils = { is, array, object, Store, Emitter, Event }
+Yox.utils = { is, array, object, logger, Store, Emitter, Event }
 
 Yox.component = function (id, value) {
   registry.component.set(id, value)

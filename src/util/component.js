@@ -1,9 +1,9 @@
 
-import * as logger from '../config/logger'
 import * as syntax from '../config/syntax'
 import * as registry from '../config/registry'
 
 import * as object from './object'
+import * as logger from './logger'
 import * as expression from './expression'
 
 import Event from './Event'

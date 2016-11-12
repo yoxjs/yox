@@ -8,7 +8,7 @@ import * as env from './env'
  *
  * @type {boolean}
  */
-export const debug = env.FALSE
+export const debug = env.TRUE
 
 /**
  * 是否同步更新

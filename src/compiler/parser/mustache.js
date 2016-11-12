@@ -1,7 +1,6 @@
 
 import * as env from '../../config/env'
 import * as cache from '../../config/cache'
-import * as logger from '../../config/logger'
 import * as syntax from '../../config/syntax'
 import * as pattern from '../../config/pattern'
 
@@ -25,6 +24,7 @@ import Text from '../node/Text'
 import * as is from '../../util/is'
 import * as array from '../../util/array'
 import * as string from '../../util/string'
+import * as logger from '../../util/logger'
 import * as expression from '../../util/expression'
 
 const openingDelimiterPattern = /\{\{\s*/

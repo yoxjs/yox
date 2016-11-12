@@ -1,11 +1,11 @@
 
 import * as env from '../config/env'
 import * as cache from '../config/cache'
-import * as logger from '../config/logger'
 
 import * as is from './is'
 import * as array from './array'
 import * as object from './object'
+import * as logger from './logger'
 
 /**
  * 仅支持一句表达式，即不支持 `a + b, b + c`

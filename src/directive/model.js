@@ -2,11 +2,11 @@
 import * as helper from '../platform/web/helper'
 
 import * as env from '../config/env'
-import * as logger from '../config/logger'
 
 import * as is from '../util/is'
 import * as array from '../util/array'
 import * as object from '../util/object'
+import * as logger from '../util/logger'
 import * as component from '../util/component'
 
 import debounce from '../function/debounce'

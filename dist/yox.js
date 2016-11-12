@@ -29,29 +29,6 @@ var cache = Object.freeze({
 	keypathWildcardMatches: keypathWildcardMatches
 });
 
-var debug = FALSE;
-
-var sync$1 = TRUE;
-
-var switcher = Object.freeze({
-	debug: debug,
-	sync: sync$1
-});
-
-var hasConsole = typeof console !== 'undefined';
-
-var warn = function warn(msg) {
-  if (debug && hasConsole) {
-    console.warn(msg);
-  }
-};
-
-var error$1 = function error$1(msg) {
-  if (hasConsole) {
-    console.error(msg);
-  }
-};
-
 var IF = '#if';
 var ELSE = 'else';
 var ELSE_IF = 'else if';
@@ -613,6 +590,15 @@ var registry = Object.freeze({
 	partial: partial
 });
 
+var debug = TRUE;
+
+var sync$1 = TRUE;
+
+var switcher = Object.freeze({
+	debug: debug,
+	sync: sync$1
+});
+
 var INIT = 'init';
 
 var CREATE = 'create';
@@ -632,6 +618,25 @@ var lifecycle = Object.freeze({
 	ATTACH: ATTACH,
 	UPDATE: UPDATE,
 	DETACH: DETACH
+});
+
+var hasConsole = typeof console !== 'undefined';
+
+function warn(msg) {
+  if (debug && hasConsole) {
+    console.warn(msg);
+  }
+}
+
+function error$1(msg) {
+  if (hasConsole) {
+    console.error(msg);
+  }
+}
+
+var logger = Object.freeze({
+	warn: warn,
+	error: error$1
 });
 
 var LITERAL = 1;
@@ -3192,7 +3197,7 @@ function create$1(node, instance) {
   });
 }
 
-var ref = {
+var refDt = {
 
   attach: function attach(_ref) {
     var el = _ref.el,
@@ -3220,11 +3225,7 @@ var ref = {
   }
 };
 
-var refDt = Object.freeze({
-	default: ref
-});
-
-var event$1 = {
+var eventDt = {
 
   attach: function attach(_ref) {
     var el = _ref.el,
@@ -3259,10 +3260,6 @@ var event$1 = {
   }
 
 };
-
-var eventDt = Object.freeze({
-	default: event$1
-});
 
 var debounce = function (fn, delay, lazy) {
 
@@ -3383,7 +3380,7 @@ function getEventInfo(el, lazyDirective) {
   };
 }
 
-var model = {
+var modelDt = {
 
   attach: function attach(_ref7) {
     var el = _ref7.el,
@@ -3442,11 +3439,7 @@ var model = {
 
 };
 
-var modelDt = Object.freeze({
-	default: model
-});
-
-var component$1 = {
+var componentDt = {
 
   attach: function attach(_ref) {
     var el = _ref.el,
@@ -3475,10 +3468,6 @@ var component$1 = {
   }
 
 };
-
-var componentDt = Object.freeze({
-	default: component$1
-});
 
 directive.set({
   ref: refDt,
@@ -3920,7 +3909,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.11.0';
+Yox.version = '0.11.2';
 
 Yox.switcher = switcher;
 
@@ -3928,7 +3917,7 @@ Yox.syntax = syntax;
 
 Yox.cache = cache;
 
-Yox.utils = { is: is$1, event: event, array: array$1, object: object$1 };
+Yox.utils = { is: is$1, array: array$1, object: object$1, logger: logger, Store: Store, Emitter: Emitter, Event: Event };
 
 Yox.component = function (id, value) {
   component.set(id, value);
