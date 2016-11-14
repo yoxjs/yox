@@ -374,13 +374,12 @@ export default class Yox {
     if (data && object.has(data, 'length') && !is.array(data)) {
       data = array.toArray(data)
     }
-    let instance = this
-    let { $parent, $eventEmitter } = instance
-    if (!$eventEmitter.fire(type, data, instance)) {
-      if (bubble && $parent) {
-        $parent.fire(type, data, bubble)
-      }
+    let { $parent, $eventEmitter } = this
+    let isStoped = $eventEmitter.fire(type, data, this)
+    if (!isStoped && bubble && $parent) {
+      isStoped = $parent.fire(type, data, bubble)
     }
+    return isStoped
   }
 
   watch(keypath, watcher) {

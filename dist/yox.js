@@ -3749,15 +3749,14 @@ var Yox = function () {
       if (data && has$1(data, 'length') && !array(data)) {
         data = toArray(data);
       }
-      var instance = this;
-      var $parent = instance.$parent,
-          $eventEmitter = instance.$eventEmitter;
+      var $parent = this.$parent,
+          $eventEmitter = this.$eventEmitter;
 
-      if (!$eventEmitter.fire(type, data, instance)) {
-        if (bubble && $parent) {
-          $parent.fire(type, data, bubble);
-        }
+      var isStoped = $eventEmitter.fire(type, data, this);
+      if (!isStoped && bubble && $parent) {
+        isStoped = $parent.fire(type, data, bubble);
       }
+      return isStoped;
     }
   }, {
     key: 'watch',
