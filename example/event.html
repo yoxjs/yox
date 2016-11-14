@@ -16,7 +16,7 @@
             <button on-click="submit-1">
                 submit-1
             </button>
-            <button on-click="submit2($event)">
+            <button on-click="submit2($event, '{{user.name}}')">
                 submit-2
             </button>
             <button on-click="submit3(user.name)">
@@ -55,8 +55,8 @@
                 }
             },
             methods: {
-                submit2: function (event) {
-                    console.log(this, event);
+                submit2: function (event, name) {
+                    console.log(this, event, name);
                 },
                 submit3: function (name) {
                     console.log(this, name);

@@ -499,10 +499,12 @@ export default class Yox {
       object.extend(context, $computedGetters)
     }
 
-    let newNode = vdom.create(
-      mustache.render($template, context),
-      instance
-    )
+    let node = mustache.render($template, context)
+    if (!node) {
+      return
+    }
+
+    let newNode = vdom.create(node, instance)
 
     if ($currentNode) {
       $currentNode = vdom.patch($currentNode, newNode)

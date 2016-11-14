@@ -35,20 +35,20 @@
                     this.fire('click', { name: 'component' });
                 }
             },
-            oncreate: function (e) {
-                console.log('  ', this, 'create', e);
+            oncreate: function () {
+                console.log('  ', this, 'create');
             },
-            oncompile: function (e) {
-                console.log('  ', this, 'compile', e);
+            oncompile: function () {
+                console.log('  ', this, 'compile');
             },
-            onattach: function (e) {
-                console.log('  ', this, 'attach', e);
+            onattach: function () {
+                console.log('  ', this, 'attach');
             },
-            onupdate: function (e) {
-                console.log('  ', this, 'update', e);
+            onupdate: function () {
+                console.log('  ', this, 'update');
             },
-            ondetach: function (e) {
-                console.log('  ', this, 'detach', e);
+            ondetach: function () {
+                console.log('  ', this, 'detach');
             }
         };
 
@@ -129,20 +129,20 @@
                     console.log('clickFromComponent', event);
                 }
             },
-            oncreate: function (e) {
-                console.log(this, 'create', e);
+            oncreate: function () {
+                console.log(this, 'create');
             },
-            oncompile: function (e) {
-                console.log(this, 'compile', e);
+            oncompile: function () {
+                console.log(this, 'compile');
             },
-            onattach: function (e) {
-                console.log(this, 'attach', e);
+            onattach: function () {
+                console.log(this, 'attach');
             },
-            onupdate: function (e) {
-                console.log(this, 'update', e);
+            onupdate: function () {
+                console.log(this, 'update');
             },
-            ondetach: function (e) {
-                console.log(this, 'detach', e);
+            ondetach: function () {
+                console.log(this, 'detach');
             }
         });
 

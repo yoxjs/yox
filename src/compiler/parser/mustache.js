@@ -4,10 +4,10 @@ import * as cache from '../../config/cache'
 import * as syntax from '../../config/syntax'
 import * as pattern from '../../config/pattern'
 
+import * as nodeType from '../nodeType'
+
 import Context from '../helper/Context'
 import Scanner from '../helper/Scanner'
-
-import * as nodeType from '../nodeType'
 
 import Attribute from '../node/Attribute'
 import Directive from '../node/Directive'
