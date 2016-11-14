@@ -36,9 +36,11 @@
 
 监听一次事件就取消。
 
-### fire(type, data, bubble)
+### fire(type, data, bubble): boolean
 
 触发事件，事件可携带数据，也可指定是否冒泡到根组件。
+
+如果有事件处理函数返回了 false，fire 会返回 true，表示被中断了。
 
 ## 数据监听
 
