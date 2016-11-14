@@ -620,6 +620,28 @@ var lifecycle = Object.freeze({
 	DETACH: DETACH
 });
 
+var IF$1 = 1;
+
+var ELSE_IF$1 = 2;
+
+var ELSE$1 = 3;
+
+var EACH$1 = 4;
+
+var PARTIAL$1 = 5;
+
+var IMPORT$1 = 6;
+
+var EXPRESSION = 7;
+
+var DIRECTIVE = 8;
+
+var ELEMENT = 9;
+
+var ATTRIBUTE = 10;
+
+var TEXT = 11;
+
 var hasConsole = typeof console !== 'undefined';
 
 function warn(msg) {
@@ -1278,28 +1300,6 @@ var Scanner = function () {
   }]);
   return Scanner;
 }();
-
-var IF$1 = 1;
-
-var ELSE_IF$1 = 2;
-
-var ELSE$1 = 3;
-
-var EACH$1 = 4;
-
-var PARTIAL$1 = 5;
-
-var IMPORT$1 = 6;
-
-var EXPRESSION = 7;
-
-var DIRECTIVE = 8;
-
-var ELEMENT = 9;
-
-var ATTRIBUTE = 10;
-
-var TEXT = 11;
 
 var Node = function () {
   function Node(hasChildren) {
@@ -3853,7 +3853,12 @@ var Yox = function () {
         extend(context, $computedGetters);
       }
 
-      var newNode = create$1(render$1($template, context), instance);
+      var node = render$1($template, context);
+      if (!node) {
+        return;
+      }
+
+      var newNode = create$1(node, instance);
 
       if ($currentNode) {
         $currentNode = patch($currentNode, newNode);
