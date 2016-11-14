@@ -99,7 +99,7 @@ export default class Emitter {
       )
     }
 
-    return isStoped
+    return isStoped ? env.FALSE : env.TRUE
 
   }
 

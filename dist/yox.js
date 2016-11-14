@@ -2972,7 +2972,7 @@ var Emitter = function () {
         });
       }
 
-      return isStoped;
+      return isStoped ? FALSE : TRUE;
     }
   }, {
     key: 'has',
@@ -3752,11 +3752,11 @@ var Yox = function () {
       var $parent = this.$parent,
           $eventEmitter = this.$eventEmitter;
 
-      var isStoped = $eventEmitter.fire(type, data, this);
-      if (!isStoped && bubble && $parent) {
-        isStoped = $parent.fire(type, data, bubble);
+      var done = $eventEmitter.fire(type, data, this);
+      if (done && bubble && $parent) {
+        done = $parent.fire(type, data, bubble);
       }
-      return isStoped;
+      return done;
     }
   }, {
     key: 'watch',
