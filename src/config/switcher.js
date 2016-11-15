@@ -8,11 +8,11 @@ import * as env from './env'
  *
  * @type {boolean}
  */
-export const debug = env.TRUE
+export let debug = env.TRUE
 
 /**
  * 是否同步更新
  *
  * @type {boolean}
  */
-export const sync = env.TRUE
+export let sync = env.TRUE

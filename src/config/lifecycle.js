@@ -4,7 +4,7 @@
  *
  * @type {string}
  */
-export const INIT = 'init'
+export let INIT = 'init'
 
 /**
  * 已创建计算属性，方法，数据监听，事件监听。
@@ -12,32 +12,32 @@ export const INIT = 'init'
  *
  * @type {string}
  */
-export const CREATE = 'create'
+export let CREATE = 'create'
 
 /**
  * 在模板编译结束后调用。
  *
  * @type {string}
  */
-export const COMPILE = 'compile'
+export let COMPILE = 'compile'
 
 /**
  * 组件第一次加入 DOM 树调用。
  *
  * @type {string}
  */
-export const ATTACH = 'attach'
+export let ATTACH = 'attach'
 
 /**
  * 数据更新时调用。
  *
  * @type {string}
  */
-export const UPDATE = 'update'
+export let UPDATE = 'update'
 
 /**
  * 组件从 DOM 树移除时调用。
  *
  * @type {string}
  */
-export const DETACH = 'detach'
+export let DETACH = 'detach'
