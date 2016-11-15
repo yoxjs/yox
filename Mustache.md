@@ -152,7 +152,7 @@ Mustache 原版设计了 `.` 语法来获取当前 context，可是我觉得这�
 {{/each}}
 ```
 
-后来发现，用这个特性居然还可以做属性延展。
+后来发现，用这个特性居然还可以实现属性延展。
 
 ```html
 <Component{{#each props:key}} {{key}}="{{this}}"{{/each}} />
