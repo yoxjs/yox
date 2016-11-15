@@ -36,6 +36,7 @@ var EACH = '#each';
 var PARTIAL = '#partial';
 var IMPORT = '>';
 var COMMENT = '!';
+var SPREAD = '...';
 
 var DIRECTIVE_PREFIX = '@';
 var DIRECTIVE_EVENT_PREFIX = 'on-';
@@ -51,6 +52,7 @@ var syntax = Object.freeze({
 	PARTIAL: PARTIAL,
 	IMPORT: IMPORT,
 	COMMENT: COMMENT,
+	SPREAD: SPREAD,
 	DIRECTIVE_PREFIX: DIRECTIVE_PREFIX,
 	DIRECTIVE_EVENT_PREFIX: DIRECTIVE_EVENT_PREFIX,
 	SPECIAL_EVENT: SPECIAL_EVENT,
@@ -634,13 +636,15 @@ var IMPORT$1 = 6;
 
 var EXPRESSION = 7;
 
-var DIRECTIVE = 8;
+var SPREAD$1 = 8;
 
-var ELEMENT = 9;
+var DIRECTIVE = 9;
 
-var ATTRIBUTE = 10;
+var ELEMENT = 10;
 
-var TEXT = 11;
+var ATTRIBUTE = 11;
+
+var TEXT = 12;
 
 var hasConsole = typeof console !== 'undefined';
 
@@ -1691,6 +1695,42 @@ var Partial = function (_Node) {
   return Partial;
 }(Node);
 
+var Spread = function (_Node) {
+  inherits(Spread, _Node);
+
+  function Spread(expr) {
+    classCallCheck(this, Spread);
+
+    var _this = possibleConstructorReturn(this, (Spread.__proto__ || Object.getPrototypeOf(Spread)).call(this, FALSE));
+
+    _this.type = SPREAD$1;
+    _this.expr = expr;
+    return _this;
+  }
+
+  createClass(Spread, [{
+    key: 'render',
+    value: function render(data) {
+      var context = data.context,
+          parent = data.parent;
+
+      var target = this.execute(context);
+      if (!object(target)) {
+        return;
+      }
+
+      var node = void 0;
+
+      each$$1(target, function (value, key) {
+        node = new Attribute(key);
+        node.addChild(new Text(value));
+        parent.addAttr(node);
+      });
+    }
+  }]);
+  return Spread;
+}(Node);
+
 var getLocationByIndex = function (str, index) {
 
   var line = 0,
@@ -1760,6 +1800,9 @@ var elementEndPattern = /(?:\/)?>/;
 var attributePattern = /([-:@a-z0-9]+)(=["'])?/i;
 var attributeValueStartPattern = /^=["']/;
 
+var ERROR_PARTIAL_NAME = 'Expected legal partial name';
+var ERROR_EXPRESSION = 'Expected expression';
+
 var parsers = [{
   test: function test(source) {
     return source.startsWith(EACH);
@@ -1779,7 +1822,7 @@ var parsers = [{
   },
   create: function create(source) {
     var name = source.slice(IMPORT.length).trim();
-    return name ? new Import(name) : 'Expected legal partial name';
+    return name ? new Import(name) : ERROR_PARTIAL_NAME;
   }
 }, {
   test: function test(source) {
@@ -1787,7 +1830,7 @@ var parsers = [{
   },
   create: function create(source) {
     var name = source.slice(PARTIAL.length).trim();
-    return name ? new Partial(name) : 'Expected legal partial name';
+    return name ? new Partial(name) : ERROR_PARTIAL_NAME;
   }
 }, {
   test: function test(source) {
@@ -1795,7 +1838,7 @@ var parsers = [{
   },
   create: function create(source) {
     var expr = source.slice(IF.length).trim();
-    return expr ? new If(parse$1(expr)) : 'Expected expression';
+    return expr ? new If(parse$1(expr)) : ERROR_EXPRESSION;
   }
 }, {
   test: function test(source) {
@@ -1807,7 +1850,7 @@ var parsers = [{
       popStack();
       return new ElseIf(parse$1(expr));
     }
-    return 'Expected expression';
+    return ERROR_EXPRESSION;
   }
 }, {
   test: function test(source) {
@@ -1816,6 +1859,17 @@ var parsers = [{
   create: function create(source, popStack) {
     popStack();
     return new Else();
+  }
+}, {
+  test: function test(source) {
+    return source.startsWith(SPREAD);
+  },
+  create: function create(source) {
+    var expr = source.slice(SPREAD.length);
+    if (expr) {
+      return new Spread(parse$1(expr));
+    }
+    return ERROR_EXPRESSION;
   }
 }, {
   test: function test(source) {
@@ -1873,10 +1927,6 @@ function _parse(template, getPartial, setPartial) {
     return templateParse$$1[template];
   }
 
-  template = template.replace(new RegExp(openingDelimiter + '\\.\\.\\.\\s*([$\\w]+)' + closingDelimiter, 'g'), function ($0, $1) {
-    return '{{#each ' + $1 + ':key}} {{key}}="{{this}}"{{/each}}';
-  });
-
   var mainScanner = new Scanner(template),
       helperScanner = new Scanner(),
       rootNode = new Element(rootName),
@@ -1925,6 +1975,7 @@ function _parse(template, getPartial, setPartial) {
         }
         break;
 
+      case SPREAD$1:
       case ATTRIBUTE:
         if (currentNode.attrs) {
           action = 'addAttr';
@@ -3919,7 +3970,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.11.2';
+Yox.version = '0.11.8';
 
 Yox.switcher = switcher;
 

@@ -19,6 +19,7 @@ import Expression from '../node/Expression'
 import If from '../node/If'
 import Import from '../node/Import'
 import Partial from '../node/Partial'
+import Spread from '../node/Spread'
 import Text from '../node/Text'
 
 import * as is from '../../util/is'
@@ -37,6 +38,9 @@ const elementEndPattern = /(?:\/)?>/
 
 const attributePattern = /([-:@a-z0-9]+)(=["'])?/i
 const attributeValueStartPattern = /^=["']/
+
+const ERROR_PARTIAL_NAME = 'Expected legal partial name'
+const ERROR_EXPRESSION = 'Expected expression'
 
 const parsers = [
   {
@@ -61,7 +65,7 @@ const parsers = [
       let name = source.slice(syntax.IMPORT.length).trim()
       return name
         ? new Import(name)
-        : 'Expected legal partial name'
+        : ERROR_PARTIAL_NAME
     }
   },
   {
@@ -72,7 +76,7 @@ const parsers = [
       let name = source.slice(syntax.PARTIAL.length).trim()
       return name
         ? new Partial(name)
-        : 'Expected legal partial name'
+        : ERROR_PARTIAL_NAME
     }
   },
   {
@@ -83,7 +87,7 @@ const parsers = [
       let expr = source.slice(syntax.IF.length).trim()
       return expr
         ? new If(expression.parse(expr))
-        : 'Expected expression'
+        : ERROR_EXPRESSION
     }
   },
   {
@@ -96,7 +100,7 @@ const parsers = [
         popStack()
         return new ElseIf(expression.parse(expr))
       }
-      return 'Expected expression'
+      return ERROR_EXPRESSION
     }
   },
   {
@@ -106,6 +110,18 @@ const parsers = [
     create: function (source, popStack) {
       popStack()
       return new Else()
+    }
+  },
+  {
+    test: function (source) {
+      return source.startsWith(syntax.SPREAD)
+    },
+    create: function (source) {
+      let expr = source.slice(syntax.SPREAD.length)
+      if (expr) {
+        return new Spread(expression.parse(expr))
+      }
+      return ERROR_EXPRESSION
     }
   },
   {
@@ -185,14 +201,6 @@ export function parse(template, getPartial, setPartial) {
     return templateParse[template]
   }
 
-  // 支持延展操作符
-  template = template.replace(
-    new RegExp(`${openingDelimiter}\\.\\.\\.\\s*([$\\w]+)${closingDelimiter}`, 'g'),
-    function ($0, $1) {
-      return `{{#each ${$1}:key}} {{key}}="{{this}}"{{/each}}`
-    }
-  )
-
   let mainScanner = new Scanner(template),
     helperScanner = new Scanner(),
     rootNode = new Element(rootName),
@@ -238,6 +246,7 @@ export function parse(template, getPartial, setPartial) {
         }
         break
 
+      case nodeType.SPREAD:
       case nodeType.ATTRIBUTE:
         if (currentNode.attrs) {
           action = 'addAttr'

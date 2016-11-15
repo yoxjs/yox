@@ -49,29 +49,36 @@ export const IMPORT = 6
 export const EXPRESSION = 7
 
 /**
+ * 延展操作 节点
+ *
+ * @type {number}
+ */
+export const SPREAD = 8
+
+/**
  * 指令 节点
  *
  * @type {number}
  */
-export const DIRECTIVE = 8
+export const DIRECTIVE = 9
 
 /**
  * 元素 节点
  *
  * @type {number}
  */
-export const ELEMENT = 9
+export const ELEMENT = 10
 
 /**
  * 属性 节点
  *
  * @type {number}
  */
-export const ATTRIBUTE = 10
+export const ATTRIBUTE = 11
 
 /**
  * 文本 节点
  *
  * @type {number}
  */
-export const TEXT = 11
+export const TEXT = 12
