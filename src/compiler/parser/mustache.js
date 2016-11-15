@@ -27,8 +27,10 @@ import * as string from '../../util/string'
 import * as logger from '../../util/logger'
 import * as expression from '../../util/expression'
 
-const openingDelimiterPattern = /\{\{\s*/
-const closingDelimiterPattern = /\s*\}\}/
+const openingDelimiter = '\\{\\{\\s*'
+const closingDelimiter = '\\s*\\}\\}'
+const openingDelimiterPattern = new RegExp(openingDelimiter)
+const closingDelimiterPattern = new RegExp(closingDelimiter)
 
 const elementPattern = /<(?:\/)?[a-z]\w*/i
 const elementEndPattern = /(?:\/)?>/
@@ -182,6 +184,14 @@ export function parse(template, getPartial, setPartial) {
   if (templateParse[template]) {
     return templateParse[template]
   }
+
+  // 支持延展操作符
+  template = template.replace(
+    new RegExp(`${openingDelimiter}\\.\\.\\.\\s*([$\\w]+)${closingDelimiter}`, 'g'),
+    function ($0, $1) {
+      return `{{#each ${$1}:key}} {{key}}="{{this}}"{{/each}}`
+    }
+  )
 
   let mainScanner = new Scanner(template),
     helperScanner = new Scanner(),

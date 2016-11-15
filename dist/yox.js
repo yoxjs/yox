@@ -1749,8 +1749,10 @@ function parseError(str, errorMsg, errorIndex) {
   error$1(errorMsg);
 }
 
-var openingDelimiterPattern = /\{\{\s*/;
-var closingDelimiterPattern = /\s*\}\}/;
+var openingDelimiter = '\\{\\{\\s*';
+var closingDelimiter = '\\s*\\}\\}';
+var openingDelimiterPattern = new RegExp(openingDelimiter);
+var closingDelimiterPattern = new RegExp(closingDelimiter);
 
 var elementPattern = /<(?:\/)?[a-z]\w*/i;
 var elementEndPattern = /(?:\/)?>/;
@@ -1870,6 +1872,10 @@ function _parse(template, getPartial, setPartial) {
   if (templateParse$$1[template]) {
     return templateParse$$1[template];
   }
+
+  template = template.replace(new RegExp(openingDelimiter + '\\.\\.\\.\\s*([$\\w]+)' + closingDelimiter, 'g'), function ($0, $1) {
+    return '{{#each ' + $1 + ':key}} {{key}}="{{this}}"{{/each}}';
+  });
 
   var mainScanner = new Scanner(template),
       helperScanner = new Scanner(),
