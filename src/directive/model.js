@@ -42,15 +42,15 @@ const controlTypes = {
         : !!value
     },
     sync: function ({ el, keypath, instance }) {
-      let array = instance.get(keypath)
-      if (is.array(array)) {
+      let value = instance.get(keypath)
+      if (is.array(value)) {
         if (el.checked) {
-          array.push(el.value)
+          value.push(el.value)
         }
         else {
-          array.removeItem(array, el.value, env.FALSE)
+          array.removeItem(value, el.value, env.FALSE)
         }
-        instance.set(keypath, object.copy(array))
+        instance.set(keypath, object.copy(value))
       }
       else {
         instance.set(keypath, el.checked)

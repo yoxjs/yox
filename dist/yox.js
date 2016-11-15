@@ -3050,24 +3050,26 @@ var camelCase = function (name) {
   });
 };
 
-function nativeAddEventListener(element, type, listener) {
+function addListener(element, type, listener) {
   element.addEventListener(type, listener, FALSE);
 }
 
-function nativeRemoveEventListener(element, type, listener) {
+function removeListener(element, type, listener) {
   element.removeEventListener(type, listener, FALSE);
 }
 
-function createEvent(nativeEvent) {
-  return nativeEvent;
+function createEvent(event) {
+  return event;
 }
 
-function find(selector, context) {
+function findElement$1(selector, context) {
   if (!context) {
     context = doc;
   }
   return context.querySelector(selector);
 }
+
+var findElement$$1 = findElement$1;
 
 function on$1(element, type, listener) {
   var $emitter = element.$emitter || (element.$emitter = new Emitter());
@@ -3077,7 +3079,7 @@ function on$1(element, type, listener) {
       $emitter.fire(e.type, e);
     };
     $emitter[type] = nativeListener;
-    nativeAddEventListener(element, type, nativeListener);
+    addListener(element, type, nativeListener);
   }
   $emitter.on(type, listener);
 }
@@ -3091,30 +3093,30 @@ function off$1(element, type, listener) {
 
   each$1(types, function (type) {
     if ($emitter[type] && !$emitter.has(type)) {
-      nativeRemoveEventListener(element, type, $emitter[type]);
+      removeListener(element, type, $emitter[type]);
       delete $emitter[type];
     }
   });
 }
 
 function parseStyle(str) {
+
   var result = {};
 
   if (string(str)) {
     (function () {
-      var pairs = void 0,
+      var terms = void 0,
           name = void 0,
           value = void 0;
-
       each$1(str.split(';'), function (term) {
-        if (term && term.trim()) {
-          pairs = term.split(':');
-          if (pairs.length === 2) {
-            name = pairs[0].trim();
-            value = pairs[1].trim();
-            if (name) {
-              result[camelCase(name)] = value;
-            }
+        terms = term.split(':');
+        name = terms[0];
+        value = terms[1];
+        if (name && value) {
+          name = name.trim();
+          value = value.trim();
+          if (name) {
+            result[camelCase(name)] = value;
           }
         }
       });
@@ -3395,14 +3397,14 @@ var controlTypes = {
           keypath = _ref6.keypath,
           instance = _ref6.instance;
 
-      var array$$1 = instance.get(keypath);
-      if (array(array$$1)) {
+      var value = instance.get(keypath);
+      if (array(value)) {
         if (el.checked) {
-          array$$1.push(el.value);
+          value.push(el.value);
         } else {
-          array$$1.removeItem(array$$1, el.value, FALSE);
+          removeItem(value, el.value, FALSE);
         }
-        instance.set(keypath, copy(array$$1));
+        instance.set(keypath, copy(value));
       } else {
         instance.set(keypath, el.checked);
       }
@@ -3505,7 +3507,7 @@ var componentDt = {
 
     el.$component = instance.create(instance.getComponent(node.custom), {
       el: el,
-      props: copy(node.getAttributes(), true),
+      props: copy(node.getAttributes(), TRUE),
       replace: TRUE
     });
   },
@@ -3514,7 +3516,7 @@ var componentDt = {
     var el = _ref2.el,
         node = _ref2.node;
 
-    el.$component.set(copy(node.getAttributes(), true));
+    el.$component.set(copy(node.getAttributes(), TRUE));
   },
 
   detach: function detach(_ref3) {
@@ -3551,9 +3553,9 @@ var Yox = function () {
         methods = options.methods,
         partials = options.partials;
 
-    template = tag.test(template) ? template : find(template).innerHTML;
+    template = tag.test(template) ? template : findElement$$1(template).innerHTML;
 
-    el = string(el) ? find(el) : el;
+    el = string(el) ? findElement$$1(el) : el;
 
     if (!el || el.nodeType !== 1) {
       error$1('Passing a `el` option must be a html element.');
@@ -3970,7 +3972,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.11.8';
+Yox.version = '0.11.9';
 
 Yox.switcher = switcher;
 

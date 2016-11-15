@@ -9,7 +9,7 @@ export default {
       instance.getComponent(node.custom),
       {
         el,
-        props: object.copy(node.getAttributes(), true),
+        props: object.copy(node.getAttributes(), env.TRUE),
         replace: env.TRUE,
       }
     )
@@ -17,7 +17,7 @@ export default {
 
   update: function ({ el, node }) {
     el.$component.set(
-      object.copy(node.getAttributes(), true)
+      object.copy(node.getAttributes(), env.TRUE)
     )
   },
 
