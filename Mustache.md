@@ -168,7 +168,7 @@ Mustache 原版设计了 `.` 语法来获取当前 context，可是我们觉得�
 <Component {{...props}} />
 ```
 
-或者稍微复杂些的表达式，如下：
+我们还支持稍微复杂一些的表达式，如下：
 
 ```html
 <Component {{... cond ? a : b}} />
