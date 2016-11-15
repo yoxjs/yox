@@ -31,17 +31,17 @@ export default class Each extends Node {
 
     let iterator = context.get(name)
 
-    let each
+    let iterate
     if (is.array(iterator)) {
-      each = array.each
+      iterate = array.each
     }
     else if (is.object(iterator)) {
-      each = object.each
+      iterate = object.each
     }
 
-    if (each) {
+    if (iterate) {
       keys.push(name)
-      each(
+      iterate(
         iterator,
         function (item, i) {
           if (index) {

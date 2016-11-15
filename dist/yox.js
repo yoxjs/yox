@@ -1440,16 +1440,16 @@ var Each = function (_Node) {
 
       var iterator = context.get(name);
 
-      var each$$1 = void 0;
+      var iterate = void 0;
       if (array(iterator)) {
-        each$$1 = each$1;
+        iterate = each$1;
       } else if (object(iterator)) {
-        each$$1 = each$$1;
+        iterate = each$$1;
       }
 
-      if (each$$1) {
+      if (iterate) {
         keys$$1.push(name);
-        each$$1(iterator, function (item, i) {
+        iterate(iterator, function (item, i) {
           if (index) {
             context.set(index, i);
           }
