@@ -20,6 +20,8 @@ import * as component from './util/component'
 import * as vdom from './platform/web/vdom'
 import * as helper from './platform/web/helper'
 
+import toNumber from './function/toNumber'
+
 import refDt from './directive/ref'
 import eventDt from './directive/event'
 import modelDt from './directive/model'
@@ -397,6 +399,20 @@ export default class Yox {
     )
   }
 
+  increase(keypath, step, max) {
+    let value = toNumber(this.get(keypath), 0) + (is.numeric(step) ? step : 1)
+    if (!is.numeric(max) || value <= max) {
+      this.set(keypath, value)
+    }
+  }
+
+  decrease(keypath, step, min) {
+    let value = toNumber(this.get(keypath), 0) - (is.numeric(step) ? step : 1)
+    if (!is.numeric(min) || value >= min) {
+      this.set(keypath, value)
+    }
+  }
+
   updateModel(model) {
 
     let instance = this
@@ -558,7 +574,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.11.9'
+Yox.version = '0.11.10'
 
 /**
  * 开关配置

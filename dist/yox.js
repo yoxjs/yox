@@ -3256,6 +3256,13 @@ function create$1(node, instance) {
   });
 }
 
+var toNumber = function (str, defaultValue) {
+  if (numeric(str)) {
+    return +str;
+  }
+  return arguments.length === 2 ? defaultValue : 0;
+};
+
 var refDt = {
 
   attach: function attach(_ref) {
@@ -3833,6 +3840,22 @@ var Yox = function () {
       this.set(keypath, !this.get(keypath));
     }
   }, {
+    key: 'increase',
+    value: function increase(keypath, step, max) {
+      var value = toNumber(this.get(keypath), 0) + (numeric(step) ? step : 1);
+      if (!numeric(max) || value <= max) {
+        this.set(keypath, value);
+      }
+    }
+  }, {
+    key: 'decrease',
+    value: function decrease(keypath, step, min) {
+      var value = toNumber(this.get(keypath), 0) - (numeric(step) ? step : 1);
+      if (!numeric(min) || value >= min) {
+        this.set(keypath, value);
+      }
+    }
+  }, {
     key: 'updateModel',
     value: function updateModel(model) {
 
@@ -3972,7 +3995,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.11.9';
+Yox.version = '0.11.10';
 
 Yox.switcher = switcher;
 
