@@ -58,6 +58,18 @@
 
 取反 `keypath` 对应的数据。
 
+### increase(keypath, step, max)
+
+递增 `keypath` 对应的数字。
+
+默认递增 `1`，可配置增量，也可配置递增的最大值。
+
+### decrease(keypath, step, min)
+
+递减 `keypath` 对应的数字。
+
+默认递减 `1`，可配置减量，也可配置递减的最小值。
+
 ## 生命周期
 
 ### dispose()
