@@ -16,6 +16,7 @@ import * as object from '../../util/object'
 import * as nodeType from '../../compiler/nodeType'
 
 export let patch = snabbdom.init([ attributes, style ])
+const UNIQUE_KEY = 'key'
 
 export function create(node, instance) {
 
@@ -68,6 +69,7 @@ export function create(node, instance) {
         // 因为如果在组件上写了 on-click="xx" 其实是监听从组件 fire 出的 click 事件
         // 因此 component 必须在 event 指令之前执行
 
+        let attributes = node.getAttributes()
         // 组件的 attrs 作为 props 传入组件，不需要写到元素上
         if (node.custom) {
           directives.push({
@@ -78,12 +80,12 @@ export function create(node, instance) {
         }
         else {
           object.each(
-            node.getAttributes(),
+            attributes,
             function (value, key) {
               if (key === 'style') {
                 styles = helper.parseStyle(value)
               }
-              else {
+              else if (key !== UNIQUE_KEY) {
                 attrs[key] = value
               }
             }
@@ -114,6 +116,10 @@ export function create(node, instance) {
         )
 
         let data = { attrs }
+
+        if (object.has(attributes, UNIQUE_KEY)) {
+          data.key = attributes.key
+        }
 
         if (styles) {
           data.style = styles

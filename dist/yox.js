@@ -3124,6 +3124,7 @@ function parseStyle(str) {
 }
 
 var patch = snabbdom.init([attributes, style]);
+var UNIQUE_KEY = 'key';
 
 function create$1(node, instance) {
 
@@ -3166,6 +3167,8 @@ function create$1(node, instance) {
             directives = [],
             styles = void 0;
 
+        var attributes$$1 = node.getAttributes();
+
         if (node.custom) {
           directives.push({
             name: 'component',
@@ -3173,10 +3176,10 @@ function create$1(node, instance) {
             directive: instance.getDirective('component')
           });
         } else {
-          each$$1(node.getAttributes(), function (value, key) {
+          each$$1(attributes$$1, function (value, key) {
             if (key === 'style') {
               styles = parseStyle(value);
-            } else {
+            } else if (key !== UNIQUE_KEY) {
               attrs[key] = value;
             }
           });
@@ -3202,6 +3205,10 @@ function create$1(node, instance) {
         });
 
         var data = { attrs: attrs };
+
+        if (has$1(attributes$$1, UNIQUE_KEY)) {
+          data.key = attributes$$1.key;
+        }
 
         if (styles) {
           data.style = styles;
@@ -3992,7 +3999,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.11.11';
+Yox.version = '0.11.12';
 
 Yox.switcher = switcher;
 
