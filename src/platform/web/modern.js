@@ -14,8 +14,5 @@ export function createEvent(event) {
 }
 
 export function findElement(selector, context) {
-  if (!context) {
-    context = env.doc
-  }
-  return context.querySelector(selector)
+  return (context || env.doc).querySelector(selector)
 }

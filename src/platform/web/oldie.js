@@ -2,6 +2,28 @@
 import * as env from '../../config/env'
 import * as object from '../../util/object'
 
+class IEEvent {
+
+  constructor(event, element) {
+
+    object.extend(this, event)
+
+    this.currentTarget = element
+    this.target = event.srcElement || element
+    this.originalEvent = event
+
+  }
+
+  preventDefault() {
+    this.originalEvent.returnValue = env.FALSE
+  }
+
+  stopPropagation() {
+    this.originalEvent.cancelBubble = env.TRUE
+  }
+
+}
+
 function addInputListener(element, listener) {
   let oldValue = element.value
   listener.$listener = function (e) {
@@ -40,35 +62,11 @@ export function removeListener(element, type, listener) {
   }
 }
 
-class IEEvent {
-
-  constructor(event, element) {
-
-    object.extend(this, event)
-
-    this.currentTarget = element
-    this.target = event.srcElement || element
-    this.originalEvent = event
-
-  }
-
-  preventDefault() {
-    this.originalEvent.returnValue = env.FALSE
-  }
-
-  stopPropagation() {
-    this.originalEvent.cancelBubble = env.TRUE
-  }
-
-}
-
-export function createEvent(nativeEvent, element) {
-  return new IEEvent(nativeEvent, element)
+export function createEvent(event, element) {
+  return new IEEvent(event, element)
 }
 
 export function findElement(selector, context) {
-  if (!context) {
-    context = env.doc
-  }
-  return context.querySelector(selector)
+  return (context || env.doc).querySelector(selector)
 }
+

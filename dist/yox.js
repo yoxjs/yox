@@ -3063,10 +3063,7 @@ function createEvent(event) {
 }
 
 function findElement$1(selector, context) {
-  if (!context) {
-    context = doc;
-  }
-  return context.querySelector(selector);
+  return (context || doc).querySelector(selector);
 }
 
 var findElement$$1 = findElement$1;
@@ -3995,7 +3992,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.11.10';
+Yox.version = '0.11.11';
 
 Yox.switcher = switcher;
 
