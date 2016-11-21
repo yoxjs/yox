@@ -18,7 +18,7 @@ import * as nextTask from './util/nextTask'
 import * as component from './util/component'
 
 import * as vdom from './platform/web/vdom'
-import * as helper from './platform/web/helper'
+import * as native from './platform/web/native'
 
 import toNumber from './function/toNumber'
 
@@ -68,10 +68,10 @@ export default class Yox {
     // el 和 template 都可以传选择器
     template = pattern.tag.test(template)
       ? template
-      : helper.findElement(template).innerHTML
+      : native.findElement(template).innerHTML
 
     el = is.string(el)
-      ? helper.findElement(el)
+      ? native.findElement(el)
       : el
 
     if (!el || el.nodeType !== 1) {
@@ -574,7 +574,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.11.12'
+Yox.version = '0.11.13'
 
 /**
  * 开关配置

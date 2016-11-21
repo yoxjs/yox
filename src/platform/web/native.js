@@ -7,7 +7,7 @@ import Event from '../../util/Event'
 import Emitter from '../../util/Emitter'
 import camelCase from '../../function/camelCase'
 
-import * as native from './modern'
+import * as native from './nativeModern'
 
 export let findElement = native.findElement
 

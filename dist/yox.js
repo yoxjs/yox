@@ -3124,6 +3124,7 @@ function parseStyle(str) {
 }
 
 var patch = snabbdom.init([attributes, style]);
+
 var UNIQUE_KEY = 'key';
 
 function create$1(node, instance) {
@@ -3999,7 +4000,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.11.12';
+Yox.version = '0.11.13';
 
 Yox.switcher = switcher;
 

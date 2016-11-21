@@ -1,5 +1,5 @@
 
-import * as helper from '../platform/web/helper'
+import * as native from '../platform/web/native'
 
 import * as env from '../config/env'
 
@@ -124,11 +124,11 @@ export default {
     }
 
     el.$model = function () {
-      helper.off(el, name, listener)
+      native.off(el, name, listener)
       el.$model = env.NULL
     }
 
-    helper.on(el, name, listener)
+    native.on(el, name, listener)
 
   },
 

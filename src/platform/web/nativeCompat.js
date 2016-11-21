@@ -1,8 +1,8 @@
 
 import * as env from '../../config/env'
 
-import * as modern from './modern'
-import * as oldie from './oldie'
+import * as modern from './nativeModern'
+import * as oldie from './nativeOldie'
 
 let native = env.doc.addEventListener ? modern : oldie
 

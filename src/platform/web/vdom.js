@@ -4,7 +4,7 @@ import h from 'snabbdom/h'
 import style from 'snabbdom/modules/style'
 import attributes from 'snabbdom/modules/attributes'
 
-import * as helper from './helper'
+import * as native from './native'
 
 import * as env from '../../config/env'
 import * as syntax from '../../config/syntax'
@@ -16,6 +16,7 @@ import * as object from '../../util/object'
 import * as nodeType from '../../compiler/nodeType'
 
 export let patch = snabbdom.init([ attributes, style ])
+
 const UNIQUE_KEY = 'key'
 
 export function create(node, instance) {
@@ -83,7 +84,7 @@ export function create(node, instance) {
             attributes,
             function (value, key) {
               if (key === 'style') {
-                styles = helper.parseStyle(value)
+                styles = native.parseStyle(value)
               }
               else if (key !== UNIQUE_KEY) {
                 attrs[key] = value
