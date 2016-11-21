@@ -68,10 +68,10 @@ export default class Yox {
     // el 和 template 都可以传选择器
     template = pattern.tag.test(template)
       ? template
-      : native.findElement(template).innerHTML
+      : native.find(template).innerHTML
 
     el = is.string(el)
-      ? native.findElement(el)
+      ? native.find(el)
       : el
 
     if (!el || el.nodeType !== 1) {
@@ -574,7 +574,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.11.13'
+Yox.version = '0.11.14'
 
 /**
  * 开关配置
@@ -598,7 +598,7 @@ Yox.syntax = syntax
 Yox.cache = cache
 
 // 工具，便于扩展、插件使用
-Yox.utils = { is, array, object, logger, Store, Emitter, Event }
+Yox.utils = { is, array, object, logger, native, Store, Emitter, Event }
 
 Yox.component = function (id, value) {
   registry.component.set(id, value)

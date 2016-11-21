@@ -3044,12 +3044,6 @@ var Emitter = function () {
   return Emitter;
 }();
 
-var camelCase = function (name) {
-  return name.replace(/-([a-z])/gi, function ($0, $1) {
-    return $1.toUpperCase();
-  });
-};
-
 function addListener(element, type, listener) {
   element.addEventListener(type, listener, FALSE);
 }
@@ -3062,11 +3056,11 @@ function createEvent(event) {
   return event;
 }
 
-function findElement$1(selector, context) {
+function findElement(selector, context) {
   return (context || doc).querySelector(selector);
 }
 
-var findElement$$1 = findElement$1;
+var find = findElement;
 
 function on$1(element, type, listener) {
   var $emitter = element.$emitter || (element.$emitter = new Emitter());
@@ -3096,6 +3090,16 @@ function off$1(element, type, listener) {
   });
 }
 
+var native = Object.freeze({
+	find: find,
+	on: on$1,
+	off: off$1
+});
+
+var patch = snabbdom.init([attributes, style]);
+
+var UNIQUE_KEY = 'key';
+
 function parseStyle(str) {
 
   var result = {};
@@ -3122,10 +3126,6 @@ function parseStyle(str) {
 
   return result;
 }
-
-var patch = snabbdom.init([attributes, style]);
-
-var UNIQUE_KEY = 'key';
 
 function create$1(node, instance) {
 
@@ -3162,7 +3162,7 @@ function create$1(node, instance) {
   }, function (node, children) {
     counter--;
     if (node.type === ELEMENT) {
-      var _ret = function () {
+      var _ret2 = function () {
 
         var attrs = {},
             directives = [],
@@ -3254,7 +3254,7 @@ function create$1(node, instance) {
         };
       }();
 
-      if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
+      if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
     } else if (node.type === TEXT) {
       return node.content;
     }
@@ -3565,9 +3565,9 @@ var Yox = function () {
         methods = options.methods,
         partials = options.partials;
 
-    template = tag.test(template) ? template : findElement$$1(template).innerHTML;
+    template = tag.test(template) ? template : find(template).innerHTML;
 
-    el = string(el) ? findElement$$1(el) : el;
+    el = string(el) ? find(el) : el;
 
     if (!el || el.nodeType !== 1) {
       error$1('Passing a `el` option must be a html element.');
@@ -4000,7 +4000,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.11.13';
+Yox.version = '0.11.14';
 
 Yox.switcher = switcher;
 
@@ -4008,7 +4008,7 @@ Yox.syntax = syntax;
 
 Yox.cache = cache;
 
-Yox.utils = { is: is$1, array: array$1, object: object$1, logger: logger, Store: Store, Emitter: Emitter, Event: Event };
+Yox.utils = { is: is$1, array: array$1, object: object$1, logger: logger, native: native, Store: Store, Emitter: Emitter, Event: Event };
 
 Yox.component = function (id, value) {
   component.set(id, value);

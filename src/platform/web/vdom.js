@@ -19,6 +19,39 @@ export let patch = snabbdom.init([ attributes, style ])
 
 const UNIQUE_KEY = 'key'
 
+/**
+ * 把 style-name: value 解析成对象的形式
+ *
+ * @param {string} str
+ * @return {Object}
+ */
+function parseStyle(str) {
+
+  let result = { }
+
+  if (is.string(str)) {
+    let terms, name, value
+    array.each(
+      str.split(';'),
+      function (term) {
+        terms = term.split(':')
+        name = terms[0]
+        value = terms[1]
+        if (name && value) {
+          name = name.trim()
+          value = value.trim()
+          if (name) {
+            result[camelCase(name)] = value
+          }
+        }
+      }
+    )
+  }
+
+  return result
+
+}
+
 export function create(node, instance) {
 
   let counter = 0
@@ -84,7 +117,7 @@ export function create(node, instance) {
             attributes,
             function (value, key) {
               if (key === 'style') {
-                styles = native.parseStyle(value)
+                styles = parseStyle(value)
               }
               else if (key !== UNIQUE_KEY) {
                 attrs[key] = value

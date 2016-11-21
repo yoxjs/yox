@@ -9,7 +9,7 @@ import camelCase from '../../function/camelCase'
 
 import * as native from './nativeModern'
 
-export let findElement = native.findElement
+export let find = native.findElement
 
 /**
  * 绑定事件
@@ -55,35 +55,4 @@ export function off(element, type, listener) {
   )
 }
 
-/**
- * 把 style-name: value 解析成对象的形式
- *
- * @param {string} str
- * @return {Object}
- */
-export function parseStyle(str) {
 
-  let result = { }
-
-  if (is.string(str)) {
-    let terms, name, value
-    array.each(
-      str.split(';'),
-      function (term) {
-        terms = term.split(':')
-        name = terms[0]
-        value = terms[1]
-        if (name && value) {
-          name = name.trim()
-          value = value.trim()
-          if (name) {
-            result[camelCase(name)] = value
-          }
-        }
-      }
-    )
-  }
-
-  return result
-
-}
