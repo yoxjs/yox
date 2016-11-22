@@ -576,7 +576,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.11.15'
+Yox.version = '0.11.16'
 
 /**
  * 开关配置
@@ -600,7 +600,7 @@ Yox.syntax = syntax
 Yox.cache = cache
 
 // 工具，便于扩展、插件使用
-Yox.utils = { env, is, array, object, logger, native, Store, Emitter, Event }
+Yox.utils = { is, array, object, logger, native, Store, Emitter, Event }
 
 Yox.component = function (id, value) {
   registry.component.set(id, value)

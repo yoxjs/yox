@@ -9,18 +9,9 @@ var FALSE = false;
 var NULL = null;
 var UNDEFINED = undefined;
 
-var win = window;
+
 
 var doc = document;
-
-var env = Object.freeze({
-	TRUE: TRUE,
-	FALSE: FALSE,
-	NULL: NULL,
-	UNDEFINED: UNDEFINED,
-	win: win,
-	doc: doc
-});
 
 var templateParse = {};
 
@@ -4015,7 +4006,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.11.15';
+Yox.version = '0.11.16';
 
 Yox.switcher = switcher;
 
@@ -4023,7 +4014,7 @@ Yox.syntax = syntax;
 
 Yox.cache = cache;
 
-Yox.utils = { env: env, is: is$1, array: array$1, object: object$1, logger: logger, native: native, Store: Store, Emitter: Emitter, Event: Event };
+Yox.utils = { is: is$1, array: array$1, object: object$1, logger: logger, native: native, Store: Store, Emitter: Emitter, Event: Event };
 
 Yox.component = function (id, value) {
   component.set(id, value);
