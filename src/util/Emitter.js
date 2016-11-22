@@ -55,6 +55,10 @@ export default class Emitter {
 
   fire(type, data, context) {
 
+    if (data && object.has(data, 'length') && !is.array(data)) {
+      data = array.toArray(data)
+    }
+
     if (arguments.length === 2) {
       context = env.NULL
     }

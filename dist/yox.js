@@ -9,9 +9,18 @@ var FALSE = false;
 var NULL = null;
 var UNDEFINED = undefined;
 
-
+var win = window;
 
 var doc = document;
+
+var env = Object.freeze({
+	TRUE: TRUE,
+	FALSE: FALSE,
+	NULL: NULL,
+	UNDEFINED: UNDEFINED,
+	win: win,
+	doc: doc
+});
 
 var templateParse = {};
 
@@ -2991,6 +3000,10 @@ var Emitter = function () {
     key: 'fire',
     value: function fire(type, data, context) {
 
+      if (data && has$1(data, 'length') && !array(data)) {
+        data = toArray(data);
+      }
+
       if (arguments.length === 2) {
         context = NULL;
       }
@@ -3062,12 +3075,12 @@ function findElement(selector, context) {
 
 var find = findElement;
 
-function on$1(element, type, listener) {
+function on$1(element, type, listener, context) {
   var $emitter = element.$emitter || (element.$emitter = new Emitter());
   if (!$emitter.has(type)) {
     var nativeListener = function nativeListener(e) {
       e = new Event(createEvent(e, element));
-      $emitter.fire(e.type, e);
+      $emitter.fire(e.type, e, context);
     };
     $emitter[type] = nativeListener;
     addListener(element, type, nativeListener);
@@ -3563,7 +3576,8 @@ var Yox = function () {
         events = options.events,
         filters = options.filters,
         methods = options.methods,
-        partials = options.partials;
+        partials = options.partials,
+        extensions = options.extensions;
 
     template = tag.test(template) ? template : find(template).innerHTML;
 
@@ -3582,6 +3596,10 @@ var Yox = function () {
     }
 
     var instance = this;
+
+    if (object(extensions)) {
+      extend(instance, extensions);
+    }
 
     if (parent) {
       instance.$parent = parent;
@@ -3817,9 +3835,6 @@ var Yox = function () {
         bubble = TRUE;
         data = NULL;
       }
-      if (data && has$1(data, 'length') && !array(data)) {
-        data = toArray(data);
-      }
       var $parent = this.$parent,
           $eventEmitter = this.$eventEmitter;
 
@@ -4000,7 +4015,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.11.14';
+Yox.version = '0.11.15';
 
 Yox.switcher = switcher;
 
@@ -4008,7 +4023,7 @@ Yox.syntax = syntax;
 
 Yox.cache = cache;
 
-Yox.utils = { is: is$1, array: array$1, object: object$1, logger: logger, native: native, Store: Store, Emitter: Emitter, Event: Event };
+Yox.utils = { env: env, is: is$1, array: array$1, object: object$1, logger: logger, native: native, Store: Store, Emitter: Emitter, Event: Event };
 
 Yox.component = function (id, value) {
   component.set(id, value);

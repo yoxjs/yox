@@ -17,13 +17,14 @@ export let find = native.findElement
  * @param {HTMLElement} element
  * @param {string} type
  * @param {Function} listener
+ * @param {?*} context
  */
-export function on(element, type, listener) {
+export function on(element, type, listener, context) {
   let $emitter = element.$emitter || (element.$emitter = new Emitter())
   if (!$emitter.has(type)) {
     let nativeListener = function (e) {
       e = new Event(native.createEvent(e, element))
-      $emitter.fire(e.type, e)
+      $emitter.fire(e.type, e, context)
     }
     $emitter[type] = nativeListener
     native.addListener(element, type, nativeListener)

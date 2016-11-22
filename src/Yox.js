@@ -63,6 +63,7 @@ export default class Yox {
       filters,
       methods,
       partials,
+      extensions,
     } = options
 
     // el 和 template 都可以传选择器
@@ -87,6 +88,10 @@ export default class Yox {
     }
 
     let instance = this
+
+    if (is.object(extensions)) {
+      object.extend(instance, extensions)
+    }
 
     if (parent) {
       instance.$parent = parent
@@ -373,9 +378,6 @@ export default class Yox {
       bubble = env.TRUE
       data = env.NULL
     }
-    if (data && object.has(data, 'length') && !is.array(data)) {
-      data = array.toArray(data)
-    }
     let { $parent, $eventEmitter } = this
     let done = $eventEmitter.fire(type, data, this)
     if (done && bubble && $parent) {
@@ -574,7 +576,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.11.14'
+Yox.version = '0.11.15'
 
 /**
  * 开关配置
@@ -598,7 +600,7 @@ Yox.syntax = syntax
 Yox.cache = cache
 
 // 工具，便于扩展、插件使用
-Yox.utils = { is, array, object, logger, native, Store, Emitter, Event }
+Yox.utils = { env, is, array, object, logger, native, Store, Emitter, Event }
 
 Yox.component = function (id, value) {
   registry.component.set(id, value)
