@@ -321,118 +321,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
 
 
-var asyncGenerator = function () {
-  function AwaitValue(value) {
-    this.value = value;
-  }
 
-  function AsyncGenerator(gen) {
-    var front, back;
-
-    function send(key, arg) {
-      return new Promise(function (resolve, reject) {
-        var request = {
-          key: key,
-          arg: arg,
-          resolve: resolve,
-          reject: reject,
-          next: null
-        };
-
-        if (back) {
-          back = back.next = request;
-        } else {
-          front = back = request;
-          resume(key, arg);
-        }
-      });
-    }
-
-    function resume(key, arg) {
-      try {
-        var result = gen[key](arg);
-        var value = result.value;
-
-        if (value instanceof AwaitValue) {
-          Promise.resolve(value.value).then(function (arg) {
-            resume("next", arg);
-          }, function (arg) {
-            resume("throw", arg);
-          });
-        } else {
-          settle(result.done ? "return" : "normal", result.value);
-        }
-      } catch (err) {
-        settle("throw", err);
-      }
-    }
-
-    function settle(type, value) {
-      switch (type) {
-        case "return":
-          front.resolve({
-            value: value,
-            done: true
-          });
-          break;
-
-        case "throw":
-          front.reject(value);
-          break;
-
-        default:
-          front.resolve({
-            value: value,
-            done: false
-          });
-          break;
-      }
-
-      front = front.next;
-
-      if (front) {
-        resume(front.key, front.arg);
-      } else {
-        back = null;
-      }
-    }
-
-    this._invoke = send;
-
-    if (typeof gen.return !== "function") {
-      this.return = undefined;
-    }
-  }
-
-  if (typeof Symbol === "function" && Symbol.asyncIterator) {
-    AsyncGenerator.prototype[Symbol.asyncIterator] = function () {
-      return this;
-    };
-  }
-
-  AsyncGenerator.prototype.next = function (arg) {
-    return this._invoke("next", arg);
-  };
-
-  AsyncGenerator.prototype.throw = function (arg) {
-    return this._invoke("throw", arg);
-  };
-
-  AsyncGenerator.prototype.return = function (arg) {
-    return this._invoke("return", arg);
-  };
-
-  return {
-    wrap: function (fn) {
-      return function () {
-        return new AsyncGenerator(fn.apply(this, arguments));
-      };
-    },
-    await: function (value) {
-      return new AwaitValue(value);
-    }
-  };
-}();
 
 
 
@@ -3538,7 +3427,7 @@ var componentDt = {
   detach: function detach(_ref3) {
     var el = _ref3.el;
 
-    el.$component.dispose();
+    el.$component.dispose(TRUE);
     el.$component = NULL;
   }
 
@@ -3988,7 +3877,7 @@ var Yox = function () {
   }, {
     key: 'getDirective',
     value: function getDirective(name) {
-      return get$3(this, 'directive', name, true);
+      return get$3(this, 'directive', name, TRUE);
     }
   }, {
     key: 'getPartial',
@@ -3998,15 +3887,28 @@ var Yox = function () {
   }, {
     key: 'dispose',
     value: function dispose() {
-      this.$watchEmitter.off();
-      this.$eventEmitter.off();
-      this.fire(DETACH);
+
+      var instance = this;
+
+      var $currentNode = instance.$currentNode,
+          $watchEmitter = instance.$watchEmitter,
+          $eventEmitter = instance.$eventEmitter;
+
+
+      instance.fire(DETACH);
+
+      $watchEmitter.off();
+      $eventEmitter.off();
+
+      if (arguments[0] !== TRUE && $currentNode) {
+        instance.$currentNode = patch($currentNode, { text: '' });
+      }
     }
   }]);
   return Yox;
 }();
 
-Yox.version = '0.11.16';
+Yox.version = '0.11.17';
 
 Yox.switcher = switcher;
 

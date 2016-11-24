@@ -556,7 +556,7 @@ export default class Yox {
   }
 
   getDirective(name) {
-    return component.get(this, 'directive', name, true)
+    return component.get(this, 'directive', name, env.TRUE)
   }
 
   getPartial(name) {
@@ -564,9 +564,24 @@ export default class Yox {
   }
 
   dispose() {
-    this.$watchEmitter.off()
-    this.$eventEmitter.off()
-    this.fire(lifecycle.DETACH)
+
+    let instance = this
+
+    let {
+      $currentNode,
+      $watchEmitter,
+      $eventEmitter,
+    } = instance
+
+    instance.fire(lifecycle.DETACH)
+
+    $watchEmitter.off()
+    $eventEmitter.off()
+
+    if (arguments[0] !== env.TRUE && $currentNode) {
+      instance.$currentNode = vdom.patch($currentNode, { text: '' })
+    }
+
   }
 
 }
@@ -576,7 +591,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.11.16'
+Yox.version = '0.11.17'
 
 /**
  * 开关配置

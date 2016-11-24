@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>生命周期</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div id="app"></div>
+    <script src="../dist/yox.js"></script>
+    <script>
+
+        let Custom = {
+            template: `
+                <div id="custom-component">
+                  {{counter}}
+                </div>
+            `,
+            oninit: function () {
+                console.log('    oninit');
+            },
+            oncreate: function () {
+                console.log('    oncreate');
+            },
+            onattach: function () {
+                console.log('    onattach');
+            },
+            onupdate: function () {
+                console.log('    onupdate');
+            },
+            ondetach: function () {
+                console.log('    ondetach');
+            }
+        };
+
+        var instance = new Yox({
+            el: '#app',
+            data: {
+              counter: 0,
+            },
+            template: `
+                <div id="root">
+                    <button on-click="increase('counter')">
+                        increase
+                    </button>
+                    {{#if counter % 4 !== 0}}
+                    <Custom counter="{{counter}}" />
+                    {{/if}}
+                </div>
+            `,
+            components: {
+                Custom: Custom
+            },
+            oninit: function () {
+                console.log('oninit');
+            },
+            oncreate: function () {
+                console.log('oncreate');
+            },
+            onattach: function () {
+                console.log('onattach');
+            },
+            onupdate: function () {
+                console.log('onupdate');
+            },
+            ondetach: function () {
+                console.log('ondetach');
+            }
+        });
+
+    </script>
+</body>
+</html>

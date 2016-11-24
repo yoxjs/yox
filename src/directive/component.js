@@ -22,7 +22,7 @@ export default {
   },
 
   detach: function ({ el }) {
-    el.$component.dispose()
+    el.$component.dispose(env.TRUE)
     el.$component = env.NULL
   }
 
