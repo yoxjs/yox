@@ -16,9 +16,11 @@ var doc = document;
 var templateParse = {};
 
 var expressionParse = {};
+
 var expressionCompile = {};
 
 var keypathNormalize = {};
+
 var keypathWildcardMatches = {};
 
 var cache = Object.freeze({
@@ -38,7 +40,7 @@ var IMPORT = '>';
 var COMMENT = '!';
 var SPREAD = '...';
 
-var DIRECTIVE_PREFIX = '@';
+var DIRECTIVE_PREFIX = 'o-';
 var DIRECTIVE_EVENT_PREFIX = 'on-';
 
 var SPECIAL_EVENT = '$event';
@@ -122,10 +124,18 @@ var toString$1 = function (str, defaultValue) {
 var slice = Array.prototype.slice;
 
 
-function each$1(array$$1, callback) {
-  for (var i = 0, len = array$$1.length; i < len; i++) {
-    if (callback(array$$1[i], i) === FALSE) {
-      break;
+function each$1(array$$1, callback, reversed) {
+  if (reversed) {
+    for (var i = array$$1.length - 1; i >= 0; i--) {
+      if (callback(array$$1[i], i) === FALSE) {
+        break;
+      }
+    }
+  } else {
+    for (var _i = 0, len = array$$1.length; _i < len; _i++) {
+      if (callback(array$$1[_i], _i) === FALSE) {
+        break;
+      }
     }
   }
 }
@@ -3518,6 +3528,7 @@ var Yox = function () {
     }
 
     if (object(components)) {
+      instance.$children = [];
       instance.$components = components;
     }
     if (object(directives)) {
@@ -3857,7 +3868,9 @@ var Yox = function () {
     value: function create(options, extra) {
       options = extend({}, options, extra);
       options.parent = this;
-      return new Yox(options);
+      var child = new Yox(options);
+      this.$children.push(child);
+      return child;
     }
   }, {
     key: 'compileAttr',
@@ -3890,12 +3903,24 @@ var Yox = function () {
 
       var instance = this;
 
-      var $currentNode = instance.$currentNode,
+      instance.fire(DETACH);
+
+      var $parent = instance.$parent,
+          $children = instance.$children,
+          $currentNode = instance.$currentNode,
           $watchEmitter = instance.$watchEmitter,
           $eventEmitter = instance.$eventEmitter;
 
 
-      instance.fire(DETACH);
+      if ($children) {
+        each$1($children, function (child) {
+          child.dispose();
+        }, TRUE);
+      }
+
+      if ($parent && $parent.$children) {
+        removeItem($parent.$children, instance);
+      }
 
       $watchEmitter.off();
       $eventEmitter.off();
@@ -3908,7 +3933,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.11.17';
+Yox.version = '0.11.18';
 
 Yox.switcher = switcher;
 

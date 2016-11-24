@@ -7,10 +7,19 @@ let {
   slice,
 } = Array.prototype
 
-export function each(array, callback) {
-  for (let i = 0, len = array.length; i < len; i++) {
-    if (callback(array[i], i) === env.FALSE) {
-      break
+export function each(array, callback, reversed) {
+  if (reversed) {
+    for (let i = array.length - 1; i >= 0; i--) {
+      if (callback(array[i], i) === env.FALSE) {
+        break
+      }
+    }
+  }
+  else {
+    for (let i = 0, len = array.length; i < len; i++) {
+      if (callback(array[i], i) === env.FALSE) {
+        break
+      }
     }
   }
 }

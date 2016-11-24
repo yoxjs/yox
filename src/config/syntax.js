@@ -8,7 +8,7 @@ export let IMPORT = '>'
 export let COMMENT = '!'
 export let SPREAD = '...'
 
-export let DIRECTIVE_PREFIX = '@'
+export let DIRECTIVE_PREFIX = 'o-'
 export let DIRECTIVE_EVENT_PREFIX = 'on-'
 
 export let SPECIAL_EVENT = '$event'

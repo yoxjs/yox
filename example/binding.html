@@ -30,7 +30,7 @@
                     </label>
                 </div>
                 <div class="field">
-                    <input type="text" @model="title">
+                    <input type="text" o-model="title">
                 </div>
                 <div class="ui message">
                     {{title}}
@@ -46,7 +46,7 @@
                     </label>
                 </div>
                 <div class="field">
-                    <input type="text" @model="title" @lazy="500">
+                    <input type="text" o-model="title" o-lazy="500">
                 </div>
                 <div class="ui message">
                     {{title}}
@@ -63,7 +63,7 @@
                 </div>
                 <div class="field">
                     <label>input change 同步</label>
-                    <input type="text" @model="title" @lazy>
+                    <input type="text" o-model="title" o-lazy>
                 </div>
                 <div class="ui message">
                     {{title}}
@@ -78,7 +78,7 @@
                     </label>
                 </div>
                 <div class="field">
-                    <textarea @model="title"></textarea>
+                    <textarea o-model="title"></textarea>
                 </div>
                 <div class="ui message">
                     {{title}}
@@ -93,7 +93,7 @@
                     </label>
                 </div>
                 <div class="field">
-                    <textarea @model="title" @lazy="500"></textarea>
+                    <textarea o-model="title" o-lazy="500"></textarea>
                 </div>
                 <div class="ui message">
                     {{title}}
@@ -108,7 +108,7 @@
                     </label>
                 </div>
                 <div class="field">
-                    <textarea @model="title" @lazy></textarea>
+                    <textarea o-model="title" o-lazy></textarea>
                 </div>
                 <div class="ui message">
                     {{title}}
@@ -125,7 +125,7 @@
                     {{#each users}}
                         <div class="field">
                             <div class="ui radio checkbox">
-                                <input type="radio" @model="selectedUser" value="{{name}}">
+                                <input type="radio" o-model="selectedUser" value="{{name}}">
                                 <label>
                                     {{name}}
                                 </label>
@@ -145,7 +145,7 @@
                     </label>
                 </div>
                 <div class="grouped fields">
-                    <input type="checkbox" @model="checkboxSelected">
+                    <input type="checkbox" o-model="checkboxSelected">
                 </div>
                 <div class="ui message">
                     是否选中：{{checkboxSelected ? '是' : '否'}}
@@ -164,7 +164,7 @@
                     {{#each users}}
                         <div class="field">
                             <div class="ui checkbox">
-                                <input type="checkbox" @model="selectedNames" value="{{name}}">
+                                <input type="checkbox" o-model="selectedNames" value="{{name}}">
                                 <label>
                                     {{name}}
                                 </label>
@@ -186,7 +186,7 @@
                     </label>
                 </div>
                 <div class="field">
-                    <select class="ui" @model="selectedUser">
+                    <select class="ui" o-model="selectedUser">
                     {{#each users}}
                         <option>
                             {{name}}

@@ -141,6 +141,7 @@ export default class Yox {
     }
 
     if (is.object(components)) {
+      instance.$children = [ ]
       instance.$components = components
     }
     if (is.object(directives)) {
@@ -540,7 +541,9 @@ export default class Yox {
   create(options, extra) {
     options = object.extend({ }, options, extra)
     options.parent = this
-    return new Yox(options)
+    let child = new Yox(options)
+    this.$children.push(child)
+    return child
   }
 
   compileAttr(keypath, value) {
@@ -567,13 +570,29 @@ export default class Yox {
 
     let instance = this
 
+    instance.fire(lifecycle.DETACH)
+
     let {
+      $parent,
+      $children,
       $currentNode,
       $watchEmitter,
       $eventEmitter,
     } = instance
 
-    instance.fire(lifecycle.DETACH)
+    if ($children) {
+      array.each(
+        $children,
+        function (child) {
+          child.dispose()
+        },
+        env.TRUE
+      )
+    }
+
+    if ($parent && $parent.$children) {
+      array.removeItem($parent.$children, instance)
+    }
 
     $watchEmitter.off()
     $eventEmitter.off()
@@ -591,7 +610,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.11.17'
+Yox.version = '0.11.18'
 
 /**
  * 开关配置
