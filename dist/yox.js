@@ -72,7 +72,7 @@ var selfClosingTagName = /input|img|br/i;
 var toString = Object.prototype.toString;
 
 function is(arg, type) {
-  return toString.call(arg).toLowerCase() === '[object ' + type + ']';
+  return type === 'numeric' ? numeric(arg) : toString.call(arg).toLowerCase() === '[object ' + type + ']';
 }
 
 function func(arg) {
@@ -104,6 +104,7 @@ function numeric(arg) {
 }
 
 var is$1 = Object.freeze({
+	is: is,
 	func: func,
 	array: array,
 	object: object,
@@ -513,17 +514,17 @@ var switcher = Object.freeze({
 	sync: sync$1
 });
 
-var INIT = 'init';
+var INIT = 'oninit';
 
-var CREATE = 'create';
+var CREATE = 'oncreate';
 
-var COMPILE = 'compile';
+var COMPILE = 'oncompile';
 
-var ATTACH = 'attach';
+var ATTACH = 'onattach';
 
-var UPDATE = 'update';
+var UPDATE = 'onupdate';
 
-var DETACH = 'detach';
+var DETACH = 'ondetach';
 
 var lifecycle = Object.freeze({
 	INIT: INIT,
@@ -2331,6 +2332,43 @@ function set$3(instance, type, name, value) {
   instance[prop][name] = value;
 }
 
+function validate(data, schema) {
+  each$$1(schema, function (rule, key) {
+    var type = rule.type,
+        value = rule.value,
+        required = rule.required;
+
+    if (has$1(data, key)) {
+      if (type) {
+        (function () {
+          var target = data[key],
+              matched = void 0;
+
+          if (string(type)) {
+            matched = is(target, type);
+          } else if (array(type)) {
+            matched = type.some(function (t) {
+              return is(target, t);
+            });
+          } else if (func(type)) {
+            matched = type(target);
+          }
+
+          if (matched === FALSE) {
+            warn('type of ' + key + ' is not matched.');
+            delete data[key];
+          }
+        })();
+      }
+    } else if (required) {
+      warn(key + ' is not found.');
+    } else if (has$1(rule, 'value')) {
+      data[key] = func(value) ? value() : value;
+    }
+  });
+  return data;
+}
+
 var vnode = function (sel, data, children, text, elm) {
   var key = data === undefined ? undefined : data.key;
   return { sel: sel, data: data, children: children,
@@ -3182,7 +3220,7 @@ var toNumber = function (str, defaultValue) {
 
 var refDt = {
 
-  attach: function attach(_ref) {
+  onattach: function onattach(_ref) {
     var el = _ref.el,
         node = _ref.node,
         instance = _ref.instance;
@@ -3196,7 +3234,7 @@ var refDt = {
     }
   },
 
-  detach: function detach(_ref2) {
+  ondetach: function ondetach(_ref2) {
     var el = _ref2.el,
         instance = _ref2.instance;
 
@@ -3210,7 +3248,7 @@ var refDt = {
 
 var eventDt = {
 
-  attach: function attach(_ref) {
+  onattach: function onattach(_ref) {
     var el = _ref.el,
         name = _ref.name,
         node = _ref.node,
@@ -3230,7 +3268,7 @@ var eventDt = {
     }
   },
 
-  detach: function detach(_ref2) {
+  ondetach: function ondetach(_ref2) {
     var el = _ref2.el,
         name = _ref2.name,
         node = _ref2.node;
@@ -3365,7 +3403,7 @@ function getEventInfo(el, lazyDirective) {
 
 var modelDt = {
 
-  attach: function attach(_ref7) {
+  onattach: function onattach(_ref7) {
     var el = _ref7.el,
         node = _ref7.node,
         instance = _ref7.instance,
@@ -3414,7 +3452,7 @@ var modelDt = {
     on$1(el, name, listener);
   },
 
-  detach: function detach(_ref8) {
+  ondetach: function ondetach(_ref8) {
     var el = _ref8.el;
 
     el.$model();
@@ -3422,28 +3460,39 @@ var modelDt = {
 
 };
 
+function getComponentInfo(node, instance) {
+  var options = instance.getComponent(node.custom);
+  var props = copy(node.getAttributes(), TRUE);
+  if (has$1(options, 'props')) {
+    validate(props, options.props);
+  }
+  return { options: options, props: props };
+}
+
 var componentDt = {
 
-  attach: function attach(_ref) {
+  onattach: function onattach(_ref) {
     var el = _ref.el,
         node = _ref.node,
         instance = _ref.instance;
 
-    el.$component = instance.create(instance.getComponent(node.custom), {
+    var info = getComponentInfo(node, instance);
+    el.$component = instance.create(info.options, {
       el: el,
-      props: copy(node.getAttributes(), TRUE),
+      props: info.props,
       replace: TRUE
     });
   },
 
-  update: function update(_ref2) {
+  onupdate: function onupdate(_ref2) {
     var el = _ref2.el,
-        node = _ref2.node;
+        node = _ref2.node,
+        instance = _ref2.instance;
 
-    el.$component.set(copy(node.getAttributes(), TRUE));
+    el.$component.set(getComponentInfo(node, instance).props);
   },
 
-  detach: function detach(_ref3) {
+  ondetach: function ondetach(_ref3) {
     var el = _ref3.el;
 
     el.$component.dispose(TRUE);
@@ -3467,13 +3516,12 @@ var Yox = function () {
     var instance = this;
 
     each$$1(lifecycle, function (name) {
-      name = 'on' + name;
       if (func(options[name])) {
         instance[name] = options[name];
       }
     });
 
-    call(instance, 'on' + INIT, [options]);
+    call(instance, INIT, [options]);
 
     var el = options.el,
         data = options.data,
@@ -3657,7 +3705,7 @@ var Yox = function () {
       });
     }
 
-    call(instance, 'on' + CREATE);
+    call(instance, CREATE);
 
     if (template) {
       instance.$template = _parse(template, function (name) {
@@ -3667,7 +3715,7 @@ var Yox = function () {
       });
     }
 
-    call(instance, 'on' + COMPILE);
+    call(instance, COMPILE);
 
     instance.updateView(el);
   }
@@ -3753,8 +3801,13 @@ var Yox = function () {
       }
 
       if (event.type !== type) {
+        data = event.data;
         event = new Event(event);
         event.type = type;
+
+        if (data) {
+          event.data = data;
+        }
       }
 
       if (!event.target) {
@@ -3891,11 +3944,11 @@ var Yox = function () {
 
       if ($currentNode) {
         $currentNode = patch($currentNode, newNode);
-        call(instance, 'on' + UPDATE);
+        call(instance, UPDATE);
       } else {
         $currentNode = patch(el, newNode);
         instance.$el = $currentNode.elm;
-        call(instance, 'on' + ATTACH);
+        call(instance, ATTACH);
       }
 
       instance.$currentNode = $currentNode;
@@ -3903,7 +3956,7 @@ var Yox = function () {
   }, {
     key: 'create',
     value: function create(options, extra) {
-      options = extend({}, options, extra);
+      options = Yox.extend(options, extra);
       options.parent = this;
       var child = new Yox(options);
       this.$children.push(child);
@@ -3940,7 +3993,7 @@ var Yox = function () {
 
       var instance = this;
 
-      call(instance, 'on' + DETACH);
+      call(instance, DETACH);
 
       var $el = instance.$el,
           $parent = instance.$parent,
@@ -3975,7 +4028,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.12.0';
+Yox.version = '0.12.1';
 
 Yox.switcher = switcher;
 
@@ -4003,6 +4056,19 @@ Yox.partial = function (id, value) {
 
 Yox.nextTick = function (fn) {
   add(fn);
+};
+
+Yox.validate = validate;
+
+Yox.extend = function (options, extra) {
+  options = copy(options);
+  if (has$1(options, 'props')) {
+    delete options.props;
+  }
+  if (object(extra)) {
+    extend(options, extra);
+  }
+  return options;
 };
 
 Yox.use = function (plugin) {

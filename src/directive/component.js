@@ -1,27 +1,38 @@
 
 import * as env from '../config/env'
 import * as object from '../util/object'
+import * as validator from '../util/validator'
+
+function getComponentInfo(node, instance) {
+  let options = instance.getComponent(node.custom)
+  let props = object.copy(node.getAttributes(), env.TRUE)
+  if (object.has(options, 'props')) {
+    validator.validate(props, options.props)
+  }
+  return { options, props }
+}
 
 export default {
 
-  attach: function ({ el, node, instance }) {
+  onattach: function ({ el, node, instance }) {
+    let info = getComponentInfo(node, instance)
     el.$component = instance.create(
-      instance.getComponent(node.custom),
+      info.options,
       {
         el,
-        props: object.copy(node.getAttributes(), env.TRUE),
+        props: info.props,
         replace: env.TRUE,
       }
     )
   },
 
-  update: function ({ el, node }) {
+  onupdate: function ({ el, node, instance }) {
     el.$component.set(
-      object.copy(node.getAttributes(), env.TRUE)
+      getComponentInfo(node, instance).props
     )
   },
 
-  detach: function ({ el }) {
+  ondetach: function ({ el }) {
     el.$component.dispose(env.TRUE)
     el.$component = env.NULL
   }

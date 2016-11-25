@@ -1,11 +1,6 @@
 
-import {
-  NULL,
-} from '../config/env'
-
-import {
-  toArray,
-} from '../util/array'
+import * as env from '../config/env'
+import * as array from '../util/array'
 
 /**
  * 节流调用
@@ -22,9 +17,9 @@ export default function (fn, delay, lazy) {
   function createTimer(args) {
     timer = setTimeout(
       function () {
-        timer = NULL
+        timer = env.NULL
         prevTime = Date.now()
-        fn.apply(NULL, toArray(args))
+        fn.apply(env.NULL, array.toArray(args))
       },
       delay
     )
@@ -37,7 +32,7 @@ export default function (fn, delay, lazy) {
       && Date.now() - prevTime < delay
     ) {
       clearTimeout(timer)
-      timer = NULL
+      timer = env.NULL
     }
 
     if (!timer) {

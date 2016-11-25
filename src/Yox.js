@@ -16,6 +16,7 @@ import * as logger from './util/logger'
 import * as keypath from './util/keypath'
 import * as nextTask from './util/nextTask'
 import * as component from './util/component'
+import * as validator from './util/validator'
 
 import * as vdom from './platform/web/vdom'
 import * as native from './platform/web/native'
@@ -53,19 +54,19 @@ export default class Yox {
     object.each(
       lifecycle,
       function (name) {
-        name = `on${name}`
         if (is.func(options[name])) {
           instance[name] = options[name]
         }
       }
     )
 
-    object.call(instance, `on${lifecycle.INIT}`, [ options ])
+    object.call(instance, lifecycle.INIT, [ options ])
 
     let {
       el,
       data,
       props,
+
       parent,
       replace,
       computed,
@@ -285,7 +286,7 @@ export default class Yox {
     }
 
     // 准备就绪
-    object.call(instance, `on${lifecycle.CREATE}`)
+    object.call(instance, lifecycle.CREATE)
 
     // 编译结果
     if (template) {
@@ -300,7 +301,7 @@ export default class Yox {
       )
     }
 
-    object.call(instance, `on${lifecycle.COMPILE}`)
+    object.call(instance, lifecycle.COMPILE)
 
     // 第一次渲染组件
     instance.updateView(el)
@@ -389,8 +390,13 @@ export default class Yox {
 
     // 事件名称经过了转换
     if (event.type !== type) {
+      data = event.data
       event = new Event(event)
       event.type = type
+      // data 不能换位置，否则事件处理函数获取数据很蛋疼
+      if (data) {
+        event.data = data
+      }
     }
 
     if (!event.target) {
@@ -547,12 +553,12 @@ export default class Yox {
 
     if ($currentNode) {
       $currentNode = vdom.patch($currentNode, newNode)
-      object.call(instance, `on${lifecycle.UPDATE}`)
+      object.call(instance, lifecycle.UPDATE)
     }
     else {
       $currentNode = vdom.patch(el, newNode)
       instance.$el = $currentNode.elm
-      object.call(instance, `on${lifecycle.ATTACH}`)
+      object.call(instance, lifecycle.ATTACH)
     }
 
     instance.$currentNode = $currentNode
@@ -560,7 +566,7 @@ export default class Yox {
   }
 
   create(options, extra) {
-    options = object.extend({ }, options, extra)
+    options = Yox.extend(options, extra)
     options.parent = this
     let child = new Yox(options)
     this.$children.push(child)
@@ -591,7 +597,7 @@ export default class Yox {
 
     let instance = this
 
-    object.call(instance, `on${lifecycle.DETACH}`)
+    object.call(instance, lifecycle.DETACH)
 
     let {
       $el,
@@ -636,7 +642,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.12.0'
+Yox.version = '0.12.1'
 
 /**
  * 开关配置
@@ -680,6 +686,19 @@ Yox.partial = function (id, value) {
 
 Yox.nextTick = function (fn) {
   nextTask.add(fn)
+}
+
+Yox.validate = validator.validate
+
+Yox.extend = function (options, extra) {
+  options = object.copy(options)
+  if (object.has(options, 'props')) {
+    delete options.props
+  }
+  if (is.object(extra)) {
+    object.extend(options, extra)
+  }
+  return options
 }
 
 Yox.use = function (plugin) {

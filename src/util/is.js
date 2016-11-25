@@ -1,10 +1,10 @@
 
-import * as env from '../config/env'
-
 const toString = Object.prototype.toString
 
-function is(arg, type) {
-  return toString.call(arg).toLowerCase() === `[object ${type}]`
+export function is(arg, type) {
+  return type === 'numeric'
+    ? numeric(arg)
+    : toString.call(arg).toLowerCase() === `[object ${type}]`
 }
 
 export function func(arg) {

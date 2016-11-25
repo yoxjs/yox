@@ -1,17 +1,14 @@
 
-import {
-  doc,
-  TRUE,
-} from '../config/env'
+import * as env from '../config/env'
 
 let nextTick
 
 if (typeof MutationObserver === 'function') {
   nextTick = function (fn) {
     let observer = new MutationObserver(fn)
-    let textNode = doc.createTextNode('')
+    let textNode = env.doc.createTextNode('')
     observer.observe(textNode, {
-      characterData: TRUE,
+      characterData: env.TRUE,
     })
     textNode.data = ' '
   }

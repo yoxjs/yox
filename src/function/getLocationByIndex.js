@@ -1,17 +1,12 @@
 
-import {
-  FALSE,
-} from '../config/env'
-
-import {
-  each,
-} from '../util/array'
+import * as env from '../config/env'
+import * as array from '../util/array'
 
 export default function (str, index) {
 
   let line = 0, col = 0, pos = 0
 
-  each(
+  array.each(
     str.split('\n'),
     function (lineStr) {
       line++
@@ -20,7 +15,7 @@ export default function (str, index) {
       let { length } = lineStr
       if (index >= pos && index <= (pos + length)) {
         col = index - pos
-        return FALSE
+        return env.FALSE
       }
 
       pos += length
