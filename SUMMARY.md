@@ -3,7 +3,7 @@
 * [简介](README.md)
 * [缘起](缘起.md)
 * [起步](起步.md)
-* [Mustache](Mustache.md)
+* [模板语法](模板语法.md)
 * [表达式](表达式.md)
 * [计算属性](计算属性.md)
 * [Keypath](Keypath.md)
