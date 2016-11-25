@@ -54,12 +54,11 @@ function parseStyle(str) {
 
 export function create(node, instance) {
 
-  let counter = 0
+  if (node.type === nodeType.TEXT) {
+    return { text: node.content }
+  }
 
-  let {
-    DIRECTIVE_PREFIX,
-    DIRECTIVE_EVENT_PREFIX,
-  } = syntax
+  let counter = 0
 
   let traverse = function (node, enter, leave) {
 
@@ -132,13 +131,13 @@ export function create(node, instance) {
             let { name } = node
 
             let directiveName
-            if (name.startsWith(DIRECTIVE_EVENT_PREFIX)) {
-              name = name.slice(DIRECTIVE_EVENT_PREFIX.length)
+            if (name.startsWith(syntax.DIRECTIVE_EVENT_PREFIX)) {
+              name = name.slice(syntax.DIRECTIVE_EVENT_PREFIX.length)
               directiveName = 'event'
             }
             else {
               name =
-              directiveName = name.slice(DIRECTIVE_PREFIX.length)
+              directiveName = name.slice(syntax.DIRECTIVE_PREFIX.length)
             }
 
             directives.push({

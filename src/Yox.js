@@ -48,6 +48,20 @@ export default class Yox {
    */
   constructor(options) {
 
+    let instance = this
+
+    object.each(
+      lifecycle,
+      function (name) {
+        name = `on${name}`
+        if (is.func(options[name])) {
+          instance[name] = options[name]
+        }
+      }
+    )
+
+    object.call(instance, `on${lifecycle.INIT}`, [ options ])
+
     let {
       el,
       data,
@@ -66,28 +80,25 @@ export default class Yox {
       extensions,
     } = options
 
-    // el 和 template 都可以传选择器
-    template = pattern.tag.test(template)
-      ? template
-      : native.find(template).innerHTML
+    if (is.string(template) && pattern.selector.test(template)) {
+      template = native.find(template).innerHTML
+    }
 
-    el = is.string(el)
-      ? native.find(el)
-      : el
+    if (is.string(el) && pattern.selector.test(el)) {
+      el = native.find(el)
+    }
 
-    if (!el || el.nodeType !== 1) {
+    if (el && el.nodeType !== 1) {
       logger.error('Passing a `el` option must be a html element.')
     }
     if (props && (is.object(data) || is.array(data))) {
       logger.warn('Passing a `data` option with object and array to component is discouraged.')
     }
 
-    if (!replace) {
+    if (el && !replace) {
       el.innerHTML = '<div></div>'
       el = el.firstChild
     }
-
-    let instance = this
 
     if (is.object(extensions)) {
       object.extend(instance, extensions)
@@ -96,29 +107,6 @@ export default class Yox {
     if (parent) {
       instance.$parent = parent
     }
-
-    // 拆分实例方法和生命周期函数
-    let hooks = { }
-    object.each(
-      lifecycle,
-      function (name) {
-        hooks[`on${name}`] = name
-      }
-    )
-
-    // 监听各种事件
-    instance.$eventEmitter = new Emitter()
-
-    object.each(
-      hooks,
-      function (value, key) {
-        if (is.func(options[key])) {
-          instance.on(value, options[key])
-        }
-      }
-    )
-
-    instance.fire(lifecycle.INIT)
 
     if (is.object(methods)) {
       object.each(
@@ -270,6 +258,9 @@ export default class Yox {
       )
     }
 
+    // 监听各种事件
+    instance.$eventEmitter = new Emitter()
+
     if (is.object(events)) {
       object.each(
         events,
@@ -294,20 +285,22 @@ export default class Yox {
     }
 
     // 准备就绪
-    instance.fire(lifecycle.CREATE)
+    object.call(instance, `on${lifecycle.CREATE}`)
 
     // 编译结果
-    instance.$template = mustache.parse(
-      template,
-      function (name) {
-        return instance.getPartial(name)
-      },
-      function (name, node) {
-        component.set(instance, 'partial', name, node)
-      }
-    )
+    if (template) {
+      instance.$template = mustache.parse(
+        template,
+        function (name) {
+          return instance.getPartial(name)
+        },
+        function (name, node) {
+          component.set(instance, 'partial', name, node)
+        }
+      )
+    }
 
-    instance.fire(lifecycle.COMPILE)
+    object.call(instance, `on${lifecycle.COMPILE}`)
 
     // 第一次渲染组件
     instance.updateView(el)
@@ -374,15 +367,15 @@ export default class Yox {
     this.$eventEmitter.off(type, listener)
   }
 
-  fire(type, data, bubble) {
+  fire(type, data, noBubble) {
     if (arguments.length === 2 && data === env.TRUE) {
-      bubble = env.TRUE
+      noBubble = env.TRUE
       data = env.NULL
     }
     let { $parent, $eventEmitter } = this
     let done = $eventEmitter.fire(type, data, this)
-    if (done && bubble && $parent) {
-      done = $parent.fire(type, data, bubble)
+    if (done && !noBubble && $parent) {
+      done = $parent.fire(type, data)
     }
     return done
   }
@@ -517,7 +510,7 @@ export default class Yox {
       object.extend(context, $computedGetters)
     }
 
-    let node = mustache.render($template, context)
+    let node = $template && mustache.render($template, context)
     if (!node) {
       return
     }
@@ -526,12 +519,12 @@ export default class Yox {
 
     if ($currentNode) {
       $currentNode = vdom.patch($currentNode, newNode)
-      instance.fire(lifecycle.UPDATE)
+      object.call(instance, `on${lifecycle.UPDATE}`)
     }
     else {
       $currentNode = vdom.patch(el, newNode)
       instance.$el = $currentNode.elm
-      instance.fire(lifecycle.ATTACH)
+      object.call(instance, `on${lifecycle.ATTACH}`)
     }
 
     instance.$currentNode = $currentNode
@@ -570,9 +563,10 @@ export default class Yox {
 
     let instance = this
 
-    instance.fire(lifecycle.DETACH)
+    object.call(instance, `on${lifecycle.DETACH}`)
 
     let {
+      $el,
       $parent,
       $children,
       $currentNode,
@@ -601,6 +595,10 @@ export default class Yox {
       instance.$currentNode = vdom.patch($currentNode, { text: '' })
     }
 
+    if ($el) {
+      delete instance.$el
+    }
+
   }
 
 }
@@ -610,7 +608,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.11.18'
+Yox.version = '0.11.19'
 
 /**
  * 开关配置

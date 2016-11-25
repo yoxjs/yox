@@ -177,7 +177,7 @@ export function render(ast, data) {
   }
 
   let { children } = rootElement
-  if (children.length !== 1 || children[0].type !== nodeType.ELEMENT) {
+  if (children.length > 1) {
     logger.warn('Template should have only one root element.')
   }
 
@@ -446,6 +446,7 @@ export function parse(template, getPartial, setPartial) {
       }
 
       popStack()
+
       mainScanner.forward(1)
     }
     // 开始标签
@@ -475,7 +476,7 @@ export function parse(template, getPartial, setPartial) {
         return string.parseError(template, 'Illegal tag name', errorIndex)
       }
 
-      if (isComponent || isSelfClosingTag) {
+      if (isSelfClosingTag) {
         popStack()
       }
     }

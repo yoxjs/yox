@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>简单的观察者</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div id="app1"></div>
+    <div id="app2"></div>
+
+    <script id="template1" type="plain/text">
+
+    </script>
+
+    <script id="template2" type="plain/text">
+      123
+    </script>
+
+    <script src="../dist/yox.js"></script>
+    <script>
+
+        var instance1 = new Yox({
+            el: '#app1',
+            data: {
+
+            },
+            template: '#template1'
+        });
+
+        var instance2 = new Yox({
+            el: '#app2',
+            data: {
+
+            },
+            template: '#template2'
+        });
+
+        var instance3 = new Yox({
+            data: {
+                counter: 0
+            },
+            watchers: {
+                counter: function (newValue, oldValue) {
+                    console.log(newValue, oldValue)
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>

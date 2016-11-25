@@ -14,6 +14,13 @@ export let componentName = /[-A-Z]/
 export let tag = /<[^>]+>/
 
 /**
+ * 选择器
+ *
+ * @type {string}
+ */
+export let selector = /^[#.]\w+$/
+
+/**
  * 自闭合的标签
  *
  * @type {RegExp}

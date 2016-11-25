@@ -1,4 +1,5 @@
 
+import * as env from '../config/env'
 import * as syntax from '../config/syntax'
 import * as registry from '../config/registry'
 

@@ -65,6 +65,8 @@ var componentName = /[-A-Z]/;
 
 var tag = /<[^>]+>/;
 
+var selector = /^[#.]\w+$/;
+
 var selfClosingTagName = /input|img|br/i;
 
 var toString = Object.prototype.toString;
@@ -310,6 +312,16 @@ function set$1(object$$1, keypath, value) {
   }
 }
 
+function call(object$$1, method, args) {
+  if (func(object$$1[method])) {
+    if (array(args)) {
+      object$$1[method].apply(object$$1, args);
+    } else {
+      object$$1[method]();
+    }
+  }
+}
+
 var object$1 = Object.freeze({
 	keys: keys,
 	each: each$$1,
@@ -318,7 +330,8 @@ var object$1 = Object.freeze({
 	extend: extend,
 	copy: copy,
 	get: get$1,
-	set: set$1
+	set: set$1,
+	call: call
 });
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
@@ -1811,7 +1824,7 @@ function render$1(ast, data) {
 
   var children = rootElement.children;
 
-  if (children.length !== 1 || children[0].type !== ELEMENT) {
+  if (children.length > 1) {
     warn('Template should have only one root element.');
   }
 
@@ -2019,6 +2032,7 @@ function _parse(template, getPartial, setPartial) {
       }
 
       popStack();
+
       mainScanner.forward(1);
     } else {
         content = mainScanner.nextAfter(elementPattern);
@@ -2038,7 +2052,7 @@ function _parse(template, getPartial, setPartial) {
           return parseError(template, 'Illegal tag name', errorIndex);
         }
 
-        if (isComponent || isSelfClosingTag) {
+        if (isSelfClosingTag) {
           popStack();
         }
       }
@@ -3032,11 +3046,11 @@ function parseStyle(str) {
 
 function create$1(node, instance) {
 
+  if (node.type === TEXT) {
+    return { text: node.content };
+  }
+
   var counter = 0;
-
-  var DIRECTIVE_PREFIX$$1 = DIRECTIVE_PREFIX,
-      DIRECTIVE_EVENT_PREFIX$$1 = DIRECTIVE_EVENT_PREFIX;
-
 
   var traverse = function traverse(node, enter, leave) {
 
@@ -3094,11 +3108,11 @@ function create$1(node, instance) {
 
 
           var directiveName = void 0;
-          if (name.startsWith(DIRECTIVE_EVENT_PREFIX$$1)) {
-            name = name.slice(DIRECTIVE_EVENT_PREFIX$$1.length);
+          if (name.startsWith(DIRECTIVE_EVENT_PREFIX)) {
+            name = name.slice(DIRECTIVE_EVENT_PREFIX.length);
             directiveName = 'event';
           } else {
-            name = directiveName = name.slice(DIRECTIVE_PREFIX$$1.length);
+            name = directiveName = name.slice(DIRECTIVE_PREFIX.length);
           }
 
           directives.push({
@@ -3453,6 +3467,19 @@ directive.set({
 var Yox = function () {
   function Yox(options) {
     classCallCheck(this, Yox);
+
+
+    var instance = this;
+
+    each$$1(lifecycle, function (name) {
+      name = 'on' + name;
+      if (func(options[name])) {
+        instance[name] = options[name];
+      }
+    });
+
+    call(instance, 'on' + INIT, [options]);
+
     var el = options.el,
         data = options.data,
         props = options.props,
@@ -3469,23 +3496,26 @@ var Yox = function () {
         partials = options.partials,
         extensions = options.extensions;
 
-    template = tag.test(template) ? template : find(template).innerHTML;
 
-    el = string(el) ? find(el) : el;
+    if (string(template) && selector.test(template)) {
+      template = find(template).innerHTML;
+    }
 
-    if (!el || el.nodeType !== 1) {
+    if (string(el) && selector.test(el)) {
+      el = find(el);
+    }
+
+    if (el && el.nodeType !== 1) {
       error$1('Passing a `el` option must be a html element.');
     }
     if (props && (object(data) || array(data))) {
       warn('Passing a `data` option with object and array to component is discouraged.');
     }
 
-    if (!replace) {
+    if (el && !replace) {
       el.innerHTML = '<div></div>';
       el = el.firstChild;
     }
-
-    var instance = this;
 
     if (object(extensions)) {
       extend(instance, extensions);
@@ -3494,21 +3524,6 @@ var Yox = function () {
     if (parent) {
       instance.$parent = parent;
     }
-
-    var hooks = {};
-    each$$1(lifecycle, function (name) {
-      hooks['on' + name] = name;
-    });
-
-    instance.$eventEmitter = new Emitter();
-
-    each$$1(hooks, function (value, key) {
-      if (func(options[key])) {
-        instance.on(value, options[key]);
-      }
-    });
-
-    instance.fire(INIT);
 
     if (object(methods)) {
       each$$1(methods, function (value, key) {
@@ -3629,6 +3644,8 @@ var Yox = function () {
       })();
     }
 
+    instance.$eventEmitter = new Emitter();
+
     if (object(events)) {
       each$$1(events, function (listener, type) {
         if (func(listener)) {
@@ -3645,15 +3662,17 @@ var Yox = function () {
       });
     }
 
-    instance.fire(CREATE);
+    call(instance, 'on' + CREATE);
 
-    instance.$template = _parse(template, function (name) {
-      return instance.getPartial(name);
-    }, function (name, node) {
-      set$3(instance, 'partial', name, node);
-    });
+    if (template) {
+      instance.$template = _parse(template, function (name) {
+        return instance.getPartial(name);
+      }, function (name, node) {
+        set$3(instance, 'partial', name, node);
+      });
+    }
 
-    instance.fire(COMPILE);
+    call(instance, 'on' + COMPILE);
 
     instance.updateView(el);
   }
@@ -3721,17 +3740,17 @@ var Yox = function () {
     }
   }, {
     key: 'fire',
-    value: function fire(type, data, bubble) {
+    value: function fire(type, data, noBubble) {
       if (arguments.length === 2 && data === TRUE) {
-        bubble = TRUE;
+        noBubble = TRUE;
         data = NULL;
       }
       var $parent = this.$parent,
           $eventEmitter = this.$eventEmitter;
 
       var done = $eventEmitter.fire(type, data, this);
-      if (done && bubble && $parent) {
-        done = $parent.fire(type, data, bubble);
+      if (done && !noBubble && $parent) {
+        done = $parent.fire(type, data);
       }
       return done;
     }
@@ -3845,7 +3864,7 @@ var Yox = function () {
         extend(context, $computedGetters);
       }
 
-      var node = render$1($template, context);
+      var node = $template && render$1($template, context);
       if (!node) {
         return;
       }
@@ -3854,11 +3873,11 @@ var Yox = function () {
 
       if ($currentNode) {
         $currentNode = patch($currentNode, newNode);
-        instance.fire(UPDATE);
+        call(instance, 'on' + UPDATE);
       } else {
         $currentNode = patch(el, newNode);
         instance.$el = $currentNode.elm;
-        instance.fire(ATTACH);
+        call(instance, 'on' + ATTACH);
       }
 
       instance.$currentNode = $currentNode;
@@ -3903,9 +3922,10 @@ var Yox = function () {
 
       var instance = this;
 
-      instance.fire(DETACH);
+      call(instance, 'on' + DETACH);
 
-      var $parent = instance.$parent,
+      var $el = instance.$el,
+          $parent = instance.$parent,
           $children = instance.$children,
           $currentNode = instance.$currentNode,
           $watchEmitter = instance.$watchEmitter,
@@ -3928,12 +3948,16 @@ var Yox = function () {
       if (arguments[0] !== TRUE && $currentNode) {
         instance.$currentNode = patch($currentNode, { text: '' });
       }
+
+      if ($el) {
+        delete instance.$el;
+      }
     }
   }]);
   return Yox;
 }();
 
-Yox.version = '0.11.18';
+Yox.version = '0.11.19';
 
 Yox.switcher = switcher;
 
