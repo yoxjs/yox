@@ -55,10 +55,6 @@ export default class Emitter {
 
   fire(type, data, context) {
 
-    if (data && object.has(data, 'length') && !is.array(data)) {
-      data = array.toArray(data)
-    }
-
     if (arguments.length === 2) {
       context = env.NULL
     }
@@ -84,13 +80,12 @@ export default class Emitter {
           }
 
           // 如果没有返回 false，而是调用了 event.stop 也算是返回 false
-          let event = data && data[0]
-          if (event && event instanceof Event) {
+          if (data instanceof Event) {
             if (result === env.FALSE) {
-              event.prevent()
-              event.stop()
+              data.prevent()
+              data.stop()
             }
-            else if (event.isStoped) {
+            else if (data.isStoped) {
               result = env.FALSE
             }
           }

@@ -19,8 +19,8 @@
                     <button on-click="click2()">
                         click2
                     </button>
-                    <button on-click="bubble()">
-                        bubble
+                    <button on-click="noBubble()">
+                        noBubble
                     </button>
                 </div>
             `,
@@ -28,8 +28,8 @@
                 click2: function () {
                     this.fire('click2', { name: 'component' });
                 },
-                bubble: function (event) {
-                    this.fire('bubble', event, true);
+                noBubble: function (event) {
+                    this.fire('noBubble', event, true);
                 }
             }
         };
@@ -51,7 +51,7 @@
                 click2: function () {
                     console.log(this, arguments);
                 },
-                bubble: function () {
+                noBubble: function () {
                     console.log(this, arguments);
                 }
             }

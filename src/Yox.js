@@ -368,16 +368,44 @@ export default class Yox {
   }
 
   fire(type, data, noBubble) {
+
+    let instance = this
+
     if (arguments.length === 2 && data === env.TRUE) {
       noBubble = env.TRUE
       data = env.NULL
     }
-    let { $parent, $eventEmitter } = this
-    let done = $eventEmitter.fire(type, data, this)
-    if (done && !noBubble && $parent) {
-      done = $parent.fire(type, data)
+
+    // 为了使用方便， fire(type) 或 fire(type, data) 就行了
+    // 但是内部为了保持格式统一
+    // 需要转成 Event，这样还能知道 target 是哪个组件
+    let event = data
+    if (!(event instanceof Event)) {
+      event = new Event(type)
+      if (data) {
+        event.data = data
+      }
     }
+
+    // 事件名称经过了转换
+    if (event.type !== type) {
+      event = new Event(event)
+      event.type = type
+    }
+
+    if (!event.target) {
+      event.target = instance
+    }
+    event.currentTarget = instance
+
+    let { $parent, $eventEmitter } = instance
+    let done = $eventEmitter.fire(type, event, instance)
+    if (done && !noBubble && $parent) {
+      done = $parent.fire(type, event)
+    }
+
     return done
+
   }
 
   watch(keypath, watcher) {
@@ -608,7 +636,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.11.19'
+Yox.version = '0.12.0'
 
 /**
  * 开关配置

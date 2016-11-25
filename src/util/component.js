@@ -58,8 +58,8 @@ export function compileAttr(instance, keypath, value) {
     }
   }
   else {
-    return function () {
-      instance.fire(value, arguments)
+    return function (event) {
+      instance.fire(value, event)
     }
   }
 }

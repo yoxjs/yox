@@ -2279,8 +2279,8 @@ function compileAttr$1(instance, keypath, value) {
 
     if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
   } else {
-    return function () {
-      instance.fire(value, arguments);
+    return function (event) {
+      instance.fire(value, event);
     };
   }
 }
@@ -2904,10 +2904,6 @@ var Emitter = function () {
     key: 'fire',
     value: function fire(type, data, context) {
 
-      if (data && has$1(data, 'length') && !array(data)) {
-        data = toArray(data);
-      }
-
       if (arguments.length === 2) {
         context = NULL;
       }
@@ -2929,12 +2925,11 @@ var Emitter = function () {
             $once();
           }
 
-          var event = data && data[0];
-          if (event && event instanceof Event) {
+          if (data instanceof Event) {
             if (result === FALSE) {
-              event.prevent();
-              event.stop();
-            } else if (event.isStoped) {
+              data.prevent();
+              data.stop();
+            } else if (data.isStoped) {
               result = FALSE;
             }
           }
@@ -3741,17 +3736,40 @@ var Yox = function () {
   }, {
     key: 'fire',
     value: function fire(type, data, noBubble) {
+
+      var instance = this;
+
       if (arguments.length === 2 && data === TRUE) {
         noBubble = TRUE;
         data = NULL;
       }
-      var $parent = this.$parent,
-          $eventEmitter = this.$eventEmitter;
 
-      var done = $eventEmitter.fire(type, data, this);
-      if (done && !noBubble && $parent) {
-        done = $parent.fire(type, data);
+      var event = data;
+      if (!(event instanceof Event)) {
+        event = new Event(type);
+        if (data) {
+          event.data = data;
+        }
       }
+
+      if (event.type !== type) {
+        event = new Event(event);
+        event.type = type;
+      }
+
+      if (!event.target) {
+        event.target = instance;
+      }
+      event.currentTarget = instance;
+
+      var $parent = instance.$parent,
+          $eventEmitter = instance.$eventEmitter;
+
+      var done = $eventEmitter.fire(type, event, instance);
+      if (done && !noBubble && $parent) {
+        done = $parent.fire(type, event);
+      }
+
       return done;
     }
   }, {
@@ -3957,7 +3975,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.11.19';
+Yox.version = '0.12.0';
 
 Yox.switcher = switcher;
 
