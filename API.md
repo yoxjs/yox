@@ -37,9 +37,11 @@
 
 监听一次事件就取消。
 
-### fire(type, data, bubble): boolean
+### fire(type, data, noBubble): boolean
 
-触发事件，事件可携带数据，也可指定是否冒泡到根组件。
+触发事件。
+
+调用 `fire()` 触发事件默认会冒泡到根组件，如果明确不需要冒泡，可为 `noBubble` 参数传 `true`。
 
 该方法返回一个布尔值，表示事件流是否正常结束（即没有被中断）。
 
