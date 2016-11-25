@@ -37,7 +37,7 @@
 
 监听一次事件就取消。
 
-### fire(type, data, noBubble): boolean
+### fire(type, ?data, ?noBubble): boolean
 
 触发事件。
 
@@ -61,13 +61,13 @@
 
 取反 `keypath` 对应的数据。
 
-### increase(keypath, step, max)
+### increase(keypath, ?step, ?max)
 
 递增 `keypath` 对应的数字。
 
 默认递增 `1`，可配置增量，也可配置递增的最大值。
 
-### decrease(keypath, step, min)
+### decrease(keypath, ?step, ?min)
 
 递减 `keypath` 对应的数字。
 
