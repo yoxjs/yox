@@ -565,7 +565,7 @@ export default class Yox {
   }
 
   create(options, extra) {
-    options = Yox.extend(options, extra)
+    options = object.extend({ }, options, extra)
     options.parent = this
     let child = new Yox(options)
     this.$children.push(child)
@@ -641,7 +641,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.12.2'
+Yox.version = '0.13.0'
 
 /**
  * 开关配置
@@ -688,17 +688,6 @@ Yox.nextTick = function (fn) {
 }
 
 Yox.validate = validator.validate
-
-Yox.extend = function (options, extra) {
-  options = object.copy(options)
-  if (object.has(options, 'props')) {
-    delete options.props
-  }
-  if (is.object(extra)) {
-    object.extend(options, extra)
-  }
-  return options
-}
 
 Yox.use = function (plugin) {
   plugin.install(Yox)

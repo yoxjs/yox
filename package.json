@@ -1,6 +1,6 @@
 {
   "name": "yox",
-  "version": "0.12.2",
+  "version": "0.13.0",
   "description": "A lightweight mvvm framework",
   "main": "dist/yox.min.js",
   "directories": {

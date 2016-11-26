@@ -3463,8 +3463,8 @@ var modelDt = {
 function getComponentInfo(node, instance) {
   var options = instance.getComponent(node.custom);
   var props = copy(node.getAttributes(), TRUE);
-  if (has$1(options, 'props')) {
-    validate(props, options.props);
+  if (has$1(options, 'propTypes')) {
+    validate(props, options.propTypes);
   }
   return { options: options, props: props };
 }
@@ -3955,7 +3955,7 @@ var Yox = function () {
   }, {
     key: 'create',
     value: function create(options, extra) {
-      options = Yox.extend(options, extra);
+      options = extend({}, options, extra);
       options.parent = this;
       var child = new Yox(options);
       this.$children.push(child);
@@ -4027,7 +4027,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.12.2';
+Yox.version = '0.13.0';
 
 Yox.switcher = switcher;
 
@@ -4058,17 +4058,6 @@ Yox.nextTick = function (fn) {
 };
 
 Yox.validate = validate;
-
-Yox.extend = function (options, extra) {
-  options = copy(options);
-  if (has$1(options, 'props')) {
-    delete options.props;
-  }
-  if (object(extra)) {
-    extend(options, extra);
-  }
-  return options;
-};
 
 Yox.use = function (plugin) {
   plugin.install(Yox);
