@@ -372,13 +372,13 @@ export default class Yox {
 
     let instance = this
 
-    if (arguments.length === 2 && data === env.TRUE) {
-      noBubble = env.TRUE
+    if (data === env.TRUE) {
+      noBubble = data
       data = env.NULL
     }
 
-    // 为了使用方便， fire(type) 或 fire(type, data) 就行了
-    // 但是内部为了保持格式统一
+    // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
+    // 内部为了保持格式统一
     // 需要转成 Event，这样还能知道 target 是哪个组件
     let event = data
     if (!(event instanceof Event)) {
@@ -402,7 +402,6 @@ export default class Yox {
     if (!event.target) {
       event.target = instance
     }
-    event.currentTarget = instance
 
     let { $parent, $eventEmitter } = instance
     let done = $eventEmitter.fire(type, event, instance)
@@ -642,7 +641,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.12.1'
+Yox.version = '0.12.2'
 
 /**
  * 开关配置

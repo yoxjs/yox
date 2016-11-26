@@ -3787,8 +3787,8 @@ var Yox = function () {
 
       var instance = this;
 
-      if (arguments.length === 2 && data === TRUE) {
-        noBubble = TRUE;
+      if (data === TRUE) {
+        noBubble = data;
         data = NULL;
       }
 
@@ -3813,7 +3813,6 @@ var Yox = function () {
       if (!event.target) {
         event.target = instance;
       }
-      event.currentTarget = instance;
 
       var $parent = instance.$parent,
           $eventEmitter = instance.$eventEmitter;
@@ -4028,7 +4027,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.12.1';
+Yox.version = '0.12.2';
 
 Yox.switcher = switcher;
 
