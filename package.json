@@ -1,6 +1,6 @@
 {
   "name": "yox",
-  "version": "0.14.0",
+  "version": "0.14.1",
   "description": "A lightweight mvvm framework",
   "main": "dist/yox.min.js",
   "directories": {
@@ -26,8 +26,10 @@
     "url": "git+https://github.com/yoxjs/yox.git"
   },
   "keywords": [
+    "simple",
     "lightweight",
-    "mvvm"
+    "mvvm",
+    "vue"
   ],
   "author": "musicode",
   "license": "MIT",

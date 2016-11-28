@@ -526,9 +526,9 @@ var READY = 'onReady';
 
 var UPDATE = 'onUpdate';
 
-var DETACH = 'onDetach';
-
 var DESTROY = 'onDestroy';
+
+var DETACH = 'onDetach';
 
 var lifecycle = Object.freeze({
 	INIT: INIT,
@@ -537,8 +537,8 @@ var lifecycle = Object.freeze({
 	ATTACH: ATTACH,
 	READY: READY,
 	UPDATE: UPDATE,
-	DETACH: DETACH,
-	DESTROY: DESTROY
+	DESTROY: DESTROY,
+	DETACH: DETACH
 });
 
 var IF$1 = 1;
@@ -4036,7 +4036,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.14.0';
+Yox.version = '0.14.1';
 
 Yox.switcher = switcher;
 

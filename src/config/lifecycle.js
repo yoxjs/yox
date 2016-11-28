@@ -28,7 +28,7 @@ export let COMPILE = 'onCompile'
 export let ATTACH = 'onAttach'
 
 /**
- * 不用计较底层实现，反正 ready 就是可用了
+ * 无需关心底层，`ready` 意味着可用了。
  *
  * @type {string}
  */
@@ -42,15 +42,15 @@ export let READY = 'onReady'
 export let UPDATE = 'onUpdate'
 
 /**
- * 组件从 DOM 树移除之前触发。
- *
- * @type {string}
- */
-export let DETACH = 'onDetach'
-
-/**
  * 不用计较底层实现，反正 destroy 就是销毁了
  *
  * @type {string}
  */
 export let DESTROY = 'onDestroy'
+
+/**
+ * 组件从 DOM 树移除之后触发。
+ *
+ * @type {string}
+ */
+export let DETACH = 'onDetach'
