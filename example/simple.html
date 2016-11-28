@@ -14,7 +14,7 @@
     </script>
 
     <script id="template2" type="plain/text">
-      123
+      {{message}}
     </script>
 
     <script src="../dist/yox.js"></script>
@@ -31,7 +31,7 @@
         var instance2 = new Yox({
             el: '#app2',
             data: {
-
+                message: 'hello'
             },
             template: '#template2'
         });

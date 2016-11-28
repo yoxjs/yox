@@ -14,7 +14,7 @@ function getComponentInfo(node, instance) {
 
 export default {
 
-  onattach: function ({ el, node, instance }) {
+  onAttach: function ({ el, node, instance }) {
     let info = getComponentInfo(node, instance)
     el.$component = instance.create(
       info.options,
@@ -26,14 +26,14 @@ export default {
     )
   },
 
-  onupdate: function ({ el, node, instance }) {
+  onUpdate: function ({ el, node, instance }) {
     el.$component.set(
       getComponentInfo(node, instance).props
     )
   },
 
-  ondetach: function ({ el }) {
-    el.$component.dispose(env.TRUE)
+  onDetach: function ({ el }) {
+    el.$component.destroy(env.TRUE)
     el.$component = env.NULL
   }
 

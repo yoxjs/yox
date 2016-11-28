@@ -16,23 +16,29 @@
                   {{counter}}
                 </div>
             `,
-            oninit: function () {
-                console.log('    oninit');
+            onInit: function () {
+                console.log('    onInit');
             },
-            oncreate: function () {
-                console.log('    oncreate');
+            onCreate: function () {
+                console.log('    onCreate');
             },
-            oncompile: function () {
-                console.log('    oncompile');
+            onCompile: function () {
+                console.log('    onCompile');
             },
-            onattach: function () {
-                console.log('    onattach');
+            onAttach: function () {
+                console.log('    onAttach');
             },
-            onupdate: function () {
-                console.log('    onupdate');
+            onReady: function () {
+                console.log('    onReady');
             },
-            ondetach: function () {
-                console.log('    ondetach');
+            onUpdate: function () {
+                console.log('    onUpdate');
+            },
+            onDestroy: function () {
+                console.log('    onDestroy');
+            },
+            onDetach: function () {
+                console.log('    onDetach');
             }
         };
 
@@ -46,6 +52,9 @@
                     <button on-click="increase('counter')">
                         increase
                     </button>
+                    <p>
+                        {{counter}}
+                    </p>
                     {{#if counter % 4 !== 0}}
                     <Custom counter="{{counter}}" />
                     {{/if}}
@@ -54,23 +63,29 @@
             components: {
                 Custom: Custom
             },
-            oninit: function () {
-                console.log('oninit');
+            onInit: function () {
+                console.log('onInit');
             },
-            oncreate: function () {
-                console.log('oncreate');
+            onCreate: function () {
+                console.log('onCreate');
             },
-            oncompile: function () {
-                console.log('oncompile');
+            onCompile: function () {
+                console.log('onCompile');
             },
-            onattach: function () {
-                console.log('onattach');
+            onAttach: function () {
+                console.log('onAttach');
             },
-            onupdate: function () {
-                console.log('onupdate');
+            onReady: function () {
+                console.log('onReady');
             },
-            ondetach: function () {
-                console.log('ondetach');
+            onUpdate: function () {
+                console.log('onUpdate');
+            },
+            onDestroy: function () {
+                console.log('onDestroy');
+            },
+            onDetach: function () {
+                console.log('onDetach');
             }
         });
 

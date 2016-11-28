@@ -4,7 +4,7 @@ import * as native from '../platform/web/native'
 
 export default {
 
-  onattach: function({ el, name, node, instance }) {
+  onAttach: function({ el, name, node, instance }) {
 
     let listener = instance.compileAttr(node.keypath, node.getValue())
     if (listener) {
@@ -20,7 +20,7 @@ export default {
 
   },
 
-  ondetach: function ({ el, name, node }) {
+  onDetach: function ({ el, name, node }) {
     let listener = `$${name}`
     if (el[listener]) {
       native.off(el, name, el[listener])

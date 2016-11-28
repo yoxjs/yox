@@ -514,25 +514,31 @@ var switcher = Object.freeze({
 	sync: sync$1
 });
 
-var INIT = 'oninit';
+var INIT = 'onInit';
 
-var CREATE = 'oncreate';
+var CREATE = 'onCreate';
 
-var COMPILE = 'oncompile';
+var COMPILE = 'onCompile';
 
-var ATTACH = 'onattach';
+var ATTACH = 'onAttach';
 
-var UPDATE = 'onupdate';
+var READY = 'onReady';
 
-var DETACH = 'ondetach';
+var UPDATE = 'onUpdate';
+
+var DETACH = 'onDetach';
+
+var DESTROY = 'onDestroy';
 
 var lifecycle = Object.freeze({
 	INIT: INIT,
 	CREATE: CREATE,
 	COMPILE: COMPILE,
 	ATTACH: ATTACH,
+	READY: READY,
 	UPDATE: UPDATE,
-	DETACH: DETACH
+	DETACH: DETACH,
+	DESTROY: DESTROY
 });
 
 var IF$1 = 1;
@@ -3220,7 +3226,7 @@ var toNumber = function (str, defaultValue) {
 
 var refDt = {
 
-  onattach: function onattach(_ref) {
+  onAttach: function onAttach(_ref) {
     var el = _ref.el,
         node = _ref.node,
         instance = _ref.instance;
@@ -3234,7 +3240,7 @@ var refDt = {
     }
   },
 
-  ondetach: function ondetach(_ref2) {
+  onDetach: function onDetach(_ref2) {
     var el = _ref2.el,
         instance = _ref2.instance;
 
@@ -3248,7 +3254,7 @@ var refDt = {
 
 var eventDt = {
 
-  onattach: function onattach(_ref) {
+  onAttach: function onAttach(_ref) {
     var el = _ref.el,
         name = _ref.name,
         node = _ref.node,
@@ -3268,7 +3274,7 @@ var eventDt = {
     }
   },
 
-  ondetach: function ondetach(_ref2) {
+  onDetach: function onDetach(_ref2) {
     var el = _ref2.el,
         name = _ref2.name,
         node = _ref2.node;
@@ -3403,7 +3409,7 @@ function getEventInfo(el, lazyDirective) {
 
 var modelDt = {
 
-  onattach: function onattach(_ref7) {
+  onAttach: function onAttach(_ref7) {
     var el = _ref7.el,
         node = _ref7.node,
         instance = _ref7.instance,
@@ -3452,7 +3458,7 @@ var modelDt = {
     on$1(el, name, listener);
   },
 
-  ondetach: function ondetach(_ref8) {
+  onDetach: function onDetach(_ref8) {
     var el = _ref8.el;
 
     el.$model();
@@ -3471,7 +3477,7 @@ function getComponentInfo(node, instance) {
 
 var componentDt = {
 
-  onattach: function onattach(_ref) {
+  onAttach: function onAttach(_ref) {
     var el = _ref.el,
         node = _ref.node,
         instance = _ref.instance;
@@ -3484,7 +3490,7 @@ var componentDt = {
     });
   },
 
-  onupdate: function onupdate(_ref2) {
+  onUpdate: function onUpdate(_ref2) {
     var el = _ref2.el,
         node = _ref2.node,
         instance = _ref2.instance;
@@ -3492,10 +3498,10 @@ var componentDt = {
     el.$component.set(getComponentInfo(node, instance).props);
   },
 
-  ondetach: function ondetach(_ref3) {
+  onDetach: function onDetach(_ref3) {
     var el = _ref3.el;
 
-    el.$component.dispose(TRUE);
+    el.$component.destroy(TRUE);
     el.$component = NULL;
   }
 
@@ -3948,6 +3954,7 @@ var Yox = function () {
         $currentNode = patch(el, newNode);
         instance.$el = $currentNode.elm;
         call(instance, ATTACH);
+        call(instance, READY);
       }
 
       instance.$currentNode = $currentNode;
@@ -3987,12 +3994,12 @@ var Yox = function () {
       return get$3(this, 'partial', name);
     }
   }, {
-    key: 'dispose',
-    value: function dispose() {
+    key: 'destroy',
+    value: function destroy() {
 
       var instance = this;
 
-      call(instance, DETACH);
+      call(instance, DESTROY);
 
       var $el = instance.$el,
           $parent = instance.$parent,
@@ -4004,7 +4011,7 @@ var Yox = function () {
 
       if ($children) {
         each$1($children, function (child) {
-          child.dispose();
+          child.destroy();
         }, TRUE);
       }
 
@@ -4022,12 +4029,14 @@ var Yox = function () {
       if ($el) {
         delete instance.$el;
       }
+
+      call(instance, DETACH);
     }
   }]);
   return Yox;
 }();
 
-Yox.version = '0.13.0';
+Yox.version = '0.14.0';
 
 Yox.switcher = switcher;
 

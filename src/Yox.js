@@ -558,6 +558,7 @@ export default class Yox {
       $currentNode = vdom.patch(el, newNode)
       instance.$el = $currentNode.elm
       object.call(instance, lifecycle.ATTACH)
+      object.call(instance, lifecycle.READY)
     }
 
     instance.$currentNode = $currentNode
@@ -592,11 +593,11 @@ export default class Yox {
     return component.get(this, 'partial', name)
   }
 
-  dispose() {
+  destroy() {
 
     let instance = this
 
-    object.call(instance, lifecycle.DETACH)
+    object.call(instance, lifecycle.DESTROY)
 
     let {
       $el,
@@ -611,7 +612,7 @@ export default class Yox {
       array.each(
         $children,
         function (child) {
-          child.dispose()
+          child.destroy()
         },
         env.TRUE
       )
@@ -632,6 +633,8 @@ export default class Yox {
       delete instance.$el
     }
 
+    object.call(instance, lifecycle.DETACH)
+
   }
 
 }
@@ -641,7 +644,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.13.0'
+Yox.version = '0.14.0'
 
 /**
  * 开关配置
