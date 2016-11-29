@@ -1,6 +1,6 @@
 
 /**
- * <Component @ref="component" />
+ * <Component o-ref="component" />
  */
 
 import * as env from '../config/env'

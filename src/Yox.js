@@ -626,11 +626,14 @@ export default class Yox {
     $eventEmitter.off()
 
     if (arguments[0] !== env.TRUE && $currentNode) {
-      instance.$currentNode = vdom.patch($currentNode, { text: '' })
+      vdom.patch($currentNode, { text: '' })
     }
 
     if ($el) {
       delete instance.$el
+    }
+    if ($currentNode) {
+      delete instance.$currentNode
     }
 
     object.call(instance, lifecycle.DETACH)
@@ -644,7 +647,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.14.1'
+Yox.version = '0.14.2'
 
 /**
  * 开关配置

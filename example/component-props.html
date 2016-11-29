@@ -45,11 +45,8 @@
                 Custom: Custom
             },
             events: {
-                increase: function () {
-                    this.set(
-                        'user.age',
-                        this.get('user.age') + 1
-                    );
+                increase: function (e) {
+                    this.increase('user.age')
                 },
             }
         });

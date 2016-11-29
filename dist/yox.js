@@ -4023,11 +4023,14 @@ var Yox = function () {
       $eventEmitter.off();
 
       if (arguments[0] !== TRUE && $currentNode) {
-        instance.$currentNode = patch($currentNode, { text: '' });
+        patch($currentNode, { text: '' });
       }
 
       if ($el) {
         delete instance.$el;
+      }
+      if ($currentNode) {
+        delete instance.$currentNode;
       }
 
       call(instance, DETACH);
@@ -4036,7 +4039,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.14.1';
+Yox.version = '0.14.2';
 
 Yox.switcher = switcher;
 
