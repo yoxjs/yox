@@ -38,7 +38,7 @@ const controlTypes = {
     set: function ({ el, keypath, instance }) {
       let value = instance.get(keypath)
       el.checked = is.array(value)
-        ? array.hasItem(value, el.value, env.FALSE)
+        ? array.has(value, el.value, env.FALSE)
         : !!value
     },
     sync: function ({ el, keypath, instance }) {
@@ -48,7 +48,7 @@ const controlTypes = {
           value.push(el.value)
         }
         else {
-          array.removeItem(value, el.value, env.FALSE)
+          array.remove(value, el.value, env.FALSE)
         }
         instance.set(keypath, object.copy(value))
       }
@@ -64,7 +64,7 @@ function getEventInfo(el, lazyDirective) {
   let name = 'change', interval
 
   let { type, tagName } = el
-  if (tagName === 'INPUT' && array.hasItem(supportInputTypes, type)
+  if (tagName === 'INPUT' && array.has(supportInputTypes, type)
     || tagName === 'TEXTAREA'
   ) {
     if (lazyDirective) {

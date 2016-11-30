@@ -190,15 +190,15 @@ function indexOf(array$$1, item, strict) {
   }
 }
 
-function hasItem(array$$1, item, strict) {
+function has$2(array$$1, item, strict) {
   return indexOf(array$$1, item, strict) >= 0;
 }
 
-function lastItem(array$$1) {
+function last(array$$1) {
   return array$$1[array$$1.length - 1];
 }
 
-function removeItem(array$$1, item, strict) {
+function remove(array$$1, item, strict) {
   var index = indexOf(array$$1, item, strict);
   if (index >= 0) {
     array$$1.splice(index, 1);
@@ -212,9 +212,9 @@ var array$1 = Object.freeze({
 	toArray: toArray,
 	toObject: toObject,
 	indexOf: indexOf,
-	hasItem: hasItem,
-	lastItem: lastItem,
-	removeItem: removeItem
+	has: has$2,
+	last: last,
+	remove: remove
 });
 
 function keys(object$$1) {
@@ -1239,7 +1239,7 @@ var Node = function () {
       var children = this.children;
 
       if (node.type === TEXT) {
-        var lastChild = lastItem(children);
+        var lastChild = last(children);
         if (lastChild && lastChild.type === TEXT) {
           lastChild.content += node.content;
           return;
@@ -2939,7 +2939,7 @@ var Emitter = function () {
           if (listener == NULL) {
             list.length = 0;
           } else {
-            removeItem(list, listener);
+            remove(list, listener);
           }
         }
       }
@@ -2994,7 +2994,7 @@ var Emitter = function () {
       if (listener == NULL) {
         return array(list) && list.length > 0;
       }
-      return array(list) ? hasItem(list, listener) : FALSE;
+      return array(list) ? has$2(list, listener) : FALSE;
     }
   }]);
   return Emitter;
@@ -3364,7 +3364,7 @@ var controlTypes = {
           instance = _ref5.instance;
 
       var value = instance.get(keypath);
-      el.checked = array(value) ? hasItem(value, el.value, FALSE) : !!value;
+      el.checked = array(value) ? has$2(value, el.value, FALSE) : !!value;
     },
     sync: function sync(_ref6) {
       var el = _ref6.el,
@@ -3376,7 +3376,7 @@ var controlTypes = {
         if (el.checked) {
           value.push(el.value);
         } else {
-          removeItem(value, el.value, FALSE);
+          remove(value, el.value, FALSE);
         }
         instance.set(keypath, copy(value));
       } else {
@@ -3394,7 +3394,7 @@ function getEventInfo(el, lazyDirective) {
   var type = el.type,
       tagName = el.tagName;
 
-  if (tagName === 'INPUT' && hasItem(supportInputTypes, type) || tagName === 'TEXTAREA') {
+  if (tagName === 'INPUT' && has$2(supportInputTypes, type) || tagName === 'TEXTAREA') {
     if (lazyDirective) {
       var value = lazyDirective.node.getValue();
       if (numeric(value) && value >= 0) {
@@ -3660,8 +3660,8 @@ var Yox = function () {
               var removedDeps = [];
               if (array(oldDeps)) {
                 each$1(merge(oldDeps, newDeps), function (dep) {
-                  var oldExisted = hasItem(oldDeps, dep);
-                  var newExisted = hasItem(newDeps, dep);
+                  var oldExisted = has$2(oldDeps, dep);
+                  var newExisted = has$2(newDeps, dep);
                   if (oldExisted && !newExisted) {
                     removedDeps.push(dep);
                   } else if (!oldExisted && newExisted) {
@@ -3680,7 +3680,7 @@ var Yox = function () {
               });
 
               each$1(removedDeps, function (dep) {
-                removeItem($computedWatchers[dep], keypath);
+                remove($computedWatchers[dep], keypath);
               });
 
               $computedCache[keypath] = result;
@@ -3740,7 +3740,7 @@ var Yox = function () {
 
 
       if (array($computedStack)) {
-        var deps = lastItem($computedStack);
+        var deps = last($computedStack);
         if (deps) {
           deps.push(keypath);
         }
@@ -3932,6 +3932,10 @@ var Yox = function () {
           $computedGetters = instance.$computedGetters;
 
 
+      if (!$template) {
+        return;
+      }
+
       var context = {};
 
       extend(context, filter.data, $data, $filters);
@@ -3945,7 +3949,7 @@ var Yox = function () {
         extend(context, $computedGetters);
       }
 
-      var node = $template && render$1($template, context);
+      var node = render$1($template, context);
       if (!node) {
         return;
       }
@@ -4021,7 +4025,7 @@ var Yox = function () {
       }
 
       if ($parent && $parent.$children) {
-        removeItem($parent.$children, instance);
+        remove($parent.$children, instance);
       }
 
       $watchEmitter.off();
@@ -4044,7 +4048,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.14.3';
+Yox.version = '0.14.4';
 
 Yox.switcher = switcher;
 

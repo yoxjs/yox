@@ -47,7 +47,7 @@ export default class Emitter {
           list.length = 0
         }
         else {
-          array.removeItem(list, listener)
+          array.remove(list, listener)
         }
       }
     }
@@ -109,7 +109,7 @@ export default class Emitter {
       return is.array(list) && list.length > 0
     }
     return is.array(list)
-      ? array.hasItem(list, listener)
+      ? array.has(list, listener)
       : env.FALSE
   }
 }

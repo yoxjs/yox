@@ -18,7 +18,7 @@ export default class Node {
   addChild(node) {
     let { children } = this
     if (node.type === nodeType.TEXT) {
-      let lastChild = array.lastItem(children)
+      let lastChild = array.last(children)
       if (lastChild && lastChild.type === nodeType.TEXT) {
         lastChild.content += node.content
         return

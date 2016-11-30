@@ -83,15 +83,15 @@ export function indexOf(array, item, strict) {
   }
 }
 
-export function hasItem(array, item, strict) {
+export function has(array, item, strict) {
   return indexOf(array, item, strict) >= 0
 }
 
-export function lastItem(array) {
+export function last(array) {
   return array[array.length - 1]
 }
 
-export function removeItem(array, item, strict) {
+export function remove(array, item, strict) {
   let index = indexOf(array, item, strict)
   if (index >= 0) {
     array.splice(index, 1)

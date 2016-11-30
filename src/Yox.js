@@ -208,8 +208,8 @@ export default class Yox {
                 array.each(
                   array.merge(oldDeps, newDeps),
                   function (dep) {
-                    let oldExisted = array.hasItem(oldDeps, dep)
-                    let newExisted = array.hasItem(newDeps, dep)
+                    let oldExisted = array.has(oldDeps, dep)
+                    let newExisted = array.has(newDeps, dep)
                     if (oldExisted && !newExisted) {
                       removedDeps.push(dep)
                     }
@@ -236,7 +236,7 @@ export default class Yox {
               array.each(
                 removedDeps,
                 function (dep) {
-                  array.removeItem($computedWatchers[dep], keypath)
+                  array.remove($computedWatchers[dep], keypath)
                 }
               )
 
@@ -316,7 +316,7 @@ export default class Yox {
     } = this
 
     if (is.array($computedStack)) {
-      let deps = array.lastItem($computedStack)
+      let deps = array.last($computedStack)
       if (deps) {
         deps.push(keypath)
       }
@@ -525,6 +525,10 @@ export default class Yox {
       $computedGetters,
     } = instance
 
+    if (!$template) {
+      return
+    }
+
     let context = { }
 
     // 在 data 中也能写函数
@@ -542,7 +546,7 @@ export default class Yox {
       object.extend(context, $computedGetters)
     }
 
-    let node = $template && mustache.render($template, context)
+    let node = mustache.render($template, context)
     if (!node) {
       return
     }
@@ -618,7 +622,7 @@ export default class Yox {
     }
 
     if ($parent && $parent.$children) {
-      array.removeItem($parent.$children, instance)
+      array.remove($parent.$children, instance)
     }
 
     $watchEmitter.off()
@@ -646,7 +650,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.14.3'
+Yox.version = '0.14.4'
 
 /**
  * 开关配置
