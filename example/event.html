@@ -62,7 +62,7 @@
                     console.log(this, name);
                 }
             },
-            onattach: function () {
+            afterMount: function () {
                 this.on('submit-1', function () {
                     console.log(this, arguments);
                 });

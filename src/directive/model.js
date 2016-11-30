@@ -88,7 +88,7 @@ function getEventInfo(el, lazyDirective) {
 
 export default {
 
-  onAttach: function ({ el, node, instance, directives }) {
+  attach: function ({ el, node, instance, directives }) {
 
     let { name, interval, control } = getEventInfo(el, directives.lazy)
     let { keypath } = node
@@ -132,7 +132,7 @@ export default {
 
   },
 
-  onDetach: function ({ el }) {
+  detach: function ({ el }) {
     el.$model()
   }
 

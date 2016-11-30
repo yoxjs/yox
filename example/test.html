@@ -35,21 +35,6 @@
                     this.fire('click', { name: 'component' });
                 }
             },
-            oncreate: function () {
-                console.log('  ', this, 'create');
-            },
-            oncompile: function () {
-                console.log('  ', this, 'compile');
-            },
-            onattach: function () {
-                console.log('  ', this, 'attach');
-            },
-            onupdate: function () {
-                console.log('  ', this, 'update');
-            },
-            ondetach: function () {
-                console.log('  ', this, 'detach');
-            }
         };
 
         var instance = new Yox({
@@ -129,21 +114,6 @@
                     console.log('clickFromComponent', event);
                 }
             },
-            oncreate: function () {
-                console.log(this, 'create');
-            },
-            oncompile: function () {
-                console.log(this, 'compile');
-            },
-            onattach: function () {
-                console.log(this, 'attach');
-            },
-            onupdate: function () {
-                console.log(this, 'update');
-            },
-            ondetach: function () {
-                console.log(this, 'detach');
-            }
         });
 
     </script>

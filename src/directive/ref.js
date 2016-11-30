@@ -9,7 +9,7 @@ import * as component from '../util/component'
 
 export default {
 
-  onAttach: function ({ el, node, instance }) {
+  attach: function ({ el, node, instance }) {
 
     let child = el[`$component`]
     let value = node.getValue()
@@ -20,7 +20,7 @@ export default {
 
   },
 
-  onDetach: function ({ el, instance }) {
+  detach: function ({ el, instance }) {
 
     if (el.$ref) {
       delete instance.$refs[el.$ref]

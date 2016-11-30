@@ -21,6 +21,7 @@ import * as validator from './util/validator'
 import * as vdom from './platform/web/vdom'
 import * as native from './platform/web/native'
 
+import execute from './function/execute'
 import toNumber from './function/toNumber'
 
 import refDt from './directive/ref'
@@ -44,22 +45,15 @@ export default class Yox {
 
     let instance = this
 
-    object.each(
-      lifecycle,
-      function (name) {
-        if (is.func(options[name])) {
-          instance[name] = options[name]
-        }
-      }
-    )
+    // 如果不绑着，其他方法中调不到钩子
+    instance.$options = options
 
-    object.call(instance, lifecycle.INIT, [ options ])
+    execute(options[lifecycle.BEFORE_CREATE], instance, options)
 
     let {
       el,
       data,
       props,
-
       parent,
       replace,
       computed,
@@ -74,10 +68,23 @@ export default class Yox {
       extensions,
     } = options
 
+    // 监听各种事件
+    instance.$eventEmitter = new Emitter()
+    instance.on(events)
+
+    // 监听数据变化
+    instance.$watchEmitter = new Emitter()
+    instance.watch(watchers)
+
+    execute(options[lifecycle.AFTER_CREATE], instance)
+
     // 检查 template
     if (is.string(template)) {
       if (pattern.selector.test(template)) {
         template = native.getContent(template)
+      }
+      if (!template.trim()) {
+        template = env.NULL
       }
     }
     else {
@@ -248,23 +255,9 @@ export default class Yox {
       )
     }
 
-    // 监听各种事件
-    instance.$eventEmitter = new Emitter()
-    instance.on(events)
-
-    // 监听数据变化
-    instance.$watchEmitter = new Emitter()
-    instance.watch(watchers)
-
-    object.call(instance, lifecycle.CREATE)
-
-    // 编译模板
-    if (template) {
+    if (el && template) {
+      execute(options[lifecycle.BEFORE_MOUNT], instance)
       instance.$template = instance.compile(template)
-      object.call(instance, lifecycle.COMPILE)
-    }
-
-    if (el) {
       instance.updateView(el)
     }
 
@@ -304,14 +297,16 @@ export default class Yox {
       model[keypath] = value
     }
     let instance = this
-    if (instance.updateModel(model)) {
+    if (instance.updateModel(model) && instance.$currentNode) {
       if (switcher.sync) {
+        execute(instance.$options[lifecycle.BEFORE_UPDATE], instance)
         instance.updateView()
       }
       else if (!instance.$syncing) {
         instance.$syncing = env.TRUE
         nextTask.add(function () {
           delete instance.$syncing
+          execute(instance.$options[lifecycle.BEFORE_UPDATE], instance)
           instance.updateView()
         })
       }
@@ -488,14 +483,18 @@ export default class Yox {
       $computedGetters,
     } = instance
 
-    if (!$template) {
-      return
-    }
-
     let context = { }
 
-    // 在 data 中也能写函数
-    object.extend(context, registry.filter.data, $data, $filters)
+    object.extend(
+      context,
+      // 全局过滤器
+      registry.filter.data,
+      // 本地数据，这意味着 data 也能写函数，只是用 filter 来区分出过滤器
+      $data,
+      // 本地过滤器
+      $filters
+    )
+
     object.each(
       context,
       function (value, key) {
@@ -510,24 +509,21 @@ export default class Yox {
     }
 
     let node = mustache.render($template, context)
-    if (!node) {
-      return
-    }
-
     let newNode = vdom.create(node, instance)
+    let afterHook
 
     if ($currentNode) {
+      afterHook = lifecycle.AFTER_UPDATE
       $currentNode = vdom.patch($currentNode, newNode)
-      object.call(instance, lifecycle.UPDATE)
     }
     else {
+      afterHook = lifecycle.AFTER_MOUNT
       $currentNode = vdom.patch(el, newNode)
       instance.$el = $currentNode.elm
-      object.call(instance, lifecycle.ATTACH)
-      object.call(instance, lifecycle.READY)
     }
 
     instance.$currentNode = $currentNode
+    execute(instance.$options[afterHook], instance)
 
   }
 
@@ -573,11 +569,11 @@ export default class Yox {
     return is.string(partial) ? this.compile(partial) : partial
   }
 
-  destroy() {
+  destroy(removed) {
 
     let instance = this
 
-    object.call(instance, lifecycle.DESTROY)
+    execute(instance.$options[lifecycle.BEFORE_DESTROY], instance)
 
     let {
       $el,
@@ -605,7 +601,7 @@ export default class Yox {
     $watchEmitter.off()
     $eventEmitter.off()
 
-    if (arguments[0] !== env.TRUE && $currentNode) {
+    if (removed !== env.TRUE && $currentNode) {
       vdom.patch($currentNode, { text: '' })
     }
 
@@ -616,7 +612,7 @@ export default class Yox {
       delete instance.$currentNode
     }
 
-    object.call(instance, lifecycle.DETACH)
+    execute(instance.$options[lifecycle.AFTER_DESTROY], instance)
 
   }
 
@@ -627,7 +623,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.14.7'
+Yox.version = '0.15.0'
 
 /**
  * 开关配置

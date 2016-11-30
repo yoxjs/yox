@@ -25,7 +25,7 @@
                 </div>
             `,
             methods: {
-                click2: function () {
+                click2: function (e) {
                     this.fire('click2', { name: 'component' });
                 },
                 noBubble: function (event) {
@@ -38,7 +38,7 @@
             el: '#app',
             template: `
                 <div id="root">
-                    <Custom on-click1="click1" on-click2="click2" />
+                    <Custom on-click1="click1" on-click2="click3" />
                 </div>
             `,
             components: {
@@ -48,8 +48,8 @@
                 click1: function () {
                     console.log(this, arguments);
                 },
-                click2: function () {
-                    console.log(this, arguments);
+                click3: function (e) {
+                    console.log(this, e);
                 },
                 noBubble: function () {
                     console.log(this, arguments);

@@ -195,7 +195,7 @@ function last(array$$1) {
   return array$$1[array$$1.length - 1];
 }
 
-function remove(array$$1, item, strict) {
+function remove$1(array$$1, item, strict) {
   var index = indexOf(array$$1, item, strict);
   if (index >= 0) {
     array$$1.splice(index, 1);
@@ -211,7 +211,7 @@ var array$1 = Object.freeze({
 	indexOf: indexOf,
 	has: has$2,
 	last: last,
-	remove: remove
+	remove: remove$1
 });
 
 function keys(object$$1) {
@@ -310,16 +310,6 @@ function set$1(object$$1, keypath, value) {
   }
 }
 
-function call(object$$1, method, args) {
-  if (func(object$$1[method])) {
-    if (array(args)) {
-      object$$1[method].apply(object$$1, args);
-    } else {
-      object$$1[method]();
-    }
-  }
-}
-
 var object$1 = Object.freeze({
 	keys: keys,
 	each: each$$1,
@@ -328,8 +318,7 @@ var object$1 = Object.freeze({
 	extend: extend,
 	copy: copy,
 	get: get$1,
-	set: set$1,
-	call: call
+	set: set$1
 });
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
@@ -511,32 +500,21 @@ var switcher = Object.freeze({
 	sync: sync$1
 });
 
-var INIT = 'onInit';
+var BEFORE_CREATE = 'beforeCreate';
 
-var CREATE = 'onCreate';
+var AFTER_CREATE = 'afterCreate';
 
-var COMPILE = 'onCompile';
+var BEFORE_MOUNT = 'beforeMount';
 
-var ATTACH = 'onAttach';
+var AFTER_MOUNT = 'afterMount';
 
-var READY = 'onReady';
+var BEFORE_UPDATE = 'beforeUpdate';
 
-var UPDATE = 'onUpdate';
+var AFTER_UPDATE = 'afterUpdate';
 
-var DESTROY = 'onDestroy';
+var BEFORE_DESTROY = 'beforeDestroy';
 
-var DETACH = 'onDetach';
-
-var lifecycle = Object.freeze({
-	INIT: INIT,
-	CREATE: CREATE,
-	COMPILE: COMPILE,
-	ATTACH: ATTACH,
-	READY: READY,
-	UPDATE: UPDATE,
-	DESTROY: DESTROY,
-	DETACH: DETACH
-});
+var AFTER_DESTROY = 'afterDestroy';
 
 var IF$1 = 1;
 
@@ -1829,7 +1807,7 @@ function render$1(ast, data) {
   var children = rootElement.children;
 
   if (children.length > 1) {
-    warn('Template should have only one root element.');
+    error$1('Template should have only one root element.');
   }
 
   return children[0];
@@ -2895,6 +2873,16 @@ function updateAttrs(oldVnode, vnode) {
 
 var attributes = { create: updateAttrs, update: updateAttrs };
 
+var execute$1 = function (fn, context, args) {
+  if (func(fn)) {
+    if (array(args)) {
+      fn.apply(context, args);
+    } else {
+      fn.call(context, args);
+    }
+  }
+};
+
 var Emitter = function () {
   function Emitter() {
     classCallCheck(this, Emitter);
@@ -2959,7 +2947,7 @@ var Emitter = function () {
           if (listener == NULL) {
             list.length = 0;
           } else {
-            remove(list, listener);
+            remove$1(list, listener);
           }
         }
       }
@@ -2977,12 +2965,8 @@ var Emitter = function () {
 
       if (array(list)) {
         each$1(list, function (listener) {
-          var result = void 0;
-          if (array(data)) {
-            result = listener.apply(context, data);
-          } else {
-            result = data != NULL ? listener.call(context, data) : listener.call(context);
-          }
+          var result = execute$1(listener, context, data);
+
           var $once = listener.$once;
 
           if (func($once)) {
@@ -3230,13 +3214,13 @@ function create$1(node, instance) {
 
             data.hook = {
               insert: function insert(vnode) {
-                notify(vnode, ATTACH);
+                notify(vnode, 'attach');
               },
-              update: function update(oldNode, vnode) {
-                notify(vnode, UPDATE);
+              postpatch: function postpatch(oldNode, vnode) {
+                notify(vnode, 'update');
               },
-              destroy: function destroy(vnode) {
-                notify(vnode, DETACH);
+              remove: function remove(vnode) {
+                notify(vnode, 'detach');
               }
             };
           })();
@@ -3263,7 +3247,7 @@ var toNumber = function (str, defaultValue) {
 
 var refDt = {
 
-  onAttach: function onAttach(_ref) {
+  attach: function attach(_ref) {
     var el = _ref.el,
         node = _ref.node,
         instance = _ref.instance;
@@ -3277,7 +3261,7 @@ var refDt = {
     }
   },
 
-  onDetach: function onDetach(_ref2) {
+  detach: function detach(_ref2) {
     var el = _ref2.el,
         instance = _ref2.instance;
 
@@ -3291,7 +3275,7 @@ var refDt = {
 
 var eventDt = {
 
-  onAttach: function onAttach(_ref) {
+  attach: function attach(_ref) {
     var el = _ref.el,
         name = _ref.name,
         node = _ref.node,
@@ -3311,7 +3295,7 @@ var eventDt = {
     }
   },
 
-  onDetach: function onDetach(_ref2) {
+  detach: function detach(_ref2) {
     var el = _ref2.el,
         name = _ref2.name;
 
@@ -3406,7 +3390,7 @@ var controlTypes = {
         if (el.checked) {
           value.push(el.value);
         } else {
-          remove(value, el.value, FALSE);
+          remove$1(value, el.value, FALSE);
         }
         instance.set(keypath, copy(value));
       } else {
@@ -3445,7 +3429,7 @@ function getEventInfo(el, lazyDirective) {
 
 var modelDt = {
 
-  onAttach: function onAttach(_ref7) {
+  attach: function attach(_ref7) {
     var el = _ref7.el,
         node = _ref7.node,
         instance = _ref7.instance,
@@ -3494,7 +3478,7 @@ var modelDt = {
     on$1(el, name, listener);
   },
 
-  onDetach: function onDetach(_ref8) {
+  detach: function detach(_ref8) {
     var el = _ref8.el;
 
     el.$model();
@@ -3513,7 +3497,7 @@ function getComponentInfo(node, instance) {
 
 var componentDt = {
 
-  onAttach: function onAttach(_ref) {
+  attach: function attach(_ref) {
     var el = _ref.el,
         node = _ref.node,
         instance = _ref.instance;
@@ -3526,7 +3510,7 @@ var componentDt = {
     });
   },
 
-  onUpdate: function onUpdate(_ref2) {
+  update: function update(_ref2) {
     var el = _ref2.el,
         node = _ref2.node,
         instance = _ref2.instance;
@@ -3534,7 +3518,7 @@ var componentDt = {
     el.$component.set(getComponentInfo(node, instance).props);
   },
 
-  onDetach: function onDetach(_ref3) {
+  detach: function detach(_ref3) {
     var el = _ref3.el;
 
     el.$component.destroy(TRUE);
@@ -3550,13 +3534,9 @@ var Yox = function () {
 
     var instance = this;
 
-    each$$1(lifecycle, function (name) {
-      if (func(options[name])) {
-        instance[name] = options[name];
-      }
-    });
+    instance.$options = options;
 
-    call(instance, INIT, [options]);
+    execute$1(options[BEFORE_CREATE], instance, options);
 
     var el = options.el,
         data = options.data,
@@ -3574,9 +3554,20 @@ var Yox = function () {
         partials = options.partials,
         extensions = options.extensions;
 
+    instance.$eventEmitter = new Emitter();
+    instance.on(events);
+
+    instance.$watchEmitter = new Emitter();
+    instance.watch(watchers);
+
+    execute$1(options[AFTER_CREATE], instance);
+
     if (string(template)) {
       if (selector.test(template)) {
         template = getContent(template);
+      }
+      if (!template.trim()) {
+        template = NULL;
       }
     } else {
       template = NULL;
@@ -3696,7 +3687,7 @@ var Yox = function () {
               });
 
               each$1(removedDeps, function (dep) {
-                remove($computedWatchers[dep], keypath);
+                remove$1($computedWatchers[dep], keypath);
               });
 
               $computedCache[keypath] = result;
@@ -3714,20 +3705,9 @@ var Yox = function () {
       })();
     }
 
-    instance.$eventEmitter = new Emitter();
-    instance.on(events);
-
-    instance.$watchEmitter = new Emitter();
-    instance.watch(watchers);
-
-    call(instance, CREATE);
-
-    if (template) {
+    if (el && template) {
+      execute$1(options[BEFORE_MOUNT], instance);
       instance.$template = instance.compile(template);
-      call(instance, COMPILE);
-    }
-
-    if (el) {
       instance.updateView(el);
     }
   }
@@ -3766,13 +3746,15 @@ var Yox = function () {
         model[keypath] = value;
       }
       var instance = this;
-      if (instance.updateModel(model)) {
+      if (instance.updateModel(model) && instance.$currentNode) {
         if (sync$1) {
+          execute$1(instance.$options[BEFORE_UPDATE], instance);
           instance.updateView();
         } else if (!instance.$syncing) {
           instance.$syncing = TRUE;
           add(function () {
             delete instance.$syncing;
+            execute$1(instance.$options[BEFORE_UPDATE], instance);
             instance.updateView();
           });
         }
@@ -3933,13 +3915,10 @@ var Yox = function () {
           $computedGetters = instance.$computedGetters;
 
 
-      if (!$template) {
-        return;
-      }
-
       var context = {};
 
       extend(context, filter.data, $data, $filters);
+
       each$$1(context, function (value, key) {
         if (func(value)) {
           context[key] = value.bind(instance);
@@ -3951,23 +3930,20 @@ var Yox = function () {
       }
 
       var node = render$1($template, context);
-      if (!node) {
-        return;
-      }
-
       var newNode = create$1(node, instance);
+      var afterHook = void 0;
 
       if ($currentNode) {
+        afterHook = AFTER_UPDATE;
         $currentNode = patch($currentNode, newNode);
-        call(instance, UPDATE);
       } else {
+        afterHook = AFTER_MOUNT;
         $currentNode = patch(el, newNode);
         instance.$el = $currentNode.elm;
-        call(instance, ATTACH);
-        call(instance, READY);
       }
 
       instance.$currentNode = $currentNode;
+      execute$1(instance.$options[afterHook], instance);
     }
   }, {
     key: 'create',
@@ -4016,11 +3992,11 @@ var Yox = function () {
     }
   }, {
     key: 'destroy',
-    value: function destroy() {
+    value: function destroy(removed) {
 
       var instance = this;
 
-      call(instance, DESTROY);
+      execute$1(instance.$options[BEFORE_DESTROY], instance);
 
       var $el = instance.$el,
           $parent = instance.$parent,
@@ -4037,13 +4013,13 @@ var Yox = function () {
       }
 
       if ($parent && $parent.$children) {
-        remove($parent.$children, instance);
+        remove$1($parent.$children, instance);
       }
 
       $watchEmitter.off();
       $eventEmitter.off();
 
-      if (arguments[0] !== TRUE && $currentNode) {
+      if (removed !== TRUE && $currentNode) {
         patch($currentNode, { text: '' });
       }
 
@@ -4054,13 +4030,13 @@ var Yox = function () {
         delete instance.$currentNode;
       }
 
-      call(instance, DETACH);
+      execute$1(instance.$options[AFTER_DESTROY], instance);
     }
   }]);
   return Yox;
 }();
 
-Yox.version = '0.14.7';
+Yox.version = '0.15.0';
 
 Yox.switcher = switcher;
 

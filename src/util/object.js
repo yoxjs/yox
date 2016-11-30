@@ -123,14 +123,3 @@ export function set(object, keypath, value, autoFill = env.TRUE) {
     object[keypath] = value
   }
 }
-
-export function call(object, method, args) {
-  if (is.func(object[method])) {
-    if (is.array(args)) {
-      object[method].apply(object, args)
-    }
-    else {
-      object[method]()
-    }
-  }
-}

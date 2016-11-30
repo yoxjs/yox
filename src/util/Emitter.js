@@ -1,6 +1,8 @@
 
 import * as env from '../config/env'
 
+import execute from '../function/execute'
+
 import * as is from './is'
 import * as array from './array'
 import * as object from './object'
@@ -92,15 +94,8 @@ export default class Emitter {
       array.each(
         list,
         function (listener) {
-          let result
-          if (is.array(data)) {
-            result = listener.apply(context, data)
-          }
-          else {
-            result = data != env.NULL
-              ? listener.call(context, data)
-              : listener.call(context)
-          }
+          let result = execute(listener, context, data)
+
           let { $once } = listener
           if (is.func($once)) {
             $once()

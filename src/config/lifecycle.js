@@ -1,56 +1,58 @@
 
 /**
- * 进入 `new Yox(options)` 之后立即触发，钩子函数会传入 `options` 数据。
+ * 进入 `new Yox(options)` 之后立即触发，钩子函数会传入 `options`
  *
  * @type {string}
  */
-export let INIT = 'onInit'
+export let BEFORE_CREATE = 'beforeCreate'
 
 /**
- * 除了还没编译模板，其他该做的都做完了。
+ * 初始化事件和数据监听之后触发
  *
  * @type {string}
  */
-export let CREATE = 'onCreate'
+export let AFTER_CREATE = 'afterCreate'
 
 /**
- * 模板编译结束后触发。
+ * 模板编译，加入 DOM 树之前触发
  *
  * @type {string}
  */
-export let COMPILE = 'onCompile'
+export let BEFORE_MOUNT = 'beforeMount'
 
 /**
- * 组件加入 DOM 树后触发。
+ * 加入 DOM 树之后触发
+ *
+ * 这时可通过 `$el` 获取组件根元素
  *
  * @type {string}
  */
-export let ATTACH = 'onAttach'
+export let AFTER_MOUNT = 'afterMount'
 
 /**
- * 无需关心底层，`ready` 意味着可用了。
+ * 视图更新之前触发
  *
  * @type {string}
  */
-export let READY = 'onReady'
+export let BEFORE_UPDATE = 'beforeUpdate'
 
 /**
- * 组件视图更新后触发。
+ * 视图更新之后触发
  *
  * @type {string}
  */
-export let UPDATE = 'onUpdate'
+export let AFTER_UPDATE = 'afterUpdate'
 
 /**
- * 不用计较底层实现，反正 destroy 就是销毁了
+ * 销毁之前触发
  *
  * @type {string}
  */
-export let DESTROY = 'onDestroy'
+export let BEFORE_DESTROY = 'beforeDestroy'
 
 /**
- * 组件从 DOM 树移除之后触发。
+ * 销毁之后触发
  *
  * @type {string}
  */
-export let DETACH = 'onDetach'
+export let AFTER_DESTROY = 'afterDestroy'

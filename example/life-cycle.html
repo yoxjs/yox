@@ -16,29 +16,29 @@
                   {{counter}}
                 </div>
             `,
-            onInit: function () {
-                console.log('    onInit');
+            beforeCreate: function (options) {
+                console.log('    beforeCreate', options);
             },
-            onCreate: function () {
-                console.log('    onCreate');
+            afterCreate: function () {
+                console.log('    afterCreate');
             },
-            onCompile: function () {
-                console.log('    onCompile');
+            beforeMount: function () {
+                console.log('    beforeMount');
             },
-            onAttach: function () {
-                console.log('    onAttach');
+            afterMount: function () {
+                console.log('    afterMount');
             },
-            onReady: function () {
-                console.log('    onReady');
+            beforeUpdate: function () {
+                console.log('    beforeUpdate');
             },
-            onUpdate: function () {
-                console.log('    onUpdate');
+            afterUpdate: function () {
+                console.log('    afterUpdate');
             },
-            onDestroy: function () {
-                console.log('    onDestroy');
+            beforeDestroy: function () {
+                console.log('    beforeDestroy');
             },
-            onDetach: function () {
-                console.log('    onDetach');
+            afterDestroy: function () {
+                console.log('    afterDestroy');
             }
         };
 
@@ -63,29 +63,29 @@
             components: {
                 Custom: Custom
             },
-            onInit: function () {
-                console.log('onInit');
+            beforeCreate: function (options) {
+                console.log('beforeCreate', options);
             },
-            onCreate: function () {
-                console.log('onCreate');
+            afterCreate: function () {
+                console.log('afterCreate');
             },
-            onCompile: function () {
-                console.log('onCompile');
+            beforeMount: function () {
+                console.log('beforeMount');
             },
-            onAttach: function () {
-                console.log('onAttach');
+            afterMount: function () {
+                console.log('afterMount');
             },
-            onReady: function () {
-                console.log('onReady');
+            beforeUpdate: function () {
+                console.log('beforeUpdate');
             },
-            onUpdate: function () {
-                console.log('onUpdate');
+            afterUpdate: function () {
+                console.log('afterUpdate');
             },
-            onDestroy: function () {
-                console.log('onDestroy');
+            beforeDestroy: function () {
+                console.log('beforeDestroy');
             },
-            onDetach: function () {
-                console.log('onDetach');
+            afterDestroy: function () {
+                console.log('afterDestroy');
             }
         });
 

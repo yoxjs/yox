@@ -183,13 +183,13 @@ export function create(node, instance) {
 
           data.hook = {
             insert: function (vnode) {
-              notify(vnode, lifecycle.ATTACH)
+              notify(vnode, 'attach')
             },
-            update: function (oldNode, vnode) {
-              notify(vnode, lifecycle.UPDATE)
+            postpatch: function (oldNode, vnode) {
+              notify(vnode, 'update')
             },
-            destroy: function (vnode) {
-              notify(vnode, lifecycle.DETACH)
+            remove: function (vnode) {
+              notify(vnode, 'detach')
             }
           }
         }
