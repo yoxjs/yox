@@ -45,9 +45,6 @@ export default class Yox {
 
     let instance = this
 
-    // 如果不绑着，其他方法中调不到钩子
-    instance.$options = options
-
     execute(options[lifecycle.BEFORE_CREATE], instance, options)
 
     let {
@@ -67,6 +64,9 @@ export default class Yox {
       partials,
       extensions,
     } = options
+
+    // 如果不绑着，其他方法调不到钩子
+    instance.$options = options
 
     // 监听各种事件
     instance.$eventEmitter = new Emitter()
