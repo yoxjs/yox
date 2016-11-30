@@ -14,18 +14,45 @@ export default class Emitter {
   }
 
   on(type, listener) {
+
     let { listeners } = this
-    let list = listeners[type] || (listeners[type] = [])
-    list.push(listener)
+    let addListener = function (listener, type) {
+      if (is.func(listener)) {
+        let list = listeners[type] || (listeners[type] = [ ])
+        list.push(listener)
+      }
+    }
+
+    if (is.object(type)) {
+      object.each(type, addListener)
+    }
+    else if (is.string(type)) {
+      addListener(listener, type)
+    }
+
   }
 
   once(type, listener) {
+
     let instance = this
-    listener.$once = function () {
-      instance.off(type, listener)
-      delete listener.$once
+    let addOnce = function (listener, type) {
+      if (is.func(listener)) {
+        listener.$once = function () {
+          instance.off(type, listener)
+          delete listener.$once
+        }
+      }
     }
+
+    if (is.object(type)) {
+      object.each(type, addOnce)
+    }
+    else if (is.string(type)) {
+      addOnce(listener, type)
+    }
+
     instance.on(type, listener)
+
   }
 
   off(type, listener) {

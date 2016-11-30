@@ -128,14 +128,16 @@ var slice = Array.prototype.slice;
 
 
 function each$1(array$$1, callback, reversed) {
+  var length = array$$1.length;
+
   if (reversed) {
-    for (var i = array$$1.length - 1; i >= 0; i--) {
+    for (var i = length - 1; i >= 0; i--) {
       if (callback(array$$1[i], i) === FALSE) {
         break;
       }
     }
   } else {
-    for (var _i = 0, len = array$$1.length; _i < len; _i++) {
+    for (var _i = 0; _i < length; _i++) {
       if (callback(array$$1[_i], _i) === FALSE) {
         break;
       }
@@ -159,11 +161,6 @@ function merge() {
 }
 
 function toArray(array$$1) {
-  try {
-    'length' in array$$1;
-  } catch (e) {
-    return [];
-  }
   return array(array$$1) ? array$$1 : slice.call(array$$1);
 }
 
@@ -2317,11 +2314,12 @@ function testKeypath(instance, keypath, name) {
 }
 
 function get$3(instance, type, name, silent) {
-  var prop = '$' + type + 's';
-  if (instance[prop] && has$1(instance[prop], name)) {
-    return instance[prop][name];
+  var result = get$1(instance, '$' + type + 's.' + name);
+  if (result) {
+    return result.value;
   } else {
-    var value = registry[type].get(name);
+    var globalRegistry = registry[type];
+    var value = globalRegistry && globalRegistry.get(name);
     if (value) {
       return value;
     } else if (!silent) {
@@ -2331,11 +2329,11 @@ function get$3(instance, type, name, silent) {
 }
 
 function set$3(instance, type, name, value) {
-  var prop = '$' + type + 's';
-  if (!instance[prop]) {
-    instance[prop] = {};
+  if (object(name)) {
+    set$1(instance, '$' + type + 's', name);
+  } else if (string(name)) {
+    set$1(instance, '$' + type + 's.' + name, value);
   }
-  instance[prop][name] = value;
 }
 
 function validate(data, schema) {
@@ -2909,17 +2907,39 @@ var Emitter = function () {
     value: function on(type, listener) {
       var listeners = this.listeners;
 
-      var list = listeners[type] || (listeners[type] = []);
-      list.push(listener);
+      var addListener = function addListener(listener, type) {
+        if (func(listener)) {
+          var list = listeners[type] || (listeners[type] = []);
+          list.push(listener);
+        }
+      };
+
+      if (object(type)) {
+        each$$1(type, addListener);
+      } else if (string(type)) {
+        addListener(listener, type);
+      }
     }
   }, {
     key: 'once',
     value: function once(type, listener) {
+
       var instance = this;
-      listener.$once = function () {
-        instance.off(type, listener);
-        delete listener.$once;
+      var addOnce = function addOnce(listener, type) {
+        if (func(listener)) {
+          listener.$once = function () {
+            instance.off(type, listener);
+            delete listener.$once;
+          };
+        }
       };
+
+      if (object(type)) {
+        each$$1(type, addOnce);
+      } else if (string(type)) {
+        addOnce(listener, type);
+      }
+
       instance.on(type, listener);
     }
   }, {
@@ -3019,9 +3039,17 @@ function findElement(selector, context) {
 var find = findElement;
 
 function create$2(parent, tagName) {
-  var child = doc.createElement(tagName);
+  var child = doc.createElement(tagName || 'div');
   parent.appendChild(child);
   return child;
+}
+
+function getContent(selector) {
+  return find(selector).innerHTML;
+}
+
+function isElement(node) {
+  return node.nodeType === 1;
 }
 
 function on$1(element, type, listener, context) {
@@ -3055,6 +3083,8 @@ function off$1(element, type, listener) {
 var native = Object.freeze({
 	find: find,
 	create: create$2,
+	getContent: getContent,
+	isElement: isElement,
 	on: on$1,
 	off: off$1
 });
@@ -3551,64 +3581,57 @@ var Yox = function () {
         partials = options.partials,
         extensions = options.extensions;
 
-
-    if (string(template) && selector.test(template)) {
-      template = find(template).innerHTML;
+    if (string(template)) {
+      if (selector.test(template)) {
+        template = getContent(template);
+      }
+    } else {
+      template = NULL;
     }
 
-    if (string(el) && selector.test(el)) {
-      el = find(el);
+    if (string(el)) {
+      if (selector.test(el)) {
+        el = find(el);
+      }
+    }
+    if (el) {
+      if (isElement(el)) {
+        if (!replace) {
+          el = create$2(el);
+        }
+      } else {
+        error$1('Passing a `el` option must be a html element.');
+      }
     }
 
-    if (el && el.nodeType !== 1) {
-      error$1('Passing a `el` option must be a html element.');
-    }
-    if (props && (object(data) || array(data))) {
-      warn('Passing a `data` option with object and array to component is discouraged.');
+    if (props && !object(props)) {
+      props = NULL;
     }
 
-    if (el && !replace) {
-      el = create$2(el, 'div');
+    if (props && data && !func(data)) {
+      warn('Passing a `data` option should be a function.');
     }
 
-    if (object(extensions)) {
-      extend(instance, extensions);
+    data = func(data) ? data.call(instance) : data;
+    if (props) {
+      data = extend(data || {}, props);
+    }
+    if (data) {
+      instance.$data = data;
     }
 
     if (parent) {
       instance.$parent = parent;
     }
 
-    if (object(methods)) {
-      each$$1(methods, function (value, key) {
-        instance[key] = value;
-      });
-    }
+    extend(instance, methods);
+    extend(instance, extensions);
 
-    data = func(data) ? data.call(instance) : data;
-    if (object(props)) {
-      if (!object(data)) {
-        data = {};
-      }
-      extend(data, props);
-    }
-    if (data) {
-      instance.$data = data;
-    }
-
-    if (object(components)) {
-      instance.$children = [];
-      instance.$components = components;
-    }
-    if (object(directives)) {
-      instance.$directives = directives;
-    }
-    if (object(filters)) {
-      instance.$filters = filters;
-    }
-    if (object(partials)) {
-      instance.$partials = partials;
-    }
+    instance.$children = [];
+    set$3(instance, 'component', components);
+    set$3(instance, 'directive', directives);
+    set$3(instance, 'filter', filters);
+    set$3(instance, 'partial', partials);
 
     if (object(computed)) {
       (function () {
@@ -3699,22 +3722,10 @@ var Yox = function () {
     }
 
     instance.$eventEmitter = new Emitter();
-
-    if (object(events)) {
-      each$$1(events, function (listener, type) {
-        if (func(listener)) {
-          instance.on(type, listener);
-        }
-      });
-    }
+    instance.on(events);
 
     instance.$watchEmitter = new Emitter();
-
-    if (object(watchers)) {
-      each$$1(watchers, function (watcher, keypath) {
-        instance.watch(keypath, watcher);
-      });
-    }
+    instance.watch(watchers);
 
     call(instance, CREATE);
 
@@ -4048,7 +4059,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.14.4';
+Yox.version = '0.14.5';
 
 Yox.switcher = switcher;
 

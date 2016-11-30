@@ -3,6 +3,7 @@ import * as env from '../config/env'
 import * as syntax from '../config/syntax'
 import * as registry from '../config/registry'
 
+import * as is from './is'
 import * as object from './object'
 import * as logger from './logger'
 import * as expression from './expression'
@@ -89,13 +90,19 @@ export function testKeypath(instance, keypath, name) {
 
 }
 
+/**
+ * 获取组件实例上的对象
+ *
+ * 如果实例上没有，再从全局注册找
+ */
 export function get(instance, type, name, silent) {
-  let prop = `$${type}s`
-  if (instance[prop] && object.has(instance[prop], name)) {
-    return instance[prop][name]
+  let result = object.get(instance, `$${type}s.${name}`)
+  if (result) {
+    return result.value
   }
   else {
-    let value = registry[type].get(name)
+    let globalRegistry = registry[type]
+    let value = globalRegistry && globalRegistry.get(name)
     if (value) {
       return value
     }
@@ -105,10 +112,14 @@ export function get(instance, type, name, silent) {
   }
 }
 
+/**
+ * 挂在组件实例上的属性，格式如 this.$refs.name = value
+ */
 export function set(instance, type, name, value) {
-  let prop = `$${type}s`
-  if (!instance[prop]) {
-    instance[prop] = { }
+  if (is.object(name)) {
+    object.set(instance, `$${type}s`, name)
   }
-  instance[prop][name] = value
+  else if (is.string(name)) {
+    object.set(instance, `$${type}s.${name}`, value)
+  }
 }

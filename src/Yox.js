@@ -81,66 +81,63 @@ export default class Yox {
       extensions,
     } = options
 
-    if (is.string(template) && pattern.selector.test(template)) {
-      template = native.find(template).innerHTML
+    // 检查 template
+    if (is.string(template)) {
+      if (pattern.selector.test(template)) {
+        template = native.getContent(template)
+      }
+    }
+    else {
+      template = env.NULL
     }
 
-    if (is.string(el) && pattern.selector.test(el)) {
-      el = native.find(el)
+    // 检查 el
+    if (is.string(el)) {
+      if (pattern.selector.test(el)) {
+        el = native.find(el)
+      }
+    }
+    if (el) {
+      if (native.isElement(el)) {
+        if (!replace) {
+          el = native.create(el)
+        }
+      }
+      else {
+        logger.error('Passing a `el` option must be a html element.')
+      }
     }
 
-    if (el && el.nodeType !== 1) {
-      logger.error('Passing a `el` option must be a html element.')
+    // 检查 props
+    if (props && !is.object(props)) {
+      props = env.NULL
     }
-    if (props && (is.object(data) || is.array(data))) {
-      logger.warn('Passing a `data` option with object and array to component is discouraged.')
-    }
-
-    if (el && !replace) {
-      el = native.create(el, 'div')
+    // 如果传了 props，则 data 应该是个 function
+    if (props && data && !is.func(data)) {
+      logger.warn('Passing a `data` option should be a function.')
     }
 
-    if (is.object(extensions)) {
-      object.extend(instance, extensions)
+    // 检查 data
+    data = is.func(data) ? data.call(instance) : data
+    if (props) {
+      data = object.extend(data || { }, props)
+    }
+    if (data) {
+      instance.$data = data
     }
 
     if (parent) {
       instance.$parent = parent
     }
 
-    if (is.object(methods)) {
-      object.each(
-        methods,
-        function (value, key) {
-          instance[key] = value
-        }
-      )
-    }
+    object.extend(instance, methods)
+    object.extend(instance, extensions)
 
-    data = is.func(data) ? data.call(instance) : data
-    if (is.object(props)) {
-      if (!is.object(data)) {
-        data = { }
-      }
-      object.extend(data, props)
-    }
-    if (data) {
-      instance.$data = data
-    }
-
-    if (is.object(components)) {
-      instance.$children = [ ]
-      instance.$components = components
-    }
-    if (is.object(directives)) {
-      instance.$directives = directives
-    }
-    if (is.object(filters)) {
-      instance.$filters = filters
-    }
-    if (is.object(partials)) {
-      instance.$partials = partials
-    }
+    instance.$children = [ ]
+    component.set(instance, 'component', components)
+    component.set(instance, 'directive', directives)
+    component.set(instance, 'filter', filters)
+    component.set(instance, 'partial', partials)
 
     if (is.object(computed)) {
 
@@ -260,29 +257,11 @@ export default class Yox {
 
     // 监听各种事件
     instance.$eventEmitter = new Emitter()
-
-    if (is.object(events)) {
-      object.each(
-        events,
-        function (listener, type) {
-          if (is.func(listener)) {
-            instance.on(type, listener)
-          }
-        }
-      )
-    }
+    instance.on(events)
 
     // 监听数据变化
     instance.$watchEmitter = new Emitter()
-
-    if (is.object(watchers)) {
-      object.each(
-        watchers,
-        function (watcher, keypath) {
-          instance.watch(keypath, watcher)
-        }
-      )
-    }
+    instance.watch(watchers)
 
     // 准备就绪
     object.call(instance, lifecycle.CREATE)
@@ -650,7 +629,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.14.4'
+Yox.version = '0.14.5'
 
 /**
  * 开关配置

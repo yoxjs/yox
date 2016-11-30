@@ -8,15 +8,16 @@ let {
 } = Array.prototype
 
 export function each(array, callback, reversed) {
+  let { length } = array
   if (reversed) {
-    for (let i = array.length - 1; i >= 0; i--) {
+    for (let i = length - 1; i >= 0; i--) {
       if (callback(array[i], i) === env.FALSE) {
         break
       }
     }
   }
   else {
-    for (let i = 0, len = array.length; i < len; i++) {
+    for (let i = 0; i < length; i++) {
       if (callback(array[i], i) === env.FALSE) {
         break
       }
@@ -44,12 +45,6 @@ export function merge() {
 }
 
 export function toArray(array) {
-  try {
-    'length' in array
-  }
-  catch (e) {
-    return [ ]
-  }
   return is.array(array) ? array : slice.call(array)
 }
 
