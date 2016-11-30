@@ -157,12 +157,15 @@ function isIdentifierPart(charCode) {
  */
 function matchBestToken(content, sortedTokens) {
   let result
-  array.each(sortedTokens, function (token) {
-    if (content.startsWith(token)) {
-      result = token
-      return env.FALSE
+  array.each(
+    sortedTokens,
+    function (token) {
+      if (content.startsWith(token)) {
+        result = token
+        return env.FALSE
+      }
     }
-  })
+  )
   return result
 }
 
@@ -281,9 +284,7 @@ function createCall(callee, args) {
 export function parse(content) {
 
   let { length } = content
-  let index = 0
-  let charCode
-  let value
+  let index = 0, charCode, value
 
   function getChar() {
     return content.charAt(index)
@@ -377,7 +378,7 @@ export function parse(content) {
 
   function parseTuple(delimiter) {
 
-    let args = [], closed
+    let args = [ ], closed
 
     while (index < length) {
       charCode = getCharCode()

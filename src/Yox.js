@@ -97,8 +97,7 @@ export default class Yox {
     }
 
     if (el && !replace) {
-      el.innerHTML = '<div></div>'
-      el = el.firstChild
+      el = native.create(el, 'div')
     }
 
     if (is.object(extensions)) {
@@ -647,7 +646,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.14.2'
+Yox.version = '0.14.3'
 
 /**
  * 开关配置

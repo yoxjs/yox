@@ -757,9 +757,9 @@ function createCall(callee, args) {
 function parse$1(content) {
   var length = content.length;
 
-  var index = 0;
-  var charCode = void 0;
-  var value = void 0;
+  var index = 0,
+      charCode = void 0,
+      value = void 0;
 
   function getChar() {
     return content.charAt(index);
@@ -3018,6 +3018,12 @@ function findElement(selector, context) {
 
 var find = findElement;
 
+function create$2(parent, tagName) {
+  var child = doc.createElement(tagName);
+  parent.appendChild(child);
+  return child;
+}
+
 function on$1(element, type, listener, context) {
   var $emitter = element.$emitter || (element.$emitter = new Emitter());
   if (!$emitter.has(type)) {
@@ -3048,6 +3054,7 @@ function off$1(element, type, listener) {
 
 var native = Object.freeze({
 	find: find,
+	create: create$2,
 	on: on$1,
 	off: off$1
 });
@@ -3276,8 +3283,7 @@ var eventDt = {
 
   onDetach: function onDetach(_ref2) {
     var el = _ref2.el,
-        name = _ref2.name,
-        node = _ref2.node;
+        name = _ref2.name;
 
     var listener = '$' + name;
     if (el[listener]) {
@@ -3562,8 +3568,7 @@ var Yox = function () {
     }
 
     if (el && !replace) {
-      el.innerHTML = '<div></div>';
-      el = el.firstChild;
+      el = create$2(el, 'div');
     }
 
     if (object(extensions)) {
@@ -4039,7 +4044,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.14.2';
+Yox.version = '0.14.3';
 
 Yox.switcher = switcher;
 

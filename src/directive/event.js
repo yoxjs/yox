@@ -20,7 +20,7 @@ export default {
 
   },
 
-  onDetach: function ({ el, name, node }) {
+  onDetach: function ({ el, name }) {
     let listener = `$${name}`
     if (el[listener]) {
       native.off(el, name, el[listener])

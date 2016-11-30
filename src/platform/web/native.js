@@ -1,4 +1,6 @@
 
+import * as env from '../../config/env'
+
 import * as is from '../../util/is'
 import * as array from '../../util/array'
 import * as object from '../../util/object'
@@ -10,6 +12,12 @@ import camelCase from '../../function/camelCase'
 import * as native from './nativeModern'
 
 export let find = native.findElement
+
+export function create(parent, tagName) {
+  let child = env.doc.createElement(tagName)
+  parent.appendChild(child)
+  return child
+}
 
 /**
  * 绑定事件
@@ -55,5 +63,3 @@ export function off(element, type, listener) {
     }
   )
 }
-
-
