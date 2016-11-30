@@ -14,9 +14,8 @@ import * as native from './nativeModern'
 export let find = native.findElement
 
 export function create(parent, tagName) {
-  let child = env.doc.createElement(tagName || 'div')
-  parent.appendChild(child)
-  return child
+  parent.innerHTML = `<${tagName}></${tagName}>`
+  return parent.firstChild
 }
 
 export function getContent(selector) {

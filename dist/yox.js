@@ -3023,9 +3023,8 @@ function findElement(selector, context) {
 var find = findElement;
 
 function create$2(parent, tagName) {
-  var child = doc.createElement(tagName || 'div');
-  parent.appendChild(child);
-  return child;
+  parent.innerHTML = '<' + tagName + '></' + tagName + '>';
+  return parent.firstChild;
 }
 
 function getContent(selector) {
@@ -3581,7 +3580,7 @@ var Yox = function () {
     if (el) {
       if (isElement(el)) {
         if (!replace) {
-          el = create$2(el);
+          el = create$2(el, 'div');
         }
       } else {
         error$1('Passing a `el` option must be a html element.');
@@ -4036,7 +4035,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.15.0';
+Yox.version = '0.15.1';
 
 Yox.switcher = switcher;
 

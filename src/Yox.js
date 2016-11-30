@@ -100,7 +100,7 @@ export default class Yox {
     if (el) {
       if (native.isElement(el)) {
         if (!replace) {
-          el = native.create(el)
+          el = native.create(el, 'div')
         }
       }
       else {
@@ -623,7 +623,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.15.0'
+Yox.version = '0.15.1'
 
 /**
  * 开关配置
