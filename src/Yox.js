@@ -32,13 +32,6 @@ import Store from './util/Store'
 import Event from './util/Event'
 import Emitter from './util/Emitter'
 
-registry.directive.set({
-  ref: refDt,
-  event: eventDt,
-  model: modelDt,
-  component: componentDt,
-})
-
 export default class Yox {
 
   /**
@@ -629,7 +622,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.14.5'
+Yox.version = '0.14.6'
 
 /**
  * 开关配置
@@ -652,31 +645,81 @@ Yox.syntax = syntax
  */
 Yox.cache = cache
 
-// 工具，便于扩展、插件使用
+/**
+ * 工具，便于扩展、插件使用
+ *
+ * @type {Object}
+ */
 Yox.utils = { is, array, object, logger, native, Store, Emitter, Event }
 
+/**
+ * 全局注册组件
+ *
+ * @param {Object|string} id
+ * @param {?Object} value
+ */
 Yox.component = function (id, value) {
   registry.component.set(id, value)
 }
 
+/**
+ * 全局注册指令
+ *
+ * @param {Object|string} id
+ * @param {?Object} value
+ */
 Yox.directive = function (id, value) {
   registry.directive.set(id, value)
 }
 
+/**
+ * 全局注册过滤器
+ *
+ * @param {Object|string} id
+ * @param {?Function} value
+ */
 Yox.filter = function (id, value) {
   registry.filter.set(id, value)
 }
 
+/**
+ * 全局注册子模板
+ *
+ * @param {Object|string} id
+ * @param {?string} value
+ */
 Yox.partial = function (id, value) {
   registry.partial.set(id, value)
 }
 
-Yox.nextTick = function (fn) {
-  nextTask.add(fn)
-}
+/**
+ * 注册下一个时间片执行的函数
+ *
+ * @param {Function} fn
+ */
+Yox.nextTick = nextTask.add
 
+/**
+ * 验证 props
+ *
+ * @param {Object} props 传递的数据
+ * @param {Object} schema 数据格式
+ */
 Yox.validate = validator.validate
 
+/**
+ * 安装插件
+ *
+ * @param {Object} plugin
+ */
 Yox.use = function (plugin) {
   plugin.install(Yox)
 }
+
+// 全局注册内置指令
+Yox.directive({
+  ref: refDt,
+  event: eventDt,
+  model: modelDt,
+  component: componentDt,
+})

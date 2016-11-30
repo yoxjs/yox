@@ -1905,7 +1905,11 @@ function _parse(template, getPartial, setPartial) {
         break;
 
       case IMPORT$1:
-        each$1(getPartial(name).children, function (node) {
+        var partial = getPartial(name);
+        if (string(partial)) {
+          partial = _parse(partial, getPartial, setPartial);
+        }
+        each$1(partial.children, function (node) {
           addChild(node);
         });
         return;
@@ -3543,13 +3547,6 @@ var componentDt = {
 
 };
 
-directive.set({
-  ref: refDt,
-  event: eventDt,
-  model: modelDt,
-  component: componentDt
-});
-
 var Yox = function () {
   function Yox(options) {
     classCallCheck(this, Yox);
@@ -4059,7 +4056,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.14.5';
+Yox.version = '0.14.6';
 
 Yox.switcher = switcher;
 
@@ -4085,15 +4082,20 @@ Yox.partial = function (id, value) {
   partial.set(id, value);
 };
 
-Yox.nextTick = function (fn) {
-  add(fn);
-};
+Yox.nextTick = add;
 
 Yox.validate = validate;
 
 Yox.use = function (plugin) {
   plugin.install(Yox);
 };
+
+Yox.directive({
+  ref: refDt,
+  event: eventDt,
+  model: modelDt,
+  component: componentDt
+});
 
 return Yox;
 
