@@ -256,26 +256,17 @@ export default class Yox {
     instance.$watchEmitter = new Emitter()
     instance.watch(watchers)
 
-    // 准备就绪
     object.call(instance, lifecycle.CREATE)
 
-    // 编译结果
+    // 编译模板
     if (template) {
-      instance.$template = mustache.parse(
-        template,
-        function (name) {
-          return instance.getPartial(name)
-        },
-        function (name, node) {
-          component.set(instance, 'partial', name, node)
-        }
-      )
+      instance.$template = instance.compile(template)
+      object.call(instance, lifecycle.COMPILE)
     }
 
-    object.call(instance, lifecycle.COMPILE)
-
-    // 第一次渲染组件
-    instance.updateView(el)
+    if (el) {
+      instance.updateView(el)
+    }
 
   }
 
@@ -548,6 +539,19 @@ export default class Yox {
     return child
   }
 
+  compile(template) {
+    let instance = this
+    return mustache.parse(
+      template,
+      function (name) {
+        return instance.getPartial(name)
+      },
+      function (name, node) {
+        component.set(instance, 'partial', name, node)
+      }
+    )
+  }
+
   compileAttr(keypath, value) {
     return component.compileAttr(this, keypath, value)
   }
@@ -565,7 +569,8 @@ export default class Yox {
   }
 
   getPartial(name) {
-    return component.get(this, 'partial', name)
+    let partial = component.get(this, 'partial', name)
+    return is.string(partial) ? this.compile(partial) : partial
   }
 
   destroy() {
@@ -622,7 +627,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.14.6'
+Yox.version = '0.14.7'
 
 /**
  * 开关配置

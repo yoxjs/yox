@@ -260,12 +260,8 @@ export function parse(template, getPartial, setPartial) {
         break
 
       case nodeType.IMPORT:
-        let partial = getPartial(name)
-        if (is.string(partial)) {
-          partial = parse(partial, getPartial, setPartial)
-        }
         array.each(
-          partial.children,
+          getPartial(name).children,
           function (node) {
             addChild(node)
           }

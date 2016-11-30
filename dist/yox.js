@@ -999,7 +999,7 @@ function parse$1(content) {
   return expressionParse$$1[content];
 }
 
-function compile(ast) {
+function compile$1(ast) {
 
   var content = void 0;
 
@@ -1254,7 +1254,7 @@ var Node = function () {
   }, {
     key: 'execute',
     value: function execute(context) {
-      var fn = compile(this.expr);
+      var fn = compile$1(this.expr);
 
       return fn.apply(NULL, fn.$arguments.map(function (name) {
         return context.get(name);
@@ -1905,11 +1905,7 @@ function _parse(template, getPartial, setPartial) {
         break;
 
       case IMPORT$1:
-        var partial = getPartial(name);
-        if (string(partial)) {
-          partial = _parse(partial, getPartial, setPartial);
-        }
-        each$1(partial.children, function (node) {
+        each$1(getPartial(name).children, function (node) {
           addChild(node);
         });
         return;
@@ -3727,16 +3723,13 @@ var Yox = function () {
     call(instance, CREATE);
 
     if (template) {
-      instance.$template = _parse(template, function (name) {
-        return instance.getPartial(name);
-      }, function (name, node) {
-        set$3(instance, 'partial', name, node);
-      });
+      instance.$template = instance.compile(template);
+      call(instance, COMPILE);
     }
 
-    call(instance, COMPILE);
-
-    instance.updateView(el);
+    if (el) {
+      instance.updateView(el);
+    }
   }
 
   createClass(Yox, [{
@@ -3986,6 +3979,16 @@ var Yox = function () {
       return child;
     }
   }, {
+    key: 'compile',
+    value: function compile(template) {
+      var instance = this;
+      return _parse(template, function (name) {
+        return instance.getPartial(name);
+      }, function (name, node) {
+        set$3(instance, 'partial', name, node);
+      });
+    }
+  }, {
     key: 'compileAttr',
     value: function compileAttr(keypath, value) {
       return compileAttr$1(this, keypath, value);
@@ -4008,7 +4011,8 @@ var Yox = function () {
   }, {
     key: 'getPartial',
     value: function getPartial(name) {
-      return get$3(this, 'partial', name);
+      var partial$$1 = get$3(this, 'partial', name);
+      return string(partial$$1) ? this.compile(partial$$1) : partial$$1;
     }
   }, {
     key: 'destroy',
@@ -4056,7 +4060,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.14.6';
+Yox.version = '0.14.7';
 
 Yox.switcher = switcher;
 
