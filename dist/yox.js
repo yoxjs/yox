@@ -977,7 +977,7 @@ function parse$1(content) {
   return expressionParse$$1[content];
 }
 
-function compile$1(ast) {
+function compile(ast) {
 
   var content = void 0;
 
@@ -1232,7 +1232,7 @@ var Node = function () {
   }, {
     key: 'execute',
     value: function execute(context) {
-      var fn = compile$1(this.expr);
+      var fn = compile(this.expr);
 
       return fn.apply(NULL, fn.$arguments.map(function (name) {
         return context.get(name);
@@ -2214,7 +2214,7 @@ var Event = function () {
   return Event;
 }();
 
-function compileAttr$1(instance, keypath, value) {
+function compileValue$1(instance, keypath, value) {
   if (value.indexOf('(') > 0) {
     var _ret = function () {
       var ast = parse$1(value);
@@ -3281,7 +3281,7 @@ var eventDt = {
         instance = _ref.instance;
 
 
-    var listener = instance.compileAttr(node.keypath, node.getValue());
+    var listener = instance.compileValue(node.keypath, node.getValue());
     if (listener) {
       var $component = el.$component;
 
@@ -3533,8 +3533,6 @@ var Yox = function () {
 
     var instance = this;
 
-    instance.$options = options;
-
     execute$1(options[BEFORE_CREATE], instance, options);
 
     var el = options.el,
@@ -3552,6 +3550,8 @@ var Yox = function () {
         methods = options.methods,
         partials = options.partials,
         extensions = options.extensions;
+
+    instance.$options = options;
 
     instance.$eventEmitter = new Emitter();
     instance.on(events);
@@ -3610,11 +3610,12 @@ var Yox = function () {
     extend(instance, methods);
     extend(instance, extensions);
 
-    instance.$children = [];
     set$3(instance, 'component', components);
     set$3(instance, 'directive', directives);
     set$3(instance, 'filter', filters);
     set$3(instance, 'partial', partials);
+
+    instance.$children = [];
 
     if (object(computed)) {
       (function () {
@@ -3706,7 +3707,7 @@ var Yox = function () {
 
     if (el && template) {
       execute$1(options[BEFORE_MOUNT], instance);
-      instance.$template = instance.compile(template);
+      instance.$template = instance.compileTemplate(template);
       instance.updateView(el);
     }
   }
@@ -3747,13 +3748,11 @@ var Yox = function () {
       var instance = this;
       if (instance.updateModel(model) && instance.$currentNode) {
         if (sync$1) {
-          execute$1(instance.$options[BEFORE_UPDATE], instance);
           instance.updateView();
         } else if (!instance.$syncing) {
           instance.$syncing = TRUE;
           add(function () {
             delete instance.$syncing;
-            execute$1(instance.$options[BEFORE_UPDATE], instance);
             instance.updateView();
           });
         }
@@ -3907,6 +3906,10 @@ var Yox = function () {
 
       var instance = this;
 
+      if (!el) {
+        execute$1(instance.$options[BEFORE_UPDATE], instance);
+      }
+
       var $data = instance.$data,
           $filters = instance.$filters,
           $template = instance.$template,
@@ -3954,8 +3957,8 @@ var Yox = function () {
       return child;
     }
   }, {
-    key: 'compile',
-    value: function compile(template) {
+    key: 'compileTemplate',
+    value: function compileTemplate(template) {
       var instance = this;
       return _parse(template, function (name) {
         return instance.getPartial(name);
@@ -3964,9 +3967,9 @@ var Yox = function () {
       });
     }
   }, {
-    key: 'compileAttr',
-    value: function compileAttr(keypath, value) {
-      return compileAttr$1(this, keypath, value);
+    key: 'compileValue',
+    value: function compileValue(keypath, value) {
+      return compileValue$1(this, keypath, value);
     }
   }, {
     key: 'getComponent',
@@ -3987,7 +3990,7 @@ var Yox = function () {
     key: 'getPartial',
     value: function getPartial(name) {
       var partial$$1 = get$3(this, 'partial', name);
-      return string(partial$$1) ? this.compile(partial$$1) : partial$$1;
+      return string(partial$$1) ? this.compileTemplate(partial$$1) : partial$$1;
     }
   }, {
     key: 'destroy',
@@ -4005,29 +4008,30 @@ var Yox = function () {
           $eventEmitter = instance.$eventEmitter;
 
 
-      if ($children) {
-        each$1($children, function (child) {
-          child.destroy();
-        }, TRUE);
-      }
+      each$1($children, function (child) {
+        child.destroy();
+      }, TRUE);
 
       if ($parent && $parent.$children) {
         remove$1($parent.$children, instance);
       }
 
-      $watchEmitter.off();
-      $eventEmitter.off();
-
-      if (removed !== TRUE && $currentNode) {
-        patch($currentNode, { text: '' });
-      }
-
       if ($el) {
         delete instance.$el;
       }
+
       if ($currentNode) {
+        if (removed !== TRUE) {
+          patch($currentNode, { text: '' });
+        }
         delete instance.$currentNode;
       }
+
+      $watchEmitter.off();
+      $eventEmitter.off();
+
+      delete instance.$watchEmitter;
+      delete instance.$eventEmitter;
 
       execute$1(instance.$options[AFTER_DESTROY], instance);
     }
@@ -4035,7 +4039,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.15.1';
+Yox.version = '0.16.0';
 
 Yox.switcher = switcher;
 

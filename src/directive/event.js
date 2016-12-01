@@ -6,7 +6,7 @@ export default {
 
   attach: function({ el, name, node, instance }) {
 
-    let listener = instance.compileAttr(node.keypath, node.getValue())
+    let listener = instance.compileValue(node.keypath, node.getValue())
     if (listener) {
       let { $component } = el
       if ($component) {

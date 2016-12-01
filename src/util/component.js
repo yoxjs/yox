@@ -14,7 +14,7 @@ import {
   stringify,
 } from './keypath'
 
-export function compileAttr(instance, keypath, value) {
+export function compileValue(instance, keypath, value) {
   if (value.indexOf('(') > 0) {
     let ast = expression.parse(value)
     if (ast.type === expression.CALL) {

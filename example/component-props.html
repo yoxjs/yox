@@ -25,6 +25,30 @@
                 increase: function () {
                     this.fire('increase');
                 }
+            },
+            beforeCreate: function (options) {
+                console.log('    beforeCreate', options);
+            },
+            afterCreate: function () {
+                console.log('    afterCreate');
+            },
+            beforeMount: function () {
+                console.log('    beforeMount');
+            },
+            afterMount: function () {
+                console.log('    afterMount');
+            },
+            beforeUpdate: function () {
+                console.log('    beforeUpdate');
+            },
+            afterUpdate: function () {
+                console.log('    afterUpdate');
+            },
+            beforeDestroy: function () {
+                console.log('    beforeDestroy');
+            },
+            afterDestroy: function () {
+                console.log('    afterDestroy');
             }
         };
 
@@ -48,6 +72,30 @@
                 increase: function (e) {
                     this.increase('user.age')
                 },
+            },
+            beforeCreate: function (options) {
+                console.log('beforeCreate', options);
+            },
+            afterCreate: function () {
+                console.log('afterCreate');
+            },
+            beforeMount: function () {
+                console.log('beforeMount');
+            },
+            afterMount: function () {
+                console.log('afterMount');
+            },
+            beforeUpdate: function () {
+                console.log('beforeUpdate');
+            },
+            afterUpdate: function () {
+                console.log('afterUpdate');
+            },
+            beforeDestroy: function () {
+                console.log('beforeDestroy');
+            },
+            afterDestroy: function () {
+                console.log('afterDestroy');
             }
         });
 

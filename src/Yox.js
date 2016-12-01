@@ -133,11 +133,12 @@ export default class Yox {
     object.extend(instance, methods)
     object.extend(instance, extensions)
 
-    instance.$children = [ ]
     component.set(instance, 'component', components)
     component.set(instance, 'directive', directives)
     component.set(instance, 'filter', filters)
     component.set(instance, 'partial', partials)
+
+    instance.$children = [ ]
 
     if (is.object(computed)) {
 
@@ -257,7 +258,7 @@ export default class Yox {
 
     if (el && template) {
       execute(options[lifecycle.BEFORE_MOUNT], instance)
-      instance.$template = instance.compile(template)
+      instance.$template = instance.compileTemplate(template)
       instance.updateView(el)
     }
 
@@ -299,14 +300,12 @@ export default class Yox {
     let instance = this
     if (instance.updateModel(model) && instance.$currentNode) {
       if (switcher.sync) {
-        execute(instance.$options[lifecycle.BEFORE_UPDATE], instance)
         instance.updateView()
       }
       else if (!instance.$syncing) {
         instance.$syncing = env.TRUE
         nextTask.add(function () {
           delete instance.$syncing
-          execute(instance.$options[lifecycle.BEFORE_UPDATE], instance)
           instance.updateView()
         })
       }
@@ -475,6 +474,10 @@ export default class Yox {
 
     let instance = this
 
+    if (!el) {
+      execute(instance.$options[lifecycle.BEFORE_UPDATE], instance)
+    }
+
     let {
       $data,
       $filters,
@@ -535,7 +538,7 @@ export default class Yox {
     return child
   }
 
-  compile(template) {
+  compileTemplate(template) {
     let instance = this
     return mustache.parse(
       template,
@@ -548,8 +551,8 @@ export default class Yox {
     )
   }
 
-  compileAttr(keypath, value) {
-    return component.compileAttr(this, keypath, value)
+  compileValue(keypath, value) {
+    return component.compileValue(this, keypath, value)
   }
 
   getComponent(name) {
@@ -566,7 +569,7 @@ export default class Yox {
 
   getPartial(name) {
     let partial = component.get(this, 'partial', name)
-    return is.string(partial) ? this.compile(partial) : partial
+    return is.string(partial) ? this.compileTemplate(partial) : partial
   }
 
   destroy(removed) {
@@ -584,33 +587,34 @@ export default class Yox {
       $eventEmitter,
     } = instance
 
-    if ($children) {
-      array.each(
-        $children,
-        function (child) {
-          child.destroy()
-        },
-        env.TRUE
-      )
-    }
+    array.each(
+      $children,
+      function (child) {
+        child.destroy()
+      },
+      env.TRUE
+    )
 
     if ($parent && $parent.$children) {
       array.remove($parent.$children, instance)
     }
 
-    $watchEmitter.off()
-    $eventEmitter.off()
-
-    if (removed !== env.TRUE && $currentNode) {
-      vdom.patch($currentNode, { text: '' })
-    }
-
     if ($el) {
       delete instance.$el
     }
+
     if ($currentNode) {
+      if (removed !== env.TRUE) {
+        vdom.patch($currentNode, { text: '' })
+      }
       delete instance.$currentNode
     }
+
+    $watchEmitter.off()
+    $eventEmitter.off()
+
+    delete instance.$watchEmitter
+    delete instance.$eventEmitter
 
     execute(instance.$options[lifecycle.AFTER_DESTROY], instance)
 
@@ -623,7 +627,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.15.1'
+Yox.version = '0.16.0'
 
 /**
  * 开关配置
