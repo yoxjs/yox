@@ -138,8 +138,6 @@ export default class Yox {
     component.set(instance, 'filter', filters)
     component.set(instance, 'partial', partials)
 
-    instance.$children = [ ]
-
     if (is.object(computed)) {
 
       // 把计算属性拆为 getter 和 setter
@@ -361,7 +359,7 @@ export default class Yox {
 
     let { $parent, $eventEmitter } = instance
     let done = $eventEmitter.fire(type, event, instance)
-    if (done && !noBubble && $parent) {
+    if (done && $parent && !noBubble) {
       done = $parent.fire(type, event)
     }
 
@@ -410,10 +408,7 @@ export default class Yox {
       $computedSetters,
     } = instance
 
-    let hasComputed = is.object($computedWatchers),
-      changes = { },
-      setter,
-      oldValue
+    let changes = { }, setter, oldValue
 
     object.each(
       model,
@@ -423,7 +418,7 @@ export default class Yox {
 
           changes[key] = [ value, oldValue ]
 
-          if (hasComputed && is.array($computedWatchers[key])) {
+          if ($computedWatchers && is.array($computedWatchers[key])) {
             array.each(
               $computedWatchers[key],
               function (watcher) {
@@ -435,7 +430,7 @@ export default class Yox {
           }
 
           // 计算属性优先
-          if (hasComputed) {
+          if ($computedSetters) {
             setter = $computedSetters[key]
             if (setter) {
               setter(value)
@@ -534,7 +529,8 @@ export default class Yox {
     options = object.extend({ }, options, extra)
     options.parent = this
     let child = new Yox(options)
-    this.$children.push(child)
+    let children = this.$children || (this.$children = [ ])
+    children.push(child)
     return child
   }
 
@@ -576,10 +572,9 @@ export default class Yox {
 
     let instance = this
 
-    execute(instance.$options[lifecycle.BEFORE_DESTROY], instance)
-
     let {
       $el,
+      $options,
       $parent,
       $children,
       $currentNode,
@@ -587,16 +582,22 @@ export default class Yox {
       $eventEmitter,
     } = instance
 
-    array.each(
-      $children,
-      function (child) {
-        child.destroy()
-      },
-      env.TRUE
-    )
+    execute($options[lifecycle.BEFORE_DESTROY], instance)
+
+    if ($children) {
+      array.each(
+        $children,
+        function (child) {
+          child.destroy()
+        },
+        env.TRUE
+      )
+      delete instance.$children
+    }
 
     if ($parent && $parent.$children) {
       array.remove($parent.$children, instance)
+      delete instance.$parent
     }
 
     if ($el) {
@@ -616,7 +617,9 @@ export default class Yox {
     delete instance.$watchEmitter
     delete instance.$eventEmitter
 
-    execute(instance.$options[lifecycle.AFTER_DESTROY], instance)
+    execute($options[lifecycle.AFTER_DESTROY], instance)
+
+    delete instance.$options
 
   }
 
@@ -627,7 +630,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.16.0'
+Yox.version = '0.16.1'
 
 /**
  * 开关配置

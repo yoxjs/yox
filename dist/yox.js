@@ -3615,8 +3615,6 @@ var Yox = function () {
     set$3(instance, 'filter', filters);
     set$3(instance, 'partial', partials);
 
-    instance.$children = [];
-
     if (object(computed)) {
       (function () {
         var $computedGetters = instance.$computedGetters = {};
@@ -3810,7 +3808,7 @@ var Yox = function () {
           $eventEmitter = instance.$eventEmitter;
 
       var done = $eventEmitter.fire(type, event, instance);
-      if (done && !noBubble && $parent) {
+      if (done && $parent && !noBubble) {
         done = $parent.fire(type, event);
       }
 
@@ -3860,8 +3858,7 @@ var Yox = function () {
           $computedSetters = instance.$computedSetters;
 
 
-      var hasComputed = object($computedWatchers),
-          changes = {},
+      var changes = {},
           setter = void 0,
           oldValue = void 0;
 
@@ -3871,7 +3868,7 @@ var Yox = function () {
 
           changes[key] = [value, oldValue];
 
-          if (hasComputed && array($computedWatchers[key])) {
+          if ($computedWatchers && array($computedWatchers[key])) {
             each$1($computedWatchers[key], function (watcher) {
               if (has$1($computedCache, watcher)) {
                 delete $computedCache[watcher];
@@ -3879,7 +3876,7 @@ var Yox = function () {
             });
           }
 
-          if (hasComputed) {
+          if ($computedSetters) {
             setter = $computedSetters[key];
             if (setter) {
               setter(value);
@@ -3953,7 +3950,8 @@ var Yox = function () {
       options = extend({}, options, extra);
       options.parent = this;
       var child = new Yox(options);
-      this.$children.push(child);
+      var children = this.$children || (this.$children = []);
+      children.push(child);
       return child;
     }
   }, {
@@ -3998,9 +3996,8 @@ var Yox = function () {
 
       var instance = this;
 
-      execute$1(instance.$options[BEFORE_DESTROY], instance);
-
       var $el = instance.$el,
+          $options = instance.$options,
           $parent = instance.$parent,
           $children = instance.$children,
           $currentNode = instance.$currentNode,
@@ -4008,12 +4005,18 @@ var Yox = function () {
           $eventEmitter = instance.$eventEmitter;
 
 
-      each$1($children, function (child) {
-        child.destroy();
-      }, TRUE);
+      execute$1($options[BEFORE_DESTROY], instance);
+
+      if ($children) {
+        each$1($children, function (child) {
+          child.destroy();
+        }, TRUE);
+        delete instance.$children;
+      }
 
       if ($parent && $parent.$children) {
         remove$1($parent.$children, instance);
+        delete instance.$parent;
       }
 
       if ($el) {
@@ -4033,13 +4036,15 @@ var Yox = function () {
       delete instance.$watchEmitter;
       delete instance.$eventEmitter;
 
-      execute$1(instance.$options[AFTER_DESTROY], instance);
+      execute$1($options[AFTER_DESTROY], instance);
+
+      delete instance.$options;
     }
   }]);
   return Yox;
 }();
 
-Yox.version = '0.16.0';
+Yox.version = '0.16.1';
 
 Yox.switcher = switcher;
 
