@@ -1076,8 +1076,8 @@ var Context = function () {
     var instance = this;
     instance.data = data;
     instance.parent = parent;
-    instance.cache = {};
-    instance.cache[THIS_ARG] = data;
+    var cache = instance.cache = {};
+    cache[THIS_ARG] = data;
   }
 
   createClass(Context, [{
@@ -1094,16 +1094,7 @@ var Context = function () {
       if (has$1(cache, keypath)) {
         delete cache[keypath];
       }
-      if (keypath.indexOf('.') > 0) {
-        var terms = keypath.split('.');
-        var prop = terms.pop();
-        var result = get$1(data, terms.join('.'));
-        if (result) {
-          result.value[prop] = value;
-        }
-      } else {
-        data[keypath] = value;
-      }
+      set$1(data, keypath, value);
     }
   }, {
     key: 'get',
@@ -3903,16 +3894,17 @@ var Yox = function () {
 
       var instance = this;
 
-      if (!el) {
-        execute$1(instance.$options[BEFORE_UPDATE], instance);
-      }
-
       var $data = instance.$data,
+          $options = instance.$options,
           $filters = instance.$filters,
           $template = instance.$template,
           $currentNode = instance.$currentNode,
           $computedGetters = instance.$computedGetters;
 
+
+      if (!el) {
+        execute$1($options[BEFORE_UPDATE], instance);
+      }
 
       var context = {};
 
@@ -3942,7 +3934,7 @@ var Yox = function () {
       }
 
       instance.$currentNode = $currentNode;
-      execute$1(instance.$options[afterHook], instance);
+      execute$1($options[afterHook], instance);
     }
   }, {
     key: 'create',
@@ -4044,7 +4036,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.16.1';
+Yox.version = '0.16.2';
 
 Yox.switcher = switcher;
 

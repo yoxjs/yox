@@ -12,8 +12,8 @@ export default class Context {
     let instance = this
     instance.data = data
     instance.parent = parent
-    instance.cache = {}
-    instance.cache[expression.THIS_ARG] = data
+    let cache = instance.cache = { }
+    cache[expression.THIS_ARG] = data
   }
 
   push(data) {
@@ -25,17 +25,7 @@ export default class Context {
     if (object.has(cache, keypath)) {
       delete cache[keypath]
     }
-    if (keypath.indexOf('.') > 0) {
-      let terms = keypath.split('.')
-      let prop = terms.pop()
-      let result = object.get(data, terms.join('.'))
-      if (result) {
-        result.value[prop] = value
-      }
-    }
-    else {
-      data[keypath] = value
-    }
+    object.set(data, keypath, value)
   }
 
   get(keypath) {

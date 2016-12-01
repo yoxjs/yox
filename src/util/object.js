@@ -107,7 +107,7 @@ export function set(object, keypath, value, autoFill = env.TRUE) {
           object = object[item]
         }
         else if (autoFill) {
-          object = object[item] = {}
+          object = object[item] = { }
         }
         else {
           object = env.NULL

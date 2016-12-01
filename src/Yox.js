@@ -469,17 +469,18 @@ export default class Yox {
 
     let instance = this
 
-    if (!el) {
-      execute(instance.$options[lifecycle.BEFORE_UPDATE], instance)
-    }
-
     let {
       $data,
+      $options,
       $filters,
       $template,
       $currentNode,
       $computedGetters,
     } = instance
+
+    if (!el) {
+      execute($options[lifecycle.BEFORE_UPDATE], instance)
+    }
 
     let context = { }
 
@@ -521,7 +522,7 @@ export default class Yox {
     }
 
     instance.$currentNode = $currentNode
-    execute(instance.$options[afterHook], instance)
+    execute($options[afterHook], instance)
 
   }
 
@@ -630,7 +631,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.16.1'
+Yox.version = '0.16.2'
 
 /**
  * 开关配置
