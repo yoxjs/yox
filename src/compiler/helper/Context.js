@@ -1,6 +1,6 @@
 
+import * as env from '../../config/env'
 import * as object from '../../util/object'
-import * as expression from '../../util/expression'
 
 export default class Context {
 
@@ -13,7 +13,7 @@ export default class Context {
     instance.data = data
     instance.parent = parent
     let cache = instance.cache = { }
-    cache[expression.THIS_ARG] = data
+    cache[env.THIS] = data
   }
 
   push(data) {

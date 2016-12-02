@@ -22,8 +22,6 @@ export const BINARY = 7
 export const CONDITIONAL = 8
 export const CALL = 9
 
-export const THIS_ARG = '$_$'
-
 // 分隔符
 const COMMA  = 44 // ,
 const SEMCOL = 59 // ;
@@ -573,14 +571,13 @@ export function parse(content) {
 
   }
 
-  let { expressionParse } = cache
-  if (!expressionParse[content]) {
+  if (!cache.expressionParse[content]) {
     let node = parseExpression()
     node.$raw = content
-    expressionParse[content] = node
+    cache.expressionParse[content] = node
   }
 
-  return expressionParse[content]
+  return cache.expressionParse[content]
 
 }
 
@@ -621,14 +618,14 @@ export function compile(ast) {
           }
           else if (node.type === THIS) {
             hasThis = env.TRUE
-            args.push(THIS_ARG)
+            args.push(env.THIS)
           }
         }
       }
     )
 
     if (hasThis) {
-      content = content.replace(/\bthis\b/, THIS_ARG)
+      content = content.replace(/\bthis\b/, env.THIS)
     }
 
     let fn = new Function(args.join(', '), `return ${content}`)

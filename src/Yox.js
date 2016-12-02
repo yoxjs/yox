@@ -617,10 +617,9 @@ export default class Yox {
 
     delete instance.$watchEmitter
     delete instance.$eventEmitter
+    delete instance.$options
 
     execute($options[lifecycle.AFTER_DESTROY], instance)
-
-    delete instance.$options
 
   }
 
@@ -631,7 +630,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.16.2'
+Yox.version = '0.16.3'
 
 /**
  * 开关配置

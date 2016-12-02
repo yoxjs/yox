@@ -9,6 +9,8 @@ var FALSE = false;
 var NULL = null;
 var UNDEFINED = undefined;
 
+var THIS = '$this';
+
 
 
 var doc = document;
@@ -195,7 +197,7 @@ function last(array$$1) {
   return array$$1[array$$1.length - 1];
 }
 
-function remove$1(array$$1, item, strict) {
+function remove(array$$1, item, strict) {
   var index = indexOf(array$$1, item, strict);
   if (index >= 0) {
     array$$1.splice(index, 1);
@@ -211,7 +213,7 @@ var array$1 = Object.freeze({
 	indexOf: indexOf,
 	has: has$2,
 	last: last,
-	remove: remove$1
+	remove: remove
 });
 
 function keys(object$$1) {
@@ -540,6 +542,127 @@ var ATTRIBUTE = 11;
 
 var TEXT = 12;
 
+var Context = function () {
+  function Context(data, parent) {
+    classCallCheck(this, Context);
+
+    var instance = this;
+    instance.data = data;
+    instance.parent = parent;
+    var cache = instance.cache = {};
+    cache[THIS] = data;
+  }
+
+  createClass(Context, [{
+    key: 'push',
+    value: function push(data) {
+      return new Context(data, this);
+    }
+  }, {
+    key: 'set',
+    value: function set(keypath, value) {
+      var data = this.data,
+          cache = this.cache;
+
+      if (has$1(cache, keypath)) {
+        delete cache[keypath];
+      }
+      set$1(data, keypath, value);
+    }
+  }, {
+    key: 'get',
+    value: function get(keypath) {
+
+      var instance = this;
+      var _instance = instance,
+          cache = _instance.cache;
+
+      if (!has$1(cache, keypath)) {
+        var result = void 0;
+        while (instance) {
+          result = get$1(instance.data, keypath);
+          if (result) {
+            cache[keypath] = result.value;
+            break;
+          } else {
+            instance = instance.parent;
+          }
+        }
+      }
+
+      return cache[keypath];
+    }
+  }]);
+  return Context;
+}();
+
+var Scanner = function () {
+  function Scanner(str) {
+    classCallCheck(this, Scanner);
+
+    this.reset(str);
+  }
+
+  createClass(Scanner, [{
+    key: 'reset',
+    value: function reset(str) {
+      this.pos = 0;
+      this.tail = str;
+    }
+  }, {
+    key: 'hasNext',
+    value: function hasNext() {
+      return this.tail;
+    }
+  }, {
+    key: 'nextAfter',
+    value: function nextAfter(pattern) {
+      var tail = this.tail;
+
+      var matches = tail.match(pattern);
+      if (!matches || matches.index) {
+        return '';
+      }
+      var result = matches[0];
+      this.forward(result.length);
+      return result;
+    }
+  }, {
+    key: 'nextBefore',
+    value: function nextBefore(pattern) {
+      var pos = this.pos,
+          tail = this.tail;
+
+      var matches = tail.match(pattern);
+      if (matches) {
+        var index = matches.index;
+
+        if (!index) {
+          return '';
+        }
+        var result = tail.substr(0, index);
+        this.forward(index);
+        return result;
+      } else {
+        this.forward(tail.length);
+        return tail;
+      }
+    }
+  }, {
+    key: 'forward',
+    value: function forward(offset) {
+      this.pos += offset;
+      this.tail = this.tail.slice(offset);
+    }
+  }, {
+    key: 'charAt',
+    value: function charAt(index) {
+      return this.tail[index];
+    }
+  }]);
+  return Scanner;
+}();
+
 var hasConsole = typeof console !== 'undefined';
 
 function warn(msg) {
@@ -562,14 +685,12 @@ var logger = Object.freeze({
 var LITERAL = 1;
 var ARRAY = 2;
 var IDENTIFIER = 3;
-var THIS = 4;
+var THIS$1 = 4;
 var MEMBER = 5;
 var UNARY = 6;
 var BINARY = 7;
 var CONDITIONAL = 8;
 var CALL = 9;
-
-var THIS_ARG = '$_$';
 
 var COMMA = 44;
 var PERIOD = 46;
@@ -702,7 +823,7 @@ function createIdentifier(name) {
 
 function createThis() {
   return {
-    type: THIS
+    type: THIS$1
   };
 }
 
@@ -966,15 +1087,13 @@ function parse$1(content) {
     return test;
   }
 
-  var expressionParse$$1 = expressionParse;
-
-  if (!expressionParse$$1[content]) {
+  if (!expressionParse[content]) {
     var node = parseExpression();
     node.$raw = content;
-    expressionParse$$1[content] = node;
+    expressionParse[content] = node;
   }
 
-  return expressionParse$$1[content];
+  return expressionParse[content];
 }
 
 function compile(ast) {
@@ -1000,15 +1119,15 @@ function compile(ast) {
         enter: function enter(node) {
           if (node.type === IDENTIFIER) {
             args.push(node.name);
-          } else if (node.type === THIS) {
+          } else if (node.type === THIS$1) {
             hasThis = TRUE;
-            args.push(THIS_ARG);
+            args.push(THIS);
           }
         }
       });
 
       if (hasThis) {
-        content = content.replace(/\bthis\b/, THIS_ARG);
+        content = content.replace(/\bthis\b/, THIS);
       }
 
       var fn = new Function(args.join(', '), 'return ' + content);
@@ -1068,127 +1187,6 @@ function traverse(ast) {
     options.leave(ast);
   }
 }
-
-var Context = function () {
-  function Context(data, parent) {
-    classCallCheck(this, Context);
-
-    var instance = this;
-    instance.data = data;
-    instance.parent = parent;
-    var cache = instance.cache = {};
-    cache[THIS_ARG] = data;
-  }
-
-  createClass(Context, [{
-    key: 'push',
-    value: function push(data) {
-      return new Context(data, this);
-    }
-  }, {
-    key: 'set',
-    value: function set(keypath, value) {
-      var data = this.data,
-          cache = this.cache;
-
-      if (has$1(cache, keypath)) {
-        delete cache[keypath];
-      }
-      set$1(data, keypath, value);
-    }
-  }, {
-    key: 'get',
-    value: function get(keypath) {
-
-      var instance = this;
-      var _instance = instance,
-          cache = _instance.cache;
-
-      if (!has$1(cache, keypath)) {
-        var result = void 0;
-        while (instance) {
-          result = get$1(instance.data, keypath);
-          if (result) {
-            cache[keypath] = result.value;
-            break;
-          } else {
-            instance = instance.parent;
-          }
-        }
-      }
-
-      return cache[keypath];
-    }
-  }]);
-  return Context;
-}();
-
-var Scanner = function () {
-  function Scanner(str) {
-    classCallCheck(this, Scanner);
-
-    this.reset(str);
-  }
-
-  createClass(Scanner, [{
-    key: 'reset',
-    value: function reset(str) {
-      this.pos = 0;
-      this.tail = str;
-    }
-  }, {
-    key: 'hasNext',
-    value: function hasNext() {
-      return this.tail;
-    }
-  }, {
-    key: 'nextAfter',
-    value: function nextAfter(pattern) {
-      var tail = this.tail;
-
-      var matches = tail.match(pattern);
-      if (!matches || matches.index) {
-        return '';
-      }
-      var result = matches[0];
-      this.forward(result.length);
-      return result;
-    }
-  }, {
-    key: 'nextBefore',
-    value: function nextBefore(pattern) {
-      var pos = this.pos,
-          tail = this.tail;
-
-      var matches = tail.match(pattern);
-      if (matches) {
-        var index = matches.index;
-
-        if (!index) {
-          return '';
-        }
-        var result = tail.substr(0, index);
-        this.forward(index);
-        return result;
-      } else {
-        this.forward(tail.length);
-        return tail;
-      }
-    }
-  }, {
-    key: 'forward',
-    value: function forward(offset) {
-      this.pos += offset;
-      this.tail = this.tail.slice(offset);
-    }
-  }, {
-    key: 'charAt',
-    value: function charAt(index) {
-      return this.tail[index];
-    }
-  }]);
-  return Scanner;
-}();
 
 var Node = function () {
   function Node(hasChildren) {
@@ -1805,11 +1803,9 @@ function render$1(ast, data) {
 }
 
 function _parse(template, getPartial, setPartial) {
-  var templateParse$$1 = templateParse;
 
-
-  if (templateParse$$1[template]) {
-    return templateParse$$1[template];
+  if (templateParse[template]) {
+    return templateParse[template];
   }
 
   var mainScanner = new Scanner(template),
@@ -2035,20 +2031,18 @@ function _parse(template, getPartial, setPartial) {
     return parseError(template, 'Missing end tag (</' + nodeStack[0].name + '>)', errorIndex);
   }
 
-  templateParse$$1[template] = rootNode;
+  templateParse[template] = rootNode;
 
   return rootNode;
 }
 
 function normalize(keypath) {
-  var keypathNormalize$$1 = keypathNormalize;
 
-
-  if (!keypathNormalize$$1[keypath]) {
-    keypathNormalize$$1[keypath] = keypath.indexOf('[') < 0 ? keypath : stringify(parse$1(keypath));
+  if (!keypathNormalize[keypath]) {
+    keypathNormalize[keypath] = keypath.indexOf('[') < 0 ? keypath : stringify(parse$1(keypath));
   }
 
-  return keypathNormalize$$1[keypath];
+  return keypathNormalize[keypath];
 }
 
 function stringify(node) {
@@ -2068,10 +2062,8 @@ function stringify(node) {
 }
 
 function getWildcardMatches(keypath) {
-  var keypathWildcardMatches$$1 = keypathWildcardMatches;
 
-
-  if (!keypathWildcardMatches$$1[keypath]) {
+  if (!keypathWildcardMatches[keypath]) {
     (function () {
       var result = [];
       var terms = normalize(keypath).split('.');
@@ -2081,11 +2073,11 @@ function getWildcardMatches(keypath) {
       each$1(getBoolCombinations(terms.length), function (items) {
         result.push(items.map(toWildcard).join('.'));
       });
-      keypathWildcardMatches$$1[keypath] = result;
+      keypathWildcardMatches[keypath] = result;
     })();
   }
 
-  return keypathWildcardMatches$$1[keypath];
+  return keypathWildcardMatches[keypath];
 }
 
 function getWildcardNames(keypath, wildcardKeypath) {
@@ -2938,7 +2930,7 @@ var Emitter = function () {
           if (listener == NULL) {
             list.length = 0;
           } else {
-            remove$1(list, listener);
+            remove(list, listener);
           }
         }
       }
@@ -3209,7 +3201,7 @@ function create$1(node, instance) {
               postpatch: function postpatch(oldNode, vnode) {
                 notify(vnode, 'update');
               },
-              remove: function remove(vnode) {
+              destroy: function destroy(vnode) {
                 notify(vnode, 'detach');
               }
             };
@@ -3380,7 +3372,7 @@ var controlTypes = {
         if (el.checked) {
           value.push(el.value);
         } else {
-          remove$1(value, el.value, FALSE);
+          remove(value, el.value, FALSE);
         }
         instance.set(keypath, copy(value));
       } else {
@@ -3676,7 +3668,7 @@ var Yox = function () {
               });
 
               each$1(removedDeps, function (dep) {
-                remove$1($computedWatchers[dep], keypath);
+                remove($computedWatchers[dep], keypath);
               });
 
               $computedCache[keypath] = result;
@@ -4007,7 +3999,7 @@ var Yox = function () {
       }
 
       if ($parent && $parent.$children) {
-        remove$1($parent.$children, instance);
+        remove($parent.$children, instance);
         delete instance.$parent;
       }
 
@@ -4027,16 +4019,15 @@ var Yox = function () {
 
       delete instance.$watchEmitter;
       delete instance.$eventEmitter;
+      delete instance.$options;
 
       execute$1($options[AFTER_DESTROY], instance);
-
-      delete instance.$options;
     }
   }]);
   return Yox;
 }();
 
-Yox.version = '0.16.2';
+Yox.version = '0.16.3';
 
 Yox.switcher = switcher;
 

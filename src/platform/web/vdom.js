@@ -188,7 +188,7 @@ export function create(node, instance) {
             postpatch: function (oldNode, vnode) {
               notify(vnode, 'update')
             },
-            remove: function (vnode) {
+            destroy: function (vnode) {
               notify(vnode, 'detach')
             }
           }

@@ -195,10 +195,8 @@ export function render(ast, data) {
  */
 export function parse(template, getPartial, setPartial) {
 
-  let { templateParse } = cache
-
-  if (templateParse[template]) {
-    return templateParse[template]
+  if (cache.templateParse[template]) {
+    return cache.templateParse[template]
   }
 
   let mainScanner = new Scanner(template),
@@ -486,7 +484,7 @@ export function parse(template, getPartial, setPartial) {
     return string.parseError(template, `Missing end tag (</${nodeStack[0].name}>)`, errorIndex)
   }
 
-  templateParse[template] = rootNode
+  cache.templateParse[template] = rootNode
 
   return rootNode
 

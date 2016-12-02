@@ -12,15 +12,13 @@ import * as expression from './expression'
  */
 export function normalize(keypath) {
 
-  let { keypathNormalize } = cache
-
-  if (!keypathNormalize[keypath]) {
-    keypathNormalize[keypath] = keypath.indexOf('[') < 0
+  if (!cache.keypathNormalize[keypath]) {
+    cache.keypathNormalize[keypath] = keypath.indexOf('[') < 0
       ? keypath
       : stringify(expression.parse(keypath))
   }
 
-  return keypathNormalize[keypath]
+  return cache.keypathNormalize[keypath]
 
 }
 
@@ -55,9 +53,7 @@ export function stringify(node) {
  */
 export function getWildcardMatches(keypath) {
 
-  let { keypathWildcardMatches } = cache
-
-  if (!keypathWildcardMatches[keypath]) {
+  if (!cache.keypathWildcardMatches[keypath]) {
     let result = [ ]
     let terms = normalize(keypath).split('.')
     let toWildcard = function (isTrue, index) {
@@ -71,10 +67,10 @@ export function getWildcardMatches(keypath) {
         )
       }
     )
-    keypathWildcardMatches[keypath] = result
+    cache.keypathWildcardMatches[keypath] = result
   }
 
-  return keypathWildcardMatches[keypath]
+  return cache.keypathWildcardMatches[keypath]
 
 }
 
