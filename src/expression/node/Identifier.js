@@ -1,18 +1,21 @@
 
 import Node from './Node'
-
 import * as nodeType from '../nodeType'
 
 /**
- * partial 节点
+ * Identifier 节点
  *
  * @param {string} name
  */
-export default class Partial extends Node {
+export default class Identifier extends Node {
 
   constructor(name) {
-    super(nodeType.PARTIAL)
+    super(nodeType.IDENTIFIER)
     this.name = name
+  }
+
+  stringify() {
+    return this.name
   }
 
 }

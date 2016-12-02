@@ -14,8 +14,7 @@ import * as object from '../../util/object'
 export default class Element extends Node {
 
   constructor(name, custom) {
-    super()
-    this.type = nodeType.ELEMENT
+    super(nodeType.ELEMENT)
     this.name = name
     this.custom = custom
     this.attrs = [ ]

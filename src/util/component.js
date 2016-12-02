@@ -6,21 +6,19 @@ import * as registry from '../config/registry'
 import * as is from './is'
 import * as object from './object'
 import * as logger from './logger'
-import * as expression from './expression'
+
+import * as expression from '../expression/index'
+import * as expressionNodeType from '../expression/nodeType'
 
 import Event from './Event'
-
-import {
-  stringify,
-} from './keypath'
 
 export function compileValue(instance, keypath, value) {
   if (value.indexOf('(') > 0) {
     let ast = expression.parse(value)
-    if (ast.type === expression.CALL) {
+    if (ast.type === expressionNodeType.CALL) {
       return function (e) {
         let isEvent = e instanceof Event
-        let args = object.copy(ast.arguments)
+        let args = object.copy(ast.args)
         if (!args.length) {
           if (isEvent) {
             args.push(e)
@@ -30,10 +28,10 @@ export function compileValue(instance, keypath, value) {
           args = args.map(
             function (item) {
               let { name, type } = item
-              if (type === expression.LITERAL) {
+              if (type === expressionNodeType.LITERAL) {
                 return item.value
               }
-              if (type === expression.IDENTIFIER) {
+              if (type === expressionNodeType.IDENTIFIER) {
                 if (name === syntax.SPECIAL_EVENT) {
                   if (isEvent) {
                     return e
@@ -43,8 +41,8 @@ export function compileValue(instance, keypath, value) {
                   return keypath
                 }
               }
-              else if (type === expression.MEMBER) {
-                name = stringify(item)
+              else if (type === expressionNodeType.MEMBER) {
+                name = item.stringify()
               }
 
               let result = testKeypath(instance, keypath, name)

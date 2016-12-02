@@ -17,8 +17,7 @@ import * as object from '../../util/object'
 export default class Spread extends Node {
 
   constructor(expr) {
-    super(env.FALSE)
-    this.type = nodeType.SPREAD
+    super(nodeType.SPREAD, env.FALSE)
     this.expr = expr
   }
 

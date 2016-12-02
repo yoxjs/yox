@@ -1,15 +1,20 @@
 
 import * as env from '../../config/env'
-import * as array from '../../util/array'
 import * as nodeType from '../nodeType'
-import * as expression from '../../util/expression'
+
+import * as is from '../../util/is'
+import * as array from '../../util/array'
+import * as expression from '../../expression/index'
+
+import around from '../../function/around'
 
 /**
  * 节点基类
  */
 export default class Node {
 
-  constructor(hasChildren) {
+  constructor(type, hasChildren) {
+    this.type = type
     if (hasChildren !== env.FALSE) {
       this.children = [ ]
     }
@@ -37,9 +42,9 @@ export default class Node {
     // 可能是任何类型的结果
     return fn.apply(
       env.NULL,
-      fn.$arguments.map(
-        function (name) {
-          return context.get(name)
+      fn.$deps.map(
+        function (dep) {
+          return context.get(dep)
         }
       )
     )
@@ -55,6 +60,29 @@ export default class Node {
       function (prev, current) {
         return current.render(data, prev)
       }
+    )
+  }
+
+  traverse(enter, leave) {
+    return around(
+      this,
+      function (node) {
+        if (is.array(node.children)) {
+          let children = [ ]
+          array.each(
+            node.children,
+            function (item) {
+              item = item.traverse(enter, leave)
+              if (item != env.NULL) {
+                children.push(item)
+              }
+            }
+          )
+          return children
+        }
+      },
+      enter,
+      leave
     )
   }
 

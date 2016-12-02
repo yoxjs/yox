@@ -12,8 +12,7 @@ import * as nodeType from '../nodeType'
 export default class Text extends Node {
 
   constructor(content) {
-    super(env.FALSE)
-    this.type = nodeType.TEXT
+    super(nodeType.TEXT, env.FALSE)
     this.content = content
   }
 

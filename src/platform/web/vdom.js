@@ -1,3 +1,4 @@
+
 import snabbdom from 'snabbdom'
 
 import h from 'snabbdom/h'
@@ -8,7 +9,6 @@ import * as native from './native'
 
 import * as env from '../../config/env'
 import * as syntax from '../../config/syntax'
-import * as lifecycle from '../../config/lifecycle'
 
 import * as is from '../../util/is'
 import * as array from '../../util/array'
@@ -52,39 +52,9 @@ function parseStyle(str) {
 
 }
 
-export function create(node, instance) {
-
-  if (node.type === nodeType.TEXT) {
-    return { text: node.content }
-  }
-
+export function create(root, instance) {
   let counter = 0
-
-  let traverse = function (node, enter, leave) {
-
-    if (enter(node) === env.FALSE) {
-      return
-    }
-
-    let children = [ ]
-    if (is.array(node.children)) {
-      array.each(
-        node.children,
-        function (item) {
-          item = traverse(item, enter, leave)
-          if (item != env.NULL) {
-            children.push(item)
-          }
-        }
-      )
-    }
-
-    return leave(node, children)
-
-  }
-
-  return traverse(
-    node,
+  return root.traverse(
     function (node) {
       counter++
       if (node.type === nodeType.ATTRIBUTE || node.type === nodeType.DIRECTIVE) {
@@ -197,7 +167,9 @@ export function create(node, instance) {
         return h(node.name, data, children)
       }
       else if (node.type === nodeType.TEXT) {
-        return node.content
+        return node === root
+          ? { text: node.content }
+          : node.content
       }
     }
   )

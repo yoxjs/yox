@@ -2,7 +2,7 @@
 import * as cache from '../config/cache'
 
 import * as array from './array'
-import * as expression from './expression'
+import * as expression from '../expression/index'
 
 /**
  * 把 obj['name'] 的形式转成 obj.name
@@ -15,34 +15,11 @@ export function normalize(keypath) {
   if (!cache.keypathNormalize[keypath]) {
     cache.keypathNormalize[keypath] = keypath.indexOf('[') < 0
       ? keypath
-      : stringify(expression.parse(keypath))
+      : expression.parse(keypath).stringify()
   }
 
   return cache.keypathNormalize[keypath]
 
-}
-
-/**
- * 把 member 表达式节点解析成 keypath
- *
- * @param {Object} node
- * @return {string}
- */
-export function stringify(node) {
-  let result = [ ]
-  do {
-    let { name, property } = node
-    if (property) {
-      result.push(property.value)
-    }
-    else if (name) {
-      result.push(name)
-    }
-  }
-  while (node = node.object)
-  return result.length > 0
-    ? result.reverse().join('.')
-    : ''
 }
 
 /**

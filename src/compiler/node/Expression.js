@@ -18,8 +18,7 @@ import * as pattern from '../../config/pattern'
 export default class Expression extends Node {
 
   constructor(expr, safe) {
-    super(env.FALSE)
-    this.type = nodeType.EXPRESSION
+    super(nodeType.EXPRESSION, env.FALSE)
     this.expr = expr
     this.safe = safe
   }

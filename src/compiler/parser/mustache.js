@@ -26,7 +26,7 @@ import * as is from '../../util/is'
 import * as array from '../../util/array'
 import * as string from '../../util/string'
 import * as logger from '../../util/logger'
-import * as expression from '../../util/expression'
+import * as expression from '../../expression/index'
 
 const openingDelimiter = '\\{\\{\\s*'
 const closingDelimiter = '\\s*\\}\\}'
@@ -155,8 +155,8 @@ export function render(ast, data) {
   let keys = [ ]
 
   // 非转义插值需要解析模板字符串
-  let renderAst = function (node) {
-    node.render({
+  let renderAst = function (ast) {
+    ast.render({
       keys,
       parent: rootElement,
       context: rootContext,
@@ -181,7 +181,10 @@ export function render(ast, data) {
     logger.error('Template should have only one root element.')
   }
 
-  return children[0]
+  return {
+    root: children[0],
+    deps: rootContext.used,
+  }
 
 }
 

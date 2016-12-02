@@ -18,6 +18,8 @@ import * as nextTask from './util/nextTask'
 import * as component from './util/component'
 import * as validator from './util/validator'
 
+import * as expression from './expression/index'
+
 import * as vdom from './platform/web/vdom'
 import * as native from './platform/web/native'
 
@@ -290,22 +292,37 @@ export default class Yox {
   }
 
   set(keypath, value) {
+
     let model = keypath
     if (is.string(keypath)) {
       model = { }
       model[keypath] = value
     }
+
     let instance = this
-    if (instance.updateModel(model) && instance.$currentNode) {
-      if (switcher.sync) {
-        instance.updateView()
-      }
-      else if (!instance.$syncing) {
-        instance.$syncing = env.TRUE
-        nextTask.add(function () {
-          delete instance.$syncing
+    let changes = instance.updateModel(model)
+
+    let { $deps, $currentNode } = instance
+    // 是否是视图中用到的数据变化了
+    if (changes && $deps && $currentNode) {
+      let needUpdate = $deps.some(
+        function (keypath) {
+          return object.has(changes, keypath)
+        }
+      )
+      if (true) {
+        if (switcher.sync) {
           instance.updateView()
-        })
+        }
+        else if (!instance.$syncing) {
+          instance.$syncing = env.TRUE
+          nextTask.add(
+            function () {
+              delete instance.$syncing
+              instance.updateView()
+            }
+          )
+        }
       }
     }
   }
@@ -507,8 +524,10 @@ export default class Yox {
       object.extend(context, $computedGetters)
     }
 
-    let node = mustache.render($template, context)
-    let newNode = vdom.create(node, instance)
+    let { root, deps } = mustache.render($template, context)
+    instance.$deps = deps
+
+    let newNode = vdom.create(root, instance)
     let afterHook
 
     if ($currentNode) {
@@ -658,7 +677,7 @@ Yox.cache = cache
  *
  * @type {Object}
  */
-Yox.utils = { is, array, object, logger, native, Store, Emitter, Event }
+Yox.utils = { is, array, object, logger, native, expression, Store, Emitter, Event }
 
 /**
  * 全局注册组件

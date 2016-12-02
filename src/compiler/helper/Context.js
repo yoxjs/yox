@@ -1,5 +1,6 @@
 
 import * as env from '../../config/env'
+import * as array from '../../util/array'
 import * as object from '../../util/object'
 
 export default class Context {
@@ -12,6 +13,7 @@ export default class Context {
     let instance = this
     instance.data = data
     instance.parent = parent
+    instance.used = [ ]
     let cache = instance.cache = { }
     cache[env.THIS] = data
   }
@@ -31,7 +33,7 @@ export default class Context {
   get(keypath) {
 
     let instance = this
-    let { cache } = instance
+    let { cache, used } = instance
     if (!object.has(cache, keypath)) {
       let result
       while (instance) {
@@ -44,6 +46,10 @@ export default class Context {
           instance = instance.parent
         }
       }
+    }
+
+    if (!array.has(used, keypath)) {
+      used.push(keypath)
     }
 
     return cache[keypath]

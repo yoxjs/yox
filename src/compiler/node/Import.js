@@ -12,8 +12,7 @@ import * as nodeType from '../nodeType'
 export default class Import extends Node {
 
   constructor(name) {
-    super(env.FALSE)
-    this.type = nodeType.IMPORT
+    super(nodeType.IMPORT, env.FALSE)
     this.name = name
   }
 

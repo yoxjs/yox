@@ -9,8 +9,7 @@ import * as nodeType from '../nodeType'
 export default class Else extends Node {
 
   constructor() {
-    super()
-    this.type = nodeType.ELSE
+    super(nodeType.ELSE)
   }
 
   render(data, prev) {

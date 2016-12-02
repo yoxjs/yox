@@ -17,8 +17,7 @@ import * as syntax from '../../config/syntax'
 export default class Each extends Node {
 
   constructor(name, index) {
-    super()
-    this.type = nodeType.EACH
+    super(nodeType.EACH)
     this.name = name
     this.index = index
   }

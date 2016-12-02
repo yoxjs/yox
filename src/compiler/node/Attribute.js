@@ -12,8 +12,7 @@ import * as object from '../../util/object'
 export default class Attribute extends Node {
 
   constructor(name) {
-    super()
-    this.type = nodeType.ATTRIBUTE
+    super(nodeType.ATTRIBUTE)
     this.name = name
   }
 

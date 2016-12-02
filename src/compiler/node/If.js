@@ -12,8 +12,7 @@ import * as nodeType from '../nodeType'
 export default class If extends Node {
 
   constructor(expr) {
-    super()
-    this.type = nodeType.IF
+    super(nodeType.IF)
     this.expr = expr
   }
 
