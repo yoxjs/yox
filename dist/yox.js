@@ -48,6 +48,9 @@ var DIRECTIVE_EVENT_PREFIX = 'on-';
 var SPECIAL_EVENT = '$event';
 var SPECIAL_KEYPATH = '$keypath';
 
+var KEY_UNIQUE = 'key';
+var KEY_REF = 'ref';
+
 var syntax = Object.freeze({
 	IF: IF,
 	ELSE: ELSE,
@@ -60,7 +63,9 @@ var syntax = Object.freeze({
 	DIRECTIVE_PREFIX: DIRECTIVE_PREFIX,
 	DIRECTIVE_EVENT_PREFIX: DIRECTIVE_EVENT_PREFIX,
 	SPECIAL_EVENT: SPECIAL_EVENT,
-	SPECIAL_KEYPATH: SPECIAL_KEYPATH
+	SPECIAL_KEYPATH: SPECIAL_KEYPATH,
+	KEY_UNIQUE: KEY_UNIQUE,
+	KEY_REF: KEY_REF
 });
 
 var componentName = /[-A-Z]/;
@@ -2164,7 +2169,7 @@ function _parse(template, getPartial, setPartial) {
 
               name = match[1];
 
-              addChild(name.startsWith(DIRECTIVE_PREFIX) || name.startsWith(DIRECTIVE_EVENT_PREFIX) ? new Directive(name) : new Attribute(name));
+              addChild(name.startsWith(DIRECTIVE_PREFIX) || name.startsWith(DIRECTIVE_EVENT_PREFIX) || name === KEY_REF || name === KEY_UNIQUE ? new Directive(name) : new Attribute(name));
 
               if (string(match[2])) {
                 quote = match[2].charAt(1);
@@ -3267,9 +3272,6 @@ var native = Object.freeze({
 
 var patch = snabbdom.init([attributes, style]);
 
-var UNIQUE_KEY = 'key';
-var REF_KEY = 'ref';
-
 function parseStyle(str) {
 
   var result = {};
@@ -3313,32 +3315,21 @@ function create$1(root, instance) {
             directives = [],
             styles = void 0;
 
-        var addDirective = function addDirective(name, directiveName, directiveNode) {
-          directives.push({
-            name: name,
-            node: directiveNode || node,
-            directive: instance.getDirective(directiveName || name)
-          });
-        };
+        var data = { attrs: attrs };
 
         var attributes$$1 = node.getAttributes();
 
         if (node.component) {
-          addDirective('component');
-
-          if (has$1(attributes$$1, REF_KEY)) {
-            var refDirective = node.attrs.filter(function (attr) {
-              return attr.name === REF_KEY;
-            })[0];
-            if (refDirective) {
-              addDirective('ref', 'ref', refDirective);
-            }
-          }
+          directives.push({
+            name: 'component',
+            node: node,
+            directive: instance.getDirective('component')
+          });
         } else {
           each$$1(attributes$$1, function (value, key) {
             if (key === 'style') {
               styles = parseStyle(value);
-            } else if (key !== UNIQUE_KEY && key !== REF_KEY) {
+            } else {
               attrs[key] = value;
             }
           });
@@ -3352,18 +3343,21 @@ function create$1(root, instance) {
           if (name.startsWith(DIRECTIVE_EVENT_PREFIX)) {
             name = name.slice(DIRECTIVE_EVENT_PREFIX.length);
             directiveName = 'event';
-          } else {
+          } else if (name.startsWith(DIRECTIVE_PREFIX)) {
             name = directiveName = name.slice(DIRECTIVE_PREFIX.length);
+          } else if (name === KEY_UNIQUE) {
+            data.key = attributes$$1.key;
+            return;
+          } else if (name === KEY_REF) {
+            name = directiveName = 'ref';
           }
 
-          addDirective(name, directiveName, node);
+          directives.push({
+            name: name,
+            node: node,
+            directive: instance.getDirective(directiveName)
+          });
         });
-
-        var data = { attrs: attrs };
-
-        if (has$1(attributes$$1, UNIQUE_KEY)) {
-          data.key = attributes$$1.key;
-        }
 
         if (styles) {
           data.style = styles;
@@ -4240,7 +4234,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.16.5';
+Yox.version = '0.16.6';
 
 Yox.switcher = switcher;
 

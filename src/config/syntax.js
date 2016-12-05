@@ -13,3 +13,7 @@ export let DIRECTIVE_EVENT_PREFIX = 'on-'
 
 export let SPECIAL_EVENT = '$event'
 export let SPECIAL_KEYPATH = '$keypath'
+
+export let KEY_UNIQUE = 'key'
+export let KEY_REF = 'ref'
+
