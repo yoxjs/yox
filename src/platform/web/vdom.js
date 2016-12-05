@@ -83,7 +83,7 @@ export function create(root, instance) {
 
         let attributes = node.getAttributes()
         // 组件的 attrs 作为 props 传入组件，不需要写到元素上
-        if (node.custom) {
+        if (node.component) {
           addDirective('component')
           // 这里获取节点还能改进
           if (object.has(attributes, REF_KEY)) {
@@ -126,7 +126,7 @@ export function create(root, instance) {
               directiveName = name.slice(syntax.DIRECTIVE_PREFIX.length)
             }
 
-            addDirective(name, directiveName)
+            addDirective(name, directiveName, node)
           }
         )
 

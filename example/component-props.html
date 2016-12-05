@@ -13,6 +13,8 @@
         let Custom = {
             template: `
                 <div id="custom-component">
+                    title: {{title}}
+                    <br>
                     name: {{user.name}}
                     <br>
                     age: {{user.age}}
@@ -55,6 +57,7 @@
         var instance = new Yox({
             el: '#app',
             data: {
+                title: 'yox',
                 user: {
                     name: 'Jake',
                     age: 0,
@@ -62,7 +65,7 @@
             },
             template: `
                 <div id="root">
-                    <Custom ref="child" user="{{user}}" />
+                    <Custom ref="child" title="{{title}}" user="{{user}}" />
                 </div>
             `,
             components: {

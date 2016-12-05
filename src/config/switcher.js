@@ -15,4 +15,4 @@ export let debug = env.TRUE
  *
  * @type {boolean}
  */
-export let sync = env.TRUE
+export let sync = env.FALSE

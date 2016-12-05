@@ -4,7 +4,7 @@ import * as object from '../util/object'
 import * as validator from '../util/validator'
 
 function getComponentInfo(node, instance) {
-  let options = instance.getComponent(node.custom)
+  let options = instance.getComponent(node.component)
   let props = object.copy(node.getAttributes(), env.TRUE)
   if (object.has(options, 'propTypes')) {
     validator.validate(props, options.propTypes)

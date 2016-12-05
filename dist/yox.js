@@ -495,7 +495,7 @@ var registry = Object.freeze({
 
 var debug = TRUE;
 
-var sync$1 = TRUE;
+var sync$1 = FALSE;
 
 var switcher = Object.freeze({
 	debug: debug,
@@ -1579,13 +1579,13 @@ var Each = function (_Node) {
 var Element = function (_Node) {
   inherits(Element, _Node);
 
-  function Element(name, custom) {
+  function Element(name, component) {
     classCallCheck(this, Element);
 
     var _this = possibleConstructorReturn(this, (Element.__proto__ || Object.getPrototypeOf(Element)).call(this, ELEMENT));
 
     _this.name = name;
-    _this.custom = custom;
+    _this.component = component;
     _this.attrs = [];
     _this.directives = [];
     return _this;
@@ -1615,7 +1615,7 @@ var Element = function (_Node) {
     value: function render(data) {
 
       var instance = this;
-      var node = new Element(instance.name, instance.custom);
+      var node = new Element(instance.name, instance.component);
       node.keypath = data.keys.join('.');
       data.parent.addChild(node);
 
@@ -2057,8 +2057,7 @@ function _parse(template, getPartial, setPartial) {
       errorIndex = void 0;
 
   var attrLike = {};
-  attrLike[ATTRIBUTE] = TRUE;
-  attrLike[DIRECTIVE] = TRUE;
+  attrLike[ATTRIBUTE] = attrLike[DIRECTIVE] = TRUE;
 
   var pushStack = function pushStack(node) {
     nodeStack.push(currentNode);
@@ -2359,6 +2358,7 @@ if (typeof MutationObserver === 'function') {
 
 var nextTick$1 = nextTick;
 
+var currentTasks = void 0;
 var nextTasks = [];
 
 function add(task) {
@@ -2369,10 +2369,12 @@ function add(task) {
 }
 
 function run() {
-  each$1(nextTasks, function (task) {
+  currentTasks = nextTasks;
+  nextTasks = [];
+  each$1(currentTasks, function (task) {
     task();
   });
-  nextTasks.length = 0;
+  currentTasks = NULL;
 }
 
 var Event = function () {
@@ -3321,7 +3323,7 @@ function create$1(root, instance) {
 
         var attributes$$1 = node.getAttributes();
 
-        if (node.custom) {
+        if (node.component) {
           addDirective('component');
 
           if (has$1(attributes$$1, REF_KEY)) {
@@ -3354,7 +3356,7 @@ function create$1(root, instance) {
             name = directiveName = name.slice(DIRECTIVE_PREFIX.length);
           }
 
-          addDirective(name, directiveName);
+          addDirective(name, directiveName, node);
         });
 
         var data = { attrs: attrs };
@@ -3662,7 +3664,7 @@ var modelDt = {
 };
 
 function getComponentInfo(node, instance) {
-  var options = instance.getComponent(node.custom);
+  var options = instance.getComponent(node.component);
   var props = copy(node.getAttributes(), TRUE);
   if (has$1(options, 'propTypes')) {
     validate(props, options.propTypes);
@@ -3771,13 +3773,9 @@ var Yox = function () {
       warn('Passing a `data` option should be a function.');
     }
 
-    data = func(data) ? data.call(instance) : data;
-    if (props) {
-      data = extend(data || {}, props);
-    }
-    if (data) {
-      instance.$data = data;
-    }
+    instance.$data = props || {};
+
+    extend(instance.$data, func(data) ? data.call(instance) : data);
 
     if (parent) {
       instance.$parent = parent;
@@ -3928,20 +3926,25 @@ var Yox = function () {
           $currentNode = instance.$currentNode;
 
       if (changes && $deps && $currentNode) {
-        var needUpdate = $deps.some(function (keypath) {
-          return has$1(changes, keypath);
-        });
-        {
-          if (sync$1) {
-            instance.updateView();
-          } else if (!instance.$syncing) {
-            instance.$syncing = TRUE;
-            add(function () {
-              delete instance.$syncing;
-              instance.updateView();
+        (function () {
+          var changeKeys = keys(changes);
+          var needUpdate = $deps.some(function (keypath) {
+            return changeKeys.some(function (changekey) {
+              return changekey.startsWith(keypath);
             });
+          });
+          if (needUpdate) {
+            if (sync$1) {
+              instance.updateView();
+            } else if (!instance.$syncing) {
+              instance.$syncing = TRUE;
+              add(function () {
+                delete instance.$syncing;
+                instance.updateView();
+              });
+            }
           }
-        }
+        })();
       }
     }
   }, {
@@ -4237,7 +4240,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.16.4';
+Yox.version = '0.16.5';
 
 Yox.switcher = switcher;
 

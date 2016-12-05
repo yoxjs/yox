@@ -119,14 +119,14 @@ export default class Yox {
       logger.warn('Passing a `data` option should be a function.')
     }
 
-    // 检查 data
-    data = is.func(data) ? data.call(instance) : data
-    if (props) {
-      data = object.extend(data || { }, props)
-    }
-    if (data) {
-      instance.$data = data
-    }
+    // 先把外部数据的放进去，这样当 data 是函数时，可以通过 this.get() 获取到外部数据
+    instance.$data = props || { }
+
+    // 后放 data
+    object.extend(
+      instance.$data,
+      is.func(data) ? data.call(instance) : data
+    )
 
     if (parent) {
       instance.$parent = parent
@@ -305,12 +305,17 @@ export default class Yox {
     let { $deps, $currentNode } = instance
     // 是否是视图中用到的数据变化了
     if (changes && $deps && $currentNode) {
+      let changeKeys = object.keys(changes)
       let needUpdate = $deps.some(
         function (keypath) {
-          return object.has(changes, keypath)
+          return changeKeys.some(
+            function (changekey) {
+              return changekey.startsWith(keypath)
+            }
+          )
         }
       )
-      if (true) {
+      if (needUpdate) {
         if (switcher.sync) {
           instance.updateView()
         }
@@ -649,7 +654,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.16.4'
+Yox.version = '0.16.5'
 
 /**
  * 开关配置

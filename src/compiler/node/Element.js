@@ -9,14 +9,14 @@ import * as object from '../../util/object'
  * 元素节点
  *
  * @param {string} name
- * @param {string} custom
+ * @param {string} component
  */
 export default class Element extends Node {
 
-  constructor(name, custom) {
+  constructor(name, component) {
     super(nodeType.ELEMENT)
     this.name = name
-    this.custom = custom
+    this.component = component
     this.attrs = [ ]
     this.directives = [ ]
   }
@@ -43,7 +43,7 @@ export default class Element extends Node {
   render(data) {
 
     let instance = this
-    let node = new Element(instance.name, instance.custom)
+    let node = new Element(instance.name, instance.component)
     node.keypath = data.keys.join('.')
     data.parent.addChild(node)
 

@@ -217,7 +217,7 @@ export function parse(template, getPartial, setPartial) {
     errorIndex
 
   let attrLike = { }
-  attrLike[nodeType.ATTRIBUTE] = env.TRUE
+  attrLike[nodeType.ATTRIBUTE] =
   attrLike[nodeType.DIRECTIVE] = env.TRUE
 
   let pushStack = function (node) {
