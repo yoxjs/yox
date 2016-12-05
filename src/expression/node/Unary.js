@@ -2,8 +2,6 @@
 import Node from './Node'
 import * as nodeType from '../nodeType'
 
-import around from '../../function/around'
-
 /**
  * Unary 节点
  *
@@ -23,21 +21,9 @@ export default class Unary extends Node {
     return `${operator}${arg.stringify()}`
   }
 
-  traverse(enter, leave) {
-    around(
-      this,
-      function (node) {
-        let { arg } = node
-        arg.traverse(enter, leave)
-      },
-      enter,
-      leave
-    )
-  }
-
-  run(data) {
+  execute(context) {
     let { operator, arg } = this
-    let result = arg.run(data)
+    let result = arg.execute(context)
     switch (operator) {
       case Unary.PLUS:
         result.value = +result.value

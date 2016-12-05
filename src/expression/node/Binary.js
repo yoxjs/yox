@@ -2,7 +2,7 @@
 import Node from './Node'
 import * as nodeType from '../nodeType'
 
-import around from '../../function/around'
+import * as array from '../../util/array'
 
 /**
  * Binary 节点
@@ -25,23 +25,10 @@ export default class Binary extends Node {
     return `(${left.stringify()}) ${operator} (${right.stringify()})`
   }
 
-  traverse(enter, leave) {
-    around(
-      this,
-      function (node) {
-        let { left, right } = node
-        left.traverse(enter, leave)
-        right.traverse(enter, leave)
-      },
-      enter,
-      leave
-    )
-  }
-
-  run(data) {
+  execute(context) {
     let { right, operator, left } = this
-    left = left.run(data)
-    right = right.run(data)
+    left = left.execute(context)
+    right = right.execute(context)
 
     let value
     switch (operator) {

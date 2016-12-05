@@ -3,9 +3,9 @@ import Node from './Node'
 import Literal from './Literal'
 import * as nodeType from '../nodeType'
 
-import around from '../../function/around'
 import * as env from '../../config/env'
 import * as array from '../../util/array'
+import execute from '../../function/execute'
 
 /**
  * Member 节点
@@ -56,31 +56,18 @@ export default class Member extends Node {
     ).join('')
   }
 
-  traverse(enter, leave) {
-    around(
-      this,
-      function (node) {
-        let { object, property } = node
-        property.traverse(enter, leave)
-        object.traverse(enter, leave)
-      },
-      enter,
-      leave
-    )
-  }
-
-  run(data) {
+  execute(context) {
     let list = this.flatten()
     let firstNode = list.shift()
 
-    let { value, deps } = firstNode.run(data)
+    let { value, deps } = firstNode.execute(context)
     let currentValue = value, memberDeps = [ ], keypaths = [ deps[0] ]
 
     array.each(
       list,
       function (node) {
         if (node.type !== nodeType.LITERAL) {
-          let { value, deps }= node.run(data)
+          let { value, deps }= node.execute(context)
           node = new Literal(value)
           memberDeps.push(deps)
         }

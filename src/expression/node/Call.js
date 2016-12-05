@@ -31,40 +31,16 @@ export default class Call extends Node {
     return `${callee.stringify()}(${args.join(', ')})`
   }
 
-  traverse(enter, leave) {
-    around(
-      this,
-      function (node) {
-        let { callee, args } = node
-        callee.traverse(enter, leave)
-        array.each(
-          args,
-          function (arg) {
-            arg.traverse(enter, leave)
-          }
-        )
-      },
-      enter,
-      leave
-    )
-  }
-
-  run(data, func) {
+  execute(context) {
     let { callee, args } = this
-    let deps = [ ]
-
-    if (!func) {
-      callee = callee.run(data)
-      func = callee.value
-      deps.push(callee.deps)
-    }
-
+    callee = callee.execute(context)
+    let deps = [ callee.deps ]
     let value = execute(
-      func,
+      callee.value,
       env.NULL,
       args.map(
         function (arg) {
-          let result = arg.run(data)
+          let result = arg.execute(context)
           deps.push(result.deps)
           return result.value
         }

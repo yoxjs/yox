@@ -39,18 +39,10 @@ export default class Node {
 
   execute(context, keypath) {
     let { expr } = this
-    expr.run(context)
-    console.log('expr', keypath, expr.stringify(), expr)
+    let result = expr.execute(context)
+    // console.log('expr', keypath, expr.stringify(), result)
     // 可能是任何类型的结果
-    return execute(
-      fn,
-      env.NULL,
-      fn.$deps.map(
-        function (dep) {
-          return context.get(dep)
-        }
-      )
-    )
+    return result.value
   }
 
   render() {

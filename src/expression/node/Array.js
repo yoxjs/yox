@@ -2,8 +2,9 @@
 import Node from './Node'
 import * as nodeType from '../nodeType'
 
+import * as env from '../../config/env'
 import * as array from '../../util/array'
-import around from '../../function/around'
+import execute from '../../function/execute'
 
 /**
  * Array 节点
@@ -27,24 +28,7 @@ export default class Array extends Node {
     return `[${elements.join(', ')}]`
   }
 
-  traverse(enter, leave) {
-    around(
-      this,
-      function (node) {
-        let { elements } = node
-        array.each(
-          elements,
-          function (element) {
-            element.traverse(enter, leave)
-          }
-        )
-      },
-      enter,
-      leave,
-    )
-  }
-
-  run(data) {
+  execute(context) {
     let values = [ ]
     return {
       value: values,
@@ -54,7 +38,7 @@ export default class Array extends Node {
           env.NULL,
           this.elements.map(
             function (node) {
-              let { deps, value } = node.run(data)
+              let { deps, value } = node.execute(context)
               values.push(value)
               return deps
             }

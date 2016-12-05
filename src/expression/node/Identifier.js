@@ -2,9 +2,6 @@
 import Node from './Node'
 import * as nodeType from '../nodeType'
 
-import * as env from '../../config/env'
-import * as object from '../../util/object'
-
 /**
  * Identifier 节点
  *
@@ -21,11 +18,10 @@ export default class Identifier extends Node {
     return this.name
   }
 
-  run(data) {
+  execute(context) {
     let { name } = this
-    let result = object.get(data, name)
     return {
-      value: result ? result.value : env.UNDEFINED,
+      value: context.get(name),
       deps: [ name ]
     }
   }
