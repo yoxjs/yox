@@ -11,24 +11,24 @@ import * as syntax from '../../config/syntax'
 /**
  * each 节点
  *
- * @param {string} name
+ * @param {Expression} expr
  * @param {string} index
  */
 export default class Each extends Node {
 
-  constructor(name, index) {
+  constructor(expr, index) {
     super(nodeType.EACH)
-    this.name = name
+    this.expr = expr
     this.index = index
   }
 
   render(data) {
 
     let instance = this
-    let { name, index } = instance
+    let { expr, index } = instance
     let { context, keys } = data
 
-    let { value } = context.get(name)
+    let value = instance.execute(data)
 
     let iterate
     if (is.array(value)) {
@@ -39,7 +39,8 @@ export default class Each extends Node {
     }
 
     if (iterate) {
-      keys.push(name)
+      let listContext = context.push(value)
+      keys.push(expr.stringify())
       iterate(
         value,
         function (item, i) {
@@ -49,7 +50,7 @@ export default class Each extends Node {
           keys.push(i)
           context.set(syntax.SPECIAL_KEYPATH, keys.join('.'))
           instance.renderChildren(
-            object.extend({}, data, { context: context.push(item) })
+            object.extend({ }, data, { context: listContext.push(item) })
           )
           context.remove(syntax.SPECIAL_KEYPATH)
           keys.pop()

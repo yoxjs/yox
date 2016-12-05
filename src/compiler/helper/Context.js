@@ -62,8 +62,13 @@ export default class Context {
       }
     }
 
+    let value = cache[keypath]
+    if (keypath === env.THIS) {
+      keypath = '.'
+    }
+
     return {
-      value: cache[keypath],
+      value,
       keypath,
     }
 

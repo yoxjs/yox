@@ -80,7 +80,14 @@ export default class Member extends Node {
       )
     }
 
+    keypaths = keypaths.filter(
+      function (keypath) {
+        return keypath !== '.'
+      }
+    )
+
     memberDeps.unshift([ keypaths.join('.') ])
+
 
     return {
       value: currentValue,

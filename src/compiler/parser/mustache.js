@@ -50,12 +50,12 @@ const parsers = [
     },
     create: function (source) {
       let terms = source.slice(syntax.EACH.length).trim().split(':')
-      let name = terms[0].trim()
+      let expr = expression.parse(terms[0])
       let index
       if (terms[1]) {
         index = terms[1].trim()
       }
-      return new Each(name, index)
+      return new Each(expr, index)
     }
   },
   {

@@ -4,7 +4,7 @@ import * as nodeType from '../nodeType'
 
 import * as is from '../../util/is'
 import * as array from '../../util/array'
-import * as keypath from '../../util/keypath'
+import * as object from '../../util/object'
 
 import execute from '../../function/execute'
 
@@ -40,11 +40,22 @@ export default class Node {
   execute(data) {
     let { context, keys, addDeps } = data
     let { value, deps } = this.expr.execute(context)
-    let base = keys.join('.')
     addDeps(
       deps.map(
         function (dep) {
-          return base + dep
+          let base = object.copy(keys)
+          array.each(
+            dep.split('/'),
+            function (dep) {
+              if (dep === '..') {
+                base.pop()
+              }
+              else if (dep && dep !== '.') {
+                base.push(dep)
+              }
+            }
+          )
+          return base.join('.')
         }
       )
     )
