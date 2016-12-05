@@ -95,6 +95,7 @@ export function get(object, keypath) {
 }
 
 export function set(object, keypath, value, autoFill = env.TRUE) {
+  let remove = arguments.length === 2
   keypath = toString(keypath)
   if (keypath.indexOf('.') > 0) {
     let originalObject = object
@@ -106,7 +107,7 @@ export function set(object, keypath, value, autoFill = env.TRUE) {
         if (object[item]) {
           object = object[item]
         }
-        else if (autoFill) {
+        else if (!remove && autoFill) {
           object = object[item] = { }
         }
         else {
@@ -116,10 +117,21 @@ export function set(object, keypath, value, autoFill = env.TRUE) {
       }
     )
     if (object && object !== originalObject) {
-      object[prop] = value
+      setValue(object, prop, value, remove)
     }
   }
   else {
-    object[keypath] = value
+    setValue(object, keypath, value, remove)
+  }
+}
+
+function setValue(object, name, value, remove) {
+  if (remove) {
+    if (has(object, name)) {
+      delete object[name]
+    }
+  }
+  else {
+    object[name] = value
   }
 }

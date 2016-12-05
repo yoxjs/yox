@@ -26,30 +26,31 @@ export default class Each extends Node {
 
     let instance = this
     let { name, index } = instance
-    let { context, keys } = data
+    let { context, keys, push } = data
 
-    let iterator = context.get(name)
+    let { value } = context.get(name)
 
     let iterate
-    if (is.array(iterator)) {
+    if (is.array(value)) {
       iterate = array.each
     }
-    else if (is.object(iterator)) {
+    else if (is.object(value)) {
       iterate = object.each
     }
 
     if (iterate) {
       keys.push(name)
       iterate(
-        iterator,
+        value,
         function (item, i) {
+          let newContext = push(context, item)
           if (index) {
-            context.set(index, i)
+            newContext.set(index, i)
           }
           keys.push(i)
-          context.set(syntax.SPECIAL_KEYPATH, keys.join('.'))
+          newContext.set(syntax.SPECIAL_KEYPATH, keys.join('.'))
           instance.renderChildren(
-            object.extend({}, data, { context: context.push(item) })
+            object.extend({}, data, { context: newContext })
           )
           keys.pop()
         }

@@ -22,12 +22,21 @@ export default class Context {
     return new Context(data, this)
   }
 
+  remove(keypath) {
+    this.set(keypath)
+  }
+
   set(keypath, value) {
     let { data, cache } = this
     if (object.has(cache, keypath)) {
       delete cache[keypath]
     }
-    object.set(data, keypath, value)
+    if (arguments.length === 1) {
+      object.set(data, keypath)
+    }
+    else {
+      object.set(data, keypath, value)
+    }
   }
 
   get(keypath) {
@@ -56,7 +65,10 @@ export default class Context {
       used.push(keypath)
     }
 
-    return cache[keypath]
+    return {
+      value: cache[keypath],
+      keypath,
+    }
 
   }
 }

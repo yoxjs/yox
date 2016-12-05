@@ -4,6 +4,8 @@ import Literal from './Literal'
 import * as nodeType from '../nodeType'
 
 import * as env from '../../config/env'
+
+import * as is from '../../util/is'
 import * as array from '../../util/array'
 import execute from '../../function/execute'
 
@@ -63,18 +65,20 @@ export default class Member extends Node {
     let { value, deps } = firstNode.execute(context)
     let currentValue = value, memberDeps = [ ], keypaths = [ deps[0] ]
 
-    array.each(
-      list,
-      function (node) {
-        if (node.type !== nodeType.LITERAL) {
-          let { value, deps }= node.execute(context)
-          node = new Literal(value)
-          memberDeps.push(deps)
+    if (is.object(currentValue)) {
+      array.each(
+        list,
+        function (node) {
+          if (node.type !== nodeType.LITERAL) {
+            let { value, deps }= node.execute(context)
+            node = new Literal(value)
+            memberDeps.push(deps)
+          }
+          keypaths.push(node.value)
+          currentValue = currentValue[node.value]
         }
-        keypaths.push(node.value)
-        currentValue = currentValue[node.value]
-      }
-    )
+      )
+    }
 
     memberDeps.unshift([ keypaths.join('.') ])
 

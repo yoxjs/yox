@@ -212,7 +212,7 @@ function last(array$$1) {
   return array$$1[array$$1.length - 1];
 }
 
-function remove(array$$1, item, strict) {
+function remove$1(array$$1, item, strict) {
   var index = indexOf(array$$1, item, strict);
   if (index >= 0) {
     array$$1.splice(index, 1);
@@ -229,7 +229,7 @@ var array$1 = Object.freeze({
 	indexOf: indexOf,
 	has: has$2,
 	last: last,
-	remove: remove
+	remove: remove$1
 });
 
 function keys(object$$1) {
@@ -305,6 +305,7 @@ function get$1(object$$1, keypath) {
 function set$1(object$$1, keypath, value) {
   var autoFill = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : TRUE;
 
+  var remove$$1 = arguments.length === 2;
   keypath = toString$1(keypath);
   if (keypath.indexOf('.') > 0) {
     var originalObject = object$$1;
@@ -313,7 +314,7 @@ function set$1(object$$1, keypath, value) {
     each$1(list, function (item, index) {
       if (object$$1[item]) {
         object$$1 = object$$1[item];
-      } else if (autoFill) {
+      } else if (!remove$$1 && autoFill) {
         object$$1 = object$$1[item] = {};
       } else {
         object$$1 = NULL;
@@ -321,10 +322,20 @@ function set$1(object$$1, keypath, value) {
       }
     });
     if (object$$1 && object$$1 !== originalObject) {
-      object$$1[prop] = value;
+      setValue(object$$1, prop, value, remove$$1);
     }
   } else {
-    object$$1[keypath] = value;
+    setValue(object$$1, keypath, value, remove$$1);
+  }
+}
+
+function setValue(object$$1, name, value, remove$$1) {
+  if (remove$$1) {
+    if (has$1(object$$1, name)) {
+      delete object$$1[name];
+    }
+  } else {
+    object$$1[name] = value;
   }
 }
 
@@ -576,6 +587,11 @@ var Context = function () {
       return new Context(data, this);
     }
   }, {
+    key: 'remove',
+    value: function remove(keypath) {
+      this.set(keypath);
+    }
+  }, {
     key: 'set',
     value: function set(keypath, value) {
       var data = this.data,
@@ -584,7 +600,11 @@ var Context = function () {
       if (has$1(cache, keypath)) {
         delete cache[keypath];
       }
-      set$1(data, keypath, value);
+      if (arguments.length === 1) {
+        set$1(data, keypath);
+      } else {
+        set$1(data, keypath, value);
+      }
     }
   }, {
     key: 'get',
@@ -616,7 +636,10 @@ var Context = function () {
         used.push(keypath);
       }
 
-      return cache[keypath];
+      return {
+        value: cache[keypath],
+        keypath: keypath
+      };
     }
   }]);
   return Context;
@@ -689,6 +712,272 @@ var Scanner = function () {
   return Scanner;
 }();
 
+var hasConsole = typeof console !== 'undefined';
+
+function warn(msg) {
+  if (debug && hasConsole) {
+    console.warn(msg);
+  }
+}
+
+function error$1(msg) {
+  if (hasConsole) {
+    console.error(msg);
+  }
+}
+
+var logger = Object.freeze({
+	warn: warn,
+	error: error$1
+});
+
+function isNumber(charCode) {
+  return charCode >= 48 && charCode <= 57;
+}
+
+function isWhitespace(charCode) {
+  return charCode === 32 || charCode === 9;
+}
+
+function isIdentifierStart(charCode) {
+  return charCode === 36 || charCode === 95 || charCode >= 97 && charCode <= 122 || charCode >= 65 && charCode <= 90;
+}
+
+function isIdentifierPart(charCode) {
+  return isIdentifierStart(charCode) || isNumber(charCode);
+}
+
+function matchBestToken(content, sortedTokens) {
+  var result = void 0;
+  each$1(sortedTokens, function (token) {
+    if (content.startsWith(token)) {
+      result = token;
+      return FALSE;
+    }
+  });
+  return result;
+}
+
+function parseError(expression) {
+  error$1('Failed to parse expression: [' + expression + '].');
+}
+
+var ARRAY = 1;
+var BINARY = 2;
+var CALL = 3;
+var CONDITIONAL = 4;
+var IDENTIFIER = 5;
+var LITERAL = 6;
+var MEMBER = 7;
+var UNARY = 8;
+
+var Node$2 = function Node$2(type) {
+  classCallCheck(this, Node$2);
+
+  this.type = type;
+};
+
+var Unary = function (_Node) {
+  inherits(Unary, _Node);
+
+  function Unary(operator, arg) {
+    classCallCheck(this, Unary);
+
+    var _this = possibleConstructorReturn(this, (Unary.__proto__ || Object.getPrototypeOf(Unary)).call(this, UNARY));
+
+    _this.operator = operator;
+    _this.arg = arg;
+    return _this;
+  }
+
+  createClass(Unary, [{
+    key: 'stringify',
+    value: function stringify() {
+      var operator = this.operator,
+          arg = this.arg;
+
+      return '' + operator + arg.stringify();
+    }
+  }, {
+    key: 'execute',
+    value: function execute(context) {
+      var operator = this.operator,
+          arg = this.arg;
+
+      var result = arg.execute(context);
+      switch (operator) {
+        case Unary.PLUS:
+          result.value = +result.value;
+          break;
+        case Unary.MINUS:
+          result.value = -result.value;
+          break;
+        case Unary.BANG:
+          result.value = !result.value;
+          break;
+        case Unary.WAVE:
+          result.value = ~result.value;
+          break;
+      }
+      return result;
+    }
+  }]);
+  return Unary;
+}(Node$2);
+
+Unary.PLUS = '+';
+Unary.MINUS = '-';
+Unary.BANG = '!';
+Unary.WAVE = '~';
+
+var Binary = function (_Node) {
+  inherits(Binary, _Node);
+
+  function Binary(right, operator, left) {
+    classCallCheck(this, Binary);
+
+    var _this = possibleConstructorReturn(this, (Binary.__proto__ || Object.getPrototypeOf(Binary)).call(this, BINARY));
+
+    _this.right = right;
+    _this.operator = operator;
+    _this.left = left;
+    return _this;
+  }
+
+  createClass(Binary, [{
+    key: 'stringify',
+    value: function stringify() {
+      var right = this.right,
+          operator = this.operator,
+          left = this.left;
+
+      return '(' + left.stringify() + ') ' + operator + ' (' + right.stringify() + ')';
+    }
+  }, {
+    key: 'execute',
+    value: function execute(context) {
+      var right = this.right,
+          operator = this.operator,
+          left = this.left;
+
+      left = left.execute(context);
+      right = right.execute(context);
+
+      var value = void 0;
+      switch (operator) {
+        case Binary.OR:
+          value = left.value || right.value;
+          break;
+        case Binary.AND:
+          value = left.value && right.value;
+          break;
+        case Binary.SE:
+          value = left.value === right.value;
+          break;
+        case Binary.SNE:
+          value = left.value !== right.value;
+          break;
+        case Binary.LE:
+          value = left.value == right.value;
+          break;
+        case Binary.LNE:
+          value = left.value != right.value;
+          break;
+        case Binary.GT:
+          value = left.value > right.value;
+          break;
+        case Binary.LT:
+          value = left.value < right.value;
+          break;
+        case Binary.GTE:
+          value = left.value >= right.value;
+          break;
+        case Binary.LTE:
+          value = left.value <= right.value;
+          break;
+        case Binary.PLUS:
+          value = left.value + right.value;
+          break;
+        case Binary.MINUS:
+          value = left.value - right.value;
+          break;
+        case Binary.MULTIPLY:
+          value = left.value * right.value;
+          break;
+        case Binary.DIVIDE:
+          value = left.value / right.value;
+          break;
+        case Binary.MODULO:
+          value = left.value % right.value;
+          break;
+      }
+
+      return {
+        value: value,
+        deps: unique(merge(left.deps, right.deps))
+      };
+    }
+  }]);
+  return Binary;
+}(Node$2);
+
+Binary.OR = '||';
+Binary.AND = '&&';
+
+Binary.SE = '===';
+
+Binary.SNE = '!==';
+
+Binary.LE = '==';
+
+Binary.LNE = '!=';
+Binary.GT = '>';
+Binary.LT = '<';
+Binary.GTE = '>=';
+Binary.LTE = '<=';
+Binary.PLUS = '+';
+Binary.MINUS = '-';
+Binary.MULTIPLY = '*';
+Binary.DIVIDE = '/';
+Binary.MODULO = '%';
+
+function sortKeys(obj) {
+  return keys(obj).sort(function (a, b) {
+    return b.length - a.length;
+  });
+}
+
+var unaryMap = {};
+unaryMap[Unary.PLUS] = unaryMap[Unary.MINUS] = unaryMap[Unary.BANG] = unaryMap[Unary.WAVE] = TRUE;
+
+var unaryList = sortKeys(unaryMap);
+
+var binaryMap = {};
+binaryMap[Binary.OR] = 1;
+binaryMap[Binary.AND] = 2;
+binaryMap[Binary.LE] = 3;
+binaryMap[Binary.LNE] = 3;
+binaryMap[Binary.SE] = 3;
+binaryMap[Binary.SNE] = 3;
+binaryMap[Binary.LT] = 4;
+binaryMap[Binary.LTE] = 4;
+binaryMap[Binary.GT] = 4;
+binaryMap[Binary.GTE] = 4;
+binaryMap[Binary.PLUS] = 5;
+binaryMap[Binary.MINUS] = 5;
+binaryMap[Binary.MULTIPLY] = 6;
+binaryMap[Binary.DIVIDE] = 6;
+binaryMap[Binary.MODULO] = 6;
+
+var binaryList = sortKeys(binaryMap);
+
+var keyword = {
+  'true': TRUE,
+  'false': FALSE,
+  'null': NULL,
+  'undefined': UNDEFINED
+};
+
 var execute$1 = function (fn, context, args) {
   if (func(fn)) {
     if (array(args)) {
@@ -699,6 +988,48 @@ var execute$1 = function (fn, context, args) {
   }
 };
 
+var Array$1 = function (_Node) {
+  inherits(Array, _Node);
+
+  function Array(elements) {
+    classCallCheck(this, Array);
+
+    var _this = possibleConstructorReturn(this, (Array.__proto__ || Object.getPrototypeOf(Array)).call(this, ARRAY));
+
+    _this.elements = elements;
+    return _this;
+  }
+
+  createClass(Array, [{
+    key: 'stringify',
+    value: function stringify() {
+      var elements = this.elements;
+
+      elements = elements.map(function (element) {
+        return element.stringify();
+      });
+      return '[' + elements.join(', ') + ']';
+    }
+  }, {
+    key: 'execute',
+    value: function execute(context) {
+      var values = [];
+      return {
+        value: values,
+        deps: unique(execute$1(merge, NULL, this.elements.map(function (node) {
+          var _node$execute = node.execute(context),
+              deps = _node$execute.deps,
+              value = _node$execute.value;
+
+          values.push(value);
+          return deps;
+        })))
+      };
+    }
+  }]);
+  return Array;
+}(Node$2);
+
 var around = function (object$$1, fn, enter, leave) {
   if (func(enter) && enter(object$$1) === FALSE) {
     return;
@@ -706,6 +1037,588 @@ var around = function (object$$1, fn, enter, leave) {
   var result = execute$1(fn, object$$1, object$$1);
   return func(leave) ? leave(object$$1, result) : result;
 };
+
+var Call = function (_Node) {
+  inherits(Call, _Node);
+
+  function Call(callee, args) {
+    classCallCheck(this, Call);
+
+    var _this = possibleConstructorReturn(this, (Call.__proto__ || Object.getPrototypeOf(Call)).call(this, CALL));
+
+    _this.callee = callee;
+    _this.args = args;
+    return _this;
+  }
+
+  createClass(Call, [{
+    key: 'stringify',
+    value: function stringify() {
+      var callee = this.callee,
+          args = this.args;
+
+      args = args.map(function (arg) {
+        return arg.stringify();
+      });
+      return callee.stringify() + '(' + args.join(', ') + ')';
+    }
+  }, {
+    key: 'execute',
+    value: function execute(context) {
+      var callee = this.callee,
+          args = this.args;
+
+      callee = callee.execute(context);
+      var deps = [callee.deps];
+      var value = execute$1(callee.value, NULL, args.map(function (arg) {
+        var result = arg.execute(context);
+        deps.push(result.deps);
+        return result.value;
+      }));
+      return {
+        value: value,
+        deps: unique(execute$1(merge, NULL, deps))
+      };
+    }
+  }]);
+  return Call;
+}(Node$2);
+
+var Conditional = function (_Node) {
+  inherits(Conditional, _Node);
+
+  function Conditional(test, consequent, alternate) {
+    classCallCheck(this, Conditional);
+
+    var _this = possibleConstructorReturn(this, (Conditional.__proto__ || Object.getPrototypeOf(Conditional)).call(this, CONDITIONAL));
+
+    _this.test = test;
+    _this.consequent = consequent;
+    _this.alternate = alternate;
+    return _this;
+  }
+
+  createClass(Conditional, [{
+    key: 'stringify',
+    value: function stringify() {
+      var test = this.test,
+          consequent = this.consequent,
+          alternate = this.alternate;
+
+      return '(' + test.stringify() + ') ? (' + consequent.stringify() + ') : (' + alternate.stringify() + ')';
+    }
+  }, {
+    key: 'execute',
+    value: function execute(context) {
+      var test = this.test,
+          consequent = this.consequent,
+          alternate = this.alternate;
+
+      test = test.execute(context);
+      if (test.value) {
+        consequent = consequent.execute(context);
+        return {
+          value: consequent.value,
+          deps: unique(merge(test.deps, consequent.deps))
+        };
+      } else {
+        alternate = alternate.execute(context);
+        return {
+          value: alternate.value,
+          deps: unique(merge(test.deps, alternate.deps))
+        };
+      }
+    }
+  }]);
+  return Conditional;
+}(Node$2);
+
+var Identifier = function (_Node) {
+  inherits(Identifier, _Node);
+
+  function Identifier(name) {
+    classCallCheck(this, Identifier);
+
+    var _this = possibleConstructorReturn(this, (Identifier.__proto__ || Object.getPrototypeOf(Identifier)).call(this, IDENTIFIER));
+
+    _this.name = name;
+    return _this;
+  }
+
+  createClass(Identifier, [{
+    key: 'stringify',
+    value: function stringify() {
+      return this.name;
+    }
+  }, {
+    key: 'execute',
+    value: function execute(context) {
+      var _context$get = context.get(this.name),
+          value = _context$get.value,
+          keypath = _context$get.keypath;
+
+      return {
+        value: value,
+        deps: [keypath]
+      };
+    }
+  }]);
+  return Identifier;
+}(Node$2);
+
+var Literal = function (_Node) {
+  inherits(Literal, _Node);
+
+  function Literal(value) {
+    classCallCheck(this, Literal);
+
+    var _this = possibleConstructorReturn(this, (Literal.__proto__ || Object.getPrototypeOf(Literal)).call(this, LITERAL));
+
+    _this.value = value;
+    return _this;
+  }
+
+  createClass(Literal, [{
+    key: 'stringify',
+    value: function stringify() {
+      var value = this.value;
+
+      return string(value) ? '\'' + value + '\'' : value;
+    }
+  }, {
+    key: 'execute',
+    value: function execute() {
+      return {
+        value: this.value,
+        deps: []
+      };
+    }
+  }]);
+  return Literal;
+}(Node$2);
+
+var Member = function (_Node) {
+  inherits(Member, _Node);
+
+  function Member(object$$1, property) {
+    classCallCheck(this, Member);
+
+    var _this = possibleConstructorReturn(this, (Member.__proto__ || Object.getPrototypeOf(Member)).call(this, MEMBER));
+
+    _this.object = object$$1;
+    _this.property = property;
+    return _this;
+  }
+
+  createClass(Member, [{
+    key: 'flatten',
+    value: function flatten() {
+      var result = [];
+
+      var current = this,
+          next = void 0;
+      do {
+        next = current.object;
+        if (current.type === MEMBER) {
+          result.unshift(current.property);
+        } else {
+          result.unshift(current);
+        }
+      } while (current = next);
+
+      return result;
+    }
+  }, {
+    key: 'stringify',
+    value: function stringify() {
+      var list = this.flatten();
+      return list.map(function (node, index) {
+        if (node.type === LITERAL) {
+          return '.' + node.value;
+        } else {
+          node = node.stringify();
+          return index > 0 ? '[' + node + ']' : node;
+        }
+      }).join('');
+    }
+  }, {
+    key: 'execute',
+    value: function execute(context) {
+      var list = this.flatten();
+      var firstNode = list.shift();
+
+      var _firstNode$execute = firstNode.execute(context),
+          value = _firstNode$execute.value,
+          deps = _firstNode$execute.deps;
+
+      var currentValue = value,
+          memberDeps = [],
+          keypaths = [deps[0]];
+
+      if (object(currentValue)) {
+        each$1(list, function (node) {
+          if (node.type !== LITERAL) {
+            var _node$execute = node.execute(context),
+                _value = _node$execute.value,
+                _deps = _node$execute.deps;
+
+            node = new Literal(_value);
+            memberDeps.push(_deps);
+          }
+          keypaths.push(node.value);
+          currentValue = currentValue[node.value];
+        });
+      }
+
+      memberDeps.unshift([keypaths.join('.')]);
+
+      return {
+        value: currentValue,
+        deps: unique(execute$1(merge, NULL, memberDeps))
+      };
+    }
+  }]);
+  return Member;
+}(Node$2);
+
+var COMMA = 44;
+var PERIOD = 46;
+var SQUOTE = 39;
+var DQUOTE = 34;
+var OPAREN = 40;
+var CPAREN = 41;
+var OBRACK = 91;
+var CBRACK = 93;
+var QUMARK = 63;
+var COLON = 58;
+function parse$1(content) {
+  var length = content.length;
+
+  var index = 0,
+      charCode = void 0,
+      value = void 0;
+
+  function getChar() {
+    return content.charAt(index);
+  }
+  function getCharCode(i) {
+    return content.charCodeAt(i != NULL ? i : index);
+  }
+
+  function skipWhitespace() {
+    while (isWhitespace(getCharCode())) {
+      index++;
+    }
+  }
+
+  function skipNumber() {
+    while (isNumber(getCharCode())) {
+      index++;
+    }
+  }
+
+  function skipString() {
+    var closed = void 0,
+        quote = getCharCode();
+    index++;
+    while (index < length) {
+      index++;
+      if (getCharCode(index - 1) === quote) {
+        closed = TRUE;
+        break;
+      }
+    }
+    if (!closed) {
+      return parseError(content);
+    }
+  }
+
+  function skipIdentifier() {
+    do {
+      index++;
+    } while (isIdentifierPart(getCharCode()));
+  }
+
+  function parseNumber() {
+
+    var start = index;
+
+    skipNumber();
+    if (getCharCode() === PERIOD) {
+      index++;
+      skipNumber();
+    }
+
+    return new Literal(parseFloat(content.substring(start, index)));
+  }
+
+  function parseString() {
+
+    var start = index;
+
+    skipString();
+
+    return new Literal(content.substring(start + 1, index - 1));
+  }
+
+  function parseIdentifier() {
+
+    var start = index;
+    skipIdentifier();
+
+    value = content.substring(start, index);
+    if (keyword[value]) {
+      return new Literal(keyword[value]);
+    }
+
+    if (value === 'this') {
+      return new Identifier(THIS);
+    }
+
+    if (value) {
+      return new Identifier(value);
+    }
+
+    parseError(content);
+  }
+
+  function parseTuple(delimiter) {
+
+    var args = [],
+        closed = void 0;
+
+    while (index < length) {
+      charCode = getCharCode();
+      if (charCode === delimiter) {
+        index++;
+        closed = TRUE;
+        break;
+      } else if (charCode === COMMA) {
+        index++;
+      } else {
+        args.push(parseExpression());
+      }
+    }
+
+    if (closed) {
+      return args;
+    }
+
+    parseError(content);
+  }
+
+  function parseOperator(sortedOperatorList) {
+    skipWhitespace();
+    value = matchBestToken(content.slice(index), sortedOperatorList);
+    if (value) {
+      index += value.length;
+      return value;
+    }
+  }
+
+  function parseVariable() {
+
+    value = parseIdentifier();
+
+    while (index < length) {
+      charCode = getCharCode();
+      if (charCode === OPAREN) {
+        index++;
+        value = new Call(value, parseTuple(CPAREN));
+        break;
+      } else {
+        if (charCode === PERIOD) {
+          index++;
+          value = new Member(value, new Literal(parseIdentifier().name));
+        } else if (charCode === OBRACK) {
+            index++;
+            value = new Member(value, parseSubexpression(CBRACK));
+          } else {
+            break;
+          }
+      }
+    }
+
+    return value;
+  }
+
+  function parseToken() {
+    skipWhitespace();
+
+    charCode = getCharCode();
+
+    if (charCode === SQUOTE || charCode === DQUOTE) {
+      return parseString();
+    } else if (isNumber(charCode) || charCode === PERIOD) {
+        return parseNumber();
+      } else if (charCode === OBRACK) {
+          index++;
+          return new Array$1(parseTuple(CBRACK));
+        } else if (charCode === OPAREN) {
+            index++;
+            return parseSubexpression(CPAREN);
+          } else if (isIdentifierStart(charCode)) {
+            return parseVariable();
+          }
+    value = parseOperator(unaryList);
+    if (value) {
+      return parseUnary(value);
+    }
+    parseError(content);
+  }
+
+  function parseUnary(op) {
+    value = parseToken();
+    if (value) {
+      return new Unary(op, value);
+    }
+    parseError(content);
+  }
+
+  function parseBinary() {
+
+    var left = parseToken();
+    var op = parseOperator(binaryList);
+    if (!op) {
+      return left;
+    }
+
+    var right = parseToken();
+    var stack = [left, op, binaryMap[op], right];
+
+    while (op = parseOperator(binaryList)) {
+      if (stack.length > 3 && binaryMap[op] < stack[stack.length - 2]) {
+        stack.push(new Binary(stack.pop(), (stack.pop(), stack.pop()), stack.pop()));
+      }
+
+      right = parseToken();
+      if (right) {
+        stack.push(op, binaryMap[op], right);
+      } else {
+        parseError(content);
+      }
+    }
+
+    right = stack.pop();
+    while (stack.length > 1) {
+      right = new Binary(right, (stack.pop(), stack.pop()), stack.pop());
+    }
+
+    return right;
+  }
+
+  function parseSubexpression(delimiter) {
+    value = parseExpression();
+    if (getCharCode() === delimiter) {
+      index++;
+      return value;
+    }
+    parseError(content);
+  }
+
+  function parseExpression() {
+
+    var test = parseBinary();
+
+    skipWhitespace();
+    if (getCharCode() === QUMARK) {
+      index++;
+
+      var consequent = parseBinary();
+
+      skipWhitespace();
+      if (getCharCode() === COLON) {
+        index++;
+
+        var alternate = parseBinary();
+
+        skipWhitespace();
+        return new Conditional(test, consequent, alternate);
+      } else {
+        parseError(content);
+      }
+    }
+
+    return test;
+  }
+
+  if (!expressionParse[content]) {
+    var ast = parseExpression();
+    expressionParse[content] = expressionParse[ast.stringify()] = ast;
+  }
+
+  return expressionParse[content];
+}
+
+var expression = Object.freeze({
+	parse: parse$1
+});
+
+function normalize(keypath) {
+
+  if (!keypathNormalize[keypath]) {
+    keypathNormalize[keypath] = keypath.indexOf('[') < 0 ? keypath : parse$1(keypath).stringify();
+  }
+
+  return keypathNormalize[keypath];
+}
+
+function getWildcardMatches(keypath) {
+
+  if (!keypathWildcardMatches[keypath]) {
+    (function () {
+      var result = [];
+      var terms = normalize(keypath).split('.');
+      var toWildcard = function toWildcard(isTrue, index) {
+        return isTrue ? '*' : terms[index];
+      };
+      each$1(getBoolCombinations(terms.length), function (items) {
+        result.push(items.map(toWildcard).join('.'));
+      });
+      keypathWildcardMatches[keypath] = result;
+    })();
+  }
+
+  return keypathWildcardMatches[keypath];
+}
+
+function getWildcardNames(keypath, wildcardKeypath) {
+
+  var result = [];
+  if (wildcardKeypath.indexOf('*') < 0) {
+    return result;
+  }
+
+  var list = keypath.split('.');
+  each$1(wildcardKeypath.split('.'), function (name, index) {
+    if (name === '*') {
+      result.push(list[index]);
+    }
+  });
+
+  return result;
+}
+
+function getBoolCombinations(num) {
+  var result = [];
+  var toBool = function toBool(value) {
+    return value == 1;
+  };
+  var length = parseInt(new Array(num + 1).join('1'), 2);
+  for (var i = 0, binary, j, item; i <= length; i++) {
+    binary = i.toString(2);
+    if (binary.length < num) {
+      binary = '0' + binary;
+    }
+
+    item = [];
+    for (j = 0; j < num; j++) {
+      item.push(toBool(binary[j]));
+    }
+    result.push(item);
+  }
+  return result;
+}
 
 var Node = function () {
   function Node(type, hasChildren) {
@@ -740,12 +1653,12 @@ var Node = function () {
     }
   }, {
     key: 'execute',
-    value: function execute$1(context, keypath) {
-      var expr = this.expr;
+    value: function execute$1(context, base) {
+      var _expr$execute = this.expr.execute(context),
+          value = _expr$execute.value,
+          deps = _expr$execute.deps;
 
-      var result = expr.execute(context);
-
-      return result.value;
+      return value;
     }
   }, {
     key: 'render',
@@ -862,27 +1775,29 @@ var Each = function (_Node) {
       var name = instance.name,
           index = instance.index;
       var context = data.context,
-          keys$$1 = data.keys;
+          keys$$1 = data.keys,
+          push = data.push;
 
-
-      var iterator = context.get(name);
+      var _context$get = context.get(name),
+          value = _context$get.value;
 
       var iterate = void 0;
-      if (array(iterator)) {
+      if (array(value)) {
         iterate = each$1;
-      } else if (object(iterator)) {
+      } else if (object(value)) {
         iterate = each$$1;
       }
 
       if (iterate) {
         keys$$1.push(name);
-        iterate(iterator, function (item, i) {
+        iterate(value, function (item, i) {
+          var newContext = push(context, item);
           if (index) {
-            context.set(index, i);
+            newContext.set(index, i);
           }
           keys$$1.push(i);
-          context.set(SPECIAL_KEYPATH, keys$$1.join('.'));
-          instance.renderChildren(extend({}, data, { context: context.push(item) }));
+          newContext.set(SPECIAL_KEYPATH, keys$$1.join('.'));
+          instance.renderChildren(extend({}, data, { context: newContext }));
           keys$$1.pop();
         });
         keys$$1.pop();
@@ -1143,25 +2058,6 @@ var Spread = function (_Node) {
   return Spread;
 }(Node);
 
-var hasConsole = typeof console !== 'undefined';
-
-function warn(msg) {
-  if (debug && hasConsole) {
-    console.warn(msg);
-  }
-}
-
-function error$1(msg) {
-  if (hasConsole) {
-    console.error(msg);
-  }
-}
-
-var logger = Object.freeze({
-	warn: warn,
-	error: error$1
-});
-
 var getLocationByIndex = function (str, index) {
 
   var line = 0,
@@ -1207,7 +2103,7 @@ function matchByQuote(str, nonQuote) {
   return match ? match[0] : '';
 }
 
-function parseError(str, errorMsg, errorIndex) {
+function parseError$1(str, errorMsg, errorIndex) {
   if (errorIndex == NULL) {
     errorMsg += '.';
   } else {
@@ -1219,807 +2115,6 @@ function parseError(str, errorMsg, errorIndex) {
   }
   error$1(errorMsg);
 }
-
-function isNumber(charCode) {
-  return charCode >= 48 && charCode <= 57;
-}
-
-function isWhitespace(charCode) {
-  return charCode === 32 || charCode === 9;
-}
-
-function isIdentifierStart(charCode) {
-  return charCode === 36 || charCode === 95 || charCode >= 97 && charCode <= 122 || charCode >= 65 && charCode <= 90;
-}
-
-function isIdentifierPart(charCode) {
-  return isIdentifierStart(charCode) || isNumber(charCode);
-}
-
-function matchBestToken(content, sortedTokens) {
-  var result = void 0;
-  each$1(sortedTokens, function (token) {
-    if (content.startsWith(token)) {
-      result = token;
-      return FALSE;
-    }
-  });
-  return result;
-}
-
-function parseError$1(expression) {
-  error$1('Failed to parse expression: [' + expression + '].');
-}
-
-var ARRAY = 1;
-var BINARY = 2;
-var CALL = 3;
-var CONDITIONAL = 4;
-var IDENTIFIER = 5;
-var LITERAL = 6;
-var MEMBER = 7;
-var UNARY = 8;
-
-var Node$2 = function Node$2(type) {
-  classCallCheck(this, Node$2);
-
-  this.type = type;
-};
-
-var Unary = function (_Node) {
-  inherits(Unary, _Node);
-
-  function Unary(operator, arg) {
-    classCallCheck(this, Unary);
-
-    var _this = possibleConstructorReturn(this, (Unary.__proto__ || Object.getPrototypeOf(Unary)).call(this, UNARY));
-
-    _this.operator = operator;
-    _this.arg = arg;
-    return _this;
-  }
-
-  createClass(Unary, [{
-    key: 'stringify',
-    value: function stringify() {
-      var operator = this.operator,
-          arg = this.arg;
-
-      return '' + operator + arg.stringify();
-    }
-  }, {
-    key: 'execute',
-    value: function execute(context) {
-      var operator = this.operator,
-          arg = this.arg;
-
-      var result = arg.execute(context);
-      switch (operator) {
-        case Unary.PLUS:
-          result.value = +result.value;
-          break;
-        case Unary.MINUS:
-          result.value = -result.value;
-          break;
-        case Unary.BANG:
-          result.value = !result.value;
-          break;
-        case Unary.WAVE:
-          result.value = ~result.value;
-          break;
-      }
-      return result;
-    }
-  }]);
-  return Unary;
-}(Node$2);
-
-Unary.PLUS = '+';
-Unary.MINUS = '-';
-Unary.BANG = '!';
-Unary.WAVE = '~';
-
-var Binary = function (_Node) {
-  inherits(Binary, _Node);
-
-  function Binary(right, operator, left) {
-    classCallCheck(this, Binary);
-
-    var _this = possibleConstructorReturn(this, (Binary.__proto__ || Object.getPrototypeOf(Binary)).call(this, BINARY));
-
-    _this.right = right;
-    _this.operator = operator;
-    _this.left = left;
-    return _this;
-  }
-
-  createClass(Binary, [{
-    key: 'stringify',
-    value: function stringify() {
-      var right = this.right,
-          operator = this.operator,
-          left = this.left;
-
-      return '(' + left.stringify() + ') ' + operator + ' (' + right.stringify() + ')';
-    }
-  }, {
-    key: 'execute',
-    value: function execute(context) {
-      var right = this.right,
-          operator = this.operator,
-          left = this.left;
-
-      left = left.execute(context);
-      right = right.execute(context);
-
-      var value = void 0;
-      switch (operator) {
-        case Binary.OR:
-          value = left.value || right.value;
-          break;
-        case Binary.AND:
-          value = left.value && right.value;
-          break;
-        case Binary.SE:
-          value = left.value === right.value;
-          break;
-        case Binary.SNE:
-          value = left.value !== right.value;
-          break;
-        case Binary.LE:
-          value = left.value == right.value;
-          break;
-        case Binary.LNE:
-          value = left.value != right.value;
-          break;
-        case Binary.GT:
-          value = left.value > right.value;
-          break;
-        case Binary.LT:
-          value = left.value < right.value;
-          break;
-        case Binary.GTE:
-          value = left.value >= right.value;
-          break;
-        case Binary.LTE:
-          value = left.value <= right.value;
-          break;
-        case Binary.PLUS:
-          value = left.value + right.value;
-          break;
-        case Binary.MINUS:
-          value = left.value - right.value;
-          break;
-        case Binary.MULTIPLY:
-          value = left.value * right.value;
-          break;
-        case Binary.DIVIDE:
-          value = left.value / right.value;
-          break;
-        case Binary.MODULO:
-          value = left.value % right.value;
-          break;
-      }
-
-      return {
-        value: value,
-        deps: unique(merge(left.deps, right.deps))
-      };
-    }
-  }]);
-  return Binary;
-}(Node$2);
-
-Binary.OR = '||';
-Binary.AND = '&&';
-
-Binary.SE = '===';
-
-Binary.SNE = '!==';
-
-Binary.LE = '==';
-
-Binary.LNE = '!=';
-Binary.GT = '>';
-Binary.LT = '<';
-Binary.GTE = '>=';
-Binary.LTE = '<=';
-Binary.PLUS = '+';
-Binary.MINUS = '-';
-Binary.MULTIPLY = '*';
-Binary.DIVIDE = '/';
-Binary.MODULO = '%';
-
-function sortKeys(obj) {
-  return keys(obj).sort(function (a, b) {
-    return b.length - a.length;
-  });
-}
-
-var unaryMap = {};
-unaryMap[Unary.PLUS] = unaryMap[Unary.MINUS] = unaryMap[Unary.BANG] = unaryMap[Unary.WAVE] = TRUE;
-
-var unaryList = sortKeys(unaryMap);
-
-var binaryMap = {};
-binaryMap[Binary.OR] = 1;
-binaryMap[Binary.AND] = 2;
-binaryMap[Binary.LE] = 3;
-binaryMap[Binary.LNE] = 3;
-binaryMap[Binary.SE] = 3;
-binaryMap[Binary.SNE] = 3;
-binaryMap[Binary.LT] = 4;
-binaryMap[Binary.LTE] = 4;
-binaryMap[Binary.GT] = 4;
-binaryMap[Binary.GTE] = 4;
-binaryMap[Binary.PLUS] = 5;
-binaryMap[Binary.MINUS] = 5;
-binaryMap[Binary.MULTIPLY] = 6;
-binaryMap[Binary.DIVIDE] = 6;
-binaryMap[Binary.MODULO] = 6;
-
-var binaryList = sortKeys(binaryMap);
-
-var keyword = {
-  'true': TRUE,
-  'false': FALSE,
-  'null': NULL,
-  'undefined': UNDEFINED
-};
-
-var Array$1 = function (_Node) {
-  inherits(Array, _Node);
-
-  function Array(elements) {
-    classCallCheck(this, Array);
-
-    var _this = possibleConstructorReturn(this, (Array.__proto__ || Object.getPrototypeOf(Array)).call(this, ARRAY));
-
-    _this.elements = elements;
-    return _this;
-  }
-
-  createClass(Array, [{
-    key: 'stringify',
-    value: function stringify() {
-      var elements = this.elements;
-
-      elements = elements.map(function (element) {
-        return element.stringify();
-      });
-      return '[' + elements.join(', ') + ']';
-    }
-  }, {
-    key: 'execute',
-    value: function execute(context) {
-      var values = [];
-      return {
-        value: values,
-        deps: unique(execute$1(merge, NULL, this.elements.map(function (node) {
-          var _node$execute = node.execute(context),
-              deps = _node$execute.deps,
-              value = _node$execute.value;
-
-          values.push(value);
-          return deps;
-        })))
-      };
-    }
-  }]);
-  return Array;
-}(Node$2);
-
-var Call = function (_Node) {
-  inherits(Call, _Node);
-
-  function Call(callee, args) {
-    classCallCheck(this, Call);
-
-    var _this = possibleConstructorReturn(this, (Call.__proto__ || Object.getPrototypeOf(Call)).call(this, CALL));
-
-    _this.callee = callee;
-    _this.args = args;
-    return _this;
-  }
-
-  createClass(Call, [{
-    key: 'stringify',
-    value: function stringify() {
-      var callee = this.callee,
-          args = this.args;
-
-      args = args.map(function (arg) {
-        return arg.stringify();
-      });
-      return callee.stringify() + '(' + args.join(', ') + ')';
-    }
-  }, {
-    key: 'execute',
-    value: function execute(context) {
-      var callee = this.callee,
-          args = this.args;
-
-      callee = callee.execute(context);
-      var deps = [callee.deps];
-      var value = execute$1(callee.value, NULL, args.map(function (arg) {
-        var result = arg.execute(context);
-        deps.push(result.deps);
-        return result.value;
-      }));
-      return {
-        value: value,
-        deps: unique(execute$1(merge, NULL, deps))
-      };
-    }
-  }]);
-  return Call;
-}(Node$2);
-
-var Conditional = function (_Node) {
-  inherits(Conditional, _Node);
-
-  function Conditional(test, consequent, alternate) {
-    classCallCheck(this, Conditional);
-
-    var _this = possibleConstructorReturn(this, (Conditional.__proto__ || Object.getPrototypeOf(Conditional)).call(this, CONDITIONAL));
-
-    _this.test = test;
-    _this.consequent = consequent;
-    _this.alternate = alternate;
-    return _this;
-  }
-
-  createClass(Conditional, [{
-    key: 'stringify',
-    value: function stringify() {
-      var test = this.test,
-          consequent = this.consequent,
-          alternate = this.alternate;
-
-      return '(' + test.stringify() + ') ? (' + consequent.stringify() + ') : (' + alternate.stringify() + ')';
-    }
-  }, {
-    key: 'execute',
-    value: function execute(context) {
-      var test = this.test,
-          consequent = this.consequent,
-          alternate = this.alternate;
-
-      test = test.execute(context);
-      if (test.value) {
-        consequent = consequent.execute(context);
-        return {
-          value: consequent.value,
-          deps: unique(merge(test.deps, consequent.deps))
-        };
-      } else {
-        alternate = alternate.execute(context);
-        return {
-          value: alternate.value,
-          deps: unique(merge(test.deps, alternate.deps))
-        };
-      }
-    }
-  }]);
-  return Conditional;
-}(Node$2);
-
-var Identifier = function (_Node) {
-  inherits(Identifier, _Node);
-
-  function Identifier(name) {
-    classCallCheck(this, Identifier);
-
-    var _this = possibleConstructorReturn(this, (Identifier.__proto__ || Object.getPrototypeOf(Identifier)).call(this, IDENTIFIER));
-
-    _this.name = name;
-    return _this;
-  }
-
-  createClass(Identifier, [{
-    key: 'stringify',
-    value: function stringify() {
-      return this.name;
-    }
-  }, {
-    key: 'execute',
-    value: function execute(context) {
-      var name = this.name;
-
-      return {
-        value: context.get(name),
-        deps: [name]
-      };
-    }
-  }]);
-  return Identifier;
-}(Node$2);
-
-var Literal = function (_Node) {
-  inherits(Literal, _Node);
-
-  function Literal(value) {
-    classCallCheck(this, Literal);
-
-    var _this = possibleConstructorReturn(this, (Literal.__proto__ || Object.getPrototypeOf(Literal)).call(this, LITERAL));
-
-    _this.value = value;
-    return _this;
-  }
-
-  createClass(Literal, [{
-    key: 'stringify',
-    value: function stringify() {
-      var value = this.value;
-
-      return string(value) ? '\'' + value + '\'' : value;
-    }
-  }, {
-    key: 'execute',
-    value: function execute() {
-      return {
-        value: this.value,
-        deps: []
-      };
-    }
-  }]);
-  return Literal;
-}(Node$2);
-
-var Member = function (_Node) {
-  inherits(Member, _Node);
-
-  function Member(object, property) {
-    classCallCheck(this, Member);
-
-    var _this = possibleConstructorReturn(this, (Member.__proto__ || Object.getPrototypeOf(Member)).call(this, MEMBER));
-
-    _this.object = object;
-    _this.property = property;
-    return _this;
-  }
-
-  createClass(Member, [{
-    key: 'flatten',
-    value: function flatten() {
-      var result = [];
-
-      var current = this,
-          next = void 0;
-      do {
-        next = current.object;
-        if (current.type === MEMBER) {
-          result.unshift(current.property);
-        } else {
-          result.unshift(current);
-        }
-      } while (current = next);
-
-      return result;
-    }
-  }, {
-    key: 'stringify',
-    value: function stringify() {
-      var list = this.flatten();
-      return list.map(function (node, index) {
-        if (node.type === LITERAL) {
-          return '.' + node.value;
-        } else {
-          node = node.stringify();
-          return index > 0 ? '[' + node + ']' : node;
-        }
-      }).join('');
-    }
-  }, {
-    key: 'execute',
-    value: function execute(context) {
-      var list = this.flatten();
-      var firstNode = list.shift();
-
-      var _firstNode$execute = firstNode.execute(context),
-          value = _firstNode$execute.value,
-          deps = _firstNode$execute.deps;
-
-      var currentValue = value,
-          memberDeps = [],
-          keypaths = [deps[0]];
-
-      each$1(list, function (node) {
-        if (node.type !== LITERAL) {
-          var _node$execute = node.execute(context),
-              _value = _node$execute.value,
-              _deps = _node$execute.deps;
-
-          node = new Literal(_value);
-          memberDeps.push(_deps);
-        }
-        keypaths.push(node.value);
-        currentValue = currentValue[node.value];
-      });
-
-      memberDeps.unshift([keypaths.join('.')]);
-
-      return {
-        value: currentValue,
-        deps: unique(execute$1(merge, NULL, memberDeps))
-      };
-    }
-  }]);
-  return Member;
-}(Node$2);
-
-var COMMA = 44;
-var PERIOD = 46;
-var SQUOTE = 39;
-var DQUOTE = 34;
-var OPAREN = 40;
-var CPAREN = 41;
-var OBRACK = 91;
-var CBRACK = 93;
-var QUMARK = 63;
-var COLON = 58;
-function parse$1(content) {
-  var length = content.length;
-
-  var index = 0,
-      charCode = void 0,
-      value = void 0;
-
-  function getChar() {
-    return content.charAt(index);
-  }
-  function getCharCode(i) {
-    return content.charCodeAt(i != NULL ? i : index);
-  }
-
-  function skipWhitespace() {
-    while (isWhitespace(getCharCode())) {
-      index++;
-    }
-  }
-
-  function skipNumber() {
-    while (isNumber(getCharCode())) {
-      index++;
-    }
-  }
-
-  function skipString() {
-    var closed = void 0,
-        quote = getCharCode();
-    index++;
-    while (index < length) {
-      index++;
-      if (getCharCode(index - 1) === quote) {
-        closed = TRUE;
-        break;
-      }
-    }
-    if (!closed) {
-      return parseError$1(content);
-    }
-  }
-
-  function skipIdentifier() {
-    do {
-      index++;
-    } while (isIdentifierPart(getCharCode()));
-  }
-
-  function parseNumber() {
-
-    var start = index;
-
-    skipNumber();
-    if (getCharCode() === PERIOD) {
-      index++;
-      skipNumber();
-    }
-
-    return new Literal(parseFloat(content.substring(start, index)));
-  }
-
-  function parseString() {
-
-    var start = index;
-
-    skipString();
-
-    return new Literal(content.substring(start + 1, index - 1));
-  }
-
-  function parseIdentifier() {
-
-    var start = index;
-    skipIdentifier();
-
-    value = content.substring(start, index);
-    if (keyword[value]) {
-      return new Literal(keyword[value]);
-    }
-
-    if (value === 'this') {
-      return new Identifier(THIS);
-    }
-
-    if (value) {
-      return new Identifier(value);
-    }
-
-    parseError$1(content);
-  }
-
-  function parseTuple(delimiter) {
-
-    var args = [],
-        closed = void 0;
-
-    while (index < length) {
-      charCode = getCharCode();
-      if (charCode === delimiter) {
-        index++;
-        closed = TRUE;
-        break;
-      } else if (charCode === COMMA) {
-        index++;
-      } else {
-        args.push(parseExpression());
-      }
-    }
-
-    if (closed) {
-      return args;
-    }
-
-    parseError$1(content);
-  }
-
-  function parseOperator(sortedOperatorList) {
-    skipWhitespace();
-    value = matchBestToken(content.slice(index), sortedOperatorList);
-    if (value) {
-      index += value.length;
-      return value;
-    }
-  }
-
-  function parseVariable() {
-
-    value = parseIdentifier();
-
-    while (index < length) {
-      charCode = getCharCode();
-      if (charCode === OPAREN) {
-        index++;
-        value = new Call(value, parseTuple(CPAREN));
-        break;
-      } else {
-        if (charCode === PERIOD) {
-          index++;
-          value = new Member(value, new Literal(parseIdentifier().name));
-        } else if (charCode === OBRACK) {
-            index++;
-            value = new Member(value, parseSubexpression(CBRACK));
-          } else {
-            break;
-          }
-      }
-    }
-
-    return value;
-  }
-
-  function parseToken() {
-    skipWhitespace();
-
-    charCode = getCharCode();
-
-    if (charCode === SQUOTE || charCode === DQUOTE) {
-      return parseString();
-    } else if (isNumber(charCode) || charCode === PERIOD) {
-        return parseNumber();
-      } else if (charCode === OBRACK) {
-          index++;
-          return new Array$1(parseTuple(CBRACK));
-        } else if (charCode === OPAREN) {
-            index++;
-            return parseSubexpression(CPAREN);
-          } else if (isIdentifierStart(charCode)) {
-            return parseVariable();
-          }
-    value = parseOperator(unaryList);
-    if (value) {
-      return parseUnary(value);
-    }
-    parseError$1(content);
-  }
-
-  function parseUnary(op) {
-    value = parseToken();
-    if (value) {
-      return new Unary(op, value);
-    }
-    parseError$1(content);
-  }
-
-  function parseBinary() {
-
-    var left = parseToken();
-    var op = parseOperator(binaryList);
-    if (!op) {
-      return left;
-    }
-
-    var right = parseToken();
-    var stack = [left, op, binaryMap[op], right];
-
-    while (op = parseOperator(binaryList)) {
-      if (stack.length > 3 && binaryMap[op] < stack[stack.length - 2]) {
-        stack.push(new Binary(stack.pop(), (stack.pop(), stack.pop()), stack.pop()));
-      }
-
-      right = parseToken();
-      if (right) {
-        stack.push(op, binaryMap[op], right);
-      } else {
-        parseError$1(content);
-      }
-    }
-
-    right = stack.pop();
-    while (stack.length > 1) {
-      right = new Binary(right, (stack.pop(), stack.pop()), stack.pop());
-    }
-
-    return right;
-  }
-
-  function parseSubexpression(delimiter) {
-    value = parseExpression();
-    if (getCharCode() === delimiter) {
-      index++;
-      return value;
-    }
-    parseError$1(content);
-  }
-
-  function parseExpression() {
-
-    var test = parseBinary();
-
-    skipWhitespace();
-    if (getCharCode() === QUMARK) {
-      index++;
-
-      var consequent = parseBinary();
-
-      skipWhitespace();
-      if (getCharCode() === COLON) {
-        index++;
-
-        var alternate = parseBinary();
-
-        skipWhitespace();
-        return new Conditional(test, consequent, alternate);
-      } else {
-        parseError$1(content);
-      }
-    }
-
-    return test;
-  }
-
-  if (!expressionParse[content]) {
-    var ast = parseExpression();
-    expressionParse[content] = expressionParse[ast.stringify()] = ast;
-  }
-
-  return expressionParse[content];
-}
-
-var expression = Object.freeze({
-	parse: parse$1
-});
 
 var openingDelimiter = '\\{\\{\\s*';
 var closingDelimiter = '\\s*\\}\\}';
@@ -2123,17 +2218,24 @@ function render$1(ast, data) {
 
   var rootElement = new Element(rootName);
   var rootContext = new Context(data);
-  var keys = [];
+  var keys$$1 = [],
+      contexts = [rootContext];
 
   var renderAst = function renderAst(ast) {
-    ast.render({
-      keys: keys,
+    var data = {
+      keys: keys$$1,
       parent: rootElement,
       context: rootContext,
       parse: function parse(template) {
         return _parse(template).children;
+      },
+      push: function push(currentContext, newData) {
+        var newContext = currentContext.push(newData);
+        contexts.push(newContext);
+        return newContext;
       }
-    });
+    };
+    ast.render(data);
   };
 
   if (ast.name === rootName) {
@@ -2314,7 +2416,7 @@ function _parse(template, getPartial, setPartial) {
             if (parser.test(content)) {
               node = parser.create(content, popStack);
               if (string(node)) {
-                parseError(template, node, errorIndex);
+                parseError$1(template, node, errorIndex);
               }
               if (isAttributesParsing && node.type === EXPRESSION && !attrLike[currentNode.type]) {
                 node = new Attribute(node);
@@ -2346,9 +2448,9 @@ function _parse(template, getPartial, setPartial) {
       name = content.slice(2);
 
       if (mainScanner.charAt(0) !== '>') {
-        return parseError(template, 'Illegal tag name', errorIndex);
+        return parseError$1(template, 'Illegal tag name', errorIndex);
       } else if (name !== currentNode.name) {
-        return parseError(template, 'Unexpected closing tag', errorIndex);
+        return parseError$1(template, 'Unexpected closing tag', errorIndex);
       }
 
       popStack();
@@ -2369,7 +2471,7 @@ function _parse(template, getPartial, setPartial) {
 
         content = mainScanner.nextAfter(elementEndPattern);
         if (!content) {
-          return parseError(template, 'Illegal tag name', errorIndex);
+          return parseError$1(template, 'Illegal tag name', errorIndex);
         }
 
         if (isSelfClosingTag) {
@@ -2379,78 +2481,12 @@ function _parse(template, getPartial, setPartial) {
   }
 
   if (nodeStack.length) {
-    return parseError(template, 'Missing end tag (</' + nodeStack[0].name + '>)', errorIndex);
+    return parseError$1(template, 'Missing end tag (</' + nodeStack[0].name + '>)', errorIndex);
   }
 
   templateParse[template] = rootNode;
 
   return rootNode;
-}
-
-function normalize(keypath) {
-
-  if (!keypathNormalize[keypath]) {
-    keypathNormalize[keypath] = keypath.indexOf('[') < 0 ? keypath : parse$1(keypath).stringify();
-  }
-
-  return keypathNormalize[keypath];
-}
-
-function getWildcardMatches(keypath) {
-
-  if (!keypathWildcardMatches[keypath]) {
-    (function () {
-      var result = [];
-      var terms = normalize(keypath).split('.');
-      var toWildcard = function toWildcard(isTrue, index) {
-        return isTrue ? '*' : terms[index];
-      };
-      each$1(getBoolCombinations(terms.length), function (items) {
-        result.push(items.map(toWildcard).join('.'));
-      });
-      keypathWildcardMatches[keypath] = result;
-    })();
-  }
-
-  return keypathWildcardMatches[keypath];
-}
-
-function getWildcardNames(keypath, wildcardKeypath) {
-
-  var result = [];
-  if (wildcardKeypath.indexOf('*') < 0) {
-    return result;
-  }
-
-  var list = keypath.split('.');
-  each$1(wildcardKeypath.split('.'), function (name, index) {
-    if (name === '*') {
-      result.push(list[index]);
-    }
-  });
-
-  return result;
-}
-
-function getBoolCombinations(num) {
-  var result = [];
-  var toBool = function toBool(value) {
-    return value == 1;
-  };
-  var length = parseInt(new Array(num + 1).join('1'), 2);
-  for (var i = 0, binary, j, item; i <= length; i++) {
-    binary = i.toString(2);
-    if (binary.length < num) {
-      binary = '0' + binary;
-    }
-
-    item = [];
-    for (j = 0; j < num; j++) {
-      item.push(toBool(binary[j]));
-    }
-    result.push(item);
-  }
-  return result;
 }
 
 var nextTick = void 0;
@@ -3258,7 +3294,7 @@ var Emitter = function () {
           if (listener == NULL) {
             list.length = 0;
           } else {
-            remove(list, listener);
+            remove$1(list, listener);
           }
         }
       }
@@ -3674,7 +3710,7 @@ var controlTypes = {
         if (el.checked) {
           value.push(el.value);
         } else {
-          remove(value, el.value, FALSE);
+          remove$1(value, el.value, FALSE);
         }
         instance.set(keypath, copy(value));
       } else {
@@ -3966,7 +4002,7 @@ var Yox = function () {
               });
 
               each$1(removedDeps, function (dep) {
-                remove($computedWatchers[dep], keypath);
+                remove$1($computedWatchers[dep], keypath);
               });
 
               $computedCache[keypath] = result;
@@ -4319,7 +4355,7 @@ var Yox = function () {
       }
 
       if ($parent && $parent.$children) {
-        remove($parent.$children, instance);
+        remove$1($parent.$children, instance);
         delete instance.$parent;
       }
 
@@ -4347,7 +4383,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.16.8';
+Yox.version = '0.16.9';
 
 Yox.switcher = switcher;
 

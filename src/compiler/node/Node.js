@@ -4,6 +4,7 @@ import * as nodeType from '../nodeType'
 
 import * as is from '../../util/is'
 import * as array from '../../util/array'
+import * as keypath from '../../util/keypath'
 
 import around from '../../function/around'
 import execute from '../../function/execute'
@@ -37,12 +38,14 @@ export default class Node {
     return children[0] ? children[0].content : env.TRUE
   }
 
-  execute(context, keypath) {
-    let { expr } = this
-    let result = expr.execute(context)
-    // console.log('expr', keypath, expr.stringify(), result)
-    // 可能是任何类型的结果
-    return result.value
+  execute(context, base) {
+    let { value, deps } = this.expr.execute(context)
+    // deps = deps.map(
+    //   function (dep) {
+    //     return keypath.join(base, dep)
+    //   }
+    // )
+    return value
   }
 
   render() {

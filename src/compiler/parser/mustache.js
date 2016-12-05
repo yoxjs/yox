@@ -24,6 +24,7 @@ import Text from '../node/Text'
 
 import * as is from '../../util/is'
 import * as array from '../../util/array'
+import * as object from '../../util/object'
 import * as string from '../../util/string'
 import * as logger from '../../util/logger'
 import * as expression from '../../expression/index'
@@ -152,18 +153,24 @@ export function render(ast, data) {
 
   let rootElement = new Element(rootName)
   let rootContext = new Context(data)
-  let keys = [ ]
+  let keys = [ ], contexts = [ rootContext ]
 
   // 非转义插值需要解析模板字符串
   let renderAst = function (ast) {
-    ast.render({
+    let data = {
       keys,
       parent: rootElement,
       context: rootContext,
       parse: function (template) {
         return parse(template).children
       },
-    })
+      push: function (currentContext, newData) {
+        let newContext = currentContext.push(newData)
+        contexts.push(newContext)
+        return newContext
+      }
+    }
+    ast.render(data)
   }
 
   if (ast.name === rootName) {
