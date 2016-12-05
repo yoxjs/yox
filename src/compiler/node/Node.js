@@ -37,13 +37,17 @@ export default class Node {
     return children[0] ? children[0].content : env.TRUE
   }
 
-  execute(context, base) {
+  execute(data) {
+    let { context, keys, addDeps } = data
     let { value, deps } = this.expr.execute(context)
-    // deps = deps.map(
-    //   function (dep) {
-    //     return keypath.join(base, dep)
-    //   }
-    // )
+    let base = keys.join('.')
+    addDeps(
+      deps.map(
+        function (dep) {
+          return base + dep
+        }
+      )
+    )
     return value
   }
 

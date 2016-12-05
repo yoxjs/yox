@@ -22,8 +22,7 @@ export default class Spread extends Node {
   }
 
   render(data) {
-    let { context, parent, keys } = data
-    let target = this.execute(context, keys.join('.'))
+    let target = this.execute(data)
     if (!is.object(target)) {
       return
     }
@@ -35,7 +34,7 @@ export default class Spread extends Node {
       function (value, key) {
         node = new Attribute(key)
         node.addChild(new Text(value))
-        parent.addAttr(node)
+        data.parent.addAttr(node)
       }
     )
   }

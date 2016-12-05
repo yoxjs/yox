@@ -30,6 +30,15 @@ export function reduce(array, callback, initialValue) {
   return array.reduce(callback, initialValue)
 }
 
+export function push(array, newArray) {
+  each(
+    newArray,
+    function (item) {
+      array.push(item)
+    }
+  )
+}
+
 export function merge() {
   let result = [ ]
   let push = function (item) {

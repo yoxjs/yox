@@ -156,6 +156,12 @@ function reduce(array$$1, callback, initialValue) {
   return array$$1.reduce(callback, initialValue);
 }
 
+function push$1(array$$1, newArray) {
+  each$1(newArray, function (item) {
+    array$$1.push(item);
+  });
+}
+
 function merge() {
   var result = [];
   var push = function push(item) {
@@ -222,6 +228,7 @@ function remove$1(array$$1, item, strict) {
 var array$1 = Object.freeze({
 	each: each$1,
 	reduce: reduce,
+	push: push$1,
 	merge: merge,
 	unique: unique,
 	toArray: toArray,
@@ -576,7 +583,6 @@ var Context = function () {
     var instance = this;
     instance.data = data;
     instance.parent = parent;
-    instance.used = [];
     var cache = instance.cache = {};
     cache[THIS] = data;
   }
@@ -612,8 +618,7 @@ var Context = function () {
 
       var instance = this;
       var _instance = instance,
-          cache = _instance.cache,
-          used = _instance.used;
+          cache = _instance.cache;
 
 
       if (!has$1(cache, keypath)) {
@@ -632,10 +637,6 @@ var Context = function () {
         if (result) {
           cache[keypath] = result.value;
         }
-      }
-
-      if (!has$2(used, keypath)) {
-        used.push(keypath);
       }
 
       return {
@@ -1647,11 +1648,19 @@ var Node = function () {
     }
   }, {
     key: 'execute',
-    value: function execute$1(context, base) {
+    value: function execute$1(data) {
+      var context = data.context,
+          keys = data.keys,
+          addDeps = data.addDeps;
+
       var _expr$execute = this.expr.execute(context),
           value = _expr$execute.value,
           deps = _expr$execute.deps;
 
+      var base = keys.join('.');
+      addDeps(deps.map(function (dep) {
+        return base + dep;
+      }));
       return value;
     }
   }, {
@@ -1685,13 +1694,12 @@ var Attribute = function (_Node) {
     value: function render(data) {
       var name = this.name;
 
-      var keypath = data.keys.join('.');
       if (name.type === EXPRESSION) {
-        name = name.execute(data.context, keypath);
+        name = name.execute(data);
       }
 
       var node = new Attribute(name);
-      node.keypath = keypath;
+      node.keypath = data.keys.join('.');
       data.parent.addAttr(node);
 
       this.renderChildren(extend({}, data, { parent: node }));
@@ -1747,8 +1755,7 @@ var Each = function (_Node) {
       var name = instance.name,
           index = instance.index;
       var context = data.context,
-          keys$$1 = data.keys,
-          push = data.push;
+          keys$$1 = data.keys;
 
       var _context$get = context.get(name),
           value = _context$get.value;
@@ -1763,14 +1770,17 @@ var Each = function (_Node) {
       if (iterate) {
         keys$$1.push(name);
         iterate(value, function (item, i) {
-          var newContext = push(context, item);
           if (index) {
-            newContext.set(index, i);
+            context.set(index, i);
           }
           keys$$1.push(i);
-          newContext.set(SPECIAL_KEYPATH, keys$$1.join('.'));
-          instance.renderChildren(extend({}, data, { context: newContext }));
+          context.set(SPECIAL_KEYPATH, keys$$1.join('.'));
+          instance.renderChildren(extend({}, data, { context: context.push(item) }));
+          context.remove(SPECIAL_KEYPATH);
           keys$$1.pop();
+          if (index) {
+            context.remove(index);
+          }
         });
         keys$$1.pop();
       }
@@ -1866,7 +1876,7 @@ var ElseIf = function (_Node) {
     key: 'render',
     value: function render(data, prev) {
       if (prev) {
-        if (this.execute(data.context, data.keys.join('.'))) {
+        if (this.execute(data)) {
           this.renderChildren(data);
         } else {
           return prev;
@@ -1917,7 +1927,7 @@ var Expression = function (_Node) {
     key: 'render',
     value: function render(data) {
 
-      var content = this.execute(data.context, data.keys.join('.'));
+      var content = this.execute(data);
       if (content == NULL) {
         content = '';
       }
@@ -1954,7 +1964,7 @@ var If = function (_Node) {
   createClass(If, [{
     key: 'render',
     value: function render(data) {
-      if (this.execute(data.context, data.keys.join('.'))) {
+      if (this.execute(data)) {
         this.renderChildren(data);
       } else {
         return TRUE;
@@ -2009,11 +2019,7 @@ var Spread = function (_Node) {
   createClass(Spread, [{
     key: 'render',
     value: function render(data) {
-      var context = data.context,
-          parent = data.parent,
-          keys$$1 = data.keys;
-
-      var target = this.execute(context, keys$$1.join('.'));
+      var target = this.execute(data);
       if (!object(target)) {
         return;
       }
@@ -2023,7 +2029,7 @@ var Spread = function (_Node) {
       each$$1(target, function (value, key) {
         node = new Attribute(key);
         node.addChild(new Text(value));
-        parent.addAttr(node);
+        data.parent.addAttr(node);
       });
     }
   }]);
@@ -2189,25 +2195,21 @@ var rootName = 'root';
 function render$1(ast, data) {
 
   var rootElement = new Element(rootName);
-  var rootContext = new Context(data);
   var keys$$1 = [],
-      contexts = [rootContext];
+      deps = [];
 
   var renderAst = function renderAst(ast) {
-    var data = {
+    ast.render({
       keys: keys$$1,
       parent: rootElement,
-      context: rootContext,
+      context: new Context(data),
       parse: function parse(template) {
         return _parse(template).children;
       },
-      push: function push(currentContext, newData) {
-        var newContext = currentContext.push(newData);
-        contexts.push(newContext);
-        return newContext;
+      addDeps: function addDeps(newDeps) {
+        push$1(deps, newDeps);
       }
-    };
-    ast.render(data);
+    });
   };
 
   if (ast.name === rootName) {
@@ -2224,7 +2226,7 @@ function render$1(ast, data) {
 
   return {
     root: children[0],
-    deps: rootContext.used
+    deps: unique(deps)
   };
 }
 
@@ -4375,7 +4377,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.16.10';
+Yox.version = '0.16.12';
 
 Yox.switcher = switcher;
 

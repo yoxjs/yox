@@ -653,7 +653,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.16.10'
+Yox.version = '0.16.12'
 
 /**
  * 开关配置

@@ -26,7 +26,7 @@ export default class Each extends Node {
 
     let instance = this
     let { name, index } = instance
-    let { context, keys, push } = data
+    let { context, keys } = data
 
     let { value } = context.get(name)
 
@@ -43,16 +43,19 @@ export default class Each extends Node {
       iterate(
         value,
         function (item, i) {
-          let newContext = push(context, item)
           if (index) {
-            newContext.set(index, i)
+            context.set(index, i)
           }
           keys.push(i)
-          newContext.set(syntax.SPECIAL_KEYPATH, keys.join('.'))
+          context.set(syntax.SPECIAL_KEYPATH, keys.join('.'))
           instance.renderChildren(
-            object.extend({}, data, { context: newContext })
+            object.extend({}, data, { context: context.push(item) })
           )
+          context.remove(syntax.SPECIAL_KEYPATH)
           keys.pop()
+          if (index) {
+            context.remove(index)
+          }
         }
       )
       keys.pop()

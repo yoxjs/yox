@@ -152,25 +152,21 @@ const rootName = 'root'
 export function render(ast, data) {
 
   let rootElement = new Element(rootName)
-  let rootContext = new Context(data)
-  let keys = [ ], contexts = [ rootContext ]
+  let keys = [ ], deps = [ ]
 
   // 非转义插值需要解析模板字符串
   let renderAst = function (ast) {
-    let data = {
+    ast.render({
       keys,
       parent: rootElement,
-      context: rootContext,
+      context: new Context(data),
       parse: function (template) {
         return parse(template).children
       },
-      push: function (currentContext, newData) {
-        let newContext = currentContext.push(newData)
-        contexts.push(newContext)
-        return newContext
+      addDeps: function (newDeps) {
+        array.push(deps, newDeps)
       }
-    }
-    ast.render(data)
+    })
   }
 
   if (ast.name === rootName) {
@@ -190,7 +186,7 @@ export function render(ast, data) {
 
   return {
     root: children[0],
-    deps: rootContext.used,
+    deps: array.unique(deps),
   }
 
 }

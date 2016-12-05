@@ -53,7 +53,13 @@
             },
             template: `
                 <div id="root">
-
+                    {{user.name}}
+                    <br>
+                    {{user['name']}}
+                    <br>
+                    {{user[variable]}}
+                    {{ user.age > 10 ? title : variable }}
+                    <Custom ref="child" title="{{title}}" user="{{user}}" />
                     <ul>
                         {{#each list}}
                         <li>

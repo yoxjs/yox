@@ -13,7 +13,6 @@ export default class Context {
     let instance = this
     instance.data = data
     instance.parent = parent
-    instance.used = [ ]
     let cache = instance.cache = { }
     cache[env.THIS] = data
   }
@@ -42,7 +41,7 @@ export default class Context {
   get(keypath) {
 
     let instance = this
-    let { cache, used } = instance
+    let { cache } = instance
 
     if (!object.has(cache, keypath)) {
       let result
@@ -61,10 +60,6 @@ export default class Context {
       if (result) {
         cache[keypath] = result.value
       }
-    }
-
-    if (!array.has(used, keypath)) {
-      used.push(keypath)
     }
 
     return {
