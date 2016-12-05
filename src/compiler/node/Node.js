@@ -4,7 +4,9 @@ import * as nodeType from '../nodeType'
 
 import * as is from '../../util/is'
 import * as array from '../../util/array'
+
 import * as expression from '../../expression/index'
+import * as expressionNodeType from '../../expression/nodeType'
 
 import around from '../../function/around'
 
@@ -38,7 +40,8 @@ export default class Node {
   }
 
   execute(context) {
-    let fn = expression.compile(this.expr)
+    let { expr } = this
+    let fn = expression.compile(expr)
     // 可能是任何类型的结果
     return fn.apply(
       env.NULL,

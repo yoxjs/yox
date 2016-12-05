@@ -53,8 +53,8 @@ export default class Member extends Node {
       this,
       function (node) {
         let { object, property } = node
-        object.traverse(enter, leave)
         property.traverse(enter, leave)
+        object.traverse(enter, leave)
       },
       enter,
       leave

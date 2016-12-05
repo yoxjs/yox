@@ -532,8 +532,7 @@ export default class Yox {
     let { root, deps } = mustache.render($template, context)
     instance.$deps = deps
 
-    let newNode = vdom.create(root, instance)
-    let afterHook
+    let newNode = vdom.create(root, instance), afterHook
 
     if ($currentNode) {
       afterHook = lifecycle.AFTER_UPDATE
@@ -654,7 +653,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.16.6'
+Yox.version = '0.16.7'
 
 /**
  * 开关配置

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>组件数据流</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div id="app"></div>
+    <script src="../dist/yox.js"></script>
+    <script>
+
+        let Custom = {
+            template: `
+                <div id="custom-component">
+                    title: {{title}}
+                    <br>
+                    name: {{user.name}}
+                    <br>
+                    age: {{user.age}}
+                    <button on-click="increase()">
+                        increase
+                    </button>
+                </div>
+            `,
+            methods: {
+                increase: function () {
+                    this.fire('increase');
+                }
+            }
+        };
+
+        var instance = new Yox({
+            el: '#app',
+            data: {
+                title: 'yox',
+                variable: 'age',
+                user: {
+                    name: 'Jake',
+                    age: 0,
+                },
+                list: [
+                    {
+                        name: 'h1',
+                    },
+                    {
+                        name: 'h2',
+                    },
+                    {
+                        name: 'h3',
+                    },
+                ]
+            },
+            template: `
+                <div id="root">
+                    {{user.name}}
+                    <br>
+                    {{user['name']}}
+                    <br>
+                    {{user[variable]}}
+                    <Custom ref="child" title="{{title}}" user="{{user}}" />
+                    <ul>
+                        {{#each list}}
+                        <li>
+                            {{name}}
+                        </li>
+                        {{/each}}
+                    </ul>
+                </div>
+            `,
+            components: {
+                Custom: Custom
+            },
+            events: {
+                increase: function (e) {
+                    this.increase('user.age')
+                },
+            }
+        });
+
+    </script>
+</body>
+</html>

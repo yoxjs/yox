@@ -679,6 +679,25 @@ var replace = function (str, from, to) {
   return str.replace(new RegExp('(?:^|\\b)' + from + '(?:$|\\b)', 'g'), to);
 };
 
+var hasConsole = typeof console !== 'undefined';
+
+function warn(msg) {
+  if (debug && hasConsole) {
+    console.warn(msg);
+  }
+}
+
+function error$1(msg) {
+  if (hasConsole) {
+    console.error(msg);
+  }
+}
+
+var logger = Object.freeze({
+	warn: warn,
+	error: error$1
+});
+
 function isNumber(charCode) {
   return charCode >= 48 && charCode <= 57;
 }
@@ -707,7 +726,7 @@ function matchBestToken(content, sortedTokens) {
 }
 
 function parseError(expression) {
-  logger.error('Failed to parse expression: [' + expression + '].');
+  error$1('Failed to parse expression: [' + expression + '].');
 }
 
 var ARRAY = 1;
@@ -1048,8 +1067,8 @@ var Member = function (_Node) {
         var object = node.object,
             property = node.property;
 
-        object.traverse(enter, leave);
         property.traverse(enter, leave);
+        object.traverse(enter, leave);
       }, enter, leave);
     }
   }]);
@@ -1431,7 +1450,9 @@ var Node = function () {
   }, {
     key: 'execute',
     value: function execute(context) {
-      var fn = compile(this.expr);
+      var expr = this.expr;
+
+      var fn = compile(expr);
 
       return fn.apply(NULL, fn.$deps.map(function (dep) {
         return context.get(dep);
@@ -1830,25 +1851,6 @@ var Spread = function (_Node) {
   }]);
   return Spread;
 }(Node);
-
-var hasConsole = typeof console !== 'undefined';
-
-function warn(msg) {
-  if (debug && hasConsole) {
-    console.warn(msg);
-  }
-}
-
-function error$1(msg) {
-  if (hasConsole) {
-    console.error(msg);
-  }
-}
-
-var logger$1 = Object.freeze({
-	warn: warn,
-	error: error$1
-});
 
 var getLocationByIndex = function (str, index) {
 
@@ -4120,8 +4122,8 @@ var Yox = function () {
 
       instance.$deps = deps;
 
-      var newNode = create$1(root, instance);
-      var afterHook = void 0;
+      var newNode = create$1(root, instance),
+          afterHook = void 0;
 
       if ($currentNode) {
         afterHook = AFTER_UPDATE;
@@ -4234,7 +4236,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.16.6';
+Yox.version = '0.16.7';
 
 Yox.switcher = switcher;
 
@@ -4242,7 +4244,7 @@ Yox.syntax = syntax;
 
 Yox.cache = cache;
 
-Yox.utils = { is: is$1, array: array$1, object: object$1, logger: logger$1, native: native, expression: expression, Store: Store, Emitter: Emitter, Event: Event };
+Yox.utils = { is: is$1, array: array$1, object: object$1, logger: logger, native: native, expression: expression, Store: Store, Emitter: Emitter, Event: Event };
 
 Yox.component = function (id, value) {
   component.set(id, value);

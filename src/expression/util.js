@@ -1,6 +1,7 @@
 
 import * as env from '../config/env'
 import * as array from '../util/array'
+import * as logger from '../util/logger'
 
 /**
  * 是否是数字
