@@ -22,8 +22,8 @@ export default class Spread extends Node {
   }
 
   render(data) {
-    let { context, parent } = data
-    let target = this.execute(context)
+    let { context, parent, keys } = data
+    let target = this.execute(context, keys.join('.'))
     if (!is.object(target)) {
       return
     }

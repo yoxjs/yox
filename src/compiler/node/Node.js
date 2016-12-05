@@ -5,10 +5,8 @@ import * as nodeType from '../nodeType'
 import * as is from '../../util/is'
 import * as array from '../../util/array'
 
-import * as expression from '../../expression/index'
-import * as expressionNodeType from '../../expression/nodeType'
-
 import around from '../../function/around'
+import execute from '../../function/execute'
 
 /**
  * 节点基类
@@ -39,11 +37,13 @@ export default class Node {
     return children[0] ? children[0].content : env.TRUE
   }
 
-  execute(context) {
+  execute(context, keypath) {
     let { expr } = this
-    let fn = expression.compile(expr)
+    expr.run(context)
+    console.log('expr', keypath, expr.stringify(), expr)
     // 可能是任何类型的结果
-    return fn.apply(
+    return execute(
+      fn,
       env.NULL,
       fn.$deps.map(
         function (dep) {

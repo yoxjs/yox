@@ -23,4 +23,11 @@ export default class Literal extends Node {
       : value
   }
 
+  run() {
+    return {
+      value: this.value,
+      deps: [ ],
+    }
+  }
+
 }

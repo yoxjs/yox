@@ -86,7 +86,7 @@ function func(arg) {
   return is(arg, 'function');
 }
 
-function array(arg) {
+function array$1(arg) {
   return is(arg, 'array');
 }
 
@@ -113,7 +113,7 @@ function numeric(arg) {
 var is$1 = Object.freeze({
 	is: is,
 	func: func,
-	array: array,
+	array: array$1,
 	object: object,
 	string: string,
 	number: number,
@@ -167,8 +167,18 @@ function merge() {
   return result;
 }
 
+function unique(array$$1, strict) {
+  var result = [];
+  each$1(array$$1, function (item) {
+    if (!has$2(result, item, strict)) {
+      result.push(item);
+    }
+  });
+  return result;
+}
+
 function toArray(array$$1) {
-  return array(array$$1) ? array$$1 : slice.call(array$$1);
+  return array$1(array$$1) ? array$$1 : slice.call(array$$1);
 }
 
 function toObject(array$$1, key) {
@@ -209,10 +219,11 @@ function remove(array$$1, item, strict) {
   }
 }
 
-var array$1 = Object.freeze({
+var array$2 = Object.freeze({
 	each: each$1,
 	reduce: reduce,
 	merge: merge,
+	unique: unique,
 	toArray: toArray,
 	toObject: toObject,
 	indexOf: indexOf,
@@ -254,7 +265,7 @@ function extend() {
 
 function copy(object$$1, deep) {
   var result = object$$1;
-  if (array(object$$1)) {
+  if (array$1(object$$1)) {
     result = [];
     each$1(object$$1, function (item, index) {
       result[index] = deep ? copy(item) : item;
@@ -584,8 +595,10 @@ var Context = function () {
           cache = _instance.cache,
           used = _instance.used;
 
+
       if (!has$1(cache, keypath)) {
         var result = void 0;
+        var keypaths = [keypath];
         while (instance) {
           result = get$1(instance.data, keypath);
           if (result) {
@@ -593,8 +606,10 @@ var Context = function () {
             break;
           } else {
             instance = instance.parent;
+            keypaths.unshift('..');
           }
         }
+        keypath = keypaths.join('/');
       }
 
       if (!has$2(used, keypath)) {
@@ -674,11 +689,6 @@ var Scanner = function () {
   return Scanner;
 }();
 
-var replace = function (str, from, to) {
-  from = from.replace(/[$.]/g, '\\$&');
-  return str.replace(new RegExp('(?:^|\\b)' + from + '(?:$|\\b)', 'g'), to);
-};
-
 var hasConsole = typeof console !== 'undefined';
 
 function warn(msg) {
@@ -738,57 +748,9 @@ var LITERAL = 6;
 var MEMBER = 7;
 var UNARY = 8;
 
-function sortKeys(obj) {
-  return keys(obj).sort(function (a, b) {
-    return b.length - a.length;
-  });
-}
-
-var unaryMap = {
-  '+': TRUE,
-  '-': TRUE,
-  '!': TRUE,
-  '~': TRUE
-};
-
-var unaryList = sortKeys(unaryMap);
-
-var binaryMap = {
-  '||': 1,
-  '&&': 2,
-  '|': 3,
-  '^': 4,
-  '&': 5,
-  '==': 6,
-  '!=': 6,
-  '===': 6,
-  '!==': 6,
-  '<': 7,
-  '>': 7,
-  '<=': 7,
-  '>=': 7,
-  '<<': 8,
-  '>>': 8,
-  '>>>': 8,
-  '+': 9,
-  '-': 9,
-  '*': 10,
-  '/': 10,
-  '%': 10
-};
-
-var binaryList = sortKeys(binaryMap);
-
-var keyword = {
-  'true': TRUE,
-  'false': FALSE,
-  'null': NULL,
-  'undefined': UNDEFINED
-};
-
 var execute$1 = function (fn, context, args) {
   if (func(fn)) {
-    if (array(args)) {
+    if (array$1(args)) {
       return fn.apply(context, args);
     } else {
       return fn.call(context, args);
@@ -816,46 +778,82 @@ var Node$2 = function () {
     value: function traverse(enter, leave) {
       around(this, NULL, enter, leave);
     }
+  }, {
+    key: 'getDeps',
+    value: function getDeps() {
+      var deps = [];
+      this.traverse(function (node) {
+        if (node.type === IDENTIFIER) {
+          deps.push(node.stringify());
+        }
+      });
+      return deps;
+    }
   }]);
   return Node;
 }();
 
-var Array$1 = function (_Node) {
-  inherits(Array, _Node);
+var Unary = function (_Node) {
+  inherits(Unary, _Node);
 
-  function Array(elements) {
-    classCallCheck(this, Array);
+  function Unary(operator, arg) {
+    classCallCheck(this, Unary);
 
-    var _this = possibleConstructorReturn(this, (Array.__proto__ || Object.getPrototypeOf(Array)).call(this, ARRAY));
+    var _this = possibleConstructorReturn(this, (Unary.__proto__ || Object.getPrototypeOf(Unary)).call(this, UNARY));
 
-    _this.elements = elements;
+    _this.operator = operator;
+    _this.arg = arg;
     return _this;
   }
 
-  createClass(Array, [{
+  createClass(Unary, [{
     key: 'stringify',
     value: function stringify() {
-      var elements = this.elements;
+      var operator = this.operator,
+          arg = this.arg;
 
-      elements = elements.map(function (element) {
-        return element.stringify();
-      });
-      return '[' + elements.join(', ') + ']';
+      return '' + operator + arg.stringify();
     }
   }, {
     key: 'traverse',
     value: function traverse(enter, leave) {
       around(this, function (node) {
-        var elements = node.elements;
+        var arg = node.arg;
 
-        each$1(elements, function (element) {
-          element.traverse(enter, leave);
-        });
+        arg.traverse(enter, leave);
       }, enter, leave);
     }
+  }, {
+    key: 'run',
+    value: function run(data) {
+      var operator = this.operator,
+          arg = this.arg;
+
+      var result = arg.run(data);
+      switch (operator) {
+        case Unary.PLUS:
+          result.value = +result.value;
+          break;
+        case Unary.MINUS:
+          result.value = -result.value;
+          break;
+        case Unary.BANG:
+          result.value = !result.value;
+          break;
+        case Unary.WAVE:
+          result.value = ~result.value;
+          break;
+      }
+      return result;
+    }
   }]);
-  return Array;
+  return Unary;
 }(Node$2);
+
+Unary.PLUS = '+';
+Unary.MINUS = '-';
+Unary.BANG = '!';
+Unary.WAVE = '~';
 
 var Binary = function (_Node) {
   inherits(Binary, _Node);
@@ -891,8 +889,182 @@ var Binary = function (_Node) {
         right.traverse(enter, leave);
       }, enter, leave);
     }
+  }, {
+    key: 'run',
+    value: function run(data) {
+      var right = this.right,
+          operator = this.operator,
+          left = this.left;
+
+      left = left.run(data);
+      right = right.run(data);
+
+      var value = void 0;
+      switch (operator) {
+        case Binary.OR:
+          value = left.value || right.value;
+          break;
+        case Binary.AND:
+          value = left.value && right.value;
+          break;
+        case Binary.SE:
+          value = left.value === right.value;
+          break;
+        case Binary.SNE:
+          value = left.value !== right.value;
+          break;
+        case Binary.LE:
+          value = left.value == right.value;
+          break;
+        case Binary.LNE:
+          value = left.value != right.value;
+          break;
+        case Binary.GT:
+          value = left.value > right.value;
+          break;
+        case Binary.LT:
+          value = left.value < right.value;
+          break;
+        case Binary.GTE:
+          value = left.value >= right.value;
+          break;
+        case Binary.LTE:
+          value = left.value <= right.value;
+          break;
+        case Binary.PLUS:
+          value = left.value + right.value;
+          break;
+        case Binary.MINUS:
+          value = left.value - right.value;
+          break;
+        case Binary.MULTIPLY:
+          value = left.value * right.value;
+          break;
+        case Binary.DIVIDE:
+          value = left.value / right.value;
+          break;
+        case Binary.MODULO:
+          value = left.value % right.value;
+          break;
+      }
+
+      return {
+        value: value,
+        deps: array.unique(array.merge(left.deps, right.deps))
+      };
+    }
   }]);
   return Binary;
+}(Node$2);
+
+Binary.OR = '||';
+Binary.AND = '&&';
+
+Binary.SE = '===';
+
+Binary.SNE = '!==';
+
+Binary.LE = '==';
+
+Binary.LNE = '!=';
+Binary.GT = '>';
+Binary.LT = '<';
+Binary.GTE = '>=';
+Binary.LTE = '<=';
+Binary.PLUS = '+';
+Binary.MINUS = '-';
+Binary.MULTIPLY = '*';
+Binary.DIVIDE = '/';
+Binary.MODULO = '%';
+
+function sortKeys(obj) {
+  return keys(obj).sort(function (a, b) {
+    return b.length - a.length;
+  });
+}
+
+var unaryMap = {};
+unaryMap[Unary.PLUS] = unaryMap[Unary.MINUS] = unaryMap[Unary.BANG] = unaryMap[Unary.WAVE] = TRUE;
+
+var unaryList = sortKeys(unaryMap);
+
+var binaryMap = {};
+binaryMap[Binary.OR] = 1;
+binaryMap[Binary.AND] = 2;
+binaryMap[Binary.LE] = 3;
+binaryMap[Binary.LNE] = 3;
+binaryMap[Binary.SE] = 3;
+binaryMap[Binary.SNE] = 3;
+binaryMap[Binary.LT] = 4;
+binaryMap[Binary.LTE] = 4;
+binaryMap[Binary.GT] = 4;
+binaryMap[Binary.GTE] = 4;
+binaryMap[Binary.PLUS] = 5;
+binaryMap[Binary.MINUS] = 5;
+binaryMap[Binary.MULTIPLY] = 6;
+binaryMap[Binary.DIVIDE] = 6;
+binaryMap[Binary.MODULO] = 6;
+
+var binaryList = sortKeys(binaryMap);
+
+var keyword = {
+  'true': TRUE,
+  'false': FALSE,
+  'null': NULL,
+  'undefined': UNDEFINED
+};
+
+var Array$1 = function (_Node) {
+  inherits(Array, _Node);
+
+  function Array(elements) {
+    classCallCheck(this, Array);
+
+    var _this = possibleConstructorReturn(this, (Array.__proto__ || Object.getPrototypeOf(Array)).call(this, ARRAY));
+
+    _this.elements = elements;
+    return _this;
+  }
+
+  createClass(Array, [{
+    key: 'stringify',
+    value: function stringify() {
+      var elements = this.elements;
+
+      elements = elements.map(function (element) {
+        return element.stringify();
+      });
+      return '[' + elements.join(', ') + ']';
+    }
+  }, {
+    key: 'traverse',
+    value: function traverse(enter, leave) {
+      around(this, function (node) {
+        var elements = node.elements;
+
+        each$1(elements, function (element) {
+          element.traverse(enter, leave);
+        });
+      }, enter, leave);
+    }
+  }, {
+    key: 'run',
+    value: function run(data) {
+      var values = [];
+      return {
+        value: values,
+        deps: unique(execute(merge, env.NULL, this.elements.map(function (node) {
+          var _node$run = node.run(data),
+              deps = _node$run.deps,
+              value = _node$run.value;
+
+          values.push(value);
+          return deps;
+        })))
+      };
+    }
+  }]);
+  return Array;
 }(Node$2);
 
 var Call = function (_Node) {
@@ -931,6 +1103,30 @@ var Call = function (_Node) {
           arg.traverse(enter, leave);
         });
       }, enter, leave);
+    }
+  }, {
+    key: 'run',
+    value: function run(data, func) {
+      var callee = this.callee,
+          args = this.args;
+
+      var deps = [];
+
+      if (!func) {
+        callee = callee.run(data);
+        func = callee.value;
+        deps.push(callee.deps);
+      }
+
+      var value = execute$1(func, NULL, args.map(function (arg) {
+        var result = arg.run(data);
+        deps.push(result.deps);
+        return result.value;
+      }));
+      return {
+        value: value,
+        deps: unique(execute$1(merge, NULL, deps))
+      };
     }
   }]);
   return Call;
@@ -972,6 +1168,28 @@ var Conditional = function (_Node) {
         alternate.traverse(enter, leave);
       }, enter, leave);
     }
+  }, {
+    key: 'run',
+    value: function run(data) {
+      var test = this.test,
+          consequent = this.consequent,
+          alternate = this.alternate;
+
+      test = test.run(data);
+      if (test.value) {
+        consequent = consequent(data);
+        return {
+          value: consequent.value,
+          deps: unique(merge(test.deps, consequent.deps))
+        };
+      } else {
+        alternate = alternate(data);
+        return {
+          value: alternate.value,
+          deps: unique(merge(test.deps, alternate.deps))
+        };
+      }
+    }
   }]);
   return Conditional;
 }(Node$2);
@@ -992,6 +1210,17 @@ var Identifier = function (_Node) {
     key: 'stringify',
     value: function stringify() {
       return this.name;
+    }
+  }, {
+    key: 'run',
+    value: function run(data) {
+      var name = this.name;
+
+      var result = get$1(data, name);
+      return {
+        value: result ? result.value : UNDEFINED,
+        deps: [name]
+      };
     }
   }]);
   return Identifier;
@@ -1016,6 +1245,14 @@ var Literal = function (_Node) {
 
       return string(value) ? '\'' + value + '\'' : value;
     }
+  }, {
+    key: 'run',
+    value: function run() {
+      return {
+        value: this.value,
+        deps: []
+      };
+    }
   }]);
   return Literal;
 }(Node$2);
@@ -1034,31 +1271,35 @@ var Member = function (_Node) {
   }
 
   createClass(Member, [{
-    key: 'stringify',
-    value: function stringify() {
+    key: 'flatten',
+    value: function flatten() {
       var result = [];
-
-      var push = function push(node) {
-        if (node.type === LITERAL) {
-          result.push('.' + node.value);
-        } else {
-          node = node.stringify();
-          result.push(next ? '[' + node + ']' : node);
-        }
-      };
 
       var current = this,
           next = void 0;
       do {
         next = current.object;
         if (current.type === MEMBER) {
-          push(current.property, next);
+          result.unshift(current.property);
         } else {
-          push(current, next);
+          result.unshift(current);
         }
       } while (current = next);
 
-      return result.reverse().join('');
+      return result;
+    }
+  }, {
+    key: 'stringify',
+    value: function stringify() {
+      var list = this.flatten();
+      return list.map(function (node, index) {
+        if (node.type === LITERAL) {
+          return '.' + node.value;
+        } else {
+          node = node.stringify();
+          return index > 0 ? '[' + node + ']' : node;
+        }
+      }).join('');
     }
   }, {
     key: 'traverse',
@@ -1071,42 +1312,42 @@ var Member = function (_Node) {
         object.traverse(enter, leave);
       }, enter, leave);
     }
+  }, {
+    key: 'run',
+    value: function run(data) {
+      var list = this.flatten();
+      var firstNode = list.shift();
+
+      var _firstNode$run = firstNode.run(data),
+          value = _firstNode$run.value,
+          deps = _firstNode$run.deps;
+
+      var currentValue = value,
+          memberDeps = [],
+          keypaths = [deps[0]];
+
+      each$1(list, function (node) {
+        if (node.type !== LITERAL) {
+          var _node$run = node.run(data),
+              _value = _node$run.value,
+              _deps = _node$run.deps;
+
+          node = new Literal(_value);
+          memberDeps.push(_deps);
+        }
+        keypaths.push(node.value);
+        currentValue = currentValue[node.value];
+      });
+
+      memberDeps.unshift([keypaths.join('.')]);
+
+      return {
+        value: currentValue,
+        deps: unique(execute(merge, NULL, memberDeps))
+      };
+    }
   }]);
   return Member;
-}(Node$2);
-
-var Unary = function (_Node) {
-  inherits(Unary, _Node);
-
-  function Unary(operator, arg) {
-    classCallCheck(this, Unary);
-
-    var _this = possibleConstructorReturn(this, (Unary.__proto__ || Object.getPrototypeOf(Unary)).call(this, UNARY));
-
-    _this.operator = operator;
-    _this.arg = arg;
-    return _this;
-  }
-
-  createClass(Unary, [{
-    key: 'stringify',
-    value: function stringify() {
-      var operator = this.operator,
-          arg = this.arg;
-
-      return '' + operator + arg.stringify();
-    }
-  }, {
-    key: 'traverse',
-    value: function traverse(enter, leave) {
-      around(this, function (node) {
-        var arg = node.arg;
-
-        arg.traverse(enter, leave);
-      }, enter, leave);
-    }
-  }]);
-  return Unary;
 }(Node$2);
 
 var COMMA = 44;
@@ -1220,6 +1461,7 @@ function parse$1(content) {
       if (charCode === delimiter) {
         index++;
         closed = TRUE;
+        break;
       } else if (charCode === COMMA) {
         index++;
       } else {
@@ -1370,50 +1612,15 @@ function parse$1(content) {
   }
 
   if (!expressionParse[content]) {
-    expressionParse[content] = parseExpression();
+    var ast = parseExpression();
+    expressionParse[content] = expressionParse[ast.stringify()] = ast;
   }
 
   return expressionParse[content];
 }
 
-function compile(ast) {
-
-  var content = void 0;
-
-  if (string(ast)) {
-    ast = parse$1(ast);
-  }
-  content = ast.stringify();
-
-  if (!expressionCompile[content]) {
-    (function () {
-      var deps = [];
-      ast.traverse(function (node) {
-        if (node.type === IDENTIFIER) {
-          deps.push(node.stringify());
-        }
-      });
-
-      var args = [],
-          arg = void 0;
-      each$1(deps, function (keypath, index) {
-        arg = '$' + index;
-        args.push(arg);
-        content = replace(content, keypath, arg);
-      });
-
-      var fn = new Function(args.join(', '), 'return ' + content);
-      fn.$deps = deps;
-      expressionCompile[content] = fn;
-    })();
-  }
-
-  return expressionCompile[content];
-}
-
 var expression = Object.freeze({
-	parse: parse$1,
-	compile: compile
+	parse: parse$1
 });
 
 var Node = function () {
@@ -1449,12 +1656,13 @@ var Node = function () {
     }
   }, {
     key: 'execute',
-    value: function execute(context) {
+    value: function execute(context, keypath) {
       var expr = this.expr;
 
-      var fn = compile(expr);
+      var fn = expression.compile(expr);
+      console.log('expr', keypath, expr.stringify(), expr);
 
-      return fn.apply(NULL, fn.$deps.map(function (dep) {
+      return execute$1(fn, NULL, fn.$deps.map(function (dep) {
         return context.get(dep);
       }));
     }
@@ -1472,7 +1680,7 @@ var Node = function () {
     key: 'traverse',
     value: function traverse(enter, leave) {
       return around(this, function (node) {
-        if (array(node.children)) {
+        if (array$1(node.children)) {
           var _ret = function () {
             var children = [];
             each$1(node.children, function (item) {
@@ -1511,12 +1719,13 @@ var Attribute = function (_Node) {
     value: function render(data) {
       var name = this.name;
 
+      var keypath = data.keys.join('.');
       if (name.type === EXPRESSION) {
-        name = name.execute(data.context);
+        name = name.execute(data.context, keypath);
       }
 
       var node = new Attribute(name);
-      node.keypath = data.keys.join('.');
+      node.keypath = keypath;
       data.parent.addAttr(node);
 
       this.renderChildren(extend({}, data, { parent: node }));
@@ -1578,7 +1787,7 @@ var Each = function (_Node) {
       var iterator = context.get(name);
 
       var iterate = void 0;
-      if (array(iterator)) {
+      if (array$1(iterator)) {
         iterate = each$1;
       } else if (object(iterator)) {
         iterate = each$$1;
@@ -1689,7 +1898,7 @@ var ElseIf = function (_Node) {
     key: 'render',
     value: function render(data, prev) {
       if (prev) {
-        if (this.execute(data.context)) {
+        if (this.execute(data.context, data.keys.join('.'))) {
           this.renderChildren(data);
         } else {
           return prev;
@@ -1740,7 +1949,7 @@ var Expression = function (_Node) {
     key: 'render',
     value: function render(data) {
 
-      var content = this.execute(data.context);
+      var content = this.execute(data.context, data.keys.join('.'));
       if (content == NULL) {
         content = '';
       }
@@ -1777,7 +1986,7 @@ var If = function (_Node) {
   createClass(If, [{
     key: 'render',
     value: function render(data) {
-      if (this.execute(data.context)) {
+      if (this.execute(data.context, data.keys.join('.'))) {
         this.renderChildren(data);
       } else {
         return TRUE;
@@ -1833,9 +2042,10 @@ var Spread = function (_Node) {
     key: 'render',
     value: function render(data) {
       var context = data.context,
-          parent = data.parent;
+          parent = data.parent,
+          keys$$1 = data.keys;
 
-      var target = this.execute(context);
+      var target = this.execute(context, keys$$1.join('.'));
       if (!object(target)) {
         return;
       }
@@ -2370,12 +2580,12 @@ var nextTasks = [];
 
 function add(task) {
   if (!nextTasks.length) {
-    nextTick$1(run);
+    nextTick$1(run$1);
   }
   nextTasks.push(task);
 }
 
-function run() {
+function run$1() {
   currentTasks = nextTasks;
   nextTasks = [];
   each$1(currentTasks, function (task) {
@@ -2538,7 +2748,7 @@ function validate(data, schema) {
 
           if (string(type)) {
             matched = is(target, type);
-          } else if (array(type)) {
+          } else if (array$1(type)) {
             matched = type.some(function (t) {
               return is(target, t);
             });
@@ -3137,13 +3347,13 @@ var Emitter = function () {
 
       if (type == NULL) {
         each$$1(listeners, function (list, type) {
-          if (array(listeners[type])) {
+          if (array$1(listeners[type])) {
             listeners[type].length = 0;
           }
         });
       } else {
         var list = listeners[type];
-        if (array(list)) {
+        if (array$1(list)) {
           if (listener == NULL) {
             list.length = 0;
           } else {
@@ -3163,7 +3373,7 @@ var Emitter = function () {
       var list = this.listeners[type],
           isStoped = void 0;
 
-      if (array(list)) {
+      if (array$1(list)) {
         each$1(list, function (listener) {
           var result = execute$1(listener, context, data);
 
@@ -3196,9 +3406,9 @@ var Emitter = function () {
     value: function has(type, listener) {
       var list = this.listeners[type];
       if (listener == NULL) {
-        return array(list) && list.length > 0;
+        return array$1(list) && list.length > 0;
       }
-      return array(list) ? has$2(list, listener) : FALSE;
+      return array$1(list) ? has$2(list, listener) : FALSE;
     }
   }]);
   return Emitter;
@@ -3551,7 +3761,7 @@ var controlTypes = {
           instance = _ref5.instance;
 
       var value = instance.get(keypath);
-      el.checked = array(value) ? has$2(value, el.value, FALSE) : !!value;
+      el.checked = array$1(value) ? has$2(value, el.value, FALSE) : !!value;
     },
     sync: function sync(_ref6) {
       var el = _ref6.el,
@@ -3559,7 +3769,7 @@ var controlTypes = {
           instance = _ref6.instance;
 
       var value = instance.get(keypath);
-      if (array(value)) {
+      if (array$1(value)) {
         if (el.checked) {
           value.push(el.value);
         } else {
@@ -3833,7 +4043,7 @@ var Yox = function () {
 
               var addedDeps = [];
               var removedDeps = [];
-              if (array(oldDeps)) {
+              if (array$1(oldDeps)) {
                 each$1(merge(oldDeps, newDeps), function (dep) {
                   var oldExisted = has$2(oldDeps, dep);
                   var newExisted = has$2(newDeps, dep);
@@ -3848,7 +4058,7 @@ var Yox = function () {
               }
 
               each$1(addedDeps, function (dep) {
-                if (!array($computedWatchers[dep])) {
+                if (!array$1($computedWatchers[dep])) {
                   $computedWatchers[dep] = [];
                 }
                 $computedWatchers[dep].push(keypath);
@@ -3888,7 +4098,7 @@ var Yox = function () {
           $computedGetters = this.$computedGetters;
 
 
-      if (array($computedStack)) {
+      if (array$1($computedStack)) {
         var deps = last($computedStack);
         if (deps) {
           deps.push(keypath);
@@ -4055,7 +4265,7 @@ var Yox = function () {
 
           changes[key] = [value, oldValue];
 
-          if ($computedWatchers && array($computedWatchers[key])) {
+          if ($computedWatchers && array$1($computedWatchers[key])) {
             each$1($computedWatchers[key], function (watcher) {
               if (has$1($computedCache, watcher)) {
                 delete $computedCache[watcher];
@@ -4244,7 +4454,7 @@ Yox.syntax = syntax;
 
 Yox.cache = cache;
 
-Yox.utils = { is: is$1, array: array$1, object: object$1, logger: logger, native: native, expression: expression, Store: Store, Emitter: Emitter, Event: Event };
+Yox.utils = { is: is$1, array: array$2, object: object$1, logger: logger, native: native, expression: expression, Store: Store, Emitter: Emitter, Event: Event };
 
 Yox.component = function (id, value) {
   component.set(id, value);

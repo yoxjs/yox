@@ -127,6 +127,9 @@ export function parse(content) {
       return new Literal(keyword[value])
     }
 
+    // 如果函数是 function () { return this }
+    // 如果用 fn.call('')，返回的会是个 new String('')，不是字符串字面量
+    // 所以我们把 this 全都改成 IDENTIFIER 了
     if (value === 'this') {
       return new Identifier(env.THIS)
     }
@@ -148,6 +151,7 @@ export function parse(content) {
       if (charCode === delimiter) {
         index++
         closed = env.TRUE
+        break
       }
       else if (charCode === COMMA) {
         index++
@@ -345,61 +349,11 @@ export function parse(content) {
   }
 
   if (!cache.expressionParse[content]) {
-    cache.expressionParse[content] = parseExpression()
+    let ast = parseExpression()
+    cache.expressionParse[content] =
+    cache.expressionParse[ast.stringify()] = ast
   }
 
   return cache.expressionParse[content]
-
-}
-
-
-/**
- * 创建一个可执行的函数来运行该代码
- *
- * @param {string|Object} ast
- * @return {Function}
- */
-export function compile(ast) {
-
-  let content
-
-  if (is.string(ast)) {
-    ast = parse(ast)
-  }
-  content = ast.stringify()
-
-  // 如果函数是 function () { return this }
-  // 如果用 fn.call('')，返回的会是个 new String('')，不是字符串字面量
-  // 所以我们把 this 全都改成 IDENTIFIER 了
-
-  if (!cache.expressionCompile[content]) {
-    // 如果表达式是 object.a.b
-    // 这里最好是获取完整的路径，而不是获取到 object 就完事
-    // 因为分析依赖时，需要用到最根上的路径
-    let deps = [ ]
-    ast.traverse(
-      function (node) {
-        if (node.type === nodeType.IDENTIFIER) {
-          deps.push(node.stringify())
-        }
-      }
-    )
-
-    let args = [ ], arg
-    array.each(
-      deps,
-      function (keypath, index) {
-        arg = `$${index}`
-        args.push(arg)
-        content = replace(content, keypath, arg)
-      }
-    )
-
-    let fn = new Function(args.join(', '), `return ${content}`)
-    fn.$deps = deps
-    cache.expressionCompile[content] = fn
-  }
-
-  return cache.expressionCompile[content]
 
 }

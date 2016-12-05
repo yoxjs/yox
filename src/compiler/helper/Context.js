@@ -34,8 +34,10 @@ export default class Context {
 
     let instance = this
     let { cache, used } = instance
+
     if (!object.has(cache, keypath)) {
       let result
+      let keypaths = [ keypath ]
       while (instance) {
         result = object.get(instance.data, keypath)
         if (result) {
@@ -44,8 +46,10 @@ export default class Context {
         }
         else {
           instance = instance.parent
+          keypaths.unshift('..')
         }
       }
+      keypath = keypaths.join('/')
     }
 
     if (!array.has(used, keypath)) {

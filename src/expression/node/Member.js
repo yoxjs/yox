@@ -1,8 +1,11 @@
 
 import Node from './Node'
+import Literal from './Literal'
 import * as nodeType from '../nodeType'
 
 import around from '../../function/around'
+import * as env from '../../config/env'
+import * as array from '../../util/array'
 
 /**
  * Member 节点
@@ -18,34 +21,39 @@ export default class Member extends Node {
     this.property = property
   }
 
-  stringify() {
+  flatten() {
     let result = [ ]
-
-    let push = function (node) {
-      if (node.type === nodeType.LITERAL) {
-        result.push(`.${node.value}`)
-      }
-      else {
-        node = node.stringify()
-        result.push(
-          next ? `[${node}]` : node
-        )
-      }
-    }
 
     let current = this, next
     do {
       next = current.object
       if (current.type === nodeType.MEMBER) {
-        push(current.property, next)
+        result.unshift(current.property)
       }
       else {
-        push(current, next)
+        result.unshift(current)
       }
     }
     while (current = next)
 
-    return result.reverse().join('')
+    return result
+  }
+
+  stringify() {
+    let list = this.flatten()
+    return list.map(
+      function (node, index) {
+        if (node.type === nodeType.LITERAL) {
+          return `.${node.value}`
+        }
+        else {
+          node = node.stringify()
+          return index > 0
+            ? `[${node}]`
+            : node
+        }
+      }
+    ).join('')
   }
 
   traverse(enter, leave) {
@@ -59,6 +67,40 @@ export default class Member extends Node {
       enter,
       leave
     )
+  }
+
+  run(data) {
+    let list = this.flatten()
+    let firstNode = list.shift()
+
+    let { value, deps } = firstNode.run(data)
+    let currentValue = value, memberDeps = [ ], keypaths = [ deps[0] ]
+
+    array.each(
+      list,
+      function (node) {
+        if (node.type !== nodeType.LITERAL) {
+          let { value, deps }= node.run(data)
+          node = new Literal(value)
+          memberDeps.push(deps)
+        }
+        keypaths.push(node.value)
+        currentValue = currentValue[node.value]
+      }
+    )
+
+    memberDeps.unshift([ keypaths.join('.') ])
+
+    return {
+      value: currentValue,
+      deps: array.unique(
+        execute(
+          array.merge,
+          env.NULL,
+          memberDeps
+        )
+      ),
+    }
   }
 
 }

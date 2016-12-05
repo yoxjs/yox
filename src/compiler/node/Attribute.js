@@ -19,12 +19,13 @@ export default class Attribute extends Node {
   render(data) {
 
     let { name } = this
+    let keypath = data.keys.join('.')
     if (name.type === nodeType.EXPRESSION) {
-      name = name.execute(data.context)
+      name = name.execute(data.context, keypath)
     }
 
     let node = new Attribute(name)
-    node.keypath = data.keys.join('.')
+    node.keypath = keypath
     data.parent.addAttr(node)
 
     this.renderChildren(

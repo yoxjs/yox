@@ -22,7 +22,7 @@ export default class If extends Node {
     // 当它为假时，需要跟进后续的条件分支
     // 这里用到 reduce 的机制非常合适
     // 即如果前一个分支不满足，返回 true，告知后续的要执行
-    if (this.execute(data.context)) {
+    if (this.execute(data.context, data.keys.join('.'))) {
       this.renderChildren(data)
     }
     else {

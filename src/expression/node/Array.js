@@ -44,4 +44,24 @@ export default class Array extends Node {
     )
   }
 
+  run(data) {
+    let values = [ ]
+    return {
+      value: values,
+      deps: array.unique(
+        execute(
+          array.merge,
+          env.NULL,
+          this.elements.map(
+            function (node) {
+              let { deps, value } = node.run(data)
+              values.push(value)
+              return deps
+            }
+          )
+        )
+      )
+    }
+  }
+
 }

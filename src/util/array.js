@@ -44,6 +44,19 @@ export function merge() {
   return result
 }
 
+export function unique(array, strict) {
+  let result = [ ]
+  each(
+    array,
+    function (item) {
+      if (!has(result, item, strict)) {
+        result.push(item)
+      }
+    }
+  )
+  return result
+}
+
 export function toArray(array) {
   return is.array(array) ? array : slice.call(array)
 }

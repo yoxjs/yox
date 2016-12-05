@@ -3,6 +3,7 @@ import Node from './Node'
 import * as nodeType from '../nodeType'
 
 import around from '../../function/around'
+import * as array from '../../util/array'
 
 /**
  * Conditional 节点
@@ -37,6 +38,29 @@ export default class Conditional extends Node {
       enter,
       leave
     )
+  }
+
+  run(data) {
+    let { test, consequent, alternate } = this
+    test = test.run(data)
+    if (test.value) {
+      consequent = consequent(data)
+      return {
+        value: consequent.value,
+        deps: array.unique(
+          array.merge(test.deps, consequent.deps)
+        )
+      }
+    }
+    else {
+      alternate = alternate(data)
+      return {
+        value: alternate.value,
+        deps: array.unique(
+          array.merge(test.deps, alternate.deps)
+        )
+      }
+    }
   }
 
 }
