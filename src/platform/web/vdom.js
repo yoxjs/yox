@@ -18,6 +18,7 @@ import * as nodeType from '../../compiler/nodeType'
 export let patch = snabbdom.init([ attributes, style ])
 
 const UNIQUE_KEY = 'key'
+const REF_KEY = 'ref'
 
 /**
  * 把 style-name: value 解析成对象的形式
@@ -72,14 +73,29 @@ export function create(root, instance) {
         // 因为如果在组件上写了 on-click="xx" 其实是监听从组件 fire 出的 click 事件
         // 因此 component 必须在 event 指令之前执行
 
+        let addDirective = function (name, directiveName, directiveNode) {
+          directives.push({
+            name: name,
+            node: directiveNode || node,
+            directive: instance.getDirective(directiveName || name),
+          })
+        }
+
         let attributes = node.getAttributes()
         // 组件的 attrs 作为 props 传入组件，不需要写到元素上
         if (node.custom) {
-          directives.push({
-            name: 'component',
-            node,
-            directive: instance.getDirective('component'),
-          })
+          addDirective('component')
+          // 这里获取节点还能改进
+          if (object.has(attributes, REF_KEY)) {
+            let refDirective = node.attrs.filter(
+              function (attr) {
+                return attr.name === REF_KEY
+              }
+            )[0]
+            if (refDirective) {
+              addDirective('ref', 'ref', refDirective)
+            }
+          }
         }
         else {
           object.each(
@@ -88,7 +104,7 @@ export function create(root, instance) {
               if (key === 'style') {
                 styles = parseStyle(value)
               }
-              else if (key !== UNIQUE_KEY) {
+              else if (key !== UNIQUE_KEY && key !== REF_KEY) {
                 attrs[key] = value
               }
             }
@@ -110,11 +126,7 @@ export function create(root, instance) {
               directiveName = name.slice(syntax.DIRECTIVE_PREFIX.length)
             }
 
-            directives.push({
-              name,
-              node,
-              directive: instance.getDirective(directiveName),
-            })
+            addDirective(name, directiveName)
           }
         )
 
