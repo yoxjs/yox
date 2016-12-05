@@ -622,7 +622,6 @@ var Context = function () {
         while (instance) {
           result = get$1(instance.data, keypath);
           if (result) {
-            cache[keypath] = result.value;
             break;
           } else {
             instance = instance.parent;
@@ -630,6 +629,9 @@ var Context = function () {
           }
         }
         keypath = keypaths.join('/');
+        if (result) {
+          cache[keypath] = result.value;
+        }
       }
 
       if (!has$2(used, keypath)) {
@@ -1029,14 +1031,6 @@ var Array$1 = function (_Node) {
   }]);
   return Array;
 }(Node$2);
-
-var around = function (object$$1, fn, enter, leave) {
-  if (func(enter) && enter(object$$1) === FALSE) {
-    return;
-  }
-  var result = execute$1(fn, object$$1, object$$1);
-  return func(leave) ? leave(object$$1, result) : result;
-};
 
 var Call = function (_Node) {
   inherits(Call, _Node);
@@ -1669,28 +1663,6 @@ var Node = function () {
       reduce(children || this.children, function (prev, current) {
         return current.render(data, prev);
       });
-    }
-  }, {
-    key: 'traverse',
-    value: function traverse(enter, leave) {
-      return around(this, function (node) {
-        if (array(node.children)) {
-          var _ret = function () {
-            var children = [];
-            each$1(node.children, function (item) {
-              item = item.traverse(enter, leave);
-              if (item != NULL) {
-                children.push(item);
-              }
-            });
-            return {
-              v: children
-            };
-          }();
-
-          if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
-        }
-      }, enter, leave);
     }
   }]);
   return Node;
@@ -3449,8 +3421,28 @@ function parseStyle(str) {
 }
 
 function create$1(root, instance) {
+
   var counter = 0;
-  return root.traverse(function (node) {
+  var traverse = function traverse(node, enter, leave) {
+
+    if (enter(node) === FALSE) {
+      return;
+    }
+
+    var children = [];
+    if (array(node.children)) {
+      each$1(node.children, function (item) {
+        item = traverse(item, enter, leave);
+        if (item != NULL) {
+          children.push(item);
+        }
+      });
+    }
+
+    return leave(node, children);
+  };
+
+  return traverse(root, function (node) {
     counter++;
     if (node.type === ATTRIBUTE || node.type === DIRECTIVE) {
       return FALSE;
@@ -4383,7 +4375,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.16.9';
+Yox.version = '0.16.10';
 
 Yox.switcher = switcher;
 

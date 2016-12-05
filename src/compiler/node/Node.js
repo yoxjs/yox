@@ -6,7 +6,6 @@ import * as is from '../../util/is'
 import * as array from '../../util/array'
 import * as keypath from '../../util/keypath'
 
-import around from '../../function/around'
 import execute from '../../function/execute'
 
 /**
@@ -58,29 +57,6 @@ export default class Node {
       function (prev, current) {
         return current.render(data, prev)
       }
-    )
-  }
-
-  traverse(enter, leave) {
-    return around(
-      this,
-      function (node) {
-        if (is.array(node.children)) {
-          let children = [ ]
-          array.each(
-            node.children,
-            function (item) {
-              item = item.traverse(enter, leave)
-              if (item != env.NULL) {
-                children.push(item)
-              }
-            }
-          )
-          return children
-        }
-      },
-      enter,
-      leave
     )
   }
 

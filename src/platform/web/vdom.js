@@ -51,8 +51,33 @@ function parseStyle(str) {
 }
 
 export function create(root, instance) {
+
   let counter = 0
-  return root.traverse(
+  let traverse = function (node, enter, leave) {
+
+    if (enter(node) === env.FALSE) {
+      return
+    }
+
+    let children = [ ]
+    if (is.array(node.children)) {
+      array.each(
+        node.children,
+        function (item) {
+          item = traverse(item, enter, leave)
+          if (item != env.NULL) {
+            children.push(item)
+          }
+        }
+      )
+    }
+
+    return leave(node, children)
+
+  }
+
+  return traverse(
+    root,
     function (node) {
       counter++
       if (node.type === nodeType.ATTRIBUTE || node.type === nodeType.DIRECTIVE) {

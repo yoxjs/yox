@@ -50,7 +50,6 @@ export default class Context {
       while (instance) {
         result = object.get(instance.data, keypath)
         if (result) {
-          cache[keypath] = result.value
           break
         }
         else {
@@ -59,6 +58,9 @@ export default class Context {
         }
       }
       keypath = keypaths.join('/')
+      if (result) {
+        cache[keypath] = result.value
+      }
     }
 
     if (!array.has(used, keypath)) {

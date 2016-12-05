@@ -4,7 +4,6 @@ import * as nodeType from '../nodeType'
 
 import * as env from '../../config/env'
 import * as array from '../../util/array'
-import around from '../../function/around'
 import execute from '../../function/execute'
 
 /**
