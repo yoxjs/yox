@@ -4,7 +4,6 @@ import * as nodeType from '../nodeType'
 
 import * as env from '../../config/env'
 import * as array from '../../util/array'
-import execute from '../../function/execute'
 
 /**
  * Array 节点
@@ -29,22 +28,18 @@ export default class Array extends Node {
   }
 
   execute(context) {
-    let values = [ ]
+    let value = [ ], deps = [ ]
+    array.each(
+      this.elements,
+      function (node) {
+        let result = node.execute(context)
+        value.push(result.value)
+        array.push(deps, result.deps)
+      }
+    )
     return {
-      value: values,
-      deps: array.unique(
-        execute(
-          array.merge,
-          env.NULL,
-          this.elements.map(
-            function (node) {
-              let { deps, value } = node.execute(context)
-              values.push(value)
-              return deps
-            }
-          )
-        )
-      )
+      value,
+      deps,
     }
   }
 

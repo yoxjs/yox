@@ -32,18 +32,14 @@ export default class Conditional extends Node {
       consequent = consequent.execute(context)
       return {
         value: consequent.value,
-        deps: array.unique(
-          array.merge(test.deps, consequent.deps)
-        )
+        deps: array.push(test.deps, consequent.deps),
       }
     }
     else {
       alternate = alternate.execute(context)
       return {
         value: alternate.value,
-        deps: array.unique(
-          array.merge(test.deps, alternate.deps)
-        )
+        deps: array.push(test.deps, alternate.deps),
       }
     }
   }

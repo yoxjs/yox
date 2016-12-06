@@ -30,13 +30,16 @@ export function reduce(array, callback, initialValue) {
   return array.reduce(callback, initialValue)
 }
 
-export function push(array, newArray) {
+export function push(array, newArray, unique, strict) {
   each(
     newArray,
     function (item) {
-      array.push(item)
+      if (unique === env.FALSE || !has(array, item, strict)) {
+        array.push(item)
+      }
     }
   )
+  return array
 }
 
 export function merge() {
@@ -48,19 +51,6 @@ export function merge() {
     arguments,
     function (array) {
       each(array, push)
-    }
-  )
-  return result
-}
-
-export function unique(array, strict) {
-  let result = [ ]
-  each(
-    array,
-    function (item) {
-      if (!has(result, item, strict)) {
-        result.push(item)
-      }
     }
   )
   return result

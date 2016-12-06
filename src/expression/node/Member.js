@@ -62,20 +62,20 @@ export default class Member extends Node {
     let list = this.flatten()
     let firstNode = list.shift()
 
-    let { value, deps } = firstNode.execute(context)
-    let currentValue = value, memberDeps = [ ], keypaths = [ deps[0] ]
+    let result = firstNode.execute(context)
+    let value = result.value, deps = [ ], keypaths = [ result.deps[0] ]
 
-    if (is.object(currentValue)) {
+    if (is.object(value)) {
       array.each(
         list,
         function (node) {
           if (node.type !== nodeType.LITERAL) {
-            let { value, deps }= node.execute(context)
-            node = new Literal(value)
-            memberDeps.push(deps)
+            let result= node.execute(context)
+            array.push(deps, result.deps)
+            node = new Literal(result.value)
           }
           keypaths.push(node.value)
-          currentValue = currentValue[node.value]
+          value = value[node.value]
         }
       )
     }
@@ -86,18 +86,11 @@ export default class Member extends Node {
       }
     )
 
-    memberDeps.unshift([ keypaths.join('.') ])
-
+    array.push(deps, [ keypaths.join('.') ])
 
     return {
-      value: currentValue,
-      deps: array.unique(
-        execute(
-          array.merge,
-          env.NULL,
-          memberDeps
-        )
-      ),
+      value,
+      deps,
     }
   }
 

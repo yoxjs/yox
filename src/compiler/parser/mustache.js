@@ -186,7 +186,7 @@ export function render(ast, data) {
 
   return {
     root: children[0],
-    deps: array.unique(deps),
+    deps,
   }
 
 }

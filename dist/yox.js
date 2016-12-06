@@ -156,10 +156,13 @@ function reduce(array$$1, callback, initialValue) {
   return array$$1.reduce(callback, initialValue);
 }
 
-function push$1(array$$1, newArray) {
+function push$1(array$$1, newArray, unique, strict) {
   each$1(newArray, function (item) {
-    array$$1.push(item);
+    if (unique === FALSE || !has$2(array$$1, item, strict)) {
+      array$$1.push(item);
+    }
   });
+  return array$$1;
 }
 
 function merge() {
@@ -169,16 +172,6 @@ function merge() {
   };
   each$1(arguments, function (array$$1) {
     each$1(array$$1, push);
-  });
-  return result;
-}
-
-function unique(array$$1, strict) {
-  var result = [];
-  each$1(array$$1, function (item) {
-    if (!has$2(result, item, strict)) {
-      result.push(item);
-    }
   });
   return result;
 }
@@ -230,7 +223,6 @@ var array$1 = Object.freeze({
 	reduce: reduce,
 	push: push$1,
 	merge: merge,
-	unique: unique,
 	toArray: toArray,
 	toObject: toObject,
 	indexOf: indexOf,
@@ -820,12 +812,11 @@ var Attribute = function (_Node) {
           parent = data.parent;
 
 
+      var deps = void 0;
       if (name.type === EXPRESSION) {
-        var _name$execute = name.execute(data),
-            value = _name$execute.value,
-            deps = _name$execute.deps;
-
-        name = value;
+        var result = name.execute(data);
+        name = result.value;
+        deps = result.deps;
       }
 
       var node = new Attribute(name);
@@ -1446,7 +1437,7 @@ var Binary = function (_Node) {
 
       return {
         value: value,
-        deps: unique(merge(left.deps, right.deps))
+        deps: push$1(left.deps, right.deps)
       };
     }
   }]);
@@ -1535,17 +1526,16 @@ var Array$1 = function (_Node) {
   }, {
     key: 'execute',
     value: function execute(context) {
-      var values = [];
+      var value = [],
+          deps = [];
+      each$1(this.elements, function (node) {
+        var result = node.execute(context);
+        value.push(result.value);
+        push$1(deps, result.deps);
+      });
       return {
-        value: values,
-        deps: unique(execute$1(merge, NULL, this.elements.map(function (node) {
-          var _node$execute = node.execute(context),
-              deps = _node$execute.deps,
-              value = _node$execute.value;
-
-          values.push(value);
-          return deps;
-        })))
+        value: value,
+        deps: deps
       };
     }
   }]);
@@ -1582,16 +1572,19 @@ var Call = function (_Node) {
       var callee = this.callee,
           args = this.args;
 
-      callee = callee.execute(context);
-      var deps = [callee.deps];
-      var value = execute$1(callee.value, NULL, args.map(function (arg) {
+      var _callee$execute = callee.execute(context),
+          value = _callee$execute.value,
+          deps = _callee$execute.deps;
+
+      value = execute$1(value, NULL, args.map(function (arg) {
         var result = arg.execute(context);
-        deps.push(result.deps);
+        push$1(deps, result.deps);
         return result.value;
       }));
+
       return {
         value: value,
-        deps: unique(execute$1(merge, NULL, deps))
+        deps: deps
       };
     }
   }]);
@@ -1633,13 +1626,13 @@ var Conditional = function (_Node) {
         consequent = consequent.execute(context);
         return {
           value: consequent.value,
-          deps: unique(merge(test.deps, consequent.deps))
+          deps: push$1(test.deps, consequent.deps)
         };
       } else {
         alternate = alternate.execute(context);
         return {
           value: alternate.value,
-          deps: unique(merge(test.deps, alternate.deps))
+          deps: push$1(test.deps, alternate.deps)
         };
       }
     }
@@ -1757,30 +1750,24 @@ var Member = function (_Node) {
     }
   }, {
     key: 'execute',
-    value: function execute(context) {
+    value: function execute$1(context) {
       var list = this.flatten();
       var firstNode = list.shift();
 
-      var _firstNode$execute = firstNode.execute(context),
-          value = _firstNode$execute.value,
-          deps = _firstNode$execute.deps;
+      var result = firstNode.execute(context);
+      var value = result.value,
+          deps = [],
+          keypaths = [result.deps[0]];
 
-      var currentValue = value,
-          memberDeps = [],
-          keypaths = [deps[0]];
-
-      if (object(currentValue)) {
+      if (object(value)) {
         each$1(list, function (node) {
           if (node.type !== LITERAL) {
-            var _node$execute = node.execute(context),
-                _value = _node$execute.value,
-                _deps = _node$execute.deps;
-
-            node = new Literal(_value);
-            memberDeps.push(_deps);
+            var _result = node.execute(context);
+            push$1(deps, _result.deps);
+            node = new Literal(_result.value);
           }
           keypaths.push(node.value);
-          currentValue = currentValue[node.value];
+          value = value[node.value];
         });
       }
 
@@ -1788,11 +1775,11 @@ var Member = function (_Node) {
         return keypath !== '.';
       });
 
-      memberDeps.unshift([keypaths.join('.')]);
+      push$1(deps, [keypaths.join('.')]);
 
       return {
-        value: currentValue,
-        deps: unique(execute$1(merge, NULL, memberDeps))
+        value: value,
+        deps: deps
       };
     }
   }]);
@@ -2204,7 +2191,7 @@ function render$1(ast, data) {
 
   return {
     root: children[0],
-    deps: unique(deps)
+    deps: deps
   };
 }
 

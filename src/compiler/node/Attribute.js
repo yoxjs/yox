@@ -1,7 +1,9 @@
 
 import Node from './Node'
 
+import * as env from '../../config/env'
 import * as nodeType from '../nodeType'
+import * as array from '../../util/array'
 import * as object from '../../util/object'
 
 /**
@@ -21,9 +23,11 @@ export default class Attribute extends Node {
     let { name } = this
     let { keys, parent } = data
 
+    let deps
     if (name.type === nodeType.EXPRESSION) {
-      let { value, deps } = name.execute(data)
-      name = value
+      let result = name.execute(data)
+      name = result.value
+      deps = result.deps
     }
 
     let node = new Attribute(name)

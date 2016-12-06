@@ -32,28 +32,23 @@ export default class Call extends Node {
 
   execute(context) {
     let { callee, args } = this
-    callee = callee.execute(context)
-    let deps = [ callee.deps ]
-    let value = execute(
-      callee.value,
+    let { value, deps } = callee.execute(context)
+
+    value = execute(
+      value,
       env.NULL,
       args.map(
         function (arg) {
           let result = arg.execute(context)
-          deps.push(result.deps)
+          array.push(deps, result.deps)
           return result.value
         }
       )
     )
+
     return {
       value,
-      deps: array.unique(
-        execute(
-          array.merge,
-          env.NULL,
-          deps
-        )
-      )
+      deps,
     }
   }
 

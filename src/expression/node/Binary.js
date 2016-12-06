@@ -81,9 +81,7 @@ export default class Binary extends Node {
 
     return {
       value,
-      deps: array.unique(
-        array.merge(left.deps, right.deps)
-      )
+      deps: array.push(left.deps, right.deps),
     }
   }
 
