@@ -1327,22 +1327,28 @@ var Unary = function (_Node) {
       var operator = this.operator,
           arg = this.arg;
 
-      var result = arg.execute(context);
+      var _arg$execute = arg.execute(context),
+          value = _arg$execute.value,
+          deps = _arg$execute.deps;
+
       switch (operator) {
         case Unary.PLUS:
-          result.value = +result.value;
+          value = +value;
           break;
         case Unary.MINUS:
-          result.value = -result.value;
+          value = -value;
           break;
         case Unary.BANG:
-          result.value = !result.value;
+          value = !value;
           break;
         case Unary.WAVE:
-          result.value = ~result.value;
+          value = ~value;
           break;
       }
-      return result;
+      return {
+        value: value,
+        deps: deps
+      };
     }
   }]);
   return Unary;
@@ -1750,7 +1756,7 @@ var Member = function (_Node) {
     }
   }, {
     key: 'execute',
-    value: function execute$1(context) {
+    value: function execute(context) {
       var list = this.flatten();
       var firstNode = list.shift();
 
