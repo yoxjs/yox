@@ -25,26 +25,26 @@ export default class Expression extends Node {
 
   render(data) {
 
-    let content = this.execute(data)
-    if (content == env.NULL) {
-      content = ''
+    let { value, deps } = this.execute(data)
+    if (value == env.NULL) {
+      value = ''
     }
 
-    if (is.func(content) && content.computed) {
-      content = content()
+    if (is.func(value) && value.computed) {
+      value = value()
     }
 
-    // 处理需要不转义的
-    if (!this.safe && is.string(content) && pattern.tag.test(content)) {
+    // 处理不转义的字符串模板
+    if (!this.safe && is.string(value) && pattern.tag.test(value)) {
       array.each(
-        data.parse(content),
+        data.parse(value),
         function (node) {
           node.render(data)
         }
       )
     }
     else {
-      let node = new Text(content)
+      let node = new Text(value)
       node.render(data)
     }
 

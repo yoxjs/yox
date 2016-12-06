@@ -22,21 +22,17 @@ export default class Spread extends Node {
   }
 
   render(data) {
-    let target = this.execute(data)
-    if (!is.object(target)) {
-      return
+    let { value, deps } = this.execute(data)
+    if (is.object(value)) {
+      object.each(
+        value,
+        function (value, key) {
+          let node = new Attribute(key)
+          node.addChild(new Text(value))
+          node.render(data)
+        }
+      )
     }
-
-    let node
-
-    object.each(
-      target,
-      function (value, key) {
-        node = new Attribute(key)
-        node.addChild(new Text(value))
-        data.parent.addAttr(node)
-      }
-    )
   }
 
 }

@@ -772,7 +772,7 @@ var Node = function () {
           value = _expr$execute.value,
           deps = _expr$execute.deps;
 
-      addDeps(deps.map(function (dep) {
+      deps = deps.map(function (dep) {
         var base = copy(keys$$1);
         each$1(dep.split('/'), function (dep) {
           if (dep === '..') {
@@ -782,8 +782,9 @@ var Node = function () {
           }
         });
         return base.join('.');
-      }));
-      return value;
+      });
+      addDeps(deps);
+      return { value: value, deps: deps };
     }
   }, {
     key: 'render',
@@ -815,14 +816,21 @@ var Attribute = function (_Node) {
     key: 'render',
     value: function render(data) {
       var name = this.name;
+      var keys$$1 = data.keys,
+          parent = data.parent;
+
 
       if (name.type === EXPRESSION) {
-        name = name.execute(data);
+        var _name$execute = name.execute(data),
+            value = _name$execute.value,
+            deps = _name$execute.deps;
+
+        name = value;
       }
 
       var node = new Attribute(name);
-      node.keypath = data.keys.join('.');
-      data.parent.addAttr(node);
+      node.keypath = keys$$1.join('.');
+      parent.addAttr(node);
 
       this.renderChildren(extend({}, data, { parent: node }));
     }
@@ -879,8 +887,9 @@ var Each = function (_Node) {
       var context = data.context,
           keys$$1 = data.keys;
 
-
-      var value = instance.execute(data);
+      var _instance$execute = instance.execute(data),
+          value = _instance$execute.value,
+          deps = _instance$execute.deps;
 
       var iterate = void 0;
       if (array(value)) {
@@ -895,15 +904,17 @@ var Each = function (_Node) {
           keys$$1.push(expr.stringify());
           iterate(value, function (item, i) {
             if (index) {
-              context.set(index, i);
+              listContext.set(index, i);
             }
             keys$$1.push(i);
-            context.set(SPECIAL_KEYPATH, keys$$1.join('.'));
+            listContext.set(SPECIAL_KEYPATH, keys$$1.join('.'));
+
             instance.renderChildren(extend({}, data, { context: listContext.push(item) }));
-            context.remove(SPECIAL_KEYPATH);
+
+            listContext.remove(SPECIAL_KEYPATH);
             keys$$1.pop();
             if (index) {
-              context.remove(index);
+              listContext.remove(index);
             }
           });
           keys$$1.pop();
@@ -953,13 +964,18 @@ var Element = function (_Node) {
     value: function render(data) {
 
       var instance = this;
-      var node = new Element(instance.name, instance.component);
+      var name = instance.name,
+          component = instance.component,
+          attrs = instance.attrs,
+          directives = instance.directives;
+
+      var node = new Element(name, component);
       node.keypath = data.keys.join('.');
       data.parent.addChild(node);
 
       data = extend({}, data, { parent: node });
-      instance.renderChildren(data, instance.attrs);
-      instance.renderChildren(data, instance.directives);
+      instance.renderChildren(data, attrs);
+      instance.renderChildren(data, directives);
       instance.renderChildren(data);
     }
   }]);
@@ -1001,7 +1017,11 @@ var ElseIf = function (_Node) {
     key: 'render',
     value: function render(data, prev) {
       if (prev) {
-        if (this.execute(data)) {
+        var _execute = this.execute(data),
+            value = _execute.value,
+            deps = _execute.deps;
+
+        if (value) {
           this.renderChildren(data);
         } else {
           return prev;
@@ -1051,22 +1071,24 @@ var Expression = function (_Node) {
   createClass(Expression, [{
     key: 'render',
     value: function render(data) {
+      var _execute = this.execute(data),
+          value = _execute.value,
+          deps = _execute.deps;
 
-      var content = this.execute(data);
-      if (content == NULL) {
-        content = '';
+      if (value == NULL) {
+        value = '';
       }
 
-      if (func(content) && content.computed) {
-        content = content();
+      if (func(value) && value.computed) {
+        value = value();
       }
 
-      if (!this.safe && string(content) && tag.test(content)) {
-        each$1(data.parse(content), function (node) {
+      if (!this.safe && string(value) && tag.test(value)) {
+        each$1(data.parse(value), function (node) {
           node.render(data);
         });
       } else {
-        var node = new Text(content);
+        var node = new Text(value);
         node.render(data);
       }
     }
@@ -1089,7 +1111,11 @@ var If = function (_Node) {
   createClass(If, [{
     key: 'render',
     value: function render(data) {
-      if (this.execute(data)) {
+      var _execute = this.execute(data),
+          value = _execute.value,
+          deps = _execute.deps;
+
+      if (value) {
         this.renderChildren(data);
       } else {
         return TRUE;
@@ -1144,18 +1170,17 @@ var Spread = function (_Node) {
   createClass(Spread, [{
     key: 'render',
     value: function render(data) {
-      var target = this.execute(data);
-      if (!object(target)) {
-        return;
+      var _execute = this.execute(data),
+          value = _execute.value,
+          deps = _execute.deps;
+
+      if (object(value)) {
+        each$$1(value, function (value, key) {
+          var node = new Attribute(key);
+          node.addChild(new Text(value));
+          node.render(data);
+        });
       }
-
-      var node = void 0;
-
-      each$$1(target, function (value, key) {
-        node = new Attribute(key);
-        node.addChild(new Text(value));
-        data.parent.addAttr(node);
-      });
     }
   }]);
   return Spread;
@@ -3821,7 +3846,7 @@ var modelDt = {
 
 function getComponentInfo(node, instance) {
   var options = instance.getComponent(node.component);
-  var props = copy(node.getAttributes(), TRUE);
+  var props = node.getAttributes();
   if (has$1(options, 'propTypes')) {
     validate(props, options.propTypes);
   }

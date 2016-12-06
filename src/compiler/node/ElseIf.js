@@ -17,7 +17,8 @@ export default class ElseIf extends Node {
 
   render(data, prev) {
     if (prev) {
-      if (this.execute(data)) {
+      let { value, deps } = this.execute(data)
+      if (value) {
         this.renderChildren(data)
       }
       else {

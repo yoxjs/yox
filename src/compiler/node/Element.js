@@ -43,13 +43,14 @@ export default class Element extends Node {
   render(data) {
 
     let instance = this
-    let node = new Element(instance.name, instance.component)
+    let { name, component, attrs, directives } = instance
+    let node = new Element(name, component)
     node.keypath = data.keys.join('.')
     data.parent.addChild(node)
 
     data = object.extend({ }, data, { parent: node })
-    instance.renderChildren(data, instance.attrs)
-    instance.renderChildren(data, instance.directives)
+    instance.renderChildren(data, attrs)
+    instance.renderChildren(data, directives)
     instance.renderChildren(data)
 
   }

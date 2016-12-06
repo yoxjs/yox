@@ -40,26 +40,25 @@ export default class Node {
   execute(data) {
     let { context, keys, addDeps } = data
     let { value, deps } = this.expr.execute(context)
-    addDeps(
-      deps.map(
-        function (dep) {
-          let base = object.copy(keys)
-          array.each(
-            dep.split('/'),
-            function (dep) {
-              if (dep === '..') {
-                base.pop()
-              }
-              else if (dep && dep !== '.') {
-                base.push(dep)
-              }
+    deps = deps.map(
+      function (dep) {
+        let base = object.copy(keys)
+        array.each(
+          dep.split('/'),
+          function (dep) {
+            if (dep === '..') {
+              base.pop()
             }
-          )
-          return base.join('.')
-        }
-      )
+            else if (dep && dep !== '.') {
+              base.push(dep)
+            }
+          }
+        )
+        return base.join('.')
+      }
     )
-    return value
+    addDeps(deps)
+    return { value, deps }
   }
 
   render() {
