@@ -133,7 +133,6 @@ var toString$1 = function (str, defaultValue) {
 
 var slice = Array.prototype.slice;
 
-
 function each$1(array$$1, callback, reversed) {
   var length = array$$1.length;
 
@@ -3621,6 +3620,9 @@ var refDt = {
     var child = el['$component'];
     var value = node.getValue();
     if (child && value) {
+      if (get$3(instance, 'ref', value, TRUE)) {
+        error$1('ref ' + value + ' is existed.');
+      }
       set$3(instance, 'ref', value, child);
       el.$ref = value;
     }
@@ -4115,11 +4117,13 @@ var Yox = function () {
             });
           };
 
-          each$1($children, function (child) {
-            if (needSync(child.propDeps)) {
-              child.sync();
-            }
-          });
+          if ($children) {
+            each$1($children, function (child) {
+              if (needSync(child.propDeps)) {
+                child.sync();
+              }
+            });
+          }
 
           if (needSync($deps)) {
             instance.sync();
@@ -4436,7 +4440,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.16.14';
+Yox.version = '0.16.15';
 
 Yox.switcher = switcher;
 

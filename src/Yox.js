@@ -318,14 +318,16 @@ export default class Yox {
       }
 
       // 同步子组件
-      array.each(
-        $children,
-        function (child) {
-          if (needSync(child.propDeps)) {
-            child.sync()
+      if ($children) {
+        array.each(
+          $children,
+          function (child) {
+            if (needSync(child.propDeps)) {
+              child.sync()
+            }
           }
-        }
-      )
+        )
+      }
 
       if (needSync($deps)) {
         instance.sync()
@@ -674,7 +676,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.16.14'
+Yox.version = '0.16.15'
 
 /**
  * 开关配置

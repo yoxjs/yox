@@ -5,6 +5,7 @@
 
 import * as env from '../config/env'
 
+import * as logger from '../util/logger'
 import * as component from '../util/component'
 
 export default {
@@ -14,6 +15,9 @@ export default {
     let child = el[`$component`]
     let value = node.getValue()
     if (child && value) {
+      if (component.get(instance, 'ref', value, env.TRUE)) {
+        logger.error(`ref ${value} is existed.`)
+      }
       component.set(instance, 'ref', value, child)
       el.$ref = value
     }

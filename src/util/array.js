@@ -7,6 +7,9 @@ let {
   slice,
 } = Array.prototype
 
+/**
+ * 遍历数组，支持返回 fasle 退出遍历
+ */
 export function each(array, callback, reversed) {
   let { length } = array
   if (reversed) {
@@ -25,11 +28,17 @@ export function each(array, callback, reversed) {
   }
 }
 
-// array.reduce 如果是空数组，不传 initialValue 居然会报错，所以封装一下
+/**
+ * 原生的 array.reduce 如果传了空数组，不传 initialValue 居然会报错
+ */
 export function reduce(array, callback, initialValue) {
   return array.reduce(callback, initialValue)
 }
 
+/**
+ * array.push 的参数数组化版
+ * 默认开启严格去重
+ */
 export function push(array, newArray, unique, strict) {
   each(
     newArray,
@@ -42,6 +51,9 @@ export function push(array, newArray, unique, strict) {
   return array
 }
 
+/**
+ * 合并多个数组，不去重
+ */
 export function merge() {
   let result = [ ]
   let push = function (item) {
