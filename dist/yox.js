@@ -964,10 +964,24 @@ var Element = function (_Node) {
       node.keypath = data.keys.join('.');
       data.parent.addChild(node);
 
-      data = extend({}, data, { parent: node });
-      instance.renderChildren(data, attrs);
-      instance.renderChildren(data, directives);
-      instance.renderChildren(data);
+      var addDeps = data.addDeps;
+
+
+      var deps = [];
+      var nextData = {
+        parent: node,
+        addDeps: function addDeps(childrenDeps) {
+          push$1(deps, childrenDeps);
+        }
+      };
+
+      nextData = extend({}, data, nextData);
+      instance.renderChildren(nextData, attrs);
+      instance.renderChildren(nextData, directives);
+      instance.renderChildren(nextData);
+
+      addDeps(deps);
+      node.deps = deps;
     }
   }]);
   return Element;
@@ -3837,15 +3851,6 @@ var modelDt = {
 
 };
 
-function getComponentInfo(node, instance) {
-  var options = instance.getComponent(node.component);
-  var props = node.getAttributes();
-  if (has$1(options, 'propTypes')) {
-    validate(props, options.propTypes);
-  }
-  return { options: options, props: props };
-}
-
 var componentDt = {
 
   attach: function attach(_ref) {
@@ -3853,24 +3858,23 @@ var componentDt = {
         node = _ref.node,
         instance = _ref.instance;
 
-    var info = getComponentInfo(node, instance);
-    el.$component = instance.create(info.options, {
+    var options = instance.getComponent(node.component);
+    var props = node.getAttributes();
+    if (has$1(options, 'propTypes')) {
+      validate(props, options.propTypes);
+    }
+    el.$component = instance.create(options, {
       el: el,
-      props: info.props,
-      replace: TRUE
+      props: props,
+      replace: TRUE,
+      extensions: {
+        propDeps: node.deps
+      }
     });
   },
 
-  update: function update(_ref2) {
-    var el = _ref2.el,
-        node = _ref2.node,
-        instance = _ref2.instance;
-
-    el.$component.set(getComponentInfo(node, instance).props);
-  },
-
-  detach: function detach(_ref3) {
-    var el = _ref3.el;
+  detach: function detach(_ref2) {
+    var el = _ref2.el;
 
     el.$component.destroy(TRUE);
     el.$component = NULL;
@@ -4094,31 +4098,49 @@ var Yox = function () {
       }
 
       var instance = this;
-      var changes = instance.updateModel(model);
-
       var $deps = instance.$deps,
+          $children = instance.$children,
           $currentNode = instance.$currentNode;
+
+      var changes = instance.updateModel(model);
 
       if (changes && $deps && $currentNode) {
         (function () {
           var changeKeys = keys(changes);
-          var needUpdate = $deps.some(function (keypath) {
-            return changeKeys.some(function (changekey) {
-              return changekey.startsWith(keypath);
-            });
-          });
-          if (needUpdate) {
-            if (sync$1) {
-              instance.updateView();
-            } else if (!instance.$syncing) {
-              instance.$syncing = TRUE;
-              add(function () {
-                delete instance.$syncing;
-                instance.updateView();
+          var needSync = function needSync(deps) {
+            return deps.some(function (keypath) {
+              return changeKeys.some(function (changekey) {
+                return changekey.startsWith(keypath);
               });
+            });
+          };
+
+          each$1($children, function (child) {
+            if (needSync(child.propDeps)) {
+              child.sync();
             }
+          });
+
+          if (needSync($deps)) {
+            instance.sync();
           }
         })();
+      }
+    }
+  }, {
+    key: 'sync',
+    value: function sync() {
+
+      var instance = this;
+
+      if (sync$1) {
+        instance.updateView();
+      } else if (!instance.$syncing) {
+        instance.$syncing = TRUE;
+        add(function () {
+          delete instance.$syncing;
+          instance.updateView();
+        });
       }
     }
   }, {
@@ -4414,7 +4436,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.16.13';
+Yox.version = '0.16.14';
 
 Yox.switcher = switcher;
 

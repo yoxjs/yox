@@ -300,36 +300,57 @@ export default class Yox {
     }
 
     let instance = this
+    let { $deps, $children, $currentNode } = instance
     let changes = instance.updateModel(model)
 
-    let { $deps, $currentNode } = instance
-    // 是否是视图中用到的数据变化了
     if (changes && $deps && $currentNode) {
       let changeKeys = object.keys(changes)
-      let needUpdate = $deps.some(
-        function (keypath) {
-          return changeKeys.some(
-            function (changekey) {
-              return changekey.startsWith(keypath)
-            }
-          )
+      let needSync = function (deps) {
+        return deps.some(
+          function (keypath) {
+            return changeKeys.some(
+              function (changekey) {
+                return changekey.startsWith(keypath)
+              }
+            )
+          }
+        )
+      }
+
+      // 同步子组件
+      array.each(
+        $children,
+        function (child) {
+          if (needSync(child.propDeps)) {
+            child.sync()
+          }
         }
       )
-      if (needUpdate) {
-        if (switcher.sync) {
+
+      if (needSync($deps)) {
+        instance.sync()
+      }
+
+    }
+  }
+
+  sync() {
+
+    let instance = this
+
+    if (switcher.sync) {
+      instance.updateView()
+    }
+    else if (!instance.$syncing) {
+      instance.$syncing = env.TRUE
+      nextTask.add(
+        function () {
+          delete instance.$syncing
           instance.updateView()
         }
-        else if (!instance.$syncing) {
-          instance.$syncing = env.TRUE
-          nextTask.add(
-            function () {
-              delete instance.$syncing
-              instance.updateView()
-            }
-          )
-        }
-      }
+      )
     }
+
   }
 
   on(type, listener) {
@@ -653,7 +674,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.16.13'
+Yox.version = '0.16.14'
 
 /**
  * 开关配置

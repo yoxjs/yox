@@ -27,6 +27,30 @@
                 increase: function () {
                     this.fire('increase');
                 }
+            },
+            beforeCreate: function (options) {
+                console.log('    beforeCreate', options);
+            },
+            afterCreate: function () {
+                console.log('    afterCreate');
+            },
+            beforeMount: function () {
+                console.log('    beforeMount');
+            },
+            afterMount: function () {
+                console.log('    afterMount');
+            },
+            beforeUpdate: function () {
+                console.log('    beforeUpdate', this);
+            },
+            afterUpdate: function () {
+                console.log('    afterUpdate');
+            },
+            beforeDestroy: function () {
+                console.log('    beforeDestroy');
+            },
+            afterDestroy: function () {
+                console.log('    afterDestroy');
             }
         };
 
@@ -64,6 +88,7 @@
                         {{#each list}}
                         <li>
                             {{name}} - {{user.name}}
+                            <Custom ref="child" user="{{user}}" />
                         </li>
                         {{/each}}
                     </ul>
