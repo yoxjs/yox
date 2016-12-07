@@ -4093,12 +4093,14 @@ var Yox = function () {
           $computedGetters = this.$computedGetters;
 
 
-      if (array($computedStack)) {
+      if ($computedStack) {
         var deps = last($computedStack);
         if (deps) {
           deps.push(keypath);
         }
+      }
 
+      if ($computedGetters) {
         var getter = $computedGetters[keypath];
         if (getter) {
           return getter();
@@ -4122,6 +4124,7 @@ var Yox = function () {
         model[keypath] = value;
       } else if (object(keypath)) {
         model = keypath;
+
         forceSync = value;
       } else {
         return;
@@ -4130,14 +4133,14 @@ var Yox = function () {
       var instance = this;
       var $data = instance.$data,
           $dirty = instance.$dirty,
-          $deps = instance.$deps,
+          $viewDeps = instance.$viewDeps,
           $children = instance.$children,
           $currentNode = instance.$currentNode;
 
       var change = instance.testChange(model);
 
       if (change || $dirty) {
-        if ($deps && $currentNode) {
+        if ($viewDeps && $currentNode) {
           (function () {
 
             var isDirty = function isDirty(deps) {
@@ -4155,7 +4158,7 @@ var Yox = function () {
 
             if (change && $children) {
               each$1($children, function (child) {
-                each$$1(child.propDeps, function (deps, name) {
+                each$$1(child.propDeps, function (deps) {
                   if (isDirty(deps)) {
                     child.$dirty = TRUE;
                     return FALSE;
@@ -4164,7 +4167,7 @@ var Yox = function () {
               });
             }
 
-            if ($dirty || isDirty($deps)) {
+            if ($dirty || isDirty($viewDeps)) {
               if (change) {
                 instance.applyChange(change);
               }
@@ -4180,12 +4183,12 @@ var Yox = function () {
             }
           })();
         } else {
-          instance.applyChange(change);
-        }
-      }
+            instance.applyChange(change);
+          }
 
-      if ($dirty) {
-        delete instance.$dirty;
+        if ($dirty) {
+          delete instance.$dirty;
+        }
       }
     }
   }, {
@@ -4255,27 +4258,6 @@ var Yox = function () {
     key: 'watchOnce',
     value: function watchOnce(keypath, watcher) {
       this.$watchEmitter.once(keypath, watcher);
-    }
-  }, {
-    key: 'toggle',
-    value: function toggle(keypath) {
-      this.set(keypath, !this.get(keypath));
-    }
-  }, {
-    key: 'increase',
-    value: function increase(keypath, step, max) {
-      var value = toNumber(this.get(keypath), 0) + (numeric(step) ? step : 1);
-      if (!numeric(max) || value <= max) {
-        this.set(keypath, value);
-      }
-    }
-  }, {
-    key: 'decrease',
-    value: function decrease(keypath, step, min) {
-      var value = toNumber(this.get(keypath), 0) - (numeric(step) ? step : 1);
-      if (!numeric(min) || value >= min) {
-        this.set(keypath, value);
-      }
     }
   }, {
     key: 'testChange',
@@ -4372,7 +4354,7 @@ var Yox = function () {
           root = _mustache$render.root,
           deps = _mustache$render.deps;
 
-      instance.$deps = deps;
+      instance.$viewDeps = deps;
 
       var newNode = create$1(root, instance),
           afterHook = void 0;
@@ -4484,11 +4466,32 @@ var Yox = function () {
 
       execute$1($options[AFTER_DESTROY], instance);
     }
+  }, {
+    key: 'toggle',
+    value: function toggle(keypath) {
+      this.set(keypath, !this.get(keypath));
+    }
+  }, {
+    key: 'increase',
+    value: function increase(keypath, step, max) {
+      var value = toNumber(this.get(keypath), 0) + (numeric(step) ? step : 1);
+      if (!numeric(max) || value <= max) {
+        this.set(keypath, value);
+      }
+    }
+  }, {
+    key: 'decrease',
+    value: function decrease(keypath, step, min) {
+      var value = toNumber(this.get(keypath), 0) - (numeric(step) ? step : 1);
+      if (!numeric(min) || value >= min) {
+        this.set(keypath, value);
+      }
+    }
   }]);
   return Yox;
 }();
 
-Yox.version = '0.16.16';
+Yox.version = '0.16.17';
 
 Yox.switcher = switcher;
 

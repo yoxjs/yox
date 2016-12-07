@@ -26,11 +26,6 @@ import * as native from './platform/web/native'
 import execute from './function/execute'
 import toNumber from './function/toNumber'
 
-import refDt from './directive/ref'
-import eventDt from './directive/event'
-import modelDt from './directive/model'
-import componentDt from './directive/component'
-
 import Store from './util/Store'
 import Event from './util/Event'
 import Emitter from './util/Emitter'
@@ -272,12 +267,14 @@ export default class Yox {
       $computedGetters,
     } = this
 
-    if (is.array($computedStack)) {
+    if ($computedStack) {
       let deps = array.last($computedStack)
       if (deps) {
         deps.push(keypath)
       }
+    }
 
+    if ($computedGetters) {
       let getter = $computedGetters[keypath]
       if (getter) {
         return getter()
@@ -301,18 +298,24 @@ export default class Yox {
     }
     else if (is.object(keypath)) {
       model = keypath
+      // 是否强制同步更新
+      // 如果是一个异步更新触发的 set
+      // 没必要再次异步，因为此时已经可以是所有手动数据操作完成之后了
       forceSync = value
     }
     else {
       return
     }
 
+    // 视图的 deps 和其他的 deps 要单独处理
+    // 当子组件更新时，如果 dirty 为 true，必须要强刷
+    // 这时还需要对比其他的 deps，比如 watch 的字段
     let instance = this
-    let { $data, $dirty, $deps, $children, $currentNode } = instance
+    let { $data, $dirty, $viewDeps, $children, $currentNode } = instance
     let change = instance.testChange(model)
 
     if (change || $dirty) {
-      if ($deps && $currentNode) {
+      if ($viewDeps && $currentNode) {
 
         let isDirty = function (deps) {
           let dirty
@@ -339,7 +342,7 @@ export default class Yox {
             function (child) {
               object.each(
                 child.propDeps,
-                function (deps, name) {
+                function (deps) {
                   if (isDirty(deps)) {
                     child.$dirty = env.TRUE
                     return env.FALSE
@@ -350,7 +353,7 @@ export default class Yox {
           )
         }
 
-        if ($dirty || isDirty($deps)) {
+        if ($dirty || isDirty($viewDeps)) {
           if (change) {
             instance.applyChange(change)
           }
@@ -369,13 +372,14 @@ export default class Yox {
         }
 
       }
+      // 比如作为 data bus 使用
       else {
         instance.applyChange(change)
       }
-    }
 
-    if ($dirty) {
-      delete instance.$dirty
+      if ($dirty) {
+        delete instance.$dirty
+      }
     }
 
   }
@@ -443,27 +447,6 @@ export default class Yox {
 
   watchOnce(keypath, watcher) {
     this.$watchEmitter.once(keypath, watcher)
-  }
-
-  toggle(keypath) {
-    this.set(
-      keypath,
-      !this.get(keypath)
-    )
-  }
-
-  increase(keypath, step, max) {
-    let value = toNumber(this.get(keypath), 0) + (is.numeric(step) ? step : 1)
-    if (!is.numeric(max) || value <= max) {
-      this.set(keypath, value)
-    }
-  }
-
-  decrease(keypath, step, min) {
-    let value = toNumber(this.get(keypath), 0) - (is.numeric(step) ? step : 1)
-    if (!is.numeric(min) || value >= min) {
-      this.set(keypath, value)
-    }
   }
 
   testChange(model) {
@@ -588,7 +571,7 @@ export default class Yox {
     }
 
     let { root, deps } = mustache.render($template, context)
-    instance.$deps = deps
+    instance.$viewDeps = deps
 
     let newNode = vdom.create(root, instance), afterHook
 
@@ -704,6 +687,27 @@ export default class Yox {
 
   }
 
+  toggle(keypath) {
+    this.set(
+      keypath,
+      !this.get(keypath)
+    )
+  }
+
+  increase(keypath, step, max) {
+    let value = toNumber(this.get(keypath), 0) + (is.numeric(step) ? step : 1)
+    if (!is.numeric(max) || value <= max) {
+      this.set(keypath, value)
+    }
+  }
+
+  decrease(keypath, step, min) {
+    let value = toNumber(this.get(keypath), 0) - (is.numeric(step) ? step : 1)
+    if (!is.numeric(min) || value >= min) {
+      this.set(keypath, value)
+    }
+  }
+
 }
 
 /**
@@ -711,7 +715,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.16.16'
+Yox.version = '0.16.17'
 
 /**
  * 开关配置
@@ -804,6 +808,12 @@ Yox.validate = validator.validate
 Yox.use = function (plugin) {
   plugin.install(Yox)
 }
+
+
+import refDt from './directive/ref'
+import eventDt from './directive/event'
+import modelDt from './directive/model'
+import componentDt from './directive/component'
 
 // 全局注册内置指令
 Yox.directive({
