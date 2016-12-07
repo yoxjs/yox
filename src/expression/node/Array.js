@@ -4,6 +4,7 @@ import * as nodeType from '../nodeType'
 
 import * as env from '../../config/env'
 import * as array from '../../util/array'
+import * as object from '../../util/object'
 
 /**
  * Array 节点
@@ -28,13 +29,13 @@ export default class Array extends Node {
   }
 
   execute(context) {
-    let value = [ ], deps = [ ]
+    let value = [ ], deps = { }
     array.each(
       this.elements,
       function (node) {
         let result = node.execute(context)
         value.push(result.value)
-        array.push(deps, result.deps)
+        object.extend(deps, result.deps)
       }
     )
     return {

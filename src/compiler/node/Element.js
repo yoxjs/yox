@@ -29,17 +29,6 @@ export default class Element extends Node {
     this.directives.push(node)
   }
 
-  getAttributes() {
-    let result = { }
-    array.each(
-      this.attrs,
-      function (node) {
-        result[node.name] = node.getValue()
-      }
-    )
-    return result
-  }
-
   render(data) {
 
     let instance = this
@@ -48,23 +37,10 @@ export default class Element extends Node {
     node.keypath = data.keys.join('.')
     data.parent.addChild(node)
 
-    let { addDeps } = data
-
-    let deps = [ ]
-    let nextData = {
-      parent: node,
-      addDeps: function (childrenDeps) {
-        array.push(deps, childrenDeps)
-      }
-    }
-
-    nextData = object.extend({ }, data, nextData)
-    instance.renderChildren(nextData, attrs)
-    instance.renderChildren(nextData, directives)
-    instance.renderChildren(nextData)
-
-    addDeps(deps)
-    node.deps = deps
+    data = object.extend({ }, data, { parent: node })
+    instance.renderChildren(data, attrs)
+    instance.renderChildren(data, directives)
+    instance.renderChildren(data)
 
   }
 

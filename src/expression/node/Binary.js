@@ -2,7 +2,7 @@
 import Node from './Node'
 import * as nodeType from '../nodeType'
 
-import * as array from '../../util/array'
+import * as object from '../../util/object'
 
 /**
  * Binary 节点
@@ -81,7 +81,7 @@ export default class Binary extends Node {
 
     return {
       value,
-      deps: array.push(left.deps, right.deps),
+      deps: object.extend(left.deps, right.deps),
     }
   }
 

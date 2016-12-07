@@ -25,7 +25,7 @@ export default class Expression extends Node {
 
   render(data) {
 
-    let { value, deps } = this.execute(data)
+    let { value } = this.execute(data)
     if (value == env.NULL) {
       value = ''
     }

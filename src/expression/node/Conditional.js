@@ -2,7 +2,7 @@
 import Node from './Node'
 import * as nodeType from '../nodeType'
 
-import * as array from '../../util/array'
+import * as object from '../../util/object'
 
 /**
  * Conditional 节点
@@ -32,14 +32,14 @@ export default class Conditional extends Node {
       consequent = consequent.execute(context)
       return {
         value: consequent.value,
-        deps: array.push(test.deps, consequent.deps),
+        deps: object.extend(test.deps, consequent.deps),
       }
     }
     else {
       alternate = alternate.execute(context)
       return {
         value: alternate.value,
-        deps: array.push(test.deps, alternate.deps),
+        deps: object.extend(test.deps, alternate.deps),
       }
     }
   }

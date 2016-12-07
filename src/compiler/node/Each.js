@@ -28,7 +28,7 @@ export default class Each extends Node {
     let { expr, index } = instance
     let { context, keys } = data
 
-    let { value, deps } = instance.execute(data)
+    let { value } = instance.execute(data)
 
     let iterate
     if (is.array(value)) {

@@ -3,7 +3,7 @@ import Node from './Node'
 import * as nodeType from '../nodeType'
 
 import * as env from '../../config/env'
-import * as array from '../../util/array'
+import * as object from '../../util/object'
 import execute from '../../function/execute'
 
 /**
@@ -40,7 +40,7 @@ export default class Call extends Node {
       args.map(
         function (arg) {
           let result = arg.execute(context)
-          array.push(deps, result.deps)
+          object.extend(deps, result.deps)
           return result.value
         }
       )

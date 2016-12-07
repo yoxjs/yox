@@ -7,6 +7,7 @@ import * as env from '../../config/env'
 
 import * as is from '../../util/is'
 import * as array from '../../util/array'
+import * as object from '../../util/object'
 
 /**
  * Member 节点
@@ -61,8 +62,12 @@ export default class Member extends Node {
     let list = this.flatten()
     let firstNode = list.shift()
 
-    let result = firstNode.execute(context)
-    let value = result.value, deps = [ ], keypaths = [ result.deps[0] ]
+    let { value, deps } = firstNode.execute(context)
+    // deps 包含第一个 term 对应的数据，其实我们想要的是到最后一个 term 的数据
+    let key = object.keys(deps)[0]
+    delete deps[key]
+
+    let keypaths = [ key ]
 
     if (is.object(value)) {
       array.each(
@@ -70,7 +75,7 @@ export default class Member extends Node {
         function (node) {
           if (node.type !== nodeType.LITERAL) {
             let result= node.execute(context)
-            array.push(deps, result.deps)
+            object.extend(deps, result.deps)
             node = new Literal(result.value)
           }
           keypaths.push(node.value)
@@ -85,7 +90,7 @@ export default class Member extends Node {
       }
     )
 
-    array.push(deps, [ keypaths.join('.') ])
+    deps[ keypaths.join('.') ] = value
 
     return {
       value,

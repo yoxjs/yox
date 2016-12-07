@@ -36,22 +36,6 @@ export function reduce(array, callback, initialValue) {
 }
 
 /**
- * array.push 的参数数组化版
- * 默认开启严格去重
- */
-export function push(array, newArray, unique, strict) {
-  each(
-    newArray,
-    function (item) {
-      if (unique === env.FALSE || !has(array, item, strict)) {
-        array.push(item)
-      }
-    }
-  )
-  return array
-}
-
-/**
  * 合并多个数组，不去重
  */
 export function merge() {

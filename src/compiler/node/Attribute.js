@@ -23,20 +23,29 @@ export default class Attribute extends Node {
     let { name } = this
     let { keys, parent } = data
 
-    let deps
     if (name.type === nodeType.EXPRESSION) {
-      let result = name.execute(data)
-      name = result.value
-      deps = result.deps
+      let { value } = name.execute(data)
+      name = value
     }
 
     let node = new Attribute(name)
     node.keypath = keys.join('.')
     parent.addAttr(node)
 
+    let deps = { }
+    let nextData = {
+      parent: node,
+      addDeps: function (childrenDeps) {
+        object.extend(deps, childrenDeps)
+      }
+    }
+
     this.renderChildren(
-      object.extend({ }, data, { parent: node })
+      object.extend({ }, data, nextData)
     )
+
+    node.deps = deps
+    data.addDeps(deps)
 
   }
 

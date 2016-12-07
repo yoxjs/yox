@@ -152,19 +152,19 @@ const rootName = 'root'
 export function render(ast, data) {
 
   let rootElement = new Element(rootName)
-  let keys = [ ], deps = [ ]
+  let deps = { }
 
   // 非转义插值需要解析模板字符串
   let renderAst = function (ast) {
     ast.render({
-      keys,
+      keys: [ ],
       parent: rootElement,
       context: new Context(data),
       parse: function (template) {
         return parse(template).children
       },
-      addDeps: function (newDeps) {
-        array.push(deps, newDeps)
+      addDeps: function (childrenDeps) {
+        object.extend(deps, childrenDeps)
       }
     })
   }

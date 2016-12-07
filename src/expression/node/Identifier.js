@@ -19,10 +19,12 @@ export default class Identifier extends Node {
   }
 
   execute(context) {
+    let deps = { }
     let { value, keypath } = context.get(this.name)
+    deps[keypath] = value
     return {
       value,
-      deps: [ keypath ],
+      deps,
     }
   }
 

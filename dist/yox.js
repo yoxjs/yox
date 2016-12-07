@@ -155,15 +155,6 @@ function reduce(array$$1, callback, initialValue) {
   return array$$1.reduce(callback, initialValue);
 }
 
-function push$1(array$$1, newArray, unique, strict) {
-  each$1(newArray, function (item) {
-    if (unique === FALSE || !has$2(array$$1, item, strict)) {
-      array$$1.push(item);
-    }
-  });
-  return array$$1;
-}
-
 function merge() {
   var result = [];
   var push = function push(item) {
@@ -220,7 +211,6 @@ function remove$1(array$$1, item, strict) {
 var array$1 = Object.freeze({
 	each: each$1,
 	reduce: reduce,
-	push: push$1,
 	merge: merge,
 	toArray: toArray,
 	toObject: toObject,
@@ -763,19 +753,23 @@ var Node = function () {
           value = _expr$execute.value,
           deps = _expr$execute.deps;
 
-      deps = deps.map(function (dep) {
+      var newDeps = {};
+      each$$1(deps, function (value, keypath) {
         var base = copy(keys$$1);
-        each$1(dep.split('/'), function (dep) {
-          if (dep === '..') {
+        each$1(keypath.split('/'), function (term) {
+          if (term === '..') {
             base.pop();
-          } else if (dep && dep !== '.') {
-            base.push(dep);
+          } else if (term && term !== '.') {
+            base.push(term);
           }
         });
-        return base.join('.');
+        newDeps[base.join('.')] = value;
       });
-      addDeps(deps);
-      return { value: value, deps: deps };
+      addDeps(newDeps);
+      return {
+        value: value,
+        deps: newDeps
+      };
     }
   }, {
     key: 'render',
@@ -811,18 +805,29 @@ var Attribute = function (_Node) {
           parent = data.parent;
 
 
-      var deps = void 0;
       if (name.type === EXPRESSION) {
-        var result = name.execute(data);
-        name = result.value;
-        deps = result.deps;
+        var _name$execute = name.execute(data),
+            value = _name$execute.value;
+
+        name = value;
       }
 
       var node = new Attribute(name);
       node.keypath = keys$$1.join('.');
       parent.addAttr(node);
 
-      this.renderChildren(extend({}, data, { parent: node }));
+      var deps = {};
+      var nextData = {
+        parent: node,
+        addDeps: function addDeps(childrenDeps) {
+          extend(deps, childrenDeps);
+        }
+      };
+
+      this.renderChildren(extend({}, data, nextData));
+
+      node.deps = deps;
+      data.addDeps(deps);
     }
   }]);
   return Attribute;
@@ -878,8 +883,7 @@ var Each = function (_Node) {
           keys$$1 = data.keys;
 
       var _instance$execute = instance.execute(data),
-          value = _instance$execute.value,
-          deps = _instance$execute.deps;
+          value = _instance$execute.value;
 
       var iterate = void 0;
       if (array(value)) {
@@ -941,15 +945,6 @@ var Element = function (_Node) {
       this.directives.push(node);
     }
   }, {
-    key: 'getAttributes',
-    value: function getAttributes() {
-      var result = {};
-      each$1(this.attrs, function (node) {
-        result[node.name] = node.getValue();
-      });
-      return result;
-    }
-  }, {
     key: 'render',
     value: function render(data) {
 
@@ -963,24 +958,10 @@ var Element = function (_Node) {
       node.keypath = data.keys.join('.');
       data.parent.addChild(node);
 
-      var addDeps = data.addDeps;
-
-
-      var deps = [];
-      var nextData = {
-        parent: node,
-        addDeps: function addDeps(childrenDeps) {
-          push$1(deps, childrenDeps);
-        }
-      };
-
-      nextData = extend({}, data, nextData);
-      instance.renderChildren(nextData, attrs);
-      instance.renderChildren(nextData, directives);
-      instance.renderChildren(nextData);
-
-      addDeps(deps);
-      node.deps = deps;
+      data = extend({}, data, { parent: node });
+      instance.renderChildren(data, attrs);
+      instance.renderChildren(data, directives);
+      instance.renderChildren(data);
     }
   }]);
   return Element;
@@ -1022,8 +1003,7 @@ var ElseIf = function (_Node) {
     value: function render(data, prev) {
       if (prev) {
         var _execute = this.execute(data),
-            value = _execute.value,
-            deps = _execute.deps;
+            value = _execute.value;
 
         if (value) {
           this.renderChildren(data);
@@ -1076,8 +1056,7 @@ var Expression = function (_Node) {
     key: 'render',
     value: function render(data) {
       var _execute = this.execute(data),
-          value = _execute.value,
-          deps = _execute.deps;
+          value = _execute.value;
 
       if (value == NULL) {
         value = '';
@@ -1116,8 +1095,7 @@ var If = function (_Node) {
     key: 'render',
     value: function render(data) {
       var _execute = this.execute(data),
-          value = _execute.value,
-          deps = _execute.deps;
+          value = _execute.value;
 
       if (value) {
         this.renderChildren(data);
@@ -1175,8 +1153,7 @@ var Spread = function (_Node) {
     key: 'render',
     value: function render(data) {
       var _execute = this.execute(data),
-          value = _execute.value,
-          deps = _execute.deps;
+          value = _execute.value;
 
       if (object(value)) {
         each$$1(value, function (value, key) {
@@ -1456,7 +1433,7 @@ var Binary = function (_Node) {
 
       return {
         value: value,
-        deps: push$1(left.deps, right.deps)
+        deps: extend(left.deps, right.deps)
       };
     }
   }]);
@@ -1546,11 +1523,11 @@ var Array$1 = function (_Node) {
     key: 'execute',
     value: function execute(context) {
       var value = [],
-          deps = [];
+          deps = {};
       each$1(this.elements, function (node) {
         var result = node.execute(context);
         value.push(result.value);
-        push$1(deps, result.deps);
+        extend(deps, result.deps);
       });
       return {
         value: value,
@@ -1597,7 +1574,7 @@ var Call = function (_Node) {
 
       value = execute$1(value, NULL, args.map(function (arg) {
         var result = arg.execute(context);
-        push$1(deps, result.deps);
+        extend(deps, result.deps);
         return result.value;
       }));
 
@@ -1645,13 +1622,13 @@ var Conditional = function (_Node) {
         consequent = consequent.execute(context);
         return {
           value: consequent.value,
-          deps: push$1(test.deps, consequent.deps)
+          deps: extend(test.deps, consequent.deps)
         };
       } else {
         alternate = alternate.execute(context);
         return {
           value: alternate.value,
-          deps: push$1(test.deps, alternate.deps)
+          deps: extend(test.deps, alternate.deps)
         };
       }
     }
@@ -1679,13 +1656,16 @@ var Identifier = function (_Node) {
   }, {
     key: 'execute',
     value: function execute(context) {
+      var deps = {};
+
       var _context$get = context.get(this.name),
           value = _context$get.value,
           keypath = _context$get.keypath;
 
+      deps[keypath] = value;
       return {
         value: value,
-        deps: [keypath]
+        deps: deps
       };
     }
   }]);
@@ -1716,7 +1696,7 @@ var Literal = function (_Node) {
     value: function execute() {
       return {
         value: this.value,
-        deps: []
+        deps: {}
       };
     }
   }]);
@@ -1773,17 +1753,21 @@ var Member = function (_Node) {
       var list = this.flatten();
       var firstNode = list.shift();
 
-      var result = firstNode.execute(context);
-      var value = result.value,
-          deps = [],
-          keypaths = [result.deps[0]];
+      var _firstNode$execute = firstNode.execute(context),
+          value = _firstNode$execute.value,
+          deps = _firstNode$execute.deps;
+
+      var key = keys(deps)[0];
+      delete deps[key];
+
+      var keypaths = [key];
 
       if (object(value)) {
         each$1(list, function (node) {
           if (node.type !== LITERAL) {
-            var _result = node.execute(context);
-            push$1(deps, _result.deps);
-            node = new Literal(_result.value);
+            var result = node.execute(context);
+            extend(deps, result.deps);
+            node = new Literal(result.value);
           }
           keypaths.push(node.value);
           value = value[node.value];
@@ -1794,7 +1778,7 @@ var Member = function (_Node) {
         return keypath !== '.';
       });
 
-      push$1(deps, [keypaths.join('.')]);
+      deps[keypaths.join('.')] = value;
 
       return {
         value: value,
@@ -2179,19 +2163,18 @@ var rootName = 'root';
 function render$1(ast, data) {
 
   var rootElement = new Element(rootName);
-  var keys$$1 = [],
-      deps = [];
+  var deps = {};
 
   var renderAst = function renderAst(ast) {
     ast.render({
-      keys: keys$$1,
+      keys: [],
       parent: rootElement,
       context: new Context(data),
       parse: function parse(template) {
         return _parse(template).children;
       },
-      addDeps: function addDeps(newDeps) {
-        push$1(deps, newDeps);
+      addDeps: function addDeps(childrenDeps) {
+        extend(deps, childrenDeps);
       }
     });
   };
@@ -3510,7 +3493,7 @@ function create$1(root, instance) {
 
         var data = { attrs: attrs };
 
-        var attributes$$1 = node.getAttributes();
+        var attributes$$1 = node.attrs;
 
         if (node.component) {
           directives.push({
@@ -3519,11 +3502,13 @@ function create$1(root, instance) {
             directive: instance.getDirective('component')
           });
         } else {
-          each$$1(attributes$$1, function (value, key) {
-            if (key === 'style') {
+          each$1(attributes$$1, function (node) {
+            var name = node.name,
+                value = node.getValue();
+            if (name === 'style') {
               styles = parseStyle(value);
             } else {
-              attrs[key] = value;
+              attrs[name] = value;
             }
           });
         }
@@ -3539,7 +3524,7 @@ function create$1(root, instance) {
           } else if (name.startsWith(DIRECTIVE_PREFIX)) {
             name = directiveName = name.slice(DIRECTIVE_PREFIX.length);
           } else if (name === KEY_UNIQUE) {
-            data.key = attributes$$1.key;
+            data.key = node.getValue();
             return;
           } else if (name === KEY_REF) {
             name = directiveName = 'ref';
@@ -3621,7 +3606,7 @@ var refDt = {
     var value = node.getValue();
     if (child && value) {
       if (get$3(instance, 'ref', value, TRUE)) {
-        error$1('ref ' + value + ' is existed.');
+        error$1('Ref ' + value + ' is existed.');
       }
       set$3(instance, 'ref', value, child);
       el.$ref = value;
@@ -3853,6 +3838,27 @@ var modelDt = {
 
 };
 
+function getComponentInfo(node, instance) {
+  var component = node.component,
+      attrs = node.attrs;
+
+  var options = instance.getComponent(component);
+  var props = {},
+      propDeps = {};
+  each$1(attrs, function (node) {
+    props[node.name] = node.getValue();
+    propDeps[node.name] = node.deps;
+  });
+  if (has$1(options, 'propTypes')) {
+    validate(props, options.propTypes);
+  }
+  return {
+    options: options,
+    props: props,
+    propDeps: propDeps
+  };
+}
+
 var componentDt = {
 
   attach: function attach(_ref) {
@@ -3860,23 +3866,38 @@ var componentDt = {
         node = _ref.node,
         instance = _ref.instance;
 
-    var options = instance.getComponent(node.component);
-    var props = node.getAttributes();
-    if (has$1(options, 'propTypes')) {
-      validate(props, options.propTypes);
-    }
+    var _getComponentInfo = getComponentInfo(node, instance),
+        options = _getComponentInfo.options,
+        props = _getComponentInfo.props,
+        propDeps = _getComponentInfo.propDeps;
+
     el.$component = instance.create(options, {
       el: el,
       props: props,
       replace: TRUE,
       extensions: {
-        propDeps: node.deps
+        propDeps: propDeps
       }
     });
   },
 
-  detach: function detach(_ref2) {
-    var el = _ref2.el;
+  update: function update(_ref2) {
+    var el = _ref2.el,
+        node = _ref2.node,
+        instance = _ref2.instance;
+
+    var _getComponentInfo2 = getComponentInfo(node, instance),
+        props = _getComponentInfo2.props,
+        propDeps = _getComponentInfo2.propDeps;
+
+    var $component = el.$component;
+
+    $component.propDeps = propDeps;
+    $component.set(props, TRUE);
+  },
+
+  detach: function detach(_ref3) {
+    var el = _ref3.el;
 
     el.$component.destroy(TRUE);
     el.$component = NULL;
@@ -4060,7 +4081,7 @@ var Yox = function () {
     if (el && template) {
       execute$1(options[BEFORE_MOUNT], instance);
       instance.$template = instance.compileTemplate(template);
-      instance.updateView(el);
+      instance.update(el);
     }
   }
 
@@ -4093,58 +4114,78 @@ var Yox = function () {
     key: 'set',
     value: function set(keypath, value) {
 
-      var model = keypath;
+      var model = void 0,
+          forceSync = void 0;
+
       if (string(keypath)) {
         model = {};
         model[keypath] = value;
+      } else if (object(keypath)) {
+        model = keypath;
+        forceSync = value;
+      } else {
+        return;
       }
 
       var instance = this;
-      var $deps = instance.$deps,
+      var $data = instance.$data,
+          $dirty = instance.$dirty,
+          $deps = instance.$deps,
           $children = instance.$children,
           $currentNode = instance.$currentNode;
 
-      var changes = instance.updateModel(model);
+      var change = instance.testChange(model);
 
-      if (changes && $deps && $currentNode) {
-        (function () {
-          var changeKeys = keys(changes);
-          var needSync = function needSync(deps) {
-            return deps.some(function (keypath) {
-              return changeKeys.some(function (changekey) {
-                return changekey.startsWith(keypath);
+      if (change || $dirty) {
+        if ($deps && $currentNode) {
+          (function () {
+
+            var isDirty = function isDirty(deps) {
+              var dirty = void 0;
+              each$$1(deps, function (oldValue, dep) {
+                each$$1(change, function (args, keypath) {
+                  if (keypath === dep || keypath.startsWith(dep) || dep.startsWith(keypath)) {
+                    dirty = TRUE;
+                    return FALSE;
+                  }
+                });
               });
-            });
-          };
+              return dirty;
+            };
 
-          if ($children) {
-            each$1($children, function (child) {
-              if (needSync(child.propDeps)) {
-                child.sync();
+            if (change && $children) {
+              each$1($children, function (child) {
+                each$$1(child.propDeps, function (deps, name) {
+                  if (isDirty(deps)) {
+                    child.$dirty = TRUE;
+                    return FALSE;
+                  }
+                });
+              });
+            }
+
+            if ($dirty || isDirty($deps)) {
+              if (change) {
+                instance.applyChange(change);
               }
-            });
-          }
-
-          if (needSync($deps)) {
-            instance.sync();
-          }
-        })();
+              if (sync$1 || forceSync) {
+                instance.update();
+              } else if (!instance.$syncing) {
+                instance.$syncing = TRUE;
+                add(function () {
+                  delete instance.$syncing;
+                  instance.update();
+                });
+              }
+            }
+          })();
+        } else {
+          instance.applyChange(change);
+        }
       }
-    }
-  }, {
-    key: 'sync',
-    value: function sync() {
 
-      var instance = this;
-
-      if (sync$1) {
-        instance.updateView();
-      } else if (!instance.$syncing) {
-        instance.$syncing = TRUE;
-        add(function () {
-          delete instance.$syncing;
-          instance.updateView();
-        });
+      if ($dirty) {
+        delete instance.$dirty;
       }
     }
   }, {
@@ -4237,8 +4278,26 @@ var Yox = function () {
       }
     }
   }, {
-    key: 'updateModel',
-    value: function updateModel(model) {
+    key: 'testChange',
+    value: function testChange(model) {
+
+      var instance = this,
+          result = {};
+
+      each$$1(model, function (value, key) {
+        var oldValue = instance.get(key);
+        if (value !== oldValue) {
+          result[key] = [value, oldValue];
+        }
+      });
+
+      if (count(result)) {
+        return result;
+      }
+    }
+  }, {
+    key: 'applyChange',
+    value: function applyChange(change) {
 
       var instance = this;
 
@@ -4249,48 +4308,37 @@ var Yox = function () {
           $computedSetters = instance.$computedSetters;
 
 
-      var changes = {},
-          setter = void 0,
-          oldValue = void 0;
-
-      each$$1(model, function (value, key) {
-        oldValue = instance.get(key);
-        if (value !== oldValue) {
-
-          changes[key] = [value, oldValue];
-
-          if ($computedWatchers && array($computedWatchers[key])) {
-            each$1($computedWatchers[key], function (watcher) {
-              if (has$1($computedCache, watcher)) {
-                delete $computedCache[watcher];
-              }
-            });
-          }
-
-          if ($computedSetters) {
-            setter = $computedSetters[key];
-            if (setter) {
-              setter(value);
-              return;
+      each$$1(change, function (args, key) {
+        if ($computedWatchers && array($computedWatchers[key])) {
+          each$1($computedWatchers[key], function (watcher) {
+            if (has$1($computedCache, watcher)) {
+              delete $computedCache[watcher];
             }
-          }
-
-          set$1($data, key, value);
+          });
         }
+
+        var value = args[0];
+
+        if ($computedSetters) {
+          var setter = $computedSetters[key];
+          if (setter) {
+            setter(value);
+            return;
+          }
+        }
+
+        set$1($data, key, value);
       });
 
-      if (count(changes)) {
-        each$$1(changes, function (args, key) {
-          each$1(getWildcardMatches(key), function (wildcardKeypath) {
-            $watchEmitter.fire(wildcardKeypath, merge(args, getWildcardNames(key, wildcardKeypath)), instance);
-          });
+      each$$1(change, function (args, key) {
+        each$1(getWildcardMatches(key), function (wildcardKeypath) {
+          $watchEmitter.fire(wildcardKeypath, merge(args, getWildcardNames(key, wildcardKeypath)), instance);
         });
-        return changes;
-      }
+      });
     }
   }, {
-    key: 'updateView',
-    value: function updateView(el) {
+    key: 'update',
+    value: function update(el) {
 
       var instance = this;
 
@@ -4440,7 +4488,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.16.15';
+Yox.version = '0.16.16';
 
 Yox.switcher = switcher;
 

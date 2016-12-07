@@ -22,7 +22,7 @@ export default class Spread extends Node {
   }
 
   render(data) {
-    let { value, deps } = this.execute(data)
+    let { value } = this.execute(data)
     if (is.object(value)) {
       object.each(
         value,

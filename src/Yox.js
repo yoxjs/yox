@@ -259,7 +259,7 @@ export default class Yox {
     if (el && template) {
       execute(options[lifecycle.BEFORE_MOUNT], instance)
       instance.$template = instance.compileTemplate(template)
-      instance.updateView(el)
+      instance.update(el)
     }
 
   }
@@ -293,64 +293,89 @@ export default class Yox {
 
   set(keypath, value) {
 
-    let model = keypath
+    let model, forceSync
+
     if (is.string(keypath)) {
       model = { }
       model[keypath] = value
     }
+    else if (is.object(keypath)) {
+      model = keypath
+      forceSync = value
+    }
+    else {
+      return
+    }
 
     let instance = this
-    let { $deps, $children, $currentNode } = instance
-    let changes = instance.updateModel(model)
+    let { $data, $dirty, $deps, $children, $currentNode } = instance
+    let change = instance.testChange(model)
 
-    if (changes && $deps && $currentNode) {
-      let changeKeys = object.keys(changes)
-      let needSync = function (deps) {
-        return deps.some(
-          function (keypath) {
-            return changeKeys.some(
-              function (changekey) {
-                return changekey.startsWith(keypath)
+    if (change || $dirty) {
+      if ($deps && $currentNode) {
+
+        let isDirty = function (deps) {
+          let dirty
+          object.each(
+            deps,
+            function (oldValue, dep) {
+              object.each(
+                change,
+                function (args, keypath) {
+                  if (keypath === dep || keypath.startsWith(dep) || dep.startsWith(keypath)) {
+                    dirty = env.TRUE
+                    return env.FALSE
+                  }
+                }
+              )
+            }
+          )
+          return dirty
+        }
+
+        if (change && $children) {
+          array.each(
+            $children,
+            function (child) {
+              object.each(
+                child.propDeps,
+                function (deps, name) {
+                  if (isDirty(deps)) {
+                    child.$dirty = env.TRUE
+                    return env.FALSE
+                  }
+                }
+              )
+            }
+          )
+        }
+
+        if ($dirty || isDirty($deps)) {
+          if (change) {
+            instance.applyChange(change)
+          }
+          if (switcher.sync || forceSync) {
+            instance.update()
+          }
+          else if (!instance.$syncing) {
+            instance.$syncing = env.TRUE
+            nextTask.add(
+              function () {
+                delete instance.$syncing
+                instance.update()
               }
             )
           }
-        )
-      }
-
-      // 同步子组件
-      if ($children) {
-        array.each(
-          $children,
-          function (child) {
-            if (needSync(child.propDeps)) {
-              child.sync()
-            }
-          }
-        )
-      }
-
-      if (needSync($deps)) {
-        instance.sync()
-      }
-
-    }
-  }
-
-  sync() {
-
-    let instance = this
-
-    if (switcher.sync) {
-      instance.updateView()
-    }
-    else if (!instance.$syncing) {
-      instance.$syncing = env.TRUE
-      nextTask.add(
-        function () {
-          delete instance.$syncing
-          instance.updateView()
         }
-      )
+
+      }
+      else {
+        instance.applyChange(change)
+      }
+    }
+
+    if ($dirty) {
+      delete instance.$dirty
     }
 
   }
@@ -441,7 +466,27 @@ export default class Yox {
     }
   }
 
-  updateModel(model) {
+  testChange(model) {
+
+    let instance = this, result = { }
+
+    object.each(
+      model,
+      function (value, key) {
+        let oldValue = instance.get(key)
+        if (value !== oldValue) {
+          result[key] = [ value, oldValue ]
+        }
+      }
+    )
+
+    if (object.count(result)) {
+      return result
+    }
+
+  }
+
+  applyChange(change) {
 
     let instance = this
 
@@ -453,64 +498,54 @@ export default class Yox {
       $computedSetters,
     } = instance
 
-    let changes = { }, setter, oldValue
-
     object.each(
-      model,
-      function (value, key) {
-        oldValue = instance.get(key)
-        if (value !== oldValue) {
-
-          changes[key] = [ value, oldValue ]
-
-          if ($computedWatchers && is.array($computedWatchers[key])) {
-            array.each(
-              $computedWatchers[key],
-              function (watcher) {
-                if (object.has($computedCache, watcher)) {
-                  delete $computedCache[watcher]
-                }
-              }
-            )
-          }
-
-          // 计算属性优先
-          if ($computedSetters) {
-            setter = $computedSetters[key]
-            if (setter) {
-              setter(value)
-              return
-            }
-          }
-
-          object.set($data, key, value)
-
-        }
-      }
-    )
-
-    if (object.count(changes)) {
-      object.each(
-        changes,
-        function (args, key) {
+      change,
+      function (args, key) {
+        // 清除计算属性的缓存
+        if ($computedWatchers && is.array($computedWatchers[key])) {
           array.each(
-            keypath.getWildcardMatches(key),
-            function (wildcardKeypath) {
-              $watchEmitter.fire(
-                wildcardKeypath,
-                array.merge(args, keypath.getWildcardNames(key, wildcardKeypath)),
-                instance
-              )
+            $computedWatchers[key],
+            function (watcher) {
+              if (object.has($computedCache, watcher)) {
+                delete $computedCache[watcher]
+              }
             }
           )
         }
-      )
-      return changes
-    }
+
+        let value = args[0]
+        // 计算属性优先
+        if ($computedSetters) {
+          let setter = $computedSetters[key]
+          if (setter) {
+            setter(value)
+            return
+          }
+        }
+
+        object.set($data, key, value)
+      }
+    )
+
+    object.each(
+      change,
+      function (args, key) {
+        array.each(
+          keypath.getWildcardMatches(key),
+          function (wildcardKeypath) {
+            $watchEmitter.fire(
+              wildcardKeypath,
+              array.merge(args, keypath.getWildcardNames(key, wildcardKeypath)),
+              instance
+            )
+          }
+        )
+      }
+    )
 
   }
 
-  updateView(el) {
+  update(el) {
 
     let instance = this
 
@@ -676,7 +711,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.16.15'
+Yox.version = '0.16.16'
 
 /**
  * 开关配置

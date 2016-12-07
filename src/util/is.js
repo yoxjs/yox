@@ -1,4 +1,5 @@
 
+import * as env from '../config/env'
 const toString = Object.prototype.toString
 
 export function is(arg, type) {
@@ -30,6 +31,10 @@ export function number(arg) {
 export function boolean(arg) {
   return is(arg, 'boolean')
 }
+
+// export function primitive(arg) {
+//   return string(arg) || number (arg) || boolean(arg) || arg == env.NULL
+// }
 
 export function numeric(arg) {
   return !isNaN(parseFloat(arg)) && isFinite(arg)

@@ -97,7 +97,7 @@ export function create(root, instance) {
         // 因为如果在组件上写了 on-click="xx" 其实是监听从组件 fire 出的 click 事件
         // 因此 component 必须在 event 指令之前执行
 
-        let attributes = node.getAttributes()
+        let attributes = node.attrs
         // 组件的 attrs 作为 props 传入组件，不需要写到元素上
         if (node.component) {
           directives.push({
@@ -107,14 +107,15 @@ export function create(root, instance) {
           })
         }
         else {
-          object.each(
+          array.each(
             attributes,
-            function (value, key) {
-              if (key === 'style') {
+            function (node) {
+              let { name } = node, value = node.getValue()
+              if (name === 'style') {
                 styles = parseStyle(value)
               }
               else {
-                attrs[key] = value
+                attrs[name] = value
               }
             }
           )
@@ -135,7 +136,7 @@ export function create(root, instance) {
               directiveName = name.slice(syntax.DIRECTIVE_PREFIX.length)
             }
             else if (name === syntax.KEY_UNIQUE) {
-              data.key = attributes.key
+              data.key = node.getValue()
               return
             }
             else if (name === syntax.KEY_REF) {

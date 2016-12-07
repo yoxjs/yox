@@ -16,7 +16,7 @@ export default {
     let value = node.getValue()
     if (child && value) {
       if (component.get(instance, 'ref', value, env.TRUE)) {
-        logger.error(`ref ${value} is existed.`)
+        logger.error(`Ref ${value} is existed.`)
       }
       component.set(instance, 'ref', value, child)
       el.$ref = value

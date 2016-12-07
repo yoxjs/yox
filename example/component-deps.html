@@ -85,10 +85,10 @@
                     {{ user.age > 10 ? title : variable }}
                     <Custom ref="child" title="{{title}}" user="{{user}}" />
                     <ul>
-                        {{#each list}}
+                        {{#each list:index}}
                         <li>
                             {{name}} - {{user.name}}
-                            <Custom ref="child" user="{{user}}" />
+                            <Custom ref="child{{index}}" title="{{title}}" user="{{user}}" />
                         </li>
                         {{/each}}
                     </ul>
