@@ -121,3 +121,7 @@ export function set(instance, type, name, value) {
     object.set(instance, `$${type}s.${name}`, value)
   }
 }
+
+export function remove(instance, type, name) {
+  object.set(instance, `$${type}s.${name}`)
+}

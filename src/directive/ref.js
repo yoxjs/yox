@@ -27,7 +27,7 @@ export default {
   detach: function ({ el, instance }) {
 
     if (el.$ref) {
-      delete instance.$refs[el.$ref]
+      component.remove(instance, 'ref', el.$ref)
       el.$ref = env.NULL
     }
 

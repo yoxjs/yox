@@ -331,6 +331,9 @@ export default class Yox {
                   }
                 }
               )
+              if (dirty) {
+                return env.FALSE
+              }
             }
           )
           return dirty
@@ -370,9 +373,8 @@ export default class Yox {
             )
           }
         }
-
       }
-      // 比如作为 data bus 使用
+      // 比如用于 data bus
       else {
         instance.applyChange(change)
       }
@@ -715,7 +717,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.16.17'
+Yox.version = '0.16.18'
 
 /**
  * 开关配置

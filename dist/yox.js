@@ -2678,6 +2678,10 @@ function set$3(instance, type, name, value) {
   }
 }
 
+function remove$2(instance, type, name) {
+  set$1(instance, '$' + type + 's.' + name);
+}
+
 function validate(data, schema) {
   each$$1(schema, function (rule, key) {
     var type = rule.type,
@@ -3619,7 +3623,7 @@ var refDt = {
 
 
     if (el.$ref) {
-      delete instance.$refs[el.$ref];
+      remove$2(instance, 'ref', el.$ref);
       el.$ref = NULL;
     }
   }
@@ -4152,6 +4156,9 @@ var Yox = function () {
                     return FALSE;
                   }
                 });
+                if (dirty) {
+                  return FALSE;
+                }
               });
               return dirty;
             };
@@ -4491,7 +4498,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.16.17';
+Yox.version = '0.16.18';
 
 Yox.switcher = switcher;
 
