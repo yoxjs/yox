@@ -103,7 +103,7 @@ export function create(root, instance) {
           directives.push({
             name: 'component',
             node: node,
-            directive: instance.getDirective('component'),
+            directive: instance.directive('component'),
           })
         }
         else {
@@ -147,7 +147,7 @@ export function create(root, instance) {
             directives.push({
               name: name,
               node: node,
-              directive: instance.getDirective(directiveName),
+              directive: instance.directive(directiveName),
             })
           }
         )

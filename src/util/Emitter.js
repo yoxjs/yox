@@ -11,16 +11,22 @@ import Event from './Event'
 
 export default class Emitter {
 
-  constructor() {
+  constructor(options) {
+    object.extend(this, options)
     this.listeners = { }
   }
 
   on(type, listener) {
 
-    let { listeners } = this
+    let { listeners, onAdd } = this
+    let added = [ ]
+
     let addListener = function (listener, type) {
       if (is.func(listener)) {
         let list = listeners[type] || (listeners[type] = [ ])
+        if (!list.length) {
+          added.push(type)
+        }
         list.push(listener)
       }
     }
@@ -30,6 +36,10 @@ export default class Emitter {
     }
     else if (is.string(type)) {
       addListener(listener, type)
+    }
+
+    if (added.length && is.func(onAdd)) {
+      onAdd(added)
     }
 
   }
@@ -58,13 +68,17 @@ export default class Emitter {
   }
 
   off(type, listener) {
-    let { listeners } = this
+
+    let { listeners, onRemove } = this
+    let removed = [ ]
+
     if (type == env.NULL) {
       object.each(
         listeners,
         function (list, type) {
           if (is.array(listeners[type])) {
             listeners[type].length = 0
+            removed.push(type)
           }
         }
       )
@@ -78,8 +92,16 @@ export default class Emitter {
         else {
           array.remove(list, listener)
         }
+        if (!list.length) {
+          removed.push(type)
+        }
       }
     }
+
+    if (removed.length && is.func(onRemove)) {
+      onRemove(removed)
+    }
+
   }
 
   fire(type, data, context) {

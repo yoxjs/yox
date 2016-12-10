@@ -36,6 +36,26 @@ export function reduce(array, callback, initialValue) {
 }
 
 /**
+ * 返回 array2 中包含，array1 中不包含的数组项
+ *
+ * @param {Array} array1
+ * @param {Array} array2
+ * @return {Array}
+ */
+export function diff(array1, array2, strict) {
+  let result = [ ]
+  each(
+    array2,
+    function (item) {
+      if (!has(array1, item, strict)) {
+        result.push(item)
+      }
+    }
+  )
+  return result
+}
+
+/**
  * 合并多个数组，不去重
  */
 export function merge() {
@@ -61,7 +81,7 @@ export function toObject(array, key) {
   each(
     array,
     function (item) {
-      result[item[key]] = item
+      result[key ? item[key] : item] = item
     }
   )
   return result

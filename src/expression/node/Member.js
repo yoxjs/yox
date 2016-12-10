@@ -64,10 +64,8 @@ export default class Member extends Node {
 
     let { value, deps } = firstNode.execute(context)
     // deps 包含第一个 term 对应的数据，其实我们想要的是到最后一个 term 的数据
-    let key = object.keys(deps)[0]
+    let key = object.keys(deps)[0], keypaths = [ key ]
     delete deps[key]
-
-    let keypaths = [ key ]
 
     if (is.object(value)) {
       array.each(

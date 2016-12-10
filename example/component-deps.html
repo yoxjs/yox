@@ -23,6 +23,11 @@
                     </button>
                 </div>
             `,
+            watchers: {
+              'user.age': function (newValue, oldValue) {
+                console.log('   ', newValue, oldValue)
+              }
+            },
             methods: {
                 increase: function () {
                     this.fire('increase');

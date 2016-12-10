@@ -152,6 +152,16 @@ function reduce(array$$1, callback, initialValue) {
   return array$$1.reduce(callback, initialValue);
 }
 
+function diff(array1, array2, strict) {
+  var result = [];
+  each$1(array2, function (item) {
+    if (!has$2(array1, item, strict)) {
+      result.push(item);
+    }
+  });
+  return result;
+}
+
 function merge() {
   var result = [];
   var push = function push(item) {
@@ -170,7 +180,7 @@ function toArray(array$$1) {
 function toObject(array$$1, key) {
   var result = {};
   each$1(array$$1, function (item) {
-    result[item[key]] = item;
+    result[key ? item[key] : item] = item;
   });
   return result;
 }
@@ -208,6 +218,7 @@ function remove$1(array$$1, item, strict) {
 var array$1 = Object.freeze({
 	each: each$1,
 	reduce: reduce,
+	diff: diff,
 	merge: merge,
 	toArray: toArray,
 	toObject: toObject,
@@ -493,25 +504,22 @@ var Store = function () {
   return Store;
 }();
 
-var component = new Store();
-var directive = new Store();
-var filter = new Store();
+var component$1 = new Store();
+var directive$1 = new Store();
+var filter$1 = new Store();
 var partial = new Store();
 
 var registry = Object.freeze({
-	component: component,
-	directive: directive,
-	filter: filter,
+	component: component$1,
+	directive: directive$1,
+	filter: filter$1,
 	partial: partial
 });
 
 var debug = TRUE;
 
-var sync$1 = FALSE;
-
 var switcher = Object.freeze({
-	debug: debug,
-	sync: sync$1
+	debug: debug
 });
 
 var BEFORE_CREATE = 'beforeCreate';
@@ -1754,10 +1762,9 @@ var Member = function (_Node) {
           value = _firstNode$execute.value,
           deps = _firstNode$execute.deps;
 
-      var key = keys(deps)[0];
+      var key = keys(deps)[0],
+          keypaths = [key];
       delete deps[key];
-
-      var keypaths = [key];
 
       if (object(value)) {
         each$1(list, function (node) {
@@ -2697,7 +2704,7 @@ function validate(data, schema) {
           }
 
           if (matched === FALSE) {
-            warn('type of ' + key + ' is not matched.');
+            warn('Type of ' + key + ' is not matched.');
             delete data[key];
           }
         })();
@@ -3234,20 +3241,27 @@ function updateAttrs(oldVnode, vnode) {
 var attributes = { create: updateAttrs, update: updateAttrs };
 
 var Emitter = function () {
-  function Emitter() {
+  function Emitter(options) {
     classCallCheck(this, Emitter);
 
+    extend(this, options);
     this.listeners = {};
   }
 
   createClass(Emitter, [{
     key: 'on',
     value: function on(type, listener) {
-      var listeners = this.listeners;
+      var listeners = this.listeners,
+          onAdd = this.onAdd;
+
+      var added = [];
 
       var addListener = function addListener(listener, type) {
         if (func(listener)) {
           var list = listeners[type] || (listeners[type] = []);
+          if (!list.length) {
+            added.push(type);
+          }
           list.push(listener);
         }
       };
@@ -3256,6 +3270,10 @@ var Emitter = function () {
         each$$1(type, addListener);
       } else if (string(type)) {
         addListener(listener, type);
+      }
+
+      if (added.length && func(onAdd)) {
+        onAdd(added);
       }
     }
   }, {
@@ -3283,12 +3301,16 @@ var Emitter = function () {
   }, {
     key: 'off',
     value: function off(type, listener) {
-      var listeners = this.listeners;
+      var listeners = this.listeners,
+          onRemove = this.onRemove;
+
+      var removed = [];
 
       if (type == NULL) {
         each$$1(listeners, function (list, type) {
           if (array(listeners[type])) {
             listeners[type].length = 0;
+            removed.push(type);
           }
         });
       } else {
@@ -3299,7 +3321,14 @@ var Emitter = function () {
           } else {
             remove$1(list, listener);
           }
+          if (!list.length) {
+            removed.push(type);
+          }
         }
+      }
+
+      if (removed.length && func(onRemove)) {
+        onRemove(removed);
       }
     }
   }, {
@@ -3495,7 +3524,7 @@ function create$1(root, instance) {
           directives.push({
             name: 'component',
             node: node,
-            directive: instance.getDirective('component')
+            directive: instance.directive('component')
           });
         } else {
           each$1(attributes$$1, function (node) {
@@ -3529,7 +3558,7 @@ function create$1(root, instance) {
           directives.push({
             name: name,
             node: node,
-            directive: instance.getDirective(directiveName)
+            directive: instance.directive(directiveName)
           });
         });
 
@@ -3831,20 +3860,17 @@ function getComponentInfo(node, instance) {
   var component = node.component,
       attrs = node.attrs;
 
-  var options = instance.getComponent(component);
-  var props = {},
-      propDeps = {};
+  var options = instance.component(component);
+  var props = {};
   each$1(attrs, function (node) {
     props[node.name] = node.getValue();
-    propDeps[node.name] = node.deps;
   });
   if (has$1(options, 'propTypes')) {
     validate(props, options.propTypes);
   }
   return {
     options: options,
-    props: props,
-    propDeps: propDeps
+    props: props
   };
 }
 
@@ -3857,16 +3883,12 @@ var componentDt = {
 
     var _getComponentInfo = getComponentInfo(node, instance),
         options = _getComponentInfo.options,
-        props = _getComponentInfo.props,
-        propDeps = _getComponentInfo.propDeps;
+        props = _getComponentInfo.props;
 
     el.$component = instance.create(options, {
       el: el,
       props: props,
-      replace: TRUE,
-      extensions: {
-        propDeps: propDeps
-      }
+      replace: TRUE
     });
   },
 
@@ -3881,8 +3903,9 @@ var componentDt = {
 
     var $component = el.$component;
 
-    $component.propDeps = propDeps;
-    $component.set(props, TRUE);
+    $component.$sync = TRUE;
+    $component.set(props);
+    delete $component.$sync;
   },
 
   detach: function detach(_ref3) {
@@ -3919,13 +3942,119 @@ var Yox = function () {
         partials = options.partials,
         extensions = options.extensions;
 
+    if (props && !object(props)) {
+      props = NULL;
+    }
+
+    if (props && data && !func(data)) {
+      warn('Passing a `data` option should be a function.');
+    }
+
+    instance.$data = props || {};
+
+    extend(instance.$data, func(data) ? data.call(instance) : data);
+
     instance.$options = options;
 
     instance.$eventEmitter = new Emitter();
     instance.on(events);
 
-    instance.$watchEmitter = new Emitter();
+    instance.$viewUpdater = function () {
+      if (instance.$sync) {
+        instance.update();
+      } else if (!instance.$syncing) {
+        instance.$syncing = TRUE;
+        add(function () {
+          delete instance.$syncing;
+          instance.update();
+        });
+      }
+    };
+
+    var $watchCache = instance.$watchCache = {};
+    instance.$watchEmitter = new Emitter({
+      onAdd: function onAdd(added) {
+        each$1(added, function (keypath) {
+          if (keypath.indexOf('*') < 0 && !has$1($watchCache, keypath)) {
+            $watchCache[keypath] = instance.get(keypath);
+          }
+        });
+      },
+      onRemove: function onRemove(removed) {
+        each$1(removed, function (keypath) {
+          if (has$1($watchCache, keypath)) {
+            delete $watchCache[keypath];
+          }
+        });
+      }
+    });
     instance.watch(watchers);
+
+    if (object(computed)) {
+      (function () {
+
+        instance.$cacheCleaner = function (newValue, oldValue, keypath) {
+          if (has$1($watchCache, keypath)) {
+            delete $watchCache[keypath];
+          }
+        };
+
+        var $computedGetters = instance.$computedGetters = {};
+
+        var $computedSetters = instance.$computedSetters = {};
+
+        var $computedStack = instance.$computedStack = [];
+
+        var $computedDeps = instance.$computedDeps = {};
+
+        each$$1(computed, function (item, keypath) {
+          var get$$1 = void 0,
+              set$$1 = void 0,
+              cache = TRUE;
+          if (func(item)) {
+            get$$1 = item;
+          } else if (object(item)) {
+            if (has$1(item, 'cache')) {
+              cache = item.cache;
+            }
+            if (func(item.get)) {
+              get$$1 = item.get;
+            }
+            if (func(item.set)) {
+              set$$1 = item.set;
+            }
+          }
+
+          if (get$$1) {
+            var getter = function getter() {
+
+              if (cache && has$1($watchCache, keypath)) {
+                return $watchCache[keypath];
+              }
+
+              $computedStack.push([]);
+              var result = get$$1.call(instance);
+
+              var newDeps = $computedStack.pop();
+              var oldDeps = $computedDeps[keypath];
+
+              instance.updateWatcher(newDeps, oldDeps, instance.$cacheCleaner);
+
+              $computedDeps[keypath] = newDeps;
+              $watchCache[keypath] = result;
+
+              return result;
+            };
+            getter.computed = TRUE;
+            $computedGetters[keypath] = getter;
+          }
+
+          if (set$$1) {
+            $computedSetters[keypath] = set$$1.bind(instance);
+          }
+        });
+      })();
+    }
 
     execute$1(options[AFTER_CREATE], instance);
 
@@ -3955,18 +4084,6 @@ var Yox = function () {
       }
     }
 
-    if (props && !object(props)) {
-      props = NULL;
-    }
-
-    if (props && data && !func(data)) {
-      warn('Passing a `data` option should be a function.');
-    }
-
-    instance.$data = props || {};
-
-    extend(instance.$data, func(data) ? data.call(instance) : data);
-
     if (parent) {
       instance.$parent = parent;
     }
@@ -3974,109 +4091,49 @@ var Yox = function () {
     extend(instance, methods);
     extend(instance, extensions);
 
-    set$3(instance, 'component', components);
-    set$3(instance, 'directive', directives);
-    set$3(instance, 'filter', filters);
-    set$3(instance, 'partial', partials);
-
-    if (object(computed)) {
-      (function () {
-        var $computedGetters = instance.$computedGetters = {};
-
-        var $computedSetters = instance.$computedSetters = {};
-
-        var $computedCache = instance.$computedCache = {};
-
-        var $computedStack = instance.$computedStack = [];
-
-        var $computedWatchers = instance.$computedWatchers = {};
-
-        var $computedDeps = instance.$computedDeps = {};
-
-        each$$1(computed, function (item, keypath) {
-          var get$$1 = void 0,
-              set$$1 = void 0,
-              cache = TRUE;
-          if (func(item)) {
-            get$$1 = item;
-          } else if (object(item)) {
-            if (has$1(item, 'cache')) {
-              cache = item.cache;
-            }
-            if (func(item.get)) {
-              get$$1 = item.get;
-            }
-            if (func(item.set)) {
-              set$$1 = item.set;
-            }
-          }
-
-          if (get$$1) {
-            var getter = function getter() {
-
-              if (cache && has$1($computedCache, keypath)) {
-                return $computedCache[keypath];
-              }
-
-              $computedStack.push([]);
-              var result = get$$1.call(instance);
-
-              var newDeps = $computedStack.pop();
-              var oldDeps = $computedDeps[keypath];
-              $computedDeps[keypath] = newDeps;
-
-              var addedDeps = [];
-              var removedDeps = [];
-              if (array(oldDeps)) {
-                each$1(merge(oldDeps, newDeps), function (dep) {
-                  var oldExisted = has$2(oldDeps, dep);
-                  var newExisted = has$2(newDeps, dep);
-                  if (oldExisted && !newExisted) {
-                    removedDeps.push(dep);
-                  } else if (!oldExisted && newExisted) {
-                    addedDeps.push(dep);
-                  }
-                });
-              } else {
-                addedDeps = newDeps;
-              }
-
-              each$1(addedDeps, function (dep) {
-                if (!array($computedWatchers[dep])) {
-                  $computedWatchers[dep] = [];
-                }
-                $computedWatchers[dep].push(keypath);
-              });
-
-              each$1(removedDeps, function (dep) {
-                remove$1($computedWatchers[dep], keypath);
-              });
-
-              $computedCache[keypath] = result;
-
-              return result;
-            };
-            getter.computed = TRUE;
-            $computedGetters[keypath] = getter;
-          }
-
-          if (set$$1) {
-            $computedSetters[keypath] = set$$1.bind(instance);
-          }
-        });
-      })();
-    }
+    instance.component(components);
+    instance.directive(directives);
+    instance.filter(filters);
+    instance.partial(partials);
 
     if (el && template) {
       execute$1(options[BEFORE_MOUNT], instance);
-      instance.$template = instance.compileTemplate(template);
+      if (string(template)) {
+        template = instance.compileTemplate(template);
+      }
+      instance.$template = template;
       instance.update(el);
     }
   }
 
   createClass(Yox, [{
+    key: 'updateWatcher',
+    value: function updateWatcher(newDeps, oldDeps, watcher) {
+
+      var addedDeps = void 0,
+          removedDeps = void 0;
+      if (array(oldDeps)) {
+        addedDeps = diff(oldDeps, newDeps);
+        removedDeps = diff(newDeps, oldDeps);
+      } else {
+        addedDeps = newDeps;
+      }
+
+      var instance = this;
+
+      each$1(addedDeps, function (keypath) {
+        instance.watch(keypath, watcher);
+      });
+
+      if (removedDeps) {
+        each$1(removedDeps, function (dep) {
+          instance.unwatch(dep, watcher);
+        });
+      }
+    }
+  }, {
     key: 'get',
-    value: function get(keypath) {
+    value: function get(key) {
       var $data = this.$data,
           $computedStack = this.$computedStack,
           $computedGetters = this.$computedGetters;
@@ -4085,103 +4142,83 @@ var Yox = function () {
       if ($computedStack) {
         var deps = last($computedStack);
         if (deps) {
-          deps.push(keypath);
+          deps.push(key);
         }
       }
 
       if ($computedGetters) {
-        var getter = $computedGetters[keypath];
+        var getter = $computedGetters[key];
         if (getter) {
           return getter();
         }
       }
 
-      var result = get$1($data, keypath);
+      var result = get$1($data, key);
       if (result) {
         return result.value;
       }
     }
   }, {
     key: 'set',
-    value: function set(keypath, value) {
+    value: function set(key, value) {
 
-      var model = void 0,
-          forceSync = void 0;
+      var model = void 0;
 
-      if (string(keypath)) {
+      if (string(key)) {
         model = {};
-        model[keypath] = value;
-      } else if (object(keypath)) {
-        model = keypath;
-
-        forceSync = value;
+        model[key] = value;
+      } else if (object(key)) {
+        model = key;
       } else {
         return;
       }
 
-      var instance = this;
+      var instance = this,
+          changes = {};
+
       var $data = instance.$data,
-          $dirty = instance.$dirty,
-          $viewDeps = instance.$viewDeps,
-          $children = instance.$children,
-          $currentNode = instance.$currentNode;
+          $computedSetters = instance.$computedSetters,
+          $watchCache = instance.$watchCache,
+          $watchEmitter = instance.$watchEmitter;
 
-      var change = instance.testChange(model);
 
-      if (change || $dirty) {
-        if ($viewDeps && $currentNode) {
-          (function () {
+      each$$1(model, function (value, key) {
+        changes[key] = instance.get(key);
+      });
 
-            var isDirty = function isDirty(deps) {
-              var dirty = void 0;
-              each$$1(deps, function (oldValue, dep) {
-                each$$1(change, function (args, keypath) {
-                  if (keypath === dep || keypath.startsWith(dep) || dep.startsWith(keypath)) {
-                    dirty = TRUE;
-                    return FALSE;
-                  }
-                });
-                if (dirty) {
-                  return FALSE;
-                }
-              });
-              return dirty;
-            };
-
-            if (change && $children) {
-              each$1($children, function (child) {
-                each$$1(child.propDeps, function (deps) {
-                  if (isDirty(deps)) {
-                    child.$dirty = TRUE;
-                    return FALSE;
-                  }
-                });
-              });
-            }
-
-            if ($dirty || isDirty($viewDeps)) {
-              if (change) {
-                instance.applyChange(change);
-              }
-              if (sync$1 || forceSync) {
-                instance.update();
-              } else if (!instance.$syncing) {
-                instance.$syncing = TRUE;
-                add(function () {
-                  delete instance.$syncing;
-                  instance.update();
-                });
-              }
-            }
-          })();
-        } else {
-            instance.applyChange(change);
+      each$$1(model, function (value, key) {
+        if ($computedSetters) {
+          var setter = $computedSetters[key];
+          if (setter) {
+            setter(value);
+            return;
           }
-
-        if ($dirty) {
-          delete instance.$dirty;
         }
-      }
+        set$1($data, key, value);
+      });
+
+      each$$1(model, function (value, key) {
+        if (value !== changes[key]) {
+          changes[key] = [value, changes[key], key];
+        } else {
+          delete changes[key];
+        }
+      });
+
+      each$$1($watchCache, function (oldValue, key) {
+        if (!has$1(changes, key)) {
+          var newValue = instance.get(key);
+          if (newValue !== oldValue) {
+            changes[key] = [newValue, oldValue, key];
+          }
+        }
+      });
+
+      each$$1(changes, function (args, key) {
+        each$1(getWildcardMatches(key), function (wildcardKeypath) {
+          $watchEmitter.fire(wildcardKeypath, merge(args, getWildcardNames(key, wildcardKeypath)), instance);
+        });
+      });
     }
   }, {
     key: 'on',
@@ -4252,63 +4289,9 @@ var Yox = function () {
       this.$watchEmitter.once(keypath, watcher);
     }
   }, {
-    key: 'testChange',
-    value: function testChange(model) {
-
-      var instance = this,
-          result = {};
-
-      each$$1(model, function (value, key) {
-        var oldValue = instance.get(key);
-        if (value !== oldValue) {
-          result[key] = [value, oldValue];
-        }
-      });
-
-      if (count(result)) {
-        return result;
-      }
-    }
-  }, {
-    key: 'applyChange',
-    value: function applyChange(change) {
-
-      var instance = this;
-
-      var $data = instance.$data,
-          $watchEmitter = instance.$watchEmitter,
-          $computedCache = instance.$computedCache,
-          $computedWatchers = instance.$computedWatchers,
-          $computedSetters = instance.$computedSetters;
-
-
-      each$$1(change, function (args, key) {
-        if ($computedWatchers && array($computedWatchers[key])) {
-          each$1($computedWatchers[key], function (watcher) {
-            if (has$1($computedCache, watcher)) {
-              delete $computedCache[watcher];
-            }
-          });
-        }
-
-        var value = args[0];
-
-        if ($computedSetters) {
-          var setter = $computedSetters[key];
-          if (setter) {
-            setter(value);
-            return;
-          }
-        }
-
-        set$1($data, key, value);
-      });
-
-      each$$1(change, function (args, key) {
-        each$1(getWildcardMatches(key), function (wildcardKeypath) {
-          $watchEmitter.fire(wildcardKeypath, merge(args, getWildcardNames(key, wildcardKeypath)), instance);
-        });
-      });
+    key: 'unwatch',
+    value: function unwatch(keypath, watcher) {
+      this.$watchEmitter.off(keypath, watcher);
     }
   }, {
     key: 'update',
@@ -4317,6 +4300,8 @@ var Yox = function () {
       var instance = this;
 
       var $data = instance.$data,
+          $viewDeps = instance.$viewDeps,
+          $viewUpdater = instance.$viewUpdater,
           $options = instance.$options,
           $filters = instance.$filters,
           $template = instance.$template,
@@ -4330,7 +4315,7 @@ var Yox = function () {
 
       var context = {};
 
-      extend(context, filter.data, $data, $filters);
+      extend(context, filter$1.data, $data, $filters);
 
       each$$1(context, function (value, key) {
         if (func(value)) {
@@ -4346,6 +4331,8 @@ var Yox = function () {
           root = _mustache$render.root,
           deps = _mustache$render.deps;
 
+      deps = keys(deps);
+      instance.updateWatcher(deps, $viewDeps, $viewUpdater);
       instance.$viewDeps = deps;
 
       var newNode = create$1(root, instance),
@@ -4378,9 +4365,9 @@ var Yox = function () {
     value: function compileTemplate(template) {
       var instance = this;
       return _parse(template, function (name) {
-        return instance.getPartial(name);
+        return instance.partial(name);
       }, function (name, node) {
-        set$3(instance, 'partial', name, node);
+        instance.partial(name, node);
       });
     }
   }, {
@@ -4389,25 +4376,37 @@ var Yox = function () {
       return compileValue$1(this, keypath, value);
     }
   }, {
-    key: 'getComponent',
-    value: function getComponent(name) {
-      return get$3(this, 'component', name);
+    key: 'component',
+    value: function component(name, value) {
+      if (arguments.length === 1 && string(name)) {
+        return get$3(this, 'component', name);
+      }
+      set$3(this, 'component', name, value);
     }
   }, {
-    key: 'getFilter',
-    value: function getFilter(name) {
-      return get$3(this, 'filter', name);
+    key: 'filter',
+    value: function filter(name, value) {
+      if (arguments.length === 1 && string(name)) {
+        return get$3(this, 'filter', name);
+      }
+      set$3(this, 'filter', name, value);
     }
   }, {
-    key: 'getDirective',
-    value: function getDirective(name) {
-      return get$3(this, 'directive', name, TRUE);
+    key: 'directive',
+    value: function directive(name, value) {
+      if (arguments.length === 1 && string(name)) {
+        return get$3(this, 'directive', name, TRUE);
+      }
+      set$3(this, 'directive', name, value);
     }
   }, {
-    key: 'getPartial',
-    value: function getPartial(name) {
-      var partial$$1 = get$3(this, 'partial', name);
-      return string(partial$$1) ? this.compileTemplate(partial$$1) : partial$$1;
+    key: 'partial',
+    value: function partial$$1(name, value) {
+      if (arguments.length === 1 && string(name)) {
+        var partial$$1 = get$3(this, 'partial', name);
+        return string(partial$$1) ? this.compileTemplate(partial$$1) : partial$$1;
+      }
+      set$3(this, 'partial', name, value);
     }
   }, {
     key: 'destroy',
@@ -4415,8 +4414,7 @@ var Yox = function () {
 
       var instance = this;
 
-      var $el = instance.$el,
-          $options = instance.$options,
+      var $options = instance.$options,
           $parent = instance.$parent,
           $children = instance.$children,
           $currentNode = instance.$currentNode,
@@ -4430,31 +4428,24 @@ var Yox = function () {
         each$1($children, function (child) {
           child.destroy();
         }, TRUE);
-        delete instance.$children;
       }
 
       if ($parent && $parent.$children) {
         remove$1($parent.$children, instance);
-        delete instance.$parent;
-      }
-
-      if ($el) {
-        delete instance.$el;
       }
 
       if ($currentNode) {
         if (removed !== TRUE) {
           patch($currentNode, { text: '' });
         }
-        delete instance.$currentNode;
       }
 
       $watchEmitter.off();
       $eventEmitter.off();
 
-      delete instance.$watchEmitter;
-      delete instance.$eventEmitter;
-      delete instance.$options;
+      each$$1(instance, function (value, key) {
+        delete instance[key];
+      });
 
       execute$1($options[AFTER_DESTROY], instance);
     }
@@ -4483,7 +4474,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.16.19';
+Yox.version = '0.17.0';
 
 Yox.switcher = switcher;
 
@@ -4494,15 +4485,15 @@ Yox.cache = cache;
 Yox.utils = { is: is$1, array: array$1, object: object$1, logger: logger, native: native, expression: expression, Store: Store, Emitter: Emitter, Event: Event };
 
 Yox.component = function (id, value) {
-  component.set(id, value);
+  component$1.set(id, value);
 };
 
 Yox.directive = function (id, value) {
-  directive.set(id, value);
+  directive$1.set(id, value);
 };
 
 Yox.filter = function (id, value) {
-  filter.set(id, value);
+  filter$1.set(id, value);
 };
 
 Yox.partial = function (id, value) {

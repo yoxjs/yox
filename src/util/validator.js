@@ -43,7 +43,7 @@ export function validate(data, schema) {
           }
           // 类型比较失败
           if (matched === env.FALSE) {
-            logger.warn(`type of ${key} is not matched.`)
+            logger.warn(`Type of ${key} is not matched.`)
             delete data[key]
           }
         }
