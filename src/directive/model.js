@@ -1,6 +1,4 @@
 
-import * as native from '../platform/web/native'
-
 import * as env from '../config/env'
 
 import * as is from '../util/is'
@@ -9,7 +7,8 @@ import * as object from '../util/object'
 import * as logger from '../util/logger'
 import * as component from '../util/component'
 
-import debounce from '../function/debounce'
+import event from './event'
+
 
 // 支持 input 事件的控件
 const supportInputTypes = [ 'text', 'number', 'tel', 'url', 'email', 'search' ]
@@ -59,38 +58,19 @@ const controlTypes = {
   }
 }
 
-function getEventInfo(el, lazyDirective) {
-
-  let name = 'change', interval
-
-  let { type, tagName } = el
-  if (tagName === 'INPUT' && array.has(supportInputTypes, type)
-    || tagName === 'TEXTAREA'
-  ) {
-    if (lazyDirective) {
-      let value = lazyDirective.node.getValue()
-      if (is.numeric(value) && value >= 0) {
-        name = 'input'
-        interval = value
-      }
-    }
-    else {
-      name = 'input'
-    }
-  }
-
-  return {
-    name,
-    interval,
-    control: controlTypes[type] || controlTypes.normal,
-  }
-}
-
 export default {
 
   attach: function ({ el, node, instance, directives }) {
 
-    let { name, interval, control } = getEventInfo(el, directives.lazy)
+    let name = 'change'
+
+    let { type, tagName } = el
+    if (tagName === 'INPUT' && array.has(supportInputTypes, type)
+      || tagName === 'TEXTAREA'
+    ) {
+      name = 'input'
+    }
+
     let { keypath } = node
 
     let value = node.getValue()
@@ -106,6 +86,8 @@ export default {
       keypath,
       instance,
     }
+
+    let control = controlTypes[type] || controlTypes.normal
     control.set(data)
 
     instance.watch(
@@ -115,25 +97,21 @@ export default {
       }
     )
 
-    let listener = function () {
-      control.sync(data)
-    }
-
-    if (interval) {
-      listener = debounce(listener, interval)
-    }
-
-    el.$model = function () {
-      native.off(el, name, listener)
-      el.$model = env.NULL
-    }
-
-    native.on(el, name, listener)
+    event.attach({
+      el,
+      node,
+      name,
+      instance,
+      directives,
+      listener: function () {
+        control.sync(data)
+      }
+    })
 
   },
 
   detach: function ({ el }) {
-    el.$model()
+    event.detach({ el })
   }
 
 }

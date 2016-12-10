@@ -717,7 +717,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.16.18'
+Yox.version = '0.16.19'
 
 /**
  * 开关配置
@@ -824,3 +824,8 @@ Yox.directive({
   model: modelDt,
   component: componentDt,
 })
+
+/**
+ * [TODO]
+ * 1. 监听数据变化的 keypath pattern
+ */

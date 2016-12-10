@@ -21,15 +21,12 @@ var expressionParse = {};
 
 var expressionCompile = {};
 
-var keypathNormalize = {};
-
 var keypathWildcardMatches = {};
 
 var cache = Object.freeze({
 	templateParse: templateParse,
 	expressionParse: expressionParse,
 	expressionCompile: expressionCompile,
-	keypathNormalize: keypathNormalize,
 	keypathWildcardMatches: keypathWildcardMatches
 });
 
@@ -2431,12 +2428,7 @@ function _parse(template, getPartial, setPartial) {
 }
 
 function normalize(keypath) {
-
-  if (!keypathNormalize[keypath]) {
-    keypathNormalize[keypath] = keypath.indexOf('[') < 0 ? keypath : parse$1(keypath).stringify();
-  }
-
-  return keypathNormalize[keypath];
+  return keypath.indexOf('[') < 0 ? keypath : parse$1(keypath).stringify();
 }
 
 function getWildcardMatches(keypath) {
@@ -3629,41 +3621,6 @@ var refDt = {
   }
 };
 
-var eventDt = {
-
-  attach: function attach(_ref) {
-    var el = _ref.el,
-        name = _ref.name,
-        node = _ref.node,
-        instance = _ref.instance;
-
-
-    var listener = instance.compileValue(node.keypath, node.getValue());
-    if (listener) {
-      var $component = el.$component;
-
-      if ($component) {
-        $component.on(name, listener);
-      } else {
-        on$1(el, name, listener);
-        el['$' + name] = listener;
-      }
-    }
-  },
-
-  detach: function detach(_ref2) {
-    var el = _ref2.el,
-        name = _ref2.name;
-
-    var listener = '$' + name;
-    if (el[listener]) {
-      off$1(el, name, el[listener]);
-      el[listener] = NULL;
-    }
-  }
-
-};
-
 var debounce = function (fn, delay, lazy) {
 
   var prevTime = void 0,
@@ -3688,6 +3645,58 @@ var debounce = function (fn, delay, lazy) {
       createTimer(arguments);
     }
   };
+};
+
+var event = {
+
+  attach: function attach(_ref) {
+    var el = _ref.el,
+        name = _ref.name,
+        node = _ref.node,
+        instance = _ref.instance,
+        listener = _ref.listener,
+        directives = _ref.directives;
+
+
+    if (!listener) {
+      listener = instance.compileValue(node.keypath, node.getValue());
+    }
+
+    if (listener) {
+      var lazy = directives.lazy;
+
+      if (lazy) {
+        var value = lazy.node.getValue();
+        if (numeric(value) && value >= 0) {
+          listener = debounce(listener, value);
+        } else if (name === 'input') {
+          name = 'change';
+        }
+      }
+
+      var $component = el.$component;
+
+      if ($component) {
+        $component.on(name, listener);
+      } else {
+        on$1(el, name, listener);
+        el.$event = function () {
+          off$1(el, name, listener);
+          el.$event = NULL;
+        };
+      }
+    }
+  },
+
+  detach: function detach(_ref2) {
+    var el = _ref2.el;
+    var $event = el.$event;
+
+    if ($event) {
+      $event();
+    }
+  }
+
 };
 
 var supportInputTypes = ['text', 'number', 'tel', 'url', 'email', 'search'];
@@ -3756,33 +3765,6 @@ var controlTypes = {
   }
 };
 
-function getEventInfo(el, lazyDirective) {
-
-  var name = 'change',
-      interval = void 0;
-
-  var type = el.type,
-      tagName = el.tagName;
-
-  if (tagName === 'INPUT' && has$2(supportInputTypes, type) || tagName === 'TEXTAREA') {
-    if (lazyDirective) {
-      var value = lazyDirective.node.getValue();
-      if (numeric(value) && value >= 0) {
-        name = 'input';
-        interval = value;
-      }
-    } else {
-      name = 'input';
-    }
-  }
-
-  return {
-    name: name,
-    interval: interval,
-    control: controlTypes[type] || controlTypes.normal
-  };
-}
-
 var modelDt = {
 
   attach: function attach(_ref7) {
@@ -3791,10 +3773,15 @@ var modelDt = {
         instance = _ref7.instance,
         directives = _ref7.directives;
 
-    var _getEventInfo = getEventInfo(el, directives.lazy),
-        name = _getEventInfo.name,
-        interval = _getEventInfo.interval,
-        control = _getEventInfo.control;
+
+    var name = 'change';
+
+    var type = el.type,
+        tagName = el.tagName;
+
+    if (tagName === 'INPUT' && has$2(supportInputTypes, type) || tagName === 'TEXTAREA') {
+      name = 'input';
+    }
 
     var keypath = node.keypath;
 
@@ -3812,32 +3799,30 @@ var modelDt = {
       keypath: keypath,
       instance: instance
     };
+
+    var control = controlTypes[type] || controlTypes.normal;
     control.set(data);
 
     instance.watch(keypath, function () {
       control.set(data);
     });
 
-    var listener = function listener() {
-      control.sync(data);
-    };
-
-    if (interval) {
-      listener = debounce(listener, interval);
-    }
-
-    el.$model = function () {
-      off$1(el, name, listener);
-      el.$model = NULL;
-    };
-
-    on$1(el, name, listener);
+    event.attach({
+      el: el,
+      node: node,
+      name: name,
+      instance: instance,
+      directives: directives,
+      listener: function listener() {
+        control.sync(data);
+      }
+    });
   },
 
   detach: function detach(_ref8) {
     var el = _ref8.el;
 
-    el.$model();
+    event.detach({ el: el });
   }
 
 };
@@ -4224,34 +4209,34 @@ var Yox = function () {
         data = NULL;
       }
 
-      var event = data;
-      if (!(event instanceof Event)) {
-        event = new Event(type);
+      var event$$1 = data;
+      if (!(event$$1 instanceof Event)) {
+        event$$1 = new Event(type);
         if (data) {
-          event.data = data;
+          event$$1.data = data;
         }
       }
 
-      if (event.type !== type) {
-        data = event.data;
-        event = new Event(event);
-        event.type = type;
+      if (event$$1.type !== type) {
+        data = event$$1.data;
+        event$$1 = new Event(event$$1);
+        event$$1.type = type;
 
         if (data) {
-          event.data = data;
+          event$$1.data = data;
         }
       }
 
-      if (!event.target) {
-        event.target = instance;
+      if (!event$$1.target) {
+        event$$1.target = instance;
       }
 
       var $parent = instance.$parent,
           $eventEmitter = instance.$eventEmitter;
 
-      var done = $eventEmitter.fire(type, event, instance);
+      var done = $eventEmitter.fire(type, event$$1, instance);
       if (done && $parent && !noBubble) {
-        done = $parent.fire(type, event);
+        done = $parent.fire(type, event$$1);
       }
 
       return done;
@@ -4498,7 +4483,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.16.18';
+Yox.version = '0.16.19';
 
 Yox.switcher = switcher;
 
@@ -4534,7 +4519,7 @@ Yox.use = function (plugin) {
 
 Yox.directive({
   ref: refDt,
-  event: eventDt,
+  event: event,
   model: modelDt,
   component: componentDt
 });

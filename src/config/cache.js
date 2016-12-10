@@ -24,13 +24,6 @@ export let expressionParse = { }
 export let expressionCompile = { }
 
 /**
- * 格式化 keypath 的缓存
- *
- * @type {Object}
- */
-export let keypathNormalize = { }
-
-/**
  * keypath 通配符的缓存
  *
  * @type {Object}

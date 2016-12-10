@@ -11,15 +11,9 @@ import * as expression from '../expression/index'
  * @return {string}
  */
 export function normalize(keypath) {
-
-  if (!cache.keypathNormalize[keypath]) {
-    cache.keypathNormalize[keypath] = keypath.indexOf('[') < 0
-      ? keypath
-      : expression.parse(keypath).stringify()
-  }
-
-  return cache.keypathNormalize[keypath]
-
+  return keypath.indexOf('[') < 0
+    ? keypath
+    : expression.parse(keypath).stringify()
 }
 
 /**
