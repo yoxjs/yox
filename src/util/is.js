@@ -32,9 +32,9 @@ export function boolean(arg) {
   return is(arg, 'boolean')
 }
 
-// export function primitive(arg) {
-//   return string(arg) || number (arg) || boolean(arg) || arg == env.NULL
-// }
+export function primitive(arg) {
+  return string(arg) || number (arg) || boolean(arg) || arg == env.NULL
+}
 
 export function numeric(arg) {
   return !isNaN(parseFloat(arg)) && isFinite(arg)

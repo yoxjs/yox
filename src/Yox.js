@@ -87,7 +87,6 @@ export default class Yox {
     instance.$eventEmitter = new Emitter()
     instance.on(events)
 
-    // 监听数据变化
     instance.$viewUpdater = function () {
       if (instance.$sync) {
         instance.update()
@@ -344,6 +343,7 @@ export default class Yox {
 
     let {
       $data,
+      $children,
       $computedSetters,
       $watchCache,
       $watchEmitter,
@@ -409,6 +409,37 @@ export default class Yox {
         )
       }
     )
+
+    if (!instance.$syncing && $children) {
+      array.each(
+        $children,
+        function (child) {
+          let hasChange
+          array.each(
+            child.$propDeps,
+            function (dep) {
+              if (!is.primitive(instance.get(dep))) {
+                object.each(
+                  changes,
+                  function (args, keypath) {
+                    if (keypath.startsWith(dep)) {
+                      hasChange = env.TRUE
+                      return env.FALSE
+                    }
+                  }
+                )
+              }
+              if (hasChange) {
+                return env.FALSE
+              }
+            }
+          )
+          if (hasChange) {
+            child.set({})
+          }
+        }
+      )
+    }
 
   }
 
@@ -683,7 +714,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.17.0'
+Yox.version = '0.17.1'
 
 /**
  * 开关配置
@@ -790,9 +821,3 @@ Yox.directive({
   model: modelDt,
   component: componentDt,
 })
-
-/**
- * [TODO]
- * 1. 监听数据变化的 keypath pattern
- * 2. getComponent 等 改成 setter/getter
- */

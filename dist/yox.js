@@ -103,6 +103,10 @@ function boolean(arg) {
   return is(arg, 'boolean');
 }
 
+function primitive$1(arg) {
+  return string(arg) || number(arg) || boolean(arg) || arg == NULL;
+}
+
 function numeric(arg) {
   return !isNaN(parseFloat(arg)) && isFinite(arg);
 }
@@ -115,6 +119,7 @@ var is$1 = Object.freeze({
 	string: string,
 	number: number,
 	boolean: boolean,
+	primitive: primitive$1,
 	numeric: numeric
 });
 
@@ -3627,13 +3632,12 @@ var refDt = {
         instance = _ref.instance;
 
 
-    var child = el['$component'];
     var value = node.getValue();
-    if (child && value) {
+    if (value) {
       if (get$3(instance, 'ref', value, TRUE)) {
         error$1('Ref ' + value + ' is existed.');
       }
-      set$3(instance, 'ref', value, child);
+      set$3(instance, 'ref', value, el.$component || el);
       el.$ref = value;
     }
   },
@@ -3861,16 +3865,19 @@ function getComponentInfo(node, instance) {
       attrs = node.attrs;
 
   var options = instance.component(component);
-  var props = {};
+  var props = {},
+      propDeps = {};
   each$1(attrs, function (node) {
     props[node.name] = node.getValue();
+    extend(propDeps, node.deps);
   });
   if (has$1(options, 'propTypes')) {
     validate(props, options.propTypes);
   }
   return {
     options: options,
-    props: props
+    props: props,
+    propDeps: keys(propDeps)
   };
 }
 
@@ -3883,12 +3890,16 @@ var componentDt = {
 
     var _getComponentInfo = getComponentInfo(node, instance),
         options = _getComponentInfo.options,
-        props = _getComponentInfo.props;
+        props = _getComponentInfo.props,
+        propDeps = _getComponentInfo.propDeps;
 
     el.$component = instance.create(options, {
       el: el,
       props: props,
-      replace: TRUE
+      replace: TRUE,
+      extensions: {
+        $propDeps: propDeps
+      }
     });
   },
 
@@ -3903,6 +3914,7 @@ var componentDt = {
 
     var $component = el.$component;
 
+    $component.$propDeps = propDeps;
     $component.$sync = TRUE;
     $component.set(props);
     delete $component.$sync;
@@ -4177,6 +4189,7 @@ var Yox = function () {
           changes = {};
 
       var $data = instance.$data,
+          $children = instance.$children,
           $computedSetters = instance.$computedSetters,
           $watchCache = instance.$watchCache,
           $watchEmitter = instance.$watchEmitter;
@@ -4219,6 +4232,28 @@ var Yox = function () {
           $watchEmitter.fire(wildcardKeypath, merge(args, getWildcardNames(key, wildcardKeypath)), instance);
         });
       });
+
+      if (!instance.$syncing && $children) {
+        each$1($children, function (child) {
+          var hasChange = void 0;
+          each$1(child.$propDeps, function (dep) {
+            if (!primitive$1(instance.get(dep))) {
+              each$$1(changes, function (args, keypath) {
+                if (keypath.startsWith(dep)) {
+                  hasChange = TRUE;
+                  return FALSE;
+                }
+              });
+            }
+            if (hasChange) {
+              return FALSE;
+            }
+          });
+          if (hasChange) {
+            child.set({});
+          }
+        });
+      }
     }
   }, {
     key: 'on',
@@ -4474,7 +4509,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.17.0';
+Yox.version = '0.17.1';
 
 Yox.switcher = switcher;
 

@@ -12,13 +12,12 @@ export default {
 
   attach: function ({ el, node, instance }) {
 
-    let child = el[`$component`]
     let value = node.getValue()
-    if (child && value) {
+    if (value) {
       if (component.get(instance, 'ref', value, env.TRUE)) {
         logger.error(`Ref ${value} is existed.`)
       }
-      component.set(instance, 'ref', value, child)
+      component.set(instance, 'ref', value, el.$component || el)
       el.$ref = value
     }
 
