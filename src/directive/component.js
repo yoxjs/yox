@@ -1,5 +1,6 @@
 
 import * as env from '../config/env'
+import * as is from '../util/is'
 import * as array from '../util/array'
 import * as object from '../util/object'
 import * as validator from '../util/validator'
@@ -11,8 +12,11 @@ function getComponentInfo(node, instance) {
   array.each(
     attrs,
     function (node) {
-      props[node.name] = node.getValue()
-      object.extend(propDeps, node.deps)
+      let value = node.getValue()
+      props[node.name] = value
+      if (!is.primitive(value)) {
+        object.extend(propDeps, node.deps)
+      }
     }
   )
   if (object.has(options, 'propTypes')) {
@@ -29,17 +33,41 @@ export default {
 
   attach: function ({ el, node, instance }) {
     let { options, props, propDeps } = getComponentInfo(node, instance)
-    el.$component = instance.create(
+    let component = instance.create(
       options,
       {
         el,
         props,
         replace: env.TRUE,
-        extensions: {
-          $propDeps: propDeps,
+      }
+    )
+    component.$propDeps = propDeps
+
+    // 父级无法判断子组件对引用数据的依赖
+    instance.watch(
+      '*',
+      function (newValue, oldValue, keypath) {
+        if (
+          component.$propDeps.some(
+            function (dep) {
+              return keypath.startsWith(dep)
+            }
+          )
+        ) {
+          if (!component.$diffing) {
+            component.$diffing = env.TRUE
+            instance.nextTick(
+              function () {
+                delete component.$diffing
+                component.diff()
+              }
+            )
+          }
         }
       }
     )
+
+    el.$component = component
   },
 
   update: function ({ el, node, instance}) {

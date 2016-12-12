@@ -110,39 +110,64 @@ export default class Emitter {
       context = env.NULL
     }
 
-    let list = this.listeners[type], isStoped
+    let done = env.TRUE
+    let handle = function (list, data) {
+      if (is.array(list)) {
+        array.each(
+          list,
+          function (listener) {
+            let result = execute(listener, context, data)
 
-    if (is.array(list)) {
-      array.each(
-        list,
-        function (listener) {
-          let result = execute(listener, context, data)
+            let { $once } = listener
+            if (is.func($once)) {
+              $once()
+            }
 
-          let { $once } = listener
-          if (is.func($once)) {
-            $once()
-          }
+            // 如果没有返回 false，而是调用了 event.stop 也算是返回 false
+            if (data instanceof Event) {
+              if (result === env.FALSE) {
+                data.prevent()
+                data.stop()
+              }
+              else if (data.isStoped) {
+                result = env.FALSE
+              }
+            }
 
-          // 如果没有返回 false，而是调用了 event.stop 也算是返回 false
-          if (data instanceof Event) {
             if (result === env.FALSE) {
-              data.prevent()
-              data.stop()
-            }
-            else if (data.isStoped) {
-              result = env.FALSE
+              return done = env.FALSE
             }
           }
+        )
+      }
+    }
 
-          if (result === env.FALSE) {
-            isStoped = env.TRUE
-            return result
+    let { listeners } = this
+    handle(listeners[type], data)
+
+    // user.* 能响应 user.name
+    // *.* 能响应 user.name
+    // * 能响应 user.name
+    if (done) {
+      object.each(
+        listeners,
+        function (list, key) {
+          if (key !== type || key.indexOf('*') >= 0) {
+            key = key.replace(/\*/g, '(\\w+)').replace(/\./g, '\\.')
+            let match = type.match(new RegExp(`^${key}`))
+            if (match) {
+              handle(
+                list,
+                array.merge(data, array.toArray(match).slice(1))
+              )
+            }
+            return done
           }
         }
       )
     }
 
-    return isStoped ? env.FALSE : env.TRUE
+    return done
 
   }
 

@@ -13,7 +13,6 @@ import * as is from './util/is'
 import * as array from './util/array'
 import * as object from './util/object'
 import * as logger from './util/logger'
-import * as keypath from './util/keypath'
 import * as nextTask from './util/nextTask'
 import * as component from './util/component'
 import * as validator from './util/validator'
@@ -197,12 +196,13 @@ export default class Yox {
 
               return result
             }
+            getter.binded =
             getter.computed = env.TRUE
             $computedGetters[keypath] = getter
           }
 
           if (set) {
-            $computedSetters[keypath] = set.bind(instance)
+            $computedSetters[keypath] = set
           }
 
         }
@@ -295,92 +295,17 @@ export default class Yox {
 
   }
 
-  get(key) {
+  diff(changes) {
 
+    if (!is.object(changes)) {
+      changes = { }
+    }
+
+    let instance = this
     let {
-      $data,
-      $computedStack,
-      $computedGetters,
-    } = this
-
-    if ($computedStack) {
-      let deps = array.last($computedStack)
-      if (deps) {
-        deps.push(key)
-      }
-    }
-
-    if ($computedGetters) {
-      let getter = $computedGetters[key]
-      if (getter) {
-        return getter()
-      }
-    }
-
-    let result = object.get($data, key)
-    if (result) {
-      return result.value
-    }
-
-  }
-
-  set(key, value) {
-
-    let model
-
-    if (is.string(key)) {
-      model = { }
-      model[key] = value
-    }
-    else if (is.object(key)) {
-      model = key
-    }
-    else {
-      return
-    }
-
-    let instance = this, changes = { }
-
-    let {
-      $data,
-      $children,
-      $computedSetters,
       $watchCache,
       $watchEmitter,
     } = instance
-
-    object.each(
-      model,
-      function (value, key) {
-        changes[key] = instance.get(key)
-      }
-    )
-
-    object.each(
-      model,
-      function (value, key) {
-        if ($computedSetters) {
-          let setter = $computedSetters[key]
-          if (setter) {
-            setter(value)
-            return
-          }
-        }
-        object.set($data, key, value)
-      }
-    )
-
-    object.each(
-      model,
-      function (value, key) {
-        if (value !== changes[key]) {
-          changes[key] = [ value, changes[key], key ]
-        }
-        else {
-          delete changes[key]
-        }
-      }
-    )
 
     object.each(
       $watchCache,
@@ -397,49 +322,86 @@ export default class Yox {
     object.each(
       changes,
       function (args, key) {
-        array.each(
-          keypath.getWildcardMatches(key),
-          function (wildcardKeypath) {
-            $watchEmitter.fire(
-              wildcardKeypath,
-              array.merge(args, keypath.getWildcardNames(key, wildcardKeypath)),
-              instance
-            )
-          }
-        )
+        $watchEmitter.fire(key, args, instance)
       }
     )
 
-    if (!instance.$syncing && $children) {
-      array.each(
-        $children,
-        function (child) {
-          let hasChange
-          array.each(
-            child.$propDeps,
-            function (dep) {
-              if (!is.primitive(instance.get(dep))) {
-                object.each(
-                  changes,
-                  function (args, keypath) {
-                    if (keypath.startsWith(dep)) {
-                      hasChange = env.TRUE
-                      return env.FALSE
-                    }
-                  }
-                )
-              }
-              if (hasChange) {
-                return env.FALSE
-              }
-            }
-          )
-          if (hasChange) {
-            child.set({})
+    return changes
+
+  }
+
+  get(keypath) {
+
+    let {
+      $data,
+      $computedStack,
+      $computedGetters,
+    } = this
+
+    if ($computedStack) {
+      let deps = array.last($computedStack)
+      if (deps) {
+        deps.push(keypath)
+      }
+    }
+
+    if ($computedGetters) {
+      let getter = $computedGetters[keypath]
+      if (getter) {
+        return getter()
+      }
+    }
+
+    let result = object.get($data, keypath)
+    if (result) {
+      return result.value
+    }
+
+  }
+
+  set(keypath, value) {
+
+    let model = keypath
+    if (is.string(keypath)) {
+      model = { }
+      model[keypath] = value
+    }
+
+    let instance = this, changes = { }
+
+    let {
+      $data,
+      $children,
+      $computedSetters,
+    } = instance
+
+    // 保存差异
+    object.each(
+      model,
+      function (newValue, keypath) {
+        let oldValue = instance.get(keypath)
+        if (newValue !== oldValue) {
+          changes[keypath] = [ newValue, oldValue, keypath ]
+        }
+      }
+    )
+
+    // 赋值
+    object.each(
+      model,
+      function (value, keypath) {
+        if ($computedSetters) {
+          let setter = $computedSetters[keypath]
+          if (setter) {
+            setter.call(instance, value)
+            return
           }
         }
-      )
-    }
+        object.set($data, keypath, value)
+      }
+    )
+
+    instance.diff(changes)
 
   }
 
@@ -517,9 +479,9 @@ export default class Yox {
     let instance = this
 
     let {
-      $data,
       $viewDeps,
       $viewUpdater,
+      $data,
       $options,
       $filters,
       $template,
@@ -527,7 +489,7 @@ export default class Yox {
       $computedGetters,
     } = instance
 
-    if (!el) {
+    if ($currentNode) {
       execute($options[lifecycle.BEFORE_UPDATE], instance)
     }
 
@@ -537,36 +499,32 @@ export default class Yox {
       context,
       // 全局过滤器
       registry.filter.data,
-      // 本地数据，这意味着 data 也能写函数，只是用 filter 来区分出过滤器
+      // 本地数据，这意味着 data 也能写函数，只是用 filter 来隔离过滤器
       $data,
       // 本地过滤器
-      $filters
+      $filters,
+      // 本地计算属性
+      $computedGetters
     )
 
     object.each(
       context,
       function (value, key) {
-        if (is.func(value)) {
+        if (is.func(value) && !value.binded) {
           context[key] = value.bind(instance)
         }
       }
     )
 
-    if (is.object($computedGetters)) {
-      object.extend(context, $computedGetters)
-    }
-
     let { root, deps } = mustache.render($template, context)
-    deps = object.keys(deps)
+    instance.$viewDeps = object.keys(deps)
     instance.updateWatcher(
-      deps,
+      instance.$viewDeps,
       $viewDeps,
       $viewUpdater
     )
-    instance.$viewDeps = deps
 
     let newNode = vdom.create(root, instance), afterHook
-
     if ($currentNode) {
       afterHook = lifecycle.AFTER_UPDATE
       $currentNode = vdom.patch($currentNode, newNode)
@@ -609,28 +567,28 @@ export default class Yox {
   }
 
   component(name, value) {
-    if (arguments.length === 1 && is.string(name)) {
+    if (is.getter(name, value)) {
       return component.get(this, 'component', name)
     }
     component.set(this, 'component', name, value)
   }
 
   filter(name, value) {
-    if (arguments.length === 1 && is.string(name)) {
+    if (is.getter(name, value)) {
       return component.get(this, 'filter', name)
     }
     component.set(this, 'filter', name, value)
   }
 
   directive(name, value) {
-    if (arguments.length === 1 && is.string(name)) {
+    if (is.getter(name, value)) {
       return component.get(this, 'directive', name, env.TRUE)
     }
     component.set(this, 'directive', name, value)
   }
 
   partial(name, value) {
-    if (arguments.length === 1 && is.string(name)) {
+    if (is.getter(name, value)) {
       let partial = component.get(this, 'partial', name)
       return is.string(partial) ? this.compileTemplate(partial) : partial
     }
@@ -686,6 +644,10 @@ export default class Yox {
 
   }
 
+  nextTick(fn) {
+    nextTask.add(fn)
+  }
+
   toggle(keypath) {
     this.set(
       keypath,
@@ -714,7 +676,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.17.1'
+Yox.version = '0.17.2'
 
 /**
  * 开关配置
