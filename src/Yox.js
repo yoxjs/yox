@@ -216,6 +216,9 @@ export default class Yox {
       if (pattern.selector.test(template)) {
         template = native.getContent(template)
       }
+      if (!pattern.tag.test(template)) {
+        logger.error('Passing a `template` option must have a root element.')
+      }
       if (!template.trim()) {
         template = env.NULL
       }
@@ -288,7 +291,7 @@ export default class Yox {
       array.each(
         removedDeps,
         function (dep) {
-          instance.unwatch(dep, watcher)
+          instance.$watchEmitter.off(dep, watcher)
         }
       )
     }
@@ -310,9 +313,10 @@ export default class Yox {
     object.each(
       $watchCache,
       function (oldValue, key) {
-        if (!object.has(changes, key)) {
-          let newValue = instance.get(key)
-          if (newValue !== oldValue) {
+        let newValue = instance.get(key)
+        if (newValue !== oldValue) {
+          $watchCache[key] = newValue
+          if (!object.has(changes, key)) {
             changes[key] = [ newValue, oldValue, key ]
           }
         }
@@ -361,10 +365,17 @@ export default class Yox {
 
   set(keypath, value) {
 
-    let model = keypath
+    let model, forceSync
     if (is.string(keypath)) {
       model = { }
       model[keypath] = value
+    }
+    else if (is.object(keypath)) {
+      model = keypath
+      forceSync = value
+    }
+    else {
+      return
     }
 
     let instance = this, changes = { }
@@ -375,7 +386,6 @@ export default class Yox {
       $computedSetters,
     } = instance
 
-    // 保存差异
     object.each(
       model,
       function (newValue, keypath) {
@@ -386,7 +396,6 @@ export default class Yox {
       }
     )
 
-    // 赋值
     object.each(
       model,
       function (value, keypath) {
@@ -401,7 +410,20 @@ export default class Yox {
       }
     )
 
+    instance.$sync = forceSync
     instance.diff(changes)
+    delete instance.$sync
+
+    if ($children) {
+      array.each(
+        $children,
+        function (child) {
+          child.$sync = forceSync
+          child.diff()
+          delete child.$sync
+        }
+      )
+    }
 
   }
 
@@ -468,10 +490,6 @@ export default class Yox {
 
   watchOnce(keypath, watcher) {
     this.$watchEmitter.once(keypath, watcher)
-  }
-
-  unwatch(keypath, watcher) {
-    this.$watchEmitter.off(keypath, watcher)
   }
 
   update(el) {
@@ -567,10 +585,36 @@ export default class Yox {
   }
 
   component(name, value) {
-    if (is.getter(name, value)) {
-      return component.get(this, 'component', name)
+    let instance = this, callback
+    if (is.func(value)) {
+      callback = value
+      value = env.NULL
     }
-    component.set(this, 'component', name, value)
+    if (is.getter(name, value)) {
+      let options = component.get(instance, 'component', name)
+      if (is.func(options) && callback) {
+        let { pending } = options
+        if (!pending) {
+          pending = options.pending = [ callback ]
+          options(function (replacement) {
+            array.each(
+              pending,
+              function (callback) {
+                callback(replacement)
+              }
+            )
+            component.set(instance, 'component', name, replacement)
+          })
+        }
+        else {
+          pending.push(callback)
+        }
+      }
+      else if (is.object(options)) {
+        callback(options)
+      }
+    }
+    component.set(instance, 'component', name, value)
   }
 
   filter(name, value) {
@@ -676,7 +720,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.17.2'
+Yox.version = '0.17.3'
 
 /**
  * 开关配置

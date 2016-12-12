@@ -28,11 +28,20 @@
             },
             template: '<div></div>',
             watchers: {
-                'user.name': function (newValue, oldValue) {
-                    console.log(this, newValue, oldValue);
+                'user.name': function () {
+                    console.log('user.name', arguments);
                 },
-                'users.*.name': function (newValue, oldValue, index) {
-                    console.log(index, newValue);
+                'users.*.name': function () {
+                    console.log('users.*.name', arguments);
+                },
+                'user.**': function () {
+                    console.log('user.**', arguments);
+                },
+                '**': function () {
+                    console.log('**', arguments);
+                },
+                '*': function () {
+                    console.log('*', arguments);
                 }
             }
         });

@@ -3323,8 +3323,8 @@ var Emitter = function () {
       if (done) {
         each$$1(listeners, function (list, key) {
           if (key !== type || key.indexOf('*') >= 0) {
-            key = key.replace(/\*/g, '(\\w+)').replace(/\./g, '\\.');
-            var match = type.match(new RegExp('^' + key));
+            key = ['^', key.replace(/\*\*?/g, '(\\w+)').replace(/\./g, '\\.'), key.endsWith('**') ? '' : '$'];
+            var match = type.match(new RegExp(key.join('')));
             if (match) {
               handle(list, merge(data, toArray(match).slice(1)));
             }
@@ -3572,7 +3572,7 @@ function create$1(root, instance) {
 
       if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
     } else if (node.type === TEXT) {
-      return node === root ? { text: node.content } : node.content;
+      return node.content;
     }
   });
 }
@@ -3820,28 +3820,20 @@ var modelDt = {
 
 };
 
-function getComponentInfo(node, instance) {
+function getComponentInfo(node, instance, callback) {
   var component = node.component,
       attrs = node.attrs;
 
-  var options = instance.component(component);
-  var props = {},
-      propDeps = {};
-  each$1(attrs, function (node) {
-    var value = node.getValue();
-    props[node.name] = value;
-    if (!primitive$1(value)) {
-      extend(propDeps, node.deps);
+  instance.component(component, function (options) {
+    var props = {};
+    each$1(attrs, function (node) {
+      props[node.name] = node.getValue();
+    });
+    if (has$1(options, 'propTypes')) {
+      validate(props, options.propTypes);
     }
+    callback(props, options);
   });
-  if (has$1(options, 'propTypes')) {
-    validate(props, options.propTypes);
-  }
-  return {
-    options: options,
-    props: props,
-    propDeps: keys(propDeps)
-  };
 }
 
 var componentDt = {
@@ -3851,33 +3843,16 @@ var componentDt = {
         node = _ref.node,
         instance = _ref.instance;
 
-    var _getComponentInfo = getComponentInfo(node, instance),
-        options = _getComponentInfo.options,
-        props = _getComponentInfo.props,
-        propDeps = _getComponentInfo.propDeps;
-
-    var component = instance.create(options, {
-      el: el,
-      props: props,
-      replace: TRUE
-    });
-    component.$propDeps = propDeps;
-
-    instance.watch('*', function (newValue, oldValue, keypath) {
-      if (component.$propDeps.some(function (dep) {
-        return keypath.startsWith(dep);
-      })) {
-        if (!component.$diffing) {
-          component.$diffing = TRUE;
-          instance.nextTick(function () {
-            delete component.$diffing;
-            component.diff();
-          });
-        }
+    getComponentInfo(node, instance, function (props, options) {
+      if (el.$component === NULL) {
+        return;
       }
+      el.$component = instance.create(options, {
+        el: el,
+        props: props,
+        replace: TRUE
+      });
     });
-
-    el.$component = component;
   },
 
   update: function update(_ref2) {
@@ -3885,23 +3860,18 @@ var componentDt = {
         node = _ref2.node,
         instance = _ref2.instance;
 
-    var _getComponentInfo2 = getComponentInfo(node, instance),
-        props = _getComponentInfo2.props,
-        propDeps = _getComponentInfo2.propDeps;
-
-    var $component = el.$component;
-
-    $component.$propDeps = propDeps;
-    $component.$sync = TRUE;
-    $component.set(props);
-    delete $component.$sync;
+    getComponentInfo(node, instance, function (props) {
+      el.$component.set(props, TRUE);
+    });
   },
 
   detach: function detach(_ref3) {
     var el = _ref3.el;
 
-    el.$component.destroy(TRUE);
-    el.$component = NULL;
+    if (el.$component) {
+      el.$component.destroy(TRUE);
+      el.$component = NULL;
+    }
   }
 
 };
@@ -4051,6 +4021,9 @@ var Yox = function () {
       if (selector.test(template)) {
         template = getContent(template);
       }
+      if (!tag.test(template)) {
+        error$1('Passing a `template` option must have a root element.');
+      }
       if (!template.trim()) {
         template = NULL;
       }
@@ -4116,7 +4089,7 @@ var Yox = function () {
 
       if (removedDeps) {
         each$1(removedDeps, function (dep) {
-          instance.unwatch(dep, watcher);
+          instance.$watchEmitter.off(dep, watcher);
         });
       }
     }
@@ -4134,9 +4107,10 @@ var Yox = function () {
 
 
       each$$1($watchCache, function (oldValue, key) {
-        if (!has$1(changes, key)) {
-          var newValue = instance.get(key);
-          if (newValue !== oldValue) {
+        var newValue = instance.get(key);
+        if (newValue !== oldValue) {
+          $watchCache[key] = newValue;
+          if (!has$1(changes, key)) {
             changes[key] = [newValue, oldValue, key];
           }
         }
@@ -4179,10 +4153,16 @@ var Yox = function () {
     key: 'set',
     value: function set(keypath, value) {
 
-      var model = keypath;
+      var model = void 0,
+          forceSync = void 0;
       if (string(keypath)) {
         model = {};
         model[keypath] = value;
+      } else if (object(keypath)) {
+        model = keypath;
+        forceSync = value;
+      } else {
+        return;
       }
 
       var instance = this,
@@ -4191,6 +4171,7 @@ var Yox = function () {
       var $data = instance.$data,
           $children = instance.$children,
           $computedSetters = instance.$computedSetters;
+
 
       each$$1(model, function (newValue, keypath) {
         var oldValue = instance.get(keypath);
@@ -4210,7 +4191,17 @@ var Yox = function () {
         set$1($data, keypath, value);
       });
 
+      instance.$sync = forceSync;
       instance.diff(changes);
+      delete instance.$sync;
+
+      if ($children) {
+        each$1($children, function (child) {
+          child.$sync = forceSync;
+          child.diff();
+          delete child.$sync;
+        });
+      }
     }
   }, {
     key: 'on',
@@ -4279,11 +4270,6 @@ var Yox = function () {
     key: 'watchOnce',
     value: function watchOnce(keypath, watcher) {
       this.$watchEmitter.once(keypath, watcher);
-    }
-  }, {
-    key: 'unwatch',
-    value: function unwatch(keypath, watcher) {
-      this.$watchEmitter.off(keypath, watcher);
     }
   }, {
     key: 'update',
@@ -4364,10 +4350,35 @@ var Yox = function () {
   }, {
     key: 'component',
     value: function component(name, value) {
-      if (getter(name, value)) {
-        return get$3(this, 'component', name);
+      var instance = this,
+          callback = void 0;
+      if (func(value)) {
+        callback = value;
+        value = NULL;
       }
-      set$3(this, 'component', name, value);
+      if (getter(name, value)) {
+        var options = get$3(instance, 'component', name);
+        if (func(options) && callback) {
+          (function () {
+            var pending = options.pending;
+
+            if (!pending) {
+              pending = options.pending = [callback];
+              options(function (replacement) {
+                each$1(pending, function (callback) {
+                  callback(replacement);
+                });
+                set$3(instance, 'component', name, replacement);
+              });
+            } else {
+              pending.push(callback);
+            }
+          })();
+        } else if (object(options)) {
+          callback(options);
+        }
+      }
+      set$3(instance, 'component', name, value);
     }
   }, {
     key: 'filter',
@@ -4465,7 +4476,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.17.2';
+Yox.version = '0.17.3';
 
 Yox.switcher = switcher;
 

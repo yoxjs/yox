@@ -153,8 +153,14 @@ export default class Emitter {
         listeners,
         function (list, key) {
           if (key !== type || key.indexOf('*') >= 0) {
-            key = key.replace(/\*/g, '(\\w+)').replace(/\./g, '\\.')
-            let match = type.match(new RegExp(`^${key}`))
+            key = [
+              '^',
+              key.replace(/\*\*?/g, '(\\w+)').replace(/\./g, '\\.'),
+              key.endsWith('**') ? '' : '$'
+            ]
+            let match = type.match(
+              new RegExp(key.join(''))
+            )
             if (match) {
               handle(
                 list,

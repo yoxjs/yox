@@ -195,9 +195,7 @@ export function create(root, instance) {
         return h(node.name, data, children)
       }
       else if (node.type === nodeType.TEXT) {
-        return node === root
-          ? { text: node.content }
-          : node.content
+        return node.content
       }
     }
   )

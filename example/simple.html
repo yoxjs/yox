@@ -9,14 +9,6 @@
     <div id="app1"></div>
     <div id="app2"></div>
 
-    <script id="template1" type="plain/text">
-
-    </script>
-
-    <script id="template2" type="plain/text">
-      {{message}}
-    </script>
-
     <script src="../dist/yox.js"></script>
     <script>
 
@@ -25,7 +17,6 @@
             data: {
 
             },
-            template: '#template1'
         });
 
         var instance2 = new Yox({
@@ -33,7 +24,6 @@
             data: {
                 message: 'hello'
             },
-            template: '#template2'
         });
 
         var instance3 = new Yox({
