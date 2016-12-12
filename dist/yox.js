@@ -111,10 +111,6 @@ function numeric(arg) {
   return !isNaN(parseFloat(arg)) && isFinite(arg);
 }
 
-function getter(name) {
-  return string(name) && arguments[1] == NULL;
-}
-
 var is$1 = Object.freeze({
 	is: is,
 	func: func,
@@ -124,8 +120,7 @@ var is$1 = Object.freeze({
 	number: number,
 	boolean: boolean,
 	primitive: primitive$1,
-	numeric: numeric,
-	getter: getter
+	numeric: numeric
 });
 
 var toString$1 = function (str, defaultValue) {
@@ -517,13 +512,13 @@ var Store = function () {
 var component$1 = new Store();
 var directive$1 = new Store();
 var filter$1 = new Store();
-var partial = new Store();
+var partial$1 = new Store();
 
 var registry = Object.freeze({
 	component: component$1,
 	directive: directive$1,
 	filter: filter$1,
-	partial: partial
+	partial: partial$1
 });
 
 var debug = TRUE;
@@ -3577,6 +3572,26 @@ function create$1(root, instance) {
   });
 }
 
+var magic = function (options) {
+  var args = options.args,
+      get = options.get,
+      set = options.set;
+
+  var key = args[0],
+      value = args[1];
+  if (object(key)) {
+    execute$1(set, NULL, key);
+  } else if (string(key)) {
+    var length = args.length;
+
+    if (length === 2) {
+      execute$1(set, NULL, args);
+    } else if (length === 1) {
+      return execute$1(get, NULL, key);
+    }
+  }
+};
+
 var toNumber = function (str, defaultValue) {
   if (numeric(str)) {
     return +str;
@@ -3918,18 +3933,6 @@ var Yox = function () {
     instance.$eventEmitter = new Emitter();
     instance.on(events);
 
-    instance.$viewUpdater = function () {
-      if (instance.$sync) {
-        instance.update();
-      } else if (!instance.$syncing) {
-        instance.$syncing = TRUE;
-        add(function () {
-          delete instance.$syncing;
-          instance.update();
-        });
-      }
-    };
-
     var $watchCache = instance.$watchCache = {};
     instance.$watchEmitter = new Emitter({
       onAdd: function onAdd(added) {
@@ -3985,7 +3988,7 @@ var Yox = function () {
           }
 
           if (get$$1) {
-            var getter$$1 = function getter$$1() {
+            var getter = function getter() {
 
               if (cache && has$1($watchCache, keypath)) {
                 return $watchCache[keypath];
@@ -4004,8 +4007,8 @@ var Yox = function () {
 
               return result;
             };
-            getter$$1.binded = getter$$1.computed = TRUE;
-            $computedGetters[keypath] = getter$$1;
+            getter.binded = getter.computed = TRUE;
+            $computedGetters[keypath] = getter;
           }
 
           if (set$$1) {
@@ -4059,6 +4062,19 @@ var Yox = function () {
     instance.partial(partials);
 
     if (el && template) {
+
+      instance.$viewUpdater = function () {
+        if (instance.$sync) {
+          instance.update();
+        } else if (!instance.$syncing) {
+          instance.$syncing = TRUE;
+          add(function () {
+            delete instance.$syncing;
+            instance.update();
+          });
+        }
+      };
+
       execute$1(options[BEFORE_MOUNT], instance);
       if (string(template)) {
         template = instance.compileTemplate(template);
@@ -4138,9 +4154,9 @@ var Yox = function () {
       }
 
       if ($computedGetters) {
-        var getter$$1 = $computedGetters[keypath];
-        if (getter$$1) {
-          return getter$$1();
+        var getter = $computedGetters[keypath];
+        if (getter) {
+          return getter();
         }
       }
 
@@ -4222,8 +4238,6 @@ var Yox = function () {
     key: 'fire',
     value: function fire(type, data, noBubble) {
 
-      var instance = this;
-
       if (data === TRUE) {
         noBubble = data;
         data = NULL;
@@ -4247,12 +4261,14 @@ var Yox = function () {
         }
       }
 
+      var instance = this;
+      var $parent = instance.$parent,
+          $eventEmitter = instance.$eventEmitter;
+
+
       if (!event$$1.target) {
         event$$1.target = instance;
       }
-
-      var $parent = instance.$parent,
-          $eventEmitter = instance.$eventEmitter;
 
       var done = $eventEmitter.fire(type, event$$1, instance);
       if (done && $parent && !noBubble) {
@@ -4349,61 +4365,86 @@ var Yox = function () {
     }
   }, {
     key: 'component',
-    value: function component(name, value) {
-      var instance = this,
-          callback = void 0;
+    value: function component(id, value) {
+
+      var callback = void 0;
       if (func(value)) {
         callback = value;
         value = NULL;
       }
-      if (getter(name, value)) {
-        var options = get$3(instance, 'component', name);
-        if (func(options) && callback) {
-          (function () {
-            var pending = options.pending;
 
-            if (!pending) {
-              pending = options.pending = [callback];
-              options(function (replacement) {
-                each$1(pending, function (callback) {
-                  callback(replacement);
+      var instance = this;
+      magic({
+        args: value ? [id, value] : [id],
+        get: function get(id) {
+          var options = get$3(instance, 'component', id);
+          if (func(options)) {
+            (function () {
+              var pending = options.pending;
+
+              if (!pending) {
+                pending = options.pending = [callback];
+                options(function (replacement) {
+                  set$3(instance, 'component', id, replacement);
+                  each$1(pending, function (callback) {
+                    callback(replacement);
+                  });
                 });
-                set$3(instance, 'component', name, replacement);
-              });
-            } else {
-              pending.push(callback);
-            }
-          })();
-        } else if (object(options)) {
-          callback(options);
+              } else {
+                pending.push(callback);
+              }
+            })();
+          } else if (object(options)) {
+            callback(options);
+          }
+        },
+        set: function set(id, value) {
+          set$3(instance, 'component', id, value);
         }
-      }
-      set$3(instance, 'component', name, value);
+      });
     }
   }, {
     key: 'filter',
-    value: function filter(name, value) {
-      if (getter(name, value)) {
-        return get$3(this, 'filter', name);
-      }
-      set$3(this, 'filter', name, value);
+    value: function filter() {
+      var instance = this;
+      return magic({
+        args: arguments,
+        get: function get(id) {
+          return get$3(instance, 'filter', id);
+        },
+        set: function set(id, value) {
+          set$3(instance, 'filter', id, value);
+        }
+      });
     }
   }, {
     key: 'directive',
-    value: function directive(name, value) {
-      if (getter(name, value)) {
-        return get$3(this, 'directive', name, TRUE);
-      }
-      set$3(this, 'directive', name, value);
+    value: function directive() {
+      var instance = this;
+      return magic({
+        args: arguments,
+        get: function get(id) {
+          return get$3(instance, 'directive', id, TRUE);
+        },
+        set: function set(id, value) {
+          set$3(instance, 'directive', id, value);
+        }
+      });
     }
   }, {
     key: 'partial',
-    value: function partial$$1(name, value) {
-      if (getter(name, value)) {
-        var partial$$1 = get$3(this, 'partial', name);
-        return string(partial$$1) ? this.compileTemplate(partial$$1) : partial$$1;
-      }
-      set$3(this, 'partial', name, value);
+    value: function partial() {
+      var instance = this;
+      return magic({
+        args: arguments,
+        get: function get(id) {
+          var partial$$1 = get$3(instance, 'partial', id);
+          return string(partial$$1) ? instance.compileTemplate(partial$$1) : partial$$1;
+        },
+        set: function set(id, value) {
+          set$3(instance, 'partial', id, value);
+        }
+      });
     }
   }, {
     key: 'destroy',
@@ -4454,7 +4495,9 @@ var Yox = function () {
   }, {
     key: 'toggle',
     value: function toggle(keypath) {
-      this.set(keypath, !this.get(keypath));
+      var value = !this.get(keypath);
+      this.set(keypath, value);
+      return value;
     }
   }, {
     key: 'increase',
@@ -4463,6 +4506,7 @@ var Yox = function () {
       if (!numeric(max) || value <= max) {
         this.set(keypath, value);
       }
+      return value;
     }
   }, {
     key: 'decrease',
@@ -4471,12 +4515,13 @@ var Yox = function () {
       if (!numeric(min) || value >= min) {
         this.set(keypath, value);
       }
+      return value;
     }
   }]);
   return Yox;
 }();
 
-Yox.version = '0.17.3';
+Yox.version = '0.17.4';
 
 Yox.switcher = switcher;
 
@@ -4486,23 +4531,19 @@ Yox.cache = cache;
 
 Yox.utils = { is: is$1, array: array$1, object: object$1, logger: logger, native: native, expression: expression, Store: Store, Emitter: Emitter, Event: Event };
 
-Yox.component = function (id, value) {
-  component$1.set(id, value);
-};
-
-Yox.directive = function (id, value) {
-  directive$1.set(id, value);
-};
-
-Yox.filter = function (id, value) {
-  filter$1.set(id, value);
-};
-
-Yox.partial = function (id, value) {
-  partial.set(id, value);
-};
-
-Yox.nextTick = add;
+each$1(['component', 'directive', 'filter', 'partial'], function (type) {
+  Yox[type] = function () {
+    return magic({
+      args: arguments,
+      get: function get(id) {
+        return registry[type].get(id);
+      },
+      set: function set(id, value) {
+        registry[type].set(id, value);
+      }
+    });
+  };
+});
 
 Yox.validate = validate;
 

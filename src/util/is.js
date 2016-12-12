@@ -39,7 +39,3 @@ export function primitive(arg) {
 export function numeric(arg) {
   return !isNaN(parseFloat(arg)) && isFinite(arg)
 }
-
-export function getter(name) {
-  return string(name) && arguments[1] == env.NULL
-}

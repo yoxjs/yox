@@ -22,6 +22,7 @@ import * as expression from './expression/index'
 import * as vdom from './platform/web/vdom'
 import * as native from './platform/web/native'
 
+import magic from './function/magic'
 import execute from './function/execute'
 import toNumber from './function/toNumber'
 
@@ -85,21 +86,6 @@ export default class Yox {
     // 监听各种事件
     instance.$eventEmitter = new Emitter()
     instance.on(events)
-
-    instance.$viewUpdater = function () {
-      if (instance.$sync) {
-        instance.update()
-      }
-      else if (!instance.$syncing) {
-        instance.$syncing = env.TRUE
-        nextTask.add(
-          function () {
-            delete instance.$syncing
-            instance.update()
-          }
-        )
-      }
-    }
 
     let $watchCache =
     instance.$watchCache = { }
@@ -257,6 +243,22 @@ export default class Yox {
     instance.partial(partials)
 
     if (el && template) {
+
+      instance.$viewUpdater = function () {
+        if (instance.$sync) {
+          instance.update()
+        }
+        else if (!instance.$syncing) {
+          instance.$syncing = env.TRUE
+          nextTask.add(
+            function () {
+              delete instance.$syncing
+              instance.update()
+            }
+          )
+        }
+      }
+
       execute(options[lifecycle.BEFORE_MOUNT], instance)
       if (is.string(template)) {
         template = instance.compileTemplate(template)
@@ -427,21 +429,44 @@ export default class Yox {
 
   }
 
+  /**
+   * 监听事件
+   *
+   * @param {string|Object} type
+   * @param {?Function} listener
+   */
   on(type, listener) {
     this.$eventEmitter.on(type, listener)
   }
 
+  /**
+   * 监听一次事件
+   *
+   * @param {string|Object} type
+   * @param {?Function} listener
+   */
   once(type, listener) {
     this.$eventEmitter.once(type, listener)
   }
 
+  /**
+   * 取消监听事件
+   *
+   * @param {string|Object} type
+   * @param {?Function} listener
+   */
   off(type, listener) {
     this.$eventEmitter.off(type, listener)
   }
 
+  /**
+   * 触发事件
+   *
+   * @param {string} type
+   * @param {?*} data
+   * @param {?boolean} noBubble 事件默认冒泡，不冒泡请传 true
+   */
   fire(type, data, noBubble) {
-
-    let instance = this
 
     if (data === env.TRUE) {
       noBubble = data
@@ -470,11 +495,13 @@ export default class Yox {
       }
     }
 
+    let instance = this
+    let { $parent, $eventEmitter } = instance
+
     if (!event.target) {
       event.target = instance
     }
 
-    let { $parent, $eventEmitter } = instance
     let done = $eventEmitter.fire(type, event, instance)
     if (done && $parent && !noBubble) {
       done = $parent.fire(type, event)
@@ -484,14 +511,29 @@ export default class Yox {
 
   }
 
+  /**
+   * 监听数据变化
+   *
+   * @param {string|Object} keypath
+   * @param {?Function} watcher
+   */
   watch(keypath, watcher) {
     this.$watchEmitter.on(keypath, watcher)
   }
 
+  /**
+   * 监听一次数据变化
+   *
+   * @param {string|Object} keypath
+   * @param {?Function} watcher
+   */
   watchOnce(keypath, watcher) {
     this.$watchEmitter.once(keypath, watcher)
   }
 
+  /**
+   * 更新视图
+   */
   update(el) {
 
     let instance = this
@@ -558,6 +600,13 @@ export default class Yox {
 
   }
 
+  /**
+   * 创建子组件
+   *
+   * @param {Object} options 组件配置
+   * @param {?Object} extra 添加进组件配置，但不修改配置的数据，比如 el、props 等
+   * @return {Yox} 子组件实例
+   */
   create(options, extra) {
     options = object.extend({ }, options, extra)
     options.parent = this
@@ -584,61 +633,118 @@ export default class Yox {
     return component.compileValue(this, keypath, value)
   }
 
-  component(name, value) {
-    let instance = this, callback
+  /**
+   * 本地组件的 getter/setter
+   *
+   * @param {string|Object} id
+   * @param {?string|Function} value
+   */
+  component(id, value) {
+
+    let callback
     if (is.func(value)) {
       callback = value
       value = env.NULL
     }
-    if (is.getter(name, value)) {
-      let options = component.get(instance, 'component', name)
-      if (is.func(options) && callback) {
-        let { pending } = options
-        if (!pending) {
-          pending = options.pending = [ callback ]
-          options(function (replacement) {
-            array.each(
-              pending,
-              function (callback) {
-                callback(replacement)
-              }
-            )
-            component.set(instance, 'component', name, replacement)
-          })
+
+    let instance = this
+    magic({
+      args: value ? [ id, value ] : [ id ],
+      get: function (id) {
+        let options = component.get(instance, 'component', id)
+        if (is.func(options)) {
+          let { pending } = options
+          if (!pending) {
+            pending = options.pending = [ callback ]
+            options(function (replacement) {
+              component.set(instance, 'component', id, replacement)
+              array.each(
+                pending,
+                function (callback) {
+                  callback(replacement)
+                }
+              )
+            })
+          }
+          else {
+            pending.push(callback)
+          }
         }
-        else {
-          pending.push(callback)
+        else if (is.object(options)) {
+          callback(options)
         }
+      },
+      set: function (id, value) {
+        component.set(instance, 'component', id, value)
       }
-      else if (is.object(options)) {
-        callback(options)
+    })
+
+  }
+
+  /**
+   * 本地过滤器的 getter/setter
+   *
+   * @param {string|Object} id
+   * @param {?string} value
+   * @return {?string}
+   */
+  filter() {
+    let instance = this
+    return magic({
+      args: arguments,
+      get: function (id) {
+        return component.get(instance, 'filter', id)
+      },
+      set: function (id, value) {
+        component.set(instance, 'filter', id, value)
       }
-    }
-    component.set(instance, 'component', name, value)
+    })
   }
 
-  filter(name, value) {
-    if (is.getter(name, value)) {
-      return component.get(this, 'filter', name)
-    }
-    component.set(this, 'filter', name, value)
+  /**
+   * 本地指令的 getter/setter
+   *
+   * @param {string|Object} id
+   * @param {?string} value
+   * @return {?string}
+   */
+  directive() {
+    let instance = this
+    return magic({
+      args: arguments,
+      get: function (id) {
+        return component.get(instance, 'directive', id, env.TRUE)
+      },
+      set: function (id, value) {
+        component.set(instance, 'directive', id, value)
+      }
+    })
   }
 
-  directive(name, value) {
-    if (is.getter(name, value)) {
-      return component.get(this, 'directive', name, env.TRUE)
-    }
-    component.set(this, 'directive', name, value)
+  /**
+   * 本地子模板的 getter/setter
+   *
+   * @param {string|Object} id
+   * @param {?string} value
+   * @return {?string}
+   */
+  partial() {
+    let instance = this
+    return magic({
+      args: arguments,
+      get: function (id) {
+        let partial = component.get(instance, 'partial', id)
+        return is.string(partial) ? instance.compileTemplate(partial) : partial
+      },
+      set: function (id, value) {
+        component.set(instance, 'partial', id, value)
+      }
+    })
   }
 
-  partial(name, value) {
-    if (is.getter(name, value)) {
-      let partial = component.get(this, 'partial', name)
-      return is.string(partial) ? this.compileTemplate(partial) : partial
-    }
-    component.set(this, 'partial', name, value)
-  }
-
+  /**
+   * 销毁组件
+   */
   destroy(removed) {
 
     let instance = this
@@ -688,29 +794,63 @@ export default class Yox {
 
   }
 
+  /**
+   * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
+   *
+   * @param {Function} fn
+   */
   nextTick(fn) {
     nextTask.add(fn)
   }
 
+  /**
+   * 取反 keypath 对应的数据
+   *
+   * 不管 keypath 对应的数据是什么类型，操作后都是布尔型
+   *
+   * @param {boolean} keypath
+   * @return {boolean} 取反后的布尔值
+   */
   toggle(keypath) {
-    this.set(
-      keypath,
-      !this.get(keypath)
-    )
+    let value = !this.get(keypath)
+    this.set(keypath, value)
+    return value
   }
 
+  /**
+   * 递增 keypath 对应的数据
+   *
+   * 注意，最好是整型的加法，如果涉及浮点型，不保证计算正确
+   *
+   * @param {string} keypath 值必须能转型成数字，如果不能，则默认从 0 开始递增
+   * @param {?number} step 步进值，默认是 1
+   * @param {?number} min 可以递增到的最小值，默认不限制
+   * @return {number} 返回递增后的值
+   */
   increase(keypath, step, max) {
     let value = toNumber(this.get(keypath), 0) + (is.numeric(step) ? step : 1)
     if (!is.numeric(max) || value <= max) {
       this.set(keypath, value)
     }
+    return value
   }
 
+  /**
+   * 递减 keypath 对应的数据
+   *
+   * 注意，最好是整型的减法，如果涉及浮点型，不保证计算正确
+   *
+   * @param {string} keypath 值必须能转型成数字，如果不能，则默认从 0 开始递减
+   * @param {?number} step 步进值，默认是 1
+   * @param {?number} min 可以递减到的最小值，默认不限制
+   * @return {number} 返回递减后的值
+   */
   decrease(keypath, step, min) {
     let value = toNumber(this.get(keypath), 0) - (is.numeric(step) ? step : 1)
     if (!is.numeric(min) || value >= min) {
       this.set(keypath, value)
     }
+    return value
   }
 
 }
@@ -720,7 +860,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.17.3'
+Yox.version = '0.17.4'
 
 /**
  * 开关配置
@@ -751,51 +891,27 @@ Yox.cache = cache
 Yox.utils = { is, array, object, logger, native, expression, Store, Emitter, Event }
 
 /**
- * 全局注册组件
+ * 全局注册
  *
  * @param {Object|string} id
  * @param {?Object} value
  */
-Yox.component = function (id, value) {
-  registry.component.set(id, value)
-}
-
-/**
- * 全局注册指令
- *
- * @param {Object|string} id
- * @param {?Object} value
- */
-Yox.directive = function (id, value) {
-  registry.directive.set(id, value)
-}
-
-/**
- * 全局注册过滤器
- *
- * @param {Object|string} id
- * @param {?Function} value
- */
-Yox.filter = function (id, value) {
-  registry.filter.set(id, value)
-}
-
-/**
- * 全局注册子模板
- *
- * @param {Object|string} id
- * @param {?string} value
- */
-Yox.partial = function (id, value) {
-  registry.partial.set(id, value)
-}
-
-/**
- * 注册下一个时间片执行的函数
- *
- * @param {Function} fn
- */
-Yox.nextTick = nextTask.add
+array.each(
+  ['component', 'directive', 'filter', 'partial'],
+  function (type) {
+    Yox[type] = function () {
+      return magic({
+        args: arguments,
+        get: function (id) {
+          return registry[type].get(id)
+        },
+        set: function (id, value) {
+          registry[type].set(id, value)
+        }
+      })
+    }
+  }
+)
 
 /**
  * 验证 props
@@ -807,6 +923,8 @@ Yox.validate = validator.validate
 
 /**
  * 安装插件
+ *
+ * 插件必须暴露 install 方法
  *
  * @param {Object} plugin
  */
