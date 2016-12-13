@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>计算属性</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div id="app"></div>
+    <script id="template" type="plain/text">
+
+        <div>
+            <label>
+              <input type="checkbox" o-model="allChecked">
+              全选
+            </label>
+            {{#each list}}
+                <div>
+                  <input type="checkbox" o-model="checked">
+                </div>
+            {{/each}}
+        </div>
+
+    </script>
+    <script src="../dist/yox.js"></script>
+    <script>
+        var instance = new Yox({
+            el: '#app',
+            template: '#template',
+            data: {
+                list: [
+                  { id: 1, checked: false },
+                  { id: 2, checked: false }
+                ]
+            },
+            computed: {
+                allChecked: {
+                    get: function () {
+                        var list = this.get('list');
+                        for (var i = 0, len = list.length; i < len; i++) {
+                            if (!this.get('list.' + i + '.checked')) {
+                                return false;
+                            }
+                        }
+                        return len > 0;
+                    },
+                    set: function (allChecked) {
+                        var list = this.get('list');
+                        var data = {};
+                        for (var i = 0, len = list.length; i < len; i++) {
+                            data['list.' + i + '.checked'] = allChecked;
+                        }
+                        this.set(data);
+                    }
+                }
+            },
+            watchers: {
+              'list.*.checked': function () {
+                  console.log('item checked change', arguments);
+              },
+              allChecked: function () {
+                  console.log('all checked change', arguments);
+              }
+            }
+        });
+
+    </script>
+</body>
+</html>

@@ -49,7 +49,6 @@ export default class Each extends Node {
           }
           keys.push(i)
           listContext.set(syntax.SPECIAL_KEYPATH, keys.join('.'))
-
           instance.renderChildren(
             object.extend({ }, data, { context: listContext.push(item) })
           )

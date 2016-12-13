@@ -115,15 +115,8 @@ export default class Yox {
         )
       }
     })
-    instance.watch(watchers)
 
     if (is.object(computed)) {
-
-      instance.$cacheCleaner = function (newValue, oldValue, keypath) {
-        if (object.has($watchCache, keypath)) {
-          delete $watchCache[keypath]
-        }
-      }
 
       // 把计算属性拆为 getter 和 setter
       let $computedGetters =
@@ -142,13 +135,16 @@ export default class Yox {
       object.each(
         computed,
         function (item, keypath) {
-          let get, set, cache = env.TRUE
+          let get, set, deps, cache = env.TRUE
           if (is.func(item)) {
             get = item
           }
           else if (is.object(item)) {
             if (object.has(item, 'cache')) {
               cache = item.cache
+            }
+            if (is.array(item.deps)) {
+              deps = item.deps
             }
             if (is.func(item.get)) {
               get = item.get
@@ -159,31 +155,51 @@ export default class Yox {
           }
 
           if (get) {
-            let getter = function () {
 
-              if (cache && object.has($watchCache, keypath)) {
-                return $watchCache[keypath]
+            let watcher
+            if (cache) {
+              watcher = function () {
+                getter.$dirty = env.TRUE
+                component.diff(instance)
               }
+            }
 
-              // 新推一个依赖收集数组
-              $computedStack.push([ ])
-              let result = get.call(instance)
+            let getter = function () {
+              if (cache) {
 
-              // 处理收集好的依赖
-              let newDeps = $computedStack.pop()
-              let oldDeps = $computedDeps[keypath]
+                if (!getter.$dirty) {
+                  if (object.has($watchCache, keypath)) {
+                    return $watchCache[keypath]
+                  }
+                }
+                else {
+                  delete getter.$dirty
+                }
 
-              component.updateDeps(
-                instance,
-                newDeps,
-                oldDeps,
-                instance.$cacheCleaner
-              )
+                if (!deps) {
+                  $computedStack.push([ ])
+                }
+                let result = get.call(instance)
 
-              $computedDeps[keypath] = newDeps
-              $watchCache[keypath] = result
+                let newDeps = deps || $computedStack.pop()
+                let oldDeps = $computedDeps[keypath]
+                if (newDeps !== oldDeps) {
+                  component.updateDeps(
+                    instance,
+                    newDeps,
+                    oldDeps,
+                    watcher
+                  )
+                }
 
-              return result
+                $computedDeps[keypath] = newDeps
+                $watchCache[keypath] = result
+
+                return result
+              }
+              else {
+                return execute(get, instance)
+              }
             }
             getter.$binded =
             getter.$computed = env.TRUE
@@ -197,6 +213,8 @@ export default class Yox {
         }
       )
     }
+
+    instance.watch(watchers)
 
     execute(options[lifecycle.AFTER_CREATE], instance)
 
@@ -243,7 +261,7 @@ export default class Yox {
     instance.partial(partials)
 
     if (el && template) {
-      instance.$viewUpdater = function () {
+      instance.$viewWatcher = function () {
         instance.$dirty = env.TRUE
       }
       execute(options[lifecycle.BEFORE_MOUNT], instance)
@@ -474,7 +492,7 @@ export default class Yox {
 
     let {
       $viewDeps,
-      $viewUpdater,
+      $viewWatcher,
       $data,
       $options,
       $filters,
@@ -516,7 +534,7 @@ export default class Yox {
       instance,
       instance.$viewDeps,
       $viewDeps,
-      $viewUpdater
+      $viewWatcher
     )
 
     let newNode = vdom.create(root, instance), afterHook
@@ -873,7 +891,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.17.8'
+Yox.version = '0.17.9'
 
 /**
  * 开关配置

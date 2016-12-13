@@ -18,12 +18,17 @@ export function testKeypath(instance, keypath, name) {
     name = terms.pop()
   }
 
-  let data = instance.$data, result
+  let {
+    $data,
+    $computedGetters,
+  } = instance
+
+  let result
 
   do {
     terms.push(name)
     keypath = terms.join('.')
-    result = object.get(data, keypath)
+    result = object.get($data, keypath)
     if (result) {
       return {
         keypath,
@@ -33,6 +38,13 @@ export function testKeypath(instance, keypath, name) {
     terms.splice(-2)
   }
   while (terms.length || keypath.indexOf('.') > 0)
+
+  if ($computedGetters && object.has($computedGetters, name)) {
+    return {
+      keypath: name,
+      value: $computedGetters[name](),
+    }
+  }
 
 }
 
@@ -101,6 +113,9 @@ export function diff(instance, changes) {
         if (!object.has(changes, key)) {
           changes[key] = [ newValue, oldValue, key ]
         }
+      }
+      else if (object.has(changes, key)) {
+        delete changes[key]
       }
     }
   )

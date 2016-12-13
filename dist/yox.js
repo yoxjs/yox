@@ -969,7 +969,6 @@ var Each = function (_Node) {
             }
             keys$$1.push(i);
             listContext.set(SPECIAL_KEYPATH, keys$$1.join('.'));
-
             instance.renderChildren(extend({}, data, { context: listContext.push(item) }));
             keys$$1.pop();
           });
@@ -2463,13 +2462,16 @@ function testKeypath(instance, keypath, name) {
     name = terms.pop();
   }
 
-  var data = instance.$data,
-      result = void 0;
+  var $data = instance.$data,
+      $computedGetters = instance.$computedGetters;
+
+
+  var result = void 0;
 
   do {
     terms.push(name);
     keypath = terms.join('.');
-    result = get$1(data, keypath);
+    result = get$1($data, keypath);
     if (result) {
       return {
         keypath: keypath,
@@ -2478,6 +2480,13 @@ function testKeypath(instance, keypath, name) {
     }
     terms.splice(-2);
   } while (terms.length || keypath.indexOf('.') > 0);
+
+  if ($computedGetters && has$1($computedGetters, name)) {
+    return {
+      keypath: name,
+      value: $computedGetters[name]()
+    };
+  }
 }
 
 function updateDeps(instance, newDeps, oldDeps, watcher) {
@@ -2532,6 +2541,8 @@ function diff$1(instance, changes) {
       if (!has$1(changes, key)) {
         changes[key] = [newValue, oldValue, key];
       }
+    } else if (has$1(changes, key)) {
+      delete changes[key];
     }
   });
 
@@ -3930,17 +3941,9 @@ var Yox = function () {
         });
       }
     });
-    instance.watch(watchers);
 
     if (object(computed)) {
       (function () {
-
-        instance.$cacheCleaner = function (newValue, oldValue, keypath) {
-          if (has$1($watchCache, keypath)) {
-            delete $watchCache[keypath];
-          }
-        };
-
         var $computedGetters = instance.$computedGetters = {};
 
         var $computedSetters = instance.$computedSetters = {};
@@ -3952,12 +3955,16 @@ var Yox = function () {
         each$$1(computed, function (item, keypath) {
           var get$$1 = void 0,
               set$$1 = void 0,
+              deps = void 0,
               cache = TRUE;
           if (func(item)) {
             get$$1 = item;
           } else if (object(item)) {
             if (has$1(item, 'cache')) {
               cache = item.cache;
+            }
+            if (array(item.deps)) {
+              deps = item.deps;
             }
             if (func(item.get)) {
               get$$1 = item.get;
@@ -3968,27 +3975,49 @@ var Yox = function () {
           }
 
           if (get$$1) {
-            var getter = function getter() {
+            (function () {
 
-              if (cache && has$1($watchCache, keypath)) {
-                return $watchCache[keypath];
+              var watcher = void 0;
+              if (cache) {
+                watcher = function watcher() {
+                  getter.$dirty = TRUE;
+                  diff$1(instance);
+                };
               }
 
-              $computedStack.push([]);
-              var result = get$$1.call(instance);
+              var getter = function getter() {
+                if (cache) {
 
-              var newDeps = $computedStack.pop();
-              var oldDeps = $computedDeps[keypath];
+                  if (!getter.$dirty) {
+                    if (has$1($watchCache, keypath)) {
+                      return $watchCache[keypath];
+                    }
+                  } else {
+                    delete getter.$dirty;
+                  }
 
-              updateDeps(instance, newDeps, oldDeps, instance.$cacheCleaner);
+                  if (!deps) {
+                    $computedStack.push([]);
+                  }
+                  var result = get$$1.call(instance);
 
-              $computedDeps[keypath] = newDeps;
-              $watchCache[keypath] = result;
+                  var newDeps = deps || $computedStack.pop();
+                  var oldDeps = $computedDeps[keypath];
+                  if (newDeps !== oldDeps) {
+                    updateDeps(instance, newDeps, oldDeps, watcher);
+                  }
 
-              return result;
-            };
-            getter.$binded = getter.$computed = TRUE;
-            $computedGetters[keypath] = getter;
+                  $computedDeps[keypath] = newDeps;
+                  $watchCache[keypath] = result;
+
+                  return result;
+                } else {
+                  return execute$1(get$$1, instance);
+                }
+              };
+              getter.$binded = getter.$computed = TRUE;
+              $computedGetters[keypath] = getter;
+            })();
           }
 
           if (set$$1) {
@@ -3997,6 +4026,8 @@ var Yox = function () {
         });
       })();
     }
+
+    instance.watch(watchers);
 
     execute$1(options[AFTER_CREATE], instance);
 
@@ -4039,7 +4070,7 @@ var Yox = function () {
     instance.partial(partials);
 
     if (el && template) {
-      instance.$viewUpdater = function () {
+      instance.$viewWatcher = function () {
         instance.$dirty = TRUE;
       };
       execute$1(options[BEFORE_MOUNT], instance);
@@ -4066,9 +4097,9 @@ var Yox = function () {
       }
 
       if ($computedGetters) {
-        var getter = $computedGetters[keypath];
-        if (getter) {
-          return getter();
+        var _getter = $computedGetters[keypath];
+        if (_getter) {
+          return _getter();
         }
       }
 
@@ -4213,7 +4244,7 @@ var Yox = function () {
       var instance = this;
 
       var $viewDeps = instance.$viewDeps,
-          $viewUpdater = instance.$viewUpdater,
+          $viewWatcher = instance.$viewWatcher,
           $data = instance.$data,
           $options = instance.$options,
           $filters = instance.$filters,
@@ -4241,7 +4272,7 @@ var Yox = function () {
           deps = _view$render.deps;
 
       instance.$viewDeps = keys(deps);
-      updateDeps(instance, instance.$viewDeps, $viewDeps, $viewUpdater);
+      updateDeps(instance, instance.$viewDeps, $viewDeps, $viewWatcher);
 
       var newNode = create$1(root, instance),
           afterHook = void 0;
@@ -4291,7 +4322,7 @@ var Yox = function () {
 
       var instance = this;
       if (value.indexOf('(') > 0) {
-        var _ret2 = function () {
+        var _ret3 = function () {
           var ast = parse$1(value);
           if (ast.type === CALL) {
             return {
@@ -4334,7 +4365,7 @@ var Yox = function () {
           }
         }();
 
-        if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
+        if ((typeof _ret3 === 'undefined' ? 'undefined' : _typeof(_ret3)) === "object") return _ret3.v;
       } else {
         return function (event$$1) {
           instance.fire(value, event$$1);
@@ -4511,7 +4542,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.17.8';
+Yox.version = '0.17.9';
 
 Yox.switcher = switcher;
 
