@@ -1,7 +1,7 @@
 
 import * as env from '../config/env'
 
-import * as logger from './logger'
+import * as logger from '../util/logger'
 
 import getLocationByIndex from '../function/getLocationByIndex'
 

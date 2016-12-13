@@ -53,12 +53,7 @@ export default class Each extends Node {
           instance.renderChildren(
             object.extend({ }, data, { context: listContext.push(item) })
           )
-
-          listContext.remove(syntax.SPECIAL_KEYPATH)
           keys.pop()
-          if (index) {
-            listContext.remove(index)
-          }
         }
       )
       keys.pop()

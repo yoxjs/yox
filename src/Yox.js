@@ -7,7 +7,7 @@ import * as registry from './config/registry'
 import * as switcher from './config/switcher'
 import * as lifecycle from './config/lifecycle'
 
-import * as mustache from './compiler/parser/mustache'
+import * as view from './view/index'
 
 import * as is from './util/is'
 import * as array from './util/array'
@@ -500,7 +500,7 @@ export default class Yox {
       }
     )
 
-    let { root, deps } = mustache.render($template, context)
+    let { root, deps } = view.render($template, context)
     instance.$viewDeps = object.keys(deps)
     component.updateDeps(
       instance,
@@ -550,7 +550,7 @@ export default class Yox {
   compileTemplate(template) {
     let instance = this
     if (is.string(template)) {
-      return mustache.parse(
+      return view.parse(
         template,
         function (id) {
           let partial = instance.partial(id)
@@ -863,7 +863,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.17.6'
+Yox.version = '0.17.7'
 
 /**
  * 开关配置

@@ -1,33 +1,33 @@
 
-import * as env from '../../config/env'
-import * as cache from '../../config/cache'
-import * as syntax from '../../config/syntax'
-import * as pattern from '../../config/pattern'
+import * as env from '../config/env'
+import * as cache from '../config/cache'
+import * as syntax from '../config/syntax'
+import * as pattern from '../config/pattern'
 
-import * as nodeType from '../nodeType'
+import * as util from './util'
+import * as nodeType from './nodeType'
 
-import Context from '../helper/Context'
-import Scanner from '../helper/Scanner'
+import Context from './helper/Context'
+import Scanner from './helper/Scanner'
 
-import Attribute from '../node/Attribute'
-import Directive from '../node/Directive'
-import Each from '../node/Each'
-import Element from '../node/Element'
-import Else from '../node/Else'
-import ElseIf from '../node/ElseIf'
-import Expression from '../node/Expression'
-import If from '../node/If'
-import Import from '../node/Import'
-import Partial from '../node/Partial'
-import Spread from '../node/Spread'
-import Text from '../node/Text'
+import Attribute from './node/Attribute'
+import Directive from './node/Directive'
+import Each from './node/Each'
+import Element from './node/Element'
+import Else from './node/Else'
+import ElseIf from './node/ElseIf'
+import Expression from './node/Expression'
+import If from './node/If'
+import Import from './node/Import'
+import Partial from './node/Partial'
+import Spread from './node/Spread'
+import Text from './node/Text'
 
-import * as is from '../../util/is'
-import * as array from '../../util/array'
-import * as object from '../../util/object'
-import * as string from '../../util/string'
-import * as logger from '../../util/logger'
-import * as expression from '../../expression/index'
+import * as is from '../util/is'
+import * as array from '../util/array'
+import * as object from '../util/object'
+import * as logger from '../util/logger'
+import * as expression from '../expression/index'
 
 const openingDelimiter = '\\{\\{\\s*'
 const closingDelimiter = '\\s*\\}\\}'
@@ -239,10 +239,10 @@ export function parse(template, getPartial, setPartial) {
 
     switch (type) {
       case nodeType.TEXT:
-        if (string.isBreakLine(content)) {
+        if (util.isBreakLine(content)) {
           return
         }
-        if (content = string.trimBreakline(content)) {
+        if (content = util.trimBreakline(content)) {
           node.content = content
         }
         else {
@@ -287,7 +287,7 @@ export function parse(template, getPartial, setPartial) {
   }
 
   let parseAttributeValue = function (content) {
-    match = string.matchByQuote(content, quote)
+    match = util.matchByQuote(content, quote)
     if (match) {
       addChild(
         new Text(match)
@@ -404,7 +404,7 @@ export function parse(template, getPartial, setPartial) {
               if (parser.test(content)) {
                 node = parser.create(content, popStack)
                 if (is.string(node)) {
-                  string.parseError(template, node, errorIndex)
+                  util.parseError(template, node, errorIndex)
                 }
                 if (isAttributesParsing
                   && node.type === nodeType.EXPRESSION
@@ -445,10 +445,10 @@ export function parse(template, getPartial, setPartial) {
       name = content.slice(2)
 
       if (mainScanner.charAt(0) !== '>') {
-        return string.parseError(template, 'Illegal tag name', errorIndex)
+        return util.parseError(template, 'Illegal tag name', errorIndex)
       }
       else if (name !== currentNode.name) {
-        return string.parseError(template, 'Unexpected closing tag', errorIndex)
+        return util.parseError(template, 'Unexpected closing tag', errorIndex)
       }
 
       popStack()
@@ -479,7 +479,7 @@ export function parse(template, getPartial, setPartial) {
 
       content = mainScanner.nextAfter(elementEndPattern)
       if (!content) {
-        return string.parseError(template, 'Illegal tag name', errorIndex)
+        return util.parseError(template, 'Illegal tag name', errorIndex)
       }
 
       if (isSelfClosingTag) {
@@ -489,7 +489,7 @@ export function parse(template, getPartial, setPartial) {
   }
 
   if (nodeStack.length) {
-    return string.parseError(template, `Missing end tag (</${nodeStack[0].name}>)`, errorIndex)
+    return util.parseError(template, `Missing end tag (</${nodeStack[0].name}>)`, errorIndex)
   }
 
   cache.templateParse[template] = rootNode

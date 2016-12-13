@@ -17,8 +17,8 @@ export default class Store {
     if (is.object(key)) {
       object.each(
         key,
-        function (value, name) {
-          data[name] = value
+        function (value, key) {
+          data[key] = value
         }
       )
     }

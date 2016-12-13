@@ -213,7 +213,7 @@ function last(array$$1) {
   return array$$1[array$$1.length - 1];
 }
 
-function remove$1(array$$1, item, strict) {
+function remove(array$$1, item, strict) {
   var index = indexOf(array$$1, item, strict);
   if (index >= 0) {
     array$$1.splice(index, 1);
@@ -230,7 +230,7 @@ var array$1 = Object.freeze({
 	indexOf: indexOf,
 	has: has$2,
 	last: last,
-	remove: remove$1
+	remove: remove
 });
 
 function keys(object$$1) {
@@ -306,7 +306,6 @@ function get$1(object$$1, keypath) {
 function set$1(object$$1, keypath, value) {
   var autoFill = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : TRUE;
 
-  var remove$$1 = arguments.length === 2;
   keypath = toString$1(keypath);
   if (keypath.indexOf('.') > 0) {
     var originalObject = object$$1;
@@ -315,7 +314,7 @@ function set$1(object$$1, keypath, value) {
     each$1(list, function (item, index) {
       if (object$$1[item]) {
         object$$1 = object$$1[item];
-      } else if (!remove$$1 && autoFill) {
+      } else if (autoFill) {
         object$$1 = object$$1[item] = {};
       } else {
         object$$1 = NULL;
@@ -323,20 +322,10 @@ function set$1(object$$1, keypath, value) {
       }
     });
     if (object$$1 && object$$1 !== originalObject) {
-      setValue(object$$1, prop, value, remove$$1);
+      object$$1[prop] = value;
     }
   } else {
-    setValue(object$$1, keypath, value, remove$$1);
-  }
-}
-
-function setValue(object$$1, name, value, remove$$1) {
-  if (remove$$1) {
-    if (has$1(object$$1, name)) {
-      delete object$$1[name];
-    }
-  } else {
-    object$$1[name] = value;
+    object$$1[keypath] = value;
   }
 }
 
@@ -498,8 +487,8 @@ var Store = function () {
       var data = this.data;
 
       if (object(key)) {
-        each$$1(key, function (value, name) {
-          data[name] = value;
+        each$$1(key, function (value, key) {
+          data[key] = value;
         });
       } else if (string(key)) {
         data[key] = value;
@@ -543,6 +532,83 @@ var BEFORE_DESTROY = 'beforeDestroy';
 
 var AFTER_DESTROY = 'afterDestroy';
 
+var hasConsole = typeof console !== 'undefined';
+
+function warn(msg) {
+  if (debug && hasConsole) {
+    console.warn(msg);
+  }
+}
+
+function error$1(msg) {
+  if (hasConsole) {
+    console.error(msg);
+  }
+}
+
+var logger = Object.freeze({
+	warn: warn,
+	error: error$1
+});
+
+var getLocationByIndex = function (str, index) {
+
+  var line = 0,
+      col = 0,
+      pos = 0;
+
+  each$1(str.split('\n'), function (lineStr) {
+    line++;
+    col = 0;
+
+    var length = lineStr.length;
+
+    if (index >= pos && index <= pos + length) {
+      col = index - pos;
+      return FALSE;
+    }
+
+    pos += length;
+  });
+
+  return {
+    line: line,
+    col: col
+  };
+};
+
+var breaklinePrefixPattern = /^[ \t]*\n/;
+var breaklineSuffixPattern = /\n[ \t]*$/;
+
+var nonSingleQuotePattern = /^[^']*/;
+var nonDoubleQuotePattern = /^[^"]*/;
+
+function isBreakLine(str) {
+  return str.indexOf('\n') >= 0 && !str.trim();
+}
+
+function trimBreakline(str) {
+  return str.replace(breaklinePrefixPattern, '').replace(breaklineSuffixPattern, '');
+}
+
+function matchByQuote(str, nonQuote) {
+  var match = str.match(nonQuote === '"' ? nonDoubleQuotePattern : nonSingleQuotePattern);
+  return match ? match[0] : '';
+}
+
+function parseError(str, errorMsg, errorIndex) {
+  if (errorIndex == NULL) {
+    errorMsg += '.';
+  } else {
+    var _getLocationByIndex = getLocationByIndex(str, errorIndex),
+        line = _getLocationByIndex.line,
+        col = _getLocationByIndex.col;
+
+    errorMsg += ', at line ' + line + ', col ' + col + '.';
+  }
+  error$1(errorMsg);
+}
+
 var IF$1 = 1;
 
 var ELSE_IF$1 = 2;
@@ -584,11 +650,6 @@ var Context = function () {
       return new Context(data, this);
     }
   }, {
-    key: 'remove',
-    value: function remove(keypath) {
-      this.set(keypath);
-    }
-  }, {
     key: 'set',
     value: function set(keypath, value) {
       var data = this.data,
@@ -597,11 +658,7 @@ var Context = function () {
       if (has$1(cache, keypath)) {
         delete cache[keypath];
       }
-      if (arguments.length === 1) {
-        set$1(data, keypath);
-      } else {
-        set$1(data, keypath, value);
-      }
+      set$1(data, keypath, value);
     }
   }, {
     key: 'get',
@@ -914,12 +971,7 @@ var Each = function (_Node) {
             listContext.set(SPECIAL_KEYPATH, keys$$1.join('.'));
 
             instance.renderChildren(extend({}, data, { context: listContext.push(item) }));
-
-            listContext.remove(SPECIAL_KEYPATH);
             keys$$1.pop();
-            if (index) {
-              listContext.remove(index);
-            }
           });
           keys$$1.pop();
         })();
@@ -1176,83 +1228,6 @@ var Spread = function (_Node) {
   }]);
   return Spread;
 }(Node);
-
-var hasConsole = typeof console !== 'undefined';
-
-function warn(msg) {
-  if (debug && hasConsole) {
-    console.warn(msg);
-  }
-}
-
-function error$1(msg) {
-  if (hasConsole) {
-    console.error(msg);
-  }
-}
-
-var logger = Object.freeze({
-	warn: warn,
-	error: error$1
-});
-
-var getLocationByIndex = function (str, index) {
-
-  var line = 0,
-      col = 0,
-      pos = 0;
-
-  each$1(str.split('\n'), function (lineStr) {
-    line++;
-    col = 0;
-
-    var length = lineStr.length;
-
-    if (index >= pos && index <= pos + length) {
-      col = index - pos;
-      return FALSE;
-    }
-
-    pos += length;
-  });
-
-  return {
-    line: line,
-    col: col
-  };
-};
-
-var breaklinePrefixPattern = /^[ \t]*\n/;
-var breaklineSuffixPattern = /\n[ \t]*$/;
-
-var nonSingleQuotePattern = /^[^']*/;
-var nonDoubleQuotePattern = /^[^"]*/;
-
-function isBreakLine(str) {
-  return str.indexOf('\n') >= 0 && !str.trim();
-}
-
-function trimBreakline(str) {
-  return str.replace(breaklinePrefixPattern, '').replace(breaklineSuffixPattern, '');
-}
-
-function matchByQuote(str, nonQuote) {
-  var match = str.match(nonQuote === '"' ? nonDoubleQuotePattern : nonSingleQuotePattern);
-  return match ? match[0] : '';
-}
-
-function parseError(str, errorMsg, errorIndex) {
-  if (errorIndex == NULL) {
-    errorMsg += '.';
-  } else {
-    var _getLocationByIndex = getLocationByIndex(str, errorIndex),
-        line = _getLocationByIndex.line,
-        col = _getLocationByIndex.col;
-
-    errorMsg += ', at line ' + line + ', col ' + col + '.';
-  }
-  error$1(errorMsg);
-}
 
 function isNumber(charCode) {
   return charCode >= 48 && charCode <= 57;
@@ -3252,7 +3227,7 @@ var Emitter = function () {
           if (listener == NULL) {
             list.length = 0;
           } else {
-            remove$1(list, listener);
+            remove(list, listener);
           }
           if (!list.length) {
             removed.push(type);
@@ -3761,7 +3736,7 @@ var controlTypes = {
         if (el.checked) {
           value.push(el.value);
         } else {
-          remove$1(value, el.value, FALSE);
+          remove(value, el.value, FALSE);
         }
         instance.set(keypath, copy(value));
       } else {
@@ -4246,9 +4221,9 @@ var Yox = function () {
         }
       });
 
-      var _mustache$render = render$1($template, context),
-          root = _mustache$render.root,
-          deps = _mustache$render.deps;
+      var _view$render = render$1($template, context),
+          root = _view$render.root,
+          deps = _view$render.deps;
 
       instance.$viewDeps = keys(deps);
       updateDeps(instance, instance.$viewDeps, $viewDeps, $viewUpdater);
@@ -4469,7 +4444,7 @@ var Yox = function () {
       }
 
       if ($parent && $parent.$children) {
-        remove$1($parent.$children, instance);
+        remove($parent.$children, instance);
       }
 
       if ($currentNode) {
@@ -4521,7 +4496,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.17.6';
+Yox.version = '0.17.7';
 
 Yox.switcher = switcher;
 

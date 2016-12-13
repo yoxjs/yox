@@ -13,7 +13,7 @@ import * as syntax from '../../config/syntax'
 import * as is from '../../util/is'
 import * as array from '../../util/array'
 import * as object from '../../util/object'
-import * as nodeType from '../../compiler/nodeType'
+import * as viewNodeType from '../../view/nodeType'
 
 export let patch = snabbdom.init([ attributes, style ])
 
@@ -80,13 +80,13 @@ export function create(root, instance) {
     root,
     function (node) {
       counter++
-      if (node.type === nodeType.ATTRIBUTE || node.type === nodeType.DIRECTIVE) {
+      if (node.type === viewNodeType.ATTRIBUTE || node.type === viewNodeType.DIRECTIVE) {
         return env.FALSE
       }
     },
     function (node, children) {
       counter--
-      if (node.type === nodeType.ELEMENT) {
+      if (node.type === viewNodeType.ELEMENT) {
 
         let attrs = { }, directives = [ ], styles
 
@@ -194,7 +194,7 @@ export function create(root, instance) {
 
         return h(node.name, data, children)
       }
-      else if (node.type === nodeType.TEXT) {
+      else if (node.type === viewNodeType.TEXT) {
         return node.content
       }
     }

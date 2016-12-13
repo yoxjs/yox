@@ -1,4 +1,9 @@
 
+/**
+ * 组件实例的私有方法
+ * 不暴露给外部
+ */
+
 import * as env from '../config/env'
 
 import * as is from './is'
