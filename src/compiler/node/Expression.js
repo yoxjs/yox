@@ -30,7 +30,7 @@ export default class Expression extends Node {
       value = ''
     }
 
-    if (is.func(value) && value.computed) {
+    if (is.func(value) && value.$computed) {
       value = value()
     }
 

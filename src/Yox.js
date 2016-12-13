@@ -182,8 +182,8 @@ export default class Yox {
 
               return result
             }
-            getter.binded =
-            getter.computed = env.TRUE
+            getter.$binded =
+            getter.$computed = env.TRUE
             $computedGetters[keypath] = getter
           }
 
@@ -204,9 +204,6 @@ export default class Yox {
       }
       if (!pattern.tag.test(template)) {
         logger.error('Passing a `template` option must have a root element.')
-      }
-      if (!template.trim()) {
-        template = env.NULL
       }
     }
     else {
@@ -243,27 +240,11 @@ export default class Yox {
     instance.partial(partials)
 
     if (el && template) {
-
       instance.$viewUpdater = function () {
-        if (instance.$sync) {
-          instance.update()
-        }
-        else if (!instance.$syncing) {
-          instance.$syncing = env.TRUE
-          nextTask.add(
-            function () {
-              delete instance.$syncing
-              instance.update()
-            }
-          )
-        }
+        instance.$dirty = env.TRUE
       }
-
       execute(options[lifecycle.BEFORE_MOUNT], instance)
-      if (is.string(template)) {
-        template = instance.compileTemplate(template)
-      }
-      instance.$template = template
+      instance.$template = instance.compileTemplate(template)
       instance.update(el)
     }
 
@@ -336,6 +317,29 @@ export default class Yox {
 
   }
 
+  sync(immediate) {
+    let instance = this
+    if (immediate) {
+      instance.update()
+    }
+    else if (!instance.$syncing) {
+      instance.$syncing = env.TRUE
+      nextTask.add(
+        function () {
+          delete instance.$syncing
+          instance.update()
+        }
+      )
+    }
+    delete instance.$dirty
+  }
+
+  /**
+   * 取值
+   *
+   * @param {string} keypath
+   * @return {*}
+   */
   get(keypath) {
 
     let {
@@ -412,17 +416,19 @@ export default class Yox {
       }
     )
 
-    instance.$sync = forceSync
     instance.diff(changes)
-    delete instance.$sync
 
-    if ($children) {
+    if (instance.$dirty) {
+      instance.sync(forceSync)
+    }
+    else if ($children) {
       array.each(
         $children,
         function (child) {
-          child.$sync = forceSync
           child.diff()
-          delete child.$sync
+          if (child.$dirty) {
+            child.sync(forceSync)
+          }
         }
       )
     }
@@ -570,7 +576,7 @@ export default class Yox {
     object.each(
       context,
       function (value, key) {
-        if (is.func(value) && !value.binded) {
+        if (is.func(value) && !value.$binded) {
           context[key] = value.bind(instance)
         }
       }
@@ -616,17 +622,27 @@ export default class Yox {
     return child
   }
 
+  /**
+   * 把模板编译成 Yox 独有的 virtual dom
+   *
+   * @param {string} template
+   * @return {Object}
+   */
   compileTemplate(template) {
     let instance = this
-    return mustache.parse(
-      template,
-      function (name) {
-        return instance.partial(name)
-      },
-      function (name, node) {
-        instance.partial(name, node)
-      }
-    )
+    if (is.string(template)) {
+      return mustache.parse(
+        template,
+        function (id) {
+          let partial = instance.partial(id)
+          return is.string(partial) ? instance.compileTemplate(partial) : partial
+        },
+        function (id, node) {
+          instance.partial(id, node)
+        }
+      )
+    }
+    return template
   }
 
   compileValue(keypath, value) {
@@ -647,19 +663,31 @@ export default class Yox {
       value = env.NULL
     }
 
-    let instance = this
+    let store = this.$components || (this.$components = new Store())
     magic({
       args: value ? [ id, value ] : [ id ],
       get: function (id) {
-        let options = component.get(instance, 'component', id)
+
+        let options = store.get(id), fromGlobal
+        if (!options) {
+          options = Yox.component(id)
+          fromGlobal = env.TRUE
+        }
+
         if (is.func(options)) {
-          let { pending } = options
-          if (!pending) {
-            pending = options.pending = [ callback ]
+          let { $pending } = options
+          if (!$pending) {
+            $pending = options.$pending = [ callback ]
             options(function (replacement) {
-              component.set(instance, 'component', id, replacement)
+              delete options.$pending
+              if (fromGlobal) {
+                Yox.component(id, replacement)
+              }
+              else {
+                store.set(id, replacement)
+              }
               array.each(
-                pending,
+                $pending,
                 function (callback) {
                   callback(replacement)
                 }
@@ -667,7 +695,7 @@ export default class Yox {
             })
           }
           else {
-            pending.push(callback)
+            $pending.push(callback)
           }
         }
         else if (is.object(options)) {
@@ -675,7 +703,7 @@ export default class Yox {
         }
       },
       set: function (id, value) {
-        component.set(instance, 'component', id, value)
+        store.set(id, value)
       }
     })
 
@@ -689,14 +717,14 @@ export default class Yox {
    * @return {?string}
    */
   filter() {
-    let instance = this
+    let store = this.$filters || (this.$filters = new Store())
     return magic({
       args: arguments,
       get: function (id) {
-        return component.get(instance, 'filter', id)
+        return store.get(id) || Yox.filter(id)
       },
       set: function (id, value) {
-        component.set(instance, 'filter', id, value)
+        store.set(id, value)
       }
     })
   }
@@ -709,14 +737,14 @@ export default class Yox {
    * @return {?string}
    */
   directive() {
-    let instance = this
+    let store = this.$directives || (this.$directives = new Store())
     return magic({
       args: arguments,
       get: function (id) {
-        return component.get(instance, 'directive', id, env.TRUE)
+        return store.get(id) || Yox.directive(id)
       },
       set: function (id, value) {
-        component.set(instance, 'directive', id, value)
+        store.set(id, value)
       }
     })
   }
@@ -729,15 +757,14 @@ export default class Yox {
    * @return {?string}
    */
   partial() {
-    let instance = this
+    let store = this.$partials || (this.$partials = new Store())
     return magic({
       args: arguments,
       get: function (id) {
-        let partial = component.get(instance, 'partial', id)
-        return is.string(partial) ? instance.compileTemplate(partial) : partial
+        return store.get(id) || Yox.partial(id)
       },
       set: function (id, value) {
-        component.set(instance, 'partial', id, value)
+        store.set(id, value)
       }
     })
   }
@@ -860,7 +887,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.17.4'
+Yox.version = '0.17.5'
 
 /**
  * 开关配置

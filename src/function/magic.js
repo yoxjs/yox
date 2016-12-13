@@ -6,10 +6,15 @@
 
 import * as env from '../config/env'
 import * as is from '../util/is'
+import * as array from '../util/array'
+
 import execute from './execute'
 
 export default function (options) {
+
   let { args, get, set } = options
+  args = array.toArray(args)
+
   let key = args[0], value = args[1]
   if (is.object(key)) {
     execute(set, env.NULL, key)

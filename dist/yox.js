@@ -501,7 +501,7 @@ var Store = function () {
         each$$1(key, function (value, name) {
           data[name] = value;
         });
-      } else {
+      } else if (string(key)) {
         data[key] = value;
       }
     }
@@ -509,13 +509,13 @@ var Store = function () {
   return Store;
 }();
 
-var component$1 = new Store();
+var component = new Store();
 var directive$1 = new Store();
 var filter$1 = new Store();
 var partial$1 = new Store();
 
 var registry = Object.freeze({
-	component: component$1,
+	component: component,
 	directive: directive$1,
 	filter: filter$1,
 	partial: partial$1
@@ -1072,7 +1072,7 @@ var Expression = function (_Node) {
         value = '';
       }
 
-      if (func(value) && value.computed) {
+      if (func(value) && value.$computed) {
         value = value();
       }
 
@@ -2598,32 +2598,12 @@ function testKeypath(instance, keypath, name) {
   } while (terms.length || keypath.indexOf('.') > 0);
 }
 
-function get$3(instance, type, name, silent) {
-  var result = get$1(instance, '$' + type + 's.' + name);
-  if (result) {
-    return result.value;
-  } else {
-    var globalRegistry = registry[type];
-    var value = globalRegistry && globalRegistry.get(name);
-    if (value) {
-      return value;
-    } else if (!silent) {
-      error$1(name + ' ' + type + ' is not found.');
-    }
-  }
-}
 
-function set$3(instance, type, name, value) {
-  if (object(name)) {
-    set$1(instance, '$' + type + 's', name);
-  } else if (string(name)) {
-    set$1(instance, '$' + type + 's.' + name, value);
-  }
-}
 
-function remove$2(instance, type, name) {
-  set$1(instance, '$' + type + 's.' + name);
-}
+var component$1 = Object.freeze({
+	compileValue: compileValue$1,
+	testKeypath: testKeypath
+});
 
 function validate(data, schema) {
   each$$1(schema, function (rule, key) {
@@ -3577,12 +3557,15 @@ var magic = function (options) {
       get = options.get,
       set = options.set;
 
+  args = toArray(args);
+
   var key = args[0],
       value = args[1];
   if (object(key)) {
     execute$1(set, NULL, key);
   } else if (string(key)) {
-    var length = args.length;
+    var _args = args,
+        length = _args.length;
 
     if (length === 2) {
       execute$1(set, NULL, args);
@@ -3606,13 +3589,19 @@ var refDt = {
         node = _ref.node,
         instance = _ref.instance;
 
-
     var value = node.getValue();
-    if (value) {
-      if (get$3(instance, 'ref', value, TRUE)) {
-        error$1('Ref ' + value + ' is existed.');
+    if (value && string(value)) {
+      var $refs = instance.$refs;
+
+      if (object($refs)) {
+        if (has$1($refs, value)) {
+          error$1('Ref ' + value + ' is existed.');
+        }
+      } else {
+        $refs = instance.$refs = {};
       }
-      set$3(instance, 'ref', value, el.$component || el);
+
+      $refs[value] = el.$component || el;
       el.$ref = value;
     }
   },
@@ -3621,12 +3610,12 @@ var refDt = {
     var el = _ref2.el,
         instance = _ref2.instance;
 
-
     if (el.$ref) {
-      remove$2(instance, 'ref', el.$ref);
+      delete instance.$refs[el.$ref];
       el.$ref = NULL;
     }
   }
+
 };
 
 var debounce = function (fn, delay, lazy) {
@@ -4007,7 +3996,7 @@ var Yox = function () {
 
               return result;
             };
-            getter.binded = getter.computed = TRUE;
+            getter.$binded = getter.$computed = TRUE;
             $computedGetters[keypath] = getter;
           }
 
@@ -4026,9 +4015,6 @@ var Yox = function () {
       }
       if (!tag.test(template)) {
         error$1('Passing a `template` option must have a root element.');
-      }
-      if (!template.trim()) {
-        template = NULL;
       }
     } else {
       template = NULL;
@@ -4062,24 +4048,11 @@ var Yox = function () {
     instance.partial(partials);
 
     if (el && template) {
-
       instance.$viewUpdater = function () {
-        if (instance.$sync) {
-          instance.update();
-        } else if (!instance.$syncing) {
-          instance.$syncing = TRUE;
-          add(function () {
-            delete instance.$syncing;
-            instance.update();
-          });
-        }
+        instance.$dirty = TRUE;
       };
-
       execute$1(options[BEFORE_MOUNT], instance);
-      if (string(template)) {
-        template = instance.compileTemplate(template);
-      }
-      instance.$template = template;
+      instance.$template = instance.compileTemplate(template);
       instance.update(el);
     }
   }
@@ -4137,6 +4110,21 @@ var Yox = function () {
       });
 
       return changes;
+    }
+  }, {
+    key: 'sync',
+    value: function sync(immediate) {
+      var instance = this;
+      if (immediate) {
+        instance.update();
+      } else if (!instance.$syncing) {
+        instance.$syncing = TRUE;
+        add(function () {
+          delete instance.$syncing;
+          instance.update();
+        });
+      }
+      delete instance.$dirty;
     }
   }, {
     key: 'get',
@@ -4207,15 +4195,16 @@ var Yox = function () {
         set$1($data, keypath, value);
       });
 
-      instance.$sync = forceSync;
       instance.diff(changes);
-      delete instance.$sync;
 
-      if ($children) {
+      if (instance.$dirty) {
+        instance.sync(forceSync);
+      } else if ($children) {
         each$1($children, function (child) {
-          child.$sync = forceSync;
           child.diff();
-          delete child.$sync;
+          if (child.$dirty) {
+            child.sync(forceSync);
+          }
         });
       }
     }
@@ -4312,7 +4301,7 @@ var Yox = function () {
       extend(context, filter$1.data, $data, $filters, $computedGetters);
 
       each$$1(context, function (value, key) {
-        if (func(value) && !value.binded) {
+        if (func(value) && !value.$binded) {
           context[key] = value.bind(instance);
         }
       });
@@ -4352,11 +4341,15 @@ var Yox = function () {
     key: 'compileTemplate',
     value: function compileTemplate(template) {
       var instance = this;
-      return _parse(template, function (name) {
-        return instance.partial(name);
-      }, function (name, node) {
-        instance.partial(name, node);
-      });
+      if (string(template)) {
+        return _parse(template, function (id) {
+          var partial$$1 = instance.partial(id);
+          return string(partial$$1) ? instance.compileTemplate(partial$$1) : partial$$1;
+        }, function (id, node) {
+          instance.partial(id, node);
+        });
+      }
+      return template;
     }
   }, {
     key: 'compileValue',
@@ -4365,7 +4358,7 @@ var Yox = function () {
     }
   }, {
     key: 'component',
-    value: function component(id, value) {
+    value: function component$1(id, value) {
 
       var callback = void 0;
       if (func(value)) {
@@ -4373,25 +4366,38 @@ var Yox = function () {
         value = NULL;
       }
 
-      var instance = this;
+      var store = this.$components || (this.$components = new Store());
       magic({
         args: value ? [id, value] : [id],
         get: function get(id) {
-          var options = get$3(instance, 'component', id);
+
+          var options = store.get(id),
+              fromGlobal = void 0;
+          if (!options) {
+            options = Yox.component(id);
+            fromGlobal = TRUE;
+          }
+
           if (func(options)) {
             (function () {
-              var pending = options.pending;
+              var _options = options,
+                  $pending = _options.$pending;
 
-              if (!pending) {
-                pending = options.pending = [callback];
+              if (!$pending) {
+                $pending = options.$pending = [callback];
                 options(function (replacement) {
-                  set$3(instance, 'component', id, replacement);
-                  each$1(pending, function (callback) {
+                  delete options.$pending;
+                  if (fromGlobal) {
+                    Yox.component(id, replacement);
+                  } else {
+                    store.set(id, replacement);
+                  }
+                  each$1($pending, function (callback) {
                     callback(replacement);
                   });
                 });
               } else {
-                pending.push(callback);
+                $pending.push(callback);
               }
             })();
           } else if (object(options)) {
@@ -4399,50 +4405,49 @@ var Yox = function () {
           }
         },
         set: function set(id, value) {
-          set$3(instance, 'component', id, value);
+          store.set(id, value);
         }
       });
     }
   }, {
     key: 'filter',
     value: function filter() {
-      var instance = this;
+      var store = this.$filters || (this.$filters = new Store());
       return magic({
         args: arguments,
         get: function get(id) {
-          return get$3(instance, 'filter', id);
+          return store.get(id) || Yox.filter(id);
         },
         set: function set(id, value) {
-          set$3(instance, 'filter', id, value);
+          store.set(id, value);
         }
       });
     }
   }, {
     key: 'directive',
     value: function directive() {
-      var instance = this;
+      var store = this.$directives || (this.$directives = new Store());
       return magic({
         args: arguments,
         get: function get(id) {
-          return get$3(instance, 'directive', id, TRUE);
+          return store.get(id) || Yox.directive(id);
         },
         set: function set(id, value) {
-          set$3(instance, 'directive', id, value);
+          store.set(id, value);
         }
       });
     }
   }, {
     key: 'partial',
     value: function partial() {
-      var instance = this;
+      var store = this.$partials || (this.$partials = new Store());
       return magic({
         args: arguments,
         get: function get(id) {
-          var partial$$1 = get$3(instance, 'partial', id);
-          return string(partial$$1) ? instance.compileTemplate(partial$$1) : partial$$1;
+          return store.get(id) || Yox.partial(id);
         },
         set: function set(id, value) {
-          set$3(instance, 'partial', id, value);
+          store.set(id, value);
         }
       });
     }
@@ -4521,7 +4526,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.17.4';
+Yox.version = '0.17.5';
 
 Yox.switcher = switcher;
 

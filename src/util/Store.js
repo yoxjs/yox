@@ -22,7 +22,7 @@ export default class Store {
         }
       )
     }
-    else {
+    else if (is.string(key)) {
       data[key] = value
     }
   }
