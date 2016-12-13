@@ -18,6 +18,7 @@ import * as component from './util/component'
 import * as validator from './util/validator'
 
 import * as expression from './expression/index'
+import * as expressionNodeType from './expression/nodeType'
 
 import * as vdom from './platform/web/vdom'
 import * as native from './platform/web/native'
@@ -171,7 +172,8 @@ export default class Yox {
               let newDeps = $computedStack.pop()
               let oldDeps = $computedDeps[keypath]
 
-              instance.updateWatcher(
+              component.updateDeps(
+                instance,
                 newDeps,
                 oldDeps,
                 instance.$cacheCleaner
@@ -245,93 +247,9 @@ export default class Yox {
       }
       execute(options[lifecycle.BEFORE_MOUNT], instance)
       instance.$template = instance.compileTemplate(template)
-      instance.update(el)
+      instance.updateView(el)
     }
 
-  }
-
-  updateWatcher(newDeps, oldDeps, watcher) {
-
-    let addedDeps, removedDeps
-    if (is.array(oldDeps)) {
-      addedDeps = array.diff(oldDeps, newDeps)
-      removedDeps = array.diff(newDeps, oldDeps)
-    }
-    else {
-      addedDeps = newDeps
-    }
-
-    let instance = this
-
-    array.each(
-      addedDeps,
-      function (keypath) {
-        instance.watch(keypath, watcher)
-      }
-    )
-
-    if (removedDeps) {
-      array.each(
-        removedDeps,
-        function (dep) {
-          instance.$watchEmitter.off(dep, watcher)
-        }
-      )
-    }
-
-  }
-
-  diff(changes) {
-
-    if (!is.object(changes)) {
-      changes = { }
-    }
-
-    let instance = this
-    let {
-      $watchCache,
-      $watchEmitter,
-    } = instance
-
-    object.each(
-      $watchCache,
-      function (oldValue, key) {
-        let newValue = instance.get(key)
-        if (newValue !== oldValue) {
-          $watchCache[key] = newValue
-          if (!object.has(changes, key)) {
-            changes[key] = [ newValue, oldValue, key ]
-          }
-        }
-      }
-    )
-
-    object.each(
-      changes,
-      function (args, key) {
-        $watchEmitter.fire(key, args, instance)
-      }
-    )
-
-    return changes
-
-  }
-
-  sync(immediate) {
-    let instance = this
-    if (immediate) {
-      instance.update()
-    }
-    else if (!instance.$syncing) {
-      instance.$syncing = env.TRUE
-      nextTask.add(
-        function () {
-          delete instance.$syncing
-          instance.update()
-        }
-      )
-    }
-    delete instance.$dirty
   }
 
   /**
@@ -416,18 +334,18 @@ export default class Yox {
       }
     )
 
-    instance.diff(changes)
+    component.diff(instance, changes)
 
     if (instance.$dirty) {
-      instance.sync(forceSync)
+      component.updateView(instance, forceSync)
     }
     else if ($children) {
       array.each(
         $children,
         function (child) {
-          child.diff()
+          component.diff(child)
           if (child.$dirty) {
-            child.sync(forceSync)
+            component.updateView(child, forceSync)
           }
         }
       )
@@ -540,7 +458,7 @@ export default class Yox {
   /**
    * 更新视图
    */
-  update(el) {
+  updateView(el) {
 
     let instance = this
 
@@ -584,7 +502,8 @@ export default class Yox {
 
     let { root, deps } = mustache.render($template, context)
     instance.$viewDeps = object.keys(deps)
-    instance.updateWatcher(
+    component.updateDeps(
+      instance,
       instance.$viewDeps,
       $viewDeps,
       $viewUpdater
@@ -646,7 +565,64 @@ export default class Yox {
   }
 
   compileValue(keypath, value) {
-    return component.compileValue(this, keypath, value)
+
+    if (!value || !is.string(value)) {
+      return
+    }
+
+    let instance = this
+    if (value.indexOf('(') > 0) {
+      let ast = expression.parse(value)
+      if (ast.type === expressionNodeType.CALL) {
+        return function (e) {
+          let isEvent = e instanceof Event
+          let args = object.copy(ast.args)
+          if (!args.length) {
+            if (isEvent) {
+              args.push(e)
+            }
+          }
+          else {
+            args = args.map(
+              function (node) {
+                let { name, type } = node
+                if (type === expressionNodeType.LITERAL) {
+                  return node.value
+                }
+                if (type === expressionNodeType.IDENTIFIER) {
+                  if (name === syntax.SPECIAL_EVENT) {
+                    if (isEvent) {
+                      return e
+                    }
+                  }
+                  else if (name === syntax.SPECIAL_KEYPATH) {
+                    return keypath
+                  }
+                }
+                else if (type === expressionNodeType.MEMBER) {
+                  name = node.stringify()
+                }
+
+                let result = component.testKeypath(instance, keypath, name)
+                if (result) {
+                  return result.value
+                }
+              }
+            )
+          }
+          execute(
+            instance[ast.callee.name],
+            instance,
+            args
+          )
+        }
+      }
+    }
+    else {
+      return function (event) {
+        instance.fire(value, event)
+      }
+    }
   }
 
   /**
@@ -887,7 +863,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.17.5'
+Yox.version = '0.17.6'
 
 /**
  * 开关配置

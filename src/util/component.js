@@ -1,67 +1,10 @@
 
 import * as env from '../config/env'
-import * as syntax from '../config/syntax'
-import * as registry from '../config/registry'
 
 import * as is from './is'
+import * as array from './array'
 import * as object from './object'
-import * as logger from './logger'
-
-import * as expression from '../expression/index'
-import * as expressionNodeType from '../expression/nodeType'
-
-import Event from './Event'
-
-export function compileValue(instance, keypath, value) {
-  if (value.indexOf('(') > 0) {
-    let ast = expression.parse(value)
-    if (ast.type === expressionNodeType.CALL) {
-      return function (e) {
-        let isEvent = e instanceof Event
-        let args = object.copy(ast.args)
-        if (!args.length) {
-          if (isEvent) {
-            args.push(e)
-          }
-        }
-        else {
-          args = args.map(
-            function (item) {
-              let { name, type } = item
-              if (type === expressionNodeType.LITERAL) {
-                return item.value
-              }
-              if (type === expressionNodeType.IDENTIFIER) {
-                if (name === syntax.SPECIAL_EVENT) {
-                  if (isEvent) {
-                    return e
-                  }
-                }
-                else if (name === syntax.SPECIAL_KEYPATH) {
-                  return keypath
-                }
-              }
-              else if (type === expressionNodeType.MEMBER) {
-                name = item.stringify()
-              }
-
-              let result = testKeypath(instance, keypath, name)
-              if (result) {
-                return result.value
-              }
-            }
-          )
-        }
-        instance[ast.callee.name].apply(instance, args)
-      }
-    }
-  }
-  else {
-    return function (event) {
-      instance.fire(value, event)
-    }
-  }
-}
+import * as nextTask from './nextTask'
 
 export function testKeypath(instance, keypath, name) {
 
@@ -85,5 +28,85 @@ export function testKeypath(instance, keypath, name) {
     terms.splice(-2)
   }
   while (terms.length || keypath.indexOf('.') > 0)
+
+}
+
+export function updateDeps(instance, newDeps, oldDeps, watcher) {
+
+  let addedDeps, removedDeps
+  if (is.array(oldDeps)) {
+    addedDeps = array.diff(oldDeps, newDeps)
+    removedDeps = array.diff(newDeps, oldDeps)
+  }
+  else {
+    addedDeps = newDeps
+  }
+
+  array.each(
+    addedDeps,
+    function (keypath) {
+      instance.watch(keypath, watcher)
+    }
+  )
+
+  if (removedDeps) {
+    array.each(
+      removedDeps,
+      function (dep) {
+        instance.$watchEmitter.off(dep, watcher)
+      }
+    )
+  }
+
+}
+
+export function updateView(instance, immediate) {
+  if (immediate) {
+    instance.updateView()
+  }
+  else if (!instance.$syncing) {
+    instance.$syncing = env.TRUE
+    nextTask.add(
+      function () {
+        delete instance.$syncing
+        instance.updateView()
+      }
+    )
+  }
+  delete instance.$dirty
+}
+
+export function diff(instance, changes) {
+
+  if (!is.object(changes)) {
+    changes = { }
+  }
+
+  let {
+    $watchCache,
+    $watchEmitter,
+  } = instance
+
+  object.each(
+    $watchCache,
+    function (oldValue, key) {
+      let newValue = instance.get(key)
+      if (newValue !== oldValue) {
+        $watchCache[key] = newValue
+        if (!object.has(changes, key)) {
+          changes[key] = [ newValue, oldValue, key ]
+        }
+      }
+    }
+  )
+
+  object.each(
+    changes,
+    function (args, key) {
+      $watchEmitter.fire(key, args, instance)
+    }
+  )
+
+  return changes
 
 }

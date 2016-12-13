@@ -157,7 +157,7 @@ function reduce(array$$1, callback, initialValue) {
   return array$$1.reduce(callback, initialValue);
 }
 
-function diff$1(array1, array2, strict) {
+function diff(array1, array2, strict) {
   var result = [];
   each$1(array2, function (item) {
     if (!has$2(array1, item, strict)) {
@@ -223,7 +223,7 @@ function remove$1(array$$1, item, strict) {
 var array$1 = Object.freeze({
 	each: each$1,
 	reduce: reduce,
-	diff: diff$1,
+	diff: diff,
 	merge: merge,
 	toArray: toArray,
 	toObject: toObject,
@@ -2481,99 +2481,6 @@ function run() {
   currentTasks = NULL;
 }
 
-var Event = function () {
-  function Event(event) {
-    classCallCheck(this, Event);
-
-    if (event.type) {
-      this.type = event.type;
-      this.originalEvent = event;
-    } else {
-      this.type = event;
-    }
-  }
-
-  createClass(Event, [{
-    key: 'prevent',
-    value: function prevent() {
-      if (!this.isPrevented) {
-        var originalEvent = this.originalEvent;
-
-        if (originalEvent && func(originalEvent.preventDefault)) {
-          originalEvent.preventDefault();
-        }
-        this.isPrevented = TRUE;
-      }
-    }
-  }, {
-    key: 'stop',
-    value: function stop() {
-      if (!this.isStoped) {
-        var originalEvent = this.originalEvent;
-
-        if (originalEvent && func(originalEvent.stopPropagation)) {
-          originalEvent.stopPropagation();
-        }
-        this.isStoped = TRUE;
-      }
-    }
-  }]);
-  return Event;
-}();
-
-function compileValue$1(instance, keypath, value) {
-  if (value.indexOf('(') > 0) {
-    var _ret = function () {
-      var ast = parse$1(value);
-      if (ast.type === CALL) {
-        return {
-          v: function v(e) {
-            var isEvent = e instanceof Event;
-            var args = copy(ast.args);
-            if (!args.length) {
-              if (isEvent) {
-                args.push(e);
-              }
-            } else {
-              args = args.map(function (item) {
-                var name = item.name,
-                    type = item.type;
-
-                if (type === LITERAL) {
-                  return item.value;
-                }
-                if (type === IDENTIFIER) {
-                  if (name === SPECIAL_EVENT) {
-                    if (isEvent) {
-                      return e;
-                    }
-                  } else if (name === SPECIAL_KEYPATH) {
-                    return keypath;
-                  }
-                } else if (type === MEMBER) {
-                  name = item.stringify();
-                }
-
-                var result = testKeypath(instance, keypath, name);
-                if (result) {
-                  return result.value;
-                }
-              });
-            }
-            instance[ast.callee.name].apply(instance, args);
-          }
-        };
-      }
-    }();
-
-    if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
-  } else {
-    return function (event) {
-      instance.fire(value, event);
-    };
-  }
-}
-
 function testKeypath(instance, keypath, name) {
 
   var terms = keypath ? keypath.split('.') : [];
@@ -2598,11 +2505,73 @@ function testKeypath(instance, keypath, name) {
   } while (terms.length || keypath.indexOf('.') > 0);
 }
 
+function updateDeps(instance, newDeps, oldDeps, watcher) {
 
+  var addedDeps = void 0,
+      removedDeps = void 0;
+  if (array(oldDeps)) {
+    addedDeps = diff(oldDeps, newDeps);
+    removedDeps = diff(newDeps, oldDeps);
+  } else {
+    addedDeps = newDeps;
+  }
+
+  each$1(addedDeps, function (keypath) {
+    instance.watch(keypath, watcher);
+  });
+
+  if (removedDeps) {
+    each$1(removedDeps, function (dep) {
+      instance.$watchEmitter.off(dep, watcher);
+    });
+  }
+}
+
+function updateView$1(instance, immediate) {
+  if (immediate) {
+    instance.updateView();
+  } else if (!instance.$syncing) {
+    instance.$syncing = TRUE;
+    add(function () {
+      delete instance.$syncing;
+      instance.updateView();
+    });
+  }
+  delete instance.$dirty;
+}
+
+function diff$1(instance, changes) {
+
+  if (!object(changes)) {
+    changes = {};
+  }
+
+  var $watchCache = instance.$watchCache,
+      $watchEmitter = instance.$watchEmitter;
+
+
+  each$$1($watchCache, function (oldValue, key) {
+    var newValue = instance.get(key);
+    if (newValue !== oldValue) {
+      $watchCache[key] = newValue;
+      if (!has$1(changes, key)) {
+        changes[key] = [newValue, oldValue, key];
+      }
+    }
+  });
+
+  each$$1(changes, function (args, key) {
+    $watchEmitter.fire(key, args, instance);
+  });
+
+  return changes;
+}
 
 var component$1 = Object.freeze({
-	compileValue: compileValue$1,
-	testKeypath: testKeypath
+	testKeypath: testKeypath,
+	updateDeps: updateDeps,
+	updateView: updateView$1,
+	diff: diff$1
 });
 
 function validate(data, schema) {
@@ -3163,6 +3132,46 @@ function updateAttrs(oldVnode, vnode) {
 }
 
 var attributes = { create: updateAttrs, update: updateAttrs };
+
+var Event = function () {
+  function Event(event) {
+    classCallCheck(this, Event);
+
+    if (event.type) {
+      this.type = event.type;
+      this.originalEvent = event;
+    } else {
+      this.type = event;
+    }
+  }
+
+  createClass(Event, [{
+    key: 'prevent',
+    value: function prevent() {
+      if (!this.isPrevented) {
+        var originalEvent = this.originalEvent;
+
+        if (originalEvent && func(originalEvent.preventDefault)) {
+          originalEvent.preventDefault();
+        }
+        this.isPrevented = TRUE;
+      }
+    }
+  }, {
+    key: 'stop',
+    value: function stop() {
+      if (!this.isStoped) {
+        var originalEvent = this.originalEvent;
+
+        if (originalEvent && func(originalEvent.stopPropagation)) {
+          originalEvent.stopPropagation();
+        }
+        this.isStoped = TRUE;
+      }
+    }
+  }]);
+  return Event;
+}();
 
 var Emitter = function () {
   function Emitter(options) {
@@ -3989,7 +3998,7 @@ var Yox = function () {
               var newDeps = $computedStack.pop();
               var oldDeps = $computedDeps[keypath];
 
-              instance.updateWatcher(newDeps, oldDeps, instance.$cacheCleaner);
+              updateDeps(instance, newDeps, oldDeps, instance.$cacheCleaner);
 
               $computedDeps[keypath] = newDeps;
               $watchCache[keypath] = result;
@@ -4053,80 +4062,11 @@ var Yox = function () {
       };
       execute$1(options[BEFORE_MOUNT], instance);
       instance.$template = instance.compileTemplate(template);
-      instance.update(el);
+      instance.updateView(el);
     }
   }
 
   createClass(Yox, [{
-    key: 'updateWatcher',
-    value: function updateWatcher(newDeps, oldDeps, watcher) {
-
-      var addedDeps = void 0,
-          removedDeps = void 0;
-      if (array(oldDeps)) {
-        addedDeps = diff$1(oldDeps, newDeps);
-        removedDeps = diff$1(newDeps, oldDeps);
-      } else {
-        addedDeps = newDeps;
-      }
-
-      var instance = this;
-
-      each$1(addedDeps, function (keypath) {
-        instance.watch(keypath, watcher);
-      });
-
-      if (removedDeps) {
-        each$1(removedDeps, function (dep) {
-          instance.$watchEmitter.off(dep, watcher);
-        });
-      }
-    }
-  }, {
-    key: 'diff',
-    value: function diff(changes) {
-
-      if (!object(changes)) {
-        changes = {};
-      }
-
-      var instance = this;
-      var $watchCache = instance.$watchCache,
-          $watchEmitter = instance.$watchEmitter;
-
-
-      each$$1($watchCache, function (oldValue, key) {
-        var newValue = instance.get(key);
-        if (newValue !== oldValue) {
-          $watchCache[key] = newValue;
-          if (!has$1(changes, key)) {
-            changes[key] = [newValue, oldValue, key];
-          }
-        }
-      });
-
-      each$$1(changes, function (args, key) {
-        $watchEmitter.fire(key, args, instance);
-      });
-
-      return changes;
-    }
-  }, {
-    key: 'sync',
-    value: function sync(immediate) {
-      var instance = this;
-      if (immediate) {
-        instance.update();
-      } else if (!instance.$syncing) {
-        instance.$syncing = TRUE;
-        add(function () {
-          delete instance.$syncing;
-          instance.update();
-        });
-      }
-      delete instance.$dirty;
-    }
-  }, {
     key: 'get',
     value: function get(keypath) {
       var $data = this.$data,
@@ -4195,15 +4135,15 @@ var Yox = function () {
         set$1($data, keypath, value);
       });
 
-      instance.diff(changes);
+      diff$1(instance, changes);
 
       if (instance.$dirty) {
-        instance.sync(forceSync);
+        updateView$1(instance, forceSync);
       } else if ($children) {
         each$1($children, function (child) {
-          child.diff();
+          diff$1(child);
           if (child.$dirty) {
-            child.sync(forceSync);
+            updateView$1(child, forceSync);
           }
         });
       }
@@ -4277,8 +4217,8 @@ var Yox = function () {
       this.$watchEmitter.once(keypath, watcher);
     }
   }, {
-    key: 'update',
-    value: function update(el) {
+    key: 'updateView',
+    value: function updateView(el) {
 
       var instance = this;
 
@@ -4311,7 +4251,7 @@ var Yox = function () {
           deps = _mustache$render.deps;
 
       instance.$viewDeps = keys(deps);
-      instance.updateWatcher(instance.$viewDeps, $viewDeps, $viewUpdater);
+      updateDeps(instance, instance.$viewDeps, $viewDeps, $viewUpdater);
 
       var newNode = create$1(root, instance),
           afterHook = void 0;
@@ -4354,7 +4294,62 @@ var Yox = function () {
   }, {
     key: 'compileValue',
     value: function compileValue(keypath, value) {
-      return compileValue$1(this, keypath, value);
+
+      if (!value || !string(value)) {
+        return;
+      }
+
+      var instance = this;
+      if (value.indexOf('(') > 0) {
+        var _ret2 = function () {
+          var ast = parse$1(value);
+          if (ast.type === CALL) {
+            return {
+              v: function v(e) {
+                var isEvent = e instanceof Event;
+                var args = copy(ast.args);
+                if (!args.length) {
+                  if (isEvent) {
+                    args.push(e);
+                  }
+                } else {
+                  args = args.map(function (node) {
+                    var name = node.name,
+                        type = node.type;
+
+                    if (type === LITERAL) {
+                      return node.value;
+                    }
+                    if (type === IDENTIFIER) {
+                      if (name === SPECIAL_EVENT) {
+                        if (isEvent) {
+                          return e;
+                        }
+                      } else if (name === SPECIAL_KEYPATH) {
+                        return keypath;
+                      }
+                    } else if (type === MEMBER) {
+                      name = node.stringify();
+                    }
+
+                    var result = testKeypath(instance, keypath, name);
+                    if (result) {
+                      return result.value;
+                    }
+                  });
+                }
+                execute$1(instance[ast.callee.name], instance, args);
+              }
+            };
+          }
+        }();
+
+        if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
+      } else {
+        return function (event$$1) {
+          instance.fire(value, event$$1);
+        };
+      }
     }
   }, {
     key: 'component',
@@ -4526,7 +4521,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.17.5';
+Yox.version = '0.17.6';
 
 Yox.switcher = switcher;
 
