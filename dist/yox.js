@@ -638,7 +638,7 @@ var Context = function () {
     classCallCheck(this, Context);
 
     var instance = this;
-    instance.data = data;
+    instance.data = copy(data);
     instance.parent = parent;
     var cache = instance.cache = {};
     cache[THIS] = data;
@@ -3566,6 +3566,13 @@ var toNumber = function (str, defaultValue) {
   return arguments.length === 2 ? defaultValue : 0;
 };
 
+var toKeypath = function (str) {
+  if (str.indexOf('[') > 0 && str.indexOf(']') > 0) {
+    return parse$1(str).stringify();
+  }
+  return str;
+};
+
 var refDt = {
 
   attach: function attach(_ref) {
@@ -4049,6 +4056,8 @@ var Yox = function () {
           $computedGetters = this.$computedGetters;
 
 
+      keypath = toKeypath(keypath);
+
       if ($computedStack) {
         var deps = last($computedStack);
         if (deps) {
@@ -4078,7 +4087,7 @@ var Yox = function () {
         model = {};
         model[keypath] = value;
       } else if (object(keypath)) {
-        model = keypath;
+        model = copy(keypath);
         forceSync = value;
       } else {
         return;
@@ -4092,7 +4101,13 @@ var Yox = function () {
           $computedSetters = instance.$computedSetters;
 
 
-      each$$1(model, function (newValue, keypath) {
+      each$$1(model, function (newValue, key) {
+        var keypath = toKeypath(key);
+        if (keypath !== key) {
+          delete model[key];
+          model[keypath] = newValue;
+        }
+
         var oldValue = instance.get(keypath);
         if (newValue !== oldValue) {
           changes[keypath] = [newValue, oldValue, keypath];
@@ -4496,7 +4511,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.17.7';
+Yox.version = '0.17.8';
 
 Yox.switcher = switcher;
 

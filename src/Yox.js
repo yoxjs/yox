@@ -26,6 +26,7 @@ import * as native from './platform/web/native'
 import magic from './function/magic'
 import execute from './function/execute'
 import toNumber from './function/toNumber'
+import toKeypath from './function/toKeypath'
 
 import Store from './util/Store'
 import Event from './util/Event'
@@ -266,6 +267,8 @@ export default class Yox {
       $computedGetters,
     } = this
 
+    keypath = toKeypath(keypath)
+
     if ($computedStack) {
       let deps = array.last($computedStack)
       if (deps) {
@@ -295,7 +298,7 @@ export default class Yox {
       model[keypath] = value
     }
     else if (is.object(keypath)) {
-      model = keypath
+      model = object.copy(keypath)
       forceSync = value
     }
     else {
@@ -312,7 +315,14 @@ export default class Yox {
 
     object.each(
       model,
-      function (newValue, keypath) {
+      function (newValue, key) {
+        // 格式化 Keypath
+        let keypath = toKeypath(key)
+        if (keypath !== key) {
+          delete model[key]
+          model[keypath] = newValue
+        }
+
         let oldValue = instance.get(keypath)
         if (newValue !== oldValue) {
           changes[keypath] = [ newValue, oldValue, keypath ]
@@ -863,7 +873,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.17.7'
+Yox.version = '0.17.8'
 
 /**
  * 开关配置

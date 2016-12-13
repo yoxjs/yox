@@ -11,7 +11,7 @@ export default class Context {
    */
   constructor(data, parent) {
     let instance = this
-    instance.data = data
+    instance.data = object.copy(data)
     instance.parent = parent
     let cache = instance.cache = { }
     cache[env.THIS] = data
