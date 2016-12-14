@@ -1,6 +1,7 @@
 
 import * as env from '../config/env'
 import * as array from '../util/array'
+import * as object from '../util/object'
 import * as logger from '../util/logger'
 
 /**
@@ -45,6 +46,21 @@ export function isIdentifierStart(charCode) {
  */
 export function isIdentifierPart(charCode) {
   return isIdentifierStart(charCode) || isNumber(charCode)
+}
+
+
+/**
+ * 倒排对象的 key
+ *
+ * @param {Object} obj
+ * @return {Array.<string>}
+ */
+export function sortKeys(obj) {
+  return object.keys(obj).sort(
+    function (a, b) {
+      return b.length - a.length
+    }
+  )
 }
 
 /**

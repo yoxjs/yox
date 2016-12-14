@@ -19,17 +19,6 @@ var templateParse = {};
 
 var expressionParse = {};
 
-var expressionCompile = {};
-
-var keypathWildcardMatches = {};
-
-var cache = Object.freeze({
-	templateParse: templateParse,
-	expressionParse: expressionParse,
-	expressionCompile: expressionCompile,
-	keypathWildcardMatches: keypathWildcardMatches
-});
-
 var IF = '#if';
 var ELSE = 'else';
 var ELSE_IF = 'else if';
@@ -654,6 +643,12 @@ function isIdentifierPart(charCode) {
   return isIdentifierStart(charCode) || isNumber(charCode);
 }
 
+function sortKeys(obj) {
+  return keys(obj).sort(function (a, b) {
+    return b.length - a.length;
+  });
+}
+
 function matchBestToken(content, sortedTokens) {
   var result = void 0;
   each$1(sortedTokens, function (token) {
@@ -854,18 +849,14 @@ Binary.MULTIPLY = '*';
 Binary.DIVIDE = '/';
 Binary.MODULO = '%';
 
-function sortKeys(obj) {
-  return keys(obj).sort(function (a, b) {
-    return b.length - a.length;
-  });
-}
-
 var unaryMap = {};
+
 unaryMap[Unary.PLUS] = unaryMap[Unary.MINUS] = unaryMap[Unary.BANG] = unaryMap[Unary.WAVE] = TRUE;
 
 var unaryList = sortKeys(unaryMap);
 
 var binaryMap = {};
+
 binaryMap[Binary.OR] = 1;
 binaryMap[Binary.AND] = 2;
 binaryMap[Binary.LE] = 3;
@@ -4154,13 +4145,13 @@ var Yox = function () {
     value: function set(keypath, value) {
 
       var model = void 0,
-          forceSync = void 0;
+          immediate = void 0;
       if (string(keypath)) {
         model = {};
         model[keypath] = value;
       } else if (object(keypath)) {
         model = copy(keypath);
-        forceSync = value;
+        immediate = value === TRUE;
       } else {
         return;
       }
@@ -4197,17 +4188,16 @@ var Yox = function () {
         set$1($data, keypath, value);
       });
 
-      diff$1(instance, changes);
+      var update = function update(instance, changes) {
+        diff$1(instance, changes);
+        if (instance.$dirty) {
+          updateView$1(instance, immediate);
+          return TRUE;
+        }
+      };
 
-      if (instance.$dirty) {
-        updateView$1(instance, forceSync);
-      } else if ($children) {
-        each$1($children, function (child) {
-          diff$1(child);
-          if (child.$dirty) {
-            updateView$1(child, forceSync);
-          }
-        });
+      if (!update(instance, changes) && $children) {
+        each$1($children, update);
       }
     }
   }, {
@@ -4583,13 +4573,11 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.17.14';
+Yox.version = '0.17.15';
 
 Yox.switcher = switcher;
 
 Yox.syntax = syntax;
-
-Yox.cache = cache;
 
 Yox.utils = { is: is$1, array: array$1, object: object$1, string: string$1, logger: logger, native: native, expression: expression, Store: Store, Emitter: Emitter, Event: Event };
 

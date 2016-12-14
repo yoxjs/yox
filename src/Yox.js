@@ -290,14 +290,14 @@ export default class Yox {
 
   set(keypath, value) {
 
-    let model, forceSync
+    let model, immediate
     if (is.string(keypath)) {
       model = { }
       model[keypath] = value
     }
     else if (is.object(keypath)) {
       model = object.copy(keypath)
-      forceSync = value
+      immediate = value === env.TRUE
     }
     else {
       return
@@ -342,20 +342,18 @@ export default class Yox {
       }
     )
 
-    component.diff(instance, changes)
-
-    if (instance.$dirty) {
-      component.updateView(instance, forceSync)
+    var update = function (instance, changes) {
+      component.diff(instance, changes)
+      if (instance.$dirty) {
+        component.updateView(instance, immediate)
+        return env.TRUE
+      }
     }
-    else if ($children) {
+
+    if (!update(instance, changes) && $children) {
       array.each(
         $children,
-        function (child) {
-          component.diff(child)
-          if (child.$dirty) {
-            component.updateView(child, forceSync)
-          }
-        }
+        update
       )
     }
 
@@ -871,7 +869,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.17.14'
+Yox.version = '0.17.15'
 
 /**
  * 开关配置
@@ -886,13 +884,6 @@ Yox.switcher = switcher
  * @type {Object}
  */
 Yox.syntax = syntax
-
-/**
- * 全局缓存，方便外部清缓存
- *
- * @type {Object}
- */
-Yox.cache = cache
 
 /**
  * 工具，便于扩展、插件使用
