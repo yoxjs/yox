@@ -1,7 +1,7 @@
 
 import Store from '../util/Store'
 
-export let component = new Store()
-export let directive = new Store()
-export let filter = new Store()
-export let partial = new Store()
+export const component = new Store()
+export const directive = new Store()
+export const filter = new Store()
+export const partial = new Store()
