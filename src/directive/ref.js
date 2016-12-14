@@ -9,7 +9,6 @@ import * as env from '../config/env'
 import * as is from '../util/is'
 import * as object from '../util/object'
 import * as logger from '../util/logger'
-import * as component from '../util/component'
 
 export default {
 

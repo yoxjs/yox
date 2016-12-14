@@ -9,53 +9,57 @@ import * as component from '../util/component'
 
 import event from './event'
 
-
 // 支持 input 事件的控件
-const supportInputTypes = [ 'text', 'number', 'tel', 'url', 'email', 'search' ]
+const supportInputTypes = [ 'text', 'number', 'password', 'tel', 'url', 'email', 'search' ]
 
-// 特殊的双向绑定逻辑
-const controlTypes = {
-  normal: {
-    set: function ({ el, keypath, instance }) {
-      el.value = instance.get(keypath)
-    },
-    sync: function ({ el, keypath, instance }) {
+const normalControl = {
+  set: function ({ el, keypath, instance }) {
+    el.value = instance.get(keypath)
+  },
+  update: function ({ el, keypath, instance }) {
+    instance.set(keypath, el.value)
+  }
+}
+
+const radioControl = {
+  set: function ({ el, keypath, instance }) {
+    el.checked = el.value == instance.get(keypath)
+  },
+  update: function ({ el, keypath, instance }) {
+    if (el.checked) {
       instance.set(keypath, el.value)
     }
+  }
+}
+
+const checkboxControl = {
+  set: function ({ el, keypath, instance }) {
+    let value = instance.get(keypath)
+    el.checked = is.array(value)
+      ? array.has(value, el.value, env.FALSE)
+      : !!value
   },
-  radio: {
-    set: function ({ el, keypath, instance }) {
-      el.checked = el.value == instance.get(keypath)
-    },
-    sync: function ({ el, keypath, instance }) {
+  update: function ({ el, keypath, instance }) {
+    let value = instance.get(keypath)
+    if (is.array(value)) {
       if (el.checked) {
-        instance.set(keypath, el.value)
-      }
-    }
-  },
-  checkbox: {
-    set: function ({ el, keypath, instance }) {
-      let value = instance.get(keypath)
-      el.checked = is.array(value)
-        ? array.has(value, el.value, env.FALSE)
-        : !!value
-    },
-    sync: function ({ el, keypath, instance }) {
-      let value = instance.get(keypath)
-      if (is.array(value)) {
-        if (el.checked) {
-          value.push(el.value)
-        }
-        else {
-          array.remove(value, el.value, env.FALSE)
-        }
-        instance.set(keypath, object.copy(value))
+        value.push(el.value)
       }
       else {
-        instance.set(keypath, el.checked)
+        array.remove(value, el.value, env.FALSE)
       }
+      instance.set(keypath, object.copy(value))
+    }
+    else {
+      instance.set(keypath, el.checked)
     }
   }
+}
+
+// 特殊的双向绑定逻辑
+const specialControls = {
+  radio: radioControl,
+  checkbox: checkboxControl,
 }
 
 export default {
@@ -87,14 +91,20 @@ export default {
       instance,
     }
 
-    let control = controlTypes[type] || controlTypes.normal
-    control.set(data)
+    let control = specialControls[type] || normalControl
+    let set = function () {
+      control.set(data)
+    }
+    let listener = function () {
+      control.update(data)
+    }
+
+
+    set()
 
     instance.watch(
       keypath,
-      function () {
-        control.set(data)
-      }
+      set
     )
 
     event.attach({
@@ -103,9 +113,7 @@ export default {
       name,
       instance,
       directives,
-      listener: function () {
-        control.sync(data)
-      }
+      listener,
     })
 
   },

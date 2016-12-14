@@ -3744,70 +3744,75 @@ var event = {
 
 };
 
-var supportInputTypes = ['text', 'number', 'tel', 'url', 'email', 'search'];
+var supportInputTypes = ['text', 'number', 'password', 'tel', 'url', 'email', 'search'];
 
-var controlTypes = {
-  normal: {
-    set: function set(_ref) {
-      var el = _ref.el,
-          keypath = _ref.keypath,
-          instance = _ref.instance;
+var normalControl = {
+  set: function set(_ref) {
+    var el = _ref.el,
+        keypath = _ref.keypath,
+        instance = _ref.instance;
 
-      el.value = instance.get(keypath);
-    },
-    sync: function sync(_ref2) {
-      var el = _ref2.el,
-          keypath = _ref2.keypath,
-          instance = _ref2.instance;
+    el.value = instance.get(keypath);
+  },
+  update: function update(_ref2) {
+    var el = _ref2.el,
+        keypath = _ref2.keypath,
+        instance = _ref2.instance;
 
+    instance.set(keypath, el.value);
+  }
+};
+
+var radioControl = {
+  set: function set(_ref3) {
+    var el = _ref3.el,
+        keypath = _ref3.keypath,
+        instance = _ref3.instance;
+
+    el.checked = el.value == instance.get(keypath);
+  },
+  update: function update(_ref4) {
+    var el = _ref4.el,
+        keypath = _ref4.keypath,
+        instance = _ref4.instance;
+
+    if (el.checked) {
       instance.set(keypath, el.value);
     }
+  }
+};
+
+var checkboxControl = {
+  set: function set(_ref5) {
+    var el = _ref5.el,
+        keypath = _ref5.keypath,
+        instance = _ref5.instance;
+
+    var value = instance.get(keypath);
+    el.checked = array(value) ? has$2(value, el.value, FALSE) : !!value;
   },
-  radio: {
-    set: function set(_ref3) {
-      var el = _ref3.el,
-          keypath = _ref3.keypath,
-          instance = _ref3.instance;
+  update: function update(_ref6) {
+    var el = _ref6.el,
+        keypath = _ref6.keypath,
+        instance = _ref6.instance;
 
-      el.checked = el.value == instance.get(keypath);
-    },
-    sync: function sync(_ref4) {
-      var el = _ref4.el,
-          keypath = _ref4.keypath,
-          instance = _ref4.instance;
-
+    var value = instance.get(keypath);
+    if (array(value)) {
       if (el.checked) {
-        instance.set(keypath, el.value);
-      }
-    }
-  },
-  checkbox: {
-    set: function set(_ref5) {
-      var el = _ref5.el,
-          keypath = _ref5.keypath,
-          instance = _ref5.instance;
-
-      var value = instance.get(keypath);
-      el.checked = array(value) ? has$2(value, el.value, FALSE) : !!value;
-    },
-    sync: function sync(_ref6) {
-      var el = _ref6.el,
-          keypath = _ref6.keypath,
-          instance = _ref6.instance;
-
-      var value = instance.get(keypath);
-      if (array(value)) {
-        if (el.checked) {
-          value.push(el.value);
-        } else {
-          remove(value, el.value, FALSE);
-        }
-        instance.set(keypath, copy(value));
+        value.push(el.value);
       } else {
-        instance.set(keypath, el.checked);
+        remove(value, el.value, FALSE);
       }
+      instance.set(keypath, copy(value));
+    } else {
+      instance.set(keypath, el.checked);
     }
   }
+};
+
+var specialControls = {
+  radio: radioControl,
+  checkbox: checkboxControl
 };
 
 var modelDt = {
@@ -3845,12 +3850,17 @@ var modelDt = {
       instance: instance
     };
 
-    var control = controlTypes[type] || controlTypes.normal;
-    control.set(data);
-
-    instance.watch(keypath, function () {
+    var control = specialControls[type] || normalControl;
+    var set$$1 = function set$$1() {
       control.set(data);
-    });
+    };
+    var listener = function listener() {
+      control.update(data);
+    };
+
+    set$$1();
+
+    instance.watch(keypath, set$$1);
 
     event.attach({
       el: el,
@@ -3858,9 +3868,7 @@ var modelDt = {
       name: name,
       instance: instance,
       directives: directives,
-      listener: function listener() {
-        control.sync(data);
-      }
+      listener: listener
     });
   },
 
@@ -4573,7 +4581,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.17.15';
+Yox.version = '0.17.16';
 
 Yox.switcher = switcher;
 
