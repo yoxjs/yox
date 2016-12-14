@@ -95,18 +95,61 @@ export function updateView(instance, immediate) {
 
 export function diff(instance, changes) {
 
-  if (!is.object(changes)) {
-    changes = { }
-  }
-
   let {
     $watchCache,
     $watchEmitter,
+    $computedDeps,
   } = instance
+
+  // 排序，把依赖最少的放前面
+  let keys = [ ]
+  let addKey = function (key, push) {
+    if (!array.has(keys, key)) {
+      if (push) {
+        keys.push(key)
+      }
+      else {
+        keys.unshift(key)
+      }
+    }
+  }
+
+  let pickDeps = function (key) {
+    if ($computedDeps && !array.falsy($computedDeps[key])) {
+      array.each(
+        $computedDeps[key],
+        pickDeps
+      )
+      addKey(key, env.TRUE)
+    }
+    else {
+      addKey(key)
+    }
+  }
+
+  if (is.object(changes)) {
+    object.each(
+      changes,
+      function (args, key) {
+        pickDeps(key)
+      }
+    )
+  }
+  else {
+    changes = { }
+  }
 
   object.each(
     $watchCache,
-    function (oldValue, key) {
+    function (value, key) {
+      pickDeps(key)
+    }
+  )
+
+  array.each(
+    keys,
+    function (key) {
+      let oldValue = $watchCache[key]
       let newValue = instance.get(key)
       if (newValue !== oldValue) {
         $watchCache[key] = newValue
@@ -120,10 +163,12 @@ export function diff(instance, changes) {
     }
   )
 
-  object.each(
-    changes,
-    function (args, key) {
-      $watchEmitter.fire(key, args, instance)
+  array.each(
+    keys,
+    function (key) {
+      if (object.has(changes, key)) {
+        $watchEmitter.fire(key, changes[key], instance)
+      }
     }
   )
 

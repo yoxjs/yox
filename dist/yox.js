@@ -220,6 +220,10 @@ function remove(array$$1, item, strict) {
   }
 }
 
+function falsy(array$$1) {
+  return !array(array$$1) || array$$1.length === 0;
+}
+
 var array$1 = Object.freeze({
 	each: each$1,
 	reduce: reduce,
@@ -230,7 +234,8 @@ var array$1 = Object.freeze({
 	indexOf: indexOf,
 	has: has$2,
 	last: last,
-	remove: remove
+	remove: remove,
+	falsy: falsy
 });
 
 function keys(object$$1) {
@@ -2525,16 +2530,44 @@ function updateView$1(instance, immediate) {
 }
 
 function diff$1(instance, changes) {
+  var $watchCache = instance.$watchCache,
+      $watchEmitter = instance.$watchEmitter,
+      $computedDeps = instance.$computedDeps;
 
-  if (!object(changes)) {
+  var keys$$1 = [];
+  var addKey = function addKey(key, push) {
+    if (!has$2(keys$$1, key)) {
+      if (push) {
+        keys$$1.push(key);
+      } else {
+        keys$$1.unshift(key);
+      }
+    }
+  };
+
+  var pickDeps = function pickDeps(key) {
+    if ($computedDeps && !falsy($computedDeps[key])) {
+      each$1($computedDeps[key], pickDeps);
+      addKey(key, TRUE);
+    } else {
+      addKey(key);
+    }
+  };
+
+  if (object(changes)) {
+    each$$1(changes, function (args, key) {
+      pickDeps(key);
+    });
+  } else {
     changes = {};
   }
 
-  var $watchCache = instance.$watchCache,
-      $watchEmitter = instance.$watchEmitter;
+  each$$1($watchCache, function (value, key) {
+    pickDeps(key);
+  });
 
-
-  each$$1($watchCache, function (oldValue, key) {
+  each$1(keys$$1, function (key) {
+    var oldValue = $watchCache[key];
     var newValue = instance.get(key);
     if (newValue !== oldValue) {
       $watchCache[key] = newValue;
@@ -2546,8 +2579,10 @@ function diff$1(instance, changes) {
     }
   });
 
-  each$$1(changes, function (args, key) {
-    $watchEmitter.fire(key, args, instance);
+  each$1(keys$$1, function (key) {
+    if (has$1(changes, key)) {
+      $watchEmitter.fire(key, changes[key], instance);
+    }
   });
 
   return changes;
@@ -3955,7 +3990,6 @@ var Yox = function () {
 
             var watcher = function watcher() {
               getter.$dirty = TRUE;
-              diff$1(instance);
             };
 
             var getter = function getter() {
@@ -4529,7 +4563,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.17.10';
+Yox.version = '0.17.11';
 
 Yox.switcher = switcher;
 

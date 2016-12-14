@@ -120,3 +120,7 @@ export function remove(array, item, strict) {
     array.splice(index, 1)
   }
 }
+
+export function falsy(array) {
+  return !is.array(array) || array.length === 0
+}

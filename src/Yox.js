@@ -117,7 +117,6 @@ export default class Yox {
 
             let watcher = function () {
               getter.$dirty = env.TRUE
-              component.diff(instance)
             }
 
             let getter = function () {
@@ -871,7 +870,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.17.10'
+Yox.version = '0.17.11'
 
 /**
  * 开关配置
