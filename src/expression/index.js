@@ -4,7 +4,6 @@ import * as cache from '../config/cache'
 
 import * as is from '../util/is'
 import * as array from '../util/array'
-import replace from '../function/replace'
 
 import * as util from './util'
 import * as nodeType from './nodeType'

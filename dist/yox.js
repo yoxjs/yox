@@ -556,7 +556,26 @@ var logger = Object.freeze({
 	error: error$1
 });
 
-var getLocationByIndex = function (str, index) {
+var breaklinePrefixPattern = /^[ \t]*\n/;
+var breaklineSuffixPattern = /\n[ \t]*$/;
+
+var nonSingleQuotePattern = /^[^']*/;
+var nonDoubleQuotePattern = /^[^"]*/;
+
+function isBreakLine(str) {
+  return str.indexOf('\n') >= 0 && !str.trim();
+}
+
+function trimBreakline(str) {
+  return str.replace(breaklinePrefixPattern, '').replace(breaklineSuffixPattern, '');
+}
+
+function matchByQuote(str, nonQuote) {
+  var match = str.match(nonQuote === '"' ? nonDoubleQuotePattern : nonSingleQuotePattern);
+  return match ? match[0] : '';
+}
+
+function getLocationByIndex(str, index) {
 
   var line = 0,
       col = 0,
@@ -580,25 +599,6 @@ var getLocationByIndex = function (str, index) {
     line: line,
     col: col
   };
-};
-
-var breaklinePrefixPattern = /^[ \t]*\n/;
-var breaklineSuffixPattern = /\n[ \t]*$/;
-
-var nonSingleQuotePattern = /^[^']*/;
-var nonDoubleQuotePattern = /^[^"]*/;
-
-function isBreakLine(str) {
-  return str.indexOf('\n') >= 0 && !str.trim();
-}
-
-function trimBreakline(str) {
-  return str.replace(breaklinePrefixPattern, '').replace(breaklineSuffixPattern, '');
-}
-
-function matchByQuote(str, nonQuote) {
-  var match = str.match(nonQuote === '"' ? nonDoubleQuotePattern : nonSingleQuotePattern);
-  return match ? match[0] : '';
 }
 
 function parseError(str, errorMsg, errorIndex) {
@@ -637,587 +637,6 @@ var ELEMENT = 10;
 var ATTRIBUTE = 11;
 
 var TEXT = 12;
-
-var Context = function () {
-  function Context(data, parent) {
-    classCallCheck(this, Context);
-
-    this.data = copy(data);
-    this.parent = parent;
-    this.cache = {};
-    this.cache[THIS] = data;
-  }
-
-  createClass(Context, [{
-    key: 'push',
-    value: function push(data) {
-      return new Context(data, this);
-    }
-  }, {
-    key: 'set',
-    value: function set(keypath, value) {
-      var data = this.data,
-          cache = this.cache;
-
-      if (has$1(cache, keypath)) {
-        delete cache[keypath];
-      }
-      set$1(data, keypath, value);
-    }
-  }, {
-    key: 'get',
-    value: function get(keypath) {
-
-      var instance = this;
-      var _instance = instance,
-          cache = _instance.cache;
-
-
-      if (!has$1(cache, keypath)) {
-        var result = void 0;
-        var keypaths = [keypath];
-        while (instance) {
-          result = get$1(instance.data, keypath);
-          if (result) {
-            break;
-          } else {
-            instance = instance.parent;
-            keypaths.unshift('..');
-          }
-        }
-        keypath = keypaths.join('/');
-        if (result) {
-          cache[keypath] = result.value;
-        }
-      }
-
-      var value = cache[keypath];
-      if (keypath === THIS) {
-        keypath = '.';
-      }
-
-      return {
-        value: value,
-        keypath: keypath
-      };
-    }
-  }]);
-  return Context;
-}();
-
-var Scanner = function () {
-  function Scanner(str) {
-    classCallCheck(this, Scanner);
-
-    this.reset(str);
-  }
-
-  createClass(Scanner, [{
-    key: 'reset',
-    value: function reset(str) {
-      this.pos = 0;
-      this.tail = str;
-    }
-  }, {
-    key: 'hasNext',
-    value: function hasNext() {
-      return this.tail;
-    }
-  }, {
-    key: 'nextAfter',
-    value: function nextAfter(pattern) {
-      var tail = this.tail;
-
-      var matches = tail.match(pattern);
-      if (!matches || matches.index) {
-        return '';
-      }
-      var result = matches[0];
-      this.forward(result.length);
-      return result;
-    }
-  }, {
-    key: 'nextBefore',
-    value: function nextBefore(pattern) {
-      var pos = this.pos,
-          tail = this.tail;
-
-      var matches = tail.match(pattern);
-      if (matches) {
-        var index = matches.index;
-
-        if (!index) {
-          return '';
-        }
-        var result = tail.substr(0, index);
-        this.forward(index);
-        return result;
-      } else {
-        this.forward(tail.length);
-        return tail;
-      }
-    }
-  }, {
-    key: 'forward',
-    value: function forward(offset) {
-      this.pos += offset;
-      this.tail = this.tail.slice(offset);
-    }
-  }, {
-    key: 'charAt',
-    value: function charAt(index) {
-      return this.tail[index];
-    }
-  }]);
-  return Scanner;
-}();
-
-var execute$1 = function (fn, context, args) {
-  if (func(fn)) {
-    if (array(args)) {
-      return fn.apply(context, args);
-    } else {
-      return fn.call(context, args);
-    }
-  }
-};
-
-var Node = function () {
-  function Node(type, hasChildren) {
-    classCallCheck(this, Node);
-
-    this.type = type;
-    if (hasChildren !== FALSE) {
-      this.children = [];
-    }
-  }
-
-  createClass(Node, [{
-    key: 'addChild',
-    value: function addChild(node) {
-      var children = this.children;
-
-      if (node.type === TEXT) {
-        var lastChild = last(children);
-        if (lastChild && lastChild.type === TEXT) {
-          lastChild.content += node.content;
-          return;
-        }
-      }
-      children.push(node);
-    }
-  }, {
-    key: 'getValue',
-    value: function getValue() {
-      var children = this.children;
-
-      return children[0] ? children[0].content : TRUE;
-    }
-  }, {
-    key: 'execute',
-    value: function execute$1(data) {
-      var context = data.context,
-          keys$$1 = data.keys,
-          addDeps = data.addDeps;
-
-      var _expr$execute = this.expr.execute(context),
-          value = _expr$execute.value,
-          deps = _expr$execute.deps;
-
-      var newDeps = {};
-      each$$1(deps, function (value, keypath) {
-        var base = copy(keys$$1);
-        each$1(keypath.split('/'), function (term) {
-          if (term === '..') {
-            base.pop();
-          } else if (term && term !== '.') {
-            base.push(term);
-          }
-        });
-        newDeps[base.join('.')] = value;
-      });
-      addDeps(newDeps);
-      return {
-        value: value,
-        deps: newDeps
-      };
-    }
-  }, {
-    key: 'render',
-    value: function render() {}
-  }, {
-    key: 'renderChildren',
-    value: function renderChildren(data, children) {
-      reduce(children || this.children, function (prev, current) {
-        return current.render(data, prev);
-      });
-    }
-  }]);
-  return Node;
-}();
-
-var Attribute = function (_Node) {
-  inherits(Attribute, _Node);
-
-  function Attribute(name) {
-    classCallCheck(this, Attribute);
-
-    var _this = possibleConstructorReturn(this, (Attribute.__proto__ || Object.getPrototypeOf(Attribute)).call(this, ATTRIBUTE));
-
-    _this.name = name;
-    return _this;
-  }
-
-  createClass(Attribute, [{
-    key: 'render',
-    value: function render(data) {
-      var name = this.name;
-      var keys$$1 = data.keys,
-          parent = data.parent;
-
-
-      if (name.type === EXPRESSION) {
-        var _name$execute = name.execute(data),
-            value = _name$execute.value;
-
-        name = value;
-      }
-
-      var node = new Attribute(name);
-      node.keypath = keys$$1.join('.');
-      parent.addAttr(node);
-
-      this.renderChildren(extend({}, data, { parent: node }));
-    }
-  }]);
-  return Attribute;
-}(Node);
-
-var Directive = function (_Node) {
-  inherits(Directive, _Node);
-
-  function Directive(name) {
-    classCallCheck(this, Directive);
-
-    var _this = possibleConstructorReturn(this, (Directive.__proto__ || Object.getPrototypeOf(Directive)).call(this, DIRECTIVE));
-
-    _this.name = name;
-    return _this;
-  }
-
-  createClass(Directive, [{
-    key: 'render',
-    value: function render(data) {
-
-      var node = new Directive(this.name);
-      node.keypath = data.keys.join('.');
-      data.parent.addDirective(node);
-
-      this.renderChildren(extend({}, data, { parent: node }));
-    }
-  }]);
-  return Directive;
-}(Node);
-
-var Each = function (_Node) {
-  inherits(Each, _Node);
-
-  function Each(expr, index) {
-    classCallCheck(this, Each);
-
-    var _this = possibleConstructorReturn(this, (Each.__proto__ || Object.getPrototypeOf(Each)).call(this, EACH$1));
-
-    _this.expr = expr;
-    _this.index = index;
-    return _this;
-  }
-
-  createClass(Each, [{
-    key: 'render',
-    value: function render(data) {
-
-      var instance = this;
-      var expr = instance.expr,
-          index = instance.index;
-      var context = data.context,
-          keys$$1 = data.keys;
-
-      var _instance$execute = instance.execute(data),
-          value = _instance$execute.value;
-
-      var iterate = void 0;
-      if (array(value)) {
-        iterate = each$1;
-      } else if (object(value)) {
-        iterate = each$$1;
-      }
-
-      if (iterate) {
-        (function () {
-          var listContext = context.push(value);
-          keys$$1.push(expr.stringify());
-          iterate(value, function (item, i) {
-            if (index) {
-              listContext.set(index, i);
-            }
-            keys$$1.push(i);
-            listContext.set(SPECIAL_KEYPATH, keys$$1.join('.'));
-            instance.renderChildren(extend({}, data, { context: listContext.push(item) }));
-            keys$$1.pop();
-          });
-          keys$$1.pop();
-        })();
-      }
-    }
-  }]);
-  return Each;
-}(Node);
-
-var Element = function (_Node) {
-  inherits(Element, _Node);
-
-  function Element(name, component) {
-    classCallCheck(this, Element);
-
-    var _this = possibleConstructorReturn(this, (Element.__proto__ || Object.getPrototypeOf(Element)).call(this, ELEMENT));
-
-    _this.name = name;
-    _this.component = component;
-    _this.attrs = [];
-    _this.directives = [];
-    return _this;
-  }
-
-  createClass(Element, [{
-    key: 'addAttr',
-    value: function addAttr(node) {
-      this.attrs.push(node);
-    }
-  }, {
-    key: 'addDirective',
-    value: function addDirective(node) {
-      this.directives.push(node);
-    }
-  }, {
-    key: 'render',
-    value: function render(data) {
-
-      var instance = this;
-      var name = instance.name,
-          component = instance.component,
-          attrs = instance.attrs,
-          directives = instance.directives;
-
-      var node = new Element(name, component);
-      node.keypath = data.keys.join('.');
-      data.parent.addChild(node);
-
-      data = extend({}, data, { parent: node });
-      instance.renderChildren(data, attrs);
-      instance.renderChildren(data, directives);
-      instance.renderChildren(data);
-    }
-  }]);
-  return Element;
-}(Node);
-
-var Else = function (_Node) {
-  inherits(Else, _Node);
-
-  function Else() {
-    classCallCheck(this, Else);
-    return possibleConstructorReturn(this, (Else.__proto__ || Object.getPrototypeOf(Else)).call(this, ELSE$1));
-  }
-
-  createClass(Else, [{
-    key: 'render',
-    value: function render(data, prev) {
-      if (prev) {
-        this.renderChildren(data);
-      }
-    }
-  }]);
-  return Else;
-}(Node);
-
-var ElseIf = function (_Node) {
-  inherits(ElseIf, _Node);
-
-  function ElseIf(expr) {
-    classCallCheck(this, ElseIf);
-
-    var _this = possibleConstructorReturn(this, (ElseIf.__proto__ || Object.getPrototypeOf(ElseIf)).call(this, ELSE_IF$1));
-
-    _this.expr = expr;
-    return _this;
-  }
-
-  createClass(ElseIf, [{
-    key: 'render',
-    value: function render(data, prev) {
-      if (prev) {
-        var _execute = this.execute(data),
-            value = _execute.value;
-
-        if (value) {
-          this.renderChildren(data);
-        } else {
-          return prev;
-        }
-      }
-    }
-  }]);
-  return ElseIf;
-}(Node);
-
-var Text = function (_Node) {
-  inherits(Text, _Node);
-
-  function Text(content) {
-    classCallCheck(this, Text);
-
-    var _this = possibleConstructorReturn(this, (Text.__proto__ || Object.getPrototypeOf(Text)).call(this, TEXT, FALSE));
-
-    _this.content = content;
-    return _this;
-  }
-
-  createClass(Text, [{
-    key: 'render',
-    value: function render(data) {
-      var node = new Text(this.content);
-      node.keypath = data.keys.join('.');
-      data.parent.addChild(node);
-    }
-  }]);
-  return Text;
-}(Node);
-
-var Expression = function (_Node) {
-  inherits(Expression, _Node);
-
-  function Expression(expr, safe) {
-    classCallCheck(this, Expression);
-
-    var _this = possibleConstructorReturn(this, (Expression.__proto__ || Object.getPrototypeOf(Expression)).call(this, EXPRESSION, FALSE));
-
-    _this.expr = expr;
-    _this.safe = safe;
-    return _this;
-  }
-
-  createClass(Expression, [{
-    key: 'render',
-    value: function render(data) {
-      var _execute = this.execute(data),
-          value = _execute.value;
-
-      if (value == NULL) {
-        value = '';
-      } else if (func(value) && value.$computed) {
-        value = value();
-      }
-
-      if (!this.safe && string(value) && tag.test(value)) {
-        each$1(data.parse(value), function (node) {
-          node.render(data);
-        });
-      } else {
-        var node = new Text(value);
-        node.render(data);
-      }
-    }
-  }]);
-  return Expression;
-}(Node);
-
-var If = function (_Node) {
-  inherits(If, _Node);
-
-  function If(expr) {
-    classCallCheck(this, If);
-
-    var _this = possibleConstructorReturn(this, (If.__proto__ || Object.getPrototypeOf(If)).call(this, IF$1));
-
-    _this.expr = expr;
-    return _this;
-  }
-
-  createClass(If, [{
-    key: 'render',
-    value: function render(data) {
-      var _execute = this.execute(data),
-          value = _execute.value;
-
-      if (value) {
-        this.renderChildren(data);
-      } else {
-        return TRUE;
-      }
-    }
-  }]);
-  return If;
-}(Node);
-
-var Import = function (_Node) {
-  inherits(Import, _Node);
-
-  function Import(name) {
-    classCallCheck(this, Import);
-
-    var _this = possibleConstructorReturn(this, (Import.__proto__ || Object.getPrototypeOf(Import)).call(this, IMPORT$1, FALSE));
-
-    _this.name = name;
-    return _this;
-  }
-
-  return Import;
-}(Node);
-
-var Partial = function (_Node) {
-  inherits(Partial, _Node);
-
-  function Partial(name) {
-    classCallCheck(this, Partial);
-
-    var _this = possibleConstructorReturn(this, (Partial.__proto__ || Object.getPrototypeOf(Partial)).call(this, PARTIAL$1));
-
-    _this.name = name;
-    return _this;
-  }
-
-  return Partial;
-}(Node);
-
-var Spread = function (_Node) {
-  inherits(Spread, _Node);
-
-  function Spread(expr) {
-    classCallCheck(this, Spread);
-
-    var _this = possibleConstructorReturn(this, (Spread.__proto__ || Object.getPrototypeOf(Spread)).call(this, SPREAD$1, FALSE));
-
-    _this.expr = expr;
-    return _this;
-  }
-
-  createClass(Spread, [{
-    key: 'render',
-    value: function render(data) {
-      var _execute = this.execute(data),
-          value = _execute.value;
-
-      if (object(value)) {
-        each$$1(value, function (value, key) {
-          var node = new Attribute(key);
-          node.addChild(new Text(value));
-          node.render(data);
-        });
-      }
-    }
-  }]);
-  return Spread;
-}(Node);
 
 function isNumber(charCode) {
   return charCode >= 48 && charCode <= 57;
@@ -1259,8 +678,8 @@ var LITERAL = 6;
 var MEMBER = 7;
 var UNARY = 8;
 
-var Node$2 = function Node$2(type) {
-  classCallCheck(this, Node$2);
+var Node = function Node(type) {
+  classCallCheck(this, Node);
 
   this.type = type;
 };
@@ -1317,7 +736,7 @@ var Unary = function (_Node) {
     }
   }]);
   return Unary;
-}(Node$2);
+}(Node);
 
 Unary.PLUS = '+';
 Unary.MINUS = '-';
@@ -1413,7 +832,7 @@ var Binary = function (_Node) {
     }
   }]);
   return Binary;
-}(Node$2);
+}(Node);
 
 Binary.OR = '||';
 Binary.AND = '&&';
@@ -1511,7 +930,17 @@ var Array$1 = function (_Node) {
     }
   }]);
   return Array;
-}(Node$2);
+}(Node);
+
+var execute$1 = function (fn, context, args) {
+  if (func(fn)) {
+    if (array(args)) {
+      return fn.apply(context, args);
+    } else {
+      return fn.call(context, args);
+    }
+  }
+};
 
 var Call = function (_Node) {
   inherits(Call, _Node);
@@ -1560,7 +989,7 @@ var Call = function (_Node) {
     }
   }]);
   return Call;
-}(Node$2);
+}(Node);
 
 var Conditional = function (_Node) {
   inherits(Conditional, _Node);
@@ -1609,7 +1038,7 @@ var Conditional = function (_Node) {
     }
   }]);
   return Conditional;
-}(Node$2);
+}(Node);
 
 var Identifier = function (_Node) {
   inherits(Identifier, _Node);
@@ -1645,7 +1074,7 @@ var Identifier = function (_Node) {
     }
   }]);
   return Identifier;
-}(Node$2);
+}(Node);
 
 var Literal = function (_Node) {
   inherits(Literal, _Node);
@@ -1679,7 +1108,7 @@ var Literal = function (_Node) {
     }
   }]);
   return Literal;
-}(Node$2);
+}(Node);
 
 var Member = function (_Node) {
   inherits(Member, _Node);
@@ -1736,7 +1165,7 @@ var Member = function (_Node) {
           deps = _firstNode$execute.deps;
 
       var key = keys(deps)[0],
-          keypaths = [key];
+          keys$$1 = [key];
       delete deps[key];
 
       if (object(value)) {
@@ -1746,16 +1175,12 @@ var Member = function (_Node) {
             extend(deps, result.deps);
             node = new Literal(result.value);
           }
-          keypaths.push(node.value);
+          keys$$1.push(node.value);
           value = value[node.value];
         });
       }
 
-      keypaths = keypaths.filter(function (keypath) {
-        return keypath !== '.';
-      });
-
-      deps[keypaths.join('.')] = value;
+      deps[stringify$1(keys$$1)] = value;
 
       return {
         value: value,
@@ -1764,7 +1189,7 @@ var Member = function (_Node) {
     }
   }]);
   return Member;
-}(Node$2);
+}(Node);
 
 var COMMA = 44;
 var PERIOD = 46;
@@ -1776,7 +1201,7 @@ var OBRACK = 91;
 var CBRACK = 93;
 var QUMARK = 63;
 var COLON = 58;
-function parse$1(content) {
+function parse$2(content) {
   var length = content.length;
 
   var index = 0,
@@ -2036,8 +1461,605 @@ function parse$1(content) {
 }
 
 var expression = Object.freeze({
-	parse: parse$1
+	parse: parse$2
 });
+
+var SEPARATOR_KEY = '.';
+var SEPARATOR_PATH = '/';
+var LEVEL_CURRENT = '.';
+var LEVEL_PARENT = '..';
+
+function normalize(str) {
+  if (str.indexOf('[') > 0 && str.indexOf(']') > 0) {
+    return parse$2(str).stringify();
+  }
+  return str;
+}
+
+function parse$1(str) {
+  return normalize(str).split(SEPARATOR_KEY);
+}
+
+function stringify$1(keypaths) {
+  return keypaths.filter(function (term) {
+    return term && term !== '.';
+  }).join(SEPARATOR_KEY);
+}
+
+function resolve(base, path) {
+  var list = parse$1(base);
+  each$1(path.split(SEPARATOR_PATH), function (term) {
+    if (term === LEVEL_PARENT) {
+      list.pop();
+    } else {
+      list.push(term);
+    }
+  });
+  return stringify$1(list);
+}
+
+var Context = function () {
+  function Context(data, parent) {
+    classCallCheck(this, Context);
+
+    this.data = copy(data);
+    this.parent = parent;
+    this.cache = {};
+    this.cache[THIS] = data;
+  }
+
+  createClass(Context, [{
+    key: 'push',
+    value: function push(data) {
+      return new Context(data, this);
+    }
+  }, {
+    key: 'set',
+    value: function set(key, value) {
+      var data = this.data,
+          cache = this.cache;
+
+      if (has$1(cache, key)) {
+        delete cache[key];
+      }
+      set$1(data, key, value);
+    }
+  }, {
+    key: 'get',
+    value: function get(key) {
+
+      var instance = this;
+      var _instance = instance,
+          cache = _instance.cache;
+
+
+      if (!has$1(cache, key)) {
+        var result = void 0;
+        var keys$$1 = [key];
+        while (instance) {
+          result = get$1(instance.data, key);
+          if (result) {
+            break;
+          } else {
+            instance = instance.parent;
+            keys$$1.unshift(LEVEL_PARENT);
+          }
+        }
+        key = keys$$1.join(SEPARATOR_PATH);
+        if (result) {
+          cache[key] = result.value;
+        }
+      }
+
+      var value = cache[key];
+      if (key === THIS) {
+        key = LEVEL_CURRENT;
+      }
+
+      return {
+        value: value,
+        keypath: key
+      };
+    }
+  }]);
+  return Context;
+}();
+
+var Scanner = function () {
+  function Scanner(str) {
+    classCallCheck(this, Scanner);
+
+    this.reset(str);
+  }
+
+  createClass(Scanner, [{
+    key: 'reset',
+    value: function reset(str) {
+      this.pos = 0;
+      this.tail = str;
+    }
+  }, {
+    key: 'hasNext',
+    value: function hasNext() {
+      return this.tail;
+    }
+  }, {
+    key: 'nextAfter',
+    value: function nextAfter(pattern) {
+      var tail = this.tail;
+
+      var matches = tail.match(pattern);
+      if (!matches || matches.index) {
+        return '';
+      }
+      var result = matches[0];
+      this.forward(result.length);
+      return result;
+    }
+  }, {
+    key: 'nextBefore',
+    value: function nextBefore(pattern) {
+      var pos = this.pos,
+          tail = this.tail;
+
+      var matches = tail.match(pattern);
+      if (matches) {
+        var index = matches.index;
+
+        if (!index) {
+          return '';
+        }
+        var result = tail.substr(0, index);
+        this.forward(index);
+        return result;
+      } else {
+        this.forward(tail.length);
+        return tail;
+      }
+    }
+  }, {
+    key: 'forward',
+    value: function forward(offset) {
+      this.pos += offset;
+      this.tail = this.tail.slice(offset);
+    }
+  }, {
+    key: 'charAt',
+    value: function charAt(index) {
+      return this.tail[index];
+    }
+  }]);
+  return Scanner;
+}();
+
+var Node$2 = function () {
+  function Node(type, hasChildren) {
+    classCallCheck(this, Node);
+
+    this.type = type;
+    if (hasChildren !== FALSE) {
+      this.children = [];
+    }
+  }
+
+  createClass(Node, [{
+    key: 'addChild',
+    value: function addChild(node) {
+      var children = this.children;
+
+      if (node.type === TEXT) {
+        var lastChild = last(children);
+        if (lastChild && lastChild.type === TEXT) {
+          lastChild.content += node.content;
+          return;
+        }
+      }
+      children.push(node);
+    }
+  }, {
+    key: 'getValue',
+    value: function getValue() {
+      var children = this.children;
+
+      return children[0] ? children[0].content : TRUE;
+    }
+  }, {
+    key: 'execute',
+    value: function execute$1(data) {
+      var context = data.context,
+          keys$$1 = data.keys,
+          addDeps = data.addDeps;
+
+      var _expr$execute = this.expr.execute(context),
+          value = _expr$execute.value,
+          deps = _expr$execute.deps;
+
+      var newDeps = {};
+      each$$1(deps, function (value, key) {
+        newDeps[resolve(stringify$1(keys$$1), key)] = value;
+      });
+      addDeps(newDeps);
+      return {
+        value: value,
+        deps: newDeps
+      };
+    }
+  }, {
+    key: 'render',
+    value: function render() {}
+  }, {
+    key: 'renderChildren',
+    value: function renderChildren(data, children) {
+      reduce(children || this.children, function (prev, current) {
+        return current.render(data, prev);
+      });
+    }
+  }]);
+  return Node;
+}();
+
+var Attribute = function (_Node) {
+  inherits(Attribute, _Node);
+
+  function Attribute(name) {
+    classCallCheck(this, Attribute);
+
+    var _this = possibleConstructorReturn(this, (Attribute.__proto__ || Object.getPrototypeOf(Attribute)).call(this, ATTRIBUTE));
+
+    _this.name = name;
+    return _this;
+  }
+
+  createClass(Attribute, [{
+    key: 'render',
+    value: function render(data) {
+      var name = this.name;
+      var keys$$1 = data.keys,
+          parent = data.parent;
+
+
+      if (name.type === EXPRESSION) {
+        var _name$execute = name.execute(data),
+            value = _name$execute.value;
+
+        name = value;
+      }
+
+      var node = new Attribute(name);
+      node.keypath = keys$$1.join('.');
+      parent.addAttr(node);
+
+      this.renderChildren(extend({}, data, { parent: node }));
+    }
+  }]);
+  return Attribute;
+}(Node$2);
+
+var Directive = function (_Node) {
+  inherits(Directive, _Node);
+
+  function Directive(name) {
+    classCallCheck(this, Directive);
+
+    var _this = possibleConstructorReturn(this, (Directive.__proto__ || Object.getPrototypeOf(Directive)).call(this, DIRECTIVE));
+
+    _this.name = name;
+    return _this;
+  }
+
+  createClass(Directive, [{
+    key: 'render',
+    value: function render(data) {
+
+      var node = new Directive(this.name);
+      node.keypath = data.keys.join('.');
+      data.parent.addDirective(node);
+
+      this.renderChildren(extend({}, data, { parent: node }));
+    }
+  }]);
+  return Directive;
+}(Node$2);
+
+var Each = function (_Node) {
+  inherits(Each, _Node);
+
+  function Each(expr, index) {
+    classCallCheck(this, Each);
+
+    var _this = possibleConstructorReturn(this, (Each.__proto__ || Object.getPrototypeOf(Each)).call(this, EACH$1));
+
+    _this.expr = expr;
+    _this.index = index;
+    return _this;
+  }
+
+  createClass(Each, [{
+    key: 'render',
+    value: function render(data) {
+
+      var instance = this;
+      var expr = instance.expr,
+          index = instance.index;
+      var context = data.context,
+          keys$$1 = data.keys;
+
+      var _instance$execute = instance.execute(data),
+          value = _instance$execute.value;
+
+      var iterate = void 0;
+      if (array(value)) {
+        iterate = each$1;
+      } else if (object(value)) {
+        iterate = each$$1;
+      }
+
+      if (iterate) {
+        (function () {
+          var listContext = context.push(value);
+          keys$$1.push(expr.stringify());
+          iterate(value, function (item, i) {
+            if (index) {
+              listContext.set(index, i);
+            }
+            keys$$1.push(i);
+            listContext.set(SPECIAL_KEYPATH, keys$$1.join('.'));
+            instance.renderChildren(extend({}, data, { context: listContext.push(item) }));
+            keys$$1.pop();
+          });
+          keys$$1.pop();
+        })();
+      }
+    }
+  }]);
+  return Each;
+}(Node$2);
+
+var Element = function (_Node) {
+  inherits(Element, _Node);
+
+  function Element(name, component) {
+    classCallCheck(this, Element);
+
+    var _this = possibleConstructorReturn(this, (Element.__proto__ || Object.getPrototypeOf(Element)).call(this, ELEMENT));
+
+    _this.name = name;
+    _this.component = component;
+    _this.attrs = [];
+    _this.directives = [];
+    return _this;
+  }
+
+  createClass(Element, [{
+    key: 'addAttr',
+    value: function addAttr(node) {
+      this.attrs.push(node);
+    }
+  }, {
+    key: 'addDirective',
+    value: function addDirective(node) {
+      this.directives.push(node);
+    }
+  }, {
+    key: 'render',
+    value: function render(data) {
+
+      var instance = this;
+      var name = instance.name,
+          component = instance.component,
+          attrs = instance.attrs,
+          directives = instance.directives;
+
+      var node = new Element(name, component);
+      node.keypath = data.keys.join('.');
+      data.parent.addChild(node);
+
+      data = extend({}, data, { parent: node });
+      instance.renderChildren(data, attrs);
+      instance.renderChildren(data, directives);
+      instance.renderChildren(data);
+    }
+  }]);
+  return Element;
+}(Node$2);
+
+var Else = function (_Node) {
+  inherits(Else, _Node);
+
+  function Else() {
+    classCallCheck(this, Else);
+    return possibleConstructorReturn(this, (Else.__proto__ || Object.getPrototypeOf(Else)).call(this, ELSE$1));
+  }
+
+  createClass(Else, [{
+    key: 'render',
+    value: function render(data, prev) {
+      if (prev) {
+        this.renderChildren(data);
+      }
+    }
+  }]);
+  return Else;
+}(Node$2);
+
+var ElseIf = function (_Node) {
+  inherits(ElseIf, _Node);
+
+  function ElseIf(expr) {
+    classCallCheck(this, ElseIf);
+
+    var _this = possibleConstructorReturn(this, (ElseIf.__proto__ || Object.getPrototypeOf(ElseIf)).call(this, ELSE_IF$1));
+
+    _this.expr = expr;
+    return _this;
+  }
+
+  createClass(ElseIf, [{
+    key: 'render',
+    value: function render(data, prev) {
+      if (prev) {
+        var _execute = this.execute(data),
+            value = _execute.value;
+
+        if (value) {
+          this.renderChildren(data);
+        } else {
+          return prev;
+        }
+      }
+    }
+  }]);
+  return ElseIf;
+}(Node$2);
+
+var Text = function (_Node) {
+  inherits(Text, _Node);
+
+  function Text(content) {
+    classCallCheck(this, Text);
+
+    var _this = possibleConstructorReturn(this, (Text.__proto__ || Object.getPrototypeOf(Text)).call(this, TEXT, FALSE));
+
+    _this.content = content;
+    return _this;
+  }
+
+  createClass(Text, [{
+    key: 'render',
+    value: function render(data) {
+      var node = new Text(this.content);
+      node.keypath = data.keys.join('.');
+      data.parent.addChild(node);
+    }
+  }]);
+  return Text;
+}(Node$2);
+
+var Expression = function (_Node) {
+  inherits(Expression, _Node);
+
+  function Expression(expr, safe) {
+    classCallCheck(this, Expression);
+
+    var _this = possibleConstructorReturn(this, (Expression.__proto__ || Object.getPrototypeOf(Expression)).call(this, EXPRESSION, FALSE));
+
+    _this.expr = expr;
+    _this.safe = safe;
+    return _this;
+  }
+
+  createClass(Expression, [{
+    key: 'render',
+    value: function render(data) {
+      var _execute = this.execute(data),
+          value = _execute.value;
+
+      if (value == NULL) {
+        value = '';
+      } else if (func(value) && value.$computed) {
+        value = value();
+      }
+
+      if (!this.safe && string(value) && tag.test(value)) {
+        each$1(data.parse(value), function (node) {
+          node.render(data);
+        });
+      } else {
+        var node = new Text(value);
+        node.render(data);
+      }
+    }
+  }]);
+  return Expression;
+}(Node$2);
+
+var If = function (_Node) {
+  inherits(If, _Node);
+
+  function If(expr) {
+    classCallCheck(this, If);
+
+    var _this = possibleConstructorReturn(this, (If.__proto__ || Object.getPrototypeOf(If)).call(this, IF$1));
+
+    _this.expr = expr;
+    return _this;
+  }
+
+  createClass(If, [{
+    key: 'render',
+    value: function render(data) {
+      var _execute = this.execute(data),
+          value = _execute.value;
+
+      if (value) {
+        this.renderChildren(data);
+      } else {
+        return TRUE;
+      }
+    }
+  }]);
+  return If;
+}(Node$2);
+
+var Import = function (_Node) {
+  inherits(Import, _Node);
+
+  function Import(name) {
+    classCallCheck(this, Import);
+
+    var _this = possibleConstructorReturn(this, (Import.__proto__ || Object.getPrototypeOf(Import)).call(this, IMPORT$1, FALSE));
+
+    _this.name = name;
+    return _this;
+  }
+
+  return Import;
+}(Node$2);
+
+var Partial = function (_Node) {
+  inherits(Partial, _Node);
+
+  function Partial(name) {
+    classCallCheck(this, Partial);
+
+    var _this = possibleConstructorReturn(this, (Partial.__proto__ || Object.getPrototypeOf(Partial)).call(this, PARTIAL$1));
+
+    _this.name = name;
+    return _this;
+  }
+
+  return Partial;
+}(Node$2);
+
+var Spread = function (_Node) {
+  inherits(Spread, _Node);
+
+  function Spread(expr) {
+    classCallCheck(this, Spread);
+
+    var _this = possibleConstructorReturn(this, (Spread.__proto__ || Object.getPrototypeOf(Spread)).call(this, SPREAD$1, FALSE));
+
+    _this.expr = expr;
+    return _this;
+  }
+
+  createClass(Spread, [{
+    key: 'render',
+    value: function render(data) {
+      var _execute = this.execute(data),
+          value = _execute.value;
+
+      if (object(value)) {
+        each$$1(value, function (value, key) {
+          var node = new Attribute(key);
+          node.addChild(new Text(value));
+          node.render(data);
+        });
+      }
+    }
+  }]);
+  return Spread;
+}(Node$2);
 
 var openingDelimiter = '\\{\\{\\s*';
 var closingDelimiter = '\\s*\\}\\}';
@@ -2059,7 +2081,7 @@ var parsers = [{
   },
   create: function create(source) {
     var terms = source.slice(EACH.length).trim().split(':');
-    var expr = parse$1(terms[0]);
+    var expr = parse$2(terms[0]);
     var index = void 0;
     if (terms[1]) {
       index = terms[1].trim();
@@ -2088,7 +2110,7 @@ var parsers = [{
   },
   create: function create(source) {
     var expr = source.slice(IF.length).trim();
-    return expr ? new If(parse$1(expr)) : ERROR_EXPRESSION;
+    return expr ? new If(parse$2(expr)) : ERROR_EXPRESSION;
   }
 }, {
   test: function test(source) {
@@ -2098,7 +2120,7 @@ var parsers = [{
     var expr = source.slice(ELSE_IF.length);
     if (expr) {
       popStack();
-      return new ElseIf(parse$1(expr));
+      return new ElseIf(parse$2(expr));
     }
     return ERROR_EXPRESSION;
   }
@@ -2117,7 +2139,7 @@ var parsers = [{
   create: function create(source) {
     var expr = source.slice(SPREAD.length);
     if (expr) {
-      return new Spread(parse$1(expr));
+      return new Spread(parse$2(expr));
     }
     return ERROR_EXPRESSION;
   }
@@ -2131,7 +2153,7 @@ var parsers = [{
       safe = FALSE;
       source = source.slice(1);
     }
-    return new Expression(parse$1(source), safe);
+    return new Expression(parse$2(source), safe);
   }
 }];
 
@@ -2406,6 +2428,32 @@ function _parse(template, getPartial, setPartial) {
 
   return rootNode;
 }
+
+function camelCase(str) {
+  return str.replace(/-([a-z])/gi, function ($0, $1) {
+    return $1.toUpperCase();
+  });
+}
+
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function replace(str, pattern, replacement) {
+  pattern = pattern.replace(/[$.]/g, '\\$&');
+  return str.replace(new RegExp('(?:^|\\b)' + pattern + '(?:$|\\b)', 'g'), replacement);
+}
+
+function falsy$1(str) {
+  return !string(str) || str === '';
+}
+
+var string$1 = Object.freeze({
+	camelCase: camelCase,
+	capitalize: capitalize,
+	replace: replace,
+	falsy: falsy$1
+});
 
 var nextTick$1 = void 0;
 
@@ -3601,13 +3649,6 @@ var toNumber = function (str, defaultValue) {
   return arguments.length === 2 ? defaultValue : 0;
 };
 
-var toKeypath = function (str) {
-  if (str.indexOf('[') > 0 && str.indexOf(']') > 0) {
-    return parse$1(str).stringify();
-  }
-  return str;
-};
-
 var refDt = {
 
   attach: function attach(_ref) {
@@ -3919,7 +3960,7 @@ var Yox = function () {
         data = options.data,
         props = options.props,
         parent = options.parent,
-        replace = options.replace,
+        replace$$1 = options.replace,
         computed = options.computed,
         template = options.template,
         watchers = options.watchers,
@@ -4059,7 +4100,7 @@ var Yox = function () {
     }
     if (el) {
       if (isElement(el)) {
-        if (!replace) {
+        if (!replace$$1) {
           el = create$2(el, 'div');
         }
       } else {
@@ -4097,7 +4138,7 @@ var Yox = function () {
           $computedGetters = this.$computedGetters;
 
 
-      keypath = toKeypath(keypath);
+      keypath = normalize(keypath);
 
       if ($computedStack) {
         var deps = last($computedStack);
@@ -4143,7 +4184,7 @@ var Yox = function () {
 
 
       each$$1(model, function (newValue, key) {
-        var keypath = toKeypath(key);
+        var keypath = normalize(key);
         if (keypath !== key) {
           delete model[key];
           model[keypath] = newValue;
@@ -4333,7 +4374,7 @@ var Yox = function () {
       var instance = this;
       if (value.indexOf('(') > 0) {
         var _ret2 = function () {
-          var ast = parse$1(value);
+          var ast = parse$2(value);
           if (ast.type === CALL) {
             return {
               v: function v(e) {
@@ -4552,7 +4593,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.17.12';
+Yox.version = '0.17.13';
 
 Yox.switcher = switcher;
 
@@ -4560,7 +4601,7 @@ Yox.syntax = syntax;
 
 Yox.cache = cache;
 
-Yox.utils = { is: is$1, array: array$1, object: object$1, logger: logger, native: native, expression: expression, Store: Store, Emitter: Emitter, Event: Event };
+Yox.utils = { is: is$1, array: array$1, object: object$1, string: string$1, logger: logger, native: native, expression: expression, Store: Store, Emitter: Emitter, Event: Event };
 
 each$1(['component', 'directive', 'filter', 'partial'], function (type) {
   Yox[type] = function () {

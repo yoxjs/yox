@@ -2,6 +2,7 @@
 import * as env from '../../config/env'
 import * as array from '../../util/array'
 import * as object from '../../util/object'
+import * as keypath from '../../util/keypath'
 
 export default class Context {
 
@@ -20,46 +21,46 @@ export default class Context {
     return new Context(data, this)
   }
 
-  set(keypath, value) {
+  set(key, value) {
     let { data, cache } = this
-    if (object.has(cache, keypath)) {
-      delete cache[keypath]
+    if (object.has(cache, key)) {
+      delete cache[key]
     }
-    object.set(data, keypath, value)
+    object.set(data, key, value)
   }
 
-  get(keypath) {
+  get(key) {
 
     let instance = this
     let { cache } = instance
 
-    if (!object.has(cache, keypath)) {
+    if (!object.has(cache, key)) {
       let result
-      let keypaths = [ keypath ]
+      let keys = [ key ]
       while (instance) {
-        result = object.get(instance.data, keypath)
+        result = object.get(instance.data, key)
         if (result) {
           break
         }
         else {
           instance = instance.parent
-          keypaths.unshift('..')
+          keys.unshift(keypath.LEVEL_PARENT)
         }
       }
-      keypath = keypaths.join('/')
+      key = keys.join(keypath.SEPARATOR_PATH)
       if (result) {
-        cache[keypath] = result.value
+        cache[key] = result.value
       }
     }
 
-    let value = cache[keypath]
-    if (keypath === env.THIS) {
-      keypath = '.'
+    let value = cache[key]
+    if (key === env.THIS) {
+      key = keypath.LEVEL_CURRENT
     }
 
     return {
       value,
-      keypath,
+      keypath: key,
     }
 
   }

@@ -1,9 +1,8 @@
 
 import * as env from '../config/env'
 
+import * as array from '../util/array'
 import * as logger from '../util/logger'
-
-import getLocationByIndex from '../function/getLocationByIndex'
 
 const breaklinePrefixPattern = /^[ \t]*\n/
 const breaklineSuffixPattern = /\n[ \t]*$/
@@ -24,6 +23,33 @@ export function trimBreakline(str) {
 export function matchByQuote(str, nonQuote) {
   let match = str.match(nonQuote === '"' ? nonDoubleQuotePattern : nonSingleQuotePattern)
   return match ? match[0] : ''
+}
+
+export function getLocationByIndex(str, index) {
+
+  let line = 0, col = 0, pos = 0
+
+  array.each(
+    str.split('\n'),
+    function (lineStr) {
+      line++
+      col = 0
+
+      let { length } = lineStr
+      if (index >= pos && index <= (pos + length)) {
+        col = index - pos
+        return env.FALSE
+      }
+
+      pos += length
+    }
+  )
+
+  return {
+    line,
+    col,
+  }
+
 }
 
 export function parseError(str, errorMsg, errorIndex) {

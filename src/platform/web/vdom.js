@@ -13,6 +13,7 @@ import * as syntax from '../../config/syntax'
 import * as is from '../../util/is'
 import * as array from '../../util/array'
 import * as object from '../../util/object'
+import * as string from '../../util/string'
 import * as viewNodeType from '../../view/nodeType'
 
 export let patch = snabbdom.init([ attributes, style ])
@@ -39,7 +40,7 @@ function parseStyle(str) {
           name = name.trim()
           value = value.trim()
           if (name) {
-            result[camelCase(name)] = value
+            result[string.camelCase(name)] = value
           }
         }
       }

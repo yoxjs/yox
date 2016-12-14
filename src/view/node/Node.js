@@ -4,6 +4,7 @@ import * as nodeType from '../nodeType'
 
 import * as array from '../../util/array'
 import * as object from '../../util/object'
+import * as keypath from '../../util/keypath'
 
 import execute from '../../function/execute'
 
@@ -42,20 +43,13 @@ export default class Node {
     let newDeps = { }
     object.each(
       deps,
-      function (value, keypath) {
-        let base = object.copy(keys)
-        array.each(
-          keypath.split('/'),
-          function (term) {
-            if (term === '..') {
-              base.pop()
-            }
-            else if (term && term !== '.') {
-              base.push(term)
-            }
-          }
-        )
-        newDeps[base.join('.')] = value
+      function (value, key) {
+        newDeps[
+          keypath.resolve(
+            keypath.stringify(keys),
+            key
+          )
+        ] = value
       }
     )
     addDeps(newDeps)

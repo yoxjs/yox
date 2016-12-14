@@ -12,10 +12,12 @@ import * as view from './view/index'
 import * as is from './util/is'
 import * as array from './util/array'
 import * as object from './util/object'
+import * as string from './util/string'
 import * as logger from './util/logger'
 import * as nextTask from './util/nextTask'
 import * as component from './util/component'
 import * as validator from './util/validator'
+import * as keypathUtil from './util/keypath'
 
 import * as expression from './expression/index'
 import * as expressionNodeType from './expression/nodeType'
@@ -26,7 +28,6 @@ import * as native from './platform/web/native'
 import magic from './function/magic'
 import execute from './function/execute'
 import toNumber from './function/toNumber'
-import toKeypath from './function/toKeypath'
 
 import Store from './util/Store'
 import Event from './util/Event'
@@ -264,7 +265,7 @@ export default class Yox {
       $computedGetters,
     } = this
 
-    keypath = toKeypath(keypath)
+    keypath = keypathUtil.normalize(keypath)
 
     if ($computedStack) {
       let deps = array.last($computedStack)
@@ -314,7 +315,7 @@ export default class Yox {
       model,
       function (newValue, key) {
         // 格式化 Keypath
-        let keypath = toKeypath(key)
+        let keypath = keypathUtil.normalize(key)
         if (keypath !== key) {
           delete model[key]
           model[keypath] = newValue
@@ -870,7 +871,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.17.12'
+Yox.version = '0.17.13'
 
 /**
  * 开关配置
@@ -898,7 +899,7 @@ Yox.cache = cache
  *
  * @type {Object}
  */
-Yox.utils = { is, array, object, logger, native, expression, Store, Emitter, Event }
+Yox.utils = { is, array, object, string, logger, native, expression, Store, Emitter, Event }
 
 /**
  * 全局注册

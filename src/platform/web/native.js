@@ -7,7 +7,6 @@ import * as object from '../../util/object'
 
 import Event from '../../util/Event'
 import Emitter from '../../util/Emitter'
-import camelCase from '../../function/camelCase'
 
 import * as native from './nativeModern'
 

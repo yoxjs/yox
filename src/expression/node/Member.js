@@ -6,6 +6,7 @@ import * as nodeType from '../nodeType'
 import * as is from '../../util/is'
 import * as array from '../../util/array'
 import * as object from '../../util/object'
+import * as keypath from '../../util/keypath'
 
 /**
  * Member 节点
@@ -62,7 +63,7 @@ export default class Member extends Node {
 
     let { value, deps } = firstNode.execute(context)
     // deps 包含第一个 term 对应的数据，其实我们想要的是到最后一个 term 的数据
-    let key = object.keys(deps)[0], keypaths = [ key ]
+    let key = object.keys(deps)[0], keys = [ key ]
     delete deps[key]
 
     if (is.object(value)) {
@@ -74,19 +75,13 @@ export default class Member extends Node {
             object.extend(deps, result.deps)
             node = new Literal(result.value)
           }
-          keypaths.push(node.value)
+          keys.push(node.value)
           value = value[node.value]
         }
       )
     }
 
-    keypaths = keypaths.filter(
-      function (keypath) {
-        return keypath !== '.'
-      }
-    )
-
-    deps[ keypaths.join('.') ] = value
+    deps[ keypath.stringify(keys) ] = value
 
     return {
       value,
