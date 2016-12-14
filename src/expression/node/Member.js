@@ -6,7 +6,7 @@ import * as nodeType from '../nodeType'
 import * as is from '../../util/is'
 import * as array from '../../util/array'
 import * as object from '../../util/object'
-import * as keypath from '../../util/keypath'
+import * as keypathUtil from '../../util/keypath'
 
 /**
  * Member 节点
@@ -40,12 +40,15 @@ export default class Member extends Node {
     return result
   }
 
-  stringify() {
-    let list = this.flatten()
-    return list.map(
+  stringify(list) {
+    return this.flatten()
+    .map(
       function (node, index) {
         if (node.type === nodeType.LITERAL) {
-          return `.${node.value}`
+          let { value } = node
+          return is.numeric(value)
+            ? `[${value}]`
+            : `.${value}`
         }
         else {
           node = node.stringify()
@@ -54,34 +57,37 @@ export default class Member extends Node {
             : node
         }
       }
-    ).join('')
+    )
+    .join('')
   }
 
   execute(context) {
-    let list = this.flatten()
-    let firstNode = list.shift()
 
-    let { value, deps } = firstNode.execute(context)
-    // deps 包含第一个 term 对应的数据，其实我们想要的是到最后一个 term 的数据
-    let key = object.keys(deps)[0], keys = [ key ]
-    delete deps[key]
+    let deps = { }, keys = [ ]
 
-    if (is.object(value)) {
-      array.each(
-        list,
-        function (node) {
-          if (node.type !== nodeType.LITERAL) {
-            let result= node.execute(context)
+    array.each(
+      this.flatten(),
+      function (node, index) {
+        if (node.type !== nodeType.LITERAL) {
+          if (index > 0) {
+            let result = node.execute(context)
             object.extend(deps, result.deps)
-            node = new Literal(result.value)
+            keys.push(result.value)
           }
-          keys.push(node.value)
-          value = value[node.value]
+          else if (node.type === nodeType.IDENTIFIER) {
+            keys.push(node.name)
+          }
         }
-      )
-    }
+        else {
+          keys.push(node.value)
+        }
+      }
+    )
 
-    deps[ keypath.stringify(keys) ] = value
+    let key = keypathUtil.stringify(keys)
+    let { value, keypath } = context.get(key)
+
+    deps[ keypath ] = value
 
     return {
       value,

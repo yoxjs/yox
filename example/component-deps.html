@@ -66,7 +66,7 @@
                 variable: 'age',
                 user: {
                     name: 'Jake',
-                    age: 0,
+                    age: 10,
                 },
                 list: [
                     {
@@ -87,6 +87,7 @@
                     {{user['name']}}
                     <br>
                     {{user[variable]}}
+                    <br>
                     {{ user.age > 10 ? title : variable }}
                     <Custom ref="child" title="{{title}}" user="{{user}}" />
                     <ul>

@@ -14,14 +14,14 @@ export function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1)
 }
 
-export function replace(str, pattern, replacement) {
-  pattern = pattern.replace(/[$.]/g, '\\$&')
-  return str.replace(
-    new RegExp(`(?:^|\\b)${pattern}(?:$|\\b)`, 'g'),
-    replacement
-  )
-}
-
-export function falsy(str) {
-  return !is.string(str) || str === ''
-}
+// export function replace(str, pattern, replacement) {
+//   pattern = pattern.replace(/[$.]/g, '\\$&')
+//   return str.replace(
+//     new RegExp(`(?:^|\\b)${pattern}(?:$|\\b)`, 'g'),
+//     replacement
+//   )
+// }
+//
+// export function falsy(str) {
+//   return !is.string(str) || str === ''
+// }

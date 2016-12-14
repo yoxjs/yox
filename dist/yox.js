@@ -1143,11 +1143,13 @@ var Member = function (_Node) {
     }
   }, {
     key: 'stringify',
-    value: function stringify() {
-      var list = this.flatten();
-      return list.map(function (node, index) {
+    value: function stringify(list) {
+      return this.flatten().map(function (node, index) {
         if (node.type === LITERAL) {
-          return '.' + node.value;
+          var _node = node,
+              value = _node.value;
+
+          return numeric(value) ? '[' + value + ']' : '.' + value;
         } else {
           node = node.stringify();
           return index > 0 ? '[' + node + ']' : node;
@@ -1157,30 +1159,31 @@ var Member = function (_Node) {
   }, {
     key: 'execute',
     value: function execute(context) {
-      var list = this.flatten();
-      var firstNode = list.shift();
 
-      var _firstNode$execute = firstNode.execute(context),
-          value = _firstNode$execute.value,
-          deps = _firstNode$execute.deps;
+      var deps = {},
+          keys$$1 = [];
 
-      var key = keys(deps)[0],
-          keys$$1 = [key];
-      delete deps[key];
-
-      if (object(value)) {
-        each$1(list, function (node) {
-          if (node.type !== LITERAL) {
+      each$1(this.flatten(), function (node, index) {
+        if (node.type !== LITERAL) {
+          if (index > 0) {
             var result = node.execute(context);
             extend(deps, result.deps);
-            node = new Literal(result.value);
+            keys$$1.push(result.value);
+          } else if (node.type === IDENTIFIER) {
+            keys$$1.push(node.name);
           }
+        } else {
           keys$$1.push(node.value);
-          value = value[node.value];
-        });
-      }
+        }
+      });
 
-      deps[stringify$1(keys$$1)] = value;
+      var key = stringify$1(keys$$1);
+
+      var _context$get = context.get(key),
+          value = _context$get.value,
+          keypath = _context$get.keypath;
+
+      deps[keypath] = value;
 
       return {
         value: value,
@@ -2439,20 +2442,9 @@ function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-function replace(str, pattern, replacement) {
-  pattern = pattern.replace(/[$.]/g, '\\$&');
-  return str.replace(new RegExp('(?:^|\\b)' + pattern + '(?:$|\\b)', 'g'), replacement);
-}
-
-function falsy$1(str) {
-  return !string(str) || str === '';
-}
-
 var string$1 = Object.freeze({
 	camelCase: camelCase,
-	capitalize: capitalize,
-	replace: replace,
-	falsy: falsy$1
+	capitalize: capitalize
 });
 
 var nextTick$1 = void 0;
@@ -2478,7 +2470,6 @@ if (typeof MutationObserver === 'function') {
 
 var nextTick$2 = nextTick$1;
 
-var currentTasks = void 0;
 var nextTasks = [];
 
 function add(task) {
@@ -2489,12 +2480,11 @@ function add(task) {
 }
 
 function run() {
-  currentTasks = nextTasks;
+  var tasks = nextTasks;
   nextTasks = [];
-  each$1(currentTasks, function (task) {
+  each$1(tasks, function (task) {
     task();
   });
-  currentTasks = NULL;
 }
 
 function testKeypath(instance, keypath, name) {
@@ -3898,7 +3888,7 @@ function getComponentInfo(node, instance, callback) {
   instance.component(component, function (options) {
     var props = {};
     each$1(attrs, function (node) {
-      props[node.name] = node.getValue();
+      props[camelCase(node.name)] = node.getValue();
     });
     if (has$1(options, 'propTypes')) {
       validate(props, options.propTypes);
@@ -3960,7 +3950,7 @@ var Yox = function () {
         data = options.data,
         props = options.props,
         parent = options.parent,
-        replace$$1 = options.replace,
+        replace = options.replace,
         computed = options.computed,
         template = options.template,
         watchers = options.watchers,
@@ -4100,7 +4090,7 @@ var Yox = function () {
     }
     if (el) {
       if (isElement(el)) {
-        if (!replace$$1) {
+        if (!replace) {
           el = create$2(el, 'div');
         }
       } else {
@@ -4593,7 +4583,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.17.13';
+Yox.version = '0.17.14';
 
 Yox.switcher = switcher;
 

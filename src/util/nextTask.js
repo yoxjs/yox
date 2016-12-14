@@ -1,10 +1,9 @@
 
-import * as env from '../config/env'
 import nextTick from '../function/nextTick'
 
 import * as array from './array'
 
-let currentTasks, nextTasks = [ ]
+let nextTasks = [ ]
 
 /**
  * 添加异步任务
@@ -22,13 +21,12 @@ export function add(task) {
  * 立即执行已添加的任务
  */
 export function run() {
-  currentTasks = nextTasks
+  let tasks = nextTasks
   nextTasks = [ ]
   array.each(
-    currentTasks,
+    tasks,
     function (task) {
       task()
     }
   )
-  currentTasks = env.NULL
 }

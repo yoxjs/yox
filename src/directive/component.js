@@ -3,6 +3,7 @@ import * as env from '../config/env'
 import * as is from '../util/is'
 import * as array from '../util/array'
 import * as object from '../util/object'
+import * as string from '../util/string'
 import * as validator from '../util/validator'
 
 function getComponentInfo(node, instance, callback) {
@@ -14,7 +15,7 @@ function getComponentInfo(node, instance, callback) {
       array.each(
         attrs,
         function (node) {
-          props[node.name] = node.getValue()
+          props[string.camelCase(node.name)] = node.getValue()
         }
       )
       if (object.has(options, 'propTypes')) {
