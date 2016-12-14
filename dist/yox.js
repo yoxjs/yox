@@ -642,11 +642,10 @@ var Context = function () {
   function Context(data, parent) {
     classCallCheck(this, Context);
 
-    var instance = this;
-    instance.data = copy(data);
-    instance.parent = parent;
-    var cache = instance.cache = {};
-    cache[THIS] = data;
+    this.data = copy(data);
+    this.parent = parent;
+    this.cache = {};
+    this.cache[THIS] = data;
   }
 
   createClass(Context, [{
@@ -888,18 +887,7 @@ var Attribute = function (_Node) {
       node.keypath = keys$$1.join('.');
       parent.addAttr(node);
 
-      var deps = {};
-      var nextData = {
-        parent: node,
-        addDeps: function addDeps(childrenDeps) {
-          extend(deps, childrenDeps);
-        }
-      };
-
-      this.renderChildren(extend({}, data, nextData));
-
-      node.deps = deps;
-      data.addDeps(deps);
+      this.renderChildren(extend({}, data, { parent: node }));
     }
   }]);
   return Attribute;
@@ -1126,9 +1114,7 @@ var Expression = function (_Node) {
 
       if (value == NULL) {
         value = '';
-      }
-
-      if (func(value) && value.$computed) {
+      } else if (func(value) && value.$computed) {
         value = value();
       }
 
@@ -1678,7 +1664,10 @@ var Literal = function (_Node) {
     value: function stringify() {
       var value = this.value;
 
-      return string(value) ? '\'' + value + '\'' : value;
+      if (string(value)) {
+        return value.indexOf('"') >= 0 ? '\'' + value + '\'' : '"' + value + '"';
+      }
+      return value;
     }
   }, {
     key: 'execute',
@@ -4563,7 +4552,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.17.11';
+Yox.version = '0.17.12';
 
 Yox.switcher = switcher;
 

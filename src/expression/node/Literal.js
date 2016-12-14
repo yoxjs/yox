@@ -18,9 +18,12 @@ export default class Literal extends Node {
 
   stringify() {
     let { value } = this
-    return is.string(value)
-      ? `'${value}'`
-      : value
+    if (is.string(value)) {
+      return value.indexOf('"') >= 0
+        ? `'${value}'`
+        : `"${value}"`
+    }
+    return value
   }
 
   execute() {

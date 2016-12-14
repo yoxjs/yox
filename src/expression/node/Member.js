@@ -3,8 +3,6 @@ import Node from './Node'
 import Literal from './Literal'
 import * as nodeType from '../nodeType'
 
-import * as env from '../../config/env'
-
 import * as is from '../../util/is'
 import * as array from '../../util/array'
 import * as object from '../../util/object'

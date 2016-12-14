@@ -29,8 +29,7 @@ export default class Expression extends Node {
     if (value == env.NULL) {
       value = ''
     }
-
-    if (is.func(value) && value.$computed) {
+    else if (is.func(value) && value.$computed) {
       value = value()
     }
 

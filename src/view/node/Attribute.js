@@ -1,9 +1,7 @@
 
 import Node from './Node'
 
-import * as env from '../../config/env'
 import * as nodeType from '../nodeType'
-import * as array from '../../util/array'
 import * as object from '../../util/object'
 
 /**
@@ -32,20 +30,9 @@ export default class Attribute extends Node {
     node.keypath = keys.join('.')
     parent.addAttr(node)
 
-    let deps = { }
-    let nextData = {
-      parent: node,
-      addDeps: function (childrenDeps) {
-        object.extend(deps, childrenDeps)
-      }
-    }
-
     this.renderChildren(
-      object.extend({ }, data, nextData)
+      object.extend({ }, data, { parent: node })
     )
-
-    node.deps = deps
-    data.addDeps(deps)
 
   }
 

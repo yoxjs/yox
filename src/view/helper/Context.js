@@ -10,11 +10,10 @@ export default class Context {
    * @param {?Context} parent
    */
   constructor(data, parent) {
-    let instance = this
-    instance.data = object.copy(data)
-    instance.parent = parent
-    let cache = instance.cache = { }
-    cache[env.THIS] = data
+    this.data = object.copy(data)
+    this.parent = parent
+    this.cache = { }
+    this.cache[env.THIS] = data
   }
 
   push(data) {
