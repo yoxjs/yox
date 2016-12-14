@@ -34,12 +34,6 @@ import Emitter from './util/Emitter'
 
 export default class Yox {
 
-  /**
-   * 配置项
-   *
-   * @constructor
-   * @param {Object} options
-   */
   constructor(options) {
 
     let instance = this
@@ -64,6 +58,9 @@ export default class Yox {
       extensions,
     } = options
 
+    // 如果不绑着，其他方法调不到钩子
+    instance.$options = options
+
     // 检查 props
     if (props && !is.object(props)) {
       props = env.NULL
@@ -73,7 +70,8 @@ export default class Yox {
       logger.warn('Passing a `data` option should be a function.')
     }
 
-    // 先把外部数据的放进去，这样当 data 是函数时，可以通过 this.get() 获取到外部数据
+    // 先放 props
+    // 当 data 是函数时，可以通过 this.get() 获取到外部数据
     instance.$data = props || { }
 
     // 后放 data
@@ -82,8 +80,89 @@ export default class Yox {
       is.func(data) ? data.call(instance) : data
     )
 
-    // 如果不绑着，其他方法调不到钩子
-    instance.$options = options
+    // 计算属性也是数据
+    if (is.object(computed)) {
+
+      // 把计算属性拆为 getter 和 setter
+      instance.$computedGetters = { }
+      instance.$computedSetters = { }
+
+      // 辅助获取计算属性的依赖
+      instance.$computedStack = [ ]
+      instance.$computedDeps = { }
+
+      object.each(
+        computed,
+        function (item, keypath) {
+          let get, set, deps, cache = env.TRUE
+          if (is.func(item)) {
+            get = item
+          }
+          else if (is.object(item)) {
+            if (is.boolean(item.cache)) {
+              cache = item.cache
+            }
+            if (is.array(item.deps)) {
+              deps = item.deps
+            }
+            if (is.func(item.get)) {
+              get = item.get
+            }
+            if (is.func(item.set)) {
+              set = item.set
+            }
+          }
+
+          if (get) {
+
+            let watcher = function () {
+              getter.$dirty = env.TRUE
+              component.diff(instance)
+            }
+
+            let getter = function () {
+              if (!getter.$dirty) {
+                if (cache && object.has($watchCache, keypath)) {
+                  return $watchCache[keypath]
+                }
+              }
+              else {
+                delete getter.$dirty
+              }
+
+              if (!deps) {
+                instance.$computedStack.push([ ])
+              }
+              let result = execute(get, instance)
+
+              let newDeps = deps || instance.$computedStack.pop()
+              let oldDeps = instance.$computedDeps[keypath]
+              if (newDeps !== oldDeps) {
+                component.updateDeps(
+                  instance,
+                  newDeps,
+                  oldDeps,
+                  watcher
+                )
+              }
+
+              instance.$computedDeps[keypath] = newDeps
+              $watchCache[keypath] = result
+
+              return result
+            }
+            getter.$binded =
+            getter.$computed = env.TRUE
+            instance.$computedGetters[keypath] = getter
+          }
+
+          if (set) {
+            instance.$computedSetters[keypath] = set
+          }
+
+        }
+      )
+    }
 
     // 监听各种事件
     instance.$eventEmitter = new Emitter()
@@ -115,105 +194,6 @@ export default class Yox {
         )
       }
     })
-
-    if (is.object(computed)) {
-
-      // 把计算属性拆为 getter 和 setter
-      let $computedGetters =
-      instance.$computedGetters = { }
-
-      let $computedSetters =
-      instance.$computedSetters = { }
-
-      // 辅助获取计算属性的依赖
-      let $computedStack =
-      instance.$computedStack = [ ]
-      // computed => [ dep1, dep2, ... ]
-      let $computedDeps =
-      instance.$computedDeps = { }
-
-      object.each(
-        computed,
-        function (item, keypath) {
-          let get, set, deps, cache = env.TRUE
-          if (is.func(item)) {
-            get = item
-          }
-          else if (is.object(item)) {
-            if (object.has(item, 'cache')) {
-              cache = item.cache
-            }
-            if (is.array(item.deps)) {
-              deps = item.deps
-            }
-            if (is.func(item.get)) {
-              get = item.get
-            }
-            if (is.func(item.set)) {
-              set = item.set
-            }
-          }
-
-          if (get) {
-
-            let watcher
-            if (cache) {
-              watcher = function () {
-                getter.$dirty = env.TRUE
-                component.diff(instance)
-              }
-            }
-
-            let getter = function () {
-              if (cache) {
-
-                if (!getter.$dirty) {
-                  if (object.has($watchCache, keypath)) {
-                    return $watchCache[keypath]
-                  }
-                }
-                else {
-                  delete getter.$dirty
-                }
-
-                if (!deps) {
-                  $computedStack.push([ ])
-                }
-                let result = get.call(instance)
-
-                let newDeps = deps || $computedStack.pop()
-                let oldDeps = $computedDeps[keypath]
-                if (newDeps !== oldDeps) {
-                  component.updateDeps(
-                    instance,
-                    newDeps,
-                    oldDeps,
-                    watcher
-                  )
-                }
-
-                $computedDeps[keypath] = newDeps
-                $watchCache[keypath] = result
-
-                return result
-              }
-              else {
-                return execute(get, instance)
-              }
-            }
-            getter.$binded =
-            getter.$computed = env.TRUE
-            $computedGetters[keypath] = getter
-          }
-
-          if (set) {
-            $computedSetters[keypath] = set
-          }
-
-        }
-      )
-    }
-
     instance.watch(watchers)
 
     execute(options[lifecycle.AFTER_CREATE], instance)
@@ -891,7 +871,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.17.9'
+Yox.version = '0.17.10'
 
 /**
  * 开关配置
