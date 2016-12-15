@@ -303,11 +303,10 @@ export default class Yox {
       return
     }
 
-    let instance = this, changes = { }
+    let instance = this
 
     let {
       $data,
-      $children,
       $computedSetters,
     } = instance
 
@@ -319,11 +318,6 @@ export default class Yox {
         if (keypath !== key) {
           delete model[key]
           model[keypath] = newValue
-        }
-
-        let oldValue = instance.get(keypath)
-        if (newValue !== oldValue) {
-          changes[keypath] = [ newValue, oldValue, keypath ]
         }
       }
     )
@@ -342,20 +336,7 @@ export default class Yox {
       }
     )
 
-    var update = function (instance, changes) {
-      component.diff(instance, changes)
-      if (instance.$dirty) {
-        component.updateView(instance, immediate)
-        return env.TRUE
-      }
-    }
-
-    if (!update(instance, changes) && $children) {
-      array.each(
-        $children,
-        update
-      )
-    }
+    component.refresh(instance, immediate)
 
   }
 
@@ -471,6 +452,7 @@ export default class Yox {
     let {
       $viewDeps,
       $viewWatcher,
+      $dirty,
       $data,
       $options,
       $filters,
@@ -481,6 +463,9 @@ export default class Yox {
 
     if ($currentNode) {
       execute($options[lifecycle.BEFORE_UPDATE], instance)
+    }
+    if ($dirty) {
+      delete instance.$dirty
     }
 
     let context = { }
@@ -869,7 +854,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.17.16'
+Yox.version = '0.17.17'
 
 /**
  * 开关配置

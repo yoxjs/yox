@@ -148,6 +148,8 @@ export default class Emitter {
     // user.* 能响应 user.name
     // *.* 能响应 user.name
     // * 能响应 user.name
+    //
+    // ** 可以响应所有数据变化，是一个超级通配符的存在
     if (done) {
       object.each(
         listeners,
@@ -155,7 +157,10 @@ export default class Emitter {
           if (key !== type || key.indexOf('*') >= 0) {
             key = [
               '^',
-              key.replace(/\*\*?/g, '(\\w+)').replace(/\./g, '\\.'),
+              key
+                .replace(/\./g, '\\.')
+                .replace(/\*\*/g, '([\.\\w]+?)')
+                .replace(/\*/g, '(\\w+)'),
               key.endsWith('**') ? '' : '$'
             ]
             let match = type.match(

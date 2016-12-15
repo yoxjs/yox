@@ -2534,21 +2534,21 @@ function updateDeps(instance, newDeps, oldDeps, watcher) {
   }
 }
 
-function updateView$1(instance, immediate) {
+function refresh(instance, immediate) {
   if (immediate) {
-    instance.updateView();
-  } else if (!instance.$syncing) {
-    instance.$syncing = TRUE;
+    diff$1(instance);
+  } else if (!instance.$diffing) {
+    instance.$diffing = TRUE;
     add(function () {
-      delete instance.$syncing;
-      instance.updateView();
+      delete instance.$diffing;
+      diff$1(instance);
     });
   }
-  delete instance.$dirty;
 }
 
-function diff$1(instance, changes) {
-  var $watchCache = instance.$watchCache,
+function diff$1(instance) {
+  var $children = instance.$children,
+      $watchCache = instance.$watchCache,
       $watchEmitter = instance.$watchEmitter,
       $computedDeps = instance.$computedDeps;
 
@@ -2572,45 +2572,34 @@ function diff$1(instance, changes) {
     }
   };
 
-  if (object(changes)) {
-    each$$1(changes, function (args, key) {
-      pickDeps(key);
-    });
-  } else {
-    changes = {};
-  }
-
   each$$1($watchCache, function (value, key) {
     pickDeps(key);
   });
+
+  var changes = {};
 
   each$1(keys$$1, function (key) {
     var oldValue = $watchCache[key];
     var newValue = instance.get(key);
     if (newValue !== oldValue) {
       $watchCache[key] = newValue;
-      if (!has$1(changes, key)) {
-        changes[key] = [newValue, oldValue, key];
-      }
-    } else if (has$1(changes, key)) {
-      delete changes[key];
+      $watchEmitter.fire(key, [newValue, oldValue, key], instance);
     }
   });
 
-  each$1(keys$$1, function (key) {
-    if (has$1(changes, key)) {
-      $watchEmitter.fire(key, changes[key], instance);
-    }
-  });
-
-  return changes;
+  if (instance.$dirty) {
+    instance.updateView();
+  } else if ($children) {
+    each$1($children, function (child) {
+      diff$1(child);
+    });
+  }
 }
 
 var component$1 = Object.freeze({
 	testKeypath: testKeypath,
 	updateDeps: updateDeps,
-	updateView: updateView$1,
-	diff: diff$1
+	refresh: refresh
 });
 
 function validate(data, schema) {
@@ -3346,7 +3335,7 @@ var Emitter = function () {
       if (done) {
         each$$1(listeners, function (list, key) {
           if (key !== type || key.indexOf('*') >= 0) {
-            key = ['^', key.replace(/\*\*?/g, '(\\w+)').replace(/\./g, '\\.'), key.endsWith('**') ? '' : '$'];
+            key = ['^', key.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)'), key.endsWith('**') ? '' : '$'];
             var match = type.match(new RegExp(key.join('')));
             if (match) {
               handle(list, merge(data, toArray(match).slice(1)));
@@ -4164,11 +4153,9 @@ var Yox = function () {
         return;
       }
 
-      var instance = this,
-          changes = {};
+      var instance = this;
 
       var $data = instance.$data,
-          $children = instance.$children,
           $computedSetters = instance.$computedSetters;
 
 
@@ -4177,11 +4164,6 @@ var Yox = function () {
         if (keypath !== key) {
           delete model[key];
           model[keypath] = newValue;
-        }
-
-        var oldValue = instance.get(keypath);
-        if (newValue !== oldValue) {
-          changes[keypath] = [newValue, oldValue, keypath];
         }
       });
 
@@ -4196,17 +4178,7 @@ var Yox = function () {
         set$1($data, keypath, value);
       });
 
-      var update = function update(instance, changes) {
-        diff$1(instance, changes);
-        if (instance.$dirty) {
-          updateView$1(instance, immediate);
-          return TRUE;
-        }
-      };
-
-      if (!update(instance, changes) && $children) {
-        each$1($children, update);
-      }
+      refresh(instance, immediate);
     }
   }, {
     key: 'on',
@@ -4284,6 +4256,7 @@ var Yox = function () {
 
       var $viewDeps = instance.$viewDeps,
           $viewWatcher = instance.$viewWatcher,
+          $dirty = instance.$dirty,
           $data = instance.$data,
           $options = instance.$options,
           $filters = instance.$filters,
@@ -4294,6 +4267,9 @@ var Yox = function () {
 
       if ($currentNode) {
         execute$1($options[BEFORE_UPDATE], instance);
+      }
+      if ($dirty) {
+        delete instance.$dirty;
       }
 
       var context = {};
@@ -4581,7 +4557,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.17.16';
+Yox.version = '0.17.17';
 
 Yox.switcher = switcher;
 

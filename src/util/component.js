@@ -77,25 +77,25 @@ export function updateDeps(instance, newDeps, oldDeps, watcher) {
 
 }
 
-export function updateView(instance, immediate) {
+export function refresh(instance, immediate) {
   if (immediate) {
-    instance.updateView()
+    diff(instance)
   }
-  else if (!instance.$syncing) {
-    instance.$syncing = env.TRUE
+  else if (!instance.$diffing) {
+    instance.$diffing = env.TRUE
     nextTask.add(
       function () {
-        delete instance.$syncing
-        instance.updateView()
+        delete instance.$diffing
+        diff(instance)
       }
     )
   }
-  delete instance.$dirty
 }
 
-export function diff(instance, changes) {
+function diff(instance) {
 
   let {
+    $children,
     $watchCache,
     $watchEmitter,
     $computedDeps,
@@ -127,24 +127,14 @@ export function diff(instance, changes) {
     }
   }
 
-  if (is.object(changes)) {
-    object.each(
-      changes,
-      function (args, key) {
-        pickDeps(key)
-      }
-    )
-  }
-  else {
-    changes = { }
-  }
-
   object.each(
     $watchCache,
     function (value, key) {
       pickDeps(key)
     }
   )
+
+  let changes = { }
 
   array.each(
     keys,
@@ -153,25 +143,21 @@ export function diff(instance, changes) {
       let newValue = instance.get(key)
       if (newValue !== oldValue) {
         $watchCache[key] = newValue
-        if (!object.has(changes, key)) {
-          changes[key] = [ newValue, oldValue, key ]
-        }
-      }
-      else if (object.has(changes, key)) {
-        delete changes[key]
+        $watchEmitter.fire(key, [ newValue, oldValue, key ], instance)
       }
     }
   )
 
-  array.each(
-    keys,
-    function (key) {
-      if (object.has(changes, key)) {
-        $watchEmitter.fire(key, changes[key], instance)
+  if (instance.$dirty) {
+    instance.updateView()
+  }
+  else if ($children) {
+    array.each(
+      $children,
+      function (child) {
+        diff(child)
       }
-    }
-  )
-
-  return changes
+    )
+  }
 
 }
