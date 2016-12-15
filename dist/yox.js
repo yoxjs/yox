@@ -4274,7 +4274,7 @@ var Yox = function () {
 
       var context = {};
 
-      extend(context, filter$1.data, $data, $filters, $computedGetters);
+      extend(context, filter$1.data, $data, $filters.data, $computedGetters);
 
       each$$1(context, function (value, key) {
         if (func(value) && !value.$binded) {
@@ -4557,7 +4557,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.17.17';
+Yox.version = '0.17.18';
 
 Yox.switcher = switcher;
 

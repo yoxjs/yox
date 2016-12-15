@@ -477,7 +477,7 @@ export default class Yox {
       // 本地数据，这意味着 data 也能写函数，只是用 filter 来隔离过滤器
       $data,
       // 本地过滤器
-      $filters,
+      $filters.data,
       // 本地计算属性
       $computedGetters
     )
@@ -854,7 +854,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.17.17'
+Yox.version = '0.17.18'
 
 /**
  * 开关配置

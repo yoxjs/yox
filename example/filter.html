@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>过滤器</title>
+</head>
+<body>
+    <div id="app"></div>
+    <script id="template" type="plain/text">
+
+        <div>
+
+            {{formatDate(date)}}
+
+            <br>
+
+            {{formatAmount(amount)}}
+
+            <br>
+
+            {{#if isArray(list) && list.length > 0}}
+                {{#each list}}
+                    {{name}}
+                    <br>
+                {{/each}}
+            {{/if}}
+        </div>
+
+    </script>
+    <script src="../dist/yox.js"></script>
+    <script>
+        var instance = new Yox({
+            el: '#app',
+            template: '#template',
+            data: {
+                name: 'yox',
+                date: Date.now(),
+                amount: 100000,
+                list: [
+                    {
+                        name: 'Jake1'
+                    },
+                    {
+                        name: 'Jake2'
+                    },
+                    {
+                        name: 'Jake3'
+                    },
+                ]
+            },
+            filters: {
+                isArray: function (array) {
+                    return 'length' in array;
+                },
+                formatDate: function (value) {
+                    return '日期';
+                },
+                formatAmount: function (value) {
+                    return '金额';
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>
