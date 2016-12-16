@@ -28,6 +28,14 @@
             </p>
 
             <p>
+              {{users[0].name}}
+            </p>
+
+            <p>
+              {{users.0.name}}
+            </p>
+
+            <p>
                 {{#each users:index}}
                     {{name}}
                     {{#if index < users.length - 1}}

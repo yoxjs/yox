@@ -56,6 +56,10 @@ The key is that yox supports IE8.
   // 如果已全局注册，可无需再注册
   components: {},
 
+  // 组件用到的指令
+  // 如果已全局注册，可无需再注册
+  directives: {},
+
   // 组件用到的子模板
   // 如果已全局注册，可无需再注册
   partials: {},

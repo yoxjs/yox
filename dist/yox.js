@@ -1476,7 +1476,7 @@ function parse$1(str) {
 
 function stringify$1(keypaths) {
   return keypaths.filter(function (term) {
-    return term && term !== LEVEL_CURRENT;
+    return term !== '' && term !== LEVEL_CURRENT;
   }).join(SEPARATOR_KEY);
 }
 
@@ -4557,7 +4557,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.18.0';
+Yox.version = '0.18.1';
 
 Yox.switcher = switcher;
 
