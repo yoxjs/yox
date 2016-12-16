@@ -4,6 +4,83 @@ Just like Vue, but it is more lightweight and easy than Vue.
 
 The key is that yox supports IE8.
 
+```js
+{
+  // 通常只有根组件需要配置 el，支持元素节点和选择器
+  // 如果只想把组件用于纯粹的数据观察者，可不传
+  el: '组件挂载的元素',
+
+  // 组件模板，支持模板字符串和选择器
+  // 如果使用选择器，获取的是目标元素的 innerHTML
+  // 如果只想把组件用于纯粹的数据观察者，可不传
+  template: '组件模板',
+
+  // 外部传入的数据格式定义
+  propTypes: {
+    propA: {
+      // 数据类型
+      type: 'string',
+      // 默认值
+      value: ''
+    },
+    propB: {
+      // 类型支持数组
+      type: ['string', 'number'],
+      value: ''
+    },
+    propC: {
+      // 等同于 [ 'string', 'number' ]
+      type: 'numeric',
+      // 强制必需
+      required: true
+    }
+  },
+
+  // 组件数据
+  // 如果是根组件，
+  // data 通常是 object
+  data: {},
+  // 如果是子组件，data 通常是 function，返回一个 object
+  data: function () { return {}; },
+
+  // 计算属性
+  computed: {},
+  // 监听事件
+  // 包括组件自身的事件，和子组件冒泡上来的事件
+  events: {},
+
+  // 监听数据变化
+  watchers: {},
+
+  // 组件用到的子组件
+  // 如果已全局注册，可无需再注册
+  components: {},
+
+  // 组件用到的子模板
+  // 如果已全局注册，可无需再注册
+  partials: {},
+
+  // 组件模板中使用的过滤器
+  // 如果已全局注册，可无需再注册
+  filters: {},
+
+  // 组件实例方法
+  methods: {},
+
+  // 以下是组件生命周期钩子
+  beforeCreate: function,
+  afterCreate: function,
+  beforeMount: function,
+  // 一般在 afterMount 初始化第三方 DOM 库
+  afterMount: function,
+  beforeUpdate: function,
+  afterUpdate: function,
+  // 一般在 beforeDestroy 销毁第三方 DOM 库
+  beforeDestroy: function,
+  afterDestroy: function
+}
+```
+
 ## Install
 
 NPM

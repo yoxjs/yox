@@ -22,7 +22,7 @@ export function stringify(keypaths) {
   return keypaths
   .filter(
     function (term) {
-      return term && term !== '.'
+      return term && term !== LEVEL_CURRENT
     }
   )
   .join(SEPARATOR_KEY)
