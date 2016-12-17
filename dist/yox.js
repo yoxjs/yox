@@ -2588,7 +2588,7 @@ function diff$1(instance) {
   });
 
   if (instance.$dirty) {
-    instance.updateView();
+    instance.update();
   } else if ($children) {
     each$1($children, function (child) {
       diff$1(child);
@@ -4104,7 +4104,7 @@ var Yox = function () {
       };
       execute$1(options[BEFORE_MOUNT], instance);
       instance.$template = instance.compileTemplate(template);
-      instance.updateView(el);
+      instance.update(el);
     }
   }
 
@@ -4249,8 +4249,8 @@ var Yox = function () {
       this.$watchEmitter.once(keypath, watcher);
     }
   }, {
-    key: 'updateView',
-    value: function updateView(el) {
+    key: 'update',
+    value: function update(el) {
 
       var instance = this;
 
@@ -4557,7 +4557,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.18.1';
+Yox.version = '0.18.2';
 
 Yox.switcher = switcher;
 

@@ -149,7 +149,7 @@ function diff(instance) {
   )
 
   if (instance.$dirty) {
-    instance.updateView()
+    instance.update()
   }
   else if ($children) {
     array.each(

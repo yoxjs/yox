@@ -246,7 +246,7 @@ export default class Yox {
       }
       execute(options[lifecycle.BEFORE_MOUNT], instance)
       instance.$template = instance.compileTemplate(template)
-      instance.updateView(el)
+      instance.update(el)
     }
 
   }
@@ -445,7 +445,7 @@ export default class Yox {
   /**
    * 更新视图
    */
-  updateView(el) {
+  update(el) {
 
     let instance = this
 
@@ -854,7 +854,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.18.1'
+Yox.version = '0.18.2'
 
 /**
  * 开关配置
