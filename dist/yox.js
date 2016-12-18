@@ -4110,7 +4110,7 @@ var Yox = function () {
 
   createClass(Yox, [{
     key: 'get',
-    value: function get(keypath) {
+    value: function get(keypath, trim) {
       var $data = this.$data,
           $computedStack = this.$computedStack,
           $computedGetters = this.$computedGetters;
@@ -4125,17 +4125,28 @@ var Yox = function () {
         }
       }
 
+      var value = void 0,
+          hasValue = void 0;
       if ($computedGetters) {
         var _getter = $computedGetters[keypath];
         if (_getter) {
-          return _getter();
+          value = _getter();
+          hasValue = TRUE;
         }
       }
 
-      var result = get$1($data, keypath);
-      if (result) {
-        return result.value;
+      if (!hasValue) {
+        var result = get$1($data, keypath);
+        if (result) {
+          value = result.value;
+        }
       }
+
+      if (trim === TRUE && string(value)) {
+        value = value.trim();
+      }
+
+      return value;
     }
   }, {
     key: 'set',
@@ -4557,7 +4568,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.18.2';
+Yox.version = '0.18.3';
 
 Yox.switcher = switcher;
 

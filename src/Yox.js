@@ -255,9 +255,10 @@ export default class Yox {
    * 取值
    *
    * @param {string} keypath
+   * @param {?boolean} trim 在提交数据时，这个选项很有用
    * @return {*}
    */
-  get(keypath) {
+  get(keypath, trim) {
 
     let {
       $data,
@@ -274,17 +275,27 @@ export default class Yox {
       }
     }
 
+    let value, hasValue
     if ($computedGetters) {
       let getter = $computedGetters[keypath]
       if (getter) {
-        return getter()
+        value = getter()
+        hasValue = env.TRUE
       }
     }
 
-    let result = object.get($data, keypath)
-    if (result) {
-      return result.value
+    if (!hasValue) {
+      let result = object.get($data, keypath)
+      if (result) {
+        value = result.value
+      }
     }
+
+    if (trim === env.TRUE && is.string(value)) {
+      value = value.trim()
+    }
+
+    return value
 
   }
 
@@ -854,7 +865,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.18.2'
+Yox.version = '0.18.3'
 
 /**
  * 开关配置
