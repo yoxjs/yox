@@ -1,7 +1,4 @@
 
-import * as env from '../../config/env'
-
-import * as is from '../../util/is'
 import * as array from '../../util/array'
 import * as object from '../../util/object'
 
@@ -10,7 +7,9 @@ import Emitter from '../../util/Emitter'
 
 import * as native from './nativeModern'
 
-export let find = native.findElement
+export function find(selector, context) {
+  return native.findElement(selector, context)
+}
 
 export function create(parent, tagName) {
   parent.innerHTML = `<${tagName}></${tagName}>`

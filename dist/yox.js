@@ -3403,7 +3403,9 @@ function findElement(selector, context) {
   return (context || doc).querySelector(selector);
 }
 
-var find = findElement;
+function find(selector, context) {
+  return findElement(selector, context);
+}
 
 function create$2(parent, tagName) {
   parent.innerHTML = '<' + tagName + '></' + tagName + '>';
@@ -3495,8 +3497,6 @@ function create$1(root, instance) {
 
         var data = { attrs: attrs };
 
-        var attributes$$1 = node.attrs;
-
         if (node.component) {
           directives.push({
             name: 'component',
@@ -3504,7 +3504,7 @@ function create$1(root, instance) {
             directive: instance.directive('component')
           });
         } else {
-          each$1(attributes$$1, function (node) {
+          each$1(node.attrs, function (node) {
             var name = node.name,
                 value = node.getValue();
             if (name === 'style') {
@@ -3552,6 +3552,7 @@ function create$1(root, instance) {
 
         if (!counter || directives.length) {
           (function () {
+
             var map = toObject(directives, 'name');
 
             var notify = function notify(vnode, type) {

@@ -65,7 +65,6 @@ export function create(root, instance) {
         // 因为如果在组件上写了 on-click="xx" 其实是监听从组件 fire 出的 click 事件
         // 因此 component 必须在 event 指令之前执行
 
-        let attributes = node.attrs
         // 组件的 attrs 作为 props 传入组件，不需要写到元素上
         if (node.component) {
           directives.push({
@@ -76,7 +75,7 @@ export function create(root, instance) {
         }
         else {
           array.each(
-            attributes,
+            node.attrs,
             function (node) {
               let { name } = node, value = node.getValue()
               if (name === 'style') {
@@ -136,7 +135,6 @@ export function create(root, instance) {
 
         if (!counter || directives.length) {
 
-          // 方便指令内查询
           let map = array.toObject(directives, 'name')
 
           let notify = function (vnode, type) {
