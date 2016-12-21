@@ -7,7 +7,7 @@
 export let BEFORE_CREATE = 'beforeCreate'
 
 /**
- * 初始化事件和数据监听之后触发
+ * 绑定事件和数据监听之后触发
  *
  * @type {string}
  */

@@ -1,9 +1,9 @@
 
 import * as is from '../util/is'
 
-export default function (str, defaultValue) {
+export default function (str, defaultValue = 0) {
   if (is.numeric(str)) {
     return +str
   }
-  return arguments.length === 2 ? defaultValue : 0
+  return defaultValue
 }

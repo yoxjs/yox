@@ -112,14 +112,16 @@ var is$1 = Object.freeze({
 	numeric: numeric
 });
 
-var toString$1 = function (str, defaultValue) {
+var toString$1 = function (str) {
+  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+
   if (string(str)) {
     return str;
   }
   if (numeric(str)) {
     return '' + str;
   }
-  return arguments.length === 2 ? defaultValue : '';
+  return defaultValue;
 };
 
 var slice = Array.prototype.slice;
@@ -2433,9 +2435,34 @@ function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
+function parse$3(str, separator, pair) {
+  var result = {};
+  if (string(str)) {
+    (function () {
+      var terms = void 0,
+          key = void 0,
+          value = void 0;
+      each$1(str.split(separator), function (term) {
+        terms = term.split(pair);
+        key = terms[0];
+        value = terms[1];
+        if (key && value) {
+          key = key.trim();
+          value = value.trim();
+          if (key) {
+            result[key] = value;
+          }
+        }
+      });
+    })();
+  }
+  return result;
+}
+
 var string$1 = Object.freeze({
 	camelCase: camelCase,
-	capitalize: capitalize
+	capitalize: capitalize,
+	parse: parse$3
 });
 
 var nextTick$1 = void 0;
@@ -3430,33 +3457,6 @@ var native = Object.freeze({
 
 var patch = snabbdom.init([attributes, style]);
 
-function parseStyle(str) {
-
-  var result = {};
-
-  if (string(str)) {
-    (function () {
-      var terms = void 0,
-          name = void 0,
-          value = void 0;
-      each$1(str.split(';'), function (term) {
-        terms = term.split(':');
-        name = terms[0];
-        value = terms[1];
-        if (name && value) {
-          name = name.trim();
-          value = value.trim();
-          if (name) {
-            result[camelCase(name)] = value;
-          }
-        }
-      });
-    })();
-  }
-
-  return result;
-}
-
 function create$1(root, instance) {
 
   var counter = 0;
@@ -3487,7 +3487,7 @@ function create$1(root, instance) {
   }, function (node, children) {
     counter--;
     if (node.type === ELEMENT) {
-      var _ret2 = function () {
+      var _ret = function () {
 
         var attrs = {},
             directives = [],
@@ -3508,7 +3508,13 @@ function create$1(root, instance) {
             var name = node.name,
                 value = node.getValue();
             if (name === 'style') {
-              styles = parseStyle(value);
+              var _data = parse$3(value, ';', ':');
+              if (count(_data)) {
+                styles = {};
+                each$$1(_data, function (value, key) {
+                  styles[camelCase(key)] = value;
+                });
+              }
             } else {
               attrs[name] = value;
             }
@@ -3525,18 +3531,19 @@ function create$1(root, instance) {
             directiveName = 'event';
           } else if (name.startsWith(DIRECTIVE_PREFIX)) {
             name = directiveName = name.slice(DIRECTIVE_PREFIX.length);
-          } else if (name === KEY_UNIQUE) {
-            data.key = node.getValue();
-            return;
           } else if (name === KEY_REF) {
             name = directiveName = 'ref';
+          } else if (name === KEY_UNIQUE) {
+            data.key = node.getValue();
           }
 
-          directives.push({
-            name: name,
-            node: node,
-            directive: instance.directive(directiveName)
-          });
+          if (directiveName) {
+            directives.push({
+              name: name,
+              node: node,
+              directive: instance.directive(directiveName)
+            });
+          }
         });
 
         if (styles) {
@@ -3582,7 +3589,7 @@ function create$1(root, instance) {
         };
       }();
 
-      if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
+      if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
     } else if (node.type === TEXT) {
       return node.content;
     }
@@ -3612,11 +3619,13 @@ var magic = function (options) {
   }
 };
 
-var toNumber = function (str, defaultValue) {
+var toNumber = function (str) {
+  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+
   if (numeric(str)) {
     return +str;
   }
-  return arguments.length === 2 ? defaultValue : 0;
+  return defaultValue;
 };
 
 var refDt = {
@@ -4603,7 +4612,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.18.5';
+Yox.version = '0.18.6';
 
 Yox.switcher = switcher;
 

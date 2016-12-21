@@ -18,39 +18,6 @@ import * as viewNodeType from '../../view/nodeType'
 
 export let patch = snabbdom.init([ attributes, style ])
 
-/**
- * 把 style-name: value 解析成对象的形式
- *
- * @param {string} str
- * @return {Object}
- */
-function parseStyle(str) {
-
-  let result = { }
-
-  if (is.string(str)) {
-    let terms, name, value
-    array.each(
-      str.split(';'),
-      function (term) {
-        terms = term.split(':')
-        name = terms[0]
-        value = terms[1]
-        if (name && value) {
-          name = name.trim()
-          value = value.trim()
-          if (name) {
-            result[string.camelCase(name)] = value
-          }
-        }
-      }
-    )
-  }
-
-  return result
-
-}
-
 export function create(root, instance) {
 
   let counter = 0
@@ -113,7 +80,16 @@ export function create(root, instance) {
             function (node) {
               let { name } = node, value = node.getValue()
               if (name === 'style') {
-                styles = parseStyle(value)
+                let data = string.parse(value, ';', ':')
+                if (object.count(data)) {
+                  styles = { }
+                  object.each(
+                    data,
+                    function (value, key) {
+                      styles[string.camelCase(key)] = value
+                    }
+                  )
+                }
               }
               else {
                 attrs[name] = value
@@ -136,20 +112,21 @@ export function create(root, instance) {
               name =
               directiveName = name.slice(syntax.DIRECTIVE_PREFIX.length)
             }
-            else if (name === syntax.KEY_UNIQUE) {
-              data.key = node.getValue()
-              return
-            }
             else if (name === syntax.KEY_REF) {
               name =
               directiveName = 'ref'
             }
+            else if (name === syntax.KEY_UNIQUE) {
+              data.key = node.getValue()
+            }
 
-            directives.push({
-              name: name,
-              node: node,
-              directive: instance.directive(directiveName),
-            })
+            if (directiveName) {
+              directives.push({
+                name: name,
+                node: node,
+                directive: instance.directive(directiveName),
+              })
+            }
           }
         )
 
