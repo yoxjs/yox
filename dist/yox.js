@@ -3530,7 +3530,11 @@ function create$1(root, instance) {
             name = name.slice(DIRECTIVE_EVENT_PREFIX.length);
             directiveName = 'event';
           } else if (name.startsWith(DIRECTIVE_PREFIX)) {
-            name = directiveName = name.slice(DIRECTIVE_PREFIX.length);
+            name = name.slice(DIRECTIVE_PREFIX.length);
+
+            if (name !== KEY_REF) {
+              directiveName = name;
+            }
           } else if (name === KEY_REF) {
             name = directiveName = 'ref';
           } else if (name === KEY_UNIQUE) {
@@ -4613,7 +4617,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.18.6';
+Yox.version = '0.18.7';
 
 Yox.switcher = switcher;
 

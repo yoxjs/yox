@@ -108,8 +108,12 @@ export function create(root, instance) {
               directiveName = 'event'
             }
             else if (name.startsWith(syntax.DIRECTIVE_PREFIX)) {
-              name =
-              directiveName = name.slice(syntax.DIRECTIVE_PREFIX.length)
+              name = name.slice(syntax.DIRECTIVE_PREFIX.length)
+              // ref 不支持 o-ref 写法
+              // 必须写成 ref
+              if (name !== syntax.KEY_REF) {
+                directiveName = name
+              }
             }
             else if (name === syntax.KEY_REF) {
               name =

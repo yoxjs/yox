@@ -4,25 +4,25 @@
  *
  * @type {RegExp}
  */
-export let componentName = /[-A-Z]/
+export const componentName = /[-A-Z]/
 
 /**
  * html 标签
  *
  * @type {RegExp}
  */
-export let tag = /<[^>]+>/
+export const tag = /<[^>]+>/
 
 /**
  * 选择器
  *
  * @type {string}
  */
-export let selector = /^[#.]\w+$/
+export const selector = /^[#.]\w+$/
 
 /**
  * 自闭合的标签
  *
  * @type {RegExp}
  */
-export let selfClosingTagName = /input|img|br/i
+export const selfClosingTagName = /input|img|br/i

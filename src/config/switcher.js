@@ -8,4 +8,4 @@ import * as env from './env'
  *
  * @type {boolean}
  */
-export let debug = env.TRUE
+export const debug = env.TRUE

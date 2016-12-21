@@ -1,19 +1,18 @@
 
-export let IF = '#if'
-export let ELSE = 'else'
-export let ELSE_IF = 'else if'
-export let EACH = '#each'
-export let PARTIAL = '#partial'
-export let IMPORT = '>'
-export let COMMENT = '!'
-export let SPREAD = '...'
+export const IF = '#if'
+export const ELSE = 'else'
+export const ELSE_IF = 'else if'
+export const EACH = '#each'
+export const PARTIAL = '#partial'
+export const IMPORT = '>'
+export const COMMENT = '!'
+export const SPREAD = '...'
 
-export let DIRECTIVE_PREFIX = 'o-'
-export let DIRECTIVE_EVENT_PREFIX = 'on-'
+export const DIRECTIVE_PREFIX = 'o-'
+export const DIRECTIVE_EVENT_PREFIX = 'on-'
 
-export let SPECIAL_EVENT = '$event'
-export let SPECIAL_KEYPATH = '$keypath'
+export const SPECIAL_EVENT = '$event'
+export const SPECIAL_KEYPATH = '$keypath'
 
-export let KEY_UNIQUE = 'key'
-export let KEY_REF = 'ref'
-
+export const KEY_UNIQUE = 'key'
+export const KEY_REF = 'ref'
