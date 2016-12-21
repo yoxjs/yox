@@ -16,11 +16,11 @@ export const THIS = '$this'
  *
  * @type {?Window}
  */
-export const win = window
+export const win = typeof window !== 'undefined' ? window : NULL
 
 /**
  * 浏览器环境下的 document 对象
  *
  * @type {?Document}
  */
-export const doc = document
+export const doc = typeof document !== 'undefined' ? document : NULL

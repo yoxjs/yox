@@ -13,7 +13,7 @@ var THIS = '$this';
 
 
 
-var doc = document;
+var doc = typeof document !== 'undefined' ? document : NULL;
 
 var templateParse = {};
 
@@ -4568,7 +4568,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.18.3';
+Yox.version = '0.18.4';
 
 Yox.switcher = switcher;
 
