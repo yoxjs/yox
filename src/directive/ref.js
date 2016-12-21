@@ -24,16 +24,35 @@ export default {
       else {
         $refs = instance.$refs = { }
       }
-      // [TODO] 异步组件在这里会有问题
-      $refs[value] = el.$component || el
-      el.$ref = value
+
+      let setRef = function (target) {
+        $refs[value] = target
+        el.$ref = function () {
+          delete $refs[value]
+          el.$ref = env.NULL
+        }
+      }
+
+      let { $component } = el
+      if ($component) {
+        if (is.array($component)) {
+          $component.push(setRef)
+        }
+        else {
+          setRef($component)
+        }
+      }
+      else {
+        setRef(el)
+      }
+
     }
   },
 
-  detach: function ({ el, instance }) {
-    if (el.$ref) {
-      delete instance.$refs[el.$ref]
-      el.$ref = env.NULL
+  detach: function ({ el }) {
+    let { $ref } = el
+    if ($ref) {
+      $ref()
     }
   }
 

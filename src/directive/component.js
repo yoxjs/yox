@@ -29,38 +29,51 @@ function getComponentInfo(node, instance, callback) {
 export default {
 
   attach: function ({ el, node, instance }) {
+    el.$component = [ ]
     getComponentInfo(
       node,
       instance,
       function (props, options) {
-        if (el.$component === env.NULL) {
-          return
+        let { $component } = el
+        if (is.array($component)) {
+          el.$component = instance.create(
+            options,
+            {
+              el,
+              props,
+              replace: env.TRUE,
+            }
+          )
+          array.each(
+            $component,
+            function (callback) {
+              callback(el.$component)
+            }
+          )
         }
-        el.$component = instance.create(
-          options,
-          {
-            el,
-            props,
-            replace: env.TRUE,
-          }
-        )
       }
     )
   },
 
   update: function ({ el, node, instance}) {
-    getComponentInfo(
-      node,
-      instance,
-      function (props) {
-        el.$component.set(props, env.TRUE)
-      }
-    )
+    let { $component } = el
+    if (is.object($component)) {
+      getComponentInfo(
+        node,
+        instance,
+        function (props) {
+          $component.set(props, env.TRUE)
+        }
+      )
+    }
   },
 
   detach: function ({ el }) {
-    if (el.$component) {
-      el.$component.destroy(env.TRUE)
+    let { $component } = el
+    if ($component) {
+      if (is.object($component)) {
+        $component.destroy(env.TRUE)
+      }
       el.$component = env.NULL
     }
   }

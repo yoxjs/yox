@@ -3628,28 +3628,46 @@ var refDt = {
 
     var value = node.getValue();
     if (value && string(value)) {
-      var $refs = instance.$refs;
+      (function () {
+        var $refs = instance.$refs;
 
-      if (object($refs)) {
-        if (has$1($refs, value)) {
-          error$1('Ref ' + value + ' is existed.');
+        if (object($refs)) {
+          if (has$1($refs, value)) {
+            error$1('Ref ' + value + ' is existed.');
+          }
+        } else {
+          $refs = instance.$refs = {};
         }
-      } else {
-        $refs = instance.$refs = {};
-      }
 
-      $refs[value] = el.$component || el;
-      el.$ref = value;
+        var setRef = function setRef(target) {
+          $refs[value] = target;
+          el.$ref = function () {
+            delete $refs[value];
+            el.$ref = NULL;
+          };
+        };
+
+        var $component = el.$component;
+
+        if ($component) {
+          if (array($component)) {
+            $component.push(setRef);
+          } else {
+            setRef($component);
+          }
+        } else {
+          setRef(el);
+        }
+      })();
     }
   },
 
   detach: function detach(_ref2) {
-    var el = _ref2.el,
-        instance = _ref2.instance;
+    var el = _ref2.el;
+    var $ref = el.$ref;
 
-    if (el.$ref) {
-      delete instance.$refs[el.$ref];
-      el.$ref = NULL;
+    if ($ref) {
+      $ref();
     }
   }
 
@@ -3711,7 +3729,13 @@ var event = {
       var $component = el.$component;
 
       if ($component) {
-        $component.on(name, listener);
+        if (array($component)) {
+          $component.push(function ($component) {
+            $component.on(name, listener);
+          });
+        } else {
+          $component.on(name, listener);
+        }
       } else {
         on$1(el, name, listener);
         el.$event = function () {
@@ -3733,7 +3757,7 @@ var event = {
 
 };
 
-var supportInputTypes = ['text', 'number', 'password', 'tel', 'url', 'email', 'search'];
+var supportInputControls = ['text', 'number', 'password', 'tel', 'url', 'email', 'search'];
 
 var normalControl = {
   set: function set(_ref) {
@@ -3818,7 +3842,7 @@ var modelDt = {
     var type = el.type,
         tagName = el.tagName;
 
-    if (tagName === 'INPUT' && has$2(supportInputTypes, type) || tagName === 'TEXTAREA') {
+    if (tagName === 'INPUT' && has$2(supportInputControls, type) || tagName === 'TEXTAREA') {
       name = 'input';
     }
 
@@ -3892,15 +3916,20 @@ var componentDt = {
         node = _ref.node,
         instance = _ref.instance;
 
+    el.$component = [];
     getComponentInfo(node, instance, function (props, options) {
-      if (el.$component === NULL) {
-        return;
+      var $component = el.$component;
+
+      if (array($component)) {
+        el.$component = instance.create(options, {
+          el: el,
+          props: props,
+          replace: TRUE
+        });
+        each$1($component, function (callback) {
+          callback(el.$component);
+        });
       }
-      el.$component = instance.create(options, {
-        el: el,
-        props: props,
-        replace: TRUE
-      });
     });
   },
 
@@ -3908,17 +3937,23 @@ var componentDt = {
     var el = _ref2.el,
         node = _ref2.node,
         instance = _ref2.instance;
+    var $component = el.$component;
 
-    getComponentInfo(node, instance, function (props) {
-      el.$component.set(props, TRUE);
-    });
+    if (object($component)) {
+      getComponentInfo(node, instance, function (props) {
+        $component.set(props, TRUE);
+      });
+    }
   },
 
   detach: function detach(_ref3) {
     var el = _ref3.el;
+    var $component = el.$component;
 
-    if (el.$component) {
-      el.$component.destroy(TRUE);
+    if ($component) {
+      if (object($component)) {
+        $component.destroy(TRUE);
+      }
       el.$component = NULL;
     }
   }
@@ -4568,7 +4603,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.18.4';
+Yox.version = '0.18.5';
 
 Yox.switcher = switcher;
 

@@ -70,7 +70,14 @@
                 </div>
             `,
             components: {
-                Custom: Custom
+                Custom: function (callback) {
+                    setTimeout(
+                        function () {
+                            callback(Custom)
+                        },
+                        4000
+                    );
+                }
             },
             events: {
                 increase: function (e) {

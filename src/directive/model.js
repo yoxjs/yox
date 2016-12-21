@@ -9,8 +9,7 @@ import * as component from '../util/component'
 
 import event from './event'
 
-// 支持 input 事件的控件
-const supportInputTypes = [ 'text', 'number', 'password', 'tel', 'url', 'email', 'search' ]
+const supportInputControls = [ 'text', 'number', 'password', 'tel', 'url', 'email', 'search' ]
 
 const normalControl = {
   set: function ({ el, keypath, instance }) {
@@ -56,7 +55,6 @@ const checkboxControl = {
   }
 }
 
-// 特殊的双向绑定逻辑
 const specialControls = {
   radio: radioControl,
   checkbox: checkboxControl,
@@ -69,7 +67,7 @@ export default {
     let name = 'change'
 
     let { type, tagName } = el
-    if (tagName === 'INPUT' && array.has(supportInputTypes, type)
+    if (tagName === 'INPUT' && array.has(supportInputControls, type)
       || tagName === 'TEXTAREA'
     ) {
       name = 'input'

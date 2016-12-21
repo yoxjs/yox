@@ -27,7 +27,16 @@ export default {
 
       let { $component } = el
       if ($component) {
-        $component.on(name, listener)
+        if (is.array($component)) {
+          $component.push(
+            function ($component) {
+              $component.on(name, listener)
+            }
+          )
+        }
+        else {
+          $component.on(name, listener)
+        }
       }
       else {
         native.on(el, name, listener)
