@@ -22,6 +22,18 @@
         <div>
             <form class="ui form">
 
+                <div class="field">
+                    <label class="title">
+                        组件同步
+                    </label>
+                </div>
+                <div class="field">
+                    <Child name="username" o-model="title" />
+                </div>
+                <div class="ui message">
+                    {{title}}
+                </div>
+
 
 
                 <div class="field">
@@ -62,7 +74,6 @@
                     </label>
                 </div>
                 <div class="field">
-                    <label>input change 同步</label>
                     <input type="text" o-model="title" o-lazy>
                 </div>
                 <div class="ui message">
@@ -105,15 +116,16 @@
                 <div class="field">
                     <label class="title">
                         textarea change 同步
+                        组件同步
                     </label>
                 </div>
                 <div class="field">
                     <textarea o-model="title" o-lazy></textarea>
+                    <Child name="username" o-model="title" />
                 </div>
                 <div class="ui message">
                     {{title}}
                 </div>
-
 
 
                 <div class="field">
@@ -198,7 +210,6 @@
                     选中的用户：{{selectedUser}}
                 </div>
 
-
             </form>
 
 
@@ -207,6 +218,25 @@
     </script>
     <script src="../dist/yox.js"></script>
     <script>
+        var Child = {
+            template: '<input type="text" name="{{name}}" o-model="value">',
+            propTypes: {
+                name: {
+                    type: 'string',
+                    required: true,
+                },
+                value: {
+                    type: 'string',
+                    value: ''
+                }
+            },
+            watchers: {
+                value: function () {
+                    this.fire('change')
+                }
+            }
+        };
+
         var instance = new Yox({
             el: '#app',
             template: '#template',
@@ -233,8 +263,10 @@
                 formatSelectedNames: function (selectedNames) {
                     return '[' + selectedNames.toString() + ']';
                 }
+            },
+            components: {
+                Child: Child,
             }
-
         });
 
     </script>

@@ -5,8 +5,9 @@ import * as array from '../util/array'
 import * as object from '../util/object'
 import * as string from '../util/string'
 import * as validator from '../util/validator'
+import * as componentUtil from '../util/component'
 
-function getComponentInfo(node, instance, callback) {
+function getComponentInfo(node, instance, directives, callback) {
   let { component, attrs } = node
   instance.component(
     component,
@@ -18,6 +19,16 @@ function getComponentInfo(node, instance, callback) {
           props[string.camelCase(node.name)] = node.getValue()
         }
       )
+      if (!object.has(props, 'value')) {
+        let { model } = directives
+        if (model) {
+          node = model.node
+          let result = componentUtil.testKeypath(instance, node.keypath, node.getValue())
+          if (result) {
+            props.value = instance.get(result.keypath)
+          }
+        }
+      }
       if (object.has(options, 'propTypes')) {
         validator.validate(props, options.propTypes)
       }
@@ -28,11 +39,12 @@ function getComponentInfo(node, instance, callback) {
 
 export default {
 
-  attach: function ({ el, node, instance }) {
+  attach: function ({ el, node, instance, directives }) {
     el.$component = [ ]
     getComponentInfo(
       node,
       instance,
+      directives,
       function (props, options) {
         let { $component } = el
         if (is.array($component)) {
@@ -55,12 +67,13 @@ export default {
     )
   },
 
-  update: function ({ el, node, instance}) {
+  update: function ({ el, node, instance, directives }) {
     let { $component } = el
     if (is.object($component)) {
       getComponentInfo(
         node,
         instance,
+        directives,
         function (props) {
           $component.set(props, env.TRUE)
         }

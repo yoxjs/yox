@@ -153,6 +153,7 @@ export function create(root, instance) {
                     node: item.node,
                     name: item.name,
                     directives: map,
+                    attrs,
                     instance,
                   })
                 }

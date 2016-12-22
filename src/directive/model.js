@@ -9,9 +9,18 @@ import * as component from '../util/component'
 
 import event from './event'
 
-const supportInputControls = [ 'text', 'number', 'password', 'tel', 'url', 'email', 'search' ]
+const componentControl = {
+  set: function ({ el, keypath, instance }) {
+    let { $component } = el
+    $component.set('value', instance.get(keypath))
+  },
+  update: function ({ el, keypath, instance }) {
+    let { $component } = el
+    instance.set(keypath, $component.get('value'))
+  }
+}
 
-const normalControl = {
+const inputControl = {
   set: function ({ el, keypath, instance }) {
     el.value = instance.get(keypath)
   },
@@ -60,28 +69,36 @@ const specialControls = {
   checkbox: checkboxControl,
 }
 
+
 export default {
 
-  attach: function ({ el, node, instance, directives }) {
-
-    let name = 'change'
-
-    let { type, tagName } = el
-    if (tagName === 'INPUT' && array.has(supportInputControls, type)
-      || tagName === 'TEXTAREA'
-    ) {
-      name = 'input'
-    }
+  attach: function ({ el, node, instance, directives, attrs }) {
 
     let { keypath } = node
 
-    let value = node.getValue()
-    let result = component.testKeypath(instance, keypath, value)
-    if (!result) {
+    let result = component.testKeypath(instance, keypath, node.getValue())
+    if (result) {
+      keypath = result.keypath
+    }
+    else {
       logger.error(`The ${keypath} being used for two-way binding is ambiguous.`)
     }
 
-    keypath = result.keypath
+    let name = 'change', control
+
+    let { type, $component } = el
+    if ($component) {
+      control = componentControl
+    }
+    else {
+      control = specialControls[type]
+      if (!control) {
+        control = inputControl
+        if ('oninput' in el) {
+          name = 'input'
+        }
+      }
+    }
 
     let data = {
       el,
@@ -89,21 +106,20 @@ export default {
       instance,
     }
 
-    let control = specialControls[type] || normalControl
     let set = function () {
       control.set(data)
     }
-    let listener = function () {
-      control.update(data)
-    }
-
-
-    set()
 
     instance.watch(
       keypath,
       set
     )
+
+    if (control !== componentControl
+      && !object.has(attrs, 'value')
+    ) {
+      set()
+    }
 
     event.attach({
       el,
@@ -111,7 +127,9 @@ export default {
       name,
       instance,
       directives,
-      listener,
+      listener: function () {
+        control.update(data)
+      }
     })
 
   },

@@ -3571,6 +3571,7 @@ function create$1(root, instance) {
                     node: item.node,
                     name: item.name,
                     directives: map,
+                    attrs: attrs,
                     instance: instance
                   });
                 }
@@ -3773,37 +3774,54 @@ var event = {
 
 };
 
-var supportInputControls = ['text', 'number', 'password', 'tel', 'url', 'email', 'search'];
-
-var normalControl = {
+var componentControl = {
   set: function set(_ref) {
     var el = _ref.el,
         keypath = _ref.keypath,
         instance = _ref.instance;
+    var $component = el.$component;
 
-    el.value = instance.get(keypath);
+    $component.set('value', instance.get(keypath));
   },
   update: function update(_ref2) {
     var el = _ref2.el,
         keypath = _ref2.keypath,
         instance = _ref2.instance;
+    var $component = el.$component;
+
+    instance.set(keypath, $component.get('value'));
+  }
+};
+
+var inputControl = {
+  set: function set(_ref3) {
+    var el = _ref3.el,
+        keypath = _ref3.keypath,
+        instance = _ref3.instance;
+
+    el.value = instance.get(keypath);
+  },
+  update: function update(_ref4) {
+    var el = _ref4.el,
+        keypath = _ref4.keypath,
+        instance = _ref4.instance;
 
     instance.set(keypath, el.value);
   }
 };
 
 var radioControl = {
-  set: function set(_ref3) {
-    var el = _ref3.el,
-        keypath = _ref3.keypath,
-        instance = _ref3.instance;
+  set: function set(_ref5) {
+    var el = _ref5.el,
+        keypath = _ref5.keypath,
+        instance = _ref5.instance;
 
     el.checked = el.value == instance.get(keypath);
   },
-  update: function update(_ref4) {
-    var el = _ref4.el,
-        keypath = _ref4.keypath,
-        instance = _ref4.instance;
+  update: function update(_ref6) {
+    var el = _ref6.el,
+        keypath = _ref6.keypath,
+        instance = _ref6.instance;
 
     if (el.checked) {
       instance.set(keypath, el.value);
@@ -3812,18 +3830,18 @@ var radioControl = {
 };
 
 var checkboxControl = {
-  set: function set(_ref5) {
-    var el = _ref5.el,
-        keypath = _ref5.keypath,
-        instance = _ref5.instance;
+  set: function set(_ref7) {
+    var el = _ref7.el,
+        keypath = _ref7.keypath,
+        instance = _ref7.instance;
 
     var value = instance.get(keypath);
     el.checked = array(value) ? has$2(value, el.value, FALSE) : !!value;
   },
-  update: function update(_ref6) {
-    var el = _ref6.el,
-        keypath = _ref6.keypath,
-        instance = _ref6.instance;
+  update: function update(_ref8) {
+    var el = _ref8.el,
+        keypath = _ref8.keypath,
+        instance = _ref8.instance;
 
     var value = instance.get(keypath);
     if (array(value)) {
@@ -3846,32 +3864,39 @@ var specialControls = {
 
 var modelDt = {
 
-  attach: function attach(_ref7) {
-    var el = _ref7.el,
-        node = _ref7.node,
-        instance = _ref7.instance,
-        directives = _ref7.directives;
-
-
-    var name = 'change';
-
-    var type = el.type,
-        tagName = el.tagName;
-
-    if (tagName === 'INPUT' && has$2(supportInputControls, type) || tagName === 'TEXTAREA') {
-      name = 'input';
-    }
-
+  attach: function attach(_ref9) {
+    var el = _ref9.el,
+        node = _ref9.node,
+        instance = _ref9.instance,
+        directives = _ref9.directives,
+        attrs = _ref9.attrs;
     var keypath = node.keypath;
 
 
-    var value = node.getValue();
-    var result = testKeypath(instance, keypath, value);
-    if (!result) {
+    var result = testKeypath(instance, keypath, node.getValue());
+    if (result) {
+      keypath = result.keypath;
+    } else {
       error$1('The ' + keypath + ' being used for two-way binding is ambiguous.');
     }
 
-    keypath = result.keypath;
+    var name = 'change',
+        control = void 0;
+
+    var type = el.type,
+        $component = el.$component;
+
+    if ($component) {
+      control = componentControl;
+    } else {
+      control = specialControls[type];
+      if (!control) {
+        control = inputControl;
+        if ('oninput' in el) {
+          name = 'input';
+        }
+      }
+    }
 
     var data = {
       el: el,
@@ -3879,17 +3904,15 @@ var modelDt = {
       instance: instance
     };
 
-    var control = specialControls[type] || normalControl;
     var set$$1 = function set$$1() {
       control.set(data);
     };
-    var listener = function listener() {
-      control.update(data);
-    };
-
-    set$$1();
 
     instance.watch(keypath, set$$1);
+
+    if (control !== componentControl && !has$1(attrs, 'value')) {
+      set$$1();
+    }
 
     event.attach({
       el: el,
@@ -3897,27 +3920,41 @@ var modelDt = {
       name: name,
       instance: instance,
       directives: directives,
-      listener: listener
+      listener: function listener() {
+        control.update(data);
+      }
     });
   },
 
-  detach: function detach(_ref8) {
-    var el = _ref8.el;
+  detach: function detach(_ref10) {
+    var el = _ref10.el;
 
     event.detach({ el: el });
   }
 
 };
 
-function getComponentInfo(node, instance, callback) {
-  var component = node.component,
-      attrs = node.attrs;
+function getComponentInfo(node, instance, directives, callback) {
+  var _node = node,
+      component = _node.component,
+      attrs = _node.attrs;
 
   instance.component(component, function (options) {
     var props = {};
     each$1(attrs, function (node) {
       props[camelCase(node.name)] = node.getValue();
     });
+    if (!has$1(props, 'value')) {
+      var model = directives.model;
+
+      if (model) {
+        node = model.node;
+        var result = testKeypath(instance, node.keypath, node.getValue());
+        if (result) {
+          props.value = instance.get(result.keypath);
+        }
+      }
+    }
     if (has$1(options, 'propTypes')) {
       validate(props, options.propTypes);
     }
@@ -3930,10 +3967,11 @@ var componentDt = {
   attach: function attach(_ref) {
     var el = _ref.el,
         node = _ref.node,
-        instance = _ref.instance;
+        instance = _ref.instance,
+        directives = _ref.directives;
 
     el.$component = [];
-    getComponentInfo(node, instance, function (props, options) {
+    getComponentInfo(node, instance, directives, function (props, options) {
       var $component = el.$component;
 
       if (array($component)) {
@@ -3952,11 +3990,12 @@ var componentDt = {
   update: function update(_ref2) {
     var el = _ref2.el,
         node = _ref2.node,
-        instance = _ref2.instance;
+        instance = _ref2.instance,
+        directives = _ref2.directives;
     var $component = el.$component;
 
     if (object($component)) {
-      getComponentInfo(node, instance, function (props) {
+      getComponentInfo(node, instance, directives, function (props) {
         $component.set(props, TRUE);
       });
     }
@@ -4629,7 +4668,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.18.9';
+Yox.version = '0.18.10';
 
 Yox.switcher = switcher;
 
