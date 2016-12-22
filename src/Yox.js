@@ -460,21 +460,23 @@ export default class Yox {
       }
     )
 
-    let args = arguments
+    let args = arguments, immediate
     if (args.length === 1) {
+      immediate =
       instance.$dirtyIgnore = env.TRUE
-      component.refresh(instance)
     }
-    else {
-      component.refresh(instance, args[1])
+    else if (args.length === 2) {
+      immediate = args[1]
     }
+
+    component.refresh(instance, immediate)
 
   }
 
   /**
    * 更新视图
    */
-  updateView(el) {
+  updateView() {
 
     let instance = this
 
@@ -532,7 +534,7 @@ export default class Yox {
     }
     else {
       afterHook = lifecycle.AFTER_MOUNT
-      $currentNode = vdom.patch(el, newNode)
+      $currentNode = vdom.patch(arguments[0], newNode)
       instance.$el = $currentNode.elm
     }
 
@@ -764,7 +766,7 @@ export default class Yox {
   /**
    * 销毁组件
    */
-  destroy(removed) {
+  destroy() {
 
     let instance = this
 
@@ -794,7 +796,7 @@ export default class Yox {
     }
 
     if ($currentNode) {
-      if (removed !== env.TRUE) {
+      if (arguments[0] !== env.TRUE) {
         vdom.patch($currentNode, { text: '' })
       }
     }
@@ -879,7 +881,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.18.8'
+Yox.version = '0.18.9'
 
 /**
  * 开关配置

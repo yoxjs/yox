@@ -8,7 +8,11 @@ let {
 } = Array.prototype
 
 /**
- * 遍历数组，支持返回 fasle 退出遍历
+ * 遍历数组
+ *
+ * @param {Array} array
+ * @param {Function} callback 返回 false 可停止遍历
+ * @param {?boolean} reversed 是否逆序遍历
  */
 export function each(array, callback, reversed) {
   let { length } = array
@@ -29,7 +33,12 @@ export function each(array, callback, reversed) {
 }
 
 /**
- * 原生的 array.reduce 如果传了空数组，不传 initialValue 居然会报错
+ * 原生的 array.reduce 如果传了空数组，不传 initialValue 会报错，因此封装一下方便使用
+ *
+ * @param {Array} array
+ * @param {Function} callback
+ * @param {?*} initialValue 初始值
+ * @return {*}
  */
 export function reduce(array, callback, initialValue) {
   return array.reduce(callback, initialValue)
@@ -40,6 +49,7 @@ export function reduce(array, callback, initialValue) {
  *
  * @param {Array} array1
  * @param {Array} array2
+ * @param {?boolean} strict 是否全等判断，默认是全等
  * @return {Array}
  */
 export function diff(array1, array2, strict) {
@@ -57,6 +67,8 @@ export function diff(array1, array2, strict) {
 
 /**
  * 合并多个数组，不去重
+ *
+ * @return {Array}
  */
 export function merge() {
   let result = [ ]
@@ -72,10 +84,23 @@ export function merge() {
   return result
 }
 
+/**
+ * 把类数组转成数组
+ *
+ * @param {Array|ArrayLike} array 类数组
+ * @return {Array}
+ */
 export function toArray(array) {
   return is.array(array) ? array : slice.call(array)
 }
 
+/**
+ * 把数组转成对象
+ *
+ * @param {Array} array 数组
+ * @param {?string} key 数组项包含的字段名称，如果数组项是基本类型，可不传
+ * @return {Object}
+ */
 export function toObject(array, key) {
   let result = { }
   each(
@@ -87,6 +112,14 @@ export function toObject(array, key) {
   return result
 }
 
+/**
+ * 数组项在数组中的位置
+ *
+ * @param {Array} array 数组
+ * @param {*} item 数组项
+ * @param {?boolean} strict 是否全等判断，默认是全等
+ * @return {number} 如果未找到，返回 -1
+ */
 export function indexOf(array, item, strict) {
   if (strict !== env.FALSE) {
     return array.indexOf(item)
@@ -106,14 +139,35 @@ export function indexOf(array, item, strict) {
   }
 }
 
+/**
+ * 数组是否包含 item
+ *
+ * @param {Array} array 数组
+ * @param {*} item 可能包含的数组项
+ * @param {?boolean} strict 是否全等判断，默认是全等
+ * @return {boolean}
+ */
 export function has(array, item, strict) {
   return indexOf(array, item, strict) >= 0
 }
 
+/**
+ * 获取数组最后一项
+ *
+ * @param {Array} array 数组
+ * @return {*}
+ */
 export function last(array) {
   return array[array.length - 1]
 }
 
+/**
+ * 删除数组项
+ *
+ * @param {Array} array 数组
+ * @param {*} item 待删除项
+ * @param {?boolean} strict 是否全等判断，默认是全等
+ */
 export function remove(array, item, strict) {
   let index = indexOf(array, item, strict)
   if (index >= 0) {
@@ -121,6 +175,12 @@ export function remove(array, item, strict) {
   }
 }
 
+/**
+ * 用于判断长度不为 0 的数组
+ *
+ * @param {*} array
+ * @return {boolean}
+ */
 export function falsy(array) {
   return !is.array(array) || array.length === 0
 }

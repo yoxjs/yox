@@ -79,13 +79,15 @@ export function create(root, instance) {
             function (node) {
               let { name } = node, value = node.getValue()
               if (name === 'style') {
-                let data = string.parse(value, ';', ':')
-                if (object.count(data)) {
+                let list = string.parse(value, ';', ':')
+                if (list.length) {
                   styles = { }
-                  object.each(
-                    data,
-                    function (value, key) {
-                      styles[string.camelCase(key)] = value
+                  array.each(
+                    list,
+                    function (item) {
+                      if (item.value) {
+                        styles[string.camelCase(item.key)] = item.value
+                      }
                     }
                   )
                 }
@@ -110,7 +112,6 @@ export function create(root, instance) {
             else if (name.startsWith(syntax.DIRECTIVE_PREFIX)) {
               name = name.slice(syntax.DIRECTIVE_PREFIX.length)
               // ref 不支持 o-ref 写法
-              // 必须写成 ref
               if (name !== syntax.KEY_REF) {
                 directiveName = name
               }

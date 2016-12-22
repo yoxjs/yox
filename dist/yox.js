@@ -112,18 +112,6 @@ var is$1 = Object.freeze({
 	numeric: numeric
 });
 
-var toString$1 = function (str) {
-  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
-
-  if (string(str)) {
-    return str;
-  }
-  if (numeric(str)) {
-    return '' + str;
-  }
-  return defaultValue;
-};
-
 var slice = Array.prototype.slice;
 
 function each$1(array$$1, callback, reversed) {
@@ -239,12 +227,8 @@ function each$$1(object$$1, callback) {
   });
 }
 
-function count(object$$1) {
-  return keys(object$$1).length;
-}
-
-function has$1(object$$1, name) {
-  return object$$1.hasOwnProperty(name);
+function has$1(object$$1, key) {
+  return object$$1.hasOwnProperty(key);
 }
 
 function extend() {
@@ -277,15 +261,13 @@ function copy(object$$1, deep) {
 }
 
 function get$1(object$$1, keypath) {
-  keypath = toString$1(keypath);
-
   if (has$1(object$$1, keypath)) {
     return {
       value: object$$1[keypath]
     };
   }
 
-  if (keypath.indexOf('.') > 0) {
+  if (string(keypath) && keypath.indexOf('.') > 0) {
     var list = keypath.split('.');
     for (var i = 0, len = list.length; i < len && object$$1; i++) {
       if (i < len - 1) {
@@ -299,18 +281,15 @@ function get$1(object$$1, keypath) {
   }
 }
 
-function set$1(object$$1, keypath, value) {
-  var autoFill = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : TRUE;
-
-  keypath = toString$1(keypath);
-  if (keypath.indexOf('.') > 0) {
+function set$1(object$$1, keypath, value, autofill) {
+  if (string(keypath) && keypath.indexOf('.') > 0) {
     var originalObject = object$$1;
     var list = keypath.split('.');
     var prop = list.pop();
     each$1(list, function (item, index) {
       if (object$$1[item]) {
         object$$1 = object$$1[item];
-      } else if (autoFill) {
+      } else if (autofill !== FALSE) {
         object$$1 = object$$1[item] = {};
       } else {
         object$$1 = NULL;
@@ -328,7 +307,6 @@ function set$1(object$$1, keypath, value) {
 var object$1 = Object.freeze({
 	keys: keys,
 	each: each$$1,
-	count: count,
 	has: has$1,
 	extend: extend,
 	copy: copy,
@@ -667,12 +645,19 @@ function parseError$1(expression) {
 }
 
 var ARRAY = 1;
+
 var BINARY = 2;
+
 var CALL = 3;
+
 var CONDITIONAL = 4;
+
 var IDENTIFIER = 5;
+
 var LITERAL = 6;
+
 var MEMBER = 7;
+
 var UNARY = 8;
 
 var Node = function Node(type) {
@@ -2436,22 +2421,25 @@ function capitalize(str) {
 }
 
 function parse$3(str, separator, pair) {
-  var result = {};
+  var result = [];
   if (string(str)) {
     (function () {
       var terms = void 0,
           key = void 0,
-          value = void 0;
+          value = void 0,
+          item = void 0;
       each$1(str.split(separator), function (term) {
         terms = term.split(pair);
         key = terms[0];
         value = terms[1];
-        if (key && value) {
-          key = key.trim();
-          value = value.trim();
-          if (key) {
-            result[key] = value;
+        if (key) {
+          item = {
+            key: key.trim()
+          };
+          if (value) {
+            item.value = value.trim();
           }
+          result.push(item);
         }
       });
     })();
@@ -3520,11 +3508,13 @@ function create$1(root, instance) {
             var name = node.name,
                 value = node.getValue();
             if (name === 'style') {
-              var _data = parse$3(value, ';', ':');
-              if (count(_data)) {
+              var list = parse$3(value, ';', ':');
+              if (list.length) {
                 styles = {};
-                each$$1(_data, function (value, key) {
-                  styles[camelCase(key)] = value;
+                each$1(list, function (item) {
+                  if (item.value) {
+                    styles[camelCase(item.key)] = item.value;
+                  }
                 });
               }
             } else {
@@ -4324,17 +4314,19 @@ var Yox = function () {
         set$1($data, keypath, value);
       });
 
-      var args = arguments;
+      var args = arguments,
+          immediate = void 0;
       if (args.length === 1) {
-        instance.$dirtyIgnore = TRUE;
-        refresh(instance);
-      } else {
-        refresh(instance, args[1]);
+        immediate = instance.$dirtyIgnore = TRUE;
+      } else if (args.length === 2) {
+        immediate = args[1];
       }
+
+      refresh(instance, immediate);
     }
   }, {
     key: 'updateView',
-    value: function updateView(el) {
+    value: function updateView() {
 
       var instance = this;
 
@@ -4376,7 +4368,7 @@ var Yox = function () {
         $currentNode = patch($currentNode, newNode);
       } else {
         afterHook = AFTER_MOUNT;
-        $currentNode = patch(el, newNode);
+        $currentNode = patch(arguments[0], newNode);
         instance.$el = $currentNode.elm;
       }
 
@@ -4564,7 +4556,7 @@ var Yox = function () {
     }
   }, {
     key: 'destroy',
-    value: function destroy(removed) {
+    value: function destroy() {
 
       var instance = this;
 
@@ -4589,7 +4581,7 @@ var Yox = function () {
       }
 
       if ($currentNode) {
-        if (removed !== TRUE) {
+        if (arguments[0] !== TRUE) {
           patch($currentNode, { text: '' });
         }
       }
@@ -4637,7 +4629,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.18.8';
+Yox.version = '0.18.9';
 
 Yox.switcher = switcher;
 
