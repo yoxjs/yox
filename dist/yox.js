@@ -2614,8 +2614,20 @@ function diff$1(instance) {
     }
   });
 
-  if (instance.$dirty) {
-    instance.update();
+  var $dirty = instance.$dirty,
+      $dirtyIgnore = instance.$dirtyIgnore;
+
+
+  if ($dirty) {
+    delete instance.$dirty;
+  }
+  if ($dirtyIgnore) {
+    delete instance.$dirtyIgnore;
+    return;
+  }
+
+  if ($dirty) {
+    instance.updateView();
   } else if ($children) {
     each$1($children, function (child) {
       diff$1(child);
@@ -4153,7 +4165,7 @@ var Yox = function () {
       };
       execute$1(options[BEFORE_MOUNT], instance);
       instance.$template = instance.compileTemplate(template);
-      instance.update(el);
+      instance.updateView(el);
     }
   }
 
@@ -4213,32 +4225,7 @@ var Yox = function () {
         return;
       }
 
-      var instance = this;
-
-      var $data = instance.$data,
-          $computedSetters = instance.$computedSetters;
-
-
-      each$$1(model, function (newValue, key) {
-        var keypath = normalize(key);
-        if (keypath !== key) {
-          delete model[key];
-          model[keypath] = newValue;
-        }
-      });
-
-      each$$1(model, function (value, keypath) {
-        if ($computedSetters) {
-          var setter = $computedSetters[keypath];
-          if (setter) {
-            setter.call(instance, value);
-            return;
-          }
-        }
-        set$1($data, keypath, value);
-      });
-
-      refresh(instance, immediate);
+      this.updateModel(model, immediate);
     }
   }, {
     key: 'on',
@@ -4309,14 +4296,50 @@ var Yox = function () {
       this.$watchEmitter.once(keypath, watcher);
     }
   }, {
-    key: 'update',
-    value: function update(el) {
+    key: 'updateModel',
+    value: function updateModel(model) {
+
+      var instance = this;
+
+      var $data = instance.$data,
+          $computedSetters = instance.$computedSetters;
+
+
+      each$$1(model, function (newValue, key) {
+        var keypath = normalize(key);
+        if (keypath !== key) {
+          delete model[key];
+          model[keypath] = newValue;
+        }
+      });
+
+      each$$1(model, function (value, keypath) {
+        if ($computedSetters) {
+          var setter = $computedSetters[keypath];
+          if (setter) {
+            setter.call(instance, value);
+            return;
+          }
+        }
+        set$1($data, keypath, value);
+      });
+
+      var args = arguments;
+      if (args.length === 1) {
+        instance.$dirtyIgnore = TRUE;
+        refresh(instance);
+      } else {
+        refresh(instance, args[1]);
+      }
+    }
+  }, {
+    key: 'updateView',
+    value: function updateView(el) {
 
       var instance = this;
 
       var $viewDeps = instance.$viewDeps,
           $viewWatcher = instance.$viewWatcher,
-          $dirty = instance.$dirty,
           $data = instance.$data,
           $options = instance.$options,
           $filters = instance.$filters,
@@ -4327,9 +4350,6 @@ var Yox = function () {
 
       if ($currentNode) {
         execute$1($options[BEFORE_UPDATE], instance);
-      }
-      if ($dirty) {
-        delete instance.$dirty;
       }
 
       var context = {};
@@ -4617,7 +4637,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.18.7';
+Yox.version = '0.18.8';
 
 Yox.switcher = switcher;
 

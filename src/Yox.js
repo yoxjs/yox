@@ -246,7 +246,7 @@ export default class Yox {
       }
       execute(options[lifecycle.BEFORE_MOUNT], instance)
       instance.$template = instance.compileTemplate(template)
-      instance.update(el)
+      instance.updateView(el)
     }
 
   }
@@ -314,40 +314,7 @@ export default class Yox {
       return
     }
 
-    let instance = this
-
-    let {
-      $data,
-      $computedSetters,
-    } = instance
-
-    object.each(
-      model,
-      function (newValue, key) {
-        // 格式化 Keypath
-        let keypath = keypathUtil.normalize(key)
-        if (keypath !== key) {
-          delete model[key]
-          model[keypath] = newValue
-        }
-      }
-    )
-
-    object.each(
-      model,
-      function (value, keypath) {
-        if ($computedSetters) {
-          let setter = $computedSetters[keypath]
-          if (setter) {
-            setter.call(instance, value)
-            return
-          }
-        }
-        object.set($data, keypath, value)
-      }
-    )
-
-    component.refresh(instance, immediate)
+    this.updateModel(model, immediate)
 
   }
 
@@ -454,16 +421,66 @@ export default class Yox {
   }
 
   /**
+   * 只更新数据，不更新视图
+   *
+   * @param {Object} model
+   */
+  updateModel(model) {
+
+    let instance = this
+
+    let {
+      $data,
+      $computedSetters,
+    } = instance
+
+    object.each(
+      model,
+      function (newValue, key) {
+        // 格式化 Keypath
+        let keypath = keypathUtil.normalize(key)
+        if (keypath !== key) {
+          delete model[key]
+          model[keypath] = newValue
+        }
+      }
+    )
+
+    object.each(
+      model,
+      function (value, keypath) {
+        if ($computedSetters) {
+          let setter = $computedSetters[keypath]
+          if (setter) {
+            setter.call(instance, value)
+            return
+          }
+        }
+        object.set($data, keypath, value)
+      }
+    )
+
+    let args = arguments
+    if (args.length === 1) {
+      instance.$dirtyIgnore = env.TRUE
+      component.refresh(instance)
+    }
+    else {
+      component.refresh(instance, args[1])
+    }
+
+  }
+
+  /**
    * 更新视图
    */
-  update(el) {
+  updateView(el) {
 
     let instance = this
 
     let {
       $viewDeps,
       $viewWatcher,
-      $dirty,
       $data,
       $options,
       $filters,
@@ -474,9 +491,6 @@ export default class Yox {
 
     if ($currentNode) {
       execute($options[lifecycle.BEFORE_UPDATE], instance)
-    }
-    if ($dirty) {
-      delete instance.$dirty
     }
 
     let context = { }
@@ -865,7 +879,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.18.7'
+Yox.version = '0.18.8'
 
 /**
  * 开关配置

@@ -148,8 +148,21 @@ function diff(instance) {
     }
   )
 
-  if (instance.$dirty) {
-    instance.update()
+  let {
+    $dirty,
+    $dirtyIgnore,
+  } = instance
+
+  if ($dirty) {
+    delete instance.$dirty
+  }
+  if ($dirtyIgnore) {
+    delete instance.$dirtyIgnore
+    return
+  }
+
+  if ($dirty) {
+    instance.updateView()
   }
   else if ($children) {
     array.each(
