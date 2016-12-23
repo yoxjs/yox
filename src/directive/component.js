@@ -1,10 +1,10 @@
 
 import * as env from '../config/env'
+
 import * as is from '../util/is'
 import * as array from '../util/array'
 import * as object from '../util/object'
 import * as string from '../util/string'
-import * as validator from '../util/validator'
 import * as componentUtil from '../util/component'
 
 function getComponentInfo(node, instance, directives, callback) {
@@ -29,8 +29,9 @@ function getComponentInfo(node, instance, directives, callback) {
           }
         }
       }
-      if (object.has(options, 'propTypes')) {
-        validator.validate(props, options.propTypes)
+      let { propTypes } = options
+      if (is.object(propTypes)) {
+        props = componentUtil.validate(props, propTypes)
       }
       callback(props, options)
     }

@@ -22,7 +22,11 @@ const componentControl = {
 
 const inputControl = {
   set: function ({ el, keypath, instance }) {
-    el.value = instance.get(keypath)
+    let value = instance.get(keypath)
+    // 如果输入框的值相同，赋值会导致光标变化，不符合用户体验
+    if (value !== el.value) {
+      el.value = value
+    }
   },
   update: function ({ el, keypath, instance }) {
     instance.set(keypath, el.value)
@@ -84,7 +88,7 @@ export default {
       logger.error(`The ${keypath} being used for two-way binding is ambiguous.`)
     }
 
-    let name = 'change', control
+    let name = 'change', control, needSet
 
     let { type, $component } = el
     if ($component) {
@@ -98,6 +102,9 @@ export default {
           name = 'input'
         }
       }
+      if (!object.has(attrs, 'value')) {
+        needSet = env.TRUE
+      }
     }
 
     let data = {
@@ -110,16 +117,14 @@ export default {
       control.set(data)
     }
 
+    if (needSet) {
+      set()
+    }
+
     instance.watch(
       keypath,
       set
     )
-
-    if (control !== componentControl
-      && !object.has(attrs, 'value')
-    ) {
-      set()
-    }
 
     event.attach({
       el,

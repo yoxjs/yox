@@ -1,6 +1,6 @@
 
 /**
- * {
+ * propTypes: {
  *   name: {
  *     type: 'string', 或是 [ 'string', 'number' ],
  *     value: '',
@@ -11,13 +11,11 @@
 
 import * as env from '../config/env'
 
-import * as is from './is'
-import * as array from './array'
-import * as object from './object'
-import * as logger from './logger'
+import * as is from '../util/is'
+import * as object from '../util/object'
 
-// 直接修改传入的数据
-export function validate(data, schema) {
+export default function (data, schema, onNotMatched, onNotFound) {
+  let result = { }
   object.each(
     schema,
     function (rule, key) {
@@ -39,22 +37,25 @@ export function validate(data, schema) {
             )
           }
           else if (is.func(type)) {
-            matched = type(target)
+            // 有时候做判断需要参考其他数据
+            // 比如当 a 有值时，b 可以为空之类的
+            matched = type(target, data)
           }
-          // 类型比较失败
-          if (matched === env.FALSE) {
-            logger.warn(`Type of ${key} is not matched.`)
-            delete data[key]
+          if (matched === env.TRUE) {
+            result[key] = target
+          }
+          else {
+            onNotMatched(key)
           }
         }
       }
       else if (required) {
-        logger.warn(`${key} is not found.`)
+        onNotFound(key)
       }
       else if (object.has(rule, 'value')) {
-        data[key] = is.func(value) ? value() : value
+        result[key] = is.func(value) ? value(data) : value
       }
     }
   )
-  return data
+  return result
 }

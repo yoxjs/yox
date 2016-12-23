@@ -2498,6 +2498,44 @@ function run() {
   });
 }
 
+var validateProps = function (data, schema, onNotMatched, onNotFound) {
+  var result = {};
+  each$$1(schema, function (rule, key) {
+    var type = rule.type,
+        value = rule.value,
+        required = rule.required;
+
+    if (has$1(data, key)) {
+      if (type) {
+        (function () {
+          var target = data[key],
+              matched = void 0;
+
+          if (string(type)) {
+            matched = is(target, type);
+          } else if (array(type)) {
+            matched = type.some(function (t) {
+              return is(target, t);
+            });
+          } else if (func(type)) {
+            matched = type(target, data);
+          }
+          if (matched === TRUE) {
+            result[key] = target;
+          } else {
+            onNotMatched(key);
+          }
+        })();
+      }
+    } else if (required) {
+      onNotFound(key);
+    } else if (has$1(rule, 'value')) {
+      result[key] = func(value) ? value(data) : value;
+    }
+  });
+  return result;
+};
+
 function testKeypath(instance, keypath, name) {
 
   var terms = keypath ? keypath.split('.') : [];
@@ -2628,48 +2666,20 @@ function diff$1(instance) {
   }
 }
 
+function validate(props, schema) {
+  return validateProps(props, schema, function (key) {
+    warn(key + ' is not matched.');
+  }, function (key) {
+    warn(key + ' is not found.');
+  });
+}
+
 var component$1 = Object.freeze({
 	testKeypath: testKeypath,
 	updateDeps: updateDeps,
-	refresh: refresh
+	refresh: refresh,
+	validate: validate
 });
-
-function validate(data, schema) {
-  each$$1(schema, function (rule, key) {
-    var type = rule.type,
-        value = rule.value,
-        required = rule.required;
-
-    if (has$1(data, key)) {
-      if (type) {
-        (function () {
-          var target = data[key],
-              matched = void 0;
-
-          if (string(type)) {
-            matched = is(target, type);
-          } else if (array(type)) {
-            matched = type.some(function (t) {
-              return is(target, t);
-            });
-          } else if (func(type)) {
-            matched = type(target);
-          }
-
-          if (matched === FALSE) {
-            warn('Type of ' + key + ' is not matched.');
-            delete data[key];
-          }
-        })();
-      }
-    } else if (required) {
-      warn(key + ' is not found.');
-    } else if (has$1(rule, 'value')) {
-      data[key] = func(value) ? value() : value;
-    }
-  });
-  return data;
-}
 
 var vnode = function (sel, data, children, text, elm) {
   var key = data === undefined ? undefined : data.key;
@@ -3820,7 +3830,11 @@ var inputControl = {
         keypath = _ref3.keypath,
         instance = _ref3.instance;
 
-    el.value = instance.get(keypath);
+    var value = instance.get(keypath);
+
+    if (value !== el.value) {
+      el.value = value;
+    }
   },
   update: function update(_ref4) {
     var el = _ref4.el,
@@ -3902,7 +3916,8 @@ var modelDt = {
     }
 
     var name = 'change',
-        control = void 0;
+        control = void 0,
+        needSet = void 0;
 
     var type = el.type,
         $component = el.$component;
@@ -3917,6 +3932,9 @@ var modelDt = {
           name = 'input';
         }
       }
+      if (!has$1(attrs, 'value')) {
+        needSet = TRUE;
+      }
     }
 
     var data = {
@@ -3929,11 +3947,11 @@ var modelDt = {
       control.set(data);
     };
 
-    instance.watch(keypath, set$$1);
-
-    if (control !== componentControl && !has$1(attrs, 'value')) {
+    if (needSet) {
       set$$1();
     }
+
+    instance.watch(keypath, set$$1);
 
     event.attach({
       el: el,
@@ -3976,8 +3994,10 @@ function getComponentInfo(node, instance, directives, callback) {
         }
       }
     }
-    if (has$1(options, 'propTypes')) {
-      validate(props, options.propTypes);
+    var propTypes = options.propTypes;
+
+    if (object(propTypes)) {
+      props = validate(props, propTypes);
     }
     callback(props, options);
   });
@@ -4689,7 +4709,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.19.0';
+Yox.version = '0.19.1';
 
 Yox.switcher = switcher;
 
@@ -4710,6 +4730,8 @@ each$1(['component', 'directive', 'filter', 'partial'], function (type) {
     });
   };
 });
+
+Yox.nextTick = add;
 
 Yox.validate = validate;
 

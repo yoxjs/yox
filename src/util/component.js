@@ -4,11 +4,14 @@
  * 不暴露给外部
  */
 
+import validateProps from '../function/validate'
+
 import * as env from '../config/env'
 
 import * as is from './is'
 import * as array from './array'
 import * as object from './object'
+import * as logger from './logger'
 import * as nextTask from './nextTask'
 
 export function testKeypath(instance, keypath, name) {
@@ -173,4 +176,17 @@ function diff(instance) {
     )
   }
 
+}
+
+export function validate(props, schema) {
+  return validateProps(
+    props,
+    schema,
+    function (key) {
+      logger.warn(`${key} is not matched.`)
+    },
+    function (key) {
+      logger.warn(`${key} is not found.`)
+    }
+  )
 }

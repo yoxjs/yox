@@ -16,7 +16,6 @@ import * as string from './util/string'
 import * as logger from './util/logger'
 import * as nextTask from './util/nextTask'
 import * as component from './util/component'
-import * as validator from './util/validator'
 import * as keypathUtil from './util/keypath'
 
 import * as expression from './expression/index'
@@ -882,7 +881,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.19.0'
+Yox.version = '0.19.1'
 
 /**
  * 开关配置
@@ -929,12 +928,20 @@ array.each(
 )
 
 /**
+ * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
+ *
+ * @param {Function} fn
+ */
+Yox.nextTick = nextTask.add
+
+/**
  * 验证 props
  *
  * @param {Object} props 传递的数据
  * @param {Object} schema 数据格式
+ * @return {Object} 验证通过的数据
  */
-Yox.validate = validator.validate
+Yox.validate = component.validate
 
 /**
  * 安装插件
