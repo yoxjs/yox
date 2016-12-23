@@ -27,7 +27,6 @@ import * as native from './platform/web/native'
 import magic from './function/magic'
 import execute from './function/execute'
 import toNumber from './function/toNumber'
-import toString from './function/toString'
 
 import Store from './util/Store'
 import Event from './util/Event'
@@ -255,10 +254,10 @@ export default class Yox {
    * 取值
    *
    * @param {string} keypath
-   * @param {?boolean} trim 在提交数据时，这个选项很有用
+   * @param {?string} context
    * @return {*}
    */
-  get(keypath, trim) {
+  get(keypath, context) {
 
     let {
       $data,
@@ -266,36 +265,51 @@ export default class Yox {
       $computedGetters,
     } = this
 
+    let result
+
+    let getValue = function (keypath) {
+      if ($computedGetters) {
+        result = $computedGetters[keypath]
+        if (result) {
+          return {
+            value: result(),
+          }
+        }
+      }
+      return object.get($data, keypath)
+    }
+
     keypath = keypathUtil.normalize(keypath)
 
-    if ($computedStack) {
-      let deps = array.last($computedStack)
-      if (deps) {
-        deps.push(keypath)
+    if (is.string(context)) {
+      let keys = keypathUtil.parse(context)
+      while (env.TRUE) {
+        keys.push(keypath)
+        context = keypathUtil.stringify(keys)
+        result = getValue(context)
+        if (result || keys.length <= 1) {
+          if (result) {
+            result.keypath = context
+          }
+          return result
+        }
+        else {
+          keys.splice(-2)
+        }
       }
     }
-
-    let value, hasValue
-    if ($computedGetters) {
-      let getter = $computedGetters[keypath]
-      if (getter) {
-        value = getter()
-        hasValue = env.TRUE
+    else {
+      if ($computedStack) {
+        result = array.last($computedStack)
+        if (result) {
+          result.push(keypath)
+        }
       }
-    }
-
-    if (!hasValue) {
-      let result = object.get($data, keypath)
+      result = getValue(keypath)
       if (result) {
-        value = result.value
+        return result.value
       }
     }
-
-    if (trim === env.TRUE) {
-      value = toString(value).trim()
-    }
-
-    return value
 
   }
 
@@ -621,7 +635,7 @@ export default class Yox {
                   name = node.stringify()
                 }
 
-                let result = component.testKeypath(instance, keypath, name)
+                let result = instance.get(name, keypath)
                 if (result) {
                   return result.value
                 }
@@ -881,7 +895,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.19.1'
+Yox.version = '0.19.2'
 
 /**
  * 开关配置

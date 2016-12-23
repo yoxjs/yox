@@ -14,43 +14,6 @@ import * as object from './object'
 import * as logger from './logger'
 import * as nextTask from './nextTask'
 
-export function testKeypath(instance, keypath, name) {
-
-  let terms = keypath ? keypath.split('.') : [ ]
-  if (!name) {
-    name = terms.pop()
-  }
-
-  let {
-    $data,
-    $computedGetters,
-  } = instance
-
-  let result
-
-  do {
-    terms.push(name)
-    keypath = terms.join('.')
-    result = object.get($data, keypath)
-    if (result) {
-      return {
-        keypath,
-        value: result.value,
-      }
-    }
-    terms.splice(-2)
-  }
-  while (terms.length || keypath.indexOf('.') > 0)
-
-  if ($computedGetters && object.has($computedGetters, name)) {
-    return {
-      keypath: name,
-      value: $computedGetters[name](),
-    }
-  }
-
-}
-
 export function updateDeps(instance, newDeps, oldDeps, watcher) {
 
   let addedDeps, removedDeps

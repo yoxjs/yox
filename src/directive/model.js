@@ -80,7 +80,7 @@ export default {
 
     let { keypath } = node
 
-    let result = component.testKeypath(instance, keypath, node.getValue())
+    let result = instance.get(node.getValue(), keypath)
     if (result) {
       keypath = result.keypath
     }

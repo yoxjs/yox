@@ -15,7 +15,9 @@ export function normalize(str) {
 }
 
 export function parse(str) {
-  return normalize(str).split(SEPARATOR_KEY)
+  return str
+    ? normalize(str).split(SEPARATOR_KEY)
+    : [ ]
 }
 
 export function stringify(keypaths) {

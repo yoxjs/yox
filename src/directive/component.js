@@ -23,9 +23,9 @@ function getComponentInfo(node, instance, directives, callback) {
         let { model } = directives
         if (model) {
           node = model.node
-          let result = componentUtil.testKeypath(instance, node.keypath, node.getValue())
+          let result = instance.get(node.getValue(), node.keypath)
           if (result) {
-            props.value = instance.get(result.keypath)
+            props.value = result.value
           }
         }
       }

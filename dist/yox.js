@@ -1456,14 +1456,14 @@ var LEVEL_CURRENT = '.';
 var LEVEL_PARENT = '..';
 
 function normalize(str) {
-  if (str.indexOf('[') > 0 && str.indexOf(']') > 0) {
+  if (str && str.indexOf('[') > 0 && str.indexOf(']') > 0) {
     return parse$2(str).stringify();
   }
   return str;
 }
 
 function parse$1(str) {
-  return normalize(str).split(SEPARATOR_KEY);
+  return str ? normalize(str).split(SEPARATOR_KEY) : [];
 }
 
 function stringify$1(keypaths) {
@@ -1478,7 +1478,7 @@ function resolve(base, path) {
     if (term === LEVEL_PARENT) {
       list.pop();
     } else {
-      list.push(term);
+      list.push(normalize(term));
     }
   });
   return stringify$1(list);
@@ -2536,40 +2536,6 @@ var validateProps = function (data, schema, onNotMatched, onNotFound) {
   return result;
 };
 
-function testKeypath(instance, keypath, name) {
-
-  var terms = keypath ? keypath.split('.') : [];
-  if (!name) {
-    name = terms.pop();
-  }
-
-  var $data = instance.$data,
-      $computedGetters = instance.$computedGetters;
-
-
-  var result = void 0;
-
-  do {
-    terms.push(name);
-    keypath = terms.join('.');
-    result = get$1($data, keypath);
-    if (result) {
-      return {
-        keypath: keypath,
-        value: result.value
-      };
-    }
-    terms.splice(-2);
-  } while (terms.length || keypath.indexOf('.') > 0);
-
-  if ($computedGetters && has$1($computedGetters, name)) {
-    return {
-      keypath: name,
-      value: $computedGetters[name]()
-    };
-  }
-}
-
 function updateDeps(instance, newDeps, oldDeps, watcher) {
 
   var addedDeps = void 0,
@@ -2675,7 +2641,6 @@ function validate(props, schema) {
 }
 
 var component$1 = Object.freeze({
-	testKeypath: testKeypath,
 	updateDeps: updateDeps,
 	refresh: refresh,
 	validate: validate
@@ -3655,18 +3620,6 @@ var toNumber = function (str) {
   return defaultValue;
 };
 
-var toString$1 = function (str) {
-  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
-
-  if (string(str)) {
-    return str;
-  }
-  if (numeric(str)) {
-    return '' + str;
-  }
-  return defaultValue;
-};
-
 var refDt = {
 
   attach: function attach(_ref) {
@@ -3908,7 +3861,7 @@ var modelDt = {
     var keypath = node.keypath;
 
 
-    var result = testKeypath(instance, keypath, node.getValue());
+    var result = instance.get(node.getValue(), keypath);
     if (result) {
       keypath = result.keypath;
     } else {
@@ -3988,9 +3941,9 @@ function getComponentInfo(node, instance, directives, callback) {
 
       if (model) {
         node = model.node;
-        var result = testKeypath(instance, node.keypath, node.getValue());
+        var result = instance.get(node.getValue(), node.keypath);
         if (result) {
-          props.value = instance.get(result.keypath);
+          props.value = result.value;
         }
       }
     }
@@ -4241,43 +4194,55 @@ var Yox = function () {
 
   createClass(Yox, [{
     key: 'get',
-    value: function get(keypath, trim) {
+    value: function get(keypath, context) {
       var $data = this.$data,
           $computedStack = this.$computedStack,
           $computedGetters = this.$computedGetters;
 
 
+      var result = void 0;
+
+      var getValue = function getValue(keypath) {
+        if ($computedGetters) {
+          result = $computedGetters[keypath];
+          if (result) {
+            return {
+              value: result()
+            };
+          }
+        }
+        return get$1($data, keypath);
+      };
+
       keypath = normalize(keypath);
 
-      if ($computedStack) {
-        var deps = last($computedStack);
-        if (deps) {
-          deps.push(keypath);
+      if (string(context)) {
+        var keys$$1 = parse$1(context);
+        while (TRUE) {
+          keys$$1.push(keypath);
+          context = stringify$1(keys$$1);
+          result = getValue(context);
+          if (result || keys$$1.length <= 1) {
+            if (result) {
+              result.keypath = context;
+            }
+            return result;
+          } else {
+            keys$$1.splice(-2);
+          }
         }
-      }
-
-      var value = void 0,
-          hasValue = void 0;
-      if ($computedGetters) {
-        var _getter = $computedGetters[keypath];
-        if (_getter) {
-          value = _getter();
-          hasValue = TRUE;
+      } else {
+        if ($computedStack) {
+          result = last($computedStack);
+          if (result) {
+            result.push(keypath);
+          }
         }
-      }
-
-      if (!hasValue) {
-        var result = get$1($data, keypath);
+        result = getValue(keypath);
         if (result) {
-          value = result.value;
+          return result.value;
         }
       }
-
-      if (trim === TRUE) {
-        value = toString$1(value).trim();
-      }
-
-      return value;
     }
   }, {
     key: 'set',
@@ -4520,7 +4485,7 @@ var Yox = function () {
                       name = node.stringify();
                     }
 
-                    var result = testKeypath(instance, keypath, name);
+                    var result = instance.get(name, keypath);
                     if (result) {
                       return result.value;
                     }
@@ -4709,7 +4674,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.19.1';
+Yox.version = '0.19.2';
 
 Yox.switcher = switcher;
 
