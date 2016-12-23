@@ -8,7 +8,7 @@ export const LEVEL_CURRENT = '.'
 export const LEVEL_PARENT = '..'
 
 export function normalize(str) {
-  if (str.indexOf('[') > 0 && str.indexOf(']') > 0) {
+  if (str && str.indexOf('[') > 0 && str.indexOf(']') > 0) {
     return expression.parse(str).stringify()
   }
   return str
@@ -37,7 +37,9 @@ export function resolve(base, path) {
         list.pop()
       }
       else {
-        list.push(term)
+        list.push(
+          normalize(term)
+        )
       }
     }
   )
