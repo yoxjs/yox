@@ -111,14 +111,25 @@ export function create(root, instance) {
             }
             else if (name.startsWith(syntax.DIRECTIVE_PREFIX)) {
               name = name.slice(syntax.DIRECTIVE_PREFIX.length)
-              // ref 不支持 o-ref 写法
-              if (name !== syntax.KEY_REF) {
+              // 内置指令不支持 o-xxx 写法
+              if (name !== syntax.KEY_REF
+                && name !== syntax.KEY_LAZY
+                && name !== syntax.KEY_MODEL
+              ) {
                 directiveName = name
               }
             }
             else if (name === syntax.KEY_REF) {
               name =
               directiveName = 'ref'
+            }
+            else if (name === syntax.KEY_LAZY) {
+              name =
+              directiveName = 'lazy'
+            }
+            else if (name === syntax.KEY_MODEL) {
+              name =
+              directiveName = 'model'
             }
             else if (name === syntax.KEY_UNIQUE) {
               data.key = node.getValue()

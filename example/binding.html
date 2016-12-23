@@ -28,7 +28,7 @@
                     </label>
                 </div>
                 <div class="field">
-                    <Child name="username" o-model="title" />
+                    <Child name="username" model="title" />
                 </div>
                 <div class="ui message">
                     {{title}}
@@ -42,7 +42,7 @@
                     </label>
                 </div>
                 <div class="field">
-                    <input type="text" o-model="title">
+                    <input type="text" model="title">
                 </div>
                 <div class="ui message">
                     {{title}}
@@ -58,7 +58,7 @@
                     </label>
                 </div>
                 <div class="field">
-                    <input type="text" o-model="title" o-lazy="500">
+                    <input type="text" model="title" lazy="500">
                 </div>
                 <div class="ui message">
                     {{title}}
@@ -74,7 +74,7 @@
                     </label>
                 </div>
                 <div class="field">
-                    <input type="text" o-model="title" o-lazy>
+                    <input type="text" model="title" lazy>
                 </div>
                 <div class="ui message">
                     {{title}}
@@ -89,7 +89,7 @@
                     </label>
                 </div>
                 <div class="field">
-                    <textarea o-model="title"></textarea>
+                    <textarea model="title"></textarea>
                 </div>
                 <div class="ui message">
                     {{title}}
@@ -104,7 +104,7 @@
                     </label>
                 </div>
                 <div class="field">
-                    <textarea o-model="title" o-lazy="500"></textarea>
+                    <textarea model="title" lazy="500"></textarea>
                 </div>
                 <div class="ui message">
                     {{title}}
@@ -120,8 +120,8 @@
                     </label>
                 </div>
                 <div class="field">
-                    <textarea o-model="title" o-lazy></textarea>
-                    <Child name="username" o-model="title" />
+                    <textarea model="title" lazy></textarea>
+                    <Child name="username" model="title" />
                 </div>
                 <div class="ui message">
                     {{title}}
@@ -137,7 +137,7 @@
                     {{#each users}}
                         <div class="field">
                             <div class="ui radio checkbox">
-                                <input type="radio" o-model="selectedUser" value="{{name}}">
+                                <input type="radio" model="selectedUser" value="{{name}}">
                                 <label>
                                     {{name}}
                                 </label>
@@ -157,7 +157,7 @@
                     </label>
                 </div>
                 <div class="grouped fields">
-                    <input type="checkbox" o-model="checkboxSelected">
+                    <input type="checkbox" model="checkboxSelected">
                 </div>
                 <div class="ui message">
                     是否选中：{{checkboxSelected ? '是' : '否'}}
@@ -176,7 +176,7 @@
                     {{#each users}}
                         <div class="field">
                             <div class="ui checkbox">
-                                <input type="checkbox" o-model="selectedNames" value="{{name}}">
+                                <input type="checkbox" model="selectedNames" value="{{name}}">
                                 <label>
                                     {{name}}
                                 </label>
@@ -198,7 +198,7 @@
                     </label>
                 </div>
                 <div class="field">
-                    <select class="ui" o-model="selectedUser">
+                    <select class="ui" model="selectedUser">
                     {{#each users}}
                         <option>
                             {{name}}
@@ -219,7 +219,7 @@
     <script src="../dist/yox.js"></script>
     <script>
         var Child = {
-            template: '<input type="text" name="{{name}}" o-model="value">',
+            template: '<input type="text" name="{{name}}" model="value">',
             propTypes: {
                 name: {
                     type: 'string',
@@ -231,8 +231,8 @@
                 }
             },
             watchers: {
-                value: function () {
-                    this.fire('change')
+                value: function (value) {
+                    this.fire('change', { value })
                 }
             }
         };

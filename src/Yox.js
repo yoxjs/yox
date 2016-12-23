@@ -28,6 +28,7 @@ import * as native from './platform/web/native'
 import magic from './function/magic'
 import execute from './function/execute'
 import toNumber from './function/toNumber'
+import toString from './function/toString'
 
 import Store from './util/Store'
 import Event from './util/Event'
@@ -291,8 +292,8 @@ export default class Yox {
       }
     }
 
-    if (trim === env.TRUE && is.string(value)) {
-      value = value.trim()
+    if (trim === env.TRUE) {
+      value = toString(value).trim()
     }
 
     return value
@@ -881,7 +882,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.18.10'
+Yox.version = '0.19.0'
 
 /**
  * 开关配置

@@ -360,6 +360,8 @@ export function parse(template, getPartial, setPartial) {
                 name.startsWith(syntax.DIRECTIVE_PREFIX)
                   || name.startsWith(syntax.DIRECTIVE_EVENT_PREFIX)
                   || name === syntax.KEY_REF
+                  || name === syntax.KEY_LAZY
+                  || name === syntax.KEY_MODEL
                   || name === syntax.KEY_UNIQUE
                 ? new Directive(name)
                 : new Attribute(name)

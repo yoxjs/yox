@@ -14,5 +14,8 @@ export const DIRECTIVE_EVENT_PREFIX = 'on-'
 export const SPECIAL_EVENT = '$event'
 export const SPECIAL_KEYPATH = '$keypath'
 
-export const KEY_UNIQUE = 'key'
 export const KEY_REF = 'ref'
+export const KEY_LAZY = 'lazy'
+export const KEY_MODEL = 'model'
+
+export const KEY_UNIQUE = 'key'

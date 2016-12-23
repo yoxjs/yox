@@ -34,8 +34,11 @@ var DIRECTIVE_EVENT_PREFIX = 'on-';
 var SPECIAL_EVENT = '$event';
 var SPECIAL_KEYPATH = '$keypath';
 
-var KEY_UNIQUE = 'key';
 var KEY_REF = 'ref';
+var KEY_LAZY = 'lazy';
+var KEY_MODEL = 'model';
+
+var KEY_UNIQUE = 'key';
 
 var syntax = Object.freeze({
 	IF: IF,
@@ -50,8 +53,10 @@ var syntax = Object.freeze({
 	DIRECTIVE_EVENT_PREFIX: DIRECTIVE_EVENT_PREFIX,
 	SPECIAL_EVENT: SPECIAL_EVENT,
 	SPECIAL_KEYPATH: SPECIAL_KEYPATH,
-	KEY_UNIQUE: KEY_UNIQUE,
-	KEY_REF: KEY_REF
+	KEY_REF: KEY_REF,
+	KEY_LAZY: KEY_LAZY,
+	KEY_MODEL: KEY_MODEL,
+	KEY_UNIQUE: KEY_UNIQUE
 });
 
 var componentName = /[-A-Z]/;
@@ -2305,7 +2310,7 @@ function _parse(template, getPartial, setPartial) {
 
               name = match[1];
 
-              addChild(name.startsWith(DIRECTIVE_PREFIX) || name.startsWith(DIRECTIVE_EVENT_PREFIX) || name === KEY_REF || name === KEY_UNIQUE ? new Directive(name) : new Attribute(name));
+              addChild(name.startsWith(DIRECTIVE_PREFIX) || name.startsWith(DIRECTIVE_EVENT_PREFIX) || name === KEY_REF || name === KEY_LAZY || name === KEY_MODEL || name === KEY_UNIQUE ? new Directive(name) : new Attribute(name));
 
               if (string(match[2])) {
                 quote = match[2].charAt(1);
@@ -3534,11 +3539,15 @@ function create$1(root, instance) {
           } else if (name.startsWith(DIRECTIVE_PREFIX)) {
             name = name.slice(DIRECTIVE_PREFIX.length);
 
-            if (name !== KEY_REF) {
+            if (name !== KEY_REF && name !== KEY_LAZY && name !== KEY_MODEL) {
               directiveName = name;
             }
           } else if (name === KEY_REF) {
             name = directiveName = 'ref';
+          } else if (name === KEY_LAZY) {
+            name = directiveName = 'lazy';
+          } else if (name === KEY_MODEL) {
+            name = directiveName = 'model';
           } else if (name === KEY_UNIQUE) {
             data.key = node.getValue();
           }
@@ -3632,6 +3641,18 @@ var toNumber = function (str) {
 
   if (numeric(str)) {
     return +str;
+  }
+  return defaultValue;
+};
+
+var toString$1 = function (str) {
+  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+
+  if (string(str)) {
+    return str;
+  }
+  if (numeric(str)) {
+    return '' + str;
   }
   return defaultValue;
 };
@@ -4232,8 +4253,8 @@ var Yox = function () {
         }
       }
 
-      if (trim === TRUE && string(value)) {
-        value = value.trim();
+      if (trim === TRUE) {
+        value = toString$1(value).trim();
       }
 
       return value;
@@ -4668,7 +4689,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.18.10';
+Yox.version = '0.19.0';
 
 Yox.switcher = switcher;
 
