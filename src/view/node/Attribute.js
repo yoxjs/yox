@@ -3,7 +3,6 @@ import Node from './Node'
 
 import * as nodeType from '../nodeType'
 
-import * as object from '../../util/object'
 import * as keypathUtil from '../../util/keypath'
 
 /**

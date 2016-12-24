@@ -34,7 +34,7 @@ export default class Expression extends Node {
       value = value()
     }
 
-    let result = [ ], keypath = keypathUtil.stringify(data.keys)
+    let result = [ ]
 
     // 处理不转义的字符串模板
     if (!this.safe && is.string(value) && pattern.tag.test(value)) {
@@ -50,7 +50,7 @@ export default class Expression extends Node {
     }
     else {
       let node = new Text(value)
-      node.keypath = keypath
+      node.keypath = keypathUtil.stringify(data.keys)
       result.push(node)
     }
 

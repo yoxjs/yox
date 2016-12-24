@@ -75,19 +75,18 @@ export default class Node {
 
   renderTexts(nodes) {
     let { length } = nodes
-    if (!length) {
-      return
-    }
     if (length === 1) {
       return nodes[0].content
     }
-    return nodes
-    .map(
-      function (node) {
-        return node.content
-      }
-    )
-    .join('')
+    else if (length > 1) {
+      return nodes
+      .map(
+        function (node) {
+          return node.content
+        }
+      )
+      .join('')
+    }
   }
 
 }

@@ -1690,15 +1690,13 @@ var Node$2 = function () {
     value: function renderTexts(nodes) {
       var length = nodes.length;
 
-      if (!length) {
-        return;
-      }
       if (length === 1) {
         return nodes[0].content;
+      } else if (length > 1) {
+        return nodes.map(function (node) {
+          return node.content;
+        }).join('');
       }
-      return nodes.map(function (node) {
-        return node.content;
-      }).join('');
     }
   }]);
   return Node;
@@ -1790,9 +1788,6 @@ var Each = function (_Node) {
       var expr = instance.expr,
           index = instance.index,
           children = instance.children;
-      var _data = data,
-          context = _data.context,
-          keys$$1 = _data.keys;
 
       var _instance$renderExpre = instance.renderExpression(data),
           value = _instance$renderExpre.value;
@@ -1809,7 +1804,12 @@ var Each = function (_Node) {
           data = copy(data);
 
           var result = [];
+          var _data = data,
+              context = _data.context,
+              keys$$1 = _data.keys;
+
           var listContext = context.push(value);
+
           keys$$1.push(expr.stringify());
           iterate(value, function (item, i) {
             if (index) {
@@ -1974,8 +1974,7 @@ var Expression = function (_Node) {
         value = value();
       }
 
-      var result = [],
-          keypath = stringify$1(data.keys);
+      var result = [];
 
       if (!this.safe && string(value) && tag.test(value)) {
         each$1(data.parse(value), function (node) {
@@ -1986,7 +1985,7 @@ var Expression = function (_Node) {
         });
       } else {
         var node = new Text(value);
-        node.keypath = keypath;
+        node.keypath = stringify$1(data.keys);
         result.push(node);
       }
 
@@ -4710,7 +4709,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.19.5';
+Yox.version = '0.19.6';
 
 Yox.switcher = switcher;
 

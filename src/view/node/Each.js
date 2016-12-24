@@ -27,7 +27,6 @@ export default class Each extends Node {
 
     let instance = this
     let { expr, index, children } = instance
-    let { context, keys } = data
 
     let { value } = instance.renderExpression(data)
 
@@ -43,7 +42,9 @@ export default class Each extends Node {
       data = object.copy(data)
 
       let result = [ ]
+      let { context, keys } = data
       let listContext = context.push(value)
+
       keys.push(expr.stringify())
       iterate(
         value,
@@ -52,7 +53,10 @@ export default class Each extends Node {
             listContext.set(index, i)
           }
           keys.push(i)
-          listContext.set(syntax.SPECIAL_KEYPATH, keypathUtil.stringify(keys))
+          listContext.set(
+            syntax.SPECIAL_KEYPATH,
+            keypathUtil.stringify(keys)
+          )
 
           data.context = listContext.push(item)
           array.push(
