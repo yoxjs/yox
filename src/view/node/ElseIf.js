@@ -15,15 +15,10 @@ export default class ElseIf extends Node {
     this.expr = expr
   }
 
-  render(data, prev) {
-    if (prev) {
-      let { value } = this.execute(data)
-      if (value) {
-        this.renderChildren(data)
-      }
-      else {
-        return prev
-      }
+  render(data) {
+    let { value } = this.renderExpression(data)
+    if (value) {
+      return this.renderChildren(data)
     }
   }
 

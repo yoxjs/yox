@@ -1,7 +1,5 @@
 
 import Node from './Node'
-
-import * as env from '../../config/env'
 import * as nodeType from '../nodeType'
 
 /**
@@ -17,19 +15,10 @@ export default class If extends Node {
   }
 
   render(data) {
-
-    // if 是第一个判断
-    // 当它为假时，需要跟进后续的条件分支
-    // 这里用到 reduce 的机制非常合适
-    // 即如果前一个分支不满足，返回 true，告知后续的要执行
-    let { value } = this.execute(data)
+    let { value } = this.renderExpression(data)
     if (value) {
-      this.renderChildren(data)
+      return this.renderChildren(data)
     }
-    else {
-      return env.TRUE
-    }
-
   }
 
 }

@@ -151,35 +151,19 @@ const rootName = 'root'
  */
 export function render(ast, data) {
 
-  let rootElement = new Element(rootName)
   let deps = { }
 
-  // 非转义插值需要解析模板字符串
-  let renderAst = function (ast) {
-    ast.render({
-      keys: [ ],
-      parent: rootElement,
-      context: new Context(data),
-      parse: function (template) {
-        return parse(template).children
-      },
-      addDeps: function (childrenDeps) {
-        object.extend(deps, childrenDeps)
-      }
-    })
-  }
+  let { children } = ast.render({
+    keys: [ ],
+    context: new Context(data),
+    parse: function (template) {
+      return parse(template).children
+    },
+    addDeps: function (childrenDeps) {
+      object.extend(deps, childrenDeps)
+    }
+  })[0]
 
-  if (ast.name === rootName) {
-    array.each(
-      ast.children,
-      renderAst
-    )
-  }
-  else {
-    renderAst(ast)
-  }
-
-  let { children } = rootElement
   if (children.length > 1) {
     logger.error('Component template should contain exactly one root element.')
   }
@@ -241,7 +225,7 @@ export function parse(template, getPartial, setPartial) {
     return currentNode
   }
 
-  let addChild = function (node, action = 'addChild') {
+  let addChild = function (node) {
 
     let { name, type, content, children } = node
 
@@ -255,19 +239,6 @@ export function parse(template, getPartial, setPartial) {
         }
         else {
           return
-        }
-        break
-
-      case nodeType.SPREAD:
-      case nodeType.ATTRIBUTE:
-        if (currentNode.attrs) {
-          action = 'addAttr'
-        }
-        break
-
-      case nodeType.DIRECTIVE:
-        if (currentNode.directives) {
-          action = 'addDirective'
         }
         break
 
@@ -287,7 +258,7 @@ export function parse(template, getPartial, setPartial) {
 
     }
 
-    currentNode[action](node)
+    currentNode.addChild(node)
 
     if (children) {
       pushStack(node)

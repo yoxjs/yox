@@ -7,6 +7,7 @@ import * as nodeType from '../nodeType'
 import * as is from '../../util/is'
 import * as env from '../../config/env'
 import * as array from '../../util/array'
+import * as keypathUtil from '../../util/keypath'
 import * as pattern from '../../config/pattern'
 
 /**
@@ -25,7 +26,7 @@ export default class Expression extends Node {
 
   render(data) {
 
-    let { value } = this.execute(data)
+    let { value } = this.renderExpression(data)
     if (value == env.NULL) {
       value = ''
     }
@@ -33,19 +34,27 @@ export default class Expression extends Node {
       value = value()
     }
 
+    let result = [ ], keypath = keypathUtil.stringify(data.keys)
+
     // 处理不转义的字符串模板
     if (!this.safe && is.string(value) && pattern.tag.test(value)) {
       array.each(
         data.parse(value),
         function (node) {
-          node.render(data)
+          node = node.render(data)
+          if (node) {
+            array.push(result, node)
+          }
         }
       )
     }
     else {
       let node = new Text(value)
-      node.render(data)
+      node.keypath = keypath
+      result.push(node)
     }
+
+    return result
 
   }
 

@@ -26,10 +26,10 @@ export default class Each extends Node {
   render(data) {
 
     let instance = this
-    let { expr, index } = instance
+    let { expr, index, children } = instance
     let { context, keys } = data
 
-    let { value } = instance.execute(data)
+    let { value } = instance.renderExpression(data)
 
     let iterate
     if (is.array(value)) {
@@ -40,6 +40,9 @@ export default class Each extends Node {
     }
 
     if (iterate) {
+      data = object.copy(data)
+
+      let result = [ ]
       let listContext = context.push(value)
       keys.push(expr.stringify())
       iterate(
@@ -50,13 +53,19 @@ export default class Each extends Node {
           }
           keys.push(i)
           listContext.set(syntax.SPECIAL_KEYPATH, keypathUtil.stringify(keys))
-          instance.renderChildren(
-            object.extend({ }, data, { context: listContext.push(item) })
+
+          data.context = listContext.push(item)
+          array.push(
+            result,
+            instance.renderChildren(data)
           )
+
           keys.pop()
         }
       )
       keys.pop()
+
+      return result
     }
 
   }

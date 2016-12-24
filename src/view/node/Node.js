@@ -4,10 +4,7 @@ import * as nodeType from '../nodeType'
 
 import * as array from '../../util/array'
 import * as object from '../../util/object'
-import * as keypath from '../../util/keypath'
-
-import execute from '../../function/execute'
-import toString from '../../function/toString'
+import * as keypathUtil from '../../util/keypath'
 
 /**
  * 节点基类
@@ -21,19 +18,11 @@ export default class Node {
     }
   }
 
-  addChild(node) {
-    let { children } = this
-    if (node.type === nodeType.TEXT) {
-      let lastChild = array.last(children)
-      if (lastChild && lastChild.type === nodeType.TEXT) {
-        lastChild.content += toString(node.content)
-        return
-      }
-    }
-    children.push(node)
+  addChild(child) {
+    this.children.push(child)
   }
 
-  execute(data) {
+  renderExpression(data) {
     let { context, keys, addDeps } = data
     let { value, deps } = this.expr.execute(context)
     let newDeps = { }
@@ -41,8 +30,8 @@ export default class Node {
       deps,
       function (value, key) {
         newDeps[
-          keypath.resolve(
-            keypath.stringify(keys),
+          keypathUtil.resolve(
+            keypathUtil.stringify(keys),
             key
           )
         ] = value
@@ -55,17 +44,50 @@ export default class Node {
     }
   }
 
-  render() {
-    // noop
+  renderChildren(data, children) {
+    if (!children) {
+      children = this.children
+    }
+    let i = 0, node, next
+    let list = [ ], item
+    while (node = children[i]) {
+      item = node.render(data)
+      if (item) {
+        array.push(list, item)
+        if (node.type === nodeType.IF
+          || node.type === nodeType.ELSE_IF
+        ) {
+          // 跳过后面紧跟着的 elseif else
+          while (next = children[i + 1]) {
+            if (next.type === nodeType.ELSE_IF || next.type === nodeType.ELSE) {
+              i++
+            }
+            else {
+              break
+            }
+          }
+        }
+      }
+      i++
+    }
+    return list
   }
 
-  renderChildren(data, children) {
-    array.reduce(
-      children || this.children,
-      function (prev, current) {
-        return current.render(data, prev)
+  renderTexts(nodes) {
+    let { length } = nodes
+    if (!length) {
+      return
+    }
+    if (length === 1) {
+      return nodes[0].content
+    }
+    return nodes
+    .map(
+      function (node) {
+        return node.content
       }
     )
+    .join('')
   }
 
 }

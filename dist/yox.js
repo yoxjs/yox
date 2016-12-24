@@ -137,10 +137,6 @@ function each$1(array$$1, callback, reversed) {
   }
 }
 
-function reduce(array$$1, callback, initialValue) {
-  return array$$1.reduce(callback, initialValue);
-}
-
 function diff(array1, array2, strict) {
   var result = [];
   each$1(array2, function (item) {
@@ -160,6 +156,12 @@ function merge() {
     each$1(array$$1, push);
   });
   return result;
+}
+
+function push$1(original, array$$1) {
+  each$1(array$$1, function (item) {
+    original.push(item);
+  });
 }
 
 function toArray(array$$1) {
@@ -210,9 +212,9 @@ function falsy(array$$1) {
 
 var array$1 = Object.freeze({
 	each: each$1,
-	reduce: reduce,
 	diff: diff,
 	merge: merge,
+	push: push$1,
 	toArray: toArray,
 	toObject: toObject,
 	indexOf: indexOf,
@@ -232,13 +234,13 @@ var hasConsole = typeof console !== 'undefined';
 
 function warn(msg) {
   if (debug && hasConsole) {
-    console.warn(msg);
+    console.warn('[Yox warn]: ' + msg);
   }
 }
 
 function error$1(msg) {
   if (hasConsole) {
-    console.error(msg);
+    console.error('[Yox error]: ' + msg);
   }
 }
 
@@ -1618,18 +1620,6 @@ var Scanner = function () {
   return Scanner;
 }();
 
-var toString$1 = function (str) {
-  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
-
-  if (string(str)) {
-    return str;
-  }
-  if (numeric(str)) {
-    return '' + str;
-  }
-  return defaultValue;
-};
-
 var Node$2 = function () {
   function Node(type, hasChildren) {
     classCallCheck(this, Node);
@@ -1642,21 +1632,12 @@ var Node$2 = function () {
 
   createClass(Node, [{
     key: 'addChild',
-    value: function addChild(node) {
-      var children = this.children;
-
-      if (node.type === TEXT) {
-        var lastChild = last(children);
-        if (lastChild && lastChild.type === TEXT) {
-          lastChild.content += toString$1(node.content);
-          return;
-        }
-      }
-      children.push(node);
+    value: function addChild(child) {
+      this.children.push(child);
     }
   }, {
-    key: 'execute',
-    value: function execute$1(data) {
+    key: 'renderExpression',
+    value: function renderExpression(data) {
       var context = data.context,
           keys$$1 = data.keys,
           addDeps = data.addDeps;
@@ -1676,14 +1657,48 @@ var Node$2 = function () {
       };
     }
   }, {
-    key: 'render',
-    value: function render() {}
-  }, {
     key: 'renderChildren',
     value: function renderChildren(data, children) {
-      reduce(children || this.children, function (prev, current) {
-        return current.render(data, prev);
-      });
+      if (!children) {
+        children = this.children;
+      }
+      var i = 0,
+          node = void 0,
+          next = void 0;
+      var list = [],
+          item = void 0;
+      while (node = children[i]) {
+        item = node.render(data);
+        if (item) {
+          push$1(list, item);
+          if (node.type === IF$1 || node.type === ELSE_IF$1) {
+            while (next = children[i + 1]) {
+              if (next.type === ELSE_IF$1 || next.type === ELSE$1) {
+                i++;
+              } else {
+                break;
+              }
+            }
+          }
+        }
+        i++;
+      }
+      return list;
+    }
+  }, {
+    key: 'renderTexts',
+    value: function renderTexts(nodes) {
+      var length = nodes.length;
+
+      if (!length) {
+        return;
+      }
+      if (length === 1) {
+        return nodes[0].content;
+      }
+      return nodes.map(function (node) {
+        return node.content;
+      }).join('');
     }
   }]);
   return Node;
@@ -1695,9 +1710,10 @@ var Attribute = function (_Node) {
   function Attribute(name) {
     classCallCheck(this, Attribute);
 
-    var _this = possibleConstructorReturn(this, (Attribute.__proto__ || Object.getPrototypeOf(Attribute)).call(this, ATTRIBUTE));
+    var _this = possibleConstructorReturn(this, (Attribute.__proto__ || Object.getPrototypeOf(Attribute)).call(this, ATTRIBUTE, arguments.length === 1));
 
     _this.name = name;
+    _this.value = arguments[1];
     return _this;
   }
 
@@ -1705,28 +1721,20 @@ var Attribute = function (_Node) {
     key: 'render',
     value: function render(data) {
       var name = this.name;
-      var keys$$1 = data.keys,
-          parent = data.parent;
 
 
       if (name.type === EXPRESSION) {
-        var _name$execute = name.execute(data),
-            value = _name$execute.value;
+        var _name$renderExpressio = name.renderExpression(data),
+            _value = _name$renderExpressio.value;
 
-        name = value;
+        name = _value;
       }
 
-      var node = new Attribute(name);
-      node.keypath = stringify$1(keys$$1);
-      parent.addAttr(node);
+      var value = this.renderTexts(this.renderChildren(data));
 
-      this.renderChildren(extend({}, data, { parent: node }));
-
-      var children = node.children;
-
-      delete node.children;
-
-      node.value = children.length > 0 ? children[0].content : TRUE;
+      var node = new Attribute(name, value);
+      node.keypath = stringify$1(data.keys);
+      return [node];
     }
   }]);
   return Attribute;
@@ -1738,9 +1746,10 @@ var Directive = function (_Node) {
   function Directive(name) {
     classCallCheck(this, Directive);
 
-    var _this = possibleConstructorReturn(this, (Directive.__proto__ || Object.getPrototypeOf(Directive)).call(this, DIRECTIVE));
+    var _this = possibleConstructorReturn(this, (Directive.__proto__ || Object.getPrototypeOf(Directive)).call(this, DIRECTIVE, arguments.length === 1));
 
     _this.name = name;
+    _this.value = arguments[1];
     return _this;
   }
 
@@ -1750,17 +1759,11 @@ var Directive = function (_Node) {
       var name = this.name;
 
 
-      var node = new Directive(name);
+      var value = this.renderTexts(this.renderChildren(data));
+
+      var node = new Directive(name, value);
       node.keypath = stringify$1(data.keys);
-      data.parent.addDirective(node);
-
-      this.renderChildren(extend({}, data, { parent: node }));
-
-      var children = node.children;
-
-      delete node.children;
-
-      node.value = children.length > 0 ? children[0].content : TRUE;
+      return [node];
     }
   }]);
   return Directive;
@@ -1785,12 +1788,14 @@ var Each = function (_Node) {
 
       var instance = this;
       var expr = instance.expr,
-          index = instance.index;
-      var context = data.context,
-          keys$$1 = data.keys;
+          index = instance.index,
+          children = instance.children;
+      var _data = data,
+          context = _data.context,
+          keys$$1 = _data.keys;
 
-      var _instance$execute = instance.execute(data),
-          value = _instance$execute.value;
+      var _instance$renderExpre = instance.renderExpression(data),
+          value = _instance$renderExpre.value;
 
       var iterate = void 0;
       if (array(value)) {
@@ -1800,7 +1805,10 @@ var Each = function (_Node) {
       }
 
       if (iterate) {
-        (function () {
+        var _ret = function () {
+          data = copy(data);
+
+          var result = [];
           var listContext = context.push(value);
           keys$$1.push(expr.stringify());
           iterate(value, function (item, i) {
@@ -1809,11 +1817,20 @@ var Each = function (_Node) {
             }
             keys$$1.push(i);
             listContext.set(SPECIAL_KEYPATH, stringify$1(keys$$1));
-            instance.renderChildren(extend({}, data, { context: listContext.push(item) }));
+
+            data.context = listContext.push(item);
+            push$1(result, instance.renderChildren(data));
+
             keys$$1.pop();
           });
           keys$$1.pop();
-        })();
+
+          return {
+            v: result
+          };
+        }();
+
+        if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
       }
     }
   }]);
@@ -1836,33 +1853,31 @@ var Element = function (_Node) {
   }
 
   createClass(Element, [{
-    key: 'addAttr',
-    value: function addAttr(node) {
-      this.attrs.push(node);
-    }
-  }, {
-    key: 'addDirective',
-    value: function addDirective(node) {
-      this.directives.push(node);
+    key: 'addChild',
+    value: function addChild(child) {
+      var children = void 0;
+      if (child.type === ATTRIBUTE) {
+        children = this.attrs;
+      } else if (child.type === DIRECTIVE) {
+        children = this.directives;
+      } else {
+        children = this.children;
+      }
+      children.push(child);
     }
   }, {
     key: 'render',
     value: function render(data) {
 
       var instance = this;
-      var name = instance.name,
-          component = instance.component,
-          attrs = instance.attrs,
-          directives = instance.directives;
 
-      var node = new Element(name, component);
+      var node = new Element(instance.name, instance.component);
       node.keypath = stringify$1(data.keys);
-      data.parent.addChild(node);
+      node.attrs = instance.renderChildren(data, instance.attrs);
+      node.directives = instance.renderChildren(data, instance.directives);
+      node.children = instance.renderChildren(data);
 
-      data = extend({}, data, { parent: node });
-      instance.renderChildren(data, attrs);
-      instance.renderChildren(data, directives);
-      instance.renderChildren(data);
+      return [node];
     }
   }]);
   return Element;
@@ -1878,10 +1893,8 @@ var Else = function (_Node) {
 
   createClass(Else, [{
     key: 'render',
-    value: function render(data, prev) {
-      if (prev) {
-        this.renderChildren(data);
-      }
+    value: function render(data) {
+      return this.renderChildren(data);
     }
   }]);
   return Else;
@@ -1901,16 +1914,12 @@ var ElseIf = function (_Node) {
 
   createClass(ElseIf, [{
     key: 'render',
-    value: function render(data, prev) {
-      if (prev) {
-        var _execute = this.execute(data),
-            value = _execute.value;
+    value: function render(data) {
+      var _renderExpression = this.renderExpression(data),
+          value = _renderExpression.value;
 
-        if (value) {
-          this.renderChildren(data);
-        } else {
-          return prev;
-        }
+      if (value) {
+        return this.renderChildren(data);
       }
     }
   }]);
@@ -1934,7 +1943,7 @@ var Text = function (_Node) {
     value: function render(data) {
       var node = new Text(this.content);
       node.keypath = stringify$1(data.keys);
-      data.parent.addChild(node);
+      return [node];
     }
   }]);
   return Text;
@@ -1956,8 +1965,8 @@ var Expression = function (_Node) {
   createClass(Expression, [{
     key: 'render',
     value: function render(data) {
-      var _execute = this.execute(data),
-          value = _execute.value;
+      var _renderExpression = this.renderExpression(data),
+          value = _renderExpression.value;
 
       if (value == NULL) {
         value = '';
@@ -1965,14 +1974,23 @@ var Expression = function (_Node) {
         value = value();
       }
 
+      var result = [],
+          keypath = stringify$1(data.keys);
+
       if (!this.safe && string(value) && tag.test(value)) {
         each$1(data.parse(value), function (node) {
-          node.render(data);
+          node = node.render(data);
+          if (node) {
+            push$1(result, node);
+          }
         });
       } else {
         var node = new Text(value);
-        node.render(data);
+        node.keypath = keypath;
+        result.push(node);
       }
+
+      return result;
     }
   }]);
   return Expression;
@@ -1993,13 +2011,11 @@ var If = function (_Node) {
   createClass(If, [{
     key: 'render',
     value: function render(data) {
-      var _execute = this.execute(data),
-          value = _execute.value;
+      var _renderExpression = this.renderExpression(data),
+          value = _renderExpression.value;
 
       if (value) {
-        this.renderChildren(data);
-      } else {
-        return TRUE;
+        return this.renderChildren(data);
       }
     }
   }]);
@@ -2051,15 +2067,24 @@ var Spread = function (_Node) {
   createClass(Spread, [{
     key: 'render',
     value: function render(data) {
-      var _execute = this.execute(data),
-          value = _execute.value;
+      var _renderExpression = this.renderExpression(data),
+          value = _renderExpression.value;
 
       if (object(value)) {
-        each$$1(value, function (value, key) {
-          var node = new Attribute(key);
-          node.addChild(new Text(value));
-          node.render(data);
-        });
+        var _ret = function () {
+          var result = [],
+              keypath = stringify$1(data.keys);
+          each$$1(value, function (value, key) {
+            var node = new Attribute(key, value);
+            node.keypath = keypath;
+            result.push(node);
+          });
+          return {
+            v: result
+          };
+        }();
+
+        if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
       }
     }
   }]);
@@ -2166,33 +2191,22 @@ var rootName = 'root';
 
 function render$1(ast, data) {
 
-  var rootElement = new Element(rootName);
   var deps = {};
 
-  var renderAst = function renderAst(ast) {
-    ast.render({
-      keys: [],
-      parent: rootElement,
-      context: new Context(data),
-      parse: function parse(template) {
-        return _parse(template).children;
-      },
-      addDeps: function addDeps(childrenDeps) {
-        extend(deps, childrenDeps);
-      }
-    });
-  };
+  var children = ast.render({
+    keys: [],
+    context: new Context(data),
+    parse: function parse(template) {
+      return _parse(template).children;
+    },
+    addDeps: function addDeps(childrenDeps) {
+      extend(deps, childrenDeps);
+    }
+  })[0].children;
 
-  if (ast.name === rootName) {
-    each$1(ast.children, renderAst);
-  } else {
-    renderAst(ast);
-  }
-
-  var children = rootElement.children;
 
   if (children.length > 1) {
-    error$1('Template should have only one root element.');
+    error$1('Component template should contain exactly one root element.');
   }
 
   return {
@@ -2240,7 +2254,6 @@ function _parse(template, getPartial, setPartial) {
   };
 
   var addChild = function addChild(node) {
-    var action = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'addChild';
     var name = node.name,
         type = node.type,
         content = node.content,
@@ -2259,19 +2272,6 @@ function _parse(template, getPartial, setPartial) {
         }
         break;
 
-      case SPREAD$1:
-      case ATTRIBUTE:
-        if (currentNode.attrs) {
-          action = 'addAttr';
-        }
-        break;
-
-      case DIRECTIVE:
-        if (currentNode.directives) {
-          action = 'addDirective';
-        }
-        break;
-
       case IMPORT$1:
         each$1(getPartial(name).children, function (node) {
           addChild(node);
@@ -2285,7 +2285,7 @@ function _parse(template, getPartial, setPartial) {
 
     }
 
-    currentNode[action](node);
+    currentNode.addChild(node);
 
     if (children) {
       pushStack(node);
@@ -2544,8 +2544,11 @@ var validateProps = function (data, schema, onNotMatched, onNotFound) {
           if (string(type)) {
             matched = is(target, type);
           } else if (array(type)) {
-            matched = type.some(function (t) {
-              return is(target, t);
+            each$1(type, function (t) {
+              if (is(target, t)) {
+                matched = TRUE;
+                return FALSE;
+              }
             });
           } else if (func(type)) {
             matched = type(target, data);
@@ -2607,9 +2610,9 @@ function diff$1(instance) {
       $computedDeps = instance.$computedDeps;
 
   var keys$$1 = [];
-  var addKey = function addKey(key, push) {
+  var addKey = function addKey(key, push$$1) {
     if (!has$2(keys$$1, key)) {
-      if (push) {
+      if (push$$1) {
         keys$$1.push(key);
       } else {
         keys$$1.unshift(key);
@@ -4707,7 +4710,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.19.4';
+Yox.version = '0.19.5';
 
 Yox.switcher = switcher;
 

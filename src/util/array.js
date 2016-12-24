@@ -33,18 +33,6 @@ export function each(array, callback, reversed) {
 }
 
 /**
- * 原生的 array.reduce 如果传了空数组，不传 initialValue 会报错，因此封装一下方便使用
- *
- * @param {Array} array
- * @param {Function} callback
- * @param {?*} initialValue 初始值
- * @return {*}
- */
-export function reduce(array, callback, initialValue) {
-  return array.reduce(callback, initialValue)
-}
-
-/**
  * 返回 array2 中包含，array1 中不包含的数组项
  *
  * @param {Array} array1
@@ -82,6 +70,21 @@ export function merge() {
     }
   )
   return result
+}
+
+/**
+ * 压入一个数组
+ *
+ * @param {Array} original
+ * @param {Array} array
+ */
+export function push(original, array) {
+  each(
+    array,
+    function (item) {
+      original.push(item)
+    }
+  )
 }
 
 /**
