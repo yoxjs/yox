@@ -205,12 +205,7 @@ export function parse(template, getPartial, setPartial) {
     return cache.templateParse[template]
   }
 
-  let mainScanner = new Scanner(template),
-    helperScanner = new Scanner(),
-    rootNode = new Element(rootName),
-    currentNode = rootNode,
-    nodeStack = [ ],
-    node,
+  let nodeStack = [ ],
     name,
     quote,
     content,
@@ -219,9 +214,22 @@ export function parse(template, getPartial, setPartial) {
     match,
     errorIndex
 
-  let attrLike = { }
-  attrLike[nodeType.ATTRIBUTE] =
-  attrLike[nodeType.DIRECTIVE] = env.TRUE
+  let mainScanner = new Scanner(template)
+  let helperScanner = new Scanner()
+
+  // level 有三级
+  // 0 表示可以 add Element 和 Text
+  // 1 表示只能 add Attribute 和 Directive
+  // 2 表示只能 add Text
+
+  const LEVEL_ELEMENT = 0
+  const LEVEL_ATTRIBUTE = 1
+  const LEVEL_TEXT = 2
+
+  let level = LEVEL_ELEMENT, levelNode
+
+  let rootNode = new Element(rootName)
+  let currentNode = rootNode
 
   let pushStack = function (node) {
     nodeStack.push(currentNode)
@@ -296,13 +304,14 @@ export function parse(template, getPartial, setPartial) {
     }
     if (content.charAt(0) === quote) {
       popStack()
+      level--
     }
     return content
   }
 
   // 这个函数涉及分隔符和普通模板的深度解析
   // 是最核心的函数
-  let parseContent = function (content, isAttributesParsing) {
+  let parseContent = function (content) {
 
     helperScanner.reset(content)
 
@@ -321,71 +330,72 @@ export function parse(template, getPartial, setPartial) {
         // name="{{value}}"
         // {{name}}="{{value}}"
 
-        if (isAttributesParsing) {
+        // 当前节点是 ATTRIBUTE 或 DIRECTIVE
+        // 表示至少已经有了 name
+        if (level === LEVEL_TEXT) {
 
-          // 当前节点是 ATTRIBUTE
-          // 表示至少已经有了属性名
-          if (attrLike[currentNode.type]) {
+          // 走进这里，只可能是以下几种情况：
+          // 1. 属性名是字面量，属性值已包含表达式
+          // 2. 属性名是表达式，属性值不确定是否存在
 
-            // 走进这里，只可能是以下几种情况
-            // 1. 属性名是字面量，属性值已包含表达式
-            // 2. 属性名是表达式，属性值不确定是否存在
-
-            // 当前属性的属性值是字面量结尾
-            if (currentNode.children.length) {
-              content = parseAttributeValue(content)
+          // 当前属性的属性值是字面量结尾
+          if (levelNode.children.length) {
+            content = parseAttributeValue(content)
+          }
+          else {
+            // 属性值开头部分是字面量
+            if (attributeValueStartPattern.test(content)) {
+              quote = content.charAt(1)
+              content = content.slice(2)
             }
+            // 没有属性值
             else {
-              // 属性值开头部分是字面量
-              if (attributeValueStartPattern.test(content)) {
-                quote = content.charAt(1)
-                content = content.slice(2)
-              }
-              // 没有属性值
-              else {
-                popStack()
-              }
+              popStack()
+              level--
             }
-
           }
 
-          if (!attrLike[currentNode.type]) {
-            // 下一个属性的开始
-            while (match = attributePattern.exec(content)) {
-              content = content.slice(match.index + match[0].length)
-
-              name = match[1]
-
-              addChild(
-                name.startsWith(syntax.DIRECTIVE_PREFIX)
-                  || name.startsWith(syntax.DIRECTIVE_EVENT_PREFIX)
-                  || name === syntax.KEY_REF
-                  || name === syntax.KEY_LAZY
-                  || name === syntax.KEY_MODEL
-                  || name === syntax.KEY_UNIQUE
-                ? new Directive(name)
-                : new Attribute(name)
-              )
-
-              if (is.string(match[2])) {
-                quote = match[2].charAt(1)
-                content = parseAttributeValue(content)
-                // else 可能跟了一个表达式
-              }
-              // 没有引号，即 checked、disabled 等
-              else {
-                popStack()
-              }
-            }
-            content = ''
-          }
         }
 
-        if (content) {
+
+
+        if (level === LEVEL_ATTRIBUTE) {
+          // 下一个属性的开始
+          while (match = attributePattern.exec(content)) {
+            content = content.slice(match.index + match[0].length)
+
+            name = match[1]
+
+            levelNode = name.startsWith(syntax.DIRECTIVE_PREFIX)
+              || name.startsWith(syntax.DIRECTIVE_EVENT_PREFIX)
+              || name === syntax.KEY_REF
+              || name === syntax.KEY_LAZY
+              || name === syntax.KEY_MODEL
+              || name === syntax.KEY_UNIQUE
+            ? new Directive(name)
+            : new Attribute(name)
+
+            addChild(levelNode)
+            level++
+
+            // 包含 ="
+            if (is.string(match[2])) {
+              quote = match[2].charAt(1)
+              content = parseAttributeValue(content)
+            }
+            // 没有引号，即 checked、disabled 等
+            else {
+              popStack()
+              level--
+            }
+          }
+        }
+        else if (content) {
           addChild(
             new Text(content)
           )
         }
+
       }
 
       // 分隔符之间的内容
@@ -402,19 +412,23 @@ export function parse(template, getPartial, setPartial) {
           }
           array.each(
             parsers,
-            function (parser) {
+            function (parser, index) {
               if (parser.test(content)) {
-                node = parser.create(content, popStack)
-                if (is.string(node)) {
-                  util.parseError(template, node, errorIndex)
+                // 用 index 节省一个变量定义
+                index = parser.create(content, popStack)
+                if (is.string(index)) {
+                  util.parseError(template, index, errorIndex)
                 }
-                if (isAttributesParsing
+                else if (level === LEVEL_ATTRIBUTE
                   && node.type === nodeType.EXPRESSION
-                  && !attrLike[currentNode.type]
                 ) {
-                  node = new Attribute(node)
+                  levelNode = new Attribute(index)
+                  level++
+                  addChild(levelNode)
                 }
-                addChild(node)
+                else {
+                  addChild(index)
+                }
                 return env.FALSE
               }
             }
@@ -465,18 +479,20 @@ export function parse(template, getPartial, setPartial) {
       isSelfClosingTag = isComponent || pattern.selfClosingTagName.test(name)
 
       // 低版本浏览器不支持自定义标签，因此需要转成 div
-      addChild(
-        new Element(
-          isComponent ? 'div' : name,
-          isComponent ? name : ''
-        )
+      levelNode = new Element(
+        isComponent ? 'div' : name,
+        isComponent ? name : ''
       )
+
+      addChild(levelNode)
 
       // 截取 <name 和 > 之间的内容
       // 用于提取 attribute
       content = mainScanner.nextBefore(elementEndPattern)
       if (content) {
-        parseContent(content, env.TRUE)
+        level++
+        parseContent(content)
+        level--
       }
 
       content = mainScanner.nextAfter(elementEndPattern)

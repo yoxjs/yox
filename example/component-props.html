@@ -68,7 +68,7 @@
             template: `
                 <div id="root">
                     <input ref="input" style="font-size: 18px;color: red;">
-                    <Custom ref="child" name="123{{name}}" age="{{user.age}}{{user.age}}" user="{{user}}" />
+                    <Custom ref="child" name="123{{name}}" age="{{user.age}}{{#if user.age}}1{{/if}}" user="{{user}}" />
                 </div>
             `,
             components: {

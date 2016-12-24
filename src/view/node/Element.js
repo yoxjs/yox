@@ -4,6 +4,7 @@ import Node from './Node'
 import * as nodeType from '../nodeType'
 import * as array from '../../util/array'
 import * as object from '../../util/object'
+import * as keypath from '../../util/keypath'
 
 /**
  * 元素节点
@@ -34,7 +35,7 @@ export default class Element extends Node {
     let instance = this
     let { name, component, attrs, directives } = instance
     let node = new Element(name, component)
-    node.keypath = data.keys.join('.')
+    node.keypath = keypath.stringify(data.keys)
     data.parent.addChild(node)
 
     data = object.extend({ }, data, { parent: node })

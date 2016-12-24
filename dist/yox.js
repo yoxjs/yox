@@ -222,102 +222,83 @@ var array$1 = Object.freeze({
 	falsy: falsy
 });
 
-function keys(object$$1) {
-  return Object.keys(object$$1);
+var debug = TRUE;
+
+var switcher = Object.freeze({
+	debug: debug
+});
+
+var hasConsole = typeof console !== 'undefined';
+
+function warn(msg) {
+  if (debug && hasConsole) {
+    console.warn(msg);
+  }
 }
 
-function each$$1(object$$1, callback) {
-  each$1(keys(object$$1), function (key) {
-    return callback(object$$1[key], key);
+function error$1(msg) {
+  if (hasConsole) {
+    console.error(msg);
+  }
+}
+
+var logger = Object.freeze({
+	warn: warn,
+	error: error$1
+});
+
+function isNumber(charCode) {
+  return charCode >= 48 && charCode <= 57;
+}
+
+function isWhitespace(charCode) {
+  return charCode === 32 || charCode === 9;
+}
+
+function isIdentifierStart(charCode) {
+  return charCode === 36 || charCode === 95 || charCode >= 97 && charCode <= 122 || charCode >= 65 && charCode <= 90;
+}
+
+function isIdentifierPart(charCode) {
+  return isIdentifierStart(charCode) || isNumber(charCode);
+}
+
+function sortKeys(obj) {
+  return keys(obj).sort(function (a, b) {
+    return b.length - a.length;
   });
 }
 
-function has$1(object$$1, key) {
-  return object$$1.hasOwnProperty(key);
-}
-
-function extend() {
-  var args = arguments,
-      result = args[0];
-  for (var i = 1, len = args.length; i < len; i++) {
-    if (object(args[i])) {
-      each$$1(args[i], function (value, key) {
-        result[key] = value;
-      });
+function matchBestToken(content, sortedTokens) {
+  var result = void 0;
+  each$1(sortedTokens, function (token) {
+    if (content.startsWith(token)) {
+      result = token;
+      return FALSE;
     }
-  }
+  });
   return result;
 }
 
-function copy(object$$1, deep) {
-  var result = object$$1;
-  if (array(object$$1)) {
-    result = [];
-    each$1(object$$1, function (item, index) {
-      result[index] = deep ? copy(item) : item;
-    });
-  } else if (object(object$$1)) {
-    result = {};
-    each$$1(object$$1, function (value, key) {
-      result[key] = deep ? copy(value) : value;
-    });
-  }
-  return result;
+function parseError(expression) {
+  error$1('Failed to parse expression: [' + expression + '].');
 }
 
-function get$1(object$$1, keypath) {
-  if (has$1(object$$1, keypath)) {
-    return {
-      value: object$$1[keypath]
-    };
-  }
+var ARRAY = 1;
 
-  if (string(keypath) && keypath.indexOf('.') > 0) {
-    var list = keypath.split('.');
-    for (var i = 0, len = list.length; i < len && object$$1; i++) {
-      if (i < len - 1) {
-        object$$1 = object$$1[list[i]];
-      } else if (has$1(object$$1, list[i])) {
-        return {
-          value: object$$1[list[i]]
-        };
-      }
-    }
-  }
-}
+var BINARY = 2;
 
-function set$1(object$$1, keypath, value, autofill) {
-  if (string(keypath) && keypath.indexOf('.') > 0) {
-    var originalObject = object$$1;
-    var list = keypath.split('.');
-    var prop = list.pop();
-    each$1(list, function (item, index) {
-      if (object$$1[item]) {
-        object$$1 = object$$1[item];
-      } else if (autofill !== FALSE) {
-        object$$1 = object$$1[item] = {};
-      } else {
-        object$$1 = NULL;
-        return FALSE;
-      }
-    });
-    if (object$$1 && object$$1 !== originalObject) {
-      object$$1[prop] = value;
-    }
-  } else {
-    object$$1[keypath] = value;
-  }
-}
+var CALL = 3;
 
-var object$1 = Object.freeze({
-	keys: keys,
-	each: each$$1,
-	has: has$1,
-	extend: extend,
-	copy: copy,
-	get: get$1,
-	set: set$1
-});
+var CONDITIONAL = 4;
+
+var IDENTIFIER = 5;
+
+var LITERAL = 6;
+
+var MEMBER = 7;
+
+var UNARY = 8;
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
   return typeof obj;
@@ -447,223 +428,6 @@ var set$2 = function set$2(object, property, value, receiver) {
 
   return value;
 };
-
-var Store = function () {
-  function Store() {
-    classCallCheck(this, Store);
-
-    this.data = {};
-  }
-
-  createClass(Store, [{
-    key: 'get',
-    value: function get(key) {
-      return this.data[key];
-    }
-  }, {
-    key: 'set',
-    value: function set(key, value) {
-      var data = this.data;
-
-      if (object(key)) {
-        each$$1(key, function (value, key) {
-          data[key] = value;
-        });
-      } else if (string(key)) {
-        data[key] = value;
-      }
-    }
-  }]);
-  return Store;
-}();
-
-var component = new Store();
-var directive$1 = new Store();
-var filter$1 = new Store();
-var partial$1 = new Store();
-
-var registry = Object.freeze({
-	component: component,
-	directive: directive$1,
-	filter: filter$1,
-	partial: partial$1
-});
-
-var debug = TRUE;
-
-var switcher = Object.freeze({
-	debug: debug
-});
-
-var BEFORE_CREATE = 'beforeCreate';
-
-var AFTER_CREATE = 'afterCreate';
-
-var BEFORE_MOUNT = 'beforeMount';
-
-var AFTER_MOUNT = 'afterMount';
-
-var BEFORE_UPDATE = 'beforeUpdate';
-
-var AFTER_UPDATE = 'afterUpdate';
-
-var BEFORE_DESTROY = 'beforeDestroy';
-
-var AFTER_DESTROY = 'afterDestroy';
-
-var hasConsole = typeof console !== 'undefined';
-
-function warn(msg) {
-  if (debug && hasConsole) {
-    console.warn(msg);
-  }
-}
-
-function error$1(msg) {
-  if (hasConsole) {
-    console.error(msg);
-  }
-}
-
-var logger = Object.freeze({
-	warn: warn,
-	error: error$1
-});
-
-var breaklinePrefixPattern = /^[ \t]*\n/;
-var breaklineSuffixPattern = /\n[ \t]*$/;
-
-var nonSingleQuotePattern = /^[^']*/;
-var nonDoubleQuotePattern = /^[^"]*/;
-
-function isBreakLine(str) {
-  return str.indexOf('\n') >= 0 && !str.trim();
-}
-
-function trimBreakline(str) {
-  return str.replace(breaklinePrefixPattern, '').replace(breaklineSuffixPattern, '');
-}
-
-function matchByQuote(str, nonQuote) {
-  var match = str.match(nonQuote === '"' ? nonDoubleQuotePattern : nonSingleQuotePattern);
-  return match ? match[0] : '';
-}
-
-function getLocationByIndex(str, index) {
-
-  var line = 0,
-      col = 0,
-      pos = 0;
-
-  each$1(str.split('\n'), function (lineStr) {
-    line++;
-    col = 0;
-
-    var length = lineStr.length;
-
-    if (index >= pos && index <= pos + length) {
-      col = index - pos;
-      return FALSE;
-    }
-
-    pos += length;
-  });
-
-  return {
-    line: line,
-    col: col
-  };
-}
-
-function parseError(str, errorMsg, errorIndex) {
-  if (errorIndex == NULL) {
-    errorMsg += '.';
-  } else {
-    var _getLocationByIndex = getLocationByIndex(str, errorIndex),
-        line = _getLocationByIndex.line,
-        col = _getLocationByIndex.col;
-
-    errorMsg += ', at line ' + line + ', col ' + col + '.';
-  }
-  error$1(errorMsg);
-}
-
-var IF$1 = 1;
-
-var ELSE_IF$1 = 2;
-
-var ELSE$1 = 3;
-
-var EACH$1 = 4;
-
-var PARTIAL$1 = 5;
-
-var IMPORT$1 = 6;
-
-var EXPRESSION = 7;
-
-var SPREAD$1 = 8;
-
-var DIRECTIVE = 9;
-
-var ELEMENT = 10;
-
-var ATTRIBUTE = 11;
-
-var TEXT = 12;
-
-function isNumber(charCode) {
-  return charCode >= 48 && charCode <= 57;
-}
-
-function isWhitespace(charCode) {
-  return charCode === 32 || charCode === 9;
-}
-
-function isIdentifierStart(charCode) {
-  return charCode === 36 || charCode === 95 || charCode >= 97 && charCode <= 122 || charCode >= 65 && charCode <= 90;
-}
-
-function isIdentifierPart(charCode) {
-  return isIdentifierStart(charCode) || isNumber(charCode);
-}
-
-function sortKeys(obj) {
-  return keys(obj).sort(function (a, b) {
-    return b.length - a.length;
-  });
-}
-
-function matchBestToken(content, sortedTokens) {
-  var result = void 0;
-  each$1(sortedTokens, function (token) {
-    if (content.startsWith(token)) {
-      result = token;
-      return FALSE;
-    }
-  });
-  return result;
-}
-
-function parseError$1(expression) {
-  error$1('Failed to parse expression: [' + expression + '].');
-}
-
-var ARRAY = 1;
-
-var BINARY = 2;
-
-var CALL = 3;
-
-var CONDITIONAL = 4;
-
-var IDENTIFIER = 5;
-
-var LITERAL = 6;
-
-var MEMBER = 7;
-
-var UNARY = 8;
 
 var Node = function Node(type) {
   classCallCheck(this, Node);
@@ -1225,7 +989,7 @@ function parse$2(content) {
       }
     }
     if (!closed) {
-      return parseError$1(content);
+      return parseError(content);
     }
   }
 
@@ -1275,7 +1039,7 @@ function parse$2(content) {
       return new Identifier(value);
     }
 
-    parseError$1(content);
+    parseError(content);
   }
 
   function parseTuple(delimiter) {
@@ -1300,7 +1064,7 @@ function parse$2(content) {
       return args;
     }
 
-    parseError$1(content);
+    parseError(content);
   }
 
   function parseOperator(sortedOperatorList) {
@@ -1360,7 +1124,7 @@ function parse$2(content) {
     if (value) {
       return parseUnary(value);
     }
-    parseError$1(content);
+    parseError(content);
   }
 
   function parseUnary(op) {
@@ -1368,7 +1132,7 @@ function parse$2(content) {
     if (value) {
       return new Unary(op, value);
     }
-    parseError$1(content);
+    parseError(content);
   }
 
   function parseBinary() {
@@ -1391,7 +1155,7 @@ function parse$2(content) {
       if (right) {
         stack.push(op, binaryMap[op], right);
       } else {
-        parseError$1(content);
+        parseError(content);
       }
     }
 
@@ -1409,7 +1173,7 @@ function parse$2(content) {
       index++;
       return value;
     }
-    parseError$1(content);
+    parseError(content);
   }
 
   function parseExpression() {
@@ -1431,7 +1195,7 @@ function parse$2(content) {
         skipWhitespace();
         return new Conditional(test, consequent, alternate);
       } else {
-        parseError$1(content);
+        parseError(content);
       }
     }
 
@@ -1483,6 +1247,242 @@ function resolve(base, path) {
   });
   return stringify$1(list);
 }
+
+function keys(object$$1) {
+  return Object.keys(object$$1);
+}
+
+function each$$1(object$$1, callback) {
+  each$1(keys(object$$1), function (key) {
+    return callback(object$$1[key], key);
+  });
+}
+
+function has$1(object$$1, key) {
+  return object$$1.hasOwnProperty(key);
+}
+
+function extend() {
+  var args = arguments,
+      result = args[0];
+  for (var i = 1, len = args.length; i < len; i++) {
+    if (object(args[i])) {
+      each$$1(args[i], function (value, key) {
+        result[key] = value;
+      });
+    }
+  }
+  return result;
+}
+
+function copy(object$$1, deep) {
+  var result = object$$1;
+  if (array(object$$1)) {
+    result = [];
+    each$1(object$$1, function (item, index) {
+      result[index] = deep ? copy(item) : item;
+    });
+  } else if (object(object$$1)) {
+    result = {};
+    each$$1(object$$1, function (value, key) {
+      result[key] = deep ? copy(value) : value;
+    });
+  }
+  return result;
+}
+
+function get$1(object$$1, keypath) {
+  if (has$1(object$$1, keypath)) {
+    return {
+      value: object$$1[keypath]
+    };
+  }
+
+  if (string(keypath) && keypath.indexOf('.') > 0) {
+    var list = parse$1(keypath);
+    for (var i = 0, len = list.length; i < len && object$$1; i++) {
+      if (i < len - 1) {
+        object$$1 = object$$1[list[i]];
+      } else if (has$1(object$$1, list[i])) {
+        return {
+          value: object$$1[list[i]]
+        };
+      }
+    }
+  }
+}
+
+function set$1(object$$1, keypath, value, autofill) {
+  if (string(keypath) && keypath.indexOf('.') > 0) {
+    var originalObject = object$$1;
+    var list = parse$1(keypath);
+    var prop = list.pop();
+    each$1(list, function (item, index) {
+      if (object$$1[item]) {
+        object$$1 = object$$1[item];
+      } else if (autofill !== FALSE) {
+        object$$1 = object$$1[item] = {};
+      } else {
+        object$$1 = NULL;
+        return FALSE;
+      }
+    });
+    if (object$$1 && object$$1 !== originalObject) {
+      object$$1[prop] = value;
+    }
+  } else {
+    object$$1[keypath] = value;
+  }
+}
+
+var object$1 = Object.freeze({
+	keys: keys,
+	each: each$$1,
+	has: has$1,
+	extend: extend,
+	copy: copy,
+	get: get$1,
+	set: set$1
+});
+
+var Store = function () {
+  function Store() {
+    classCallCheck(this, Store);
+
+    this.data = {};
+  }
+
+  createClass(Store, [{
+    key: 'get',
+    value: function get(key) {
+      return this.data[key];
+    }
+  }, {
+    key: 'set',
+    value: function set(key, value) {
+      var data = this.data;
+
+      if (object(key)) {
+        each$$1(key, function (value, key) {
+          data[key] = value;
+        });
+      } else if (string(key)) {
+        data[key] = value;
+      }
+    }
+  }]);
+  return Store;
+}();
+
+var component = new Store();
+var directive$1 = new Store();
+var filter$1 = new Store();
+var partial$1 = new Store();
+
+var registry = Object.freeze({
+	component: component,
+	directive: directive$1,
+	filter: filter$1,
+	partial: partial$1
+});
+
+var BEFORE_CREATE = 'beforeCreate';
+
+var AFTER_CREATE = 'afterCreate';
+
+var BEFORE_MOUNT = 'beforeMount';
+
+var AFTER_MOUNT = 'afterMount';
+
+var BEFORE_UPDATE = 'beforeUpdate';
+
+var AFTER_UPDATE = 'afterUpdate';
+
+var BEFORE_DESTROY = 'beforeDestroy';
+
+var AFTER_DESTROY = 'afterDestroy';
+
+var breaklinePrefixPattern = /^[ \t]*\n/;
+var breaklineSuffixPattern = /\n[ \t]*$/;
+
+var nonSingleQuotePattern = /^[^']*/;
+var nonDoubleQuotePattern = /^[^"]*/;
+
+function isBreakLine(str) {
+  return str.indexOf('\n') >= 0 && !str.trim();
+}
+
+function trimBreakline(str) {
+  return str.replace(breaklinePrefixPattern, '').replace(breaklineSuffixPattern, '');
+}
+
+function matchByQuote(str, nonQuote) {
+  var match = str.match(nonQuote === '"' ? nonDoubleQuotePattern : nonSingleQuotePattern);
+  return match ? match[0] : '';
+}
+
+function getLocationByIndex(str, index) {
+
+  var line = 0,
+      col = 0,
+      pos = 0;
+
+  each$1(str.split('\n'), function (lineStr) {
+    line++;
+    col = 0;
+
+    var length = lineStr.length;
+
+    if (index >= pos && index <= pos + length) {
+      col = index - pos;
+      return FALSE;
+    }
+
+    pos += length;
+  });
+
+  return {
+    line: line,
+    col: col
+  };
+}
+
+function parseError$1(str, errorMsg, errorIndex) {
+  if (errorIndex == NULL) {
+    errorMsg += '.';
+  } else {
+    var _getLocationByIndex = getLocationByIndex(str, errorIndex),
+        line = _getLocationByIndex.line,
+        col = _getLocationByIndex.col;
+
+    errorMsg += ', at line ' + line + ', col ' + col + '.';
+  }
+  error$1(errorMsg);
+}
+
+var IF$1 = 1;
+
+var ELSE_IF$1 = 2;
+
+var ELSE$1 = 3;
+
+var EACH$1 = 4;
+
+var PARTIAL$1 = 5;
+
+var IMPORT$1 = 6;
+
+var EXPRESSION = 7;
+
+var SPREAD$1 = 8;
+
+var DIRECTIVE = 9;
+
+var ELEMENT = 10;
+
+var ATTRIBUTE = 11;
+
+var TEXT = 12;
 
 var Context = function () {
   function Context(data, parent) {
@@ -1717,7 +1717,7 @@ var Attribute = function (_Node) {
       }
 
       var node = new Attribute(name);
-      node.keypath = keys$$1.join('.');
+      node.keypath = stringify$1(keys$$1);
       parent.addAttr(node);
 
       this.renderChildren(extend({}, data, { parent: node }));
@@ -1747,9 +1747,11 @@ var Directive = function (_Node) {
   createClass(Directive, [{
     key: 'render',
     value: function render(data) {
+      var name = this.name;
 
-      var node = new Directive(this.name);
-      node.keypath = data.keys.join('.');
+
+      var node = new Directive(name);
+      node.keypath = stringify$1(data.keys);
       data.parent.addDirective(node);
 
       this.renderChildren(extend({}, data, { parent: node }));
@@ -1806,7 +1808,7 @@ var Each = function (_Node) {
               listContext.set(index, i);
             }
             keys$$1.push(i);
-            listContext.set(SPECIAL_KEYPATH, keys$$1.join('.'));
+            listContext.set(SPECIAL_KEYPATH, stringify$1(keys$$1));
             instance.renderChildren(extend({}, data, { context: listContext.push(item) }));
             keys$$1.pop();
           });
@@ -1854,7 +1856,7 @@ var Element = function (_Node) {
           directives = instance.directives;
 
       var node = new Element(name, component);
-      node.keypath = data.keys.join('.');
+      node.keypath = stringify$1(data.keys);
       data.parent.addChild(node);
 
       data = extend({}, data, { parent: node });
@@ -1931,7 +1933,7 @@ var Text = function (_Node) {
     key: 'render',
     value: function render(data) {
       var node = new Text(this.content);
-      node.keypath = data.keys.join('.');
+      node.keypath = stringify$1(data.keys);
       data.parent.addChild(node);
     }
   }]);
@@ -2205,12 +2207,7 @@ function _parse(template, getPartial, setPartial) {
     return templateParse[template];
   }
 
-  var mainScanner = new Scanner(template),
-      helperScanner = new Scanner(),
-      rootNode = new Element(rootName),
-      currentNode = rootNode,
-      nodeStack = [],
-      node = void 0,
+  var nodeStack = [],
       name = void 0,
       quote = void 0,
       content = void 0,
@@ -2219,8 +2216,18 @@ function _parse(template, getPartial, setPartial) {
       match = void 0,
       errorIndex = void 0;
 
-  var attrLike = {};
-  attrLike[ATTRIBUTE] = attrLike[DIRECTIVE] = TRUE;
+  var mainScanner = new Scanner(template);
+  var helperScanner = new Scanner();
+
+  var LEVEL_ELEMENT = 0;
+  var LEVEL_ATTRIBUTE = 1;
+  var LEVEL_TEXT = 2;
+
+  var level = LEVEL_ELEMENT,
+      levelNode = void 0;
+
+  var rootNode = new Element(rootName);
+  var currentNode = rootNode;
 
   var pushStack = function pushStack(node) {
     nodeStack.push(currentNode);
@@ -2293,11 +2300,12 @@ function _parse(template, getPartial, setPartial) {
     }
     if (content.charAt(0) === quote) {
       popStack();
+      level--;
     }
     return content;
   };
 
-  var parseContent = function parseContent(content, isAttributesParsing) {
+  var parseContent = function parseContent(content) {
 
     helperScanner.reset(content);
 
@@ -2306,41 +2314,40 @@ function _parse(template, getPartial, setPartial) {
       helperScanner.nextAfter(openingDelimiterPattern);
 
       if (content) {
-
-        if (isAttributesParsing) {
-          if (attrLike[currentNode.type]) {
-            if (currentNode.children.length) {
-              content = parseAttributeValue(content);
+        if (level === LEVEL_TEXT) {
+          if (levelNode.children.length) {
+            content = parseAttributeValue(content);
+          } else {
+            if (attributeValueStartPattern.test(content)) {
+              quote = content.charAt(1);
+              content = content.slice(2);
             } else {
-              if (attributeValueStartPattern.test(content)) {
-                quote = content.charAt(1);
-                content = content.slice(2);
-              } else {
-                  popStack();
-                }
-            }
-          }
-
-          if (!attrLike[currentNode.type]) {
-            while (match = attributePattern.exec(content)) {
-              content = content.slice(match.index + match[0].length);
-
-              name = match[1];
-
-              addChild(name.startsWith(DIRECTIVE_PREFIX) || name.startsWith(DIRECTIVE_EVENT_PREFIX) || name === KEY_REF || name === KEY_LAZY || name === KEY_MODEL || name === KEY_UNIQUE ? new Directive(name) : new Attribute(name));
-
-              if (string(match[2])) {
-                quote = match[2].charAt(1);
-                content = parseAttributeValue(content);
-              } else {
-                  popStack();
-                }
-            }
-            content = '';
+                popStack();
+                level--;
+              }
           }
         }
 
-        if (content) {
+        if (level === LEVEL_ATTRIBUTE) {
+          while (match = attributePattern.exec(content)) {
+            content = content.slice(match.index + match[0].length);
+
+            name = match[1];
+
+            levelNode = name.startsWith(DIRECTIVE_PREFIX) || name.startsWith(DIRECTIVE_EVENT_PREFIX) || name === KEY_REF || name === KEY_LAZY || name === KEY_MODEL || name === KEY_UNIQUE ? new Directive(name) : new Attribute(name);
+
+            addChild(levelNode);
+            level++;
+
+            if (string(match[2])) {
+              quote = match[2].charAt(1);
+              content = parseAttributeValue(content);
+            } else {
+                popStack();
+                level--;
+              }
+          }
+        } else if (content) {
           addChild(new Text(content));
         }
       }
@@ -2355,16 +2362,18 @@ function _parse(template, getPartial, setPartial) {
           if (content.charAt(0) === '{' && helperScanner.charAt(0) === '}') {
             helperScanner.forward(1);
           }
-          each$1(parsers, function (parser) {
+          each$1(parsers, function (parser, index) {
             if (parser.test(content)) {
-              node = parser.create(content, popStack);
-              if (string(node)) {
-                parseError(template, node, errorIndex);
+              index = parser.create(content, popStack);
+              if (string(index)) {
+                parseError$1(template, index, errorIndex);
+              } else if (level === LEVEL_ATTRIBUTE && node.type === EXPRESSION) {
+                levelNode = new Attribute(index);
+                level++;
+                addChild(levelNode);
+              } else {
+                addChild(index);
               }
-              if (isAttributesParsing && node.type === EXPRESSION && !attrLike[currentNode.type]) {
-                node = new Attribute(node);
-              }
-              addChild(node);
               return FALSE;
             }
           });
@@ -2391,9 +2400,9 @@ function _parse(template, getPartial, setPartial) {
       name = content.slice(2);
 
       if (mainScanner.charAt(0) !== '>') {
-        return parseError(template, 'Illegal tag name', errorIndex);
+        return parseError$1(template, 'Illegal tag name', errorIndex);
       } else if (name !== currentNode.name) {
-        return parseError(template, 'Unexpected closing tag', errorIndex);
+        return parseError$1(template, 'Unexpected closing tag', errorIndex);
       }
 
       popStack();
@@ -2405,16 +2414,20 @@ function _parse(template, getPartial, setPartial) {
         isComponent = componentName.test(name);
         isSelfClosingTag = isComponent || selfClosingTagName.test(name);
 
-        addChild(new Element(isComponent ? 'div' : name, isComponent ? name : ''));
+        levelNode = new Element(isComponent ? 'div' : name, isComponent ? name : '');
+
+        addChild(levelNode);
 
         content = mainScanner.nextBefore(elementEndPattern);
         if (content) {
-          parseContent(content, TRUE);
+          level++;
+          parseContent(content);
+          level--;
         }
 
         content = mainScanner.nextAfter(elementEndPattern);
         if (!content) {
-          return parseError(template, 'Illegal tag name', errorIndex);
+          return parseError$1(template, 'Illegal tag name', errorIndex);
         }
 
         if (isSelfClosingTag) {
@@ -2424,7 +2437,7 @@ function _parse(template, getPartial, setPartial) {
   }
 
   if (nodeStack.length) {
-    return parseError(template, 'Missing end tag (</' + nodeStack[0].name + '>)', errorIndex);
+    return parseError$1(template, 'Missing end tag (</' + nodeStack[0].name + '>)', errorIndex);
   }
 
   templateParse[template] = rootNode;
@@ -4694,7 +4707,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.19.3';
+Yox.version = '0.19.4';
 
 Yox.switcher = switcher;
 

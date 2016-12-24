@@ -3,6 +3,7 @@ import * as env from '../config/env'
 
 import * as is from './is'
 import * as array from './array'
+import * as keypathUtil from './keypath'
 
 /**
  * 获取对象的 key 的数组
@@ -111,7 +112,7 @@ export function get(object, keypath) {
   }
   // 不能以 . 开头
   if (is.string(keypath) && keypath.indexOf('.') > 0) {
-    let list = keypath.split('.')
+    let list = keypathUtil.parse(keypath)
     for (let i = 0, len = list.length; i < len && object; i++) {
       if (i < len - 1) {
         object = object[list[i]]
@@ -136,7 +137,7 @@ export function get(object, keypath) {
 export function set(object, keypath, value, autofill) {
   if (is.string(keypath) && keypath.indexOf('.') > 0) {
     let originalObject = object
-    let list = keypath.split('.')
+    let list = keypathUtil.parse(keypath)
     let prop = list.pop()
     array.each(
       list,

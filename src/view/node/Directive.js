@@ -5,6 +5,7 @@ import * as nodeType from '../nodeType'
 
 import * as env from '../../config/env'
 import * as object from '../../util/object'
+import * as keypath from '../../util/keypath'
 
 /**
  * 指令节点
@@ -20,8 +21,10 @@ export default class Directive extends Node {
 
   render(data) {
 
-    let node = new Directive(this.name)
-    node.keypath = data.keys.join('.')
+    let { name } = this
+
+    let node = new Directive(name)
+    node.keypath = keypath.stringify(data.keys)
     data.parent.addDirective(node)
 
     this.renderChildren(
