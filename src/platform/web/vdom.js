@@ -77,7 +77,7 @@ export function create(root, instance) {
           array.each(
             node.attrs,
             function (node) {
-              let { name } = node, value = node.getValue()
+              let { name, value } = node
               if (name === 'style') {
                 let list = string.parse(value, ';', ':')
                 if (list.length) {
@@ -132,7 +132,7 @@ export function create(root, instance) {
               directiveName = 'model'
             }
             else if (name === syntax.KEY_UNIQUE) {
-              data.key = node.getValue()
+              data.key = node.value
             }
 
             if (directiveName) {

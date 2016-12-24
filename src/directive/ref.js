@@ -13,7 +13,7 @@ import * as logger from '../util/logger'
 export default {
 
   attach: function ({ el, node, instance }) {
-    let value = node.getValue()
+    let { value } = node
     if (value && is.string(value)) {
       let { $refs } = instance
       if (is.object($refs)) {

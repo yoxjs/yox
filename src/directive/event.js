@@ -10,13 +10,13 @@ export default {
   attach: function({ el, name, node, instance, listener, directives }) {
 
     if (!listener) {
-      listener = instance.compileValue(node.keypath, node.getValue())
+      listener = instance.compileValue(node.keypath, node.value)
     }
 
     if (listener) {
       let { lazy } = directives
       if (lazy) {
-        let value = lazy.node.getValue()
+        let { value } = lazy.node
         if (is.numeric(value) && value >= 0) {
           listener = debounce(listener, value)
         }

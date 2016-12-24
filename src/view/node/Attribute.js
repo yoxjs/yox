@@ -2,6 +2,8 @@
 import Node from './Node'
 
 import * as nodeType from '../nodeType'
+
+import * as env from '../../config/env'
 import * as object from '../../util/object'
 
 /**
@@ -33,6 +35,13 @@ export default class Attribute extends Node {
     this.renderChildren(
       object.extend({ }, data, { parent: node })
     )
+
+    let { children } = node
+    delete node.children
+
+    node.value = children.length > 0
+      ? children[0].content
+      : env.TRUE
 
   }
 

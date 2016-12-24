@@ -1618,6 +1618,18 @@ var Scanner = function () {
   return Scanner;
 }();
 
+var toString$1 = function (str) {
+  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+
+  if (string(str)) {
+    return str;
+  }
+  if (numeric(str)) {
+    return '' + str;
+  }
+  return defaultValue;
+};
+
 var Node$2 = function () {
   function Node(type, hasChildren) {
     classCallCheck(this, Node);
@@ -1636,18 +1648,11 @@ var Node$2 = function () {
       if (node.type === TEXT) {
         var lastChild = last(children);
         if (lastChild && lastChild.type === TEXT) {
-          lastChild.content += node.content;
+          lastChild.content += toString$1(node.content);
           return;
         }
       }
       children.push(node);
-    }
-  }, {
-    key: 'getValue',
-    value: function getValue() {
-      var children = this.children;
-
-      return children[0] ? children[0].content : TRUE;
     }
   }, {
     key: 'execute',
@@ -1716,6 +1721,12 @@ var Attribute = function (_Node) {
       parent.addAttr(node);
 
       this.renderChildren(extend({}, data, { parent: node }));
+
+      var children = node.children;
+
+      delete node.children;
+
+      node.value = children.length > 0 ? children[0].content : TRUE;
     }
   }]);
   return Attribute;
@@ -1742,6 +1753,12 @@ var Directive = function (_Node) {
       data.parent.addDirective(node);
 
       this.renderChildren(extend({}, data, { parent: node }));
+
+      var children = node.children;
+
+      delete node.children;
+
+      node.value = children.length > 0 ? children[0].content : TRUE;
     }
   }]);
   return Directive;
@@ -3486,7 +3503,8 @@ function create$1(root, instance) {
         } else {
           each$1(node.attrs, function (node) {
             var name = node.name,
-                value = node.getValue();
+                value = node.value;
+
             if (name === 'style') {
               var list = parse$3(value, ';', ':');
               if (list.length) {
@@ -3524,7 +3542,7 @@ function create$1(root, instance) {
           } else if (name === KEY_MODEL) {
             name = directiveName = 'model';
           } else if (name === KEY_UNIQUE) {
-            data.key = node.getValue();
+            data.key = node.value;
           }
 
           if (directiveName) {
@@ -3626,8 +3644,8 @@ var refDt = {
     var el = _ref.el,
         node = _ref.node,
         instance = _ref.instance;
+    var value = node.value;
 
-    var value = node.getValue();
     if (value && string(value)) {
       (function () {
         var $refs = instance.$refs;
@@ -3712,14 +3730,15 @@ var event = {
 
 
     if (!listener) {
-      listener = instance.compileValue(node.keypath, node.getValue());
+      listener = instance.compileValue(node.keypath, node.value);
     }
 
     if (listener) {
       var lazy = directives.lazy;
 
       if (lazy) {
-        var value = lazy.node.getValue();
+        var value = lazy.node.value;
+
         if (numeric(value) && value >= 0) {
           listener = debounce(listener, value);
         } else if (name === 'input') {
@@ -3858,10 +3877,11 @@ var modelDt = {
         instance = _ref9.instance,
         directives = _ref9.directives,
         attrs = _ref9.attrs;
-    var keypath = node.keypath;
+    var value = node.value,
+        keypath = node.keypath;
 
 
-    var result = instance.get(node.getValue(), keypath);
+    var result = instance.get(value, keypath);
     if (result) {
       keypath = result.keypath;
     } else {
@@ -3934,14 +3954,14 @@ function getComponentInfo(node, instance, directives, callback) {
   instance.component(component, function (options) {
     var props = {};
     each$1(attrs, function (node) {
-      props[camelCase(node.name)] = node.getValue();
+      props[camelCase(node.name)] = node.value;
     });
     if (!has$1(props, 'value')) {
       var model = directives.model;
 
       if (model) {
         node = model.node;
-        var result = instance.get(node.getValue(), node.keypath);
+        var result = instance.get(node.value, node.keypath);
         if (result) {
           props.value = result.value;
         }
@@ -4674,7 +4694,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.19.2';
+Yox.version = '0.19.3';
 
 Yox.switcher = switcher;
 

@@ -16,14 +16,14 @@ function getComponentInfo(node, instance, directives, callback) {
       array.each(
         attrs,
         function (node) {
-          props[string.camelCase(node.name)] = node.getValue()
+          props[string.camelCase(node.name)] = node.value
         }
       )
       if (!object.has(props, 'value')) {
         let { model } = directives
         if (model) {
           node = model.node
-          let result = instance.get(node.getValue(), node.keypath)
+          let result = instance.get(node.value, node.keypath)
           if (result) {
             props.value = result.value
           }

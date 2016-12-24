@@ -5,7 +5,6 @@ import * as is from '../util/is'
 import * as array from '../util/array'
 import * as object from '../util/object'
 import * as logger from '../util/logger'
-import * as component from '../util/component'
 
 import event from './event'
 
@@ -78,9 +77,9 @@ export default {
 
   attach: function ({ el, node, instance, directives, attrs }) {
 
-    let { keypath } = node
+    let { value, keypath } = node
 
-    let result = instance.get(node.getValue(), keypath)
+    let result = instance.get(value, keypath)
     if (result) {
       keypath = result.keypath
     }

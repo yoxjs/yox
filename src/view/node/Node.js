@@ -7,6 +7,7 @@ import * as object from '../../util/object'
 import * as keypath from '../../util/keypath'
 
 import execute from '../../function/execute'
+import toString from '../../function/toString'
 
 /**
  * 节点基类
@@ -25,16 +26,11 @@ export default class Node {
     if (node.type === nodeType.TEXT) {
       let lastChild = array.last(children)
       if (lastChild && lastChild.type === nodeType.TEXT) {
-        lastChild.content += node.content
+        lastChild.content += toString(node.content)
         return
       }
     }
     children.push(node)
-  }
-
-  getValue() {
-    let { children } = this
-    return children[0] ? children[0].content : env.TRUE
   }
 
   execute(data) {

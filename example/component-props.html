@@ -13,7 +13,9 @@
         let Custom = {
             template: `
                 <div id="custom-component">
-                    title: {{title}}
+                    name: {{name}}
+                    <br>
+                    age: {{age}}
                     <br>
                     name: {{user.name}}
                     <br>
@@ -66,7 +68,7 @@
             template: `
                 <div id="root">
                     <input ref="input" style="font-size: 18px;color: red;">
-                    <Custom ref="child" title="{{title}}" user="{{user}}" />
+                    <Custom ref="child" name="123{{name}}" age="{{user.age}}{{user.age}}" user="{{user}}" />
                 </div>
             `,
             components: {
