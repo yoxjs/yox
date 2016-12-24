@@ -1,8 +1,8 @@
 
 import Node from './Node'
+import * as nodeType from '../nodeType'
 
 import * as env from '../../config/env'
-import * as nodeType from '../nodeType'
 
 /**
  * import 节点

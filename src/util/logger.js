@@ -16,7 +16,7 @@ const hasConsole = typeof console !== 'undefined'
  */
 export function warn(msg) {
   if (switcher.debug && hasConsole) {
-    console.warn(msg)
+    console.warn(`[Yox warn]: ${msg}`)
   }
 }
 
@@ -27,6 +27,6 @@ export function warn(msg) {
  */
 export function error(msg) {
   if (hasConsole) {
-    console.error(msg)
+    console.error(`[Yox error]: ${msg}`)
   }
 }

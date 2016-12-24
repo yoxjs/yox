@@ -7,7 +7,7 @@ import * as is from '../../util/is'
 import * as array from '../../util/array'
 import * as object from '../../util/object'
 import * as syntax from '../../config/syntax'
-import * as keypath from '../../util/keypath'
+import * as keypathUtil from '../../util/keypath'
 
 /**
  * each 节点
@@ -49,7 +49,7 @@ export default class Each extends Node {
             listContext.set(index, i)
           }
           keys.push(i)
-          listContext.set(syntax.SPECIAL_KEYPATH, keypath.stringify(keys))
+          listContext.set(syntax.SPECIAL_KEYPATH, keypathUtil.stringify(keys))
           instance.renderChildren(
             object.extend({ }, data, { context: listContext.push(item) })
           )

@@ -181,7 +181,7 @@ export function render(ast, data) {
 
   let { children } = rootElement
   if (children.length > 1) {
-    logger.error('Template should have only one root element.')
+    logger.error('Component template should contain exactly one root element.')
   }
 
   return {

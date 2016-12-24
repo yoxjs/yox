@@ -12,6 +12,7 @@
 import * as env from '../config/env'
 
 import * as is from '../util/is'
+import * as array from '../util/array'
 import * as object from '../util/object'
 
 export default function (data, schema, onNotMatched, onNotFound) {
@@ -30,9 +31,13 @@ export default function (data, schema, onNotMatched, onNotFound) {
             matched = is.is(target, type)
           }
           else if (is.array(type)) {
-            matched = type.some(
+            array.each(
+              type,
               function (t) {
-                return is.is(target, t)
+                if (is.is(target, t)) {
+                  matched = env.TRUE
+                  return env.FALSE
+                }
               }
             )
           }
