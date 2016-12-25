@@ -1,6 +1,5 @@
 
 import Node from './Node'
-
 import * as nodeType from '../nodeType'
 
 import * as is from '../../util/is'

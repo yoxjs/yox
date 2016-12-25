@@ -10,10 +10,6 @@ const breaklineSuffixPattern = /\n[ \t]*$/
 const nonSingleQuotePattern = /^[^']*/
 const nonDoubleQuotePattern = /^[^"]*/
 
-export function isBreakLine(str) {
-  return str.indexOf('\n') >= 0 && !str.trim()
-}
-
 export function trimBreakline(str) {
   return str
     .replace(breaklinePrefixPattern, '')

@@ -1410,10 +1410,6 @@ var breaklineSuffixPattern = /\n[ \t]*$/;
 var nonSingleQuotePattern = /^[^']*/;
 var nonDoubleQuotePattern = /^[^"]*/;
 
-function isBreakLine(str) {
-  return str.indexOf('\n') >= 0 && !str.trim();
-}
-
 function trimBreakline(str) {
   return str.replace(breaklinePrefixPattern, '').replace(breaklineSuffixPattern, '');
 }
@@ -2095,11 +2091,10 @@ var closingDelimiter = '\\s*\\}\\}';
 var openingDelimiterPattern = new RegExp(openingDelimiter);
 var closingDelimiterPattern = new RegExp(closingDelimiter);
 
-var elementPattern = /<(?:\/)?[a-z]\w*/i;
+var elementPattern = /<(?:\/)?[-a-z]\w*/i;
 var elementEndPattern = /(?:\/)?>/;
 
 var attributePattern = /([-:@a-z0-9]+)(=["'])?/i;
-var attributeValueStartPattern = /^=["']/;
 
 var ERROR_PARTIAL_NAME = 'Expected legal partial name';
 var ERROR_EXPRESSION = 'Expected expression';
@@ -2186,7 +2181,9 @@ var parsers = [{
   }
 }];
 
-var rootName = 'root';
+var LEVEL_ELEMENT = 0;
+var LEVEL_ATTRIBUTE = 1;
+var LEVEL_TEXT = 2;
 
 function render$1(ast, data) {
 
@@ -2196,17 +2193,12 @@ function render$1(ast, data) {
     keys: [],
     context: new Context(data),
     parse: function parse(template) {
-      return _parse(template).children;
+      return _parse(template);
     },
     addDeps: function addDeps(childrenDeps) {
       extend(deps, childrenDeps);
     }
-  })[0].children;
-
-
-  if (children.length > 1) {
-    error$1('Component template should contain exactly one root element.');
-  }
+  });
 
   return {
     root: children[0],
@@ -2220,26 +2212,20 @@ function _parse(template, getPartial, setPartial) {
     return templateParse[template];
   }
 
-  var nodeStack = [],
-      name = void 0,
+  var name = void 0,
       quote = void 0,
       content = void 0,
-      isComponent = void 0,
-      isSelfClosingTag = void 0,
-      match = void 0,
-      errorIndex = void 0;
+      isSelfClosing = void 0,
+      match = void 0;
 
   var mainScanner = new Scanner(template);
   var helperScanner = new Scanner();
 
-  var LEVEL_ELEMENT = 0;
-  var LEVEL_ATTRIBUTE = 1;
-  var LEVEL_TEXT = 2;
-
   var level = LEVEL_ELEMENT,
       levelNode = void 0;
 
-  var rootNode = new Element(rootName);
+  var nodeStack = [];
+  var rootNode = new Element('root');
   var currentNode = rootNode;
 
   var pushStack = function pushStack(node) {
@@ -2261,9 +2247,6 @@ function _parse(template, getPartial, setPartial) {
 
     switch (type) {
       case TEXT:
-        if (isBreakLine(content)) {
-          return;
-        }
         if (content = trimBreakline(content)) {
           node.content = content;
         } else {
@@ -2272,16 +2255,20 @@ function _parse(template, getPartial, setPartial) {
         break;
 
       case IMPORT$1:
-        each$1(getPartial(name).children, function (node) {
-          addChild(node);
-        });
+        var partial = getPartial(name);
+        if (partial) {
+          each$1(partial.children, function (node) {
+            addChild(node);
+          });
+        } else {
+          error$1('Imported partial ' + name + ' is not found.');
+        }
         return;
 
       case PARTIAL$1:
         setPartial(name, node);
         pushStack(node);
         return;
-
     }
 
     currentNode.addChild(node);
@@ -2305,9 +2292,7 @@ function _parse(template, getPartial, setPartial) {
   };
 
   var parseContent = function parseContent(content) {
-
     helperScanner.reset(content);
-
     while (helperScanner.hasNext()) {
       content = helperScanner.nextBefore(openingDelimiterPattern);
       helperScanner.nextAfter(openingDelimiterPattern);
@@ -2317,7 +2302,7 @@ function _parse(template, getPartial, setPartial) {
           if (levelNode.children.length) {
             content = parseAttributeValue(content);
           } else {
-            if (attributeValueStartPattern.test(content)) {
+            if (content.charAt(0) === '=') {
               quote = content.charAt(1);
               content = content.slice(2);
             } else {
@@ -2328,23 +2313,23 @@ function _parse(template, getPartial, setPartial) {
         }
 
         if (level === LEVEL_ATTRIBUTE) {
-          while (match = attributePattern.exec(content)) {
+          while (content && (match = attributePattern.exec(content))) {
             content = content.slice(match.index + match[0].length);
-
             name = match[1];
 
-            levelNode = name.startsWith(DIRECTIVE_PREFIX) || name.startsWith(DIRECTIVE_EVENT_PREFIX) || name === KEY_REF || name === KEY_LAZY || name === KEY_MODEL || name === KEY_UNIQUE ? new Directive(name) : new Attribute(name);
+            levelNode = name === KEY_REF || name === KEY_LAZY || name === KEY_MODEL || name === KEY_UNIQUE || name.startsWith(DIRECTIVE_PREFIX) || name.startsWith(DIRECTIVE_EVENT_PREFIX) ? new Directive(name) : new Attribute(name);
 
             addChild(levelNode);
             level++;
 
-            if (string(match[2])) {
-              quote = match[2].charAt(1);
+            match = match[2];
+            if (match) {
+              quote = match.charAt(1);
               content = parseAttributeValue(content);
             } else {
-                popStack();
-                level--;
-              }
+              popStack();
+              level--;
+            }
           }
         } else if (content) {
           addChild(new Text(content));
@@ -2365,7 +2350,7 @@ function _parse(template, getPartial, setPartial) {
             if (parser.test(content)) {
               index = parser.create(content, popStack);
               if (string(index)) {
-                parseError$1(template, index, errorIndex);
+                parseError$1(template, index, mainScanner.pos + helperScanner.pos);
               } else if (level === LEVEL_ATTRIBUTE && node.type === EXPRESSION) {
                 levelNode = new Attribute(index);
                 level++;
@@ -2384,7 +2369,7 @@ function _parse(template, getPartial, setPartial) {
   while (mainScanner.hasNext()) {
     content = mainScanner.nextBefore(elementPattern);
 
-    if (content.trim()) {
+    if (content) {
       parseContent(content);
     }
 
@@ -2392,16 +2377,14 @@ function _parse(template, getPartial, setPartial) {
       break;
     }
 
-    errorIndex = mainScanner.pos;
-
     if (mainScanner.charAt(1) === '/') {
       content = mainScanner.nextAfter(elementPattern);
       name = content.slice(2);
 
       if (mainScanner.charAt(0) !== '>') {
-        return parseError$1(template, 'Illegal tag name', errorIndex);
+        return parseError$1(template, 'Illegal tag name', mainScanner.pos);
       } else if (name !== currentNode.name) {
-        return parseError$1(template, 'Unexpected closing tag', errorIndex);
+        return parseError$1(template, 'Unexpected closing tag', mainScanner.pos);
       }
 
       popStack();
@@ -2410,12 +2393,14 @@ function _parse(template, getPartial, setPartial) {
     } else {
         content = mainScanner.nextAfter(elementPattern);
         name = content.slice(1);
-        isComponent = componentName.test(name);
-        isSelfClosingTag = isComponent || selfClosingTagName.test(name);
 
-        levelNode = new Element(isComponent ? 'div' : name, isComponent ? name : '');
-
-        addChild(levelNode);
+        if (componentName.test(name)) {
+          addChild(new Element('div', name));
+          isSelfClosing = TRUE;
+        } else {
+          addChild(new Element(name));
+          isSelfClosing = selfClosingTagName.test(name);
+        }
 
         content = mainScanner.nextBefore(elementEndPattern);
         if (content) {
@@ -2425,23 +2410,28 @@ function _parse(template, getPartial, setPartial) {
         }
 
         content = mainScanner.nextAfter(elementEndPattern);
+
         if (!content) {
-          return parseError$1(template, 'Illegal tag name', errorIndex);
+          return parseError$1(template, 'Illegal tag name', mainScanner.pos);
         }
 
-        if (isSelfClosingTag) {
+        if (isSelfClosing) {
           popStack();
         }
       }
   }
 
   if (nodeStack.length) {
-    return parseError$1(template, 'Missing end tag (</' + nodeStack[0].name + '>)', errorIndex);
+    return parseError$1(template, 'Missing end tag (</' + nodeStack[0].name + '>)', mainScanner.pos);
   }
 
-  templateParse[template] = rootNode;
+  var children = rootNode.children;
 
-  return rootNode;
+  if (children.length > 1) {
+    error$1('Component template should contain exactly one root element.');
+  }
+
+  return templateParse[template] = children[0];
 }
 
 function camelCase(str) {

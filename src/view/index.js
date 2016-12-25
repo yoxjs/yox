@@ -34,11 +34,10 @@ const closingDelimiter = '\\s*\\}\\}'
 const openingDelimiterPattern = new RegExp(openingDelimiter)
 const closingDelimiterPattern = new RegExp(closingDelimiter)
 
-const elementPattern = /<(?:\/)?[a-z]\w*/i
+const elementPattern = /<(?:\/)?[-a-z]\w*/i
 const elementEndPattern = /(?:\/)?>/
 
 const attributePattern = /([-:@a-z0-9]+)(=["'])?/i
-const attributeValueStartPattern = /^=["']/
 
 const ERROR_PARTIAL_NAME = 'Expected legal partial name'
 const ERROR_EXPRESSION = 'Expected expression'
@@ -140,7 +139,9 @@ const parsers = [
   }
 ]
 
-const rootName = 'root'
+const LEVEL_ELEMENT = 0
+const LEVEL_ATTRIBUTE = 1
+const LEVEL_TEXT = 2
 
 /**
  * 把抽象语法树渲染成 Virtual DOM
@@ -153,20 +154,16 @@ export function render(ast, data) {
 
   let deps = { }
 
-  let { children } = ast.render({
+  let children = ast.render({
     keys: [ ],
     context: new Context(data),
     parse: function (template) {
-      return parse(template).children
+      return parse(template)
     },
     addDeps: function (childrenDeps) {
       object.extend(deps, childrenDeps)
     }
-  })[0]
-
-  if (children.length > 1) {
-    logger.error('Component template should contain exactly one root element.')
-  }
+  })
 
   return {
     root: children[0],
@@ -189,14 +186,11 @@ export function parse(template, getPartial, setPartial) {
     return cache.templateParse[template]
   }
 
-  let nodeStack = [ ],
-    name,
+  let name,
     quote,
     content,
-    isComponent,
-    isSelfClosingTag,
-    match,
-    errorIndex
+    isSelfClosing,
+    match
 
   let mainScanner = new Scanner(template)
   let helperScanner = new Scanner()
@@ -206,13 +200,10 @@ export function parse(template, getPartial, setPartial) {
   // 1 表示只能 add Attribute 和 Directive
   // 2 表示只能 add Text
 
-  const LEVEL_ELEMENT = 0
-  const LEVEL_ATTRIBUTE = 1
-  const LEVEL_TEXT = 2
-
   let level = LEVEL_ELEMENT, levelNode
 
-  let rootNode = new Element(rootName)
+  let nodeStack = [ ]
+  let rootNode = new Element('root')
   let currentNode = rootNode
 
   let pushStack = function (node) {
@@ -231,9 +222,6 @@ export function parse(template, getPartial, setPartial) {
 
     switch (type) {
       case nodeType.TEXT:
-        if (util.isBreakLine(content)) {
-          return
-        }
         if (content = util.trimBreakline(content)) {
           node.content = content
         }
@@ -243,19 +231,24 @@ export function parse(template, getPartial, setPartial) {
         break
 
       case nodeType.IMPORT:
-        array.each(
-          getPartial(name).children,
-          function (node) {
-            addChild(node)
-          }
-        )
+        let partial = getPartial(name)
+        if (partial) {
+          array.each(
+            partial.children,
+            function (node) {
+              addChild(node)
+            }
+          )
+        }
+        else {
+          logger.error(`Imported partial ${name} is not found.`)
+        }
         return
 
       case nodeType.PARTIAL:
         setPartial(name, node)
         pushStack(node)
         return
-
     }
 
     currentNode.addChild(node)
@@ -280,12 +273,9 @@ export function parse(template, getPartial, setPartial) {
     return content
   }
 
-  // 这个函数涉及分隔符和普通模板的深度解析
-  // 是最核心的函数
+  // 核心函数，负责分隔符和普通字符串的深度解析
   let parseContent = function (content) {
-
     helperScanner.reset(content)
-
     while (helperScanner.hasNext()) {
 
       // 分隔符之前的内容
@@ -294,67 +284,62 @@ export function parse(template, getPartial, setPartial) {
 
       if (content) {
 
-        // 支持以下 5 种 attribute
-        // name
-        // {{name}}
-        // name="value"
-        // name="{{value}}"
-        // {{name}}="{{value}}"
+        // 支持以下 8 种写法：
+        // 1. name
+        // 2. name="value"
+        // 3. name="{{value}}"
+        // 4. name="prefix{{value}}suffix"
+        // 5. {{name}}
+        // 6. {{name}}="value"
+        // 7. {{name}}="{{value}}"
+        // 8. {{name}}="prefix{{value}}suffix"
 
-        // 当前节点是 ATTRIBUTE 或 DIRECTIVE
+        // 已开始解析 ATTRIBUTE 或 DIRECTIVE
         // 表示至少已经有了 name
         if (level === LEVEL_TEXT) {
-
-          // 走进这里，只可能是以下几种情况：
-          // 1. 属性名是字面量，属性值已包含表达式
-          // 2. 属性名是表达式，属性值不确定是否存在
-
-          // 当前属性的属性值是字面量结尾
+          // 命中 8 种写法中的 3 4
+          // 因为前面处理过 {{ }}，所以 levelNode 必定有 child
           if (levelNode.children.length) {
             content = parseAttributeValue(content)
           }
           else {
-            // 属性值开头部分是字面量
-            if (attributeValueStartPattern.test(content)) {
+            // 命中 8 种写法中的 6 7 8
+            if (content.charAt(0) === '=') {
               quote = content.charAt(1)
               content = content.slice(2)
             }
-            // 没有属性值
+            // 命中 8 种写法中的 5
             else {
               popStack()
               level--
             }
+            // 8 种写法中的 1 2 在下面的 if 会一次性处理完，逻辑走不进这里
           }
-
         }
-
-
 
         if (level === LEVEL_ATTRIBUTE) {
           // 下一个属性的开始
-          while (match = attributePattern.exec(content)) {
+          while (content && (match = attributePattern.exec(content))) {
             content = content.slice(match.index + match[0].length)
-
             name = match[1]
 
-            levelNode = name.startsWith(syntax.DIRECTIVE_PREFIX)
-              || name.startsWith(syntax.DIRECTIVE_EVENT_PREFIX)
-              || name === syntax.KEY_REF
+            levelNode = name === syntax.KEY_REF
               || name === syntax.KEY_LAZY
               || name === syntax.KEY_MODEL
               || name === syntax.KEY_UNIQUE
+              || name.startsWith(syntax.DIRECTIVE_PREFIX)
+              || name.startsWith(syntax.DIRECTIVE_EVENT_PREFIX)
             ? new Directive(name)
             : new Attribute(name)
 
             addChild(levelNode)
             level++
 
-            // 包含 ="
-            if (is.string(match[2])) {
-              quote = match[2].charAt(1)
+            match = match[2]
+            if (match) {
+              quote = match.charAt(1)
               content = parseAttributeValue(content)
             }
-            // 没有引号，即 checked、disabled 等
             else {
               popStack()
               level--
@@ -388,7 +373,7 @@ export function parse(template, getPartial, setPartial) {
                 // 用 index 节省一个变量定义
                 index = parser.create(content, popStack)
                 if (is.string(index)) {
-                  util.parseError(template, index, errorIndex)
+                  util.parseError(template, index, mainScanner.pos + helperScanner.pos)
                 }
                 else if (level === LEVEL_ATTRIBUTE
                   && node.type === nodeType.EXPRESSION
@@ -413,8 +398,8 @@ export function parse(template, getPartial, setPartial) {
   while (mainScanner.hasNext()) {
     content = mainScanner.nextBefore(elementPattern)
 
-    if (content.trim()) {
-      // 处理标签之间的内容
+    // 处理标签之间的内容
+    if (content) {
       parseContent(content)
     }
 
@@ -424,41 +409,47 @@ export function parse(template, getPartial, setPartial) {
       break
     }
 
-    errorIndex = mainScanner.pos
-
     // 结束标签
     if (mainScanner.charAt(1) === '/') {
+      // 取出 </tagName
       content = mainScanner.nextAfter(elementPattern)
       name = content.slice(2)
 
+      // 没有匹配到 >
       if (mainScanner.charAt(0) !== '>') {
-        return util.parseError(template, 'Illegal tag name', errorIndex)
+        return util.parseError(template, 'Illegal tag name', mainScanner.pos)
       }
       else if (name !== currentNode.name) {
-        return util.parseError(template, 'Unexpected closing tag', errorIndex)
+        return util.parseError(template, 'Unexpected closing tag', mainScanner.pos)
       }
 
       popStack()
 
+      // 过掉 >
       mainScanner.forward(1)
     }
     // 开始标签
     else {
+      // 取出 <tagName
       content = mainScanner.nextAfter(elementPattern)
       name = content.slice(1)
-      isComponent = pattern.componentName.test(name)
-      isSelfClosingTag = isComponent || pattern.selfClosingTagName.test(name)
 
-      // 低版本浏览器不支持自定义标签，因此需要转成 div
-      levelNode = new Element(
-        isComponent ? 'div' : name,
-        isComponent ? name : ''
-      )
-
-      addChild(levelNode)
+      if (pattern.componentName.test(name)) {
+        // 低版本浏览器不支持自定义标签，需要转成 div
+        addChild(
+          new Element('div', name)
+        )
+        isSelfClosing = env.TRUE
+      }
+      else {
+        addChild(
+          new Element(name)
+        )
+        isSelfClosing = pattern.selfClosingTagName.test(name)
+      }
 
       // 截取 <name 和 > 之间的内容
-      // 用于提取 attribute
+      // 用于提取 Attribute 和 Directive
       content = mainScanner.nextBefore(elementEndPattern)
       if (content) {
         level++
@@ -467,22 +458,26 @@ export function parse(template, getPartial, setPartial) {
       }
 
       content = mainScanner.nextAfter(elementEndPattern)
+      // 没有匹配到 > 或 />
       if (!content) {
-        return util.parseError(template, 'Illegal tag name', errorIndex)
+        return util.parseError(template, 'Illegal tag name', mainScanner.pos)
       }
 
-      if (isSelfClosingTag) {
+      if (isSelfClosing) {
         popStack()
       }
     }
   }
 
   if (nodeStack.length) {
-    return util.parseError(template, `Missing end tag (</${nodeStack[0].name}>)`, errorIndex)
+    return util.parseError(template, `Missing end tag (</${nodeStack[0].name}>)`, mainScanner.pos)
   }
 
-  cache.templateParse[template] = rootNode
+  let { children } = rootNode
+  if (children.length > 1) {
+    logger.error('Component template should contain exactly one root element.')
+  }
 
-  return rootNode
+  return cache.templateParse[template] = children[0]
 
 }
