@@ -25,7 +25,7 @@ export function matchByQuote(str, nonQuote) {
   return match ? match[0] : ''
 }
 
-export function getLocationByIndex(str, index) {
+function getLocationByIndex(str, index) {
 
   let line = 0, col = 0, pos = 0
 

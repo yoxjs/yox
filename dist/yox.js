@@ -1,7 +1,7 @@
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
-  typeof define === 'function' && define.amd ? define(factory) :
-  (global.Yox = factory());
+	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
+	typeof define === 'function' && define.amd ? define(factory) :
+	(global.Yox = factory());
 }(this, (function () { 'use strict';
 
 var TRUE = true;
@@ -1974,8 +1974,11 @@ var Expression = function (_Node) {
         value = value();
       }
 
-      var node = new Text(value, this.safe);
+      var node = new Text(value);
       node.keypath = stringify$1(data.keys);
+      if (this.safe) {
+        node.safe = TRUE;
+      }
       return [node];
     }
   }]);
@@ -3184,6 +3187,331 @@ function updateAttrs(oldVnode, vnode) {
 
 var attributes = { create: updateAttrs, update: updateAttrs };
 
+function createCommonjsModule(fn, module) {
+	return module = { exports: {} }, fn(module, module.exports), module.exports;
+}
+
+var attrRE = /([\w-]+)|(['"])(.*?)\2/g;
+
+var lookup = Object.create ? Object.create(null) : {};
+lookup.area = true;
+lookup.base = true;
+lookup.br = true;
+lookup.col = true;
+lookup.embed = true;
+lookup.hr = true;
+lookup.img = true;
+lookup.input = true;
+lookup.keygen = true;
+lookup.link = true;
+lookup.menuitem = true;
+lookup.meta = true;
+lookup.param = true;
+lookup.source = true;
+lookup.track = true;
+lookup.wbr = true;
+
+var parseTag$1 = function (tag) {
+    var i = 0;
+    var key;
+    var res = {
+        type: 'tag',
+        name: '',
+        voidElement: false,
+        attrs: {},
+        children: []
+    };
+
+    tag.replace(attrRE, function (match) {
+        if (i % 2) {
+            key = match;
+        } else {
+            if (i === 0) {
+                if (lookup[match] || tag.charAt(tag.length - 2) === '/') {
+                    res.voidElement = true;
+                }
+                res.name = match;
+            } else {
+                res.attrs[key] = match.replace(/^['"]|['"]$/g, '');
+            }
+        }
+        i++;
+    });
+
+    return res;
+};
+
+var tagRE = /(?:<!--[\S\s]*?-->|<(?:"[^"]*"['"]*|'[^']*'['"]*|[^'">])+>)/g;
+var parseTag = parseTag$1;
+
+var empty = Object.create ? Object.create(null) : {};
+
+function pushTextNode(list, html, start) {
+    var end = html.indexOf('<', start);
+    var content = html.slice(start, end === -1 ? undefined : end);
+
+    if (!/^\s*$/.test(content)) {
+        list.push({
+            type: 'text',
+            content: content
+        });
+    }
+}
+
+var parse$4 = function parse$4(html, options) {
+    options || (options = {});
+    options.components || (options.components = empty);
+    var result = [];
+    var current;
+    var level = -1;
+    var arr = [];
+    var byTag = {};
+    var inComponent = false;
+
+    html.replace(tagRE, function (tag, index) {
+        if (inComponent) {
+            if (tag !== '</' + current.name + '>') {
+                return;
+            } else {
+                inComponent = false;
+            }
+        }
+
+        var isOpen = tag.charAt(1) !== '/';
+        var isComment = tag.indexOf('<!--') === 0;
+        var start = index + tag.length;
+        var nextChar = html.charAt(start);
+        var parent;
+
+        if (isOpen && !isComment) {
+            level++;
+
+            current = parseTag(tag);
+            if (current.type === 'tag' && options.components[current.name]) {
+                current.type = 'component';
+                inComponent = true;
+            }
+
+            if (!current.voidElement && !inComponent && nextChar && nextChar !== '<') {
+                pushTextNode(current.children, html, start);
+            }
+
+            byTag[current.tagName] = current;
+
+            if (level === 0) {
+                result.push(current);
+            }
+
+            parent = arr[level - 1];
+
+            if (parent) {
+                parent.children.push(current);
+            }
+
+            arr[level] = current;
+        }
+
+        if (isComment || !isOpen || current.voidElement) {
+            if (!isComment) {
+                level--;
+            }
+            if (!inComponent && nextChar !== '<' && nextChar) {
+                parent = level === -1 ? result : arr[level].children;
+                pushTextNode(parent, html, start);
+            }
+        }
+    });
+
+    return result;
+};
+
+var utils = createCommonjsModule(function (module, exports) {
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.createTextVNode = createTextVNode;
+exports.transformName = transformName;
+exports.unescapeEntities = unescapeEntities;
+
+var _vnode = vnode;
+
+var _vnode2 = _interopRequireDefault(_vnode);
+
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function createTextVNode(text, context) {
+    return (0, _vnode2.default)(undefined, undefined, undefined, unescapeEntities(text, context));
+}
+
+function transformName(name) {
+    name = name.replace(/-(\w)/g, function _replace($1, $2) {
+        return $2.toUpperCase();
+    });
+
+    var firstChar = name.charAt(0).toLowerCase();
+    return '' + firstChar + name.substring(1);
+}
+
+var entityRegex = new RegExp('&[a-z0-9]+;', 'gi');
+
+var el = null;
+
+function unescapeEntities(text, context) {
+    if (!el) {
+        el = context.createElement('div');
+    }
+    return text.replace(entityRegex, function (entity) {
+        el.innerHTML = entity;
+        return el.textContent;
+    });
+}
+});
+
+var strings$1 = createCommonjsModule(function (module, exports) {
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+exports.default = function (html) {
+    var options = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
+
+    var context = options.context || document;
+
+    if (!html) {
+        return null;
+    }
+
+    var createdVNodes = [];
+
+    var vnodes = convertNodes((0, _parse2.default)(html), createdVNodes, context);
+
+    var res = void 0;
+    if (!vnodes) {
+        res = toVNode({ type: 'text', content: html }, createdVNodes, context);
+    } else if (vnodes.length === 1) {
+        res = vnodes[0];
+    } else {
+        res = vnodes;
+    }
+
+    options.hooks && options.hooks.create && createdVNodes.forEach(function (node) {
+        options.hooks.create(node);
+    });
+    return res;
+};
+
+var _parse = parse$4;
+
+var _parse2 = _interopRequireDefault(_parse);
+
+var _h = h;
+
+var _h2 = _interopRequireDefault(_h);
+
+var _utils = utils;
+
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function _defineProperty(obj, key, value) {
+    if (key in obj) {
+        Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
+    } else {
+        obj[key] = value;
+    }return obj;
+}
+
+function convertNodes(nodes, createdVNodes, context) {
+    if (nodes instanceof Array && nodes.length > 0) {
+        return nodes.map(function (node) {
+            return toVNode(node, createdVNodes, context);
+        });
+    } else {
+        return undefined;
+    }
+}
+
+function toVNode(node, createdVNodes, context) {
+    var newNode = void 0;
+    if (node.type === 'text') {
+        newNode = (0, _utils.createTextVNode)(node.content, context);
+    } else {
+        newNode = (0, _h2.default)(node.name, buildVNodeData(node, context), convertNodes(node.children, createdVNodes, context));
+    }
+    createdVNodes.push(newNode);
+    return newNode;
+}
+
+function buildVNodeData(node, context) {
+    var data = {};
+    if (!node.attrs) {
+        return data;
+    }
+
+    var attrs = Object.keys(node.attrs).reduce(function (memo, name) {
+        if (name !== 'style' && name !== 'class') {
+            var val = (0, _utils.unescapeEntities)(node.attrs[name], context);
+            memo ? memo[name] = val : memo = _defineProperty({}, name, val);
+        }
+        return memo;
+    }, null);
+    if (attrs) {
+        data.attrs = attrs;
+    }
+
+    var style = parseStyle(node);
+    if (style) {
+        data.style = style;
+    }
+
+    var classes = parseClass(node);
+    if (classes) {
+        data.class = classes;
+    }
+
+    return data;
+}
+
+function parseStyle(node) {
+    try {
+        return node.attrs.style.split(';').reduce(function (memo, styleProp) {
+            var res = styleProp.split(':');
+            var name = (0, _utils.transformName)(res[0].trim());
+            if (name) {
+                var val = res[1].replace('!important', '').trim();
+                memo ? memo[name] = val : memo = _defineProperty({}, name, val);
+            }
+            return memo;
+        }, null);
+    } catch (e) {
+        return null;
+    }
+}
+
+function parseClass(node) {
+    try {
+        return node.attrs.class.split(' ').reduce(function (memo, className) {
+            className = className.trim();
+            if (className) {
+                memo ? memo[className] = true : memo = _defineProperty({}, className, true);
+            }
+            return memo;
+        }, null);
+    } catch (e) {
+        return null;
+    }
+}
+});
+
+var strings = strings$1;
+
 var Event = function () {
   function Event(event) {
     classCallCheck(this, Event);
@@ -3606,7 +3934,7 @@ function create$1(root, instance) {
       if (!safe || !string(content) || !tag.test(content)) {
         return content;
       } else {
-        return content;
+        return strings.default(content);
       }
     }
   });

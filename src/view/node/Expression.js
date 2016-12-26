@@ -32,8 +32,11 @@ export default class Expression extends Node {
       value = value()
     }
 
-    let node = new Text(value, this.safe)
+    let node = new Text(value)
     node.keypath = keypathUtil.stringify(data.keys)
+    if (this.safe) {
+      node.safe = env.TRUE
+    }
     return [ node ]
 
   }

@@ -4,6 +4,7 @@ import snabbdom from 'snabbdom'
 import h from 'snabbdom/h'
 import style from 'snabbdom/modules/style'
 import attributes from 'snabbdom/modules/attributes'
+import virtualize from 'snabbdom-virtualize/strings'
 
 import * as native from './native'
 
@@ -66,7 +67,6 @@ export function create(root, instance) {
         // 因为如果在组件上写了 on-click="xx" 其实是监听从组件 fire 出的 click 事件
         // 因此 component 必须在 event 指令之前执行
 
-        // 组件的 attrs 作为 props 传入组件，不需要写到元素上
         if (node.component) {
           directives.push({
             name: 'component',
@@ -194,8 +194,7 @@ export function create(root, instance) {
           return content
         }
         else {
-          // [TODO] 富文本需要 snabbdom 底层提供接口处理
-          return content
+          return virtualize.default(content)
         }
       }
     }
