@@ -4,6 +4,7 @@ import * as env from '../config/env'
 import * as array from '../util/array'
 import * as logger from '../util/logger'
 
+const breaklinePattern = /^[ \t]*\n[ \t]*$/
 const breaklinePrefixPattern = /^[ \t]*\n/
 const breaklineSuffixPattern = /\n[ \t]*$/
 
@@ -11,6 +12,9 @@ const nonSingleQuotePattern = /^[^']*/
 const nonDoubleQuotePattern = /^[^"]*/
 
 export function trimBreakline(str) {
+  if (breaklinePattern.test(str)) {
+    return ''
+  }
   return str
     .replace(breaklinePrefixPattern, '')
     .replace(breaklineSuffixPattern, '')

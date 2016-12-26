@@ -157,9 +157,6 @@ export function render(ast, data) {
   let children = ast.render({
     keys: [ ],
     context: new Context(data),
-    parse: function (template) {
-      return parse(template)
-    },
     addDeps: function (childrenDeps) {
       object.extend(deps, childrenDeps)
     }
@@ -264,11 +261,15 @@ export function parse(template, getPartial, setPartial) {
       addChild(
         new Text(match)
       )
-      content = content.substr(match.length)
     }
-    if (content.charAt(0) === quote) {
+    let { length } = match
+    if (content.charAt(length) === quote) {
       popStack()
       level--
+      length++
+    }
+    if (length) {
+      content = content.slice(length)
     }
     return content
   }

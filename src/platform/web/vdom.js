@@ -9,6 +9,7 @@ import * as native from './native'
 
 import * as env from '../../config/env'
 import * as syntax from '../../config/syntax'
+import * as pattern from '../../config/pattern'
 
 import * as is from '../../util/is'
 import * as array from '../../util/array'
@@ -188,7 +189,14 @@ export function create(root, instance) {
         return h(node.name, data, children)
       }
       else if (node.type === viewNodeType.TEXT) {
-        return node.content
+        let { safe, content } = node
+        if (!safe || !is.string(content) || !pattern.tag.test(content)) {
+          return content
+        }
+        else {
+          // [TODO] 富文本需要 snabbdom 底层提供接口处理
+          return content
+        }
       }
     }
   )

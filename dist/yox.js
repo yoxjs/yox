@@ -953,7 +953,7 @@ var OBRACK = 91;
 var CBRACK = 93;
 var QUMARK = 63;
 var COLON = 58;
-function parse$2(content) {
+function parse$1(content) {
   var length = content.length;
 
   var index = 0,
@@ -1213,7 +1213,7 @@ function parse$2(content) {
 }
 
 var expression = Object.freeze({
-	parse: parse$2
+	parse: parse$1
 });
 
 var SEPARATOR_KEY = '.';
@@ -1223,12 +1223,12 @@ var LEVEL_PARENT = '..';
 
 function normalize(str) {
   if (str && str.indexOf('[') > 0 && str.indexOf(']') > 0) {
-    return parse$2(str).stringify();
+    return parse$1(str).stringify();
   }
   return str;
 }
 
-function parse$1(str) {
+function parse$$1(str) {
   return str ? normalize(str).split(SEPARATOR_KEY) : [];
 }
 
@@ -1239,7 +1239,7 @@ function stringify$1(keypaths) {
 }
 
 function resolve(base, path) {
-  var list = parse$1(base);
+  var list = parse$$1(base);
   each$1(path.split(SEPARATOR_PATH), function (term) {
     if (term === LEVEL_PARENT) {
       list.pop();
@@ -1301,7 +1301,7 @@ function get$1(object$$1, keypath) {
   }
 
   if (string(keypath) && keypath.indexOf('.') > 0) {
-    var list = parse$1(keypath);
+    var list = parse$$1(keypath);
     for (var i = 0, len = list.length; i < len && object$$1; i++) {
       if (i < len - 1) {
         object$$1 = object$$1[list[i]];
@@ -1317,7 +1317,7 @@ function get$1(object$$1, keypath) {
 function set$1(object$$1, keypath, value, autofill) {
   if (string(keypath) && keypath.indexOf('.') > 0) {
     var originalObject = object$$1;
-    var list = parse$1(keypath);
+    var list = parse$$1(keypath);
     var prop = list.pop();
     each$1(list, function (item, index) {
       if (object$$1[item]) {
@@ -1404,6 +1404,7 @@ var BEFORE_DESTROY = 'beforeDestroy';
 
 var AFTER_DESTROY = 'afterDestroy';
 
+var breaklinePattern = /^[ \t]*\n[ \t]*$/;
 var breaklinePrefixPattern = /^[ \t]*\n/;
 var breaklineSuffixPattern = /\n[ \t]*$/;
 
@@ -1411,6 +1412,9 @@ var nonSingleQuotePattern = /^[^']*/;
 var nonDoubleQuotePattern = /^[^"]*/;
 
 function trimBreakline(str) {
+  if (breaklinePattern.test(str)) {
+    return '';
+  }
   return str.replace(breaklinePrefixPattern, '').replace(breaklineSuffixPattern, '');
 }
 
@@ -1970,22 +1974,9 @@ var Expression = function (_Node) {
         value = value();
       }
 
-      var result = [];
-
-      if (!this.safe && string(value) && tag.test(value)) {
-        each$1(data.parse(value), function (node) {
-          node = node.render(data);
-          if (node) {
-            push$1(result, node);
-          }
-        });
-      } else {
-        var node = new Text(value);
-        node.keypath = stringify$1(data.keys);
-        result.push(node);
-      }
-
-      return result;
+      var node = new Text(value, this.safe);
+      node.keypath = stringify$1(data.keys);
+      return [node];
     }
   }]);
   return Expression;
@@ -2105,7 +2096,7 @@ var parsers = [{
   },
   create: function create(source) {
     var terms = source.slice(EACH.length).trim().split(':');
-    var expr = parse$2(terms[0]);
+    var expr = parse$1(terms[0]);
     var index = void 0;
     if (terms[1]) {
       index = terms[1].trim();
@@ -2134,7 +2125,7 @@ var parsers = [{
   },
   create: function create(source) {
     var expr = source.slice(IF.length).trim();
-    return expr ? new If(parse$2(expr)) : ERROR_EXPRESSION;
+    return expr ? new If(parse$1(expr)) : ERROR_EXPRESSION;
   }
 }, {
   test: function test(source) {
@@ -2144,7 +2135,7 @@ var parsers = [{
     var expr = source.slice(ELSE_IF.length);
     if (expr) {
       popStack();
-      return new ElseIf(parse$2(expr));
+      return new ElseIf(parse$1(expr));
     }
     return ERROR_EXPRESSION;
   }
@@ -2163,7 +2154,7 @@ var parsers = [{
   create: function create(source) {
     var expr = source.slice(SPREAD.length);
     if (expr) {
-      return new Spread(parse$2(expr));
+      return new Spread(parse$1(expr));
     }
     return ERROR_EXPRESSION;
   }
@@ -2177,7 +2168,7 @@ var parsers = [{
       safe = FALSE;
       source = source.slice(1);
     }
-    return new Expression(parse$2(source), safe);
+    return new Expression(parse$1(source), safe);
   }
 }];
 
@@ -2192,9 +2183,6 @@ function render$1(ast, data) {
   var children = ast.render({
     keys: [],
     context: new Context(data),
-    parse: function parse(template) {
-      return _parse(template);
-    },
     addDeps: function addDeps(childrenDeps) {
       extend(deps, childrenDeps);
     }
@@ -2206,7 +2194,7 @@ function render$1(ast, data) {
   };
 }
 
-function _parse(template, getPartial, setPartial) {
+function parse$2(template, getPartial, setPartial) {
 
   if (templateParse[template]) {
     return templateParse[template];
@@ -2282,11 +2270,17 @@ function _parse(template, getPartial, setPartial) {
     match = matchByQuote(content, quote);
     if (match) {
       addChild(new Text(match));
-      content = content.substr(match.length);
     }
-    if (content.charAt(0) === quote) {
+    var _match = match,
+        length = _match.length;
+
+    if (content.charAt(length) === quote) {
       popStack();
       level--;
+      length++;
+    }
+    if (length) {
+      content = content.slice(length);
     }
     return content;
   };
@@ -3606,7 +3600,14 @@ function create$1(root, instance) {
 
       if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
     } else if (node.type === TEXT) {
-      return node.content;
+      var safe = node.safe,
+          content = node.content;
+
+      if (!safe || !string(content) || !tag.test(content)) {
+        return content;
+      } else {
+        return content;
+      }
     }
   });
 }
@@ -4242,7 +4243,7 @@ var Yox = function () {
       keypath = normalize(keypath);
 
       if (string(context)) {
-        var keys$$1 = parse$1(context);
+        var keys$$1 = parse$$1(context);
         while (TRUE) {
           keys$$1.push(keypath);
           context = stringify$1(keys$$1);
@@ -4460,7 +4461,7 @@ var Yox = function () {
     value: function compileTemplate(template) {
       var instance = this;
       if (string(template)) {
-        return _parse(template, function (id) {
+        return parse$2(template, function (id) {
           var partial$$1 = instance.partial(id);
           return string(partial$$1) ? instance.compileTemplate(partial$$1) : partial$$1;
         }, function (id, node) {
@@ -4480,7 +4481,7 @@ var Yox = function () {
       var instance = this;
       if (value.indexOf('(') > 0) {
         var _ret2 = function () {
-          var ast = parse$2(value);
+          var ast = parse$1(value);
           if (ast.type === CALL) {
             return {
               v: function v(e) {
