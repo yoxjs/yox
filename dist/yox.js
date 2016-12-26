@@ -44,7 +44,7 @@ function boolean(arg) {
   return is(arg, 'boolean');
 }
 
-function primitive(arg) {
+function primitive$1(arg) {
   return string(arg) || number(arg) || boolean(arg) || arg == NULL;
 }
 
@@ -60,7 +60,7 @@ var is$1 = Object.freeze({
 	string: string,
 	number: number,
 	boolean: boolean,
-	primitive: primitive,
+	primitive: primitive$1,
 	numeric: numeric
 });
 
@@ -87,7 +87,7 @@ function each(array$$1, callback, reversed) {
 function diff$1(array1, array2, strict) {
   var result = [];
   each(array2, function (item) {
-    if (!has(array1, item, strict)) {
+    if (!has$1(array1, item, strict)) {
       result.push(item);
     }
   });
@@ -97,12 +97,12 @@ function diff$1(array1, array2, strict) {
 function merge() {
   var result = [];
   each(arguments, function (array$$1) {
-    push(result, array$$1);
+    push$1(result, array$$1);
   });
   return result;
 }
 
-function push(original, array$$1) {
+function push$1(original, array$$1) {
   if (array(array$$1)) {
     each(array$$1, function (item) {
       original.push(item);
@@ -139,7 +139,7 @@ function indexOf(array$$1, item, strict) {
   }
 }
 
-function has(array$$1, item, strict) {
+function has$1(array$$1, item, strict) {
   return indexOf(array$$1, item, strict) >= 0;
 }
 
@@ -162,11 +162,11 @@ var array$1 = Object.freeze({
 	each: each,
 	diff: diff$1,
 	merge: merge,
-	push: push,
+	push: push$1,
 	toArray: toArray,
 	toObject: toObject,
 	indexOf: indexOf,
-	has: has,
+	has: has$1,
 	last: last,
 	remove: remove,
 	falsy: falsy
@@ -236,7 +236,7 @@ function parse(str) {
   return str ? normalize(str).split(SEPARATOR_KEY) : [];
 }
 
-function stringify(keypaths) {
+function stringify$1(keypaths) {
   return keypaths.filter(function (term) {
     return term !== '' && term !== LEVEL_CURRENT;
   }).join(SEPARATOR_KEY);
@@ -251,7 +251,7 @@ function resolve(base, path) {
       list.push(normalize(term));
     }
   });
-  return stringify(list);
+  return stringify$1(list);
 }
 
 function keys(object$$1) {
@@ -264,7 +264,7 @@ function each$1(object$$1, callback) {
   });
 }
 
-function has$1(object$$1, key) {
+function has$2(object$$1, key) {
   return object$$1.hasOwnProperty(key);
 }
 
@@ -297,8 +297,8 @@ function copy(object$$1, deep) {
   return result;
 }
 
-function get(object$$1, keypath) {
-  if (has$1(object$$1, keypath)) {
+function get$1(object$$1, keypath) {
+  if (has$2(object$$1, keypath)) {
     return {
       value: object$$1[keypath]
     };
@@ -309,7 +309,7 @@ function get(object$$1, keypath) {
     for (var i = 0, len = list.length; i < len && object$$1; i++) {
       if (i < len - 1) {
         object$$1 = object$$1[list[i]];
-      } else if (has$1(object$$1, list[i])) {
+      } else if (has$2(object$$1, list[i])) {
         return {
           value: object$$1[list[i]]
         };
@@ -318,7 +318,7 @@ function get(object$$1, keypath) {
   }
 }
 
-function set(object$$1, keypath, value, autofill) {
+function set$1(object$$1, keypath, value, autofill) {
   if (string(keypath) && keypath.indexOf('.') > 0) {
     var originalObject = object$$1;
     var list = parse(keypath);
@@ -344,11 +344,11 @@ function set(object$$1, keypath, value, autofill) {
 var object$1 = Object.freeze({
 	keys: keys,
 	each: each$1,
-	has: has$1,
+	has: has$2,
 	extend: extend,
 	copy: copy,
-	get: get,
-	set: set
+	get: get$1,
+	set: set$1
 });
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
@@ -655,7 +655,7 @@ var Emitter = function () {
       if (listener == NULL) {
         return array(list) && list.length > 0;
       }
-      return array(list) ? has(list, listener) : FALSE;
+      return array(list) ? has$1(list, listener) : FALSE;
     }
   }]);
   return Emitter;
@@ -668,7 +668,7 @@ function camelCase(str) {
 }
 
 function capitalize(str) {
-  return charAt(str, 0).toUpperCase() + str.slice(1);
+  return charAt$1(str, 0).toUpperCase() + str.slice(1);
 }
 
 function parse$1(str, separator, pair) {
@@ -698,7 +698,7 @@ function parse$1(str, separator, pair) {
   return result;
 }
 
-function charAt(str, index) {
+function charAt$1(str, index) {
   return str.charAt(index);
 }
 function charCodeAt(str, index) {
@@ -709,7 +709,7 @@ var string$1 = Object.freeze({
 	camelCase: camelCase,
 	capitalize: capitalize,
 	parse: parse$1,
-	charAt: charAt,
+	charAt: charAt$1,
 	charCodeAt: charCodeAt
 });
 
@@ -732,10 +732,10 @@ var logger = Object.freeze({
 	error: error$1
 });
 
-var nextTick = void 0;
+var nextTick$1 = void 0;
 
 if (typeof MutationObserver === 'function') {
-  nextTick = function nextTick(fn) {
+  nextTick$1 = function nextTick$1(fn) {
     var observer = new MutationObserver(fn);
     var textNode = doc.createTextNode('');
     observer.observe(textNode, {
@@ -744,22 +744,22 @@ if (typeof MutationObserver === 'function') {
     textNode.data = ' ';
   };
 } else if (typeof setImmediate === 'function') {
-  nextTick = function nextTick(fn) {
+  nextTick$1 = function nextTick$1(fn) {
     setImmediate(fn);
   };
 } else {
-  nextTick = function nextTick(fn) {
+  nextTick$1 = function nextTick$1(fn) {
     setTimeout(fn);
   };
 }
 
-var nextTick$1 = nextTick;
+var nextTick$2 = nextTick$1;
 
 var nextTasks = [];
 
 function add(task) {
   if (!nextTasks.length) {
-    nextTick$1(run);
+    nextTick$2(run);
   }
   nextTasks.push(task);
 }
@@ -897,7 +897,7 @@ var Context = function () {
       if (keys$$1[0] === 'this') {
         keys$$1.shift();
         return {
-          keypath: stringify(keys$$1),
+          keypath: stringify$1(keys$$1),
           instance: instance
         };
       } else {
@@ -909,7 +909,7 @@ var Context = function () {
           levelMap[LEVEL_PARENT] = 1;
 
           each(keys$$1, function (key, i) {
-            if (has$1(levelMap, key)) {
+            if (has$2(levelMap, key)) {
               lookup = FALSE;
               if (levelMap[key]) {
                 instance = instance.parent;
@@ -924,7 +924,7 @@ var Context = function () {
           });
           return {
             v: {
-              keypath: stringify(keys$$1.slice(index)),
+              keypath: stringify$1(keys$$1.slice(index)),
               instance: instance,
               lookup: lookup
             }
@@ -942,10 +942,10 @@ var Context = function () {
           keypath = _format.keypath;
 
       if (instance && keypath) {
-        if (has$1(instance.cache, keypath)) {
+        if (has$2(instance.cache, keypath)) {
           delete instance.cache[keypath];
         }
-        set(instance.data, keypath, value);
+        set$1(instance.data, keypath, value);
       }
     }
   }, {
@@ -960,13 +960,13 @@ var Context = function () {
         var _instance = instance,
             cache = _instance.cache;
 
-        if (!has$1(cache, keypath)) {
+        if (!has$2(cache, keypath)) {
           var result = void 0;
           if (keypath) {
             if (lookup) {
               var keys$$1 = [keypath];
               while (instance) {
-                result = get(instance.data, keypath);
+                result = get$1(instance.data, keypath);
                 if (result) {
                   break;
                 } else {
@@ -976,7 +976,7 @@ var Context = function () {
               }
               keypath = keys$$1.join(SEPARATOR_PATH);
             } else {
-              result = get(instance.data, keypath);
+              result = get$1(instance.data, keypath);
             }
           } else {
             result = instance.data;
@@ -1096,7 +1096,7 @@ var Node = function () {
 
       var newDeps = {};
       each$1(deps, function (value, key) {
-        newDeps[resolve(stringify(keys$$1), key)] = value;
+        newDeps[resolve(stringify$1(keys$$1), key)] = value;
       });
       addDeps(newDeps);
       return {
@@ -1118,7 +1118,7 @@ var Node = function () {
       while (node = children[i]) {
         item = node.render(data);
         if (item) {
-          push(list, item);
+          push$1(list, item);
           if (node.type === IF$1 || node.type === ELSE_IF$1) {
             while (next = children[i + 1]) {
               if (next.type === ELSE_IF$1 || next.type === ELSE$1) {
@@ -1167,7 +1167,7 @@ var Attribute = function (_Node) {
   function Attribute(options) {
     classCallCheck(this, Attribute);
 
-    var _this = possibleConstructorReturn(this, (Attribute.__proto__ || Object.getPrototypeOf(Attribute)).call(this, ATTRIBUTE, !has$1(options, 'value')));
+    var _this = possibleConstructorReturn(this, (Attribute.__proto__ || Object.getPrototypeOf(Attribute)).call(this, ATTRIBUTE, !has$2(options, 'value')));
 
     extend(_this, options);
     return _this;
@@ -1188,7 +1188,7 @@ var Attribute = function (_Node) {
       return new Attribute({
         name: name,
         value: this.renderTexts(data),
-        keypath: stringify(data.keys)
+        keypath: stringify$1(data.keys)
       });
     }
   }]);
@@ -1201,7 +1201,7 @@ var Directive = function (_Node) {
   function Directive(options) {
     classCallCheck(this, Directive);
 
-    var _this = possibleConstructorReturn(this, (Directive.__proto__ || Object.getPrototypeOf(Directive)).call(this, DIRECTIVE, !has$1(options, 'value')));
+    var _this = possibleConstructorReturn(this, (Directive.__proto__ || Object.getPrototypeOf(Directive)).call(this, DIRECTIVE, !has$2(options, 'value')));
 
     extend(_this, options);
     return _this;
@@ -1214,7 +1214,7 @@ var Directive = function (_Node) {
         name: this.name,
         subName: this.subName,
         value: this.renderTexts(data),
-        keypath: stringify(data.keys)
+        keypath: stringify$1(data.keys)
       });
     }
   }]);
@@ -1271,10 +1271,10 @@ var Each = function (_Node) {
             }
 
             keys$$1.push(i);
-            listContext.set(SPECIAL_KEYPATH, stringify(keys$$1));
+            listContext.set(SPECIAL_KEYPATH, stringify$1(keys$$1));
 
             data.context = listContext.push(item);
-            push(result, instance.renderChildren(data));
+            push$1(result, instance.renderChildren(data));
 
             keys$$1.pop();
           });
@@ -1397,7 +1397,7 @@ var Text = function (_Node) {
       return new Text({
         content: this.content,
         safe: this.safe,
-        keypath: stringify(data.keys)
+        keypath: stringify$1(data.keys)
       });
     }
   }]);
@@ -1431,7 +1431,7 @@ var Expression = function (_Node) {
       return new Text({
         content: value,
         safe: this.safe,
-        keypath: stringify(data.keys)
+        keypath: stringify$1(data.keys)
       });
     }
   }]);
@@ -1527,7 +1527,7 @@ var Spread = function (_Node) {
       if (object(value)) {
         var _ret = function () {
           var result = [],
-              keypath = stringify(data.keys);
+              keypath = stringify$1(data.keys);
           each$1(value, function (value, name) {
             result.push(new Attribute({
               name: name,
@@ -1600,8 +1600,8 @@ var MEMBER = 7;
 
 var UNARY = 8;
 
-var Node$2 = function Node(type) {
-  classCallCheck(this, Node);
+var Node$2 = function Node$2(type) {
+  classCallCheck(this, Node$2);
 
   this.type = type;
 };
@@ -2033,7 +2033,7 @@ var Member = function (_Node) {
         }
       });
 
-      var _context$get = context.get(stringify(keys$$1)),
+      var _context$get = context.get(stringify$1(keys$$1)),
           value = _context$get.value,
           keypath = _context$get.keypath;
 
@@ -2072,7 +2072,7 @@ function compile$1(content) {
       value = void 0;
 
   function getChar() {
-    return charAt(content, index);
+    return charAt$1(content, index);
   }
   function getCharCode(i) {
     return charCodeAt(content, i != NULL ? i : index);
@@ -2460,7 +2460,7 @@ var LEVEL_TEXT = 2;
 var buildInDirectives = {};
 buildInDirectives[DIRECTIVE_REF] = buildInDirectives[DIRECTIVE_LAZY] = buildInDirectives[DIRECTIVE_MODEL] = buildInDirectives[KEYWORD_UNIQUE] = TRUE;
 
-function render(ast, data, partial) {
+function render$1(ast, data, partial) {
 
   var deps = {};
 
@@ -2718,16 +2718,16 @@ var tag = /<[^>]+>/;
 
 var selector = /^[#.]\w+$/;
 
-var component = new Store();
-var directive = new Store();
-var filter = new Store();
-var partial = new Store();
+var component$1 = new Store();
+var directive$1 = new Store();
+var filter$1 = new Store();
+var partial$1 = new Store();
 
 var registry = Object.freeze({
-	component: component,
-	directive: directive,
-	filter: filter,
-	partial: partial
+	component: component$1,
+	directive: directive$1,
+	filter: filter$1,
+	partial: partial$1
 });
 
 var debug = TRUE;
@@ -2848,7 +2848,7 @@ function createKeyToOldIdx(children, beginIdx, endIdx) {
 
 var hooks = ['create', 'update', 'remove', 'destroy', 'pre', 'post'];
 
-function init(modules, api) {
+function init$1(modules, api) {
   var i,
       j,
       cbs = {};
@@ -3095,7 +3095,7 @@ function init(modules, api) {
   };
 }
 
-var snabbdom = { init: init };
+var snabbdom = { init: init$1 };
 
 var VNode$1 = vnode;
 var is$5 = is$3;
@@ -3345,7 +3345,7 @@ function pushTextNode(list, html, start) {
     }
 }
 
-var parse$2 = function parse(html, options) {
+var parse$2 = function parse$2(html, options) {
     options || (options = {});
     options.components || (options.components = empty);
     var result = [];
@@ -3619,7 +3619,7 @@ function find(selector, context) {
   return findElement(selector, context);
 }
 
-function create$1(parent, tagName) {
+function create$2(parent, tagName) {
   parent.innerHTML = '<' + tagName + '></' + tagName + '>';
   return parent.firstChild;
 }
@@ -3632,7 +3632,7 @@ function isElement(node) {
   return node.nodeType === 1;
 }
 
-function on(element, type, listener, context) {
+function on$1(element, type, listener, context) {
   var $emitter = element.$emitter || (element.$emitter = new Emitter());
   if (!$emitter.has(type)) {
     var nativeListener = function nativeListener(e) {
@@ -3645,7 +3645,7 @@ function on(element, type, listener, context) {
   $emitter.on(type, listener);
 }
 
-function off(element, type, listener) {
+function off$1(element, type, listener) {
   var $emitter = element.$emitter;
 
   var types = keys($emitter.listeners);
@@ -3662,16 +3662,16 @@ function off(element, type, listener) {
 
 var native = Object.freeze({
 	find: find,
-	create: create$1,
+	create: create$2,
 	getContent: getContent,
 	isElement: isElement,
-	on: on,
-	off: off
+	on: on$1,
+	off: off$1
 });
 
 var patch = snabbdom.init([attributes, style]);
 
-function create$$1(root, instance) {
+function create$1(root, instance) {
 
   var counter = 0;
   var traverse = function traverse(node, enter, leave) {
@@ -3823,7 +3823,7 @@ var refDt = {
         var $refs = instance.$refs;
 
         if (object($refs)) {
-          if (has$1($refs, value)) {
+          if (has$2($refs, value)) {
             error$1('Ref ' + value + ' is existed.');
           }
         } else {
@@ -3932,9 +3932,9 @@ var event = {
           $component.on(type, listener);
         }
       } else {
-        on(el, type, listener);
+        on$1(el, type, listener);
         el.$event = function () {
-          off(el, type, listener);
+          off$1(el, type, listener);
           el.$event = NULL;
         };
       }
@@ -4018,7 +4018,7 @@ var checkboxControl = {
         instance = _ref7.instance;
 
     var value = instance.get(keypath);
-    el.checked = array(value) ? has(value, el.value, FALSE) : !!value;
+    el.checked = array(value) ? has$1(value, el.value, FALSE) : !!value;
   },
   update: function update(_ref8) {
     var el = _ref8.el,
@@ -4077,7 +4077,7 @@ var modelDt = {
           type = 'input';
         }
       }
-      if (!has$1(attrs, 'value')) {
+      if (!has$2(attrs, 'value')) {
         needSet = TRUE;
       }
     }
@@ -4088,7 +4088,7 @@ var modelDt = {
       instance: instance
     };
 
-    var set$$1 = function set() {
+    var set$$1 = function set$$1() {
       control.set(data);
     };
 
@@ -4128,7 +4128,7 @@ function getComponentInfo(node, instance, directives, callback) {
     each(attrs, function (node) {
       props[camelCase(node.name)] = node.value;
     });
-    if (!has$1(props, 'value')) {
+    if (!has$2(props, 'value')) {
       var model = directives.model;
 
       if (model) {
@@ -4273,7 +4273,7 @@ var Yox = function () {
 
             var getter = function getter() {
               if (!getter.$dirty) {
-                if (cache && has$1($watchCache, keypath)) {
+                if (cache && has$2($watchCache, keypath)) {
                   return $watchCache[keypath];
                 }
               } else {
@@ -4314,14 +4314,14 @@ var Yox = function () {
     instance.$watchEmitter = new Emitter({
       onAdd: function onAdd(added) {
         each(added, function (keypath) {
-          if (keypath.indexOf('*') < 0 && !has$1($watchCache, keypath)) {
+          if (keypath.indexOf('*') < 0 && !has$2($watchCache, keypath)) {
             $watchCache[keypath] = instance.get(keypath);
           }
         });
       },
       onRemove: function onRemove(removed) {
         each(removed, function (keypath) {
-          if (has$1($watchCache, keypath)) {
+          if (has$2($watchCache, keypath)) {
             delete $watchCache[keypath];
           }
         });
@@ -4350,7 +4350,7 @@ var Yox = function () {
     if (el) {
       if (isElement(el)) {
         if (!replace) {
-          el = create$1(el, 'div');
+          el = create$2(el, 'div');
         }
       } else {
         error$1('Passing a `el` option must be a html element.');
@@ -4398,7 +4398,7 @@ var Yox = function () {
             };
           }
         }
-        return get($data, keypath);
+        return get$1($data, keypath);
       };
 
       keypath = normalize(keypath);
@@ -4407,7 +4407,7 @@ var Yox = function () {
         var keys$$1 = parse(context);
         while (TRUE) {
           keys$$1.push(keypath);
-          context = stringify(keys$$1);
+          context = stringify$1(keys$$1);
           result = getValue(context);
           if (result || keys$$1.length <= 1) {
             if (result) {
@@ -4543,7 +4543,7 @@ var Yox = function () {
             return;
           }
         }
-        set($data, keypath, value);
+        set$1($data, keypath, value);
       });
 
       var args = arguments,
@@ -4586,7 +4586,7 @@ var Yox = function () {
 
       var context = {};
 
-      extend(context, filter.data, $data, $filters.data, $computedGetters);
+      extend(context, filter$1.data, $data, $filters.data, $computedGetters);
 
       each$1(context, function (value, key) {
         if (func(value) && !value.$binded) {
@@ -4594,14 +4594,14 @@ var Yox = function () {
         }
       });
 
-      var _viewEnginer$render = render($template, context, instance.partial.bind(instance)),
+      var _viewEnginer$render = render$1($template, context, instance.partial.bind(instance)),
           root = _viewEnginer$render.root,
           deps = _viewEnginer$render.deps;
 
       instance.$viewDeps = keys(deps);
       updateDeps(instance, instance.$viewDeps, $viewDeps, $viewWatcher);
 
-      var newNode = create$$1(root, instance),
+      var newNode = create$1(root, instance),
           afterHook = void 0;
       if ($currentNode) {
         afterHook = AFTER_UPDATE;
@@ -4862,7 +4862,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.19.10';
+Yox.version = '0.19.11';
 
 Yox.switcher = switcher;
 
@@ -4895,7 +4895,7 @@ Yox.validate = function (props, schema) {
         value = rule.value,
         required = rule.required;
 
-    if (has$1(props, key)) {
+    if (has$2(props, key)) {
       if (type) {
         (function () {
           var target = props[key],
@@ -4922,7 +4922,7 @@ Yox.validate = function (props, schema) {
       }
     } else if (required) {
       warn('Passing a "' + key + '" prop is not found.');
-    } else if (has$1(rule, 'value')) {
+    } else if (has$2(rule, 'value')) {
       result[key] = func(value) ? value(props) : value;
     }
   });
@@ -4963,7 +4963,7 @@ function diff$$1(instance) {
 
   var keys$$1 = [];
   var addKey = function addKey(key, push$$1) {
-    if (!has(keys$$1, key)) {
+    if (!has$1(keys$$1, key)) {
       if (push$$1) {
         keys$$1.push(key);
       } else {
