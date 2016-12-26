@@ -8,7 +8,6 @@ import virtualize from 'snabbdom-virtualize/strings'
 
 import * as native from './native'
 
-import * as syntax from '../../config/syntax'
 import * as pattern from '../../config/pattern'
 
 import * as is from 'yox-common/util/is'
@@ -16,7 +15,9 @@ import * as env from 'yox-common/util/env'
 import * as array from 'yox-common/util/array'
 import * as object from 'yox-common/util/object'
 import * as string from 'yox-common/util/string'
-import * as viewNodeType from '../../view/nodeType'
+
+import * as viewSyntax from 'yox-template-compiler/src/syntax'
+import * as viewNodeType from 'yox-template-compiler/src/nodeType'
 
 export let patch = snabbdom.init([ attributes, style ])
 
@@ -105,43 +106,13 @@ export function create(root, instance) {
             node.directives,
             function (node) {
               let { name } = node
-
-              let directiveName
-              if (name.startsWith(syntax.DIRECTIVE_EVENT_PREFIX)) {
-                name = name.slice(syntax.DIRECTIVE_EVENT_PREFIX.length)
-                directiveName = 'event'
-              }
-              else if (name.startsWith(syntax.DIRECTIVE_PREFIX)) {
-                name = name.slice(syntax.DIRECTIVE_PREFIX.length)
-                // 内置指令不支持 o-xxx 写法
-                if (name !== syntax.KEY_REF
-                  && name !== syntax.KEY_LAZY
-                  && name !== syntax.KEY_MODEL
-                ) {
-                  directiveName = name
-                }
-              }
-              else if (name === syntax.KEY_REF) {
-                name =
-                directiveName = 'ref'
-              }
-              else if (name === syntax.KEY_LAZY) {
-                name =
-                directiveName = 'lazy'
-              }
-              else if (name === syntax.KEY_MODEL) {
-                name =
-                directiveName = 'model'
-              }
-              else if (name === syntax.KEY_UNIQUE) {
+              if (name === viewSyntax.KEYWORD_UNIQUE) {
                 data.key = node.value
               }
-
-              if (directiveName) {
+              else {
                 directives.push({
-                  name: name,
                   node: node,
-                  directive: instance.directive(directiveName),
+                  directive: instance.directive(name),
                 })
               }
             }

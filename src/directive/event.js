@@ -3,12 +3,16 @@ import debounce from 'yox-common/function/debounce'
 
 import * as is from 'yox-common/util/is'
 import * as env from 'yox-common/util/env'
+
 import * as native from '../platform/web/native'
 
 export default {
 
-  attach: function({ el, name, node, instance, listener, directives }) {
+  attach: function({ el, node, instance, directives, type, listener }) {
 
+    if (!type) {
+      type = node.subName
+    }
     if (!listener) {
       listener = instance.compileValue(node.keypath, node.value)
     }
@@ -20,8 +24,8 @@ export default {
         if (is.numeric(value) && value >= 0) {
           listener = debounce(listener, value)
         }
-        else if (name === 'input') {
-          name = 'change'
+        else if (type === 'input') {
+          type = 'change'
         }
       }
 
@@ -30,18 +34,18 @@ export default {
         if (is.array($component)) {
           $component.push(
             function ($component) {
-              $component.on(name, listener)
+              $component.on(type, listener)
             }
           )
         }
         else {
-          $component.on(name, listener)
+          $component.on(type, listener)
         }
       }
       else {
-        native.on(el, name, listener)
+        native.on(el, type, listener)
         el.$event = function () {
-          native.off(el, name, listener)
+          native.off(el, type, listener)
           el.$event = env.NULL
         }
       }

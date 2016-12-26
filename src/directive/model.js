@@ -86,18 +86,17 @@ export default {
       logger.error(`The ${keypath} being used for two-way binding is ambiguous.`)
     }
 
-    let name = 'change', control, needSet
+    let type = 'change', control, needSet
 
-    let { type, $component } = el
-    if ($component) {
+    if (el.$component) {
       control = componentControl
     }
     else {
-      control = specialControls[type]
+      control = specialControls[el.type]
       if (!control) {
         control = inputControl
         if ('oninput' in el) {
-          name = 'input'
+          type = 'input'
         }
       }
       if (!object.has(attrs, 'value')) {
@@ -127,9 +126,9 @@ export default {
     event.attach({
       el,
       node,
-      name,
       instance,
       directives,
+      type,
       listener: function () {
         control.update(data)
       }

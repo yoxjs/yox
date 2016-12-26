@@ -4,58 +4,6 @@
 	(global.Yox = factory());
 }(this, (function () { 'use strict';
 
-var templateParse = {};
-
-var expressionParse = {};
-
-var IF = '#if';
-var ELSE = 'else';
-var ELSE_IF = 'else if';
-var EACH = '#each';
-var PARTIAL = '#partial';
-var IMPORT = '>';
-var COMMENT = '!';
-var SPREAD = '...';
-
-var DIRECTIVE_PREFIX = 'o-';
-var DIRECTIVE_EVENT_PREFIX = 'on-';
-
-var SPECIAL_EVENT = '$event';
-var SPECIAL_KEYPATH = '$keypath';
-
-var KEY_REF = 'ref';
-var KEY_LAZY = 'lazy';
-var KEY_MODEL = 'model';
-
-var KEY_UNIQUE = 'key';
-
-var syntax = Object.freeze({
-	IF: IF,
-	ELSE: ELSE,
-	ELSE_IF: ELSE_IF,
-	EACH: EACH,
-	PARTIAL: PARTIAL,
-	IMPORT: IMPORT,
-	COMMENT: COMMENT,
-	SPREAD: SPREAD,
-	DIRECTIVE_PREFIX: DIRECTIVE_PREFIX,
-	DIRECTIVE_EVENT_PREFIX: DIRECTIVE_EVENT_PREFIX,
-	SPECIAL_EVENT: SPECIAL_EVENT,
-	SPECIAL_KEYPATH: SPECIAL_KEYPATH,
-	KEY_REF: KEY_REF,
-	KEY_LAZY: KEY_LAZY,
-	KEY_MODEL: KEY_MODEL,
-	KEY_UNIQUE: KEY_UNIQUE
-});
-
-var componentName = /[-A-Z]/;
-
-var tag = /<[^>]+>/;
-
-var selector = /^[#.]\w+$/;
-
-var selfClosingTagName = /input|img|br/i;
-
 var TRUE = true;
 var FALSE = false;
 var NULL = null;
@@ -118,7 +66,7 @@ var is$1 = Object.freeze({
 
 var slice = Array.prototype.slice;
 
-function each$1(array$$1, callback, reversed) {
+function each(array$$1, callback, reversed) {
   var length = array$$1.length;
 
   if (reversed) {
@@ -138,8 +86,8 @@ function each$1(array$$1, callback, reversed) {
 
 function diff$1(array1, array2, strict) {
   var result = [];
-  each$1(array2, function (item) {
-    if (!has$2(array1, item, strict)) {
+  each(array2, function (item) {
+    if (!has$1(array1, item, strict)) {
       result.push(item);
     }
   });
@@ -148,7 +96,7 @@ function diff$1(array1, array2, strict) {
 
 function merge() {
   var result = [];
-  each$1(arguments, function (array$$1) {
+  each(arguments, function (array$$1) {
     push$1(result, array$$1);
   });
   return result;
@@ -156,7 +104,7 @@ function merge() {
 
 function push$1(original, array$$1) {
   if (array(array$$1)) {
-    each$1(array$$1, function (item) {
+    each(array$$1, function (item) {
       original.push(item);
     });
   } else {
@@ -170,7 +118,7 @@ function toArray(array$$1) {
 
 function toObject(array$$1, key) {
   var result = {};
-  each$1(array$$1, function (item) {
+  each(array$$1, function (item) {
     result[key ? item[key] : item] = item;
   });
   return result;
@@ -181,7 +129,7 @@ function indexOf(array$$1, item, strict) {
     return array$$1.indexOf(item);
   } else {
     var index = -1;
-    each$1(array$$1, function (value, i) {
+    each(array$$1, function (value, i) {
       if (item == value) {
         index = i;
         return FALSE;
@@ -191,7 +139,7 @@ function indexOf(array$$1, item, strict) {
   }
 }
 
-function has$2(array$$1, item, strict) {
+function has$1(array$$1, item, strict) {
   return indexOf(array$$1, item, strict) >= 0;
 }
 
@@ -211,18 +159,60 @@ function falsy(array$$1) {
 }
 
 var array$1 = Object.freeze({
-	each: each$1,
+	each: each,
 	diff: diff$1,
 	merge: merge,
 	push: push$1,
 	toArray: toArray,
 	toObject: toObject,
 	indexOf: indexOf,
-	has: has$2,
+	has: has$1,
 	last: last,
 	remove: remove,
 	falsy: falsy
 });
+
+var _execute = function (fn, context, args) {
+  if (func(fn)) {
+    if (array(args)) {
+      return fn.apply(context, args);
+    } else {
+      return fn.call(context, args);
+    }
+  }
+};
+
+var magic = function (options) {
+  var args = options.args,
+      get = options.get,
+      set = options.set;
+
+  args = toArray(args);
+
+  var key = args[0],
+      value = args[1];
+  if (object(key)) {
+    _execute(set, NULL, key);
+  } else if (string(key)) {
+    var _args = args,
+        length = _args.length;
+
+    if (length === 2) {
+      _execute(set, NULL, args);
+    } else if (length === 1) {
+      return _execute(get, NULL, key);
+    }
+  }
+};
+
+var toNumber = function (str) {
+  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+
+  if (numeric(str)) {
+    return +str;
+  }
+  return defaultValue;
+};
 
 var SEPARATOR_KEY = '.';
 var SEPARATOR_PATH = '/';
@@ -254,7 +244,7 @@ function stringify$1(keypaths) {
 
 function resolve(base, path) {
   var list = parse(base);
-  each$1(path.split(SEPARATOR_PATH), function (term) {
+  each(path.split(SEPARATOR_PATH), function (term) {
     if (term === LEVEL_PARENT) {
       list.pop();
     } else {
@@ -268,13 +258,13 @@ function keys(object$$1) {
   return Object.keys(object$$1);
 }
 
-function each$$1(object$$1, callback) {
-  each$1(keys(object$$1), function (key) {
+function each$1(object$$1, callback) {
+  each(keys(object$$1), function (key) {
     return callback(object$$1[key], key);
   });
 }
 
-function has$1(object$$1, key) {
+function has$2(object$$1, key) {
   return object$$1.hasOwnProperty(key);
 }
 
@@ -283,7 +273,7 @@ function extend() {
       result = args[0];
   for (var i = 1, len = args.length; i < len; i++) {
     if (object(args[i])) {
-      each$$1(args[i], function (value, key) {
+      each$1(args[i], function (value, key) {
         result[key] = value;
       });
     }
@@ -295,12 +285,12 @@ function copy(object$$1, deep) {
   var result = object$$1;
   if (array(object$$1)) {
     result = [];
-    each$1(object$$1, function (item, index) {
+    each(object$$1, function (item, index) {
       result[index] = deep ? copy(item) : item;
     });
   } else if (object(object$$1)) {
     result = {};
-    each$$1(object$$1, function (value, key) {
+    each$1(object$$1, function (value, key) {
       result[key] = deep ? copy(value) : value;
     });
   }
@@ -308,7 +298,7 @@ function copy(object$$1, deep) {
 }
 
 function get$1(object$$1, keypath) {
-  if (has$1(object$$1, keypath)) {
+  if (has$2(object$$1, keypath)) {
     return {
       value: object$$1[keypath]
     };
@@ -319,7 +309,7 @@ function get$1(object$$1, keypath) {
     for (var i = 0, len = list.length; i < len && object$$1; i++) {
       if (i < len - 1) {
         object$$1 = object$$1[list[i]];
-      } else if (has$1(object$$1, list[i])) {
+      } else if (has$2(object$$1, list[i])) {
         return {
           value: object$$1[list[i]]
         };
@@ -333,7 +323,7 @@ function set$1(object$$1, keypath, value, autofill) {
     var originalObject = object$$1;
     var list = parse(keypath);
     var prop = list.pop();
-    each$1(list, function (item, index) {
+    each(list, function (item, index) {
       if (object$$1[item]) {
         object$$1 = object$$1[item];
       } else if (autofill !== FALSE) {
@@ -353,13 +343,54 @@ function set$1(object$$1, keypath, value, autofill) {
 
 var object$1 = Object.freeze({
 	keys: keys,
-	each: each$$1,
-	has: has$1,
+	each: each$1,
+	has: has$2,
 	extend: extend,
 	copy: copy,
 	get: get$1,
 	set: set$1
 });
+
+var validate = function (data, schema, onNotMatched, onNotFound) {
+  var result = {};
+  each$1(schema, function (rule, key) {
+    var type = rule.type,
+        value = rule.value,
+        required = rule.required;
+
+    if (has$2(data, key)) {
+      if (type) {
+        (function () {
+          var target = data[key],
+              matched = void 0;
+
+          if (string(type)) {
+            matched = is(target, type);
+          } else if (array(type)) {
+            each(type, function (t) {
+              if (is(target, t)) {
+                matched = TRUE;
+                return FALSE;
+              }
+            });
+          } else if (func(type)) {
+            matched = type(target, data);
+          }
+          if (matched === TRUE) {
+            result[key] = target;
+          } else {
+            onNotMatched(key);
+          }
+        })();
+      }
+    } else if (required) {
+      onNotFound(key);
+    } else if (has$2(rule, 'value')) {
+      result[key] = func(value) ? value(data) : value;
+    }
+  });
+  return result;
+};
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
   return typeof obj;
@@ -508,7 +539,7 @@ var Store = function () {
       var data = this.data;
 
       if (object(key)) {
-        each$$1(key, function (value, key) {
+        each$1(key, function (value, key) {
           data[key] = value;
         });
       } else if (string(key)) {
@@ -519,39 +550,247 @@ var Store = function () {
   return Store;
 }();
 
-var component$1 = new Store();
-var directive$1 = new Store();
-var filter$1 = new Store();
-var partial$1 = new Store();
+var Event = function () {
+  function Event(event) {
+    classCallCheck(this, Event);
 
-var registry = Object.freeze({
-	component: component$1,
-	directive: directive$1,
-	filter: filter$1,
-	partial: partial$1
+    if (event.type) {
+      this.type = event.type;
+      this.originalEvent = event;
+    } else {
+      this.type = event;
+    }
+  }
+
+  createClass(Event, [{
+    key: 'prevent',
+    value: function prevent() {
+      if (!this.isPrevented) {
+        var originalEvent = this.originalEvent;
+
+        if (originalEvent && func(originalEvent.preventDefault)) {
+          originalEvent.preventDefault();
+        }
+        this.isPrevented = TRUE;
+      }
+    }
+  }, {
+    key: 'stop',
+    value: function stop() {
+      if (!this.isStoped) {
+        var originalEvent = this.originalEvent;
+
+        if (originalEvent && func(originalEvent.stopPropagation)) {
+          originalEvent.stopPropagation();
+        }
+        this.isStoped = TRUE;
+      }
+    }
+  }]);
+  return Event;
+}();
+
+var Emitter = function () {
+  function Emitter(options) {
+    classCallCheck(this, Emitter);
+
+    extend(this, options);
+    this.listeners = {};
+  }
+
+  createClass(Emitter, [{
+    key: 'on',
+    value: function on(type, listener) {
+      var listeners = this.listeners,
+          onAdd = this.onAdd;
+
+      var added = [];
+
+      var addListener = function addListener(listener, type) {
+        if (func(listener)) {
+          var list = listeners[type] || (listeners[type] = []);
+          if (!list.length) {
+            added.push(type);
+          }
+          list.push(listener);
+        }
+      };
+
+      if (object(type)) {
+        each$1(type, addListener);
+      } else if (string(type)) {
+        addListener(listener, type);
+      }
+
+      if (added.length && func(onAdd)) {
+        onAdd(added);
+      }
+    }
+  }, {
+    key: 'once',
+    value: function once(type, listener) {
+
+      var instance = this;
+      var addOnce = function addOnce(listener, type) {
+        if (func(listener)) {
+          listener.$once = function () {
+            instance.off(type, listener);
+            delete listener.$once;
+          };
+        }
+      };
+
+      if (object(type)) {
+        each$1(type, addOnce);
+      } else if (string(type)) {
+        addOnce(listener, type);
+      }
+
+      instance.on(type, listener);
+    }
+  }, {
+    key: 'off',
+    value: function off(type, listener) {
+      var listeners = this.listeners,
+          onRemove = this.onRemove;
+
+      var removed = [];
+
+      if (type == NULL) {
+        each$1(listeners, function (list, type) {
+          if (array(listeners[type])) {
+            listeners[type].length = 0;
+            removed.push(type);
+          }
+        });
+      } else {
+        var list = listeners[type];
+        if (array(list)) {
+          if (listener == NULL) {
+            list.length = 0;
+          } else {
+            remove(list, listener);
+          }
+          if (!list.length) {
+            removed.push(type);
+          }
+        }
+      }
+
+      if (removed.length && func(onRemove)) {
+        onRemove(removed);
+      }
+    }
+  }, {
+    key: 'fire',
+    value: function fire(type, data, context) {
+
+      if (arguments.length === 2) {
+        context = NULL;
+      }
+
+      var done = TRUE;
+      var handle = function handle(list, data) {
+        if (array(list)) {
+          each(list, function (listener) {
+            var result = _execute(listener, context, data);
+
+            var $once = listener.$once;
+
+            if (func($once)) {
+              $once();
+            }
+
+            if (data instanceof Event) {
+              if (result === FALSE) {
+                data.prevent();
+                data.stop();
+              } else if (data.isStoped) {
+                result = FALSE;
+              }
+            }
+
+            if (result === FALSE) {
+              return done = FALSE;
+            }
+          });
+        }
+      };
+
+      var listeners = this.listeners;
+
+      handle(listeners[type], data);
+
+      if (done) {
+        each$1(listeners, function (list, key) {
+          if (key !== type || key.indexOf('*') >= 0) {
+            key = ['^', key.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)'), key.endsWith('**') ? '' : '$'];
+            var match = type.match(new RegExp(key.join('')));
+            if (match) {
+              handle(list, merge(data, toArray(match).slice(1)));
+            }
+            return done;
+          }
+        });
+      }
+
+      return done;
+    }
+  }, {
+    key: 'has',
+    value: function has(type, listener) {
+      var list = this.listeners[type];
+      if (listener == NULL) {
+        return array(list) && list.length > 0;
+      }
+      return array(list) ? has$1(list, listener) : FALSE;
+    }
+  }]);
+  return Emitter;
+}();
+
+function camelCase(str) {
+  return str.replace(/-([a-z])/gi, function ($0, $1) {
+    return $1.toUpperCase();
+  });
+}
+
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function parse$1(str, separator, pair) {
+  var result = [];
+  if (string(str)) {
+    (function () {
+      var terms = void 0,
+          key = void 0,
+          value = void 0,
+          item = void 0;
+      each(str.split(separator), function (term) {
+        terms = term.split(pair);
+        key = terms[0];
+        value = terms[1];
+        if (key) {
+          item = {
+            key: key.trim()
+          };
+          if (value) {
+            item.value = value.trim();
+          }
+          result.push(item);
+        }
+      });
+    })();
+  }
+  return result;
+}
+
+var string$1 = Object.freeze({
+	camelCase: camelCase,
+	capitalize: capitalize,
+	parse: parse$1
 });
-
-var debug = TRUE;
-
-var switcher = Object.freeze({
-	debug: debug
-});
-
-var BEFORE_CREATE = 'beforeCreate';
-
-var AFTER_CREATE = 'afterCreate';
-
-var BEFORE_MOUNT = 'beforeMount';
-
-var AFTER_MOUNT = 'afterMount';
-
-var BEFORE_UPDATE = 'beforeUpdate';
-
-var AFTER_UPDATE = 'afterUpdate';
-
-var BEFORE_DESTROY = 'beforeDestroy';
-
-var AFTER_DESTROY = 'afterDestroy';
 
 var hasConsole = typeof console !== 'undefined';
 
@@ -571,6 +810,46 @@ var logger = Object.freeze({
 	warn: warn,
 	error: error$1
 });
+
+var nextTick$1 = void 0;
+
+if (typeof MutationObserver === 'function') {
+  nextTick$1 = function nextTick$1(fn) {
+    var observer = new MutationObserver(fn);
+    var textNode = doc.createTextNode('');
+    observer.observe(textNode, {
+      characterData: TRUE
+    });
+    textNode.data = ' ';
+  };
+} else if (typeof setImmediate === 'function') {
+  nextTick$1 = function nextTick$1(fn) {
+    setImmediate(fn);
+  };
+} else {
+  nextTick$1 = function nextTick$1(fn) {
+    setTimeout(fn);
+  };
+}
+
+var nextTick$2 = nextTick$1;
+
+var nextTasks = [];
+
+function add(task) {
+  if (!nextTasks.length) {
+    nextTick$2(run);
+  }
+  nextTasks.push(task);
+}
+
+function run() {
+  var tasks = nextTasks;
+  nextTasks = [];
+  each(tasks, function (task) {
+    task();
+  });
+}
 
 var breaklinePattern = /^[ \t]*\n[ \t]*$/;
 var breaklinePrefixPattern = /^[ \t]*\n/;
@@ -597,7 +876,7 @@ function getLocationByIndex(str, index) {
       col = 0,
       pos = 0;
 
-  each$1(str.split('\n'), function (lineStr) {
+  each(str.split('\n'), function (lineStr) {
     line++;
     col = 0;
 
@@ -629,6 +908,27 @@ function parseError(str, errorMsg, errorIndex) {
   }
   error$1(errorMsg);
 }
+
+var IF = '#if';
+var ELSE = 'else';
+var ELSE_IF = 'else if';
+var EACH = '#each';
+var PARTIAL = '#partial';
+var IMPORT = '>';
+var COMMENT = '!';
+var SPREAD = '...';
+
+var SPECIAL_EVENT = '$event';
+var SPECIAL_KEYPATH = '$keypath';
+
+var DIRECTIVE_PREFIX = 'o-';
+var DIRECTIVE_EVENT_PREFIX = 'on-';
+
+var DIRECTIVE_REF = 'ref';
+var DIRECTIVE_LAZY = 'lazy';
+var DIRECTIVE_MODEL = 'model';
+
+var KEYWORD_UNIQUE = 'key';
 
 var IF$1 = 1;
 
@@ -674,7 +974,7 @@ var Context = function () {
       var data = this.data,
           cache = this.cache;
 
-      if (has$1(cache, keypath)) {
+      if (has$2(cache, keypath)) {
         delete cache[keypath];
       }
       set$1(data, keypath, value);
@@ -688,7 +988,7 @@ var Context = function () {
           cache = _instance.cache;
 
 
-      if (!has$1(cache, keypath)) {
+      if (!has$2(cache, keypath)) {
         var result = void 0;
         var keys$$1 = [keypath];
         while (instance) {
@@ -814,7 +1114,7 @@ var Node = function () {
           deps = _expr$execute.deps;
 
       var newDeps = {};
-      each$$1(deps, function (value, key) {
+      each$1(deps, function (value, key) {
         newDeps[resolve(stringify$1(keys$$1), key)] = value;
       });
       addDeps(newDeps);
@@ -831,10 +1131,6 @@ var Node = function () {
       }
       var list = [],
           item = void 0;
-      if (!children) {
-        return list;
-      }
-
       var i = 0,
           node = void 0,
           next = void 0;
@@ -890,7 +1186,7 @@ var Attribute = function (_Node) {
   function Attribute(options) {
     classCallCheck(this, Attribute);
 
-    var _this = possibleConstructorReturn(this, (Attribute.__proto__ || Object.getPrototypeOf(Attribute)).call(this, ATTRIBUTE, !has$1(options, 'value')));
+    var _this = possibleConstructorReturn(this, (Attribute.__proto__ || Object.getPrototypeOf(Attribute)).call(this, ATTRIBUTE, !has$2(options, 'value')));
 
     extend(_this, options);
     return _this;
@@ -924,7 +1220,7 @@ var Directive = function (_Node) {
   function Directive(options) {
     classCallCheck(this, Directive);
 
-    var _this = possibleConstructorReturn(this, (Directive.__proto__ || Object.getPrototypeOf(Directive)).call(this, DIRECTIVE, !has$1(options, 'value')));
+    var _this = possibleConstructorReturn(this, (Directive.__proto__ || Object.getPrototypeOf(Directive)).call(this, DIRECTIVE, !has$2(options, 'value')));
 
     extend(_this, options);
     return _this;
@@ -935,6 +1231,7 @@ var Directive = function (_Node) {
     value: function render(data) {
       return new Directive({
         name: this.name,
+        subName: this.subName,
         value: this.renderTexts(data),
         keypath: stringify$1(data.keys)
       });
@@ -969,9 +1266,9 @@ var Each = function (_Node) {
 
       var iterate = void 0;
       if (array(value)) {
-        iterate = each$1;
+        iterate = each;
       } else if (object(value)) {
-        iterate = each$$1;
+        iterate = each$1;
       }
 
       if (iterate) {
@@ -1246,7 +1543,7 @@ var Spread = function (_Node) {
         var _ret = function () {
           var result = [],
               keypath = stringify$1(data.keys);
-          each$$1(value, function (value, name) {
+          each$1(value, function (value, name) {
             result.push(new Attribute({
               name: name,
               value: value,
@@ -1289,7 +1586,7 @@ function sortKeys(obj) {
 
 function matchBestToken(content, sortedTokens) {
   var result = void 0;
-  each$1(sortedTokens, function (token) {
+  each(sortedTokens, function (token) {
     if (content.startsWith(token)) {
       result = token;
       return FALSE;
@@ -1327,13 +1624,12 @@ var Node$2 = function Node$2(type) {
 var Unary = function (_Node) {
   inherits(Unary, _Node);
 
-  function Unary(operator, arg) {
+  function Unary(options) {
     classCallCheck(this, Unary);
 
     var _this = possibleConstructorReturn(this, (Unary.__proto__ || Object.getPrototypeOf(Unary)).call(this, UNARY));
 
-    _this.operator = operator;
-    _this.arg = arg;
+    extend(_this, options);
     return _this;
   }
 
@@ -1386,14 +1682,12 @@ Unary.WAVE = '~';
 var Binary = function (_Node) {
   inherits(Binary, _Node);
 
-  function Binary(right, operator, left) {
+  function Binary(options) {
     classCallCheck(this, Binary);
 
     var _this = possibleConstructorReturn(this, (Binary.__proto__ || Object.getPrototypeOf(Binary)).call(this, BINARY));
 
-    _this.right = right;
-    _this.operator = operator;
-    _this.left = left;
+    extend(_this, options);
     return _this;
   }
 
@@ -1404,7 +1698,7 @@ var Binary = function (_Node) {
           operator = this.operator,
           left = this.left;
 
-      return '(' + left.stringify() + ') ' + operator + ' (' + right.stringify() + ')';
+      return left.stringify() + ' ' + operator + ' ' + right.stringify();
     }
   }, {
     key: 'execute',
@@ -1503,39 +1797,28 @@ var unaryList = sortKeys(unaryMap);
 var binaryMap = {};
 
 binaryMap[Binary.OR] = 1;
+
 binaryMap[Binary.AND] = 2;
-binaryMap[Binary.LE] = 3;
-binaryMap[Binary.LNE] = 3;
-binaryMap[Binary.SE] = 3;
-binaryMap[Binary.SNE] = 3;
-binaryMap[Binary.LT] = 4;
-binaryMap[Binary.LTE] = 4;
-binaryMap[Binary.GT] = 4;
-binaryMap[Binary.GTE] = 4;
-binaryMap[Binary.PLUS] = 5;
-binaryMap[Binary.MINUS] = 5;
-binaryMap[Binary.MULTIPLY] = 6;
-binaryMap[Binary.DIVIDE] = 6;
-binaryMap[Binary.MODULO] = 6;
+
+binaryMap[Binary.LE] = binaryMap[Binary.LNE] = binaryMap[Binary.SE] = binaryMap[Binary.SNE] = 3;
+
+binaryMap[Binary.LT] = binaryMap[Binary.LTE] = binaryMap[Binary.GT] = binaryMap[Binary.GTE] = 4;
+
+binaryMap[Binary.PLUS] = binaryMap[Binary.MINUS] = 5;
+
+binaryMap[Binary.MULTIPLY] = binaryMap[Binary.DIVIDE] = binaryMap[Binary.MODULO] = 6;
 
 var binaryList = sortKeys(binaryMap);
-
-var keyword = {
-  'true': TRUE,
-  'false': FALSE,
-  'null': NULL,
-  'undefined': UNDEFINED
-};
 
 var Array$1 = function (_Node) {
   inherits(Array, _Node);
 
-  function Array(elements) {
+  function Array(options) {
     classCallCheck(this, Array);
 
     var _this = possibleConstructorReturn(this, (Array.__proto__ || Object.getPrototypeOf(Array)).call(this, ARRAY));
 
-    _this.elements = elements;
+    extend(_this, options);
     return _this;
   }
 
@@ -1554,7 +1837,7 @@ var Array$1 = function (_Node) {
     value: function execute(context) {
       var value = [],
           deps = {};
-      each$1(this.elements, function (node) {
+      each(this.elements, function (node) {
         var result = node.execute(context);
         value.push(result.value);
         extend(deps, result.deps);
@@ -1568,26 +1851,15 @@ var Array$1 = function (_Node) {
   return Array;
 }(Node$2);
 
-var execute$1 = function (fn, context, args) {
-  if (func(fn)) {
-    if (array(args)) {
-      return fn.apply(context, args);
-    } else {
-      return fn.call(context, args);
-    }
-  }
-};
-
 var Call = function (_Node) {
   inherits(Call, _Node);
 
-  function Call(callee, args) {
+  function Call(options) {
     classCallCheck(this, Call);
 
     var _this = possibleConstructorReturn(this, (Call.__proto__ || Object.getPrototypeOf(Call)).call(this, CALL));
 
-    _this.callee = callee;
-    _this.args = args;
+    extend(_this, options);
     return _this;
   }
 
@@ -1612,7 +1884,7 @@ var Call = function (_Node) {
           value = _callee$execute.value,
           deps = _callee$execute.deps;
 
-      value = execute$1(value, NULL, args.map(function (arg) {
+      value = _execute(value, NULL, args.map(function (arg) {
         var result = arg.execute(context);
         extend(deps, result.deps);
         return result.value;
@@ -1630,14 +1902,12 @@ var Call = function (_Node) {
 var Conditional = function (_Node) {
   inherits(Conditional, _Node);
 
-  function Conditional(test, consequent, alternate) {
+  function Conditional(options) {
     classCallCheck(this, Conditional);
 
     var _this = possibleConstructorReturn(this, (Conditional.__proto__ || Object.getPrototypeOf(Conditional)).call(this, CONDITIONAL));
 
-    _this.test = test;
-    _this.consequent = consequent;
-    _this.alternate = alternate;
+    extend(_this, options);
     return _this;
   }
 
@@ -1648,7 +1918,7 @@ var Conditional = function (_Node) {
           consequent = this.consequent,
           alternate = this.alternate;
 
-      return '(' + test.stringify() + ') ? (' + consequent.stringify() + ') : (' + alternate.stringify() + ')';
+      return test.stringify() + ' ? ' + consequent.stringify() + ' : ' + alternate.stringify();
     }
   }, {
     key: 'execute',
@@ -1679,12 +1949,12 @@ var Conditional = function (_Node) {
 var Identifier = function (_Node) {
   inherits(Identifier, _Node);
 
-  function Identifier(name) {
+  function Identifier(options) {
     classCallCheck(this, Identifier);
 
     var _this = possibleConstructorReturn(this, (Identifier.__proto__ || Object.getPrototypeOf(Identifier)).call(this, IDENTIFIER));
 
-    _this.name = name;
+    extend(_this, options);
     return _this;
   }
 
@@ -1715,12 +1985,12 @@ var Identifier = function (_Node) {
 var Literal = function (_Node) {
   inherits(Literal, _Node);
 
-  function Literal(value) {
+  function Literal(options) {
     classCallCheck(this, Literal);
 
     var _this = possibleConstructorReturn(this, (Literal.__proto__ || Object.getPrototypeOf(Literal)).call(this, LITERAL));
 
-    _this.value = value;
+    extend(_this, options);
     return _this;
   }
 
@@ -1749,13 +2019,12 @@ var Literal = function (_Node) {
 var Member = function (_Node) {
   inherits(Member, _Node);
 
-  function Member(object$$1, property) {
+  function Member(options) {
     classCallCheck(this, Member);
 
     var _this = possibleConstructorReturn(this, (Member.__proto__ || Object.getPrototypeOf(Member)).call(this, MEMBER));
 
-    _this.object = object$$1;
-    _this.property = property;
+    extend(_this, options);
     return _this;
   }
 
@@ -1799,7 +2068,7 @@ var Member = function (_Node) {
       var deps = {},
           keys$$1 = [];
 
-      each$1(this.flatten(), function (node, index) {
+      each(this.flatten(), function (node, index) {
         if (node.type !== LITERAL) {
           if (index > 0) {
             var result = node.execute(context);
@@ -1840,7 +2109,16 @@ var OBRACK = 91;
 var CBRACK = 93;
 var QUMARK = 63;
 var COLON = 58;
-function parse$1(content) {
+var keyword = {
+  'true': TRUE,
+  'false': FALSE,
+  'null': NULL,
+  'undefined': UNDEFINED
+};
+
+var cache$1 = {};
+
+function compile$1(content) {
   var length = content.length;
 
   var index = 0,
@@ -1898,7 +2176,9 @@ function parse$1(content) {
       skipNumber();
     }
 
-    return new Literal(parseFloat(content.substring(start, index)));
+    return new Literal({
+      value: parseFloat(content.substring(start, index))
+    });
   }
 
   function parseString() {
@@ -1907,7 +2187,9 @@ function parse$1(content) {
 
     skipString();
 
-    return new Literal(content.substring(start + 1, index - 1));
+    return new Literal({
+      value: content.substring(start + 1, index - 1)
+    });
   }
 
   function parseIdentifier() {
@@ -1917,11 +2199,15 @@ function parse$1(content) {
 
     value = content.substring(start, index);
     if (keyword[value]) {
-      return new Literal(keyword[value]);
+      return new Literal({
+        value: keyword[value]
+      });
     }
 
     if (value) {
-      return new Identifier(value);
+      return new Identifier({
+        name: value
+      });
     }
 
     parseError$1(content);
@@ -1969,15 +2255,26 @@ function parse$1(content) {
       charCode = getCharCode();
       if (charCode === OPAREN) {
         index++;
-        value = new Call(value, parseTuple(CPAREN));
+        value = new Call({
+          callee: value,
+          args: parseTuple(CPAREN)
+        });
         break;
       } else {
         if (charCode === PERIOD) {
           index++;
-          value = new Member(value, new Literal(parseIdentifier().name));
+          value = new Member({
+            object: value,
+            property: new Literal({
+              value: parseIdentifier().name
+            })
+          });
         } else if (charCode === OBRACK) {
             index++;
-            value = new Member(value, parseSubexpression(CBRACK));
+            value = new Member({
+              object: value,
+              property: parseSubexpression(CBRACK)
+            });
           } else {
             break;
           }
@@ -1998,7 +2295,9 @@ function parse$1(content) {
         return parseNumber();
       } else if (charCode === OBRACK) {
           index++;
-          return new Array$1(parseTuple(CBRACK));
+          return new Array$1({
+            elements: parseTuple(CBRACK)
+          });
         } else if (charCode === OPAREN) {
             index++;
             return parseSubexpression(CPAREN);
@@ -2015,7 +2314,10 @@ function parse$1(content) {
   function parseUnary(op) {
     value = parseToken();
     if (value) {
-      return new Unary(op, value);
+      return new Unary({
+        operator: op,
+        arg: value
+      });
     }
     parseError$1(content);
   }
@@ -2033,7 +2335,11 @@ function parse$1(content) {
 
     while (op = parseOperator(binaryList)) {
       if (stack.length > 3 && binaryMap[op] < stack[stack.length - 2]) {
-        stack.push(new Binary(stack.pop(), (stack.pop(), stack.pop()), stack.pop()));
+        stack.push(new Binary({
+          right: stack.pop(),
+          operator: (stack.pop(), stack.pop()),
+          left: stack.pop()
+        }));
       }
 
       right = parseToken();
@@ -2046,7 +2352,11 @@ function parse$1(content) {
 
     right = stack.pop();
     while (stack.length > 1) {
-      right = new Binary(right, (stack.pop(), stack.pop()), stack.pop());
+      right = new Binary({
+        right: right,
+        operator: (stack.pop(), stack.pop()),
+        left: stack.pop()
+      });
     }
 
     return right;
@@ -2078,7 +2388,11 @@ function parse$1(content) {
         var alternate = parseBinary();
 
         skipWhitespace();
-        return new Conditional(test, consequent, alternate);
+        return new Conditional({
+          test: test,
+          consequent: consequent,
+          alternate: alternate
+        });
       } else {
         parseError$1(content);
       }
@@ -2087,17 +2401,10 @@ function parse$1(content) {
     return test;
   }
 
-  if (!expressionParse[content]) {
-    var ast = parseExpression();
-    expressionParse[content] = expressionParse[ast.stringify()] = ast;
-  }
-
-  return expressionParse[content];
+  return cache$1[content] || (cache$1[content] = parseExpression());
 }
 
-var expression = Object.freeze({
-	parse: parse$1
-});
+var cache = {};
 
 var openingDelimiter = '\\{\\{\\s*';
 var closingDelimiter = '\\s*\\}\\}';
@@ -2109,6 +2416,9 @@ var elementEndPattern = /(?:\/)?>/;
 
 var attributePattern = /([-:@a-z0-9]+)(=["'])?/i;
 
+var componentNamePattern = /[-A-Z]/;
+var selfClosingTagNamePattern = /input|img|br/i;
+
 var ERROR_PARTIAL_NAME = 'Expected legal partial name';
 var ERROR_EXPRESSION = 'Expected expression';
 
@@ -2118,7 +2428,7 @@ var parsers = [{
   },
   create: function create(source) {
     var terms = source.slice(EACH.length).trim().split(':');
-    var expr = parse$1(terms[0]);
+    var expr = compile$1(terms[0]);
     var index = void 0;
     if (terms[1]) {
       index = terms[1].trim();
@@ -2147,7 +2457,7 @@ var parsers = [{
   },
   create: function create(source) {
     var expr = source.slice(IF.length).trim();
-    return expr ? new If({ expr: parse$1(expr) }) : ERROR_EXPRESSION;
+    return expr ? new If({ expr: compile$1(expr) }) : ERROR_EXPRESSION;
   }
 }, {
   test: function test(source) {
@@ -2157,7 +2467,7 @@ var parsers = [{
     var expr = source.slice(ELSE_IF.length);
     if (expr) {
       popStack();
-      return new ElseIf({ expr: parse$1(expr) });
+      return new ElseIf({ expr: compile$1(expr) });
     }
     return ERROR_EXPRESSION;
   }
@@ -2176,7 +2486,7 @@ var parsers = [{
   create: function create(source) {
     var expr = source.slice(SPREAD.length);
     if (expr) {
-      return new Spread({ expr: parse$1(expr) });
+      return new Spread({ expr: compile$1(expr) });
     }
     return ERROR_EXPRESSION;
   }
@@ -2191,7 +2501,7 @@ var parsers = [{
       source = source.slice(1);
     }
     return new Expression({
-      expr: parse$1(source),
+      expr: compile$1(source),
       safe: safe
     });
   }
@@ -2200,6 +2510,9 @@ var parsers = [{
 var LEVEL_ELEMENT = 0;
 var LEVEL_ATTRIBUTE = 1;
 var LEVEL_TEXT = 2;
+
+var buildInDirectives = {};
+buildInDirectives[DIRECTIVE_REF] = buildInDirectives[DIRECTIVE_LAZY] = buildInDirectives[DIRECTIVE_MODEL] = buildInDirectives[KEYWORD_UNIQUE] = TRUE;
 
 function render$1(ast, data, partial) {
 
@@ -2218,10 +2531,10 @@ function render$1(ast, data, partial) {
   };
 }
 
-function compile(template) {
+function compile$$1(template) {
 
-  if (templateParse[template]) {
-    return templateParse[template];
+  if (cache[template]) {
+    return cache[template];
   }
 
   var name = void 0,
@@ -2264,7 +2577,9 @@ function compile(template) {
       }
     }
 
-    currentNode.addChild(node);
+    if (node.invalid !== TRUE) {
+      currentNode.addChild(node);
+    }
 
     if (children) {
       pushStack(node);
@@ -2316,7 +2631,24 @@ function compile(template) {
             content = content.slice(match.index + match[0].length);
             name = match[1];
 
-            levelNode = name === KEY_REF || name === KEY_LAZY || name === KEY_MODEL || name === KEY_UNIQUE || name.startsWith(DIRECTIVE_PREFIX) || name.startsWith(DIRECTIVE_EVENT_PREFIX) ? new Directive({ name: name }) : new Attribute({ name: name });
+            if (buildInDirectives[name]) {
+              levelNode = new Directive({ name: name });
+            } else {
+              if (name.startsWith(DIRECTIVE_EVENT_PREFIX)) {
+                name = name.slice(DIRECTIVE_EVENT_PREFIX.length);
+                if (name) {
+                  levelNode = new Directive({ name: 'event', subName: name });
+                }
+              } else if (name.startsWith(DIRECTIVE_PREFIX)) {
+                name = name.slice(DIRECTIVE_PREFIX.length);
+                levelNode = new Directive({ name: name });
+                if (!name || buildInDirectives[name]) {
+                  levelNode.invalid = TRUE;
+                }
+              } else {
+                levelNode = new Attribute({ name: name });
+              }
+            }
 
             addChild(levelNode);
             level++;
@@ -2345,7 +2677,7 @@ function compile(template) {
           if (content.charAt(0) === '{' && helperScanner.charAt(0) === '}') {
             helperScanner.forward(1);
           }
-          each$1(parsers, function (parser, index) {
+          each(parsers, function (parser, index) {
             if (parser.test(content)) {
               index = parser.create(content, popStack);
               if (string(index)) {
@@ -2393,7 +2725,7 @@ function compile(template) {
         content = mainScanner.nextAfter(elementPattern);
         name = content.slice(1);
 
-        if (componentName.test(name)) {
+        if (componentNamePattern.test(name)) {
           addChild(new Element({
             name: 'div',
             component: name
@@ -2401,7 +2733,7 @@ function compile(template) {
           isSelfClosing = TRUE;
         } else {
           addChild(new Element({ name: name }));
-          isSelfClosing = selfClosingTagName.test(name);
+          isSelfClosing = selfClosingTagNamePattern.test(name);
         }
 
         content = mainScanner.nextBefore(elementEndPattern);
@@ -2433,91 +2765,46 @@ function compile(template) {
     error$1('Component template should contain exactly one root element.');
   }
 
-  return templateParse[template] = children[0];
+  return cache[template] = children[0];
 }
 
-function camelCase(str) {
-  return str.replace(/-([a-z])/gi, function ($0, $1) {
-    return $1.toUpperCase();
-  });
-}
+var tag = /<[^>]+>/;
 
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
+var selector = /^[#.]\w+$/;
 
-function parse$2(str, separator, pair) {
-  var result = [];
-  if (string(str)) {
-    (function () {
-      var terms = void 0,
-          key = void 0,
-          value = void 0,
-          item = void 0;
-      each$1(str.split(separator), function (term) {
-        terms = term.split(pair);
-        key = terms[0];
-        value = terms[1];
-        if (key) {
-          item = {
-            key: key.trim()
-          };
-          if (value) {
-            item.value = value.trim();
-          }
-          result.push(item);
-        }
-      });
-    })();
-  }
-  return result;
-}
+var component$1 = new Store();
+var directive$1 = new Store();
+var filter$1 = new Store();
+var partial$1 = new Store();
 
-var string$1 = Object.freeze({
-	camelCase: camelCase,
-	capitalize: capitalize,
-	parse: parse$2
+var registry = Object.freeze({
+	component: component$1,
+	directive: directive$1,
+	filter: filter$1,
+	partial: partial$1
 });
 
-var nextTick$1 = void 0;
+var debug = TRUE;
 
-if (typeof MutationObserver === 'function') {
-  nextTick$1 = function nextTick$1(fn) {
-    var observer = new MutationObserver(fn);
-    var textNode = doc.createTextNode('');
-    observer.observe(textNode, {
-      characterData: TRUE
-    });
-    textNode.data = ' ';
-  };
-} else if (typeof setImmediate === 'function') {
-  nextTick$1 = function nextTick$1(fn) {
-    setImmediate(fn);
-  };
-} else {
-  nextTick$1 = function nextTick$1(fn) {
-    setTimeout(fn);
-  };
-}
+var switcher = Object.freeze({
+	debug: debug
+});
 
-var nextTick$2 = nextTick$1;
+var BEFORE_CREATE = 'beforeCreate';
 
-var nextTasks = [];
+var AFTER_CREATE = 'afterCreate';
 
-function add(task) {
-  if (!nextTasks.length) {
-    nextTick$2(run);
-  }
-  nextTasks.push(task);
-}
+var BEFORE_MOUNT = 'beforeMount';
 
-function run() {
-  var tasks = nextTasks;
-  nextTasks = [];
-  each$1(tasks, function (task) {
-    task();
-  });
-}
+var AFTER_MOUNT = 'afterMount';
+
+var BEFORE_UPDATE = 'beforeUpdate';
+
+var AFTER_UPDATE = 'afterUpdate';
+
+var BEFORE_DESTROY = 'beforeDestroy';
+
+var AFTER_DESTROY = 'afterDestroy';
 
 var vnode = function (sel, data, children, text, elm) {
   var key = data === undefined ? undefined : data.key;
@@ -3112,7 +3399,7 @@ function pushTextNode(list, html, start) {
     }
 }
 
-var parse$3 = function parse$3(html, options) {
+var parse$2 = function parse$2(html, options) {
     options || (options = {});
     options.components || (options.components = empty);
     var result = [];
@@ -3260,7 +3547,7 @@ exports.default = function (html) {
     return res;
 };
 
-var _parse = parse$3;
+var _parse = parse$2;
 
 var _parse2 = _interopRequireDefault(_parse);
 
@@ -3366,205 +3653,6 @@ function parseClass(node) {
 
 var strings = strings$1;
 
-var Event = function () {
-  function Event(event) {
-    classCallCheck(this, Event);
-
-    if (event.type) {
-      this.type = event.type;
-      this.originalEvent = event;
-    } else {
-      this.type = event;
-    }
-  }
-
-  createClass(Event, [{
-    key: 'prevent',
-    value: function prevent() {
-      if (!this.isPrevented) {
-        var originalEvent = this.originalEvent;
-
-        if (originalEvent && func(originalEvent.preventDefault)) {
-          originalEvent.preventDefault();
-        }
-        this.isPrevented = TRUE;
-      }
-    }
-  }, {
-    key: 'stop',
-    value: function stop() {
-      if (!this.isStoped) {
-        var originalEvent = this.originalEvent;
-
-        if (originalEvent && func(originalEvent.stopPropagation)) {
-          originalEvent.stopPropagation();
-        }
-        this.isStoped = TRUE;
-      }
-    }
-  }]);
-  return Event;
-}();
-
-var Emitter = function () {
-  function Emitter(options) {
-    classCallCheck(this, Emitter);
-
-    extend(this, options);
-    this.listeners = {};
-  }
-
-  createClass(Emitter, [{
-    key: 'on',
-    value: function on(type, listener) {
-      var listeners = this.listeners,
-          onAdd = this.onAdd;
-
-      var added = [];
-
-      var addListener = function addListener(listener, type) {
-        if (func(listener)) {
-          var list = listeners[type] || (listeners[type] = []);
-          if (!list.length) {
-            added.push(type);
-          }
-          list.push(listener);
-        }
-      };
-
-      if (object(type)) {
-        each$$1(type, addListener);
-      } else if (string(type)) {
-        addListener(listener, type);
-      }
-
-      if (added.length && func(onAdd)) {
-        onAdd(added);
-      }
-    }
-  }, {
-    key: 'once',
-    value: function once(type, listener) {
-
-      var instance = this;
-      var addOnce = function addOnce(listener, type) {
-        if (func(listener)) {
-          listener.$once = function () {
-            instance.off(type, listener);
-            delete listener.$once;
-          };
-        }
-      };
-
-      if (object(type)) {
-        each$$1(type, addOnce);
-      } else if (string(type)) {
-        addOnce(listener, type);
-      }
-
-      instance.on(type, listener);
-    }
-  }, {
-    key: 'off',
-    value: function off(type, listener) {
-      var listeners = this.listeners,
-          onRemove = this.onRemove;
-
-      var removed = [];
-
-      if (type == NULL) {
-        each$$1(listeners, function (list, type) {
-          if (array(listeners[type])) {
-            listeners[type].length = 0;
-            removed.push(type);
-          }
-        });
-      } else {
-        var list = listeners[type];
-        if (array(list)) {
-          if (listener == NULL) {
-            list.length = 0;
-          } else {
-            remove(list, listener);
-          }
-          if (!list.length) {
-            removed.push(type);
-          }
-        }
-      }
-
-      if (removed.length && func(onRemove)) {
-        onRemove(removed);
-      }
-    }
-  }, {
-    key: 'fire',
-    value: function fire(type, data, context) {
-
-      if (arguments.length === 2) {
-        context = NULL;
-      }
-
-      var done = TRUE;
-      var handle = function handle(list, data) {
-        if (array(list)) {
-          each$1(list, function (listener) {
-            var result = execute$1(listener, context, data);
-
-            var $once = listener.$once;
-
-            if (func($once)) {
-              $once();
-            }
-
-            if (data instanceof Event) {
-              if (result === FALSE) {
-                data.prevent();
-                data.stop();
-              } else if (data.isStoped) {
-                result = FALSE;
-              }
-            }
-
-            if (result === FALSE) {
-              return done = FALSE;
-            }
-          });
-        }
-      };
-
-      var listeners = this.listeners;
-
-      handle(listeners[type], data);
-
-      if (done) {
-        each$$1(listeners, function (list, key) {
-          if (key !== type || key.indexOf('*') >= 0) {
-            key = ['^', key.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)'), key.endsWith('**') ? '' : '$'];
-            var match = type.match(new RegExp(key.join('')));
-            if (match) {
-              handle(list, merge(data, toArray(match).slice(1)));
-            }
-            return done;
-          }
-        });
-      }
-
-      return done;
-    }
-  }, {
-    key: 'has',
-    value: function has(type, listener) {
-      var list = this.listeners[type];
-      if (listener == NULL) {
-        return array(list) && list.length > 0;
-      }
-      return array(list) ? has$2(list, listener) : FALSE;
-    }
-  }]);
-  return Emitter;
-}();
-
 function addListener(element, type, listener) {
   element.addEventListener(type, listener, FALSE);
 }
@@ -3618,7 +3706,7 @@ function off$1(element, type, listener) {
 
   $emitter.off(type, listener);
 
-  each$1(types, function (type) {
+  each(types, function (type) {
     if ($emitter[type] && !$emitter.has(type)) {
       removeListener(element, type, $emitter[type]);
       delete $emitter[type];
@@ -3648,7 +3736,7 @@ function create$1(root, instance) {
 
     var children = [];
     if (array(node.children)) {
-      each$1(node.children, function (item) {
+      each(node.children, function (item) {
         item = traverse(item, enter, leave);
         if (item != NULL) {
           children.push(item);
@@ -3682,15 +3770,15 @@ function create$1(root, instance) {
             directive: instance.directive('component')
           });
         } else if (array(node.attrs)) {
-          each$1(node.attrs, function (node) {
+          each(node.attrs, function (node) {
             var name = node.name,
                 value = node.value;
 
             if (name === 'style') {
-              var list = parse$2(value, ';', ':');
+              var list = parse$1(value, ';', ':');
               if (list.length) {
                 styles = {};
-                each$1(list, function (item) {
+                each(list, function (item) {
                   if (item.value) {
                     styles[camelCase(item.key)] = item.value;
                   }
@@ -3703,35 +3791,15 @@ function create$1(root, instance) {
         }
 
         if (array(node.directives)) {
-          each$1(node.directives, function (node) {
+          each(node.directives, function (node) {
             var name = node.name;
 
-
-            var directiveName = void 0;
-            if (name.startsWith(DIRECTIVE_EVENT_PREFIX)) {
-              name = name.slice(DIRECTIVE_EVENT_PREFIX.length);
-              directiveName = 'event';
-            } else if (name.startsWith(DIRECTIVE_PREFIX)) {
-              name = name.slice(DIRECTIVE_PREFIX.length);
-
-              if (name !== KEY_REF && name !== KEY_LAZY && name !== KEY_MODEL) {
-                directiveName = name;
-              }
-            } else if (name === KEY_REF) {
-              name = directiveName = 'ref';
-            } else if (name === KEY_LAZY) {
-              name = directiveName = 'lazy';
-            } else if (name === KEY_MODEL) {
-              name = directiveName = 'model';
-            } else if (name === KEY_UNIQUE) {
+            if (name === KEYWORD_UNIQUE) {
               data.key = node.value;
-            }
-
-            if (directiveName) {
+            } else {
               directives.push({
-                name: name,
                 node: node,
-                directive: instance.directive(directiveName)
+                directive: instance.directive(name)
               });
             }
           });
@@ -3747,7 +3815,7 @@ function create$1(root, instance) {
             var map = toObject(directives, 'name');
 
             var notify = function notify(vnode, type) {
-              each$1(directives, function (item) {
+              each(directives, function (item) {
                 var directive = item.directive;
 
                 if (directive && func(directive[type])) {
@@ -3796,79 +3864,6 @@ function create$1(root, instance) {
   });
 }
 
-var magic = function (options) {
-  var args = options.args,
-      get = options.get,
-      set = options.set;
-
-  args = toArray(args);
-
-  var key = args[0],
-      value = args[1];
-  if (object(key)) {
-    execute$1(set, NULL, key);
-  } else if (string(key)) {
-    var _args = args,
-        length = _args.length;
-
-    if (length === 2) {
-      execute$1(set, NULL, args);
-    } else if (length === 1) {
-      return execute$1(get, NULL, key);
-    }
-  }
-};
-
-var toNumber = function (str) {
-  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-
-  if (numeric(str)) {
-    return +str;
-  }
-  return defaultValue;
-};
-
-var validate = function (data, schema, onNotMatched, onNotFound) {
-  var result = {};
-  each$$1(schema, function (rule, key) {
-    var type = rule.type,
-        value = rule.value,
-        required = rule.required;
-
-    if (has$1(data, key)) {
-      if (type) {
-        (function () {
-          var target = data[key],
-              matched = void 0;
-
-          if (string(type)) {
-            matched = is(target, type);
-          } else if (array(type)) {
-            each$1(type, function (t) {
-              if (is(target, t)) {
-                matched = TRUE;
-                return FALSE;
-              }
-            });
-          } else if (func(type)) {
-            matched = type(target, data);
-          }
-          if (matched === TRUE) {
-            result[key] = target;
-          } else {
-            onNotMatched(key);
-          }
-        })();
-      }
-    } else if (required) {
-      onNotFound(key);
-    } else if (has$1(rule, 'value')) {
-      result[key] = func(value) ? value(data) : value;
-    }
-  });
-  return result;
-};
-
 var refDt = {
 
   attach: function attach(_ref) {
@@ -3882,7 +3877,7 @@ var refDt = {
         var $refs = instance.$refs;
 
         if (object($refs)) {
-          if (has$1($refs, value)) {
+          if (has$2($refs, value)) {
             error$1('Ref ' + value + ' is existed.');
           }
         } else {
@@ -3953,13 +3948,16 @@ var event = {
 
   attach: function attach(_ref) {
     var el = _ref.el,
-        name = _ref.name,
         node = _ref.node,
         instance = _ref.instance,
-        listener = _ref.listener,
-        directives = _ref.directives;
+        directives = _ref.directives,
+        type = _ref.type,
+        listener = _ref.listener;
 
 
+    if (!type) {
+      type = node.subName;
+    }
     if (!listener) {
       listener = instance.compileValue(node.keypath, node.value);
     }
@@ -3972,8 +3970,8 @@ var event = {
 
         if (numeric(value) && value >= 0) {
           listener = debounce(listener, value);
-        } else if (name === 'input') {
-          name = 'change';
+        } else if (type === 'input') {
+          type = 'change';
         }
       }
 
@@ -3982,15 +3980,15 @@ var event = {
       if ($component) {
         if (array($component)) {
           $component.push(function ($component) {
-            $component.on(name, listener);
+            $component.on(type, listener);
           });
         } else {
-          $component.on(name, listener);
+          $component.on(type, listener);
         }
       } else {
-        on$1(el, name, listener);
+        on$1(el, type, listener);
         el.$event = function () {
-          off$1(el, name, listener);
+          off$1(el, type, listener);
           el.$event = NULL;
         };
       }
@@ -4074,7 +4072,7 @@ var checkboxControl = {
         instance = _ref7.instance;
 
     var value = instance.get(keypath);
-    el.checked = array(value) ? has$2(value, el.value, FALSE) : !!value;
+    el.checked = array(value) ? has$1(value, el.value, FALSE) : !!value;
   },
   update: function update(_ref8) {
     var el = _ref8.el,
@@ -4119,24 +4117,21 @@ var modelDt = {
       error$1('The ' + keypath + ' being used for two-way binding is ambiguous.');
     }
 
-    var name = 'change',
+    var type = 'change',
         control = void 0,
         needSet = void 0;
 
-    var type = el.type,
-        $component = el.$component;
-
-    if ($component) {
+    if (el.$component) {
       control = componentControl;
     } else {
-      control = specialControls[type];
+      control = specialControls[el.type];
       if (!control) {
         control = inputControl;
         if ('oninput' in el) {
-          name = 'input';
+          type = 'input';
         }
       }
-      if (!has$1(attrs, 'value')) {
+      if (!has$2(attrs, 'value')) {
         needSet = TRUE;
       }
     }
@@ -4160,9 +4155,9 @@ var modelDt = {
     event.attach({
       el: el,
       node: node,
-      name: name,
       instance: instance,
       directives: directives,
+      type: type,
       listener: function listener() {
         control.update(data);
       }
@@ -4184,10 +4179,10 @@ function getComponentInfo(node, instance, directives, callback) {
 
   instance.component(component, function (options) {
     var props = {};
-    each$1(attrs, function (node) {
+    each(attrs, function (node) {
       props[camelCase(node.name)] = node.value;
     });
-    if (!has$1(props, 'value')) {
+    if (!has$2(props, 'value')) {
       var model = directives.model;
 
       if (model) {
@@ -4220,7 +4215,7 @@ var componentDt = {
           props: props,
           replace: TRUE
         });
-        each$1($component, function (callback) {
+        each($component, function (callback) {
           callback(el.$component);
         });
       }
@@ -4262,7 +4257,7 @@ var Yox = function () {
 
     var instance = this;
 
-    execute$1(options[BEFORE_CREATE], instance, options);
+    _execute(options[BEFORE_CREATE], instance, options);
 
     var el = options.el,
         data = options.data,
@@ -4301,7 +4296,7 @@ var Yox = function () {
       instance.$computedStack = [];
       instance.$computedDeps = {};
 
-      each$$1(computed, function (item, keypath) {
+      each$1(computed, function (item, keypath) {
         var get$$1 = void 0,
             set$$1 = void 0,
             deps = void 0,
@@ -4332,7 +4327,7 @@ var Yox = function () {
 
             var getter = function getter() {
               if (!getter.$dirty) {
-                if (cache && has$1($watchCache, keypath)) {
+                if (cache && has$2($watchCache, keypath)) {
                   return $watchCache[keypath];
                 }
               } else {
@@ -4342,7 +4337,7 @@ var Yox = function () {
               if (!deps) {
                 instance.$computedStack.push([]);
               }
-              var result = execute$1(get$$1, instance);
+              var result = _execute(get$$1, instance);
 
               var newDeps = deps || instance.$computedStack.pop();
               var oldDeps = instance.$computedDeps[keypath];
@@ -4372,15 +4367,15 @@ var Yox = function () {
     var $watchCache = instance.$watchCache = {};
     instance.$watchEmitter = new Emitter({
       onAdd: function onAdd(added) {
-        each$1(added, function (keypath) {
-          if (keypath.indexOf('*') < 0 && !has$1($watchCache, keypath)) {
+        each(added, function (keypath) {
+          if (keypath.indexOf('*') < 0 && !has$2($watchCache, keypath)) {
             $watchCache[keypath] = instance.get(keypath);
           }
         });
       },
       onRemove: function onRemove(removed) {
-        each$1(removed, function (keypath) {
-          if (has$1($watchCache, keypath)) {
+        each(removed, function (keypath) {
+          if (has$2($watchCache, keypath)) {
             delete $watchCache[keypath];
           }
         });
@@ -4388,7 +4383,7 @@ var Yox = function () {
     });
     instance.watch(watchers);
 
-    execute$1(options[AFTER_CREATE], instance);
+    _execute(options[AFTER_CREATE], instance);
 
     if (string(template)) {
       if (selector.test(template)) {
@@ -4432,7 +4427,7 @@ var Yox = function () {
       instance.$viewWatcher = function () {
         instance.$dirty = TRUE;
       };
-      execute$1(options[BEFORE_MOUNT], instance);
+      _execute(options[BEFORE_MOUNT], instance);
       instance.$template = Yox.compile(template);
       instance.updateView(el);
     }
@@ -4586,7 +4581,7 @@ var Yox = function () {
           $computedSetters = instance.$computedSetters;
 
 
-      each$$1(model, function (newValue, key) {
+      each$1(model, function (newValue, key) {
         var keypath = normalize(key);
         if (keypath !== key) {
           delete model[key];
@@ -4594,7 +4589,7 @@ var Yox = function () {
         }
       });
 
-      each$$1(model, function (value, keypath) {
+      each$1(model, function (value, keypath) {
         if ($computedSetters) {
           var setter = $computedSetters[keypath];
           if (setter) {
@@ -4640,22 +4635,22 @@ var Yox = function () {
 
 
       if ($currentNode) {
-        execute$1($options[BEFORE_UPDATE], instance);
+        _execute($options[BEFORE_UPDATE], instance);
       }
 
       var context = {};
 
       extend(context, filter$1.data, $data, $filters.data, $computedGetters);
 
-      each$$1(context, function (value, key) {
+      each$1(context, function (value, key) {
         if (func(value) && !value.$binded) {
           context[key] = value.bind(instance);
         }
       });
 
-      var _view$render = render$1($template, context, instance.partial.bind(instance)),
-          root = _view$render.root,
-          deps = _view$render.deps;
+      var _viewEnginer$render = render$1($template, context, instance.partial.bind(instance)),
+          root = _viewEnginer$render.root,
+          deps = _viewEnginer$render.deps;
 
       instance.$viewDeps = keys(deps);
       updateDeps(instance, instance.$viewDeps, $viewDeps, $viewWatcher);
@@ -4672,7 +4667,7 @@ var Yox = function () {
       }
 
       instance.$currentNode = $currentNode;
-      execute$1($options[afterHook], instance);
+      _execute($options[afterHook], instance);
     }
   }, {
     key: 'create',
@@ -4702,7 +4697,7 @@ var Yox = function () {
       var instance = this;
       if (value.indexOf('(') > 0) {
         var _ret2 = function () {
-          var ast = parse$1(value);
+          var ast = compile$1(value);
           if (ast.type === CALL) {
             return {
               v: function v(e) {
@@ -4738,7 +4733,7 @@ var Yox = function () {
                     }
                   });
                 }
-                execute$1(instance[ast.callee.name], instance, args);
+                _execute(instance[ast.callee.name], instance, args);
               }
             };
           }
@@ -4787,7 +4782,7 @@ var Yox = function () {
                   } else {
                     store.set(id, replacement);
                   }
-                  each$1($pending, function (callback) {
+                  each($pending, function (callback) {
                     callback(replacement);
                   });
                 });
@@ -4860,10 +4855,10 @@ var Yox = function () {
           $eventEmitter = instance.$eventEmitter;
 
 
-      execute$1($options[BEFORE_DESTROY], instance);
+      _execute($options[BEFORE_DESTROY], instance);
 
       if ($children) {
-        each$1($children, function (child) {
+        each($children, function (child) {
           child.destroy();
         }, TRUE);
       }
@@ -4881,11 +4876,11 @@ var Yox = function () {
       $watchEmitter.off();
       $eventEmitter.off();
 
-      each$$1(instance, function (value, key) {
+      each$1(instance, function (value, key) {
         delete instance[key];
       });
 
-      execute$1($options[AFTER_DESTROY], instance);
+      _execute($options[AFTER_DESTROY], instance);
     }
   }, {
     key: 'nextTick',
@@ -4921,15 +4916,13 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.19.7';
+Yox.version = '0.19.8';
 
 Yox.switcher = switcher;
 
-Yox.syntax = syntax;
+Yox.utils = { is: is$1, array: array$1, object: object$1, string: string$1, logger: logger, native: native, Store: Store, Emitter: Emitter, Event: Event };
 
-Yox.utils = { is: is$1, array: array$1, object: object$1, string: string$1, logger: logger, native: native, expression: expression, Store: Store, Emitter: Emitter, Event: Event };
-
-each$1(['component', 'directive', 'filter', 'partial'], function (type) {
+each(['component', 'directive', 'filter', 'partial'], function (type) {
   Yox[type] = function () {
     return magic({
       args: arguments,
@@ -4946,7 +4939,7 @@ each$1(['component', 'directive', 'filter', 'partial'], function (type) {
 Yox.nextTick = add;
 
 Yox.compile = function (template) {
-  return string(template) ? compile(template) : template;
+  return string(template) ? compile$$1(template) : template;
 };
 
 Yox.validate = function (props, schema) {
@@ -4972,12 +4965,12 @@ function updateDeps(instance, newDeps, oldDeps, watcher) {
     addedDeps = newDeps;
   }
 
-  each$1(addedDeps, function (keypath) {
+  each(addedDeps, function (keypath) {
     instance.watch(keypath, watcher);
   });
 
   if (removedDeps) {
-    each$1(removedDeps, function (dep) {
+    each(removedDeps, function (dep) {
       instance.$watchEmitter.off(dep, watcher);
     });
   }
@@ -4991,7 +4984,7 @@ function diff$$1(instance) {
 
   var keys$$1 = [];
   var addKey = function addKey(key, push$$1) {
-    if (!has$2(keys$$1, key)) {
+    if (!has$1(keys$$1, key)) {
       if (push$$1) {
         keys$$1.push(key);
       } else {
@@ -5002,20 +4995,20 @@ function diff$$1(instance) {
 
   var pickDeps = function pickDeps(key) {
     if ($computedDeps && !falsy($computedDeps[key])) {
-      each$1($computedDeps[key], pickDeps);
+      each($computedDeps[key], pickDeps);
       addKey(key, TRUE);
     } else {
       addKey(key);
     }
   };
 
-  each$$1($watchCache, function (value, key) {
+  each$1($watchCache, function (value, key) {
     pickDeps(key);
   });
 
   var changes = {};
 
-  each$1(keys$$1, function (key) {
+  each(keys$$1, function (key) {
     var oldValue = $watchCache[key];
     var newValue = instance.get(key);
     if (newValue !== oldValue) {
@@ -5039,7 +5032,7 @@ function diff$$1(instance) {
   if ($dirty) {
     instance.updateView();
   } else if ($children) {
-    each$1($children, function (child) {
+    each($children, function (child) {
       diff$$1(child);
     });
   }

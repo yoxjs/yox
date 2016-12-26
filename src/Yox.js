@@ -1,12 +1,12 @@
 
-import * as cache from './config/cache'
-import * as syntax from './config/syntax'
-import * as pattern from './config/pattern'
-import * as registry from './config/registry'
-import * as switcher from './config/switcher'
-import * as lifecycle from './config/lifecycle'
+import magic from 'yox-common/function/magic'
+import execute from 'yox-common/function/execute'
+import toNumber from 'yox-common/function/toNumber'
+import validate from 'yox-common/function/validate'
 
-import * as view from './view/index'
+import Store from 'yox-common/util/Store'
+import Event from 'yox-common/util/Event'
+import Emitter from 'yox-common/util/Emitter'
 
 import * as is from 'yox-common/util/is'
 import * as env from 'yox-common/util/env'
@@ -17,20 +17,19 @@ import * as logger from 'yox-common/util/logger'
 import * as nextTask from 'yox-common/util/nextTask'
 import * as keypathUtil from 'yox-common/util/keypath'
 
-import * as expression from './expression/index'
-import * as expressionNodeType from './expression/nodeType'
+import * as viewEnginer from 'yox-template-compiler'
+import * as viewSyntax from 'yox-template-compiler/src/syntax'
+
+import * as expressionEnginer from 'yox-expression-compiler'
+import * as expressionNodeType from 'yox-expression-compiler/src/nodeType'
+
+import * as pattern from './config/pattern'
+import * as registry from './config/registry'
+import * as switcher from './config/switcher'
+import * as lifecycle from './config/lifecycle'
 
 import * as vdom from './platform/web/vdom'
 import * as native from './platform/web/native'
-
-import magic from 'yox-common/function/magic'
-import execute from 'yox-common/function/execute'
-import toNumber from 'yox-common/function/toNumber'
-import validate from 'yox-common/function/validate'
-
-import Store from 'yox-common/util/Store'
-import Event from 'yox-common/util/Event'
-import Emitter from 'yox-common/util/Emitter'
 
 export default class Yox {
 
@@ -543,7 +542,7 @@ export default class Yox {
       }
     )
 
-    let { root, deps } = view.render($template, context, instance.partial.bind(instance))
+    let { root, deps } = viewEnginer.render($template, context, instance.partial.bind(instance))
     instance.$viewDeps = object.keys(deps)
     updateDeps(
       instance,
@@ -596,7 +595,7 @@ export default class Yox {
 
     let instance = this
     if (value.indexOf('(') > 0) {
-      let ast = expression.parse(value)
+      let ast = expressionEnginer.compile(value)
       if (ast.type === expressionNodeType.CALL) {
         return function (e) {
           let isEvent = e instanceof Event
@@ -614,12 +613,12 @@ export default class Yox {
                   return node.value
                 }
                 if (type === expressionNodeType.IDENTIFIER) {
-                  if (name === syntax.SPECIAL_EVENT) {
+                  if (name === viewSyntax.SPECIAL_EVENT) {
                     if (isEvent) {
                       return e
                     }
                   }
-                  else if (name === syntax.SPECIAL_KEYPATH) {
+                  else if (name === viewSyntax.SPECIAL_KEYPATH) {
                     return keypath
                   }
                 }
@@ -887,7 +886,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.19.7'
+Yox.version = '0.19.8'
 
 /**
  * 开关配置
@@ -897,18 +896,11 @@ Yox.version = '0.19.7'
 Yox.switcher = switcher
 
 /**
- * 模板语法配置
- *
- * @type {Object}
- */
-Yox.syntax = syntax
-
-/**
  * 工具，便于扩展、插件使用
  *
  * @type {Object}
  */
-Yox.utils = { is, array, object, string, logger, native, expression, Store, Emitter, Event }
+Yox.utils = { is, array, object, string, logger, native, Store, Emitter, Event }
 
 /**
  * 全局注册
@@ -948,7 +940,7 @@ Yox.nextTick = nextTask.add
  */
 Yox.compile = function (template) {
   return is.string(template)
-    ? view.compile(template)
+    ? viewEnginer.compile(template)
     : template
 }
 
