@@ -1930,18 +1930,20 @@ var Text = function (_Node) {
   inherits(Text, _Node);
 
   function Text(content) {
+    var safe = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : TRUE;
     classCallCheck(this, Text);
 
     var _this = possibleConstructorReturn(this, (Text.__proto__ || Object.getPrototypeOf(Text)).call(this, TEXT, FALSE));
 
     _this.content = content;
+    _this.safe = safe;
     return _this;
   }
 
   createClass(Text, [{
     key: 'render',
     value: function render(data) {
-      var node = new Text(this.content);
+      var node = new Text(this.content, this.safe);
       node.keypath = stringify$1(data.keys);
       return [node];
     }
@@ -1952,7 +1954,8 @@ var Text = function (_Node) {
 var Expression = function (_Node) {
   inherits(Expression, _Node);
 
-  function Expression(expr, safe) {
+  function Expression(expr) {
+    var safe = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : TRUE;
     classCallCheck(this, Expression);
 
     var _this = possibleConstructorReturn(this, (Expression.__proto__ || Object.getPrototypeOf(Expression)).call(this, EXPRESSION, FALSE));
@@ -1974,11 +1977,8 @@ var Expression = function (_Node) {
         value = value();
       }
 
-      var node = new Text(value);
+      var node = new Text(value, this.safe);
       node.keypath = stringify$1(data.keys);
-      if (!this.safe) {
-        node.danger = TRUE;
-      }
       return [node];
     }
   }]);
@@ -3928,10 +3928,10 @@ function create$1(root, instance) {
 
       if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
     } else if (node.type === TEXT) {
-      var danger = node.danger,
+      var safe = node.safe,
           content = node.content;
 
-      if (!danger || !string(content) || !tag.test(content)) {
+      if (safe || !string(content) || !tag.test(content)) {
         return content;
       } else {
         return strings.default(content);
@@ -5028,7 +5028,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.19.6';
+Yox.version = '0.19.7';
 
 Yox.switcher = switcher;
 
