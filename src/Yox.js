@@ -2,7 +2,6 @@
 import magic from 'yox-common/function/magic'
 import execute from 'yox-common/function/execute'
 import toNumber from 'yox-common/function/toNumber'
-import validate from 'yox-common/function/validate'
 
 import Store from 'yox-common/util/Store'
 import Event from 'yox-common/util/Event'
@@ -886,7 +885,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.19.8'
+Yox.version = '0.19.9'
 
 /**
  * 开关配置
@@ -952,16 +951,53 @@ Yox.compile = function (template) {
  * @return {Object} 验证通过的数据
  */
 Yox.validate = function (props, schema) {
-  return validate(
-    props,
+  let result = { }
+  object.each(
     schema,
-    function (key) {
-      logger.warn(`Passing a "${key}" prop is not matched.`)
-    },
-    function (key) {
-      logger.warn(`Passing a "${key}" prop is not found.`)
+    function (rule, key) {
+      let { type, value, required } = rule
+      if (object.has(props, key)) {
+        // 如果不写 type 或 type 不是 字符串 或 数组
+        // 就当做此规则无效，和没写一样
+        if (type) {
+          let target = props[key], matched
+          // 比较类型
+          if (is.string(type)) {
+            matched = is.is(target, type)
+          }
+          else if (is.array(type)) {
+            array.each(
+              type,
+              function (t) {
+                if (is.is(target, t)) {
+                  matched = env.TRUE
+                  return env.FALSE
+                }
+              }
+            )
+          }
+          else if (is.func(type)) {
+            // 有时候做判断需要参考其他数据
+            // 比如当 a 有值时，b 可以为空之类的
+            matched = type(target, props)
+          }
+          if (matched === env.TRUE) {
+            result[key] = target
+          }
+          else {
+            logger.warn(`Passing a "${key}" prop is not matched.`)
+          }
+        }
+      }
+      else if (required) {
+        logger.warn(`Passing a "${key}" prop is not found.`)
+      }
+      else if (object.has(rule, 'value')) {
+        result[key] = is.func(value) ? value(props) : value
+      }
     }
   )
+  return result
 }
 
 /**

@@ -351,47 +351,6 @@ var object$1 = Object.freeze({
 	set: set$1
 });
 
-var validate = function (data, schema, onNotMatched, onNotFound) {
-  var result = {};
-  each$1(schema, function (rule, key) {
-    var type = rule.type,
-        value = rule.value,
-        required = rule.required;
-
-    if (has$2(data, key)) {
-      if (type) {
-        (function () {
-          var target = data[key],
-              matched = void 0;
-
-          if (string(type)) {
-            matched = is(target, type);
-          } else if (array(type)) {
-            each(type, function (t) {
-              if (is(target, t)) {
-                matched = TRUE;
-                return FALSE;
-              }
-            });
-          } else if (func(type)) {
-            matched = type(target, data);
-          }
-          if (matched === TRUE) {
-            result[key] = target;
-          } else {
-            onNotMatched(key);
-          }
-        })();
-      }
-    } else if (required) {
-      onNotFound(key);
-    } else if (has$2(rule, 'value')) {
-      result[key] = func(value) ? value(data) : value;
-    }
-  });
-  return result;
-};
-
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
   return typeof obj;
 } : function (obj) {
@@ -756,7 +715,7 @@ function camelCase(str) {
 }
 
 function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
+  return charAt$1(str, 0).toUpperCase() + str.slice(1);
 }
 
 function parse$1(str, separator, pair) {
@@ -775,7 +734,7 @@ function parse$1(str, separator, pair) {
           item = {
             key: key.trim()
           };
-          if (value) {
+          if (string(value)) {
             item.value = value.trim();
           }
           result.push(item);
@@ -786,10 +745,19 @@ function parse$1(str, separator, pair) {
   return result;
 }
 
+function charAt$1(str, index) {
+  return str.charAt(index);
+}
+function charCodeAt(str, index) {
+  return str.charCodeAt(index);
+}
+
 var string$1 = Object.freeze({
 	camelCase: camelCase,
 	capitalize: capitalize,
-	parse: parse$1
+	parse: parse$1,
+	charAt: charAt$1,
+	charCodeAt: charCodeAt
 });
 
 var hasConsole = typeof console !== 'undefined';
@@ -969,50 +937,110 @@ var Context = function () {
       return new Context(data, this);
     }
   }, {
-    key: 'set',
-    value: function set(keypath, value) {
-      var data = this.data,
-          cache = this.cache;
+    key: 'format',
+    value: function format(keypath) {
+      var instance = this,
+          keys$$1 = parse(keypath);
+      if (keys$$1[0] === 'this') {
+        keys$$1.shift();
+        return {
+          keypath: stringify$1(keys$$1),
+          instance: instance
+        };
+      } else {
+        var _ret = function () {
+          var lookup = TRUE,
+              index = 0;
+          var levelMap = {};
+          levelMap[LEVEL_CURRENT] = 0;
+          levelMap[LEVEL_PARENT] = 1;
 
-      if (has$2(cache, keypath)) {
-        delete cache[keypath];
+          each(keys$$1, function (key, i) {
+            if (has$2(levelMap, key)) {
+              lookup = FALSE;
+              if (levelMap[key]) {
+                instance = instance.parent;
+                if (!instance) {
+                  return FALSE;
+                }
+              }
+            } else {
+              index = i;
+              return FALSE;
+            }
+          });
+          return {
+            v: {
+              keypath: stringify$1(keys$$1.slice(index)),
+              instance: instance,
+              lookup: lookup
+            }
+          };
+        }();
+
+        if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
       }
-      set$1(data, keypath, value);
+    }
+  }, {
+    key: 'set',
+    value: function set(key, value) {
+      var _format = this.format(key),
+          instance = _format.instance,
+          keypath = _format.keypath;
+
+      if (instance && keypath) {
+        if (has$2(instance.cache, keypath)) {
+          delete instance.cache[keypath];
+        }
+        set$1(instance.data, keypath, value);
+      }
     }
   }, {
     key: 'get',
-    value: function get(keypath) {
+    value: function get(key) {
+      var _format2 = this.format(key),
+          instance = _format2.instance,
+          keypath = _format2.keypath,
+          lookup = _format2.lookup;
 
-      var instance = this;
-      var _instance = instance,
-          cache = _instance.cache;
+      if (instance) {
+        var _instance = instance,
+            cache = _instance.cache;
 
-
-      if (!has$2(cache, keypath)) {
-        var result = void 0;
-        var keys$$1 = [keypath];
-        while (instance) {
-          result = get$1(instance.data, keypath);
-          if (result) {
-            break;
+        if (!has$2(cache, keypath)) {
+          var result = void 0;
+          if (keypath) {
+            if (lookup) {
+              var keys$$1 = [keypath];
+              while (instance) {
+                result = get$1(instance.data, keypath);
+                if (result) {
+                  break;
+                } else {
+                  instance = instance.parent;
+                  keys$$1.unshift(LEVEL_PARENT);
+                }
+              }
+              keypath = keys$$1.join(SEPARATOR_PATH);
+            } else {
+              result = get$1(instance.data, keypath);
+            }
           } else {
-            instance = instance.parent;
-            keys$$1.unshift(LEVEL_PARENT);
+            result = instance.data;
+          }
+
+          if (result) {
+            cache[keypath] = result.value;
           }
         }
-        keypath = keys$$1.join(SEPARATOR_PATH);
-        if (result) {
-          cache[keypath] = result.value;
-        }
-      }
 
-      var value = cache[keypath];
-      if (keypath === 'this') {
-        keypath = LEVEL_CURRENT;
+        return {
+          keypath: keypath,
+          value: cache[keypath]
+        };
       }
 
       return {
-        value: value,
         keypath: keypath
       };
     }
@@ -1493,7 +1521,12 @@ var Import = function (_Node) {
   createClass(Import, [{
     key: 'render',
     value: function render(data) {
-      return data.partial(this.name).render(data);
+      var partial = data.partial(this.name);
+      if (partial.type === ELEMENT) {
+        return partial.render(data);
+      } else {
+        return this.renderChildren(data, partial.children);
+      }
     }
   }]);
   return Import;
@@ -1514,8 +1547,7 @@ var Partial = function (_Node) {
   createClass(Partial, [{
     key: 'render',
     value: function render(data) {
-      data.partial(this.name, this.children[0]);
-      return this.renderChildren(data);
+      data.partial(this.name, this);
     }
   }]);
   return Partial;
@@ -1651,22 +1683,8 @@ var Unary = function (_Node) {
           value = _arg$execute.value,
           deps = _arg$execute.deps;
 
-      switch (operator) {
-        case Unary.PLUS:
-          value = +value;
-          break;
-        case Unary.MINUS:
-          value = -value;
-          break;
-        case Unary.BANG:
-          value = !value;
-          break;
-        case Unary.WAVE:
-          value = ~value;
-          break;
-      }
       return {
-        value: value,
+        value: OPERATOR[operator](value),
         deps: deps
       };
     }
@@ -1674,10 +1692,19 @@ var Unary = function (_Node) {
   return Unary;
 }(Node$2);
 
-Unary.PLUS = '+';
-Unary.MINUS = '-';
-Unary.BANG = '!';
-Unary.WAVE = '~';
+var OPERATOR = {};
+OPERATOR[Unary.PLUS = '+'] = function (value) {
+  return +value;
+};
+OPERATOR[Unary.MINUS = '-'] = function (value) {
+  return -value;
+};
+OPERATOR[Unary.BANG = '!'] = function (value) {
+  return !value;
+};
+OPERATOR[Unary.WAVE = '~'] = function (value) {
+  return ~value;
+};
 
 var Binary = function (_Node) {
   inherits(Binary, _Node);
@@ -1694,73 +1721,23 @@ var Binary = function (_Node) {
   createClass(Binary, [{
     key: 'stringify',
     value: function stringify() {
-      var right = this.right,
+      var left = this.left,
           operator = this.operator,
-          left = this.left;
+          right = this.right;
 
       return left.stringify() + ' ' + operator + ' ' + right.stringify();
     }
   }, {
     key: 'execute',
     value: function execute(context) {
-      var right = this.right,
+      var left = this.left,
           operator = this.operator,
-          left = this.left;
+          right = this.right;
 
       left = left.execute(context);
       right = right.execute(context);
-
-      var value = void 0;
-      switch (operator) {
-        case Binary.OR:
-          value = left.value || right.value;
-          break;
-        case Binary.AND:
-          value = left.value && right.value;
-          break;
-        case Binary.SE:
-          value = left.value === right.value;
-          break;
-        case Binary.SNE:
-          value = left.value !== right.value;
-          break;
-        case Binary.LE:
-          value = left.value == right.value;
-          break;
-        case Binary.LNE:
-          value = left.value != right.value;
-          break;
-        case Binary.GT:
-          value = left.value > right.value;
-          break;
-        case Binary.LT:
-          value = left.value < right.value;
-          break;
-        case Binary.GTE:
-          value = left.value >= right.value;
-          break;
-        case Binary.LTE:
-          value = left.value <= right.value;
-          break;
-        case Binary.PLUS:
-          value = left.value + right.value;
-          break;
-        case Binary.MINUS:
-          value = left.value - right.value;
-          break;
-        case Binary.MULTIPLY:
-          value = left.value * right.value;
-          break;
-        case Binary.DIVIDE:
-          value = left.value / right.value;
-          break;
-        case Binary.MODULO:
-          value = left.value % right.value;
-          break;
-      }
-
       return {
-        value: value,
+        value: OPERATOR$1[operator](left.value, right.value),
         deps: extend(left.deps, right.deps)
       };
     }
@@ -1768,25 +1745,52 @@ var Binary = function (_Node) {
   return Binary;
 }(Node$2);
 
-Binary.OR = '||';
-Binary.AND = '&&';
-
-Binary.SE = '===';
-
-Binary.SNE = '!==';
-
-Binary.LE = '==';
-
-Binary.LNE = '!=';
-Binary.GT = '>';
-Binary.LT = '<';
-Binary.GTE = '>=';
-Binary.LTE = '<=';
-Binary.PLUS = '+';
-Binary.MINUS = '-';
-Binary.MULTIPLY = '*';
-Binary.DIVIDE = '/';
-Binary.MODULO = '%';
+var OPERATOR$1 = {};
+OPERATOR$1[Binary.OR = '||'] = function (a, b) {
+  return a || b;
+};
+OPERATOR$1[Binary.AND = '&&'] = function (a, b) {
+  return a && b;
+};
+OPERATOR$1[Binary.SE = '==='] = function (a, b) {
+  return a === b;
+};
+OPERATOR$1[Binary.SNE = '!=='] = function (a, b) {
+  return a !== b;
+};
+OPERATOR$1[Binary.LE = '=='] = function (a, b) {
+  return a == b;
+};
+OPERATOR$1[Binary.LNE = '!='] = function (a, b) {
+  return a != b;
+};
+OPERATOR$1[Binary.LT = '<'] = function (a, b) {
+  return a < b;
+};
+OPERATOR$1[Binary.LTE = '<='] = function (a, b) {
+  return a <= b;
+};
+OPERATOR$1[Binary.GT = '>'] = function (a, b) {
+  return a > b;
+};
+OPERATOR$1[Binary.GTE = '>='] = function (a, b) {
+  return a >= b;
+};
+OPERATOR$1[Binary.PLUS = '+'] = function (a, b) {
+  return a + b;
+};
+OPERATOR$1[Binary.MINUS = '-'] = function (a, b) {
+  return a - b;
+};
+OPERATOR$1[Binary.MULTIPLY = '*'] = function (a, b) {
+  return a * b;
+};
+OPERATOR$1[Binary.DIVIDE = '/'] = function (a, b) {
+  return a / b;
+};
+OPERATOR$1[Binary.MODULO = '%'] = function (a, b) {
+  return a % b;
+};
 
 var unaryMap = {};
 
@@ -1842,10 +1846,7 @@ var Array$1 = function (_Node) {
         value.push(result.value);
         extend(deps, result.deps);
       });
-      return {
-        value: value,
-        deps: deps
-      };
+      return { value: value, deps: deps };
     }
   }]);
   return Array;
@@ -1884,14 +1885,12 @@ var Call = function (_Node) {
           value = _callee$execute.value,
           deps = _callee$execute.deps;
 
-      value = _execute(value, NULL, args.map(function (arg) {
-        var result = arg.execute(context);
-        extend(deps, result.deps);
-        return result.value;
-      }));
-
       return {
-        value: value,
+        value: _execute(value, NULL, args.map(function (arg) {
+          var result = arg.execute(context);
+          extend(deps, result.deps);
+          return result.value;
+        })),
         deps: deps
       };
     }
@@ -1973,10 +1972,7 @@ var Identifier = function (_Node) {
           keypath = _context$get.keypath;
 
       deps[keypath] = value;
-      return {
-        value: value,
-        deps: deps
-      };
+      return { value: value, deps: deps };
     }
   }]);
   return Identifier;
@@ -2069,12 +2065,14 @@ var Member = function (_Node) {
           keys$$1 = [];
 
       each(this.flatten(), function (node, index) {
-        if (node.type !== LITERAL) {
+        var type = node.type;
+
+        if (type !== LITERAL) {
           if (index > 0) {
             var result = node.execute(context);
             extend(deps, result.deps);
             keys$$1.push(result.value);
-          } else if (node.type === IDENTIFIER) {
+          } else if (type === IDENTIFIER) {
             keys$$1.push(node.name);
           }
         } else {
@@ -2082,18 +2080,13 @@ var Member = function (_Node) {
         }
       });
 
-      var key = stringify$1(keys$$1);
-
-      var _context$get = context.get(key),
+      var _context$get = context.get(stringify$1(keys$$1)),
           value = _context$get.value,
           keypath = _context$get.keypath;
 
       deps[keypath] = value;
 
-      return {
-        value: value,
-        deps: deps
-      };
+      return { value: value, deps: deps };
     }
   }]);
   return Member;
@@ -2126,10 +2119,10 @@ function compile$1(content) {
       value = void 0;
 
   function getChar() {
-    return content.charAt(index);
+    return charAt$1(content, index);
   }
   function getCharCode(i) {
-    return content.charCodeAt(i != NULL ? i : index);
+    return charCodeAt(content, i != NULL ? i : index);
   }
 
   function skipWhitespace() {
@@ -4916,7 +4909,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.19.8';
+Yox.version = '0.19.9';
 
 Yox.switcher = switcher;
 
@@ -4943,11 +4936,44 @@ Yox.compile = function (template) {
 };
 
 Yox.validate = function (props, schema) {
-  return validate(props, schema, function (key) {
-    warn('Passing a "' + key + '" prop is not matched.');
-  }, function (key) {
-    warn('Passing a "' + key + '" prop is not found.');
+  var result = {};
+  each$1(schema, function (rule, key) {
+    var type = rule.type,
+        value = rule.value,
+        required = rule.required;
+
+    if (has$2(props, key)) {
+      if (type) {
+        (function () {
+          var target = props[key],
+              matched = void 0;
+
+          if (string(type)) {
+            matched = is(target, type);
+          } else if (array(type)) {
+            each(type, function (t) {
+              if (is(target, t)) {
+                matched = TRUE;
+                return FALSE;
+              }
+            });
+          } else if (func(type)) {
+            matched = type(target, props);
+          }
+          if (matched === TRUE) {
+            result[key] = target;
+          } else {
+            warn('Passing a "' + key + '" prop is not matched.');
+          }
+        })();
+      }
+    } else if (required) {
+      warn('Passing a "' + key + '" prop is not found.');
+    } else if (has$2(rule, 'value')) {
+      result[key] = func(value) ? value(props) : value;
+    }
   });
+  return result;
 };
 
 Yox.use = function (plugin) {
