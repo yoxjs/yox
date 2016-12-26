@@ -16,7 +16,7 @@ import * as keypathUtil from '../../util/keypath'
  */
 export default class Expression extends Node {
 
-  constructor(expr, safe) {
+  constructor(expr, safe = env.TRUE) {
     super(nodeType.EXPRESSION, env.FALSE)
     this.expr = expr
     this.safe = safe
@@ -32,11 +32,8 @@ export default class Expression extends Node {
       value = value()
     }
 
-    let node = new Text(value)
+    let node = new Text(value, this.safe)
     node.keypath = keypathUtil.stringify(data.keys)
-    if (this.safe) {
-      node.safe = env.TRUE
-    }
     return [ node ]
 
   }

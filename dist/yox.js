@@ -1976,8 +1976,8 @@ var Expression = function (_Node) {
 
       var node = new Text(value);
       node.keypath = stringify$1(data.keys);
-      if (this.safe) {
-        node.safe = TRUE;
+      if (!this.safe) {
+        node.danger = TRUE;
       }
       return [node];
     }
@@ -3928,10 +3928,10 @@ function create$1(root, instance) {
 
       if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
     } else if (node.type === TEXT) {
-      var safe = node.safe,
+      var danger = node.danger,
           content = node.content;
 
-      if (!safe || !string(content) || !tag.test(content)) {
+      if (!danger || !string(content) || !tag.test(content)) {
         return content;
       } else {
         return strings.default(content);

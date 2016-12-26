@@ -190,7 +190,7 @@ export function create(root, instance) {
       }
       else if (node.type === viewNodeType.TEXT) {
         let { safe, content } = node
-        if (!safe || !is.string(content) || !pattern.tag.test(content)) {
+        if (safe || !is.string(content) || !pattern.tag.test(content)) {
           return content
         }
         else {

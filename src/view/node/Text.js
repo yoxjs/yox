@@ -12,13 +12,14 @@ import * as keypathUtil from '../../util/keypath'
  */
 export default class Text extends Node {
 
-  constructor(content) {
+  constructor(content, safe = env.TRUE) {
     super(nodeType.TEXT, env.FALSE)
     this.content = content
+    this.safe = safe
   }
 
   render(data) {
-    let node = new Text(this.content)
+    let node = new Text(this.content, this.safe)
     node.keypath = keypathUtil.stringify(data.keys)
     return [ node ]
   }
