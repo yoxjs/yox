@@ -2,8 +2,8 @@
 import Node from './Node'
 import * as nodeType from '../nodeType'
 
-import * as array from '../../util/array'
-import * as object from '../../util/object'
+import * as array from 'yox-common/util/array'
+import * as object from 'yox-common/util/object'
 
 /**
  * Array 节点

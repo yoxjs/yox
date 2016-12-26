@@ -8,14 +8,14 @@ import virtualize from 'snabbdom-virtualize/strings'
 
 import * as native from './native'
 
-import * as env from '../../config/env'
 import * as syntax from '../../config/syntax'
 import * as pattern from '../../config/pattern'
 
-import * as is from '../../util/is'
-import * as array from '../../util/array'
-import * as object from '../../util/object'
-import * as string from '../../util/string'
+import * as is from 'yox-common/util/is'
+import * as env from 'yox-common/util/env'
+import * as array from 'yox-common/util/array'
+import * as object from 'yox-common/util/object'
+import * as string from 'yox-common/util/string'
 import * as viewNodeType from '../../view/nodeType'
 
 export let patch = snabbdom.init([ attributes, style ])
@@ -74,7 +74,7 @@ export function create(root, instance) {
             directive: instance.directive('component'),
           })
         }
-        else {
+        else if (is.array(node.attrs)) {
           array.each(
             node.attrs,
             function (node) {
@@ -100,51 +100,53 @@ export function create(root, instance) {
           )
         }
 
-        array.each(
-          node.directives,
-          function (node) {
-            let { name } = node
+        if (is.array(node.directives)) {
+          array.each(
+            node.directives,
+            function (node) {
+              let { name } = node
 
-            let directiveName
-            if (name.startsWith(syntax.DIRECTIVE_EVENT_PREFIX)) {
-              name = name.slice(syntax.DIRECTIVE_EVENT_PREFIX.length)
-              directiveName = 'event'
-            }
-            else if (name.startsWith(syntax.DIRECTIVE_PREFIX)) {
-              name = name.slice(syntax.DIRECTIVE_PREFIX.length)
-              // 内置指令不支持 o-xxx 写法
-              if (name !== syntax.KEY_REF
-                && name !== syntax.KEY_LAZY
-                && name !== syntax.KEY_MODEL
-              ) {
-                directiveName = name
+              let directiveName
+              if (name.startsWith(syntax.DIRECTIVE_EVENT_PREFIX)) {
+                name = name.slice(syntax.DIRECTIVE_EVENT_PREFIX.length)
+                directiveName = 'event'
+              }
+              else if (name.startsWith(syntax.DIRECTIVE_PREFIX)) {
+                name = name.slice(syntax.DIRECTIVE_PREFIX.length)
+                // 内置指令不支持 o-xxx 写法
+                if (name !== syntax.KEY_REF
+                  && name !== syntax.KEY_LAZY
+                  && name !== syntax.KEY_MODEL
+                ) {
+                  directiveName = name
+                }
+              }
+              else if (name === syntax.KEY_REF) {
+                name =
+                directiveName = 'ref'
+              }
+              else if (name === syntax.KEY_LAZY) {
+                name =
+                directiveName = 'lazy'
+              }
+              else if (name === syntax.KEY_MODEL) {
+                name =
+                directiveName = 'model'
+              }
+              else if (name === syntax.KEY_UNIQUE) {
+                data.key = node.value
+              }
+
+              if (directiveName) {
+                directives.push({
+                  name: name,
+                  node: node,
+                  directive: instance.directive(directiveName),
+                })
               }
             }
-            else if (name === syntax.KEY_REF) {
-              name =
-              directiveName = 'ref'
-            }
-            else if (name === syntax.KEY_LAZY) {
-              name =
-              directiveName = 'lazy'
-            }
-            else if (name === syntax.KEY_MODEL) {
-              name =
-              directiveName = 'model'
-            }
-            else if (name === syntax.KEY_UNIQUE) {
-              data.key = node.value
-            }
-
-            if (directiveName) {
-              directives.push({
-                name: name,
-                node: node,
-                directive: instance.directive(directiveName),
-              })
-            }
-          }
-        )
+          )
+        }
 
         if (styles) {
           data.style = styles

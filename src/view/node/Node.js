@@ -1,10 +1,10 @@
 
-import * as env from '../../config/env'
 import * as nodeType from '../nodeType'
 
-import * as array from '../../util/array'
-import * as object from '../../util/object'
-import * as keypathUtil from '../../util/keypath'
+import * as env from 'yox-common/util/env'
+import * as array from 'yox-common/util/array'
+import * as object from 'yox-common/util/object'
+import * as keypathUtil from 'yox-common/util/keypath'
 
 /**
  * 节点基类
@@ -48,8 +48,12 @@ export default class Node {
     if (!children) {
       children = this.children
     }
-    let i = 0, node, next
     let list = [ ], item
+    if (!children) {
+      return list
+    }
+
+    let i = 0, node, next
     while (node = children[i]) {
       item = node.render(data)
       if (item) {
@@ -73,7 +77,8 @@ export default class Node {
     return list
   }
 
-  renderTexts(nodes) {
+  renderTexts(data) {
+    let nodes = this.renderChildren(data)
     let { length } = nodes
     if (length === 1) {
       return nodes[0].content
@@ -86,6 +91,13 @@ export default class Node {
         }
       )
       .join('')
+    }
+  }
+
+  renderCondition(data) {
+    let { value } = this.renderExpression(data)
+    if (value) {
+      return this.renderChildren(data)
     }
   }
 

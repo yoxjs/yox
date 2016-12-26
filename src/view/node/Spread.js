@@ -4,10 +4,10 @@ import Attribute from './Attribute'
 
 import * as nodeType from '../nodeType'
 
-import * as env from '../../config/env'
-import * as is from '../../util/is'
-import * as object from '../../util/object'
-import * as keypathUtil from '../../util/keypath'
+import * as is from 'yox-common/util/is'
+import * as env from 'yox-common/util/env'
+import * as object from 'yox-common/util/object'
+import * as keypathUtil from 'yox-common/util/keypath'
 
 /**
  * 延展操作 节点
@@ -16,9 +16,9 @@ import * as keypathUtil from '../../util/keypath'
  */
 export default class Spread extends Node {
 
-  constructor(expr) {
+  constructor(options) {
     super(nodeType.SPREAD, env.FALSE)
-    this.expr = expr
+    object.extend(this, options)
   }
 
   render(data) {
@@ -27,10 +27,14 @@ export default class Spread extends Node {
       let result = [ ], keypath = keypathUtil.stringify(data.keys)
       object.each(
         value,
-        function (value, key) {
-          let node = new Attribute(key, value)
-          node.keypath = keypath
-          result.push(node)
+        function (value, name) {
+          result.push(
+            new Attribute({
+              name,
+              value,
+              keypath,
+            })
+          )
         }
       )
       return result

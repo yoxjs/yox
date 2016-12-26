@@ -1,5 +1,4 @@
 
-import * as env from './config/env'
 import * as cache from './config/cache'
 import * as syntax from './config/syntax'
 import * as pattern from './config/pattern'
@@ -9,14 +8,14 @@ import * as lifecycle from './config/lifecycle'
 
 import * as view from './view/index'
 
-import * as is from './util/is'
-import * as array from './util/array'
-import * as object from './util/object'
-import * as string from './util/string'
-import * as logger from './util/logger'
-import * as nextTask from './util/nextTask'
-import * as component from './util/component'
-import * as keypathUtil from './util/keypath'
+import * as is from 'yox-common/util/is'
+import * as env from 'yox-common/util/env'
+import * as array from 'yox-common/util/array'
+import * as object from 'yox-common/util/object'
+import * as string from 'yox-common/util/string'
+import * as logger from 'yox-common/util/logger'
+import * as nextTask from 'yox-common/util/nextTask'
+import * as keypathUtil from 'yox-common/util/keypath'
 
 import * as expression from './expression/index'
 import * as expressionNodeType from './expression/nodeType'
@@ -24,13 +23,14 @@ import * as expressionNodeType from './expression/nodeType'
 import * as vdom from './platform/web/vdom'
 import * as native from './platform/web/native'
 
-import magic from './function/magic'
-import execute from './function/execute'
-import toNumber from './function/toNumber'
+import magic from 'yox-common/function/magic'
+import execute from 'yox-common/function/execute'
+import toNumber from 'yox-common/function/toNumber'
+import validate from 'yox-common/function/validate'
 
-import Store from './util/Store'
-import Event from './util/Event'
-import Emitter from './util/Emitter'
+import Store from 'yox-common/util/Store'
+import Event from 'yox-common/util/Event'
+import Emitter from 'yox-common/util/Emitter'
 
 export default class Yox {
 
@@ -137,7 +137,7 @@ export default class Yox {
               let newDeps = deps || instance.$computedStack.pop()
               let oldDeps = instance.$computedDeps[keypath]
               if (newDeps !== oldDeps) {
-                component.updateDeps(
+                updateDeps(
                   instance,
                   newDeps,
                   oldDeps,
@@ -244,7 +244,7 @@ export default class Yox {
         instance.$dirty = env.TRUE
       }
       execute(options[lifecycle.BEFORE_MOUNT], instance)
-      instance.$template = instance.compileTemplate(template)
+      instance.$template = Yox.compile(template)
       instance.updateView(el)
     }
 
@@ -483,7 +483,18 @@ export default class Yox {
       immediate = args[1]
     }
 
-    component.refresh(instance, immediate)
+    if (immediate) {
+      diff(instance)
+    }
+    else if (!instance.$diffing) {
+      instance.$diffing = env.TRUE
+      nextTask.add(
+        function () {
+          delete instance.$diffing
+          diff(instance)
+        }
+      )
+    }
 
   }
 
@@ -532,9 +543,9 @@ export default class Yox {
       }
     )
 
-    let { root, deps } = view.render($template, context)
+    let { root, deps } = view.render($template, context, instance.partial.bind(instance))
     instance.$viewDeps = object.keys(deps)
-    component.updateDeps(
+    updateDeps(
       instance,
       instance.$viewDeps,
       $viewDeps,
@@ -566,34 +577,15 @@ export default class Yox {
    */
   create(options, extra) {
     options = object.extend({ }, options, extra)
+    let { props, propTypes } = options
+    if (is.object(props) && is.object(propTypes)) {
+      options.props = Yox.validate(props, propTypes)
+    }
     options.parent = this
     let child = new Yox(options)
     let children = this.$children || (this.$children = [ ])
     children.push(child)
     return child
-  }
-
-  /**
-   * 把模板编译成 Yox 独有的 virtual dom
-   *
-   * @param {string} template
-   * @return {Object}
-   */
-  compileTemplate(template) {
-    let instance = this
-    if (is.string(template)) {
-      return view.parse(
-        template,
-        function (id) {
-          let partial = instance.partial(id)
-          return is.string(partial) ? instance.compileTemplate(partial) : partial
-        },
-        function (id, node) {
-          instance.partial(id, node)
-        }
-      )
-    }
-    return template
   }
 
   compileValue(keypath, value) {
@@ -925,7 +917,7 @@ Yox.utils = { is, array, object, string, logger, native, expression, Store, Emit
  * @param {?Object} value
  */
 array.each(
-  ['component', 'directive', 'filter', 'partial'],
+  [ 'component', 'directive', 'filter', 'partial' ],
   function (type) {
     Yox[type] = function () {
       return magic({
@@ -949,13 +941,36 @@ array.each(
 Yox.nextTick = nextTask.add
 
 /**
+ * 编译模板，暴露出来是为了打包阶段的模板预编译
+ *
+ * @param {string} template
+ * @return {Object}
+ */
+Yox.compile = function (template) {
+  return is.string(template)
+    ? view.compile(template)
+    : template
+}
+
+/**
  * 验证 props
  *
  * @param {Object} props 传递的数据
  * @param {Object} schema 数据格式
  * @return {Object} 验证通过的数据
  */
-Yox.validate = component.validate
+Yox.validate = function (props, schema) {
+  return validate(
+    props,
+    schema,
+    function (key) {
+      logger.warn(`Passing a "${key}" prop is not matched.`)
+    },
+    function (key) {
+      logger.warn(`Passing a "${key}" prop is not found.`)
+    }
+  )
+}
 
 /**
  * 安装插件
@@ -968,6 +983,118 @@ Yox.use = function (plugin) {
   plugin.install(Yox)
 }
 
+
+function updateDeps(instance, newDeps, oldDeps, watcher) {
+
+  let addedDeps, removedDeps
+  if (is.array(oldDeps)) {
+    addedDeps = array.diff(oldDeps, newDeps)
+    removedDeps = array.diff(newDeps, oldDeps)
+  }
+  else {
+    addedDeps = newDeps
+  }
+
+  array.each(
+    addedDeps,
+    function (keypath) {
+      instance.watch(keypath, watcher)
+    }
+  )
+
+  if (removedDeps) {
+    array.each(
+      removedDeps,
+      function (dep) {
+        instance.$watchEmitter.off(dep, watcher)
+      }
+    )
+  }
+
+}
+
+function diff(instance) {
+
+  let {
+    $children,
+    $watchCache,
+    $watchEmitter,
+    $computedDeps,
+  } = instance
+
+  // 排序，把依赖最少的放前面
+  let keys = [ ]
+  let addKey = function (key, push) {
+    if (!array.has(keys, key)) {
+      if (push) {
+        keys.push(key)
+      }
+      else {
+        keys.unshift(key)
+      }
+    }
+  }
+
+  let pickDeps = function (key) {
+    if ($computedDeps && !array.falsy($computedDeps[key])) {
+      array.each(
+        $computedDeps[key],
+        pickDeps
+      )
+      addKey(key, env.TRUE)
+    }
+    else {
+      addKey(key)
+    }
+  }
+
+  object.each(
+    $watchCache,
+    function (value, key) {
+      pickDeps(key)
+    }
+  )
+
+  let changes = { }
+
+  array.each(
+    keys,
+    function (key) {
+      let oldValue = $watchCache[key]
+      let newValue = instance.get(key)
+      if (newValue !== oldValue) {
+        $watchCache[key] = newValue
+        $watchEmitter.fire(key, [ newValue, oldValue, key ], instance)
+      }
+    }
+  )
+
+  let {
+    $dirty,
+    $dirtyIgnore,
+  } = instance
+
+  if ($dirty) {
+    delete instance.$dirty
+  }
+  if ($dirtyIgnore) {
+    delete instance.$dirtyIgnore
+    return
+  }
+
+  if ($dirty) {
+    instance.updateView()
+  }
+  else if ($children) {
+    array.each(
+      $children,
+      function (child) {
+        diff(child)
+      }
+    )
+  }
+
+}
 
 import refDt from './directive/ref'
 import eventDt from './directive/event'

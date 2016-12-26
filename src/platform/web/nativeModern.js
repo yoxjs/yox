@@ -1,5 +1,5 @@
 
-import * as env from '../../config/env'
+import * as env from 'yox-common/util/env'
 
 export function addListener(element, type, listener) {
   element.addEventListener(type, listener, env.FALSE)

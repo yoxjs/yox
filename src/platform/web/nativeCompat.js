@@ -1,5 +1,5 @@
 
-import * as env from '../../config/env'
+import * as env from 'yox-common/util/env'
 
 import * as modern from './nativeModern'
 import * as oldie from './nativeOldie'

@@ -2,7 +2,7 @@
 import Node from './Node'
 import * as nodeType from '../nodeType'
 
-import * as is from '../../util/is'
+import * as is from 'yox-common/util/is'
 
 /**
  * Literal 节点

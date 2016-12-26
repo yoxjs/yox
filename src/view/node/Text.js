@@ -2,26 +2,29 @@
 import Node from './Node'
 import * as nodeType from '../nodeType'
 
-import * as env from '../../config/env'
-import * as keypathUtil from '../../util/keypath'
+import * as env from 'yox-common/util/env'
+import * as object from 'yox-common/util/object'
+import * as keypathUtil from 'yox-common/util/keypath'
 
 /**
  * 文本节点
  *
  * @param {*} content
+ * @param {boolean} safe 是否安全渲染，即是否转义
  */
 export default class Text extends Node {
 
-  constructor(content, safe = env.TRUE) {
+  constructor(options) {
     super(nodeType.TEXT, env.FALSE)
-    this.content = content
-    this.safe = safe
+    object.extend(this, options)
   }
 
   render(data) {
-    let node = new Text(this.content, this.safe)
-    node.keypath = keypathUtil.stringify(data.keys)
-    return [ node ]
+    return new Text({
+      content: this.content,
+      safe: this.safe,
+      keypath: keypathUtil.stringify(data.keys),
+    })
   }
 
 }

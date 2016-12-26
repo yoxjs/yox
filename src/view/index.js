@@ -1,5 +1,4 @@
 
-import * as env from '../config/env'
 import * as cache from '../config/cache'
 import * as syntax from '../config/syntax'
 import * as pattern from '../config/pattern'
@@ -23,10 +22,11 @@ import Partial from './node/Partial'
 import Spread from './node/Spread'
 import Text from './node/Text'
 
-import * as is from '../util/is'
-import * as array from '../util/array'
-import * as object from '../util/object'
-import * as logger from '../util/logger'
+import * as is from 'yox-common/util/is'
+import * as env from 'yox-common/util/env'
+import * as array from 'yox-common/util/array'
+import * as object from 'yox-common/util/object'
+import * as logger from 'yox-common/util/logger'
 import * as expression from '../expression/index'
 
 const openingDelimiter = '\\{\\{\\s*'
@@ -54,7 +54,7 @@ const parsers = [
       if (terms[1]) {
         index = terms[1].trim()
       }
-      return new Each(expr, index)
+      return new Each({ expr, index })
     }
   },
   {
@@ -64,7 +64,7 @@ const parsers = [
     create: function (source) {
       let name = source.slice(syntax.IMPORT.length).trim()
       return name
-        ? new Import(name)
+        ? new Import({ name })
         : ERROR_PARTIAL_NAME
     }
   },
@@ -75,7 +75,7 @@ const parsers = [
     create: function (source) {
       let name = source.slice(syntax.PARTIAL.length).trim()
       return name
-        ? new Partial(name)
+        ? new Partial({ name })
         : ERROR_PARTIAL_NAME
     }
   },
@@ -86,7 +86,7 @@ const parsers = [
     create: function (source) {
       let expr = source.slice(syntax.IF.length).trim()
       return expr
-        ? new If(expression.parse(expr))
+        ? new If({ expr: expression.parse(expr) })
         : ERROR_EXPRESSION
     }
   },
@@ -98,7 +98,7 @@ const parsers = [
       let expr = source.slice(syntax.ELSE_IF.length)
       if (expr) {
         popStack()
-        return new ElseIf(expression.parse(expr))
+        return new ElseIf({ expr: expression.parse(expr) })
       }
       return ERROR_EXPRESSION
     }
@@ -119,7 +119,7 @@ const parsers = [
     create: function (source) {
       let expr = source.slice(syntax.SPREAD.length)
       if (expr) {
-        return new Spread(expression.parse(expr))
+        return new Spread({ expr: expression.parse(expr) })
       }
       return ERROR_EXPRESSION
     }
@@ -134,7 +134,10 @@ const parsers = [
         safe = env.FALSE
         source = source.slice(1)
       }
-      return new Expression(expression.parse(source), safe)
+      return new Expression({
+        expr: expression.parse(source),
+        safe,
+      })
     }
   }
 ]
@@ -150,34 +153,31 @@ const LEVEL_TEXT = 2
  * @param {Object} data
  * @return {Object}
  */
-export function render(ast, data) {
+export function render(ast, data, partial) {
 
   let deps = { }
 
-  let children = ast.render({
-    keys: [ ],
-    context: new Context(data),
-    addDeps: function (childrenDeps) {
-      object.extend(deps, childrenDeps)
-    }
-  })
-
   return {
-    root: children[0],
+    root: ast.render({
+      keys: [ ],
+      context: new Context(data),
+      partial,
+      addDeps: function (childrenDeps) {
+        object.extend(deps, childrenDeps)
+      }
+    }),
     deps,
   }
 
 }
 
 /**
- * 把模板解析为抽象语法树
+ * 把模板编译为抽象语法树
  *
  * @param {string} template
- * @param {Function} getPartial 当解析到 IMPORT 节点时，需要获取模板片段
- * @param {Function} setPartial 当解析到 PARTIAL 节点时，需要注册模板片段
  * @return {Object}
  */
-export function parse(template, getPartial, setPartial) {
+export function compile(template) {
 
   if (cache.templateParse[template]) {
     return cache.templateParse[template]
@@ -200,7 +200,7 @@ export function parse(template, getPartial, setPartial) {
   let level = LEVEL_ELEMENT, levelNode
 
   let nodeStack = [ ]
-  let rootNode = new Element('root')
+  let rootNode = new Element({ name: 'root' })
   let currentNode = rootNode
 
   let pushStack = function (node) {
@@ -215,37 +215,15 @@ export function parse(template, getPartial, setPartial) {
 
   let addChild = function (node) {
 
-    let { name, type, content, children } = node
+    let { type, content, children } = node
 
-    switch (type) {
-      case nodeType.TEXT:
-        if (content = util.trimBreakline(content)) {
-          node.content = content
-        }
-        else {
-          return
-        }
-        break
-
-      case nodeType.IMPORT:
-        let partial = getPartial(name)
-        if (partial) {
-          array.each(
-            partial.children,
-            function (node) {
-              addChild(node)
-            }
-          )
-        }
-        else {
-          logger.error(`Imported partial ${name} is not found.`)
-        }
+    if (type === nodeType.TEXT) {
+      if (content = util.trimBreakline(content)) {
+        node.content = content
+      }
+      else {
         return
-
-      case nodeType.PARTIAL:
-        setPartial(name, node)
-        pushStack(node)
-        return
+      }
     }
 
     currentNode.addChild(node)
@@ -259,7 +237,7 @@ export function parse(template, getPartial, setPartial) {
     match = util.matchByQuote(content, quote)
     if (match) {
       addChild(
-        new Text(match)
+        new Text({ content: match })
       )
     }
     let { length } = match
@@ -276,7 +254,7 @@ export function parse(template, getPartial, setPartial) {
 
   // 核心函数，负责分隔符和普通字符串的深度解析
   let parseContent = function (content) {
-    helperScanner.reset(content)
+    helperScanner.init(content)
     while (helperScanner.hasNext()) {
 
       // 分隔符之前的内容
@@ -330,8 +308,8 @@ export function parse(template, getPartial, setPartial) {
               || name === syntax.KEY_UNIQUE
               || name.startsWith(syntax.DIRECTIVE_PREFIX)
               || name.startsWith(syntax.DIRECTIVE_EVENT_PREFIX)
-            ? new Directive(name)
-            : new Attribute(name)
+            ? new Directive({ name })
+            : new Attribute({ name })
 
             addChild(levelNode)
             level++
@@ -349,7 +327,7 @@ export function parse(template, getPartial, setPartial) {
         }
         else if (content) {
           addChild(
-            new Text(content)
+            new Text({ content })
           )
         }
 
@@ -379,7 +357,7 @@ export function parse(template, getPartial, setPartial) {
                 else if (level === LEVEL_ATTRIBUTE
                   && node.type === nodeType.EXPRESSION
                 ) {
-                  levelNode = new Attribute(index)
+                  levelNode = new Attribute({ name: index })
                   level++
                   addChild(levelNode)
                 }
@@ -438,13 +416,16 @@ export function parse(template, getPartial, setPartial) {
       if (pattern.componentName.test(name)) {
         // 低版本浏览器不支持自定义标签，需要转成 div
         addChild(
-          new Element('div', name)
+          new Element({
+            name: 'div',
+            component: name,
+          })
         )
         isSelfClosing = env.TRUE
       }
       else {
         addChild(
-          new Element(name)
+          new Element({ name })
         )
         isSelfClosing = pattern.selfClosingTagName.test(name)
       }

@@ -1,8 +1,8 @@
 
-import debounce from '../function/debounce'
+import debounce from 'yox-common/function/debounce'
 
-import * as env from '../config/env'
-import * as is from '../util/is'
+import * as is from 'yox-common/util/is'
+import * as env from 'yox-common/util/env'
 import * as native from '../platform/web/native'
 
 export default {

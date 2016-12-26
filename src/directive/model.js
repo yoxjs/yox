@@ -1,10 +1,9 @@
 
-import * as env from '../config/env'
-
-import * as is from '../util/is'
-import * as array from '../util/array'
-import * as object from '../util/object'
-import * as logger from '../util/logger'
+import * as is from 'yox-common/util/is'
+import * as env from 'yox-common/util/env'
+import * as array from 'yox-common/util/array'
+import * as object from 'yox-common/util/object'
+import * as logger from 'yox-common/util/logger'
 
 import event from './event'
 

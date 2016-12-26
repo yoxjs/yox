@@ -1,9 +1,9 @@
 
-import * as env from '../config/env'
 import * as cache from '../config/cache'
 
-import * as is from '../util/is'
-import * as array from '../util/array'
+import * as is from 'yox-common/util/is'
+import * as env from 'yox-common/util/env'
+import * as array from 'yox-common/util/array'
 
 import * as util from './util'
 import * as nodeType from './nodeType'
@@ -129,10 +129,6 @@ export function parse(content) {
     // 如果函数是 function () { return this }
     // 如果用 fn.call('')，返回的会是个 new String('')，不是字符串字面量
     // 所以我们把 this 全都改成 IDENTIFIER 了
-    if (value === 'this') {
-      return new Identifier(env.THIS)
-    }
-
     if (value) {
       return new Identifier(value)
     }

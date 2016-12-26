@@ -1,5 +1,5 @@
 
-import Store from '../util/Store'
+import Store from 'yox-common/util/Store'
 
 export const component = new Store()
 export const directive = new Store()

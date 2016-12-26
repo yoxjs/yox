@@ -1,5 +1,5 @@
 
-import * as env from '../config/env'
+import * as env from 'yox-common/util/env'
 
 // 区分关键字和普通变量
 // 举个例子：a === true

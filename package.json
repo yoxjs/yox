@@ -16,7 +16,8 @@
     "rollup-plugin-node-resolve": "^2.0.0",
     "rollup-plugin-uglify": "^1.0.1",
     "snabbdom": "^0.5.4",
-    "snabbdom-virtualize": "^0.6.0"
+    "snabbdom-virtualize": "^0.6.0",
+    "yox-common": "^0.1.1"
   },
   "scripts": {
     "source": "rollup -c",

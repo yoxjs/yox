@@ -4,17 +4,6 @@
 	(global.Yox = factory());
 }(this, (function () { 'use strict';
 
-var TRUE = true;
-var FALSE = false;
-var NULL = null;
-var UNDEFINED = undefined;
-
-var THIS = '$this';
-
-
-
-var doc = typeof document !== 'undefined' ? document : NULL;
-
 var templateParse = {};
 
 var expressionParse = {};
@@ -67,7 +56,17 @@ var selector = /^[#.]\w+$/;
 
 var selfClosingTagName = /input|img|br/i;
 
+var TRUE = true;
+var FALSE = false;
+var NULL = null;
+var UNDEFINED = undefined;
+
+
+
+var doc = typeof document !== 'undefined' ? document : NULL;
+
 var toString = Object.prototype.toString;
+
 
 function is(arg, type) {
   return type === 'numeric' ? numeric(arg) : toString.call(arg).toLowerCase() === '[object ' + type + ']';
@@ -137,7 +136,7 @@ function each$1(array$$1, callback, reversed) {
   }
 }
 
-function diff(array1, array2, strict) {
+function diff$1(array1, array2, strict) {
   var result = [];
   each$1(array2, function (item) {
     if (!has$2(array1, item, strict)) {
@@ -149,19 +148,20 @@ function diff(array1, array2, strict) {
 
 function merge() {
   var result = [];
-  var push = function push(item) {
-    result.push(item);
-  };
   each$1(arguments, function (array$$1) {
-    each$1(array$$1, push);
+    push$1(result, array$$1);
   });
   return result;
 }
 
 function push$1(original, array$$1) {
-  each$1(array$$1, function (item) {
-    original.push(item);
-  });
+  if (array(array$$1)) {
+    each$1(array$$1, function (item) {
+      original.push(item);
+    });
+  } else {
+    original.push(array$$1);
+  }
 }
 
 function toArray(array$$1) {
@@ -212,7 +212,7 @@ function falsy(array$$1) {
 
 var array$1 = Object.freeze({
 	each: each$1,
-	diff: diff,
+	diff: diff$1,
 	merge: merge,
 	push: push$1,
 	toArray: toArray,
@@ -224,83 +224,142 @@ var array$1 = Object.freeze({
 	falsy: falsy
 });
 
-var debug = TRUE;
+var SEPARATOR_KEY = '.';
+var SEPARATOR_PATH = '/';
+var LEVEL_CURRENT = '.';
+var LEVEL_PARENT = '..';
 
-var switcher = Object.freeze({
-	debug: debug
-});
-
-var hasConsole = typeof console !== 'undefined';
-
-function warn(msg) {
-  if (debug && hasConsole) {
-    console.warn('[Yox warn]: ' + msg);
+function normalize(str) {
+  if (str && str.indexOf('[') > 0 && str.indexOf(']') > 0) {
+    return str.replace(/\[\s*?([\S]+)\s*?\]/g, function ($0, $1) {
+      var firstChar = $1.charAt[0];
+      if (firstChar === '"' || firstChar === "'") {
+        $1 = $1.slice(1, -1);
+      }
+      return '.' + $1;
+    });
   }
+  return str;
 }
 
-function error$1(msg) {
-  if (hasConsole) {
-    console.error('[Yox error]: ' + msg);
-  }
+function parse(str) {
+  return str ? normalize(str).split(SEPARATOR_KEY) : [];
 }
 
-var logger = Object.freeze({
-	warn: warn,
-	error: error$1
-});
-
-function isNumber(charCode) {
-  return charCode >= 48 && charCode <= 57;
+function stringify$1(keypaths) {
+  return keypaths.filter(function (term) {
+    return term !== '' && term !== LEVEL_CURRENT;
+  }).join(SEPARATOR_KEY);
 }
 
-function isWhitespace(charCode) {
-  return charCode === 32 || charCode === 9;
-}
-
-function isIdentifierStart(charCode) {
-  return charCode === 36 || charCode === 95 || charCode >= 97 && charCode <= 122 || charCode >= 65 && charCode <= 90;
-}
-
-function isIdentifierPart(charCode) {
-  return isIdentifierStart(charCode) || isNumber(charCode);
-}
-
-function sortKeys(obj) {
-  return keys(obj).sort(function (a, b) {
-    return b.length - a.length;
-  });
-}
-
-function matchBestToken(content, sortedTokens) {
-  var result = void 0;
-  each$1(sortedTokens, function (token) {
-    if (content.startsWith(token)) {
-      result = token;
-      return FALSE;
+function resolve(base, path) {
+  var list = parse(base);
+  each$1(path.split(SEPARATOR_PATH), function (term) {
+    if (term === LEVEL_PARENT) {
+      list.pop();
+    } else {
+      list.push(normalize(term));
     }
   });
+  return stringify$1(list);
+}
+
+function keys(object$$1) {
+  return Object.keys(object$$1);
+}
+
+function each$$1(object$$1, callback) {
+  each$1(keys(object$$1), function (key) {
+    return callback(object$$1[key], key);
+  });
+}
+
+function has$1(object$$1, key) {
+  return object$$1.hasOwnProperty(key);
+}
+
+function extend() {
+  var args = arguments,
+      result = args[0];
+  for (var i = 1, len = args.length; i < len; i++) {
+    if (object(args[i])) {
+      each$$1(args[i], function (value, key) {
+        result[key] = value;
+      });
+    }
+  }
   return result;
 }
 
-function parseError(expression) {
-  error$1('Failed to parse expression: [' + expression + '].');
+function copy(object$$1, deep) {
+  var result = object$$1;
+  if (array(object$$1)) {
+    result = [];
+    each$1(object$$1, function (item, index) {
+      result[index] = deep ? copy(item) : item;
+    });
+  } else if (object(object$$1)) {
+    result = {};
+    each$$1(object$$1, function (value, key) {
+      result[key] = deep ? copy(value) : value;
+    });
+  }
+  return result;
 }
 
-var ARRAY = 1;
+function get$1(object$$1, keypath) {
+  if (has$1(object$$1, keypath)) {
+    return {
+      value: object$$1[keypath]
+    };
+  }
 
-var BINARY = 2;
+  if (string(keypath) && keypath.indexOf('.') > 0) {
+    var list = parse(keypath);
+    for (var i = 0, len = list.length; i < len && object$$1; i++) {
+      if (i < len - 1) {
+        object$$1 = object$$1[list[i]];
+      } else if (has$1(object$$1, list[i])) {
+        return {
+          value: object$$1[list[i]]
+        };
+      }
+    }
+  }
+}
 
-var CALL = 3;
+function set$1(object$$1, keypath, value, autofill) {
+  if (string(keypath) && keypath.indexOf('.') > 0) {
+    var originalObject = object$$1;
+    var list = parse(keypath);
+    var prop = list.pop();
+    each$1(list, function (item, index) {
+      if (object$$1[item]) {
+        object$$1 = object$$1[item];
+      } else if (autofill !== FALSE) {
+        object$$1 = object$$1[item] = {};
+      } else {
+        object$$1 = NULL;
+        return FALSE;
+      }
+    });
+    if (object$$1 && object$$1 !== originalObject) {
+      object$$1[prop] = value;
+    }
+  } else {
+    object$$1[keypath] = value;
+  }
+}
 
-var CONDITIONAL = 4;
-
-var IDENTIFIER = 5;
-
-var LITERAL = 6;
-
-var MEMBER = 7;
-
-var UNARY = 8;
+var object$1 = Object.freeze({
+	keys: keys,
+	each: each$$1,
+	has: has$1,
+	extend: extend,
+	copy: copy,
+	get: get$1,
+	set: set$1
+});
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
   return typeof obj;
@@ -431,8 +490,836 @@ var set$2 = function set$2(object, property, value, receiver) {
   return value;
 };
 
-var Node = function Node(type) {
-  classCallCheck(this, Node);
+var Store = function () {
+  function Store() {
+    classCallCheck(this, Store);
+
+    this.data = {};
+  }
+
+  createClass(Store, [{
+    key: 'get',
+    value: function get(key) {
+      return this.data[key];
+    }
+  }, {
+    key: 'set',
+    value: function set(key, value) {
+      var data = this.data;
+
+      if (object(key)) {
+        each$$1(key, function (value, key) {
+          data[key] = value;
+        });
+      } else if (string(key)) {
+        data[key] = value;
+      }
+    }
+  }]);
+  return Store;
+}();
+
+var component$1 = new Store();
+var directive$1 = new Store();
+var filter$1 = new Store();
+var partial$1 = new Store();
+
+var registry = Object.freeze({
+	component: component$1,
+	directive: directive$1,
+	filter: filter$1,
+	partial: partial$1
+});
+
+var debug = TRUE;
+
+var switcher = Object.freeze({
+	debug: debug
+});
+
+var BEFORE_CREATE = 'beforeCreate';
+
+var AFTER_CREATE = 'afterCreate';
+
+var BEFORE_MOUNT = 'beforeMount';
+
+var AFTER_MOUNT = 'afterMount';
+
+var BEFORE_UPDATE = 'beforeUpdate';
+
+var AFTER_UPDATE = 'afterUpdate';
+
+var BEFORE_DESTROY = 'beforeDestroy';
+
+var AFTER_DESTROY = 'afterDestroy';
+
+var hasConsole = typeof console !== 'undefined';
+
+function warn(msg) {
+  if (hasConsole) {
+    console.warn('[Yox warn]: ' + msg);
+  }
+}
+
+function error$1(msg) {
+  if (hasConsole) {
+    console.error('[Yox error]: ' + msg);
+  }
+}
+
+var logger = Object.freeze({
+	warn: warn,
+	error: error$1
+});
+
+var breaklinePattern = /^[ \t]*\n[ \t]*$/;
+var breaklinePrefixPattern = /^[ \t]*\n/;
+var breaklineSuffixPattern = /\n[ \t]*$/;
+
+var nonSingleQuotePattern = /^[^']*/;
+var nonDoubleQuotePattern = /^[^"]*/;
+
+function trimBreakline(str) {
+  if (breaklinePattern.test(str)) {
+    return '';
+  }
+  return str.replace(breaklinePrefixPattern, '').replace(breaklineSuffixPattern, '');
+}
+
+function matchByQuote(str, nonQuote) {
+  var match = str.match(nonQuote === '"' ? nonDoubleQuotePattern : nonSingleQuotePattern);
+  return match ? match[0] : '';
+}
+
+function getLocationByIndex(str, index) {
+
+  var line = 0,
+      col = 0,
+      pos = 0;
+
+  each$1(str.split('\n'), function (lineStr) {
+    line++;
+    col = 0;
+
+    var length = lineStr.length;
+
+    if (index >= pos && index <= pos + length) {
+      col = index - pos;
+      return FALSE;
+    }
+
+    pos += length;
+  });
+
+  return {
+    line: line,
+    col: col
+  };
+}
+
+function parseError(str, errorMsg, errorIndex) {
+  if (errorIndex == NULL) {
+    errorMsg += '.';
+  } else {
+    var _getLocationByIndex = getLocationByIndex(str, errorIndex),
+        line = _getLocationByIndex.line,
+        col = _getLocationByIndex.col;
+
+    errorMsg += ', at line ' + line + ', col ' + col + '.';
+  }
+  error$1(errorMsg);
+}
+
+var IF$1 = 1;
+
+var ELSE_IF$1 = 2;
+
+var ELSE$1 = 3;
+
+var EACH$1 = 4;
+
+var PARTIAL$1 = 5;
+
+var IMPORT$1 = 6;
+
+var EXPRESSION = 7;
+
+var SPREAD$1 = 8;
+
+var DIRECTIVE = 9;
+
+var ELEMENT = 10;
+
+var ATTRIBUTE = 11;
+
+var TEXT = 12;
+
+var Context = function () {
+  function Context(data, parent) {
+    classCallCheck(this, Context);
+
+    this.data = copy(data);
+    this.parent = parent;
+    this.cache = {};
+  }
+
+  createClass(Context, [{
+    key: 'push',
+    value: function push(data) {
+      return new Context(data, this);
+    }
+  }, {
+    key: 'set',
+    value: function set(keypath, value) {
+      var data = this.data,
+          cache = this.cache;
+
+      if (has$1(cache, keypath)) {
+        delete cache[keypath];
+      }
+      set$1(data, keypath, value);
+    }
+  }, {
+    key: 'get',
+    value: function get(keypath) {
+
+      var instance = this;
+      var _instance = instance,
+          cache = _instance.cache;
+
+
+      if (!has$1(cache, keypath)) {
+        var result = void 0;
+        var keys$$1 = [keypath];
+        while (instance) {
+          result = get$1(instance.data, keypath);
+          if (result) {
+            break;
+          } else {
+            instance = instance.parent;
+            keys$$1.unshift(LEVEL_PARENT);
+          }
+        }
+        keypath = keys$$1.join(SEPARATOR_PATH);
+        if (result) {
+          cache[keypath] = result.value;
+        }
+      }
+
+      var value = cache[keypath];
+      if (keypath === 'this') {
+        keypath = LEVEL_CURRENT;
+      }
+
+      return {
+        value: value,
+        keypath: keypath
+      };
+    }
+  }]);
+  return Context;
+}();
+
+var Scanner = function () {
+  function Scanner(str) {
+    classCallCheck(this, Scanner);
+
+    this.init(str);
+  }
+
+  createClass(Scanner, [{
+    key: 'init',
+    value: function init(str) {
+      this.pos = 0;
+      this.tail = str;
+    }
+  }, {
+    key: 'hasNext',
+    value: function hasNext() {
+      return this.tail;
+    }
+  }, {
+    key: 'nextAfter',
+    value: function nextAfter(pattern) {
+      var tail = this.tail;
+
+      var matches = tail.match(pattern);
+      if (!matches || matches.index) {
+        return '';
+      }
+      var result = matches[0];
+      this.forward(result.length);
+      return result;
+    }
+  }, {
+    key: 'nextBefore',
+    value: function nextBefore(pattern) {
+      var pos = this.pos,
+          tail = this.tail;
+
+      var matches = tail.match(pattern);
+      if (matches) {
+        var index = matches.index;
+
+        if (!index) {
+          return '';
+        }
+        var result = tail.substr(0, index);
+        this.forward(index);
+        return result;
+      } else {
+        this.forward(tail.length);
+        return tail;
+      }
+    }
+  }, {
+    key: 'forward',
+    value: function forward(offset) {
+      this.pos += offset;
+      this.tail = this.tail.slice(offset);
+    }
+  }, {
+    key: 'charAt',
+    value: function charAt(index) {
+      return this.tail[index];
+    }
+  }]);
+  return Scanner;
+}();
+
+var Node = function () {
+  function Node(type, hasChildren) {
+    classCallCheck(this, Node);
+
+    this.type = type;
+    if (hasChildren !== FALSE) {
+      this.children = [];
+    }
+  }
+
+  createClass(Node, [{
+    key: 'addChild',
+    value: function addChild(child) {
+      this.children.push(child);
+    }
+  }, {
+    key: 'renderExpression',
+    value: function renderExpression(data) {
+      var context = data.context,
+          keys$$1 = data.keys,
+          addDeps = data.addDeps;
+
+      var _expr$execute = this.expr.execute(context),
+          value = _expr$execute.value,
+          deps = _expr$execute.deps;
+
+      var newDeps = {};
+      each$$1(deps, function (value, key) {
+        newDeps[resolve(stringify$1(keys$$1), key)] = value;
+      });
+      addDeps(newDeps);
+      return {
+        value: value,
+        deps: newDeps
+      };
+    }
+  }, {
+    key: 'renderChildren',
+    value: function renderChildren(data, children) {
+      if (!children) {
+        children = this.children;
+      }
+      var list = [],
+          item = void 0;
+      if (!children) {
+        return list;
+      }
+
+      var i = 0,
+          node = void 0,
+          next = void 0;
+      while (node = children[i]) {
+        item = node.render(data);
+        if (item) {
+          push$1(list, item);
+          if (node.type === IF$1 || node.type === ELSE_IF$1) {
+            while (next = children[i + 1]) {
+              if (next.type === ELSE_IF$1 || next.type === ELSE$1) {
+                i++;
+              } else {
+                break;
+              }
+            }
+          }
+        }
+        i++;
+      }
+      return list;
+    }
+  }, {
+    key: 'renderTexts',
+    value: function renderTexts(data) {
+      var nodes = this.renderChildren(data);
+      var length = nodes.length;
+
+      if (length === 1) {
+        return nodes[0].content;
+      } else if (length > 1) {
+        return nodes.map(function (node) {
+          return node.content;
+        }).join('');
+      }
+    }
+  }, {
+    key: 'renderCondition',
+    value: function renderCondition(data) {
+      var _renderExpression = this.renderExpression(data),
+          value = _renderExpression.value;
+
+      if (value) {
+        return this.renderChildren(data);
+      }
+    }
+  }]);
+  return Node;
+}();
+
+var Attribute = function (_Node) {
+  inherits(Attribute, _Node);
+
+  function Attribute(options) {
+    classCallCheck(this, Attribute);
+
+    var _this = possibleConstructorReturn(this, (Attribute.__proto__ || Object.getPrototypeOf(Attribute)).call(this, ATTRIBUTE, !has$1(options, 'value')));
+
+    extend(_this, options);
+    return _this;
+  }
+
+  createClass(Attribute, [{
+    key: 'render',
+    value: function render(data) {
+      var name = this.name;
+
+      if (name.type === EXPRESSION) {
+        var _name$renderExpressio = name.renderExpression(data),
+            value = _name$renderExpressio.value;
+
+        name = value;
+      }
+
+      return new Attribute({
+        name: name,
+        value: this.renderTexts(data),
+        keypath: stringify$1(data.keys)
+      });
+    }
+  }]);
+  return Attribute;
+}(Node);
+
+var Directive = function (_Node) {
+  inherits(Directive, _Node);
+
+  function Directive(options) {
+    classCallCheck(this, Directive);
+
+    var _this = possibleConstructorReturn(this, (Directive.__proto__ || Object.getPrototypeOf(Directive)).call(this, DIRECTIVE, !has$1(options, 'value')));
+
+    extend(_this, options);
+    return _this;
+  }
+
+  createClass(Directive, [{
+    key: 'render',
+    value: function render(data) {
+      return new Directive({
+        name: this.name,
+        value: this.renderTexts(data),
+        keypath: stringify$1(data.keys)
+      });
+    }
+  }]);
+  return Directive;
+}(Node);
+
+var Each = function (_Node) {
+  inherits(Each, _Node);
+
+  function Each(options) {
+    classCallCheck(this, Each);
+
+    var _this = possibleConstructorReturn(this, (Each.__proto__ || Object.getPrototypeOf(Each)).call(this, EACH$1));
+
+    extend(_this, options);
+    return _this;
+  }
+
+  createClass(Each, [{
+    key: 'render',
+    value: function render(data) {
+
+      var instance = this;
+      var expr = instance.expr,
+          index = instance.index,
+          children = instance.children;
+
+      var _instance$renderExpre = instance.renderExpression(data),
+          value = _instance$renderExpre.value;
+
+      var iterate = void 0;
+      if (array(value)) {
+        iterate = each$1;
+      } else if (object(value)) {
+        iterate = each$$1;
+      }
+
+      if (iterate) {
+        var _ret = function () {
+          data = copy(data);
+
+          var result = [];
+          var _data = data,
+              context = _data.context,
+              keys$$1 = _data.keys;
+
+          var listContext = context.push(value);
+
+          keys$$1.push(expr.stringify());
+
+          iterate(value, function (item, i) {
+            if (index) {
+              listContext.set(index, i);
+            }
+
+            keys$$1.push(i);
+            listContext.set(SPECIAL_KEYPATH, stringify$1(keys$$1));
+
+            data.context = listContext.push(item);
+            push$1(result, instance.renderChildren(data));
+
+            keys$$1.pop();
+          });
+
+          keys$$1.pop();
+
+          return {
+            v: result
+          };
+        }();
+
+        if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
+      }
+    }
+  }]);
+  return Each;
+}(Node);
+
+var Element = function (_Node) {
+  inherits(Element, _Node);
+
+  function Element(options) {
+    classCallCheck(this, Element);
+
+    var _this = possibleConstructorReturn(this, (Element.__proto__ || Object.getPrototypeOf(Element)).call(this, ELEMENT));
+
+    extend(_this, options);
+    return _this;
+  }
+
+  createClass(Element, [{
+    key: 'addChild',
+    value: function addChild(child) {
+      var children = void 0;
+      if (child.type === ATTRIBUTE) {
+        children = this.attrs || (this.attrs = []);
+      } else if (child.type === DIRECTIVE) {
+        children = this.directives || (this.directives = []);
+      } else {
+        children = this.children;
+      }
+      children.push(child);
+    }
+  }, {
+    key: 'render',
+    value: function render(data) {
+      var options = {
+        name: this.name,
+        component: this.component,
+        children: this.renderChildren(data)
+      };
+      var attrs = this.attrs,
+          directives = this.directives;
+
+      if (attrs) {
+        options.attrs = this.renderChildren(data, attrs);
+      }
+      if (directives) {
+        options.directives = this.renderChildren(data, directives);
+      }
+      return new Element(options);
+    }
+  }]);
+  return Element;
+}(Node);
+
+var Else = function (_Node) {
+  inherits(Else, _Node);
+
+  function Else() {
+    classCallCheck(this, Else);
+    return possibleConstructorReturn(this, (Else.__proto__ || Object.getPrototypeOf(Else)).call(this, ELSE$1));
+  }
+
+  createClass(Else, [{
+    key: 'render',
+    value: function render(data) {
+      return this.renderChildren(data);
+    }
+  }]);
+  return Else;
+}(Node);
+
+var ElseIf = function (_Node) {
+  inherits(ElseIf, _Node);
+
+  function ElseIf(options) {
+    classCallCheck(this, ElseIf);
+
+    var _this = possibleConstructorReturn(this, (ElseIf.__proto__ || Object.getPrototypeOf(ElseIf)).call(this, ELSE_IF$1));
+
+    extend(_this, options);
+    return _this;
+  }
+
+  createClass(ElseIf, [{
+    key: 'render',
+    value: function render(data) {
+      return this.renderCondition(data);
+    }
+  }]);
+  return ElseIf;
+}(Node);
+
+var Text = function (_Node) {
+  inherits(Text, _Node);
+
+  function Text(options) {
+    classCallCheck(this, Text);
+
+    var _this = possibleConstructorReturn(this, (Text.__proto__ || Object.getPrototypeOf(Text)).call(this, TEXT, FALSE));
+
+    extend(_this, options);
+    return _this;
+  }
+
+  createClass(Text, [{
+    key: 'render',
+    value: function render(data) {
+      return new Text({
+        content: this.content,
+        safe: this.safe,
+        keypath: stringify$1(data.keys)
+      });
+    }
+  }]);
+  return Text;
+}(Node);
+
+var Expression = function (_Node) {
+  inherits(Expression, _Node);
+
+  function Expression(options) {
+    classCallCheck(this, Expression);
+
+    var _this = possibleConstructorReturn(this, (Expression.__proto__ || Object.getPrototypeOf(Expression)).call(this, EXPRESSION, FALSE));
+
+    extend(_this, options);
+    return _this;
+  }
+
+  createClass(Expression, [{
+    key: 'render',
+    value: function render(data) {
+      var _renderExpression = this.renderExpression(data),
+          value = _renderExpression.value;
+
+      if (value == NULL) {
+        value = '';
+      } else if (func(value) && value.$computed) {
+        value = value();
+      }
+
+      return new Text({
+        content: value,
+        safe: this.safe,
+        keypath: stringify$1(data.keys)
+      });
+    }
+  }]);
+  return Expression;
+}(Node);
+
+var If = function (_Node) {
+  inherits(If, _Node);
+
+  function If(options) {
+    classCallCheck(this, If);
+
+    var _this = possibleConstructorReturn(this, (If.__proto__ || Object.getPrototypeOf(If)).call(this, IF$1));
+
+    extend(_this, options);
+    return _this;
+  }
+
+  createClass(If, [{
+    key: 'render',
+    value: function render(data) {
+      return this.renderCondition(data);
+    }
+  }]);
+  return If;
+}(Node);
+
+var Import = function (_Node) {
+  inherits(Import, _Node);
+
+  function Import(options) {
+    classCallCheck(this, Import);
+
+    var _this = possibleConstructorReturn(this, (Import.__proto__ || Object.getPrototypeOf(Import)).call(this, IMPORT$1, FALSE));
+
+    extend(_this, options);
+    return _this;
+  }
+
+  createClass(Import, [{
+    key: 'render',
+    value: function render(data) {
+      return data.partial(this.name).render(data);
+    }
+  }]);
+  return Import;
+}(Node);
+
+var Partial = function (_Node) {
+  inherits(Partial, _Node);
+
+  function Partial(options) {
+    classCallCheck(this, Partial);
+
+    var _this = possibleConstructorReturn(this, (Partial.__proto__ || Object.getPrototypeOf(Partial)).call(this, PARTIAL$1));
+
+    extend(_this, options);
+    return _this;
+  }
+
+  createClass(Partial, [{
+    key: 'render',
+    value: function render(data) {
+      data.partial(this.name, this.children[0]);
+      return this.renderChildren(data);
+    }
+  }]);
+  return Partial;
+}(Node);
+
+var Spread = function (_Node) {
+  inherits(Spread, _Node);
+
+  function Spread(options) {
+    classCallCheck(this, Spread);
+
+    var _this = possibleConstructorReturn(this, (Spread.__proto__ || Object.getPrototypeOf(Spread)).call(this, SPREAD$1, FALSE));
+
+    extend(_this, options);
+    return _this;
+  }
+
+  createClass(Spread, [{
+    key: 'render',
+    value: function render(data) {
+      var _renderExpression = this.renderExpression(data),
+          value = _renderExpression.value;
+
+      if (object(value)) {
+        var _ret = function () {
+          var result = [],
+              keypath = stringify$1(data.keys);
+          each$$1(value, function (value, name) {
+            result.push(new Attribute({
+              name: name,
+              value: value,
+              keypath: keypath
+            }));
+          });
+          return {
+            v: result
+          };
+        }();
+
+        if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
+      }
+    }
+  }]);
+  return Spread;
+}(Node);
+
+function isNumber(charCode) {
+  return charCode >= 48 && charCode <= 57;
+}
+
+function isWhitespace(charCode) {
+  return charCode === 32 || charCode === 9;
+}
+
+function isIdentifierStart(charCode) {
+  return charCode === 36 || charCode === 95 || charCode >= 97 && charCode <= 122 || charCode >= 65 && charCode <= 90;
+}
+
+function isIdentifierPart(charCode) {
+  return isIdentifierStart(charCode) || isNumber(charCode);
+}
+
+function sortKeys(obj) {
+  return keys(obj).sort(function (a, b) {
+    return b.length - a.length;
+  });
+}
+
+function matchBestToken(content, sortedTokens) {
+  var result = void 0;
+  each$1(sortedTokens, function (token) {
+    if (content.startsWith(token)) {
+      result = token;
+      return FALSE;
+    }
+  });
+  return result;
+}
+
+function parseError$1(expression) {
+  error$1('Failed to parse expression: [' + expression + '].');
+}
+
+var ARRAY = 1;
+
+var BINARY = 2;
+
+var CALL = 3;
+
+var CONDITIONAL = 4;
+
+var IDENTIFIER = 5;
+
+var LITERAL = 6;
+
+var MEMBER = 7;
+
+var UNARY = 8;
+
+var Node$2 = function Node$2(type) {
+  classCallCheck(this, Node$2);
 
   this.type = type;
 };
@@ -489,7 +1376,7 @@ var Unary = function (_Node) {
     }
   }]);
   return Unary;
-}(Node);
+}(Node$2);
 
 Unary.PLUS = '+';
 Unary.MINUS = '-';
@@ -585,7 +1472,7 @@ var Binary = function (_Node) {
     }
   }]);
   return Binary;
-}(Node);
+}(Node$2);
 
 Binary.OR = '||';
 Binary.AND = '&&';
@@ -679,7 +1566,7 @@ var Array$1 = function (_Node) {
     }
   }]);
   return Array;
-}(Node);
+}(Node$2);
 
 var execute$1 = function (fn, context, args) {
   if (func(fn)) {
@@ -738,7 +1625,7 @@ var Call = function (_Node) {
     }
   }]);
   return Call;
-}(Node);
+}(Node$2);
 
 var Conditional = function (_Node) {
   inherits(Conditional, _Node);
@@ -787,7 +1674,7 @@ var Conditional = function (_Node) {
     }
   }]);
   return Conditional;
-}(Node);
+}(Node$2);
 
 var Identifier = function (_Node) {
   inherits(Identifier, _Node);
@@ -823,7 +1710,7 @@ var Identifier = function (_Node) {
     }
   }]);
   return Identifier;
-}(Node);
+}(Node$2);
 
 var Literal = function (_Node) {
   inherits(Literal, _Node);
@@ -857,7 +1744,7 @@ var Literal = function (_Node) {
     }
   }]);
   return Literal;
-}(Node);
+}(Node$2);
 
 var Member = function (_Node) {
   inherits(Member, _Node);
@@ -941,7 +1828,7 @@ var Member = function (_Node) {
     }
   }]);
   return Member;
-}(Node);
+}(Node$2);
 
 var COMMA = 44;
 var PERIOD = 46;
@@ -991,7 +1878,7 @@ function parse$1(content) {
       }
     }
     if (!closed) {
-      return parseError(content);
+      return parseError$1(content);
     }
   }
 
@@ -1033,15 +1920,11 @@ function parse$1(content) {
       return new Literal(keyword[value]);
     }
 
-    if (value === 'this') {
-      return new Identifier(THIS);
-    }
-
     if (value) {
       return new Identifier(value);
     }
 
-    parseError(content);
+    parseError$1(content);
   }
 
   function parseTuple(delimiter) {
@@ -1066,7 +1949,7 @@ function parse$1(content) {
       return args;
     }
 
-    parseError(content);
+    parseError$1(content);
   }
 
   function parseOperator(sortedOperatorList) {
@@ -1126,7 +2009,7 @@ function parse$1(content) {
     if (value) {
       return parseUnary(value);
     }
-    parseError(content);
+    parseError$1(content);
   }
 
   function parseUnary(op) {
@@ -1134,7 +2017,7 @@ function parse$1(content) {
     if (value) {
       return new Unary(op, value);
     }
-    parseError(content);
+    parseError$1(content);
   }
 
   function parseBinary() {
@@ -1157,7 +2040,7 @@ function parse$1(content) {
       if (right) {
         stack.push(op, binaryMap[op], right);
       } else {
-        parseError(content);
+        parseError$1(content);
       }
     }
 
@@ -1175,7 +2058,7 @@ function parse$1(content) {
       index++;
       return value;
     }
-    parseError(content);
+    parseError$1(content);
   }
 
   function parseExpression() {
@@ -1197,7 +2080,7 @@ function parse$1(content) {
         skipWhitespace();
         return new Conditional(test, consequent, alternate);
       } else {
-        parseError(content);
+        parseError$1(content);
       }
     }
 
@@ -1215,870 +2098,6 @@ function parse$1(content) {
 var expression = Object.freeze({
 	parse: parse$1
 });
-
-var SEPARATOR_KEY = '.';
-var SEPARATOR_PATH = '/';
-var LEVEL_CURRENT = '.';
-var LEVEL_PARENT = '..';
-
-function normalize(str) {
-  if (str && str.indexOf('[') > 0 && str.indexOf(']') > 0) {
-    return parse$1(str).stringify();
-  }
-  return str;
-}
-
-function parse$$1(str) {
-  return str ? normalize(str).split(SEPARATOR_KEY) : [];
-}
-
-function stringify$1(keypaths) {
-  return keypaths.filter(function (term) {
-    return term !== '' && term !== LEVEL_CURRENT;
-  }).join(SEPARATOR_KEY);
-}
-
-function resolve(base, path) {
-  var list = parse$$1(base);
-  each$1(path.split(SEPARATOR_PATH), function (term) {
-    if (term === LEVEL_PARENT) {
-      list.pop();
-    } else {
-      list.push(normalize(term));
-    }
-  });
-  return stringify$1(list);
-}
-
-function keys(object$$1) {
-  return Object.keys(object$$1);
-}
-
-function each$$1(object$$1, callback) {
-  each$1(keys(object$$1), function (key) {
-    return callback(object$$1[key], key);
-  });
-}
-
-function has$1(object$$1, key) {
-  return object$$1.hasOwnProperty(key);
-}
-
-function extend() {
-  var args = arguments,
-      result = args[0];
-  for (var i = 1, len = args.length; i < len; i++) {
-    if (object(args[i])) {
-      each$$1(args[i], function (value, key) {
-        result[key] = value;
-      });
-    }
-  }
-  return result;
-}
-
-function copy(object$$1, deep) {
-  var result = object$$1;
-  if (array(object$$1)) {
-    result = [];
-    each$1(object$$1, function (item, index) {
-      result[index] = deep ? copy(item) : item;
-    });
-  } else if (object(object$$1)) {
-    result = {};
-    each$$1(object$$1, function (value, key) {
-      result[key] = deep ? copy(value) : value;
-    });
-  }
-  return result;
-}
-
-function get$1(object$$1, keypath) {
-  if (has$1(object$$1, keypath)) {
-    return {
-      value: object$$1[keypath]
-    };
-  }
-
-  if (string(keypath) && keypath.indexOf('.') > 0) {
-    var list = parse$$1(keypath);
-    for (var i = 0, len = list.length; i < len && object$$1; i++) {
-      if (i < len - 1) {
-        object$$1 = object$$1[list[i]];
-      } else if (has$1(object$$1, list[i])) {
-        return {
-          value: object$$1[list[i]]
-        };
-      }
-    }
-  }
-}
-
-function set$1(object$$1, keypath, value, autofill) {
-  if (string(keypath) && keypath.indexOf('.') > 0) {
-    var originalObject = object$$1;
-    var list = parse$$1(keypath);
-    var prop = list.pop();
-    each$1(list, function (item, index) {
-      if (object$$1[item]) {
-        object$$1 = object$$1[item];
-      } else if (autofill !== FALSE) {
-        object$$1 = object$$1[item] = {};
-      } else {
-        object$$1 = NULL;
-        return FALSE;
-      }
-    });
-    if (object$$1 && object$$1 !== originalObject) {
-      object$$1[prop] = value;
-    }
-  } else {
-    object$$1[keypath] = value;
-  }
-}
-
-var object$1 = Object.freeze({
-	keys: keys,
-	each: each$$1,
-	has: has$1,
-	extend: extend,
-	copy: copy,
-	get: get$1,
-	set: set$1
-});
-
-var Store = function () {
-  function Store() {
-    classCallCheck(this, Store);
-
-    this.data = {};
-  }
-
-  createClass(Store, [{
-    key: 'get',
-    value: function get(key) {
-      return this.data[key];
-    }
-  }, {
-    key: 'set',
-    value: function set(key, value) {
-      var data = this.data;
-
-      if (object(key)) {
-        each$$1(key, function (value, key) {
-          data[key] = value;
-        });
-      } else if (string(key)) {
-        data[key] = value;
-      }
-    }
-  }]);
-  return Store;
-}();
-
-var component = new Store();
-var directive$1 = new Store();
-var filter$1 = new Store();
-var partial$1 = new Store();
-
-var registry = Object.freeze({
-	component: component,
-	directive: directive$1,
-	filter: filter$1,
-	partial: partial$1
-});
-
-var BEFORE_CREATE = 'beforeCreate';
-
-var AFTER_CREATE = 'afterCreate';
-
-var BEFORE_MOUNT = 'beforeMount';
-
-var AFTER_MOUNT = 'afterMount';
-
-var BEFORE_UPDATE = 'beforeUpdate';
-
-var AFTER_UPDATE = 'afterUpdate';
-
-var BEFORE_DESTROY = 'beforeDestroy';
-
-var AFTER_DESTROY = 'afterDestroy';
-
-var breaklinePattern = /^[ \t]*\n[ \t]*$/;
-var breaklinePrefixPattern = /^[ \t]*\n/;
-var breaklineSuffixPattern = /\n[ \t]*$/;
-
-var nonSingleQuotePattern = /^[^']*/;
-var nonDoubleQuotePattern = /^[^"]*/;
-
-function trimBreakline(str) {
-  if (breaklinePattern.test(str)) {
-    return '';
-  }
-  return str.replace(breaklinePrefixPattern, '').replace(breaklineSuffixPattern, '');
-}
-
-function matchByQuote(str, nonQuote) {
-  var match = str.match(nonQuote === '"' ? nonDoubleQuotePattern : nonSingleQuotePattern);
-  return match ? match[0] : '';
-}
-
-function getLocationByIndex(str, index) {
-
-  var line = 0,
-      col = 0,
-      pos = 0;
-
-  each$1(str.split('\n'), function (lineStr) {
-    line++;
-    col = 0;
-
-    var length = lineStr.length;
-
-    if (index >= pos && index <= pos + length) {
-      col = index - pos;
-      return FALSE;
-    }
-
-    pos += length;
-  });
-
-  return {
-    line: line,
-    col: col
-  };
-}
-
-function parseError$1(str, errorMsg, errorIndex) {
-  if (errorIndex == NULL) {
-    errorMsg += '.';
-  } else {
-    var _getLocationByIndex = getLocationByIndex(str, errorIndex),
-        line = _getLocationByIndex.line,
-        col = _getLocationByIndex.col;
-
-    errorMsg += ', at line ' + line + ', col ' + col + '.';
-  }
-  error$1(errorMsg);
-}
-
-var IF$1 = 1;
-
-var ELSE_IF$1 = 2;
-
-var ELSE$1 = 3;
-
-var EACH$1 = 4;
-
-var PARTIAL$1 = 5;
-
-var IMPORT$1 = 6;
-
-var EXPRESSION = 7;
-
-var SPREAD$1 = 8;
-
-var DIRECTIVE = 9;
-
-var ELEMENT = 10;
-
-var ATTRIBUTE = 11;
-
-var TEXT = 12;
-
-var Context = function () {
-  function Context(data, parent) {
-    classCallCheck(this, Context);
-
-    this.data = copy(data);
-    this.parent = parent;
-    this.cache = {};
-    this.cache[THIS] = data;
-  }
-
-  createClass(Context, [{
-    key: 'push',
-    value: function push(data) {
-      return new Context(data, this);
-    }
-  }, {
-    key: 'set',
-    value: function set(key, value) {
-      var data = this.data,
-          cache = this.cache;
-
-      if (has$1(cache, key)) {
-        delete cache[key];
-      }
-      set$1(data, key, value);
-    }
-  }, {
-    key: 'get',
-    value: function get(key) {
-
-      var instance = this;
-      var _instance = instance,
-          cache = _instance.cache;
-
-
-      if (!has$1(cache, key)) {
-        var result = void 0;
-        var keys$$1 = [key];
-        while (instance) {
-          result = get$1(instance.data, key);
-          if (result) {
-            break;
-          } else {
-            instance = instance.parent;
-            keys$$1.unshift(LEVEL_PARENT);
-          }
-        }
-        key = keys$$1.join(SEPARATOR_PATH);
-        if (result) {
-          cache[key] = result.value;
-        }
-      }
-
-      var value = cache[key];
-      if (key === THIS) {
-        key = LEVEL_CURRENT;
-      }
-
-      return {
-        value: value,
-        keypath: key
-      };
-    }
-  }]);
-  return Context;
-}();
-
-var Scanner = function () {
-  function Scanner(str) {
-    classCallCheck(this, Scanner);
-
-    this.reset(str);
-  }
-
-  createClass(Scanner, [{
-    key: 'reset',
-    value: function reset(str) {
-      this.pos = 0;
-      this.tail = str;
-    }
-  }, {
-    key: 'hasNext',
-    value: function hasNext() {
-      return this.tail;
-    }
-  }, {
-    key: 'nextAfter',
-    value: function nextAfter(pattern) {
-      var tail = this.tail;
-
-      var matches = tail.match(pattern);
-      if (!matches || matches.index) {
-        return '';
-      }
-      var result = matches[0];
-      this.forward(result.length);
-      return result;
-    }
-  }, {
-    key: 'nextBefore',
-    value: function nextBefore(pattern) {
-      var pos = this.pos,
-          tail = this.tail;
-
-      var matches = tail.match(pattern);
-      if (matches) {
-        var index = matches.index;
-
-        if (!index) {
-          return '';
-        }
-        var result = tail.substr(0, index);
-        this.forward(index);
-        return result;
-      } else {
-        this.forward(tail.length);
-        return tail;
-      }
-    }
-  }, {
-    key: 'forward',
-    value: function forward(offset) {
-      this.pos += offset;
-      this.tail = this.tail.slice(offset);
-    }
-  }, {
-    key: 'charAt',
-    value: function charAt(index) {
-      return this.tail[index];
-    }
-  }]);
-  return Scanner;
-}();
-
-var Node$2 = function () {
-  function Node(type, hasChildren) {
-    classCallCheck(this, Node);
-
-    this.type = type;
-    if (hasChildren !== FALSE) {
-      this.children = [];
-    }
-  }
-
-  createClass(Node, [{
-    key: 'addChild',
-    value: function addChild(child) {
-      this.children.push(child);
-    }
-  }, {
-    key: 'renderExpression',
-    value: function renderExpression(data) {
-      var context = data.context,
-          keys$$1 = data.keys,
-          addDeps = data.addDeps;
-
-      var _expr$execute = this.expr.execute(context),
-          value = _expr$execute.value,
-          deps = _expr$execute.deps;
-
-      var newDeps = {};
-      each$$1(deps, function (value, key) {
-        newDeps[resolve(stringify$1(keys$$1), key)] = value;
-      });
-      addDeps(newDeps);
-      return {
-        value: value,
-        deps: newDeps
-      };
-    }
-  }, {
-    key: 'renderChildren',
-    value: function renderChildren(data, children) {
-      if (!children) {
-        children = this.children;
-      }
-      var i = 0,
-          node = void 0,
-          next = void 0;
-      var list = [],
-          item = void 0;
-      while (node = children[i]) {
-        item = node.render(data);
-        if (item) {
-          push$1(list, item);
-          if (node.type === IF$1 || node.type === ELSE_IF$1) {
-            while (next = children[i + 1]) {
-              if (next.type === ELSE_IF$1 || next.type === ELSE$1) {
-                i++;
-              } else {
-                break;
-              }
-            }
-          }
-        }
-        i++;
-      }
-      return list;
-    }
-  }, {
-    key: 'renderTexts',
-    value: function renderTexts(nodes) {
-      var length = nodes.length;
-
-      if (length === 1) {
-        return nodes[0].content;
-      } else if (length > 1) {
-        return nodes.map(function (node) {
-          return node.content;
-        }).join('');
-      }
-    }
-  }]);
-  return Node;
-}();
-
-var Attribute = function (_Node) {
-  inherits(Attribute, _Node);
-
-  function Attribute(name) {
-    classCallCheck(this, Attribute);
-
-    var _this = possibleConstructorReturn(this, (Attribute.__proto__ || Object.getPrototypeOf(Attribute)).call(this, ATTRIBUTE, arguments.length === 1));
-
-    _this.name = name;
-    _this.value = arguments[1];
-    return _this;
-  }
-
-  createClass(Attribute, [{
-    key: 'render',
-    value: function render(data) {
-      var name = this.name;
-
-
-      if (name.type === EXPRESSION) {
-        var _name$renderExpressio = name.renderExpression(data),
-            _value = _name$renderExpressio.value;
-
-        name = _value;
-      }
-
-      var value = this.renderTexts(this.renderChildren(data));
-
-      var node = new Attribute(name, value);
-      node.keypath = stringify$1(data.keys);
-      return [node];
-    }
-  }]);
-  return Attribute;
-}(Node$2);
-
-var Directive = function (_Node) {
-  inherits(Directive, _Node);
-
-  function Directive(name) {
-    classCallCheck(this, Directive);
-
-    var _this = possibleConstructorReturn(this, (Directive.__proto__ || Object.getPrototypeOf(Directive)).call(this, DIRECTIVE, arguments.length === 1));
-
-    _this.name = name;
-    _this.value = arguments[1];
-    return _this;
-  }
-
-  createClass(Directive, [{
-    key: 'render',
-    value: function render(data) {
-      var name = this.name;
-
-
-      var value = this.renderTexts(this.renderChildren(data));
-
-      var node = new Directive(name, value);
-      node.keypath = stringify$1(data.keys);
-      return [node];
-    }
-  }]);
-  return Directive;
-}(Node$2);
-
-var Each = function (_Node) {
-  inherits(Each, _Node);
-
-  function Each(expr, index) {
-    classCallCheck(this, Each);
-
-    var _this = possibleConstructorReturn(this, (Each.__proto__ || Object.getPrototypeOf(Each)).call(this, EACH$1));
-
-    _this.expr = expr;
-    _this.index = index;
-    return _this;
-  }
-
-  createClass(Each, [{
-    key: 'render',
-    value: function render(data) {
-
-      var instance = this;
-      var expr = instance.expr,
-          index = instance.index,
-          children = instance.children;
-
-      var _instance$renderExpre = instance.renderExpression(data),
-          value = _instance$renderExpre.value;
-
-      var iterate = void 0;
-      if (array(value)) {
-        iterate = each$1;
-      } else if (object(value)) {
-        iterate = each$$1;
-      }
-
-      if (iterate) {
-        var _ret = function () {
-          data = copy(data);
-
-          var result = [];
-          var _data = data,
-              context = _data.context,
-              keys$$1 = _data.keys;
-
-          var listContext = context.push(value);
-
-          keys$$1.push(expr.stringify());
-          iterate(value, function (item, i) {
-            if (index) {
-              listContext.set(index, i);
-            }
-            keys$$1.push(i);
-            listContext.set(SPECIAL_KEYPATH, stringify$1(keys$$1));
-
-            data.context = listContext.push(item);
-            push$1(result, instance.renderChildren(data));
-
-            keys$$1.pop();
-          });
-          keys$$1.pop();
-
-          return {
-            v: result
-          };
-        }();
-
-        if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
-      }
-    }
-  }]);
-  return Each;
-}(Node$2);
-
-var Element = function (_Node) {
-  inherits(Element, _Node);
-
-  function Element(name, component) {
-    classCallCheck(this, Element);
-
-    var _this = possibleConstructorReturn(this, (Element.__proto__ || Object.getPrototypeOf(Element)).call(this, ELEMENT));
-
-    _this.name = name;
-    _this.component = component;
-    _this.attrs = [];
-    _this.directives = [];
-    return _this;
-  }
-
-  createClass(Element, [{
-    key: 'addChild',
-    value: function addChild(child) {
-      var children = void 0;
-      if (child.type === ATTRIBUTE) {
-        children = this.attrs;
-      } else if (child.type === DIRECTIVE) {
-        children = this.directives;
-      } else {
-        children = this.children;
-      }
-      children.push(child);
-    }
-  }, {
-    key: 'render',
-    value: function render(data) {
-
-      var instance = this;
-
-      var node = new Element(instance.name, instance.component);
-      node.keypath = stringify$1(data.keys);
-      node.attrs = instance.renderChildren(data, instance.attrs);
-      node.directives = instance.renderChildren(data, instance.directives);
-      node.children = instance.renderChildren(data);
-
-      return [node];
-    }
-  }]);
-  return Element;
-}(Node$2);
-
-var Else = function (_Node) {
-  inherits(Else, _Node);
-
-  function Else() {
-    classCallCheck(this, Else);
-    return possibleConstructorReturn(this, (Else.__proto__ || Object.getPrototypeOf(Else)).call(this, ELSE$1));
-  }
-
-  createClass(Else, [{
-    key: 'render',
-    value: function render(data) {
-      return this.renderChildren(data);
-    }
-  }]);
-  return Else;
-}(Node$2);
-
-var ElseIf = function (_Node) {
-  inherits(ElseIf, _Node);
-
-  function ElseIf(expr) {
-    classCallCheck(this, ElseIf);
-
-    var _this = possibleConstructorReturn(this, (ElseIf.__proto__ || Object.getPrototypeOf(ElseIf)).call(this, ELSE_IF$1));
-
-    _this.expr = expr;
-    return _this;
-  }
-
-  createClass(ElseIf, [{
-    key: 'render',
-    value: function render(data) {
-      var _renderExpression = this.renderExpression(data),
-          value = _renderExpression.value;
-
-      if (value) {
-        return this.renderChildren(data);
-      }
-    }
-  }]);
-  return ElseIf;
-}(Node$2);
-
-var Text = function (_Node) {
-  inherits(Text, _Node);
-
-  function Text(content) {
-    var safe = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : TRUE;
-    classCallCheck(this, Text);
-
-    var _this = possibleConstructorReturn(this, (Text.__proto__ || Object.getPrototypeOf(Text)).call(this, TEXT, FALSE));
-
-    _this.content = content;
-    _this.safe = safe;
-    return _this;
-  }
-
-  createClass(Text, [{
-    key: 'render',
-    value: function render(data) {
-      var node = new Text(this.content, this.safe);
-      node.keypath = stringify$1(data.keys);
-      return [node];
-    }
-  }]);
-  return Text;
-}(Node$2);
-
-var Expression = function (_Node) {
-  inherits(Expression, _Node);
-
-  function Expression(expr) {
-    var safe = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : TRUE;
-    classCallCheck(this, Expression);
-
-    var _this = possibleConstructorReturn(this, (Expression.__proto__ || Object.getPrototypeOf(Expression)).call(this, EXPRESSION, FALSE));
-
-    _this.expr = expr;
-    _this.safe = safe;
-    return _this;
-  }
-
-  createClass(Expression, [{
-    key: 'render',
-    value: function render(data) {
-      var _renderExpression = this.renderExpression(data),
-          value = _renderExpression.value;
-
-      if (value == NULL) {
-        value = '';
-      } else if (func(value) && value.$computed) {
-        value = value();
-      }
-
-      var node = new Text(value, this.safe);
-      node.keypath = stringify$1(data.keys);
-      return [node];
-    }
-  }]);
-  return Expression;
-}(Node$2);
-
-var If = function (_Node) {
-  inherits(If, _Node);
-
-  function If(expr) {
-    classCallCheck(this, If);
-
-    var _this = possibleConstructorReturn(this, (If.__proto__ || Object.getPrototypeOf(If)).call(this, IF$1));
-
-    _this.expr = expr;
-    return _this;
-  }
-
-  createClass(If, [{
-    key: 'render',
-    value: function render(data) {
-      var _renderExpression = this.renderExpression(data),
-          value = _renderExpression.value;
-
-      if (value) {
-        return this.renderChildren(data);
-      }
-    }
-  }]);
-  return If;
-}(Node$2);
-
-var Import = function (_Node) {
-  inherits(Import, _Node);
-
-  function Import(name) {
-    classCallCheck(this, Import);
-
-    var _this = possibleConstructorReturn(this, (Import.__proto__ || Object.getPrototypeOf(Import)).call(this, IMPORT$1, FALSE));
-
-    _this.name = name;
-    return _this;
-  }
-
-  return Import;
-}(Node$2);
-
-var Partial = function (_Node) {
-  inherits(Partial, _Node);
-
-  function Partial(name) {
-    classCallCheck(this, Partial);
-
-    var _this = possibleConstructorReturn(this, (Partial.__proto__ || Object.getPrototypeOf(Partial)).call(this, PARTIAL$1));
-
-    _this.name = name;
-    return _this;
-  }
-
-  return Partial;
-}(Node$2);
-
-var Spread = function (_Node) {
-  inherits(Spread, _Node);
-
-  function Spread(expr) {
-    classCallCheck(this, Spread);
-
-    var _this = possibleConstructorReturn(this, (Spread.__proto__ || Object.getPrototypeOf(Spread)).call(this, SPREAD$1, FALSE));
-
-    _this.expr = expr;
-    return _this;
-  }
-
-  createClass(Spread, [{
-    key: 'render',
-    value: function render(data) {
-      var _renderExpression = this.renderExpression(data),
-          value = _renderExpression.value;
-
-      if (object(value)) {
-        var _ret = function () {
-          var result = [],
-              keypath = stringify$1(data.keys);
-          each$$1(value, function (value, key) {
-            var node = new Attribute(key, value);
-            node.keypath = keypath;
-            result.push(node);
-          });
-          return {
-            v: result
-          };
-        }();
-
-        if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
-      }
-    }
-  }]);
-  return Spread;
-}(Node$2);
 
 var openingDelimiter = '\\{\\{\\s*';
 var closingDelimiter = '\\s*\\}\\}';
@@ -2104,7 +2123,7 @@ var parsers = [{
     if (terms[1]) {
       index = terms[1].trim();
     }
-    return new Each(expr, index);
+    return new Each({ expr: expr, index: index });
   }
 }, {
   test: function test(source) {
@@ -2112,7 +2131,7 @@ var parsers = [{
   },
   create: function create(source) {
     var name = source.slice(IMPORT.length).trim();
-    return name ? new Import(name) : ERROR_PARTIAL_NAME;
+    return name ? new Import({ name: name }) : ERROR_PARTIAL_NAME;
   }
 }, {
   test: function test(source) {
@@ -2120,7 +2139,7 @@ var parsers = [{
   },
   create: function create(source) {
     var name = source.slice(PARTIAL.length).trim();
-    return name ? new Partial(name) : ERROR_PARTIAL_NAME;
+    return name ? new Partial({ name: name }) : ERROR_PARTIAL_NAME;
   }
 }, {
   test: function test(source) {
@@ -2128,7 +2147,7 @@ var parsers = [{
   },
   create: function create(source) {
     var expr = source.slice(IF.length).trim();
-    return expr ? new If(parse$1(expr)) : ERROR_EXPRESSION;
+    return expr ? new If({ expr: parse$1(expr) }) : ERROR_EXPRESSION;
   }
 }, {
   test: function test(source) {
@@ -2138,7 +2157,7 @@ var parsers = [{
     var expr = source.slice(ELSE_IF.length);
     if (expr) {
       popStack();
-      return new ElseIf(parse$1(expr));
+      return new ElseIf({ expr: parse$1(expr) });
     }
     return ERROR_EXPRESSION;
   }
@@ -2157,7 +2176,7 @@ var parsers = [{
   create: function create(source) {
     var expr = source.slice(SPREAD.length);
     if (expr) {
-      return new Spread(parse$1(expr));
+      return new Spread({ expr: parse$1(expr) });
     }
     return ERROR_EXPRESSION;
   }
@@ -2171,7 +2190,10 @@ var parsers = [{
       safe = FALSE;
       source = source.slice(1);
     }
-    return new Expression(parse$1(source), safe);
+    return new Expression({
+      expr: parse$1(source),
+      safe: safe
+    });
   }
 }];
 
@@ -2179,25 +2201,24 @@ var LEVEL_ELEMENT = 0;
 var LEVEL_ATTRIBUTE = 1;
 var LEVEL_TEXT = 2;
 
-function render$1(ast, data) {
+function render$1(ast, data, partial) {
 
   var deps = {};
 
-  var children = ast.render({
-    keys: [],
-    context: new Context(data),
-    addDeps: function addDeps(childrenDeps) {
-      extend(deps, childrenDeps);
-    }
-  });
-
   return {
-    root: children[0],
+    root: ast.render({
+      keys: [],
+      context: new Context(data),
+      partial: partial,
+      addDeps: function addDeps(childrenDeps) {
+        extend(deps, childrenDeps);
+      }
+    }),
     deps: deps
   };
 }
 
-function parse$2(template, getPartial, setPartial) {
+function compile(template) {
 
   if (templateParse[template]) {
     return templateParse[template];
@@ -2216,7 +2237,7 @@ function parse$2(template, getPartial, setPartial) {
       levelNode = void 0;
 
   var nodeStack = [];
-  var rootNode = new Element('root');
+  var rootNode = new Element({ name: 'root' });
   var currentNode = rootNode;
 
   var pushStack = function pushStack(node) {
@@ -2230,36 +2251,17 @@ function parse$2(template, getPartial, setPartial) {
   };
 
   var addChild = function addChild(node) {
-    var name = node.name,
-        type = node.type,
+    var type = node.type,
         content = node.content,
         children = node.children;
 
 
-    switch (type) {
-      case TEXT:
-        if (content = trimBreakline(content)) {
-          node.content = content;
-        } else {
-          return;
-        }
-        break;
-
-      case IMPORT$1:
-        var partial = getPartial(name);
-        if (partial) {
-          each$1(partial.children, function (node) {
-            addChild(node);
-          });
-        } else {
-          error$1('Imported partial ' + name + ' is not found.');
-        }
+    if (type === TEXT) {
+      if (content = trimBreakline(content)) {
+        node.content = content;
+      } else {
         return;
-
-      case PARTIAL$1:
-        setPartial(name, node);
-        pushStack(node);
-        return;
+      }
     }
 
     currentNode.addChild(node);
@@ -2272,7 +2274,7 @@ function parse$2(template, getPartial, setPartial) {
   var parseAttributeValue = function parseAttributeValue(content) {
     match = matchByQuote(content, quote);
     if (match) {
-      addChild(new Text(match));
+      addChild(new Text({ content: match }));
     }
     var _match = match,
         length = _match.length;
@@ -2289,7 +2291,7 @@ function parse$2(template, getPartial, setPartial) {
   };
 
   var parseContent = function parseContent(content) {
-    helperScanner.reset(content);
+    helperScanner.init(content);
     while (helperScanner.hasNext()) {
       content = helperScanner.nextBefore(openingDelimiterPattern);
       helperScanner.nextAfter(openingDelimiterPattern);
@@ -2314,7 +2316,7 @@ function parse$2(template, getPartial, setPartial) {
             content = content.slice(match.index + match[0].length);
             name = match[1];
 
-            levelNode = name === KEY_REF || name === KEY_LAZY || name === KEY_MODEL || name === KEY_UNIQUE || name.startsWith(DIRECTIVE_PREFIX) || name.startsWith(DIRECTIVE_EVENT_PREFIX) ? new Directive(name) : new Attribute(name);
+            levelNode = name === KEY_REF || name === KEY_LAZY || name === KEY_MODEL || name === KEY_UNIQUE || name.startsWith(DIRECTIVE_PREFIX) || name.startsWith(DIRECTIVE_EVENT_PREFIX) ? new Directive({ name: name }) : new Attribute({ name: name });
 
             addChild(levelNode);
             level++;
@@ -2329,7 +2331,7 @@ function parse$2(template, getPartial, setPartial) {
             }
           }
         } else if (content) {
-          addChild(new Text(content));
+          addChild(new Text({ content: content }));
         }
       }
 
@@ -2347,9 +2349,9 @@ function parse$2(template, getPartial, setPartial) {
             if (parser.test(content)) {
               index = parser.create(content, popStack);
               if (string(index)) {
-                parseError$1(template, index, mainScanner.pos + helperScanner.pos);
+                parseError(template, index, mainScanner.pos + helperScanner.pos);
               } else if (level === LEVEL_ATTRIBUTE && node.type === EXPRESSION) {
-                levelNode = new Attribute(index);
+                levelNode = new Attribute({ name: index });
                 level++;
                 addChild(levelNode);
               } else {
@@ -2379,9 +2381,9 @@ function parse$2(template, getPartial, setPartial) {
       name = content.slice(2);
 
       if (mainScanner.charAt(0) !== '>') {
-        return parseError$1(template, 'Illegal tag name', mainScanner.pos);
+        return parseError(template, 'Illegal tag name', mainScanner.pos);
       } else if (name !== currentNode.name) {
-        return parseError$1(template, 'Unexpected closing tag', mainScanner.pos);
+        return parseError(template, 'Unexpected closing tag', mainScanner.pos);
       }
 
       popStack();
@@ -2392,10 +2394,13 @@ function parse$2(template, getPartial, setPartial) {
         name = content.slice(1);
 
         if (componentName.test(name)) {
-          addChild(new Element('div', name));
+          addChild(new Element({
+            name: 'div',
+            component: name
+          }));
           isSelfClosing = TRUE;
         } else {
-          addChild(new Element(name));
+          addChild(new Element({ name: name }));
           isSelfClosing = selfClosingTagName.test(name);
         }
 
@@ -2409,7 +2414,7 @@ function parse$2(template, getPartial, setPartial) {
         content = mainScanner.nextAfter(elementEndPattern);
 
         if (!content) {
-          return parseError$1(template, 'Illegal tag name', mainScanner.pos);
+          return parseError(template, 'Illegal tag name', mainScanner.pos);
         }
 
         if (isSelfClosing) {
@@ -2419,7 +2424,7 @@ function parse$2(template, getPartial, setPartial) {
   }
 
   if (nodeStack.length) {
-    return parseError$1(template, 'Missing end tag (</' + nodeStack[0].name + '>)', mainScanner.pos);
+    return parseError(template, 'Missing end tag (</' + nodeStack[0].name + '>)', mainScanner.pos);
   }
 
   var children = rootNode.children;
@@ -2441,7 +2446,7 @@ function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-function parse$3(str, separator, pair) {
+function parse$2(str, separator, pair) {
   var result = [];
   if (string(str)) {
     (function () {
@@ -2471,7 +2476,7 @@ function parse$3(str, separator, pair) {
 var string$1 = Object.freeze({
 	camelCase: camelCase,
 	capitalize: capitalize,
-	parse: parse$3
+	parse: parse$2
 });
 
 var nextTick$1 = void 0;
@@ -2513,157 +2518,6 @@ function run() {
     task();
   });
 }
-
-var validateProps = function (data, schema, onNotMatched, onNotFound) {
-  var result = {};
-  each$$1(schema, function (rule, key) {
-    var type = rule.type,
-        value = rule.value,
-        required = rule.required;
-
-    if (has$1(data, key)) {
-      if (type) {
-        (function () {
-          var target = data[key],
-              matched = void 0;
-
-          if (string(type)) {
-            matched = is(target, type);
-          } else if (array(type)) {
-            each$1(type, function (t) {
-              if (is(target, t)) {
-                matched = TRUE;
-                return FALSE;
-              }
-            });
-          } else if (func(type)) {
-            matched = type(target, data);
-          }
-          if (matched === TRUE) {
-            result[key] = target;
-          } else {
-            onNotMatched(key);
-          }
-        })();
-      }
-    } else if (required) {
-      onNotFound(key);
-    } else if (has$1(rule, 'value')) {
-      result[key] = func(value) ? value(data) : value;
-    }
-  });
-  return result;
-};
-
-function updateDeps(instance, newDeps, oldDeps, watcher) {
-
-  var addedDeps = void 0,
-      removedDeps = void 0;
-  if (array(oldDeps)) {
-    addedDeps = diff(oldDeps, newDeps);
-    removedDeps = diff(newDeps, oldDeps);
-  } else {
-    addedDeps = newDeps;
-  }
-
-  each$1(addedDeps, function (keypath) {
-    instance.watch(keypath, watcher);
-  });
-
-  if (removedDeps) {
-    each$1(removedDeps, function (dep) {
-      instance.$watchEmitter.off(dep, watcher);
-    });
-  }
-}
-
-function refresh(instance, immediate) {
-  if (immediate) {
-    diff$1(instance);
-  } else if (!instance.$diffing) {
-    instance.$diffing = TRUE;
-    add(function () {
-      delete instance.$diffing;
-      diff$1(instance);
-    });
-  }
-}
-
-function diff$1(instance) {
-  var $children = instance.$children,
-      $watchCache = instance.$watchCache,
-      $watchEmitter = instance.$watchEmitter,
-      $computedDeps = instance.$computedDeps;
-
-  var keys$$1 = [];
-  var addKey = function addKey(key, push$$1) {
-    if (!has$2(keys$$1, key)) {
-      if (push$$1) {
-        keys$$1.push(key);
-      } else {
-        keys$$1.unshift(key);
-      }
-    }
-  };
-
-  var pickDeps = function pickDeps(key) {
-    if ($computedDeps && !falsy($computedDeps[key])) {
-      each$1($computedDeps[key], pickDeps);
-      addKey(key, TRUE);
-    } else {
-      addKey(key);
-    }
-  };
-
-  each$$1($watchCache, function (value, key) {
-    pickDeps(key);
-  });
-
-  var changes = {};
-
-  each$1(keys$$1, function (key) {
-    var oldValue = $watchCache[key];
-    var newValue = instance.get(key);
-    if (newValue !== oldValue) {
-      $watchCache[key] = newValue;
-      $watchEmitter.fire(key, [newValue, oldValue, key], instance);
-    }
-  });
-
-  var $dirty = instance.$dirty,
-      $dirtyIgnore = instance.$dirtyIgnore;
-
-
-  if ($dirty) {
-    delete instance.$dirty;
-  }
-  if ($dirtyIgnore) {
-    delete instance.$dirtyIgnore;
-    return;
-  }
-
-  if ($dirty) {
-    instance.updateView();
-  } else if ($children) {
-    each$1($children, function (child) {
-      diff$1(child);
-    });
-  }
-}
-
-function validate(props, schema) {
-  return validateProps(props, schema, function (key) {
-    warn(key + ' is not matched.');
-  }, function (key) {
-    warn(key + ' is not found.');
-  });
-}
-
-var component$1 = Object.freeze({
-	updateDeps: updateDeps,
-	refresh: refresh,
-	validate: validate
-});
 
 var vnode = function (sel, data, children, text, elm) {
   var key = data === undefined ? undefined : data.key;
@@ -2761,7 +2615,7 @@ function createKeyToOldIdx(children, beginIdx, endIdx) {
 
 var hooks = ['create', 'update', 'remove', 'destroy', 'pre', 'post'];
 
-function init(modules, api) {
+function init$1(modules, api) {
   var i,
       j,
       cbs = {};
@@ -3008,7 +2862,7 @@ function init(modules, api) {
   };
 }
 
-var snabbdom = { init: init };
+var snabbdom = { init: init$1 };
 
 var VNode$1 = vnode;
 var is$5 = is$3;
@@ -3258,7 +3112,7 @@ function pushTextNode(list, html, start) {
     }
 }
 
-var parse$4 = function parse$4(html, options) {
+var parse$3 = function parse$3(html, options) {
     options || (options = {});
     options.components || (options.components = empty);
     var result = [];
@@ -3406,7 +3260,7 @@ exports.default = function (html) {
     return res;
 };
 
-var _parse = parse$4;
+var _parse = parse$3;
 
 var _parse2 = _interopRequireDefault(_parse);
 
@@ -3827,13 +3681,13 @@ function create$1(root, instance) {
             node: node,
             directive: instance.directive('component')
           });
-        } else {
+        } else if (array(node.attrs)) {
           each$1(node.attrs, function (node) {
             var name = node.name,
                 value = node.value;
 
             if (name === 'style') {
-              var list = parse$3(value, ';', ':');
+              var list = parse$2(value, ';', ':');
               if (list.length) {
                 styles = {};
                 each$1(list, function (item) {
@@ -3848,38 +3702,40 @@ function create$1(root, instance) {
           });
         }
 
-        each$1(node.directives, function (node) {
-          var name = node.name;
+        if (array(node.directives)) {
+          each$1(node.directives, function (node) {
+            var name = node.name;
 
 
-          var directiveName = void 0;
-          if (name.startsWith(DIRECTIVE_EVENT_PREFIX)) {
-            name = name.slice(DIRECTIVE_EVENT_PREFIX.length);
-            directiveName = 'event';
-          } else if (name.startsWith(DIRECTIVE_PREFIX)) {
-            name = name.slice(DIRECTIVE_PREFIX.length);
+            var directiveName = void 0;
+            if (name.startsWith(DIRECTIVE_EVENT_PREFIX)) {
+              name = name.slice(DIRECTIVE_EVENT_PREFIX.length);
+              directiveName = 'event';
+            } else if (name.startsWith(DIRECTIVE_PREFIX)) {
+              name = name.slice(DIRECTIVE_PREFIX.length);
 
-            if (name !== KEY_REF && name !== KEY_LAZY && name !== KEY_MODEL) {
-              directiveName = name;
+              if (name !== KEY_REF && name !== KEY_LAZY && name !== KEY_MODEL) {
+                directiveName = name;
+              }
+            } else if (name === KEY_REF) {
+              name = directiveName = 'ref';
+            } else if (name === KEY_LAZY) {
+              name = directiveName = 'lazy';
+            } else if (name === KEY_MODEL) {
+              name = directiveName = 'model';
+            } else if (name === KEY_UNIQUE) {
+              data.key = node.value;
             }
-          } else if (name === KEY_REF) {
-            name = directiveName = 'ref';
-          } else if (name === KEY_LAZY) {
-            name = directiveName = 'lazy';
-          } else if (name === KEY_MODEL) {
-            name = directiveName = 'model';
-          } else if (name === KEY_UNIQUE) {
-            data.key = node.value;
-          }
 
-          if (directiveName) {
-            directives.push({
-              name: name,
-              node: node,
-              directive: instance.directive(directiveName)
-            });
-          }
-        });
+            if (directiveName) {
+              directives.push({
+                name: name,
+                node: node,
+                directive: instance.directive(directiveName)
+              });
+            }
+          });
+        }
 
         if (styles) {
           data.style = styles;
@@ -3970,6 +3826,47 @@ var toNumber = function (str) {
     return +str;
   }
   return defaultValue;
+};
+
+var validate = function (data, schema, onNotMatched, onNotFound) {
+  var result = {};
+  each$$1(schema, function (rule, key) {
+    var type = rule.type,
+        value = rule.value,
+        required = rule.required;
+
+    if (has$1(data, key)) {
+      if (type) {
+        (function () {
+          var target = data[key],
+              matched = void 0;
+
+          if (string(type)) {
+            matched = is(target, type);
+          } else if (array(type)) {
+            each$1(type, function (t) {
+              if (is(target, t)) {
+                matched = TRUE;
+                return FALSE;
+              }
+            });
+          } else if (func(type)) {
+            matched = type(target, data);
+          }
+          if (matched === TRUE) {
+            result[key] = target;
+          } else {
+            onNotMatched(key);
+          }
+        })();
+      }
+    } else if (required) {
+      onNotFound(key);
+    } else if (has$1(rule, 'value')) {
+      result[key] = func(value) ? value(data) : value;
+    }
+  });
+  return result;
 };
 
 var refDt = {
@@ -4301,11 +4198,6 @@ function getComponentInfo(node, instance, directives, callback) {
         }
       }
     }
-    var propTypes = options.propTypes;
-
-    if (object(propTypes)) {
-      props = validate(props, propTypes);
-    }
     callback(props, options);
   });
 }
@@ -4541,7 +4433,7 @@ var Yox = function () {
         instance.$dirty = TRUE;
       };
       execute$1(options[BEFORE_MOUNT], instance);
-      instance.$template = instance.compileTemplate(template);
+      instance.$template = Yox.compile(template);
       instance.updateView(el);
     }
   }
@@ -4571,7 +4463,7 @@ var Yox = function () {
       keypath = normalize(keypath);
 
       if (string(context)) {
-        var keys$$1 = parse$$1(context);
+        var keys$$1 = parse(context);
         while (TRUE) {
           keys$$1.push(keypath);
           context = stringify$1(keys$$1);
@@ -4721,7 +4613,15 @@ var Yox = function () {
         immediate = args[1];
       }
 
-      refresh(instance, immediate);
+      if (immediate) {
+        diff$$1(instance);
+      } else if (!instance.$diffing) {
+        instance.$diffing = TRUE;
+        add(function () {
+          delete instance.$diffing;
+          diff$$1(instance);
+        });
+      }
     }
   }, {
     key: 'updateView',
@@ -4753,7 +4653,7 @@ var Yox = function () {
         }
       });
 
-      var _view$render = render$1($template, context),
+      var _view$render = render$1($template, context, instance.partial.bind(instance)),
           root = _view$render.root,
           deps = _view$render.deps;
 
@@ -4778,25 +4678,18 @@ var Yox = function () {
     key: 'create',
     value: function create(options, extra) {
       options = extend({}, options, extra);
+      var _options = options,
+          props = _options.props,
+          propTypes = _options.propTypes;
+
+      if (object(props) && object(propTypes)) {
+        options.props = Yox.validate(props, propTypes);
+      }
       options.parent = this;
       var child = new Yox(options);
       var children = this.$children || (this.$children = []);
       children.push(child);
       return child;
-    }
-  }, {
-    key: 'compileTemplate',
-    value: function compileTemplate(template) {
-      var instance = this;
-      if (string(template)) {
-        return parse$2(template, function (id) {
-          var partial$$1 = instance.partial(id);
-          return string(partial$$1) ? instance.compileTemplate(partial$$1) : partial$$1;
-        }, function (id, node) {
-          instance.partial(id, node);
-        });
-      }
-      return template;
     }
   }, {
     key: 'compileValue',
@@ -4860,7 +4753,7 @@ var Yox = function () {
     }
   }, {
     key: 'component',
-    value: function component$1(id, value) {
+    value: function component(id, value) {
 
       var callback = void 0;
       if (func(value)) {
@@ -4882,8 +4775,8 @@ var Yox = function () {
 
           if (func(options)) {
             (function () {
-              var _options = options,
-                  $pending = _options.$pending;
+              var _options2 = options,
+                  $pending = _options2.$pending;
 
               if (!$pending) {
                 $pending = options.$pending = [callback];
@@ -5052,11 +4945,105 @@ each$1(['component', 'directive', 'filter', 'partial'], function (type) {
 
 Yox.nextTick = add;
 
-Yox.validate = validate;
+Yox.compile = function (template) {
+  return string(template) ? compile(template) : template;
+};
+
+Yox.validate = function (props, schema) {
+  return validate(props, schema, function (key) {
+    warn('Passing a "' + key + '" prop is not matched.');
+  }, function (key) {
+    warn('Passing a "' + key + '" prop is not found.');
+  });
+};
 
 Yox.use = function (plugin) {
   plugin.install(Yox);
 };
+
+function updateDeps(instance, newDeps, oldDeps, watcher) {
+
+  var addedDeps = void 0,
+      removedDeps = void 0;
+  if (array(oldDeps)) {
+    addedDeps = diff$1(oldDeps, newDeps);
+    removedDeps = diff$1(newDeps, oldDeps);
+  } else {
+    addedDeps = newDeps;
+  }
+
+  each$1(addedDeps, function (keypath) {
+    instance.watch(keypath, watcher);
+  });
+
+  if (removedDeps) {
+    each$1(removedDeps, function (dep) {
+      instance.$watchEmitter.off(dep, watcher);
+    });
+  }
+}
+
+function diff$$1(instance) {
+  var $children = instance.$children,
+      $watchCache = instance.$watchCache,
+      $watchEmitter = instance.$watchEmitter,
+      $computedDeps = instance.$computedDeps;
+
+  var keys$$1 = [];
+  var addKey = function addKey(key, push$$1) {
+    if (!has$2(keys$$1, key)) {
+      if (push$$1) {
+        keys$$1.push(key);
+      } else {
+        keys$$1.unshift(key);
+      }
+    }
+  };
+
+  var pickDeps = function pickDeps(key) {
+    if ($computedDeps && !falsy($computedDeps[key])) {
+      each$1($computedDeps[key], pickDeps);
+      addKey(key, TRUE);
+    } else {
+      addKey(key);
+    }
+  };
+
+  each$$1($watchCache, function (value, key) {
+    pickDeps(key);
+  });
+
+  var changes = {};
+
+  each$1(keys$$1, function (key) {
+    var oldValue = $watchCache[key];
+    var newValue = instance.get(key);
+    if (newValue !== oldValue) {
+      $watchCache[key] = newValue;
+      $watchEmitter.fire(key, [newValue, oldValue, key], instance);
+    }
+  });
+
+  var $dirty = instance.$dirty,
+      $dirtyIgnore = instance.$dirtyIgnore;
+
+
+  if ($dirty) {
+    delete instance.$dirty;
+  }
+  if ($dirtyIgnore) {
+    delete instance.$dirtyIgnore;
+    return;
+  }
+
+  if ($dirty) {
+    instance.updateView();
+  } else if ($children) {
+    each$1($children, function (child) {
+      diff$$1(child);
+    });
+  }
+}
 
 Yox.directive({
   ref: refDt,

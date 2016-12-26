@@ -2,11 +2,12 @@
 import Node from './Node'
 import * as nodeType from '../nodeType'
 
-import * as is from '../../util/is'
-import * as array from '../../util/array'
-import * as object from '../../util/object'
 import * as syntax from '../../config/syntax'
-import * as keypathUtil from '../../util/keypath'
+
+import * as is from 'yox-common/util/is'
+import * as array from 'yox-common/util/array'
+import * as object from 'yox-common/util/object'
+import * as keypathUtil from 'yox-common/util/keypath'
 
 /**
  * each 节点
@@ -16,10 +17,9 @@ import * as keypathUtil from '../../util/keypath'
  */
 export default class Each extends Node {
 
-  constructor(expr, index) {
+  constructor(options) {
     super(nodeType.EACH)
-    this.expr = expr
-    this.index = index
+    object.extend(this, options)
   }
 
   render(data) {
@@ -45,12 +45,14 @@ export default class Each extends Node {
       let listContext = context.push(value)
 
       keys.push(expr.stringify())
+
       iterate(
         value,
         function (item, i) {
           if (index) {
             listContext.set(index, i)
           }
+
           keys.push(i)
           listContext.set(
             syntax.SPECIAL_KEYPATH,
@@ -66,6 +68,7 @@ export default class Each extends Node {
           keys.pop()
         }
       )
+
       keys.pop()
 
       return result

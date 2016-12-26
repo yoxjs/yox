@@ -4,9 +4,10 @@ import Text from './Text'
 
 import * as nodeType from '../nodeType'
 
-import * as is from '../../util/is'
-import * as env from '../../config/env'
-import * as keypathUtil from '../../util/keypath'
+import * as is from 'yox-common/util/is'
+import * as env from 'yox-common/util/env'
+import * as object from 'yox-common/util/object'
+import * as keypathUtil from 'yox-common/util/keypath'
 
 /**
  * 表达式节点
@@ -16,10 +17,9 @@ import * as keypathUtil from '../../util/keypath'
  */
 export default class Expression extends Node {
 
-  constructor(expr, safe = env.TRUE) {
+  constructor(options) {
     super(nodeType.EXPRESSION, env.FALSE)
-    this.expr = expr
-    this.safe = safe
+    object.extend(this, options)
   }
 
   render(data) {
@@ -32,9 +32,11 @@ export default class Expression extends Node {
       value = value()
     }
 
-    let node = new Text(value, this.safe)
-    node.keypath = keypathUtil.stringify(data.keys)
-    return [ node ]
+    return new Text({
+      content: value,
+      safe: this.safe,
+      keypath: keypathUtil.stringify(data.keys),
+    })
 
   }
 

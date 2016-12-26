@@ -1,11 +1,9 @@
 
-import * as env from '../config/env'
-
-import * as is from '../util/is'
-import * as array from '../util/array'
-import * as object from '../util/object'
-import * as string from '../util/string'
-import * as componentUtil from '../util/component'
+import * as is from 'yox-common/util/is'
+import * as env from 'yox-common/util/env'
+import * as array from 'yox-common/util/array'
+import * as object from 'yox-common/util/object'
+import * as string from 'yox-common/util/string'
 
 function getComponentInfo(node, instance, directives, callback) {
   let { component, attrs } = node
@@ -28,10 +26,6 @@ function getComponentInfo(node, instance, directives, callback) {
             props.value = result.value
           }
         }
-      }
-      let { propTypes } = options
-      if (is.object(propTypes)) {
-        props = componentUtil.validate(props, propTypes)
       }
       callback(props, options)
     }

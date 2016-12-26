@@ -2,7 +2,7 @@
 import Node from './Node'
 import * as nodeType from '../nodeType'
 
-import * as object from '../../util/object'
+import * as object from 'yox-common/util/object'
 
 /**
  * Binary 节点

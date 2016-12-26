@@ -2,6 +2,8 @@
 import Node from './Node'
 import * as nodeType from '../nodeType'
 
+import * as object from 'yox-common/util/object'
+
 /**
  * if 节点
  *
@@ -9,16 +11,13 @@ import * as nodeType from '../nodeType'
  */
 export default class If extends Node {
 
-  constructor(expr) {
+  constructor(options) {
     super(nodeType.IF)
-    this.expr = expr
+    object.extend(this, options)
   }
 
   render(data) {
-    let { value } = this.renderExpression(data)
-    if (value) {
-      return this.renderChildren(data)
-    }
+    return this.renderCondition(data)
   }
 
 }

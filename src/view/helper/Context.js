@@ -1,8 +1,7 @@
 
-import * as env from '../../config/env'
-import * as array from '../../util/array'
-import * as object from '../../util/object'
-import * as keypath from '../../util/keypath'
+import * as array from 'yox-common/util/array'
+import * as object from 'yox-common/util/object'
+import * as keypathUtil from 'yox-common/util/keypath'
 
 export default class Context {
 
@@ -14,53 +13,52 @@ export default class Context {
     this.data = object.copy(data)
     this.parent = parent
     this.cache = { }
-    this.cache[env.THIS] = data
   }
 
   push(data) {
     return new Context(data, this)
   }
 
-  set(key, value) {
+  set(keypath, value) {
     let { data, cache } = this
-    if (object.has(cache, key)) {
-      delete cache[key]
+    if (object.has(cache, keypath)) {
+      delete cache[keypath]
     }
-    object.set(data, key, value)
+    object.set(data, keypath, value)
   }
 
-  get(key) {
+  get(keypath) {
 
     let instance = this
     let { cache } = instance
 
-    if (!object.has(cache, key)) {
+    if (!object.has(cache, keypath)) {
       let result
-      let keys = [ key ]
+      let keys = [ keypath ]
       while (instance) {
-        result = object.get(instance.data, key)
+        result = object.get(instance.data, keypath)
         if (result) {
           break
         }
         else {
           instance = instance.parent
-          keys.unshift(keypath.LEVEL_PARENT)
+          keys.unshift(keypathUtil.LEVEL_PARENT)
         }
       }
-      key = keys.join(keypath.SEPARATOR_PATH)
+      keypath = keys.join(keypathUtil.SEPARATOR_PATH)
       if (result) {
-        cache[key] = result.value
+        cache[keypath] = result.value
       }
     }
 
-    let value = cache[key]
-    if (key === env.THIS) {
-      key = keypath.LEVEL_CURRENT
+    let value = cache[keypath]
+    if (keypath === 'this') {
+      keypath = keypathUtil.LEVEL_CURRENT
     }
 
     return {
       value,
-      keypath: key,
+      keypath,
     }
 
   }

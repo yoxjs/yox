@@ -1,9 +1,9 @@
 
-import * as array from '../../util/array'
-import * as object from '../../util/object'
+import * as array from 'yox-common/util/array'
+import * as object from 'yox-common/util/object'
 
-import Event from '../../util/Event'
-import Emitter from '../../util/Emitter'
+import Event from 'yox-common/util/Event'
+import Emitter from 'yox-common/util/Emitter'
 
 import * as native from './nativeModern'
 

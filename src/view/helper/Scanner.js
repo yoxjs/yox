@@ -2,10 +2,10 @@
 export default class Scanner {
 
   constructor(str) {
-    this.reset(str)
+    this.init(str)
   }
 
-  reset(str) {
+  init(str) {
     this.pos = 0
     this.tail = str
   }

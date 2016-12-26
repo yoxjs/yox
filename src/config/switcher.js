@@ -1,5 +1,5 @@
 
-import * as env from './env'
+import * as env from 'yox-common/util/env'
 
 /**
  * 是否是调试状态

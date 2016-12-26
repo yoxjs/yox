@@ -1,5 +1,5 @@
 
-import * as env from '../config/env'
+import * as env from 'yox-common/util/env'
 
 import * as util from './util'
 

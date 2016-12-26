@@ -2,6 +2,8 @@
 import Node from './Node'
 import * as nodeType from '../nodeType'
 
+import * as object from 'yox-common/util/object'
+
 /**
  * partial 节点
  *
@@ -9,9 +11,14 @@ import * as nodeType from '../nodeType'
  */
 export default class Partial extends Node {
 
-  constructor(name) {
+  constructor(options) {
     super(nodeType.PARTIAL)
-    this.name = name
+    object.extend(this, options)
+  }
+
+  render(data) {
+    data.partial(this.name, this.children[0])
+    return this.renderChildren(data)
   }
 
 }

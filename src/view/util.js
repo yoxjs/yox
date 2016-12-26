@@ -1,8 +1,7 @@
 
-import * as env from '../config/env'
-
-import * as array from '../util/array'
-import * as logger from '../util/logger'
+import * as env from 'yox-common/util/env'
+import * as array from 'yox-common/util/array'
+import * as logger from 'yox-common/util/logger'
 
 const breaklinePattern = /^[ \t]*\n[ \t]*$/
 const breaklinePrefixPattern = /^[ \t]*\n/

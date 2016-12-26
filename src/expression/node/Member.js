@@ -3,10 +3,10 @@ import Node from './Node'
 import Literal from './Literal'
 import * as nodeType from '../nodeType'
 
-import * as is from '../../util/is'
-import * as array from '../../util/array'
-import * as object from '../../util/object'
-import * as keypathUtil from '../../util/keypath'
+import * as is from 'yox-common/util/is'
+import * as array from 'yox-common/util/array'
+import * as object from 'yox-common/util/object'
+import * as keypathUtil from 'yox-common/util/keypath'
 
 /**
  * Member 节点

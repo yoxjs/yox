@@ -2,9 +2,9 @@
 import Node from './Node'
 import * as nodeType from '../nodeType'
 
-import * as env from '../../config/env'
-import * as object from '../../util/object'
-import execute from '../../function/execute'
+import * as env from 'yox-common/util/env'
+import * as object from 'yox-common/util/object'
+import execute from 'yox-common/function/execute'
 
 /**
  * Call 节点
