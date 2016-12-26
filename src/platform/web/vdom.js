@@ -70,8 +70,8 @@ export function create(root, instance) {
 
         if (node.component) {
           directives.push({
-            name: 'component',
             node: node,
+            name: 'component',
             directive: instance.directive('component'),
           })
         }
@@ -111,6 +111,7 @@ export function create(root, instance) {
               }
               else {
                 directives.push({
+                  name,
                   node: node,
                   directive: instance.directive(name),
                 })
@@ -136,7 +137,6 @@ export function create(root, instance) {
                   directive[type]({
                     el: vnode.elm,
                     node: item.node,
-                    name: item.name,
                     directives: map,
                     attrs,
                     instance,

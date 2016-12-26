@@ -3765,8 +3765,8 @@ function create$1(root, instance) {
 
         if (node.component) {
           directives.push({
-            name: 'component',
             node: node,
+            name: 'component',
             directive: instance.directive('component')
           });
         } else if (array(node.attrs)) {
@@ -3798,6 +3798,7 @@ function create$1(root, instance) {
               data.key = node.value;
             } else {
               directives.push({
+                name: name,
                 node: node,
                 directive: instance.directive(name)
               });
@@ -3822,7 +3823,6 @@ function create$1(root, instance) {
                   directive[type]({
                     el: vnode.elm,
                     node: item.node,
-                    name: item.name,
                     directives: map,
                     attrs: attrs,
                     instance: instance
