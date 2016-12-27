@@ -231,7 +231,7 @@ function last(array$$1) {
  * @param {*} item 待删除项
  * @param {?boolean} strict 是否全等判断，默认是全等
  */
-function remove(array$$1, item, strict) {
+function remove$1(array$$1, item, strict) {
   var index = indexOf(array$$1, item, strict);
   if (index >= 0) {
     array$$1.splice(index, 1);
@@ -258,7 +258,7 @@ var array$1 = Object.freeze({
 	indexOf: indexOf,
 	has: has$1,
 	last: last,
-	remove: remove,
+	remove: remove$1,
 	falsy: falsy
 });
 
@@ -730,7 +730,7 @@ var Emitter = function () {
           if (listener == NULL) {
             list.length = 0;
           } else {
-            remove(list, listener);
+            remove$1(list, listener);
           }
           if (!list.length) {
             removed.push(type);
@@ -1066,6 +1066,9 @@ var DIRECTIVE_LAZY = 'lazy';
 var DIRECTIVE_MODEL = 'model';
 
 var KEYWORD_UNIQUE = 'key';
+
+var DELIMITER_OPENING = '\\{\\{\\s*';
+var DELIMITER_CLOSING = '\\s*\\}\\}';
 
 /**
  * if 节点
@@ -1608,7 +1611,7 @@ var Each = function (_Node) {
 
           var listContext = context.push(value);
 
-          keys$$1.push(expr.stringify());
+          keys$$1.push(normalize(expr.stringify()));
 
           iterate(value, function (item, i) {
             if (index) {
@@ -2937,10 +2940,8 @@ function compile$1(content) {
 
 var cache = {};
 
-var openingDelimiter = '\\{\\{\\s*';
-var closingDelimiter = '\\s*\\}\\}';
-var openingDelimiterPattern = new RegExp(openingDelimiter);
-var closingDelimiterPattern = new RegExp(closingDelimiter);
+var openingDelimiterPattern = new RegExp(DELIMITER_OPENING);
+var closingDelimiterPattern = new RegExp(DELIMITER_CLOSING);
 
 var elementPattern = /<(?:\/)?[-a-z]\w*/i;
 var elementEndPattern = /(?:\/)?>/;
@@ -4787,7 +4788,7 @@ var checkboxControl = {
       if (el.checked) {
         value.push(el.value);
       } else {
-        remove(value, el.value, FALSE);
+        remove$1(value, el.value, FALSE);
       }
       instance.set(keypath, copy(value));
     } else {
@@ -5124,7 +5125,18 @@ var Yox = function () {
       instance.$parent = parent;
     }
 
-    extend(instance, methods);
+    if (methods) {
+      (function () {
+        var prototype = instance.constructor.prototype;
+
+        each$1(methods, function (fn, name) {
+          if (has$2(prototype, name)) {
+            error$1('Passing a \'' + name + '\' method is conflicted with built-in methods.');
+          }
+          instance[name] = fn;
+        });
+      })();
+    }
     extend(instance, extensions);
 
     instance.component(components);
@@ -5497,7 +5509,7 @@ var Yox = function () {
 
       var instance = this;
       if (value.indexOf('(') > 0) {
-        var _ret2 = function () {
+        var _ret3 = function () {
           var ast = compile$1(value);
           if (ast.type === CALL) {
             return {
@@ -5540,7 +5552,7 @@ var Yox = function () {
           }
         }();
 
-        if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
+        if ((typeof _ret3 === 'undefined' ? 'undefined' : _typeof(_ret3)) === "object") return _ret3.v;
       } else {
         return function (event$$1) {
           instance.fire(value, event$$1);
@@ -5705,7 +5717,7 @@ var Yox = function () {
       }
 
       if ($parent && $parent.$children) {
-        remove($parent.$children, instance);
+        remove$1($parent.$children, instance);
       }
 
       if ($currentNode) {
@@ -5794,11 +5806,53 @@ var Yox = function () {
       }
       return value;
     }
+  }, {
+    key: 'unshift',
+    value: function unshift(keypath, item) {
+      handleArray(this, keypath, function (list) {
+        list.unshift(item);
+      });
+    }
+  }, {
+    key: 'shift',
+    value: function shift(keypath) {
+      return handleArray(this, keypath, function (list) {
+        return list.shift();
+      });
+    }
+  }, {
+    key: 'push',
+    value: function push(keypath, item) {
+      handleArray(this, keypath, function (list) {
+        list.push(item);
+      });
+    }
+  }, {
+    key: 'pop',
+    value: function pop(keypath) {
+      return handleArray(this, keypath, function (list) {
+        return list.pop();
+      });
+    }
+  }, {
+    key: 'remove',
+    value: function remove(keypath, item) {
+      handleArray(this, keypath, function (list) {
+        remove$1(list, item);
+      });
+    }
+  }, {
+    key: 'removeAt',
+    value: function removeAt(keypath, index) {
+      handleArray(this, keypath, function (list) {
+        list.splice(index, 1);
+      });
+    }
   }]);
   return Yox;
 }();
 
-Yox.version = '0.19.13';
+Yox.version = '0.19.14';
 
 /**
  * 开关配置
@@ -5998,6 +6052,14 @@ function diff$$1(instance) {
       diff$$1(child);
     });
   }
+}
+
+function handleArray(instance, keypath, handler) {
+  var array$$1 = instance.get(keypath);
+  array$$1 = array(array$$1) ? copy(array$$1) : [];
+  var result = handler(array$$1);
+  instance.set(keypath, array$$1);
+  return result;
 }
 
 // 全局注册内置指令

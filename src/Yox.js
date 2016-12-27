@@ -229,7 +229,18 @@ export default class Yox {
       instance.$parent = parent
     }
 
-    object.extend(instance, methods)
+    if (methods) {
+      let { prototype } = instance.constructor
+      object.each(
+        methods,
+        function (fn, name) {
+          if (object.has(prototype, name)) {
+            logger.error(`Passing a '${name}' method is conflicted with built-in methods.`)
+          }
+          instance[name] = fn
+        }
+      )
+    }
     object.extend(instance, extensions)
 
     instance.component(components)
@@ -878,14 +889,75 @@ export default class Yox {
     return value
   }
 
+  unshift(keypath, item) {
+    handleArray(
+      this,
+      keypath,
+      function (list) {
+        list.unshift(item)
+      }
+    )
+  }
+
+  shift(keypath) {
+    return handleArray(
+      this,
+      keypath,
+      function (list) {
+        return list.shift()
+      }
+    )
+  }
+
+  push(keypath, item) {
+    handleArray(
+      this,
+      keypath,
+      function (list) {
+        list.push(item)
+      }
+    )
+  }
+
+  pop(keypath) {
+    return handleArray(
+      this,
+      keypath,
+      function (list) {
+        return list.pop()
+      }
+    )
+  }
+
+  remove(keypath, item) {
+    handleArray(
+      this,
+      keypath,
+      function (list) {
+        array.remove(list, item)
+      }
+    )
+  }
+
+  removeAt(keypath, index) {
+    handleArray(
+      this,
+      keypath,
+      function (list) {
+        list.splice(index, 1)
+      }
+    )
+  }
+
 }
+
 
 /**
  * 版本
  *
  * @type {string}
  */
-Yox.version = '0.19.13'
+Yox.version = '0.19.14'
 
 /**
  * 开关配置
@@ -1122,6 +1194,16 @@ function diff(instance) {
     )
   }
 
+}
+
+function handleArray(instance, keypath, handler) {
+  let array = instance.get(keypath)
+  array = is.array(array)
+    ? object.copy(array)
+    : [ ]
+  let result = handler(array)
+  instance.set(keypath, array)
+  return result
 }
 
 import refDt from './directive/ref'
