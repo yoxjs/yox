@@ -3257,7 +3257,7 @@ function compile$$1(template) {
               index = parser.create(content, popStack);
               if (string(index)) {
                 parseError(template, index, mainScanner.pos + helperScanner.pos);
-              } else if (level === LEVEL_ATTRIBUTE && node.type === EXPRESSION) {
+              } else if (level === LEVEL_ATTRIBUTE && index.type === EXPRESSION) {
                 levelNode = new Attribute({ name: index });
                 level++;
                 addChild(levelNode);
@@ -5852,7 +5852,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.19.14';
+Yox.version = '0.19.15';
 
 /**
  * 开关配置

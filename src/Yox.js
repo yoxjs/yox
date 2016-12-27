@@ -957,7 +957,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.19.14'
+Yox.version = '0.19.15'
 
 /**
  * 开关配置
