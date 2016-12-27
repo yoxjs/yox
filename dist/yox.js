@@ -958,11 +958,13 @@ var Context = function () {
 
       if (instance) {
         var _instance = instance,
+            data = _instance.data,
             cache = _instance.cache;
 
         if (!has$2(cache, keypath)) {
-          var result = void 0;
           if (keypath) {
+            var result = void 0;
+
             if (lookup) {
               var keys$$1 = [keypath];
               while (instance) {
@@ -976,14 +978,14 @@ var Context = function () {
               }
               keypath = keys$$1.join(SEPARATOR_PATH);
             } else {
-              result = get$1(instance.data, keypath);
+              result = get$1(data, keypath);
+            }
+
+            if (result) {
+              cache[keypath] = result.value;
             }
           } else {
-            result = instance.data;
-          }
-
-          if (result) {
-            cache[keypath] = result.value;
+            cache[keypath] = data;
           }
         }
 
@@ -994,7 +996,7 @@ var Context = function () {
       }
 
       return {
-        keypath: keypath
+        keypath: key
       };
     }
   }]);
@@ -1062,7 +1064,7 @@ var Scanner = function () {
   }, {
     key: 'charAt',
     value: function charAt(index) {
-      return this.tail[index];
+      return charAt$1(this.tail, index);
     }
   }]);
   return Scanner;
@@ -1477,7 +1479,7 @@ var Import = function (_Node) {
       var partial = data.partial(this.name);
       if (partial.type === ELEMENT) {
         return partial.render(data);
-      } else {
+      } else if (partial.type === PARTIAL$1) {
         return this.renderChildren(data, partial.children);
       }
     }
@@ -4862,7 +4864,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.19.11';
+Yox.version = '0.19.12';
 
 Yox.switcher = switcher;
 
