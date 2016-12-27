@@ -24,7 +24,6 @@ import * as expressionNodeType from 'yox-expression-compiler/src/nodeType'
 
 import * as pattern from './config/pattern'
 import * as registry from './config/registry'
-import * as switcher from './config/switcher'
 import * as lifecycle from './config/lifecycle'
 
 import * as vdom from './platform/web/vdom'
@@ -217,7 +216,7 @@ export default class Yox {
     if (el) {
       if (native.isElement(el)) {
         if (!replace) {
-          el = native.create(el, 'div')
+          el = native.create('div', el)
         }
       }
       else {
@@ -248,13 +247,13 @@ export default class Yox {
     instance.filter(filters)
     instance.partial(partials)
 
-    if (el && template) {
+    if (template) {
       instance.$viewWatcher = function () {
         instance.$dirty = env.TRUE
       }
       execute(options[lifecycle.BEFORE_MOUNT], instance)
       instance.$template = Yox.compile(template)
-      instance.updateView(el)
+      instance.updateView(el || native.create('div'))
     }
 
   }
@@ -957,14 +956,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.19.15'
-
-/**
- * 开关配置
- *
- * @type {Object}
- */
-Yox.switcher = switcher
+Yox.version = '0.19.16'
 
 /**
  * 工具，便于扩展、插件使用

@@ -3383,19 +3383,6 @@ var registry = Object.freeze({
 });
 
 /**
- * 是否是调试状态
- *
- * 调试状态下会打印很多消息
- *
- * @type {boolean}
- */
-var debug = TRUE;
-
-var switcher = Object.freeze({
-	debug: debug
-});
-
-/**
  * 进入 `new Yox(options)` 之后立即触发，钩子函数会传入 `options`
  *
  * @type {string}
@@ -4350,9 +4337,12 @@ function find(selector, context) {
   return findElement(selector, context);
 }
 
-function create$2(parent, tagName) {
-  parent.innerHTML = '<' + tagName + '></' + tagName + '>';
-  return parent.firstChild;
+function create$2(tagName, parent) {
+  if (parent) {
+    parent.innerHTML = '<' + tagName + '></' + tagName + '>';
+    return parent.firstChild;
+  }
+  return doc.createElement(tagName);
 }
 
 function getContent(selector) {
@@ -5114,7 +5104,7 @@ var Yox = function () {
     if (el) {
       if (isElement(el)) {
         if (!replace) {
-          el = create$2(el, 'div');
+          el = create$2('div', el);
         }
       } else {
         error$1('Passing a `el` option must be a html element.');
@@ -5144,13 +5134,13 @@ var Yox = function () {
     instance.filter(filters);
     instance.partial(partials);
 
-    if (el && template) {
+    if (template) {
       instance.$viewWatcher = function () {
         instance.$dirty = TRUE;
       };
       _execute(options[BEFORE_MOUNT], instance);
       instance.$template = Yox.compile(template);
-      instance.updateView(el);
+      instance.updateView(el || create$2('div'));
     }
   }
 
@@ -5852,14 +5842,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.19.15';
-
-/**
- * 开关配置
- *
- * @type {Object}
- */
-Yox.switcher = switcher;
+Yox.version = '0.19.16';
 
 /**
  * 工具，便于扩展、插件使用

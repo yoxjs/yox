@@ -1,4 +1,5 @@
 
+import * as env from 'yox-common/util/env'
 import * as array from 'yox-common/util/array'
 import * as object from 'yox-common/util/object'
 
@@ -11,9 +12,12 @@ export function find(selector, context) {
   return native.findElement(selector, context)
 }
 
-export function create(parent, tagName) {
-  parent.innerHTML = `<${tagName}></${tagName}>`
-  return parent.firstChild
+export function create(tagName, parent) {
+  if (parent) {
+    parent.innerHTML = `<${tagName}></${tagName}>`
+    return parent.firstChild
+  }
+  return env.doc.createElement(tagName)
 }
 
 export function getContent(selector) {
