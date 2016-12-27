@@ -718,66 +718,6 @@ export default class Yox {
   }
 
   /**
-   * 本地过滤器的 getter/setter
-   *
-   * @param {string|Object} id
-   * @param {?string} value
-   * @return {?string}
-   */
-  filter() {
-    let store = this.$filters || (this.$filters = new Store())
-    return magic({
-      args: arguments,
-      get(id) {
-        return store.get(id) || Yox.filter(id)
-      },
-      set(id, value) {
-        store.set(id, value)
-      }
-    })
-  }
-
-  /**
-   * 本地指令的 getter/setter
-   *
-   * @param {string|Object} id
-   * @param {?string} value
-   * @return {?string}
-   */
-  directive() {
-    let store = this.$directives || (this.$directives = new Store())
-    return magic({
-      args: arguments,
-      get(id) {
-        return store.get(id) || Yox.directive(id)
-      },
-      set(id, value) {
-        store.set(id, value)
-      }
-    })
-  }
-
-  /**
-   * 本地子模板的 getter/setter
-   *
-   * @param {string|Object} id
-   * @param {?string} value
-   * @return {?string}
-   */
-  partial() {
-    let store = this.$partials || (this.$partials = new Store())
-    return magic({
-      args: arguments,
-      get(id) {
-        return store.get(id) || Yox.partial(id)
-      },
-      set(id, value) {
-        store.set(id, value)
-      }
-    })
-  }
-
-  /**
    * 销毁组件
    */
   destroy() {
@@ -956,7 +896,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.19.16'
+Yox.version = '0.19.18'
 
 /**
  * 工具，便于扩展、插件使用
@@ -965,8 +905,10 @@ Yox.version = '0.19.16'
  */
 Yox.utils = { is, array, object, string, logger, native, Store, Emitter, Event }
 
+let { prototype } = Yox
+
 /**
- * 全局注册
+ * 全局/本地注册
  *
  * @param {Object|string} id
  * @param {?Object} value
@@ -974,6 +916,21 @@ Yox.utils = { is, array, object, string, logger, native, Store, Emitter, Event }
 array.each(
   [ 'component', 'directive', 'filter', 'partial' ],
   function (type) {
+    if (!object.has(prototype, type)) {
+      prototype[type] = function () {
+        let prop = `$${type}s`
+        let store = this[prop] || (this[prop] = new Store())
+        return magic({
+          args: arguments,
+          get(id) {
+            return store.get(id) || Yox[type](id)
+          },
+          set(id, value) {
+            store.set(id, value)
+          }
+        })
+      }
+    }
     Yox[type] = function () {
       return magic({
         args: arguments,

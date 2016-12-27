@@ -913,13 +913,27 @@ var string$1 = Object.freeze({
  */
 var hasConsole = typeof console !== 'undefined';
 
+var tester = function tester() {/** yox */};
+var isDebug = /yox/.test(tester.toString());
+
+/**
+ * 打印普通日志
+ *
+ * @param {string} msg
+ */
+function log(msg) {
+  if (hasConsole && isDebug) {
+    console.log('[Yox log]: ' + msg);
+  }
+}
+
 /**
  * 打印警告日志
  *
  * @param {string} msg
  */
 function warn(msg) {
-  if (hasConsole) {
+  if (hasConsole && isDebug) {
     console.warn('[Yox warn]: ' + msg);
   }
 }
@@ -936,6 +950,7 @@ function error$1(msg) {
 }
 
 var logger = Object.freeze({
+	log: log,
 	warn: warn,
 	error: error$1
 });
@@ -2627,32 +2642,37 @@ var cache$1 = {};
  * @return {Object}
  */
 function compile$1(content) {
+
+  if (has$2(cache$1, content)) {
+    return cache$1[content];
+  }
+
   var length = content.length;
 
   var index = 0,
       charCode = void 0,
       value = void 0;
 
-  function getChar() {
+  var getChar = function getChar() {
     return charAt$1(content, index);
-  }
-  function getCharCode(i) {
+  };
+  var getCharCode = function getCharCode(i) {
     return charCodeAt(content, i != NULL ? i : index);
-  }
+  };
 
-  function skipWhitespace() {
+  var skipWhitespace = function skipWhitespace() {
     while (isWhitespace(getCharCode())) {
       index++;
     }
-  }
+  };
 
-  function skipNumber() {
+  var skipNumber = function skipNumber() {
     while (isNumber(getCharCode())) {
       index++;
     }
-  }
+  };
 
-  function skipString() {
+  var skipString = function skipString() {
     var closed = void 0,
         quote = getCharCode();
     index++;
@@ -2666,17 +2686,17 @@ function compile$1(content) {
     if (!closed) {
       return parseError$1(content);
     }
-  }
+  };
 
-  function skipIdentifier() {
+  var skipIdentifier = function skipIdentifier() {
     // 第一个字符一定是经过 isIdentifierStart 判断的
     // 因此循环至少要执行一次
     do {
       index++;
     } while (isIdentifierPart(getCharCode()));
-  }
+  };
 
-  function parseNumber() {
+  var parseNumber = function parseNumber() {
 
     var start = index;
 
@@ -2689,9 +2709,9 @@ function compile$1(content) {
     return new Literal({
       value: parseFloat(content.substring(start, index))
     });
-  }
+  };
 
-  function parseString() {
+  var parseString = function parseString() {
 
     var start = index;
 
@@ -2700,9 +2720,9 @@ function compile$1(content) {
     return new Literal({
       value: content.substring(start + 1, index - 1)
     });
-  }
+  };
 
-  function parseIdentifier() {
+  var parseIdentifier = function parseIdentifier() {
 
     var start = index;
     skipIdentifier();
@@ -2722,9 +2742,9 @@ function compile$1(content) {
     }
 
     parseError$1(content);
-  }
+  };
 
-  function parseTuple(delimiter) {
+  var parseTuple = function parseTuple(delimiter) {
 
     var args = [],
         closed = void 0;
@@ -2747,18 +2767,18 @@ function compile$1(content) {
     }
 
     parseError$1(content);
-  }
+  };
 
-  function parseOperator(sortedOperatorList) {
+  var parseOperator = function parseOperator(sortedOperatorList) {
     skipWhitespace();
     value = matchBestToken(content.slice(index), sortedOperatorList);
     if (value) {
       index += value.length;
       return value;
     }
-  }
+  };
 
-  function parseVariable() {
+  var parseVariable = function parseVariable() {
 
     value = parseIdentifier();
 
@@ -2797,9 +2817,9 @@ function compile$1(content) {
     }
 
     return value;
-  }
+  };
 
-  function parseToken() {
+  var parseToken = function parseToken() {
     skipWhitespace();
 
     charCode = getCharCode();
@@ -2830,9 +2850,9 @@ function compile$1(content) {
       return parseUnary(value);
     }
     parseError$1(content);
-  }
+  };
 
-  function parseUnary(op) {
+  var parseUnary = function parseUnary(op) {
     value = parseToken();
     if (value) {
       return new Unary({
@@ -2841,9 +2861,9 @@ function compile$1(content) {
       });
     }
     parseError$1(content);
-  }
+  };
 
-  function parseBinary() {
+  var parseBinary = function parseBinary() {
 
     var left = parseToken();
     var op = parseOperator(binaryList);
@@ -2888,19 +2908,19 @@ function compile$1(content) {
     }
 
     return right;
-  }
+  };
 
   // (xx) 和 [xx] 都可能是子表达式，因此
-  function parseSubexpression(delimiter) {
+  var parseSubexpression = function parseSubexpression(delimiter) {
     value = parseExpression();
     if (getCharCode() === delimiter) {
       index++;
       return value;
     }
     parseError$1(content);
-  }
+  };
 
-  function parseExpression() {
+  var parseExpression = function parseExpression() {
 
     // 主要是区分三元和二元表达式
     // 三元表达式可以认为是 3 个二元表达式组成的
@@ -2933,9 +2953,9 @@ function compile$1(content) {
     }
 
     return test;
-  }
+  };
 
-  return cache$1[content] || (cache$1[content] = parseExpression());
+  return cache$1[content] = parseExpression();
 }
 
 var cache = {};
@@ -3371,15 +3391,15 @@ var tag = /<[^>]+>/;
 var selector = /^[#.]\w+$/;
 
 var component$1 = new Store();
-var directive$1 = new Store();
-var filter$1 = new Store();
-var partial$1 = new Store();
+var directive = new Store();
+var filter = new Store();
+var partial = new Store();
 
 var registry = Object.freeze({
 	component: component$1,
-	directive: directive$1,
-	filter: filter$1,
-	partial: partial$1
+	directive: directive,
+	filter: filter,
+	partial: partial
 });
 
 /**
@@ -5428,7 +5448,7 @@ var Yox = function () {
 
       extend(context,
       // 全局过滤器
-      filter$1.data,
+      filter.data,
       // 本地数据，这意味着 data 也能写函数，只是用 filter 来隔离过滤器
       $data,
       // 本地过滤器
@@ -5612,75 +5632,6 @@ var Yox = function () {
     }
 
     /**
-     * 本地过滤器的 getter/setter
-     *
-     * @param {string|Object} id
-     * @param {?string} value
-     * @return {?string}
-     */
-
-  }, {
-    key: 'filter',
-    value: function filter() {
-      var store = this.$filters || (this.$filters = new Store());
-      return magic({
-        args: arguments,
-        get: function get(id) {
-          return store.get(id) || Yox.filter(id);
-        },
-        set: function set(id, value) {
-          store.set(id, value);
-        }
-      });
-    }
-
-    /**
-     * 本地指令的 getter/setter
-     *
-     * @param {string|Object} id
-     * @param {?string} value
-     * @return {?string}
-     */
-
-  }, {
-    key: 'directive',
-    value: function directive() {
-      var store = this.$directives || (this.$directives = new Store());
-      return magic({
-        args: arguments,
-        get: function get(id) {
-          return store.get(id) || Yox.directive(id);
-        },
-        set: function set(id, value) {
-          store.set(id, value);
-        }
-      });
-    }
-
-    /**
-     * 本地子模板的 getter/setter
-     *
-     * @param {string|Object} id
-     * @param {?string} value
-     * @return {?string}
-     */
-
-  }, {
-    key: 'partial',
-    value: function partial() {
-      var store = this.$partials || (this.$partials = new Store());
-      return magic({
-        args: arguments,
-        get: function get(id) {
-          return store.get(id) || Yox.partial(id);
-        },
-        set: function set(id, value) {
-          store.set(id, value);
-        }
-      });
-    }
-
-    /**
      * 销毁组件
      */
 
@@ -5842,7 +5793,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.19.16';
+Yox.version = '0.19.18';
 
 /**
  * 工具，便于扩展、插件使用
@@ -5851,13 +5802,31 @@ Yox.version = '0.19.16';
  */
 Yox.utils = { is: is$1, array: array$1, object: object$1, string: string$1, logger: logger, native: native, Store: Store, Emitter: Emitter, Event: Event };
 
+var prototype = Yox.prototype;
+
 /**
- * 全局注册
+ * 全局/本地注册
  *
  * @param {Object|string} id
  * @param {?Object} value
  */
+
 each(['component', 'directive', 'filter', 'partial'], function (type) {
+  if (!has$2(prototype, type)) {
+    prototype[type] = function () {
+      var prop = '$' + type + 's';
+      var store = this[prop] || (this[prop] = new Store());
+      return magic({
+        args: arguments,
+        get: function get(id) {
+          return store.get(id) || Yox[type](id);
+        },
+        set: function set(id, value) {
+          store.set(id, value);
+        }
+      });
+    };
+  }
   Yox[type] = function () {
     return magic({
       args: arguments,
