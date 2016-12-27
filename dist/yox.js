@@ -1672,6 +1672,12 @@ var Element = function (_Node) {
     var _this = possibleConstructorReturn(this, (Element.__proto__ || Object.getPrototypeOf(Element)).call(this, ELEMENT));
 
     extend(_this, options);
+    if (!array(options.attrs)) {
+      _this.attrs = [];
+    }
+    if (!array(options.directives)) {
+      _this.directives = [];
+    }
     return _this;
   }
 
@@ -1680,9 +1686,9 @@ var Element = function (_Node) {
     value: function addChild(child) {
       var children = void 0;
       if (child.type === ATTRIBUTE) {
-        children = this.attrs || (this.attrs = []);
+        children = this.attrs;
       } else if (child.type === DIRECTIVE) {
-        children = this.directives || (this.directives = []);
+        children = this.directives;
       } else {
         children = this.children;
       }
@@ -1691,21 +1697,13 @@ var Element = function (_Node) {
   }, {
     key: 'render',
     value: function render(data) {
-      var options = {
+      return new Element({
         name: this.name,
         component: this.component,
-        children: this.renderChildren(data)
-      };
-      var attrs = this.attrs,
-          directives = this.directives;
-
-      if (attrs) {
-        options.attrs = this.renderChildren(data, attrs);
-      }
-      if (directives) {
-        options.directives = this.renderChildren(data, directives);
-      }
-      return new Element(options);
+        children: this.renderChildren(data),
+        attrs: this.renderChildren(data, this.attrs),
+        directives: this.renderChildren(data, this.directives)
+      });
     }
   }]);
   return Element;
@@ -3159,7 +3157,9 @@ function compile$$1(template) {
   var parseAttributeValue = function parseAttributeValue(content) {
     match = matchByQuote(content, quote);
     if (match) {
-      addChild(new Text({ content: match }));
+      addChild(new Text({
+        content: match
+      }));
     }
     var _match = match,
         length = _match.length;
@@ -3315,7 +3315,7 @@ function compile$$1(template) {
       // 没有匹配到 >
       if (mainScanner.charAt(0) !== '>') {
         return parseError(template, 'Illegal tag name', mainScanner.pos);
-      } else if (name !== currentNode.name) {
+      } else if (currentNode.type === ELEMENT && name !== currentNode.name) {
         return parseError(template, 'Unexpected closing tag', mainScanner.pos);
       }
 
@@ -4476,7 +4476,7 @@ function create$1(root, instance) {
             name: 'component',
             directive: instance.directive('component')
           });
-        } else if (array(node.attrs)) {
+        } else {
           each(node.attrs, function (node) {
             var name = node.name,
                 value = node.value;
@@ -4497,21 +4497,19 @@ function create$1(root, instance) {
           });
         }
 
-        if (array(node.directives)) {
-          each(node.directives, function (node) {
-            var name = node.name;
+        each(node.directives, function (node) {
+          var name = node.name;
 
-            if (name === KEYWORD_UNIQUE) {
-              data.key = node.value;
-            } else {
-              directives.push({
-                name: name,
-                node: node,
-                directive: instance.directive(name)
-              });
-            }
-          });
-        }
+          if (name === KEYWORD_UNIQUE) {
+            data.key = node.value;
+          } else {
+            directives.push({
+              name: name,
+              node: node,
+              directive: instance.directive(name)
+            });
+          }
+        });
 
         if (styles) {
           data.style = styles;
@@ -4541,9 +4539,14 @@ function create$1(root, instance) {
             data.hook = {
               insert: function insert(vnode) {
                 notify(vnode, 'attach');
+                vnode.attached = TRUE;
               },
               postpatch: function postpatch(oldNode, vnode) {
-                notify(vnode, 'update');
+                if (oldNode.attached) {
+                  notify(vnode, 'update');
+                } else {
+                  data.hook.insert(vnode);
+                }
               },
               destroy: function destroy(vnode) {
                 notify(vnode, 'detach');
@@ -5793,7 +5796,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.19.18';
+Yox.version = '0.19.19';
 
 /**
  * 工具，便于扩展、插件使用

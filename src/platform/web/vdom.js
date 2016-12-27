@@ -75,7 +75,7 @@ export function create(root, instance) {
             directive: instance.directive('component'),
           })
         }
-        else if (is.array(node.attrs)) {
+        else {
           array.each(
             node.attrs,
             function (node) {
@@ -101,24 +101,22 @@ export function create(root, instance) {
           )
         }
 
-        if (is.array(node.directives)) {
-          array.each(
-            node.directives,
-            function (node) {
-              let { name } = node
-              if (name === viewSyntax.KEYWORD_UNIQUE) {
-                data.key = node.value
-              }
-              else {
-                directives.push({
-                  name,
-                  node: node,
-                  directive: instance.directive(name),
-                })
-              }
+        array.each(
+          node.directives,
+          function (node) {
+            let { name } = node
+            if (name === viewSyntax.KEYWORD_UNIQUE) {
+              data.key = node.value
             }
-          )
-        }
+            else {
+              directives.push({
+                name,
+                node: node,
+                directive: instance.directive(name),
+              })
+            }
+          }
+        )
 
         if (styles) {
           data.style = styles
@@ -149,9 +147,15 @@ export function create(root, instance) {
           data.hook = {
             insert(vnode) {
               notify(vnode, 'attach')
+              vnode.attached = env.TRUE
             },
             postpatch(oldNode, vnode) {
-              notify(vnode, 'update')
+              if (oldNode.attached) {
+                notify(vnode, 'update')
+              }
+              else {
+                data.hook.insert(vnode)
+              }
             },
             destroy(vnode) {
               notify(vnode, 'detach')
