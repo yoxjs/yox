@@ -34,7 +34,7 @@ function getComponentInfo(node, instance, directives, callback) {
 
 export default {
 
-  attach: function ({ el, node, instance, directives }) {
+  attach({ el, node, instance, directives }) {
     el.$component = [ ]
     getComponentInfo(
       node,
@@ -62,7 +62,7 @@ export default {
     )
   },
 
-  update: function ({ el, node, instance, directives }) {
+  update({ el, node, instance, directives }) {
     let { $component } = el
     if (is.object($component)) {
       getComponentInfo(
@@ -76,7 +76,7 @@ export default {
     }
   },
 
-  detach: function ({ el }) {
+  detach({ el }) {
     let { $component } = el
     if ($component) {
       if (is.object($component)) {

@@ -168,7 +168,7 @@ export default class Yox {
     let $watchCache =
     instance.$watchCache = { }
     instance.$watchEmitter = new Emitter({
-      onAdd: function (added) {
+      onAdd(added) {
         array.each(
           added,
           function (keypath) {
@@ -180,7 +180,7 @@ export default class Yox {
           }
         )
       },
-      onRemove: function (removed) {
+      onRemove(removed) {
         array.each(
           removed,
           function (keypath) {
@@ -664,7 +664,7 @@ export default class Yox {
     let store = this.$components || (this.$components = new Store())
     magic({
       args: value ? [ id, value ] : [ id ],
-      get: function (id) {
+      get(id) {
 
         let options = store.get(id), fromGlobal
         if (!options) {
@@ -700,7 +700,7 @@ export default class Yox {
           callback(options)
         }
       },
-      set: function (id, value) {
+      set(id, value) {
         store.set(id, value)
       }
     })
@@ -718,10 +718,10 @@ export default class Yox {
     let store = this.$filters || (this.$filters = new Store())
     return magic({
       args: arguments,
-      get: function (id) {
+      get(id) {
         return store.get(id) || Yox.filter(id)
       },
-      set: function (id, value) {
+      set(id, value) {
         store.set(id, value)
       }
     })
@@ -738,10 +738,10 @@ export default class Yox {
     let store = this.$directives || (this.$directives = new Store())
     return magic({
       args: arguments,
-      get: function (id) {
+      get(id) {
         return store.get(id) || Yox.directive(id)
       },
-      set: function (id, value) {
+      set(id, value) {
         store.set(id, value)
       }
     })
@@ -758,10 +758,10 @@ export default class Yox {
     let store = this.$partials || (this.$partials = new Store())
     return magic({
       args: arguments,
-      get: function (id) {
+      get(id) {
         return store.get(id) || Yox.partial(id)
       },
-      set: function (id, value) {
+      set(id, value) {
         store.set(id, value)
       }
     })
@@ -885,7 +885,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.19.12'
+Yox.version = '0.19.13'
 
 /**
  * 开关配置
@@ -913,10 +913,10 @@ array.each(
     Yox[type] = function () {
       return magic({
         args: arguments,
-        get: function (id) {
+        get(id) {
           return registry[type].get(id)
         },
-        set: function (id, value) {
+        set(id, value) {
           registry[type].set(id, value)
         }
       })

@@ -147,13 +147,13 @@ export function create(root, instance) {
           }
 
           data.hook = {
-            insert: function (vnode) {
+            insert(vnode) {
               notify(vnode, 'attach')
             },
-            postpatch: function (oldNode, vnode) {
+            postpatch(oldNode, vnode) {
               notify(vnode, 'update')
             },
-            destroy: function (vnode) {
+            destroy(vnode) {
               notify(vnode, 'detach')
             }
           }

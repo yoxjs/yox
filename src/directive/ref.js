@@ -11,7 +11,7 @@ import * as logger from 'yox-common/util/logger'
 
 export default {
 
-  attach: function ({ el, node, instance }) {
+  attach({ el, node, instance }) {
     let { value } = node
     if (value && is.string(value)) {
       let { $refs } = instance
@@ -48,7 +48,7 @@ export default {
     }
   },
 
-  detach: function ({ el }) {
+  detach({ el }) {
     let { $ref } = el
     if ($ref) {
       $ref()

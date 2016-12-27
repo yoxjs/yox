@@ -13,7 +13,7 @@ export default {
     babel({
       presets: [ 'es2015-rollup' ],
       babelrc: false,
-      comments: false,
+      comments: minify ? false : true,
       runtimeHelpers: true
     }),
     resolve({

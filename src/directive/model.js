@@ -8,34 +8,34 @@ import * as logger from 'yox-common/util/logger'
 import event from './event'
 
 const componentControl = {
-  set: function ({ el, keypath, instance }) {
+  set({ el, keypath, instance }) {
     let { $component } = el
     $component.set('value', instance.get(keypath))
   },
-  update: function ({ el, keypath, instance }) {
+  update({ el, keypath, instance }) {
     let { $component } = el
     instance.set(keypath, $component.get('value'))
   }
 }
 
 const inputControl = {
-  set: function ({ el, keypath, instance }) {
+  set({ el, keypath, instance }) {
     let value = instance.get(keypath)
     // 如果输入框的值相同，赋值会导致光标变化，不符合用户体验
     if (value !== el.value) {
       el.value = value
     }
   },
-  update: function ({ el, keypath, instance }) {
+  update({ el, keypath, instance }) {
     instance.set(keypath, el.value)
   }
 }
 
 const radioControl = {
-  set: function ({ el, keypath, instance }) {
+  set({ el, keypath, instance }) {
     el.checked = el.value == instance.get(keypath)
   },
-  update: function ({ el, keypath, instance }) {
+  update({ el, keypath, instance }) {
     if (el.checked) {
       instance.set(keypath, el.value)
     }
@@ -43,13 +43,13 @@ const radioControl = {
 }
 
 const checkboxControl = {
-  set: function ({ el, keypath, instance }) {
+  set({ el, keypath, instance }) {
     let value = instance.get(keypath)
     el.checked = is.array(value)
       ? array.has(value, el.value, env.FALSE)
       : !!value
   },
-  update: function ({ el, keypath, instance }) {
+  update({ el, keypath, instance }) {
     let value = instance.get(keypath)
     if (is.array(value)) {
       if (el.checked) {
@@ -74,7 +74,7 @@ const specialControls = {
 
 export default {
 
-  attach: function ({ el, node, instance, directives, attrs }) {
+  attach({ el, node, instance, directives, attrs }) {
 
     let { value, keypath } = node
 
@@ -129,14 +129,14 @@ export default {
       instance,
       directives,
       type,
-      listener: function () {
+      listener() {
         control.update(data)
       }
     })
 
   },
 
-  detach: function ({ el }) {
+  detach({ el }) {
     event.detach({ el })
   }
 

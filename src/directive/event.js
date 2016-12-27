@@ -8,7 +8,7 @@ import * as native from '../platform/web/native'
 
 export default {
 
-  attach: function({ el, node, instance, directives, type, listener }) {
+  attach({ el, node, instance, directives, type, listener }) {
 
     if (!type) {
       type = node.subName
@@ -53,7 +53,7 @@ export default {
 
   },
 
-  detach: function ({ el }) {
+  detach({ el }) {
     let { $event } = el
     if ($event) {
       $event()
