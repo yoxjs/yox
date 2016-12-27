@@ -48,6 +48,11 @@ export default {
     }
   },
 
+  update(options) {
+    this.detach(options)
+    this.attach(options)
+  },
+
   detach({ el }) {
     let { $ref } = el
     if ($ref) {

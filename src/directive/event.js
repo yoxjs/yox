@@ -31,15 +31,18 @@ export default {
 
       let { $component } = el
       if ($component) {
+        let bind = function ($component) {
+          $component.on(type, listener)
+          el.$event = function () {
+            $component.off(type, listener)
+            el.$event = env.NULL
+          }
+        }
         if (is.array($component)) {
-          $component.push(
-            function ($component) {
-              $component.on(type, listener)
-            }
-          )
+          $component.push(bind)
         }
         else {
-          $component.on(type, listener)
+          bind($component)
         }
       }
       else {
@@ -51,6 +54,11 @@ export default {
       }
     }
 
+  },
+
+  update(options) {
+    this.detach(options)
+    this.attach(options)
   },
 
   detach({ el }) {

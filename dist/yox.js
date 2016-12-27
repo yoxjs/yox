@@ -1067,7 +1067,7 @@ var ELSE_IF = 'else if';
 var EACH = '#each';
 var PARTIAL = '#partial';
 var IMPORT = '>';
-var COMMENT = '!';
+var COMMENT = ':';
 var SPREAD = '...';
 
 var SPECIAL_EVENT = '$event';
@@ -1814,9 +1814,7 @@ var Expression = function (_Node) {
       var _renderExpression = this.renderExpression(data),
           value = _renderExpression.value;
 
-      if (value == NULL) {
-        value = '';
-      } else if (func(value) && value.$computed) {
+      if (func(value) && value.$computed) {
         value = value();
       }
 
@@ -4425,6 +4423,16 @@ var native = Object.freeze({
 	off: off$1
 });
 
+var toString$1 = function (str) {
+  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+
+  try {
+    return str.toString();
+  } catch (e) {
+    return defaultValue;
+  }
+};
+
 var patch = snabbdom.init([attributes, style]);
 
 function create$1(root, instance) {
@@ -4536,18 +4544,19 @@ function create$1(root, instance) {
               });
             };
 
-            data.hook = {
-              insert: function insert(vnode) {
-                notify(vnode, 'attach');
+            var update = function update(oldNode, vnode) {
+              if (oldNode.attached) {
+                notify(vnode, 'update');
                 vnode.attached = TRUE;
-              },
-              postpatch: function postpatch(oldNode, vnode) {
-                if (oldNode.attached) {
-                  notify(vnode, 'update');
-                } else {
-                  data.hook.insert(vnode);
-                }
-              },
+              } else {
+                notify(oldNode, 'attach');
+                oldNode.attached = TRUE;
+              }
+            };
+
+            data.hook = {
+              insert: update,
+              postpatch: update,
               destroy: function destroy(vnode) {
                 notify(vnode, 'detach');
               }
@@ -4566,7 +4575,7 @@ function create$1(root, instance) {
           content = node.content;
 
       if (safe || !string(content) || !tag.test(content)) {
-        return content;
+        return toString$1(content);
       } else {
         return strings.default(content);
       }
@@ -4619,6 +4628,10 @@ var refDt = {
         }
       })();
     }
+  },
+  update: function update(options) {
+    this.detach(options);
+    this.attach(options);
   },
   detach: function detach(_ref2) {
     var el = _ref2.el;
@@ -4697,12 +4710,17 @@ var event = {
       var $component = el.$component;
 
       if ($component) {
-        if (array($component)) {
-          $component.push(function ($component) {
-            $component.on(type, listener);
-          });
-        } else {
+        var bind = function bind($component) {
           $component.on(type, listener);
+          el.$event = function () {
+            $component.off(type, listener);
+            el.$event = NULL;
+          };
+        };
+        if (array($component)) {
+          $component.push(bind);
+        } else {
+          bind($component);
         }
       } else {
         on$1(el, type, listener);
@@ -4712,6 +4730,10 @@ var event = {
         };
       }
     }
+  },
+  update: function update(options) {
+    this.detach(options);
+    this.attach(options);
   },
   detach: function detach(_ref2) {
     var el = _ref2.el;
@@ -5796,7 +5818,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.19.19';
+Yox.version = '0.19.20';
 
 /**
  * 工具，便于扩展、插件使用

@@ -10,6 +10,8 @@ import * as native from './native'
 
 import * as pattern from '../../config/pattern'
 
+import toString from 'yox-common/function/toString'
+
 import * as is from 'yox-common/util/is'
 import * as env from 'yox-common/util/env'
 import * as array from 'yox-common/util/array'
@@ -144,19 +146,20 @@ export function create(root, instance) {
             )
           }
 
-          data.hook = {
-            insert(vnode) {
-              notify(vnode, 'attach')
+          let update = function (oldNode, vnode) {
+            if (oldNode.attached) {
+              notify(vnode, 'update')
               vnode.attached = env.TRUE
-            },
-            postpatch(oldNode, vnode) {
-              if (oldNode.attached) {
-                notify(vnode, 'update')
-              }
-              else {
-                data.hook.insert(vnode)
-              }
-            },
+            }
+            else {
+              notify(oldNode, 'attach')
+              oldNode.attached = env.TRUE
+            }
+          }
+
+          data.hook = {
+            insert: update,
+            postpatch: update,
             destroy(vnode) {
               notify(vnode, 'detach')
             }
@@ -168,7 +171,7 @@ export function create(root, instance) {
       else if (node.type === viewNodeType.TEXT) {
         let { safe, content } = node
         if (safe || !is.string(content) || !pattern.tag.test(content)) {
-          return content
+          return toString(content)
         }
         else {
           return virtualize.default(content)
