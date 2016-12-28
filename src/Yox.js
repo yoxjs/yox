@@ -896,7 +896,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.19.21'
+Yox.version = '0.20.0'
 
 /**
  * 工具，便于扩展、插件使用

@@ -262,7 +262,7 @@ var array$1 = Object.freeze({
 	falsy: falsy
 });
 
-var _execute = function (fn, context, args) {
+var callFunction = function (fn, context, args) {
   if (func(fn)) {
     if (array(args)) {
       return fn.apply(context, args);
@@ -287,15 +287,15 @@ var magic = function (options) {
   var key = args[0],
       value = args[1];
   if (object(key)) {
-    _execute(set, NULL, key);
+    callFunction(set, NULL, key);
   } else if (string(key)) {
     var _args = args,
         length = _args.length;
 
     if (length === 2) {
-      _execute(set, NULL, args);
+      callFunction(set, NULL, args);
     } else if (length === 1) {
-      return _execute(get, NULL, key);
+      return callFunction(get, NULL, key);
     }
   }
 };
@@ -333,7 +333,7 @@ function parse(str) {
   return str ? normalize(str).split(SEPARATOR_KEY) : [];
 }
 
-function stringify$1(keypaths) {
+function stringify(keypaths) {
   return keypaths.filter(function (term) {
     return term !== '' && term !== LEVEL_CURRENT;
   }).join(SEPARATOR_KEY);
@@ -348,7 +348,7 @@ function resolve(base, path) {
       list.push(normalize(term));
     }
   });
-  return stringify$1(list);
+  return stringify(list);
 }
 
 /**
@@ -754,7 +754,7 @@ var Emitter = function () {
       var handle = function handle(list, data) {
         if (array(list)) {
           each(list, function (listener) {
-            var result = _execute(listener, context, data);
+            var result = callFunction(listener, context, data);
 
             var $once = listener.$once;
 
@@ -1205,7 +1205,7 @@ var Context = function () {
       if (keys$$1[0] === 'this') {
         keys$$1.shift();
         return {
-          keypath: stringify$1(keys$$1),
+          keypath: stringify(keys$$1),
           instance: instance
         };
       } else {
@@ -1232,7 +1232,7 @@ var Context = function () {
           });
           return {
             v: {
-              keypath: stringify$1(keys$$1.slice(index)),
+              keypath: stringify(keys$$1.slice(index)),
               instance: instance,
               lookup: lookup
             }
@@ -1869,147 +1869,100 @@ var Node$2 = function Node$2(type) {
 var Unary = function (_Node) {
   inherits(Unary, _Node);
 
-  function Unary(options) {
+  function Unary(operator, arg) {
     classCallCheck(this, Unary);
 
     var _this = possibleConstructorReturn(this, (Unary.__proto__ || Object.getPrototypeOf(Unary)).call(this, UNARY));
 
-    extend(_this, options);
+    _this.operator = operator;
+    _this.arg = arg;
     return _this;
   }
 
-  createClass(Unary, [{
-    key: 'stringify',
-    value: function stringify() {
-      var operator = this.operator,
-          arg = this.arg;
-
-      return '' + operator + arg.stringify();
-    }
-  }, {
-    key: 'execute',
-    value: function execute(context) {
-      var operator = this.operator,
-          arg = this.arg;
-
-      var _arg$execute = arg.execute(context),
-          value = _arg$execute.value,
-          deps = _arg$execute.deps;
-
-      return {
-        value: OPERATOR[operator](value),
-        deps: deps
-      };
-    }
-  }]);
   return Unary;
 }(Node$2);
 
-var OPERATOR = {};
-OPERATOR[Unary.PLUS = '+'] = function (value) {
+Unary[Unary.PLUS = '+'] = function (value) {
   return +value;
 };
-OPERATOR[Unary.MINUS = '-'] = function (value) {
+Unary[Unary.MINUS = '-'] = function (value) {
   return -value;
 };
-OPERATOR[Unary.BANG = '!'] = function (value) {
+Unary[Unary.BANG = '!'] = function (value) {
   return !value;
 };
-OPERATOR[Unary.WAVE = '~'] = function (value) {
+Unary[Unary.WAVE = '~'] = function (value) {
   return ~value;
 };
 
 /**
  * Binary 节点
  *
- * @param {Node} left
- * @param {string} operator
  * @param {Node} right
+ * @param {string} operator
+ * @param {Node} left
  */
 
 var Binary = function (_Node) {
   inherits(Binary, _Node);
 
-  function Binary(options) {
+  function Binary(right, operator, left) {
     classCallCheck(this, Binary);
 
     var _this = possibleConstructorReturn(this, (Binary.__proto__ || Object.getPrototypeOf(Binary)).call(this, BINARY));
 
-    extend(_this, options);
+    _this.left = left;
+    _this.operator = operator;
+    _this.right = right;
     return _this;
   }
 
-  createClass(Binary, [{
-    key: 'stringify',
-    value: function stringify() {
-      var left = this.left,
-          operator = this.operator,
-          right = this.right;
-
-      return left.stringify() + ' ' + operator + ' ' + right.stringify();
-    }
-  }, {
-    key: 'execute',
-    value: function execute(context) {
-      var left = this.left,
-          operator = this.operator,
-          right = this.right;
-
-      left = left.execute(context);
-      right = right.execute(context);
-      return {
-        value: OPERATOR$1[operator](left.value, right.value),
-        deps: extend(left.deps, right.deps)
-      };
-    }
-  }]);
   return Binary;
 }(Node$2);
 
-var OPERATOR$1 = {};
-OPERATOR$1[Binary.OR = '||'] = function (a, b) {
+Binary[Binary.OR = '||'] = function (a, b) {
   return a || b;
 };
-OPERATOR$1[Binary.AND = '&&'] = function (a, b) {
+Binary[Binary.AND = '&&'] = function (a, b) {
   return a && b;
 };
-OPERATOR$1[Binary.SE = '==='] = function (a, b) {
+Binary[Binary.SE = '==='] = function (a, b) {
   return a === b;
 };
-OPERATOR$1[Binary.SNE = '!=='] = function (a, b) {
+Binary[Binary.SNE = '!=='] = function (a, b) {
   return a !== b;
 };
-OPERATOR$1[Binary.LE = '=='] = function (a, b) {
+Binary[Binary.LE = '=='] = function (a, b) {
   return a == b;
 };
-OPERATOR$1[Binary.LNE = '!='] = function (a, b) {
+Binary[Binary.LNE = '!='] = function (a, b) {
   return a != b;
 };
-OPERATOR$1[Binary.LT = '<'] = function (a, b) {
+Binary[Binary.LT = '<'] = function (a, b) {
   return a < b;
 };
-OPERATOR$1[Binary.LTE = '<='] = function (a, b) {
+Binary[Binary.LTE = '<='] = function (a, b) {
   return a <= b;
 };
-OPERATOR$1[Binary.GT = '>'] = function (a, b) {
+Binary[Binary.GT = '>'] = function (a, b) {
   return a > b;
 };
-OPERATOR$1[Binary.GTE = '>='] = function (a, b) {
+Binary[Binary.GTE = '>='] = function (a, b) {
   return a >= b;
 };
-OPERATOR$1[Binary.PLUS = '+'] = function (a, b) {
+Binary[Binary.PLUS = '+'] = function (a, b) {
   return a + b;
 };
-OPERATOR$1[Binary.MINUS = '-'] = function (a, b) {
+Binary[Binary.MINUS = '-'] = function (a, b) {
   return a - b;
 };
-OPERATOR$1[Binary.MULTIPLY = '*'] = function (a, b) {
+Binary[Binary.MULTIPLY = '*'] = function (a, b) {
   return a * b;
 };
-OPERATOR$1[Binary.DIVIDE = '/'] = function (a, b) {
+Binary[Binary.DIVIDE = '/'] = function (a, b) {
   return a / b;
 };
-OPERATOR$1[Binary.MODULO = '%'] = function (a, b) {
+Binary[Binary.MODULO = '%'] = function (a, b) {
   return a % b;
 };
 
@@ -2047,38 +2000,15 @@ var binaryList = sortKeys(binaryMap);
 var Array$1 = function (_Node) {
   inherits(Array, _Node);
 
-  function Array(options) {
+  function Array(elements) {
     classCallCheck(this, Array);
 
     var _this = possibleConstructorReturn(this, (Array.__proto__ || Object.getPrototypeOf(Array)).call(this, ARRAY));
 
-    extend(_this, options);
+    _this.elements = elements;
     return _this;
   }
 
-  createClass(Array, [{
-    key: 'stringify',
-    value: function stringify() {
-      var elements = this.elements;
-
-      elements = elements.map(function (element) {
-        return element.stringify();
-      });
-      return '[' + elements.join(', ') + ']';
-    }
-  }, {
-    key: 'execute',
-    value: function execute(context) {
-      var value = [],
-          deps = {};
-      each(this.elements, function (node) {
-        var result = node.execute(context);
-        value.push(result.value);
-        extend(deps, result.deps);
-      });
-      return { value: value, deps: deps };
-    }
-  }]);
   return Array;
 }(Node$2);
 
@@ -2092,46 +2022,16 @@ var Array$1 = function (_Node) {
 var Call = function (_Node) {
   inherits(Call, _Node);
 
-  function Call(options) {
+  function Call(callee, args) {
     classCallCheck(this, Call);
 
     var _this = possibleConstructorReturn(this, (Call.__proto__ || Object.getPrototypeOf(Call)).call(this, CALL));
 
-    extend(_this, options);
+    _this.callee = callee;
+    _this.args = args;
     return _this;
   }
 
-  createClass(Call, [{
-    key: 'stringify',
-    value: function stringify() {
-      var callee = this.callee,
-          args = this.args;
-
-      args = args.map(function (arg) {
-        return arg.stringify();
-      });
-      return callee.stringify() + '(' + args.join(', ') + ')';
-    }
-  }, {
-    key: 'execute',
-    value: function execute(context) {
-      var callee = this.callee,
-          args = this.args;
-
-      var _callee$execute = callee.execute(context),
-          value = _callee$execute.value,
-          deps = _callee$execute.deps;
-
-      return {
-        value: _execute(value, NULL, args.map(function (arg) {
-          var result = arg.execute(context);
-          extend(deps, result.deps);
-          return result.value;
-        })),
-        deps: deps
-      };
-    }
-  }]);
   return Call;
 }(Node$2);
 
@@ -2146,47 +2046,17 @@ var Call = function (_Node) {
 var Conditional = function (_Node) {
   inherits(Conditional, _Node);
 
-  function Conditional(options) {
+  function Conditional(test, consequent, alternate) {
     classCallCheck(this, Conditional);
 
     var _this = possibleConstructorReturn(this, (Conditional.__proto__ || Object.getPrototypeOf(Conditional)).call(this, CONDITIONAL));
 
-    extend(_this, options);
+    _this.test = test;
+    _this.consequent = consequent;
+    _this.alternate = alternate;
     return _this;
   }
 
-  createClass(Conditional, [{
-    key: 'stringify',
-    value: function stringify() {
-      var test = this.test,
-          consequent = this.consequent,
-          alternate = this.alternate;
-
-      return test.stringify() + ' ? ' + consequent.stringify() + ' : ' + alternate.stringify();
-    }
-  }, {
-    key: 'execute',
-    value: function execute(context) {
-      var test = this.test,
-          consequent = this.consequent,
-          alternate = this.alternate;
-
-      test = test.execute(context);
-      if (test.value) {
-        consequent = consequent.execute(context);
-        return {
-          value: consequent.value,
-          deps: extend(test.deps, consequent.deps)
-        };
-      } else {
-        alternate = alternate.execute(context);
-        return {
-          value: alternate.value,
-          deps: extend(test.deps, alternate.deps)
-        };
-      }
-    }
-  }]);
   return Conditional;
 }(Node$2);
 
@@ -2199,33 +2069,15 @@ var Conditional = function (_Node) {
 var Identifier = function (_Node) {
   inherits(Identifier, _Node);
 
-  function Identifier(options) {
+  function Identifier(name) {
     classCallCheck(this, Identifier);
 
     var _this = possibleConstructorReturn(this, (Identifier.__proto__ || Object.getPrototypeOf(Identifier)).call(this, IDENTIFIER));
 
-    extend(_this, options);
+    _this.name = name;
     return _this;
   }
 
-  createClass(Identifier, [{
-    key: 'stringify',
-    value: function stringify() {
-      return this.name;
-    }
-  }, {
-    key: 'execute',
-    value: function execute(context) {
-      var deps = {};
-
-      var _context$get = context.get(this.name),
-          value = _context$get.value,
-          keypath = _context$get.keypath;
-
-      deps[keypath] = value;
-      return { value: value, deps: deps };
-    }
-  }]);
   return Identifier;
 }(Node$2);
 
@@ -2238,34 +2090,15 @@ var Identifier = function (_Node) {
 var Literal = function (_Node) {
   inherits(Literal, _Node);
 
-  function Literal(options) {
+  function Literal(value) {
     classCallCheck(this, Literal);
 
     var _this = possibleConstructorReturn(this, (Literal.__proto__ || Object.getPrototypeOf(Literal)).call(this, LITERAL));
 
-    extend(_this, options);
+    _this.value = value;
     return _this;
   }
 
-  createClass(Literal, [{
-    key: 'stringify',
-    value: function stringify() {
-      var value = this.value;
-
-      if (string(value)) {
-        return value.indexOf('"') >= 0 ? '\'' + value + '\'' : '"' + value + '"';
-      }
-      return value;
-    }
-  }, {
-    key: 'execute',
-    value: function execute() {
-      return {
-        value: this.value,
-        deps: {}
-      };
-    }
-  }]);
   return Literal;
 }(Node$2);
 
@@ -2279,82 +2112,35 @@ var Literal = function (_Node) {
 var Member = function (_Node) {
   inherits(Member, _Node);
 
-  function Member(options) {
+  function Member(object, property) {
     classCallCheck(this, Member);
 
     var _this = possibleConstructorReturn(this, (Member.__proto__ || Object.getPrototypeOf(Member)).call(this, MEMBER));
 
-    extend(_this, options);
+    _this.object = object;
+    _this.property = property;
     return _this;
   }
 
-  createClass(Member, [{
-    key: 'flatten',
-    value: function flatten() {
-      var result = [];
-
-      var current = this,
-          next = void 0;
-      do {
-        next = current.object;
-        if (current.type === MEMBER) {
-          result.unshift(current.property);
-        } else {
-          result.unshift(current);
-        }
-      } while (current = next);
-
-      return result;
-    }
-  }, {
-    key: 'stringify',
-    value: function stringify(list) {
-      return this.flatten().map(function (node, index) {
-        if (node.type === LITERAL) {
-          var _node = node,
-              value = _node.value;
-
-          return numeric(value) ? '[' + value + ']' : '.' + value;
-        } else {
-          node = node.stringify();
-          return index > 0 ? '[' + node + ']' : node;
-        }
-      }).join('');
-    }
-  }, {
-    key: 'execute',
-    value: function execute(context) {
-
-      var deps = {},
-          keys$$1 = [];
-
-      each(this.flatten(), function (node, index) {
-        var type = node.type;
-
-        if (type !== LITERAL) {
-          if (index > 0) {
-            var result = node.execute(context);
-            extend(deps, result.deps);
-            keys$$1.push(result.value);
-          } else if (type === IDENTIFIER) {
-            keys$$1.push(node.name);
-          }
-        } else {
-          keys$$1.push(node.value);
-        }
-      });
-
-      var _context$get = context.get(stringify$1(keys$$1)),
-          value = _context$get.value,
-          keypath = _context$get.keypath;
-
-      deps[keypath] = value;
-
-      return { value: value, deps: deps };
-    }
-  }]);
   return Member;
 }(Node$2);
+
+Member.flatten = function (node) {
+
+  var result = [];
+
+  var next = void 0;
+  do {
+    next = node.object;
+    if (node.type === MEMBER) {
+      result.unshift(node.property);
+    } else {
+      result.unshift(node);
+    }
+  } while (node = next);
+
+  return result;
+};
 
 // 分隔符
 var COMMA = 44; // ,
@@ -2380,6 +2166,167 @@ var keyword = {
 
 // 编译结果缓存
 var cache$1 = {};
+
+function stringifyRecursion(node) {
+  return stringify$1(node);
+}
+
+/**
+ * 序列化表达式
+ *
+ * @param {Node} node
+ * @return {string}
+ */
+function stringify$1(node) {
+
+  switch (node.type) {
+    case ARRAY:
+      return '[' + node.elements.map(stringifyRecursion).join(', ') + ']';
+
+    case BINARY:
+      return stringify$1(node.left) + ' ' + node.operator + ' ' + stringify$1(node.right);
+
+    case CALL:
+      return stringify$1(node.callee) + '(' + node.args.map(stringifyRecursion).join(', ') + ')';
+
+    case CONDITIONAL:
+      return stringify$1(node.test) + ' ? ' + stringify$1(node.consequent) + ' : ' + stringify$1(node.alternate);
+
+    case IDENTIFIER:
+      return node.name;
+
+    case LITERAL:
+      var value = node.value;
+
+      if (string(value)) {
+        return value.indexOf('"') >= 0 ? '\'' + value + '\'' : '"' + value + '"';
+      }
+      return value;
+
+    case MEMBER:
+      return Member.flatten(node).map(function (node, index) {
+        if (node.type === LITERAL) {
+          var _node = node,
+              _value = _node.value;
+
+          return numeric(_value) ? '[' + _value + ']' : '.' + _value;
+        } else {
+          node = stringify$1(node);
+          return index > 0 ? '[' + node + ']' : node;
+        }
+      }).join('');
+
+    case UNARY:
+      return '' + node.operator + stringify$1(node.arg);
+  }
+}
+
+/**
+ * 表达式求值
+ *
+ * @param {Node} node
+ * @param {Context} context
+ * @return {*}
+ */
+function execute(node, context) {
+
+  var deps = {},
+      value = void 0,
+      result = void 0;
+
+  (function () {
+    switch (node.type) {
+      case ARRAY:
+        value = [];
+        each(node.elements, function (node) {
+          result = execute(node, context);
+          push$1(value, result.value);
+          extend(deps, result.deps);
+        });
+        break;
+
+      case BINARY:
+        var left = node.left,
+            right = node.right;
+
+        left = execute(left, context);
+        right = execute(right, context);
+        value = Binary[node.operator](left.value, right.value);
+        deps = extend(left.deps, right.deps);
+        break;
+
+      case CALL:
+        result = execute(node.callee, context);
+        deps = result.deps;
+        value = callFunction(result.value, NULL, node.args.map(function (node) {
+          var result = execute(node, context);
+          extend(deps, result.deps);
+          return result.value;
+        }));
+        break;
+
+      case CONDITIONAL:
+        var test = node.test,
+            consequent = node.consequent,
+            alternate = node.alternate;
+
+        test = execute(test, context);
+        if (test.value) {
+          consequent = execute(consequent, context);
+          value = consequent.value;
+          deps = extend(test.deps, consequent.deps);
+        } else {
+          alternate = execute(alternate, context);
+          value = alternate.value;
+          deps = extend(test.deps, alternate.deps);
+        }
+        break;
+
+      case IDENTIFIER:
+        result = context.get(node.name);
+        value = result.value;
+        deps[result.keypath] = value;
+        break;
+
+      case LITERAL:
+        value = node.value;
+        break;
+
+      case MEMBER:
+        var keys$$1 = [];
+
+        each(Member.flatten(node), function (node, index) {
+          var type = node.type;
+
+          if (type !== LITERAL) {
+            if (index > 0) {
+              var _result = execute(node, context);
+              push$1(keys$$1, _result.value);
+              extend(deps, _result.deps);
+            } else if (type === IDENTIFIER) {
+              push$1(keys$$1, node.name);
+            }
+          } else {
+            push$1(keys$$1, node.value);
+          }
+        });
+
+        result = context.get(stringify(keys$$1));
+
+        value = result.value;
+        deps[result.keypath] = value;
+        break;
+
+      case UNARY:
+        result = execute(node.arg, context);
+        value = Unary[node.operator](result.value);
+        deps = result.deps;
+        break;
+    }
+  })();
+
+  return { value: value, deps: deps };
+}
 
 /**
  * 把表达式编译成抽象语法树
@@ -2452,9 +2399,7 @@ function compile$1(content) {
       skipNumber();
     }
 
-    return new Literal({
-      value: parseFloat(content.substring(start, index))
-    });
+    return new Literal(parseFloat(content.substring(start, index)));
   };
 
   var parseString = function parseString() {
@@ -2463,9 +2408,7 @@ function compile$1(content) {
 
     skipString();
 
-    return new Literal({
-      value: content.substring(start + 1, index - 1)
-    });
+    return new Literal(content.substring(start + 1, index - 1));
   };
 
   var parseIdentifier = function parseIdentifier() {
@@ -2475,16 +2418,12 @@ function compile$1(content) {
 
     value = content.substring(start, index);
     if (keyword[value]) {
-      return new Literal({
-        value: keyword[value]
-      });
+      return new Literal(keyword[value]);
     }
 
     // this 也视为 IDENTIFIER
     if (value) {
-      return new Identifier({
-        name: value
-      });
+      return new Identifier(value);
     }
 
     parseError$1(content);
@@ -2533,29 +2472,18 @@ function compile$1(content) {
       charCode = getCharCode();
       if (charCode === OPAREN) {
         index++;
-        value = new Call({
-          callee: value,
-          args: parseTuple(CPAREN)
-        });
+        value = new Call(value, parseTuple(CPAREN));
         break;
       } else {
         // a.x
         if (charCode === PERIOD) {
           index++;
-          value = new Member({
-            object: value,
-            property: new Literal({
-              value: parseIdentifier().name
-            })
-          });
+          value = new Member(value, new Literal(parseIdentifier().name));
         }
         // a[x]
         else if (charCode === OBRACK) {
             index++;
-            value = new Member({
-              object: value,
-              property: parseSubexpression(CBRACK)
-            });
+            value = new Member(value, parseSubexpression(CBRACK));
           } else {
             break;
           }
@@ -2580,9 +2508,7 @@ function compile$1(content) {
       // [xx, xx]
       else if (charCode === OBRACK) {
           index++;
-          return new Array$1({
-            elements: parseTuple(CBRACK)
-          });
+          return new Array$1(parseTuple(CBRACK));
         }
         // (xx, xx)
         else if (charCode === OPAREN) {
@@ -2601,10 +2527,7 @@ function compile$1(content) {
   var parseUnary = function parseUnary(op) {
     value = parseToken();
     if (value) {
-      return new Unary({
-        operator: op,
-        arg: value
-      });
+      return new Unary(op, value);
     }
     parseError$1(content);
   };
@@ -2624,11 +2547,7 @@ function compile$1(content) {
 
       // 处理左边
       if (stack.length > 3 && binaryMap[op] < stack[stack.length - 2]) {
-        stack.push(new Binary({
-          right: stack.pop(),
-          operator: (stack.pop(), stack.pop()),
-          left: stack.pop()
-        }));
+        stack.push(new Binary(stack.pop(), (stack.pop(), stack.pop()), stack.pop()));
       }
 
       right = parseToken();
@@ -2646,11 +2565,7 @@ function compile$1(content) {
 
     right = stack.pop();
     while (stack.length > 1) {
-      right = new Binary({
-        right: right,
-        operator: (stack.pop(), stack.pop()),
-        left: stack.pop()
-      });
+      right = new Binary(right, (stack.pop(), stack.pop()), stack.pop());
     }
 
     return right;
@@ -2688,11 +2603,7 @@ function compile$1(content) {
 
         // 保证调用 parseExpression() 之后无需再次调用 skipWhitespace()
         skipWhitespace();
-        return new Conditional({
-          test: test,
-          consequent: consequent,
-          alternate: alternate
-        });
+        return new Conditional(test, consequent, alternate);
       } else {
         parseError$1(content);
       }
@@ -2818,7 +2729,7 @@ function render(ast, data, createText, createElement, addDeps) {
 
   var keys$$1 = [];
   var getKeypath = function getKeypath() {
-    return stringify$1(keys$$1);
+    return stringify(keys$$1);
   };
   getKeypath.$computed = TRUE;
   data[SPECIAL_KEYPATH] = getKeypath;
@@ -2827,10 +2738,10 @@ function render(ast, data, createText, createElement, addDeps) {
   var partials = {};
   var context = new Context(data);
 
-  var execute = function execute(expr) {
-    var _expr$execute = expr.execute(context),
-        value = _expr$execute.value,
-        deps = _expr$execute.deps;
+  var execute$$1 = function execute$$1(expr) {
+    var _expressionEnginer$ex = execute(expr, context),
+        value = _expressionEnginer$ex.value,
+        deps = _expressionEnginer$ex.deps;
 
     if (addDeps) {
       addDeps(deps, getKeypath);
@@ -2926,7 +2837,7 @@ function render(ast, data, createText, createElement, addDeps) {
           // 条件判断失败就没必要往下走了
           case IF$1:
           case ELSE_IF$1:
-            if (!execute(node.expr)) {
+            if (!execute$$1(node.expr)) {
               return {
                 v: FALSE
               };
@@ -2939,7 +2850,7 @@ function render(ast, data, createText, createElement, addDeps) {
                 index = node.index,
                 children = node.children;
 
-            var value = execute(expr);
+            var value = execute$$1(expr);
 
             var iterate = void 0;
             if (array(value)) {
@@ -2954,7 +2865,7 @@ function render(ast, data, createText, createElement, addDeps) {
 
             var result = [];
 
-            var keypath = normalize(expr.stringify());
+            var keypath = normalize(stringify$1(expr));
             keys$$1.push(keypath);
             context = context.push(value);
 
@@ -3011,7 +2922,7 @@ function render(ast, data, createText, createElement, addDeps) {
           var expr = node.expr,
               safe = node.safe;
 
-          content = execute(expr);
+          content = execute$$1(expr);
           if (func(content) && content.$computed) {
             content = content();
           }
@@ -3023,7 +2934,7 @@ function render(ast, data, createText, createElement, addDeps) {
 
         case ATTRIBUTE:
           if (name.type === EXPRESSION) {
-            name = execute(name.expr);
+            name = execute$$1(name.expr);
           }
           return {
             name: name,
@@ -3045,7 +2956,7 @@ function render(ast, data, createText, createElement, addDeps) {
           return children;
 
         case SPREAD$1:
-          content = execute(node.expr);
+          content = execute$$1(node.expr);
           if (object(content)) {
             var _ret2 = function () {
               var result = [];
@@ -4969,7 +4880,7 @@ var Yox = function () {
 
     var instance = this;
 
-    _execute(options[BEFORE_CREATE], instance, options);
+    callFunction(options[BEFORE_CREATE], instance, options);
 
     var el = options.el,
         data = options.data,
@@ -5059,7 +4970,7 @@ var Yox = function () {
               if (!deps) {
                 instance.$computedStack.push([]);
               }
-              var result = _execute(get$$1, instance);
+              var result = callFunction(get$$1, instance);
 
               var newDeps = deps || instance.$computedStack.pop();
               var oldDeps = instance.$computedDeps[keypath];
@@ -5106,7 +5017,7 @@ var Yox = function () {
     });
     instance.watch(watchers);
 
-    _execute(options[AFTER_CREATE], instance);
+    callFunction(options[AFTER_CREATE], instance);
 
     // 检查 template
     if (string(template)) {
@@ -5159,7 +5070,7 @@ var Yox = function () {
       instance.$viewWatcher = function () {
         instance.$dirty = TRUE;
       };
-      _execute(options[BEFORE_MOUNT], instance);
+      callFunction(options[BEFORE_MOUNT], instance);
       instance.$template = Yox.compile(template);
       instance.updateView(el || create$2('div'));
     }
@@ -5202,7 +5113,7 @@ var Yox = function () {
         var keys$$1 = parse(context);
         while (TRUE) {
           keys$$1.push(keypath);
-          context = stringify$1(keys$$1);
+          context = stringify(keys$$1);
           result = getValue(context);
           if (result || keys$$1.length <= 1) {
             if (result) {
@@ -5442,7 +5353,7 @@ var Yox = function () {
 
 
       if ($currentNode) {
-        _execute($options[BEFORE_UPDATE], instance);
+        callFunction($options[BEFORE_UPDATE], instance);
       }
 
       var context = {};
@@ -5481,7 +5392,7 @@ var Yox = function () {
       }
 
       instance.$currentNode = $currentNode;
-      _execute($options[afterHook], instance);
+      callFunction($options[afterHook], instance);
     }
 
     /**
@@ -5556,7 +5467,7 @@ var Yox = function () {
                     }
                   });
                 }
-                _execute(instance[ast.callee.name], instance, args);
+                callFunction(instance[ast.callee.name], instance, args);
               }
             };
           }
@@ -5649,7 +5560,7 @@ var Yox = function () {
           $eventEmitter = instance.$eventEmitter;
 
 
-      _execute($options[BEFORE_DESTROY], instance);
+      callFunction($options[BEFORE_DESTROY], instance);
 
       if ($children) {
         each($children, function (child) {
@@ -5674,7 +5585,7 @@ var Yox = function () {
         delete instance[key];
       });
 
-      _execute($options[AFTER_DESTROY], instance);
+      callFunction($options[AFTER_DESTROY], instance);
     }
 
     /**
@@ -5793,7 +5704,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.19.21';
+Yox.version = '0.20.0';
 
 /**
  * 工具，便于扩展、插件使用
