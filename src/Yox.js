@@ -229,7 +229,6 @@ export default class Yox {
     }
 
     if (methods) {
-      let { prototype } = instance.constructor
       object.each(
         methods,
         function (fn, name) {
@@ -551,7 +550,8 @@ export default class Yox {
       }
     )
 
-    let { root, deps } = viewEnginer.render($template, context, instance.partial.bind(instance))
+    let { node, deps } = vdom.create($template, context, instance)
+
     instance.$viewDeps = object.keys(deps)
     updateDeps(
       instance,
@@ -560,14 +560,14 @@ export default class Yox {
       $viewWatcher
     )
 
-    let newNode = vdom.create(root, instance), afterHook
+    let afterHook
     if ($currentNode) {
       afterHook = lifecycle.AFTER_UPDATE
-      $currentNode = vdom.patch($currentNode, newNode)
+      $currentNode = vdom.patch($currentNode, node)
     }
     else {
       afterHook = lifecycle.AFTER_MOUNT
-      $currentNode = vdom.patch(arguments[0], newNode)
+      $currentNode = vdom.patch(arguments[0], node)
       instance.$el = $currentNode.elm
     }
 
@@ -896,7 +896,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.19.20'
+Yox.version = '0.19.21'
 
 /**
  * 工具，便于扩展、插件使用

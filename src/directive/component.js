@@ -6,13 +6,13 @@ import * as object from 'yox-common/util/object'
 import * as string from 'yox-common/util/string'
 
 function getComponentInfo(node, instance, directives, callback) {
-  let { component, attrs } = node
+  let { name, attributes } = node
   instance.component(
-    component,
+    name,
     function (options) {
       let props = { }
       array.each(
-        attrs,
+        attributes,
         function (node) {
           props[string.camelCase(node.name)] = node.value
         }

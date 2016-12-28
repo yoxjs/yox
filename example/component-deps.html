@@ -89,7 +89,7 @@
                     {{user[variable]}}
                     <br>
                     {{ user.age > 10 ? title : variable }}
-                    <Custom ref="child" title="{{title}}" user="{{user}}" />
+                    <Custom ref="child" title="{{title}}" {{...user}} />
                     <ul>
                         {{#each list:index}}
                         <li>
