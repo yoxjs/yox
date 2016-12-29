@@ -642,11 +642,15 @@ export default class Yox {
               }
             )
           }
-          execute(
-            instance[ast.callee.name],
-            instance,
-            args
-          )
+          let { name } = ast.callee
+          let fn = instance[name]
+          if (!fn) {
+            let result = instance.get(name, keypath)
+            if (result) {
+              fn = result.value
+            }
+          }
+          execute(fn, instance, args)
         }
       }
     }
@@ -896,7 +900,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.20.1'
+Yox.version = '0.20.2'
 
 /**
  * 工具，便于扩展、插件使用

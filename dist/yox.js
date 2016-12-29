@@ -882,7 +882,7 @@ function parse$1(str, separator, pair) {
 function charAt$1(str, index) {
   return str.charAt(index);
 }
-function charCodeAt(str, index) {
+function charCodeAt$1(str, index) {
   return str.charCodeAt(index);
 }
 
@@ -903,7 +903,7 @@ var string$1 = Object.freeze({
 	capitalize: capitalize,
 	parse: parse$1,
 	charAt: charAt$1,
-	charCodeAt: charCodeAt
+	charCodeAt: charCodeAt$1
 });
 
 /**
@@ -1007,19 +1007,11 @@ var breaklinePattern = /^[ \t]*\n[ \t]*$/;
 var breaklinePrefixPattern = /^[ \t]*\n/;
 var breaklineSuffixPattern = /\n[ \t]*$/;
 
-var nonSingleQuotePattern = /^[^']*/;
-var nonDoubleQuotePattern = /^[^"]*/;
-
 function trimBreakline(str) {
   if (breaklinePattern.test(str)) {
     return '';
   }
   return str.replace(breaklinePrefixPattern, '').replace(breaklineSuffixPattern, '');
-}
-
-function matchByQuote(str, nonQuote) {
-  var match = str.match(nonQuote === '"' ? nonDoubleQuotePattern : nonSingleQuotePattern);
-  return match ? match[0] : '';
 }
 
 function getLocationByIndex(str, index) {
@@ -1082,8 +1074,8 @@ var DIRECTIVE_MODEL = 'model';
 
 var KEYWORD_UNIQUE = 'key';
 
-var DELIMITER_OPENING = '\\{\\{\\s*';
-var DELIMITER_CLOSING = '\\s*\\}\\}';
+var DELIMITER_OPENING = '(?:\\{)?\\{\\{\\s*';
+var DELIMITER_CLOSING = '\\s*\\}\\}(?:\\})?';
 
 /**
  * if 节点
@@ -1403,6 +1395,11 @@ var Scanner = function () {
     value: function charAt(index) {
       return charAt$1(this.tail, index);
     }
+  }, {
+    key: 'charCodeAt',
+    value: function charCodeAt(index) {
+      return charCodeAt$1(this.tail, index);
+    }
   }]);
   return Scanner;
 }();
@@ -1524,22 +1521,10 @@ var Element = function (_Node) {
   }
 
   createClass(Element, [{
-    key: 'addChild',
-    value: function addChild(child) {
-      var children = void 0;
-      switch (child.type) {
-        case ATTRIBUTE:
-        case SPREAD$1:
-          children = this.attributes || (this.attributes = []);
-          break;
-        case DIRECTIVE:
-          children = this.directives || (this.directives = []);
-          break;
-        default:
-          children = this.children || (this.children = []);
-          break;
-      }
-      children.push(child);
+    key: 'addAttr',
+    value: function addAttr(child) {
+      var attrs = this.attrs || (this.attrs = []);
+      attrs.push(child);
     }
   }]);
   return Element;
@@ -2348,7 +2333,7 @@ function compile$1(content) {
     return charAt$1(content, index);
   };
   var getCharCode = function getCharCode(i) {
-    return charCodeAt(content, i != NULL ? i : index);
+    return charCodeAt$1(content, i != NULL ? i : index);
   };
 
   var skipWhitespace = function skipWhitespace() {
@@ -2615,6 +2600,8 @@ function compile$1(content) {
 
 var EQUAL = 61; // =
 var SLASH = 47; // /
+var ARROW_LEFT = 60; // <
+var ARROW_RIGHT = 62; // >
 // 缓存编译结果
 var cache = {};
 
@@ -2624,7 +2611,10 @@ var closingDelimiterPattern = new RegExp(DELIMITER_CLOSING);
 var elementPattern = /<(?:\/)?[-a-z]\w*/i;
 var elementEndPattern = /(?:\/)?>/;
 
-var attributePattern = /([-:@a-z0-9]+)(=["'])?/i;
+var attributePattern = /([-:@a-z0-9]+)(?==["'])?/i;
+
+var nonSingleQuotePattern = /^[^']*/;
+var nonDoubleQuotePattern = /^[^"]*/;
 
 var componentNamePattern = /[-A-Z]/;
 var selfClosingTagNamePattern = /input|img|br/i;
@@ -2673,7 +2663,7 @@ var parsers = [{
   test: function test(source) {
     return source.startsWith(ELSE_IF);
   },
-  create: function create(source, popStack) {
+  create: function create(source, delimiter, popStack) {
     var expr = source.slice(ELSE_IF.length);
     if (expr) {
       popStack();
@@ -2685,7 +2675,7 @@ var parsers = [{
   test: function test(source) {
     return source.startsWith(ELSE);
   },
-  create: function create(source, popStack) {
+  create: function create(source, delimiter, popStack) {
     popStack();
     return new Else();
   }
@@ -2704,21 +2694,14 @@ var parsers = [{
   test: function test(source) {
     return !source.startsWith(COMMENT);
   },
-  create: function create(source) {
-    var safe = TRUE;
-    if (source.startsWith('{')) {
-      safe = FALSE;
-      source = source.slice(1);
-    }
-    return new Expression(compile$1(source), safe);
+  create: function create(source, delimiter) {
+    return new Expression(compile$1(source), !delimiter.endsWith('}}}'));
   }
 }];
 
-// 三种 level
-// 当 level 为 LEVEL_ELEMENT 时，表示可以处理任何类型
+// 2 种 level
 // 当 level 为 LEVEL_ATTRIBUTE 时，表示只可以处理属性和指令
 // 当 level 为 LEVEL_TEXT 时，表示只可以处理属性和指令的值
-var LEVEL_ELEMENT = 0;
 var LEVEL_ATTRIBUTE = 1;
 var LEVEL_TEXT = 2;
 
@@ -2772,20 +2755,16 @@ function traverseTree(node, enter, leave, traverseList, recursion) {
   }
 
   var children = node.children,
-      attributes = node.attributes,
-      directives = node.directives;
+      attrs = node.attrs;
 
   if (array(children)) {
     children = traverseList(children, recursion);
   }
-  if (array(attributes)) {
-    attributes = traverseList(attributes, recursion);
-  }
-  if (array(directives)) {
-    directives = traverseList(directives, recursion);
+  if (array(attrs)) {
+    attrs = traverseList(attrs, recursion);
   }
 
-  return leave(node, children, attributes, directives);
+  return leave(node, children, attrs);
 }
 
 /**
@@ -2858,7 +2837,7 @@ function render(ast, createText, createElement, importTemplate, data) {
     context = new Context(data);
   }
 
-  var level = 0;
+  var count = 0;
   var partials = {};
 
   var deps = {};
@@ -2961,9 +2940,9 @@ function render(ast, createText, createElement, importTemplate, data) {
 
       if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
       if (has$2(levelTypes, type)) {
-        level++;
+        count++;
       }
-    }, function (node, children, attributes, directives) {
+    }, function (node, children, attrs) {
       var type = node.type,
           name = node.name,
           subName = node.subName,
@@ -2973,89 +2952,155 @@ function render(ast, createText, createElement, importTemplate, data) {
       var keypath = getKeypath();
 
       if (has$2(levelTypes, type)) {
-        level--;
+        count--;
       }
 
-      switch (type) {
-        case TEXT:
-          return createText({
-            keypath: keypath,
-            content: content
-          });
+      var _ret2 = function () {
+        switch (type) {
+          case TEXT:
+            return {
+              v: createText({
+                keypath: keypath,
+                content: content
+              })
+            };
 
-        case EXPRESSION:
-          var expr = node.expr,
-              safe = node.safe;
+          case EXPRESSION:
+            var expr = node.expr,
+                safe = node.safe;
 
-          content = executeExpr(expr);
-          if (func(content) && content.$computed) {
-            content = content();
-          }
-          return createText({
-            safe: safe,
-            keypath: keypath,
-            content: content
-          });
+            content = executeExpr(expr);
+            if (func(content) && content.$computed) {
+              content = content();
+            }
+            return {
+              v: createText({
+                safe: safe,
+                keypath: keypath,
+                content: content
+              })
+            };
 
-        case ATTRIBUTE:
-          if (name.type === EXPRESSION) {
-            name = executeExpr(name.expr);
-          }
-          return {
-            name: name,
-            keypath: keypath,
-            value: mergeNodes(children)
-          };
+          case ATTRIBUTE:
+            if (name.type === EXPRESSION) {
+              name = executeExpr(name.expr);
+            }
+            return {
+              v: {
+                name: name,
+                keypath: keypath,
+                value: mergeNodes(children)
+              }
+            };
 
-        case DIRECTIVE:
-          return {
-            name: name,
-            subName: subName,
-            keypath: keypath,
-            value: mergeNodes(children)
-          };
+          case DIRECTIVE:
+            return {
+              v: {
+                name: name,
+                subName: subName,
+                keypath: keypath,
+                value: mergeNodes(children)
+              }
+            };
 
-        case IF$1:
-        case ELSE_IF$1:
-        case ELSE$1:
-          return children;
+          case IF$1:
+          case ELSE_IF$1:
+          case ELSE$1:
+            return {
+              v: children
+            };
 
-        case SPREAD$1:
-          content = executeExpr(node.expr);
-          if (object(content)) {
-            var _ret2 = function () {
-              var result = [];
-              each$1(content, function (value, name) {
-                push$1(result, {
-                  name: name,
-                  value: value,
-                  keypath: keypath
+          case SPREAD$1:
+            content = executeExpr(node.expr);
+            if (object(content)) {
+              var _ret3 = function () {
+                var result = [];
+                each$1(content, function (value, name) {
+                  push$1(result, {
+                    name: name,
+                    value: value,
+                    keypath: keypath
+                  });
                 });
+                return {
+                  v: {
+                    v: result
+                  }
+                };
+              }();
+
+              if ((typeof _ret3 === 'undefined' ? 'undefined' : _typeof(_ret3)) === "object") return _ret3.v;
+            }
+            break;
+
+          case ELEMENT:
+            var attributes = [],
+                directives = [];
+            if (attrs) {
+              each(attrs, function (node) {
+                if (has$2(node, 'subName')) {
+                  if (node.name && node.subName !== '') {
+                    push$1(directives, node);
+                  }
+                } else {
+                  push$1(attributes, node);
+                }
               });
-              return {
-                v: result
-              };
-            }();
+            }
+            if (!children) {
+              children = [];
+            }
+            return {
+              v: createElement({
+                name: name,
+                attributes: attributes,
+                directives: directives,
+                children: children,
+                keypath: keypath
+              }, !count, component)
+            };
+        }
+      }();
 
-            if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
-          }
-          break;
-
-        case ELEMENT:
-          return createElement({
-            name: name,
-            attributes: attributes,
-            directives: directives,
-            children: children,
-            keypath: keypath
-          }, !level, component);
-      }
+      if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
     }, traverseList, recursion);
   };
 
   var node = recursion(ast);
 
   return { node: node, deps: deps };
+}
+
+/**
+ * 解析属性值，传入开始引号，匹配结束引号
+ *
+ * @param {string} content
+ * @param {string} quote
+ * @return {Object}
+ */
+function parseAttributeValue(content, quote) {
+
+  var result = {
+    content: content
+  };
+
+  var match = content.match(quote === '"' ? nonDoubleQuotePattern : nonSingleQuotePattern);
+
+  if (match) {
+    result.value = match[0];
+
+    var length = match[0].length;
+
+    if (charAt$1(content, length) === quote) {
+      result.end = TRUE;
+      length++;
+    }
+    if (length) {
+      result.content = content.slice(length);
+    }
+  }
+
+  return result;
 }
 
 /**
@@ -3075,24 +3120,21 @@ function compile$$1(template, loose) {
   var content = void 0;
   // 记录标签名、属性名、指令名
   var name = void 0;
-  // 记录属性、指令值的开始引号，方便匹配结束引号
+  // 记录属性值、指令值的开始引号，方便匹配结束引号
   var quote = void 0;
   // 标签是否子闭合
   var isSelfClosing = void 0;
   // 正则匹配结果
   var match = void 0;
+  // 分隔符
+  var delimiter = void 0;
 
   // 主扫描器
   var mainScanner = new Scanner(template);
   // 辅扫描器
   var helperScanner = new Scanner();
 
-  // level 有三级
-  // 0 表示可以 add Element 和 Text
-  // 1 表示只能 add Attribute 和 Directive
-  // 2 表示只能 add Text
-
-  var level = LEVEL_ELEMENT,
+  var level = void 0,
       levelNode = void 0;
 
   var nodeStack = [];
@@ -3111,8 +3153,7 @@ function compile$$1(template, loose) {
 
   var addChild = function addChild(node) {
     var type = node.type,
-        content = node.content,
-        children = node.children;
+        content = node.content;
 
 
     if (type === TEXT) {
@@ -3123,7 +3164,9 @@ function compile$$1(template, loose) {
       }
     }
 
-    if (node.invalid !== TRUE) {
+    if (level === LEVEL_ATTRIBUTE && currentNode.addAttr) {
+      currentNode.addAttr(node);
+    } else {
       currentNode.addChild(node);
     }
 
@@ -3132,23 +3175,37 @@ function compile$$1(template, loose) {
     }
   };
 
-  var parseAttributeValue = function parseAttributeValue(content) {
-    match = matchByQuote(content, quote);
-    if (match) {
-      addChild(new Text(match));
-    }
-    var _match = match,
-        length = _match.length;
+  // 属性和指令支持以下 8 种写法：
+  // 1. name
+  // 2. name="value"
+  // 3. name="{{value}}"
+  // 4. name="prefix{{value}}suffix"
+  // 5. {{name}}
+  // 6. {{name}}="value"
+  // 7. {{name}}="{{value}}"
+  // 8. {{name}}="prefix{{value}}suffix"
+  var parseAttribute = function parseAttribute(content) {
 
-    if (content.charAt(length) === quote) {
+    if (falsy(levelNode.children)) {
+      if (content && charCodeAt$1(content, 0) === EQUAL) {
+        quote = charAt$1(content, 1);
+        content = content.slice(2);
+      } else {
+        popStack();
+        level = LEVEL_ATTRIBUTE;
+        return content;
+      }
+    }
+
+    match = parseAttributeValue(content, quote);
+    if (match.value) {
+      addChild(new Text(match.value));
+    }
+    if (match.end) {
       popStack();
-      level--;
-      length++;
+      level = LEVEL_ATTRIBUTE;
     }
-    if (length) {
-      content = content.slice(length);
-    }
-    return content;
+    return match.content;
   };
 
   // 核心函数，负责分隔符和普通字符串的深度解析
@@ -3162,39 +3219,11 @@ function compile$$1(template, loose) {
 
       if (content) {
 
-        // 属性和指令支持以下 8 种写法：
-        // 1. name
-        // 2. name="value"
-        // 3. name="{{value}}"
-        // 4. name="prefix{{value}}suffix"
-        // 5. {{name}}
-        // 6. {{name}}="value"
-        // 7. {{name}}="{{value}}"
-        // 8. {{name}}="prefix{{value}}suffix"
-
-        // 已开始解析属性或指令
         if (level === LEVEL_TEXT) {
-          // 命中 8 种写法中的 3 4
-          // 因为前面处理过 {{ }}，所以 levelNode 必定有 child
-          if (levelNode.children.length) {
-            content = parseAttributeValue(content);
-          } else {
-            // 命中 8 种写法中的 6 7 8
-            if (charCodeAt(content, 0) === EQUAL) {
-              quote = charAt$1(content, 1);
-              content = content.slice(2);
-            }
-            // 命中 8 种写法中的 5
-            else {
-                popStack();
-                level--;
-              }
-            // 8 种写法中的 1 2 在下面的 if 会一次性处理完，逻辑走不进这里
-          }
+          content = parseAttribute(content);
         }
 
         if (level === LEVEL_ATTRIBUTE) {
-          // 下一个属性的开始
           while (content && (match = attributePattern.exec(content))) {
             content = content.slice(match.index + match[0].length);
             name = match[1];
@@ -3204,31 +3233,19 @@ function compile$$1(template, loose) {
             } else {
               if (name.startsWith(DIRECTIVE_EVENT_PREFIX)) {
                 name = name.slice(DIRECTIVE_EVENT_PREFIX.length);
-                if (name) {
-                  levelNode = new Directive('event', name);
-                }
+                levelNode = new Directive('event', name);
               } else if (name.startsWith(DIRECTIVE_PREFIX)) {
                 name = name.slice(DIRECTIVE_PREFIX.length);
                 levelNode = new Directive(name);
-                if (!name || buildInDirectives[name]) {
-                  levelNode.invalid = TRUE;
-                }
               } else {
                 levelNode = new Attribute(name);
               }
             }
 
             addChild(levelNode);
-            level++;
+            level = LEVEL_TEXT;
 
-            match = match[2];
-            if (match) {
-              quote = match.charAt(1);
-              content = parseAttributeValue(content);
-            } else {
-              popStack();
-              level--;
-            }
+            content = parseAttribute(content);
           }
         } else if (content) {
           addChild(new Text(content));
@@ -3237,25 +3254,23 @@ function compile$$1(template, loose) {
 
       // 分隔符之间的内容
       content = helperScanner.nextBefore(closingDelimiterPattern);
-      helperScanner.nextAfter(closingDelimiterPattern);
+      // 结束分隔符
+      delimiter = helperScanner.nextAfter(closingDelimiterPattern);
 
       if (content) {
-        if (charCodeAt(content, 0) === SLASH) {
+        if (charCodeAt$1(content, 0) === SLASH) {
           popStack();
         } else {
-          if (content.charAt(0) === '{' && helperScanner.charAt(0) === '}') {
-            helperScanner.forward(1);
-          }
           each(parsers, function (parser, index) {
-            if (parser.test(content)) {
+            if (parser.test(content, delimiter)) {
               // 用 index 节省一个变量定义
-              index = parser.create(content, popStack);
+              index = parser.create(content, delimiter, popStack);
               if (string(index)) {
                 parseError(template, index, mainScanner.pos + helperScanner.pos);
               } else if (level === LEVEL_ATTRIBUTE && index.type === EXPRESSION) {
                 levelNode = new Attribute(index);
-                level++;
                 addChild(levelNode);
+                level = LEVEL_TEXT;
               } else {
                 addChild(index);
               }
@@ -3277,18 +3292,18 @@ function compile$$1(template, loose) {
 
     // 接下来必须是 < 开头（标签）
     // 如果不是标签，那就该结束了
-    if (mainScanner.charAt(0) !== '<') {
+    if (mainScanner.charCodeAt(0) !== ARROW_LEFT) {
       break;
     }
 
     // 结束标签
-    if (mainScanner.charAt(1) === '/') {
+    if (mainScanner.charCodeAt(1) === SLASH) {
       // 取出 </tagName
       content = mainScanner.nextAfter(elementPattern);
       name = content.slice(2);
 
       // 没有匹配到 >
-      if (mainScanner.charAt(0) !== '>') {
+      if (mainScanner.charCodeAt(0) !== ARROW_RIGHT) {
         return parseError(template, 'Illegal tag name', mainScanner.pos);
       } else if (currentNode.type === ELEMENT && name !== currentNode.name) {
         return parseError(template, 'Unexpected closing tag', mainScanner.pos);
@@ -3306,21 +3321,22 @@ function compile$$1(template, loose) {
         name = content.slice(1);
 
         if (componentNamePattern.test(name)) {
-          // 低版本浏览器不支持自定义标签，需要转成 div
-          addChild(new Element(name, TRUE));
+          levelNode = new Element(name, TRUE);
           isSelfClosing = TRUE;
         } else {
-          addChild(new Element(name));
+          levelNode = new Element(name);
           isSelfClosing = selfClosingTagNamePattern.test(name);
         }
+
+        addChild(levelNode);
 
         // 截取 <name 和 > 之间的内容
         // 用于提取 Attribute 和 Directive
         content = mainScanner.nextBefore(elementEndPattern);
         if (content) {
-          level++;
+          level = LEVEL_ATTRIBUTE;
           parseContent(content);
-          level--;
+          level = NULL;
         }
 
         content = mainScanner.nextAfter(elementEndPattern);
@@ -3985,26 +4001,24 @@ function create$1(ast, context, instance) {
     var safe = node.safe,
         content = node.content;
 
-    if (boolean(safe)) {
-      if (safe || !string(content) || !tag.test(content)) {
-        return toString$1(content);
-      } else {
-        var nodes = compile$$1(content, TRUE);
-        return nodes.map(function (node) {
-          return render(node, createText, createElement).node;
-        });
-      }
-    } else {
+    if (safe !== FALSE || !string(content) || !tag.test(content)) {
       return content;
     }
+    return compile$$1(content, TRUE).map(function (node) {
+      return render(node, createText, createElement).node;
+    });
   };
 
   var createElement = function createElement(node, isRootElement, isComponent) {
+    var name = node.name,
+        attributes$$1 = node.attributes,
+        directives = node.directives,
+        children = node.children;
+
 
     var attrs = {},
-        directives = [],
+        dires = [],
         styles = void 0;
-
     var data = { attrs: attrs };
 
     // 指令的创建要确保顺序
@@ -4013,13 +4027,13 @@ function create$1(ast, context, instance) {
     // 因此 component 必须在 event 指令之前执行
 
     if (isComponent) {
-      directives.push({
+      push$1(dires, {
         node: node,
         name: 'component',
         directive: instance.directive('component')
       });
-    } else if (array(node.attributes)) {
-      each(node.attributes, function (node) {
+    } else {
+      each(attributes$$1, function (node) {
         var name = node.name,
             value = node.value;
 
@@ -4039,33 +4053,31 @@ function create$1(ast, context, instance) {
       });
     }
 
-    if (array(node.directives)) {
-      each(node.directives, function (node) {
-        var name = node.name;
+    each(directives, function (node) {
+      var name = node.name;
 
-        if (name === KEYWORD_UNIQUE) {
-          data.key = node.value;
-        } else {
-          directives.push({
-            name: name,
-            node: node,
-            directive: instance.directive(name)
-          });
-        }
-      });
-    }
+      if (name === KEYWORD_UNIQUE) {
+        data.key = node.value;
+      } else {
+        push$1(dires, {
+          name: name,
+          node: node,
+          directive: instance.directive(name)
+        });
+      }
+    });
 
     if (styles) {
       data.style = styles;
     }
 
-    if (isRootElement || directives.length) {
+    if (isRootElement || dires.length) {
       (function () {
 
-        var map = toObject(directives, 'name');
+        var map = toObject(dires, 'name');
 
         var notify = function notify(vnode, type) {
-          each(directives, function (item) {
+          each(dires, function (item) {
             var directive = item.directive;
 
             if (directive && func(directive[type])) {
@@ -4100,7 +4112,15 @@ function create$1(ast, context, instance) {
       })();
     }
 
-    return h(isComponent ? 'div' : node.name, data, node.children);
+    // snabbdom 只支持字符串形式的 children
+    children = children.map(function (child) {
+      if (child && has$2(child, 'sel') && has$2(child, 'elm')) {
+        return child;
+      }
+      return toString$1(child);
+    });
+
+    return h(isComponent ? 'div' : name, data, children);
   };
 
   var importTemplate = function importTemplate(name) {
@@ -5193,7 +5213,16 @@ var Yox = function () {
                     }
                   });
                 }
-                callFunction(instance[ast.callee.name], instance, args);
+                var name = ast.callee.name;
+
+                var fn = instance[name];
+                if (!fn) {
+                  var result = instance.get(name, keypath);
+                  if (result) {
+                    fn = result.value;
+                  }
+                }
+                callFunction(fn, instance, args);
               }
             };
           }
@@ -5430,7 +5459,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.20.1';
+Yox.version = '0.20.2';
 
 /**
  * 工具，便于扩展、插件使用

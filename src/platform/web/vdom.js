@@ -24,28 +24,22 @@ export function create(ast, context, instance) {
 
   let createText = function (node) {
     let { safe, content } = node
-    if (is.boolean(safe)) {
-      if (safe || !is.string(content) || !pattern.tag.test(content)) {
-        return toString(content)
-      }
-      else {
-        let nodes = viewEnginer.compile(content, env.TRUE)
-        return nodes.map(
-          function (node) {
-            return viewEnginer.render(node, createText, createElement).node
-          }
-        )
-      }
-    }
-    else {
+    if (safe !== env.FALSE || !is.string(content) || !pattern.tag.test(content)) {
       return content
     }
+    return viewEnginer.compile(content, env.TRUE)
+      .map(
+        function (node) {
+          return viewEnginer.render(node, createText, createElement).node
+        }
+      )
   }
 
   let createElement = function (node, isRootElement, isComponent) {
 
-    let attrs = { }, directives = [ ], styles
+    let { name, attributes, directives, children } = node
 
+    let attrs = { }, dires = [ ], styles
     let data = { attrs }
 
     // 指令的创建要确保顺序
@@ -54,15 +48,18 @@ export function create(ast, context, instance) {
     // 因此 component 必须在 event 指令之前执行
 
     if (isComponent) {
-      directives.push({
-        node: node,
-        name: 'component',
-        directive: instance.directive('component'),
-      })
+      array.push(
+        dires,
+        {
+          node,
+          name: 'component',
+          directive: instance.directive('component'),
+        }
+      )
     }
-    else if (is.array(node.attributes)) {
+    else {
       array.each(
-        node.attributes,
+        attributes,
         function (node) {
           let { name, value } = node
           if (name === 'style') {
@@ -86,36 +83,37 @@ export function create(ast, context, instance) {
       )
     }
 
-    if (is.array(node.directives)) {
-      array.each(
-        node.directives,
-        function (node) {
-          let { name } = node
-          if (name === viewSyntax.KEYWORD_UNIQUE) {
-            data.key = node.value
-          }
-          else {
-            directives.push({
+    array.each(
+      directives,
+      function (node) {
+        let { name } = node
+        if (name === viewSyntax.KEYWORD_UNIQUE) {
+          data.key = node.value
+        }
+        else {
+          array.push(
+            dires,
+            {
               name,
               node,
               directive: instance.directive(name),
-            })
-          }
+            }
+          )
         }
-      )
-    }
+      }
+    )
 
     if (styles) {
       data.style = styles
     }
 
-    if (isRootElement || directives.length) {
+    if (isRootElement || dires.length) {
 
-      let map = array.toObject(directives, 'name')
+      let map = array.toObject(dires, 'name')
 
       let notify = function (vnode, type) {
         array.each(
-          directives,
+          dires,
           function (item) {
             let { directive } = item
             if (directive && is.func(directive[type])) {
@@ -151,7 +149,20 @@ export function create(ast, context, instance) {
       }
     }
 
-    return h(isComponent ? 'div' : node.name, data, node.children)
+    // snabbdom 只支持字符串形式的 children
+    children = children.map(
+      function (child) {
+        if (child
+          && object.has(child, 'sel')
+          && object.has(child, 'elm')
+        ) {
+          return child
+        }
+        return toString(child)
+      }
+    )
+
+    return h(isComponent ? 'div' : name, data, children)
 
   }
 
