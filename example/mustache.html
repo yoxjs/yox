@@ -66,6 +66,10 @@
             </p>
 
             <p>
+                {{> bye}}
+            </p>
+
+            <p>
                 {{formatDate(today)}}
             </p>
 
@@ -78,7 +82,7 @@
             el: '#app',
             template: '#template',
             data: {
-                title: '<strong>Yox</strong>',
+                title: '<strong id="id" class="class">Yox</strong>',
 
                 user: {
                     name: 'musicode',
@@ -97,6 +101,9 @@
                     }
                 ],
                 today: new Date()
+            },
+            partials: {
+              bye: '<div>bye, {{user.name}}</div>'
             },
             filters: {
                 formatDate: function (value) {

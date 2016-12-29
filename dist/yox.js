@@ -1,7 +1,7 @@
 (function (global, factory) {
-	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
-	typeof define === 'function' && define.amd ? define(factory) :
-	(global.Yox = factory());
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
+  typeof define === 'function' && define.amd ? define(factory) :
+  (global.Yox = factory());
 }(this, (function () { 'use strict';
 
 /**
@@ -1416,15 +1416,13 @@ var Node = function () {
     classCallCheck(this, Node);
 
     this.type = type;
-    if (hasChildren !== FALSE) {
-      this.children = [];
-    }
   }
 
   createClass(Node, [{
     key: 'addChild',
     value: function addChild(child) {
-      this.children.push(child);
+      var children = this.children || (this.children = []);
+      children.push(child);
     }
   }]);
   return Node;
@@ -1443,7 +1441,7 @@ var Attribute = function (_Node) {
   function Attribute(name, value) {
     classCallCheck(this, Attribute);
 
-    var _this = possibleConstructorReturn(this, (Attribute.__proto__ || Object.getPrototypeOf(Attribute)).call(this, ATTRIBUTE, arguments.length === 1));
+    var _this = possibleConstructorReturn(this, (Attribute.__proto__ || Object.getPrototypeOf(Attribute)).call(this, ATTRIBUTE));
 
     _this.name = name;
     _this.value = value;
@@ -1469,7 +1467,7 @@ var Directive = function (_Node) {
   function Directive(name, subName, value) {
     classCallCheck(this, Directive);
 
-    var _this = possibleConstructorReturn(this, (Directive.__proto__ || Object.getPrototypeOf(Directive)).call(this, DIRECTIVE, arguments.length < 3));
+    var _this = possibleConstructorReturn(this, (Directive.__proto__ || Object.getPrototypeOf(Directive)).call(this, DIRECTIVE));
 
     _this.name = name;
     _this.subName = subName;
@@ -1519,9 +1517,9 @@ var Element = function (_Node) {
     var _this = possibleConstructorReturn(this, (Element.__proto__ || Object.getPrototypeOf(Element)).call(this, ELEMENT));
 
     _this.name = name;
-    _this.component = component;
-    _this.attributes = [];
-    _this.directives = [];
+    if (component) {
+      _this.component = component;
+    }
     return _this;
   }
 
@@ -1532,13 +1530,13 @@ var Element = function (_Node) {
       switch (child.type) {
         case ATTRIBUTE:
         case SPREAD$1:
-          children = this.attributes;
+          children = this.attributes || (this.attributes = []);
           break;
         case DIRECTIVE:
-          children = this.directives;
+          children = this.directives || (this.directives = []);
           break;
         default:
-          children = this.children;
+          children = this.children || (this.children = []);
           break;
       }
       children.push(child);
@@ -1596,7 +1594,7 @@ var Expression = function (_Node) {
   function Expression(expr, safe) {
     classCallCheck(this, Expression);
 
-    var _this = possibleConstructorReturn(this, (Expression.__proto__ || Object.getPrototypeOf(Expression)).call(this, EXPRESSION, FALSE));
+    var _this = possibleConstructorReturn(this, (Expression.__proto__ || Object.getPrototypeOf(Expression)).call(this, EXPRESSION));
 
     _this.expr = expr;
     _this.safe = safe;
@@ -1639,7 +1637,7 @@ var Import = function (_Node) {
   function Import(name) {
     classCallCheck(this, Import);
 
-    var _this = possibleConstructorReturn(this, (Import.__proto__ || Object.getPrototypeOf(Import)).call(this, IMPORT$1, FALSE));
+    var _this = possibleConstructorReturn(this, (Import.__proto__ || Object.getPrototypeOf(Import)).call(this, IMPORT$1));
 
     _this.name = name;
     return _this;
@@ -1681,7 +1679,7 @@ var Spread = function (_Node) {
   function Spread(expr) {
     classCallCheck(this, Spread);
 
-    var _this = possibleConstructorReturn(this, (Spread.__proto__ || Object.getPrototypeOf(Spread)).call(this, SPREAD$1, FALSE));
+    var _this = possibleConstructorReturn(this, (Spread.__proto__ || Object.getPrototypeOf(Spread)).call(this, SPREAD$1));
 
     _this.expr = expr;
     return _this;
@@ -1702,7 +1700,7 @@ var Text = function (_Node) {
   function Text(content) {
     classCallCheck(this, Text);
 
-    var _this = possibleConstructorReturn(this, (Text.__proto__ || Object.getPrototypeOf(Text)).call(this, TEXT, FALSE));
+    var _this = possibleConstructorReturn(this, (Text.__proto__ || Object.getPrototypeOf(Text)).call(this, TEXT));
 
     _this.content = content;
     return _this;
@@ -2617,6 +2615,7 @@ function compile$1(content) {
 
 var EQUAL = 61; // =
 var SLASH = 47; // /
+// 缓存编译结果
 var cache = {};
 
 var openingDelimiterPattern = new RegExp(DELIMITER_OPENING);
@@ -2715,103 +2714,167 @@ var parsers = [{
   }
 }];
 
+// 三种 level
+// 当 level 为 LEVEL_ELEMENT 时，表示可以处理任何类型
+// 当 level 为 LEVEL_ATTRIBUTE 时，表示只可以处理属性和指令
+// 当 level 为 LEVEL_TEXT 时，表示只可以处理属性和指令的值
 var LEVEL_ELEMENT = 0;
 var LEVEL_ATTRIBUTE = 1;
 var LEVEL_TEXT = 2;
 
+// 触发 level 变化的节点类型
 var levelTypes = {};
 levelTypes[ELEMENT] = levelTypes[ATTRIBUTE] = levelTypes[DIRECTIVE] = TRUE;
 
+// 叶子节点类型
+var leafTypes = {};
+leafTypes[EXPRESSION] = leafTypes[IMPORT$1] = leafTypes[SPREAD$1] = leafTypes[TEXT] = TRUE;
+
+// 内置指令，无需加前缀
 var buildInDirectives = {};
 buildInDirectives[DIRECTIVE_REF] = buildInDirectives[DIRECTIVE_LAZY] = buildInDirectives[DIRECTIVE_MODEL] = buildInDirectives[KEYWORD_UNIQUE] = TRUE;
 
-function render(ast, data, createText, createElement, addDeps) {
-
-  var keys$$1 = [];
-  var getKeypath = function getKeypath() {
-    return stringify(keys$$1);
-  };
-  getKeypath.$computed = TRUE;
-  data[SPECIAL_KEYPATH] = getKeypath;
-
-  var level = 0;
-  var partials = {};
-  var context = new Context(data);
-
-  var execute$$1 = function execute$$1(expr) {
-    var _expressionEnginer$ex = execute(expr, context),
-        value = _expressionEnginer$ex.value,
-        deps = _expressionEnginer$ex.deps;
-
-    if (addDeps) {
-      addDeps(deps, getKeypath);
-    }
-    return value;
-  };
-
-  var merge$$1 = function merge$$1(nodes) {
+/**
+ * 合并多个节点
+ *
+ * 用于处理属性值，如 name="xx{{xx}}xx"  name="xx"  name="{{xx}}"
+ *
+ * @param {?Array} nodes
+ * @return {*}
+ */
+function mergeNodes(nodes) {
+  if (array(nodes)) {
     if (nodes.length === 1) {
       return nodes[0];
     } else if (nodes.length > 1) {
       return nodes.join('');
     }
-  };
+  }
+}
 
-  var traverseList = function traverseList(nodes) {
-    var list = [],
-        item = void 0;
-    var i = 0,
-        node = void 0;
-    while (node = nodes[i]) {
-      item = walkTree(node);
-      if (item) {
-        push$1(list, item);
-        if (node.type === IF$1 || node.type === ELSE_IF$1) {
-          // 跳过后面紧跟着的 elseif else
-          while (node = nodes[i + 1]) {
-            if (node.type === ELSE_IF$1 || node.type === ELSE$1) {
-              i++;
-            } else {
-              break;
-            }
+/**
+ * 遍历节点树
+ *
+ * @param {Node} node
+ * @param {Function} enter
+ * @param {Function} leave
+ * @param {Function} traverseList
+ * @param {Function} recursion
+ * @return {*}
+ */
+function traverseTree(node, enter, leave, traverseList, recursion) {
+
+  var result = enter(node);
+  if (result) {
+    return result;
+  } else if (result === FALSE) {
+    return;
+  }
+
+  var children = node.children,
+      attributes = node.attributes,
+      directives = node.directives;
+
+  if (array(children)) {
+    children = traverseList(children, recursion);
+  }
+  if (array(attributes)) {
+    attributes = traverseList(attributes, recursion);
+  }
+  if (array(directives)) {
+    directives = traverseList(directives, recursion);
+  }
+
+  return leave(node, children, attributes, directives);
+}
+
+/**
+ * 遍历节点列表
+ *
+ * @param {Array.<Node>} nodes
+ * @param {Function} recursion
+ * @return {Array}
+ */
+function traverseList(nodes, recursion) {
+  var list = [],
+      item = void 0;
+  var i = 0,
+      node = void 0;
+  while (node = nodes[i]) {
+    item = recursion(node);
+    if (item) {
+      push$1(list, item);
+      if (node.type === IF$1 || node.type === ELSE_IF$1) {
+        // 跳过后面紧跟着的 elseif else
+        while (node = nodes[i + 1]) {
+          if (node.type === ELSE_IF$1 || node.type === ELSE$1) {
+            i++;
+          } else {
+            break;
           }
         }
       }
-      i++;
     }
-    return list;
+    i++;
+  }
+  return list;
+}
+
+/**
+ * 序列化表达式
+ *
+ * @param {Object} expr
+ * @return {string}
+ */
+function stringifyExpr(expr) {
+  return normalize(stringify$1(expr));
+}
+
+/**
+ * 渲染抽象语法树
+ *
+ * @param {Object} ast 编译出来的抽象语法树
+ * @param {Function} createText 创建文本节点
+ * @param {Function} createElement 创建元素节点
+ * @param {?Function} importTemplate 导入子模板，如果是纯模板，可不传
+ * @param {?Object} data 渲染模板的数据，如果渲染纯模板，可不传
+ * @return {Object} { node: x, deps: { } }
+ */
+function render(ast, createText, createElement, importTemplate, data) {
+
+  var context = void 0,
+      keys$$1 = void 0;
+  var getKeypath = function getKeypath() {
+    return '';
   };
 
-  var traverseTree = function traverseTree(node, enter, leave) {
+  if (data) {
+    keys$$1 = [];
+    getKeypath = function getKeypath() {
+      return stringify(keys$$1);
+    };
+    getKeypath.$computed = TRUE;
+    data[SPECIAL_KEYPATH] = getKeypath;
+    context = new Context(data);
+  }
 
-    var result = enter(node);
-    if (result) {
-      return result;
-    } else if (result === FALSE) {
-      return;
-    }
+  var level = 0;
+  var partials = {};
 
-    var children = node.children,
-        attributes = node.attributes,
-        directives = node.directives;
-
-    if (array(children)) {
-      children = traverseList(children);
-    }
-    if (array(attributes)) {
-      attributes = traverseList(attributes);
-    }
-    if (array(directives)) {
-      directives = traverseList(directives);
-    }
-
-    return leave(node, children, attributes, directives);
+  var deps = {};
+  var executeExpr = function executeExpr(expr) {
+    var result = execute(expr, context);
+    each$1(result.deps, function (value, key) {
+      deps[resolve(getKeypath(), key)] = value;
+    });
+    return result.value;
   };
 
-  var walkTree = function walkTree(root) {
-    return traverseTree(root, function (node) {
+  var recursion = function recursion(node) {
+    return traverseTree(node, function (node) {
       var type = node.type,
-          name = node.name;
+          name = node.name,
+          expr = node.expr;
 
       var _ret = function () {
 
@@ -2825,10 +2888,15 @@ function render(ast, data, createText, createElement, addDeps) {
             };
 
           case IMPORT$1:
-            var partial = partials[name] || instance.partial(name);
+            var partial = partials[name] || importTemplate(name);
             if (partial) {
+              if (string(partial)) {
+                return {
+                  v: traverseList(compile$$1(partial, TRUE), recursion)
+                };
+              }
               return {
-                v: traverseList(partial.children)
+                v: traverseList(partial.children, recursion)
               };
             }
             error$1('Importing partial \'' + name + '\' is not found.');
@@ -2837,7 +2905,7 @@ function render(ast, data, createText, createElement, addDeps) {
           // 条件判断失败就没必要往下走了
           case IF$1:
           case ELSE_IF$1:
-            if (!execute$$1(node.expr)) {
+            if (!executeExpr(expr)) {
               return {
                 v: FALSE
               };
@@ -2846,11 +2914,10 @@ function render(ast, data, createText, createElement, addDeps) {
 
           // each 比较特殊，只能放在 enter 里执行
           case EACH$1:
-            var expr = node.expr,
-                index = node.index,
+            var index = node.index,
                 children = node.children;
 
-            var value = execute$$1(expr);
+            var value = executeExpr(expr);
 
             var iterate = void 0;
             if (array(value)) {
@@ -2865,8 +2932,7 @@ function render(ast, data, createText, createElement, addDeps) {
 
             var result = [];
 
-            var keypath = normalize(stringify$1(expr));
-            keys$$1.push(keypath);
+            push$1(keys$$1, stringifyExpr(expr));
             context = context.push(value);
 
             iterate(value, function (item, i) {
@@ -2874,10 +2940,10 @@ function render(ast, data, createText, createElement, addDeps) {
                 context.set(index, i);
               }
 
-              keys$$1.push(i);
+              push$1(keys$$1, i);
               context = context.push(item);
 
-              push$1(result, traverseList(children));
+              push$1(result, traverseList(children, recursion));
 
               keys$$1.pop();
               context = context.pop();
@@ -2904,12 +2970,11 @@ function render(ast, data, createText, createElement, addDeps) {
           component = node.component,
           content = node.content;
 
+      var keypath = getKeypath();
 
       if (has$2(levelTypes, type)) {
         level--;
       }
-
-      var keypath = getKeypath();
 
       switch (type) {
         case TEXT:
@@ -2922,7 +2987,7 @@ function render(ast, data, createText, createElement, addDeps) {
           var expr = node.expr,
               safe = node.safe;
 
-          content = execute$$1(expr);
+          content = executeExpr(expr);
           if (func(content) && content.$computed) {
             content = content();
           }
@@ -2934,12 +2999,12 @@ function render(ast, data, createText, createElement, addDeps) {
 
         case ATTRIBUTE:
           if (name.type === EXPRESSION) {
-            name = execute$$1(name.expr);
+            name = executeExpr(name.expr);
           }
           return {
             name: name,
             keypath: keypath,
-            value: merge$$1(children)
+            value: mergeNodes(children)
           };
 
         case DIRECTIVE:
@@ -2947,7 +3012,7 @@ function render(ast, data, createText, createElement, addDeps) {
             name: name,
             subName: subName,
             keypath: keypath,
-            value: merge$$1(children)
+            value: mergeNodes(children)
           };
 
         case IF$1:
@@ -2956,7 +3021,7 @@ function render(ast, data, createText, createElement, addDeps) {
           return children;
 
         case SPREAD$1:
-          content = execute$$1(node.expr);
+          content = executeExpr(node.expr);
           if (object(content)) {
             var _ret2 = function () {
               var result = [];
@@ -2977,30 +3042,30 @@ function render(ast, data, createText, createElement, addDeps) {
           break;
 
         case ELEMENT:
-          var options = {
+          return createElement({
             name: name,
             attributes: attributes,
             directives: directives,
+            children: children,
             keypath: keypath
-          };
-          if (!component) {
-            options.children = children;
-          }
-          return createElement(options, !level, component);
+          }, !level, component);
       }
-    });
+    }, traverseList, recursion);
   };
 
-  return walkTree(ast);
+  var node = recursion(ast);
+
+  return { node: node, deps: deps };
 }
 
 /**
  * 把模板编译为抽象语法树
  *
  * @param {string} template
+ * @param {?boolean} loose
  * @return {Object}
  */
-function compile$$1(template) {
+function compile$$1(template, loose) {
 
   if (cache[template]) {
     return cache[template];
@@ -3035,7 +3100,7 @@ function compile$$1(template) {
   var currentNode = rootNode;
 
   var pushStack = function pushStack(node) {
-    nodeStack.push(currentNode);
+    push$1(nodeStack, currentNode);
     currentNode = node;
   };
 
@@ -3062,7 +3127,7 @@ function compile$$1(template) {
       currentNode.addChild(node);
     }
 
-    if (children) {
+    if (!leafTypes[type]) {
       pushStack(node);
     }
   };
@@ -3276,12 +3341,15 @@ function compile$$1(template) {
 
   var children = rootNode.children;
 
-  var root = children[0];
 
+  if (loose) {
+    return cache[template] = children;
+  }
+
+  var root = children[0];
   if (children.length > 1 || root.type !== ELEMENT) {
     error$1('Component template should contain exactly one root element.');
   }
-
   return cache[template] = root;
 }
 
@@ -3899,352 +3967,148 @@ function updateAttrs(oldVnode, vnode) {
 
 var attributes = { create: updateAttrs, update: updateAttrs };
 
-function createCommonjsModule(fn, module) {
-	return module = { exports: {} }, fn(module, module.exports), module.exports;
-}
+var toString$1 = function (str) {
+  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
 
-var attrRE = /([\w-]+)|(['"])(.*?)\2/g;
-
-// create optimized lookup object for
-// void elements as listed here:
-// http://www.w3.org/html/wg/drafts/html/master/syntax.html#void-elements
-var lookup = Object.create ? Object.create(null) : {};
-lookup.area = true;
-lookup.base = true;
-lookup.br = true;
-lookup.col = true;
-lookup.embed = true;
-lookup.hr = true;
-lookup.img = true;
-lookup.input = true;
-lookup.keygen = true;
-lookup.link = true;
-lookup.menuitem = true;
-lookup.meta = true;
-lookup.param = true;
-lookup.source = true;
-lookup.track = true;
-lookup.wbr = true;
-
-var parseTag$1 = function (tag) {
-    var i = 0;
-    var key;
-    var res = {
-        type: 'tag',
-        name: '',
-        voidElement: false,
-        attrs: {},
-        children: []
-    };
-
-    tag.replace(attrRE, function (match) {
-        if (i % 2) {
-            key = match;
-        } else {
-            if (i === 0) {
-                if (lookup[match] || tag.charAt(tag.length - 2) === '/') {
-                    res.voidElement = true;
-                }
-                res.name = match;
-            } else {
-                res.attrs[key] = match.replace(/^['"]|['"]$/g, '');
-            }
-        }
-        i++;
-    });
-
-    return res;
+  try {
+    return str.toString();
+  } catch (e) {
+    return defaultValue;
+  }
 };
 
-/*jshint -W030 */
-var tagRE = /(?:<!--[\S\s]*?-->|<(?:"[^"]*"['"]*|'[^']*'['"]*|[^'">])+>)/g;
-var parseTag = parseTag$1;
-// re-used obj for quick lookups of components
-var empty = Object.create ? Object.create(null) : {};
-// common logic for pushing a child node onto a list
-function pushTextNode(list, html, start) {
-    // calculate correct end of the content slice in case there's
-    // no tag after the text node.
-    var end = html.indexOf('<', start);
-    var content = html.slice(start, end === -1 ? undefined : end);
-    // if a node is nothing but whitespace, no need to add it.
-    if (!/^\s*$/.test(content)) {
-        list.push({
-            type: 'text',
-            content: content
-        });
-    }
-}
+var patch = snabbdom.init([attributes, style]);
 
-var parse$2 = function parse$2(html, options) {
-    options || (options = {});
-    options.components || (options.components = empty);
-    var result = [];
-    var current;
-    var level = -1;
-    var arr = [];
-    var byTag = {};
-    var inComponent = false;
+function create$1(ast, context, instance) {
 
-    html.replace(tagRE, function (tag, index) {
-        if (inComponent) {
-            if (tag !== '</' + current.name + '>') {
-                return;
-            } else {
-                inComponent = false;
-            }
-        }
+  var createText = function createText(node) {
+    var safe = node.safe,
+        content = node.content;
 
-        var isOpen = tag.charAt(1) !== '/';
-        var isComment = tag.indexOf('<!--') === 0;
-        var start = index + tag.length;
-        var nextChar = html.charAt(start);
-        var parent;
-
-        if (isOpen && !isComment) {
-            level++;
-
-            current = parseTag(tag);
-            if (current.type === 'tag' && options.components[current.name]) {
-                current.type = 'component';
-                inComponent = true;
-            }
-
-            if (!current.voidElement && !inComponent && nextChar && nextChar !== '<') {
-                pushTextNode(current.children, html, start);
-            }
-
-            byTag[current.tagName] = current;
-
-            // if we're at root, push new base node
-            if (level === 0) {
-                result.push(current);
-            }
-
-            parent = arr[level - 1];
-
-            if (parent) {
-                parent.children.push(current);
-            }
-
-            arr[level] = current;
-        }
-
-        if (isComment || !isOpen || current.voidElement) {
-            if (!isComment) {
-                level--;
-            }
-            if (!inComponent && nextChar !== '<' && nextChar) {
-                // trailing text node
-                // if we're at the root, push a base text node. otherwise add as
-                // a child to the current node.
-                parent = level === -1 ? result : arr[level].children;
-                pushTextNode(parent, html, start);
-            }
-        }
-    });
-
-    return result;
-};
-
-var utils = createCommonjsModule(function (module, exports) {
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-exports.createTextVNode = createTextVNode;
-exports.transformName = transformName;
-exports.unescapeEntities = unescapeEntities;
-
-var _vnode = vnode;
-
-var _vnode2 = _interopRequireDefault(_vnode);
-
-function _interopRequireDefault(obj) {
-    return obj && obj.__esModule ? obj : { default: obj };
-}
-
-function createTextVNode(text, context) {
-    return (0, _vnode2.default)(undefined, undefined, undefined, unescapeEntities(text, context));
-}
-
-function transformName(name) {
-    // Replace -a with A to help camel case style property names.
-    name = name.replace(/-(\w)/g, function _replace($1, $2) {
-        return $2.toUpperCase();
-    });
-    // Handle properties that start with a -.
-    var firstChar = name.charAt(0).toLowerCase();
-    return '' + firstChar + name.substring(1);
-}
-
-// Regex for matching HTML entities.
-var entityRegex = new RegExp('&[a-z0-9]+;', 'gi');
-// Element for setting innerHTML for transforming entities.
-var el = null;
-
-function unescapeEntities(text, context) {
-    // Create the element using the context if it doesn't exist.
-    if (!el) {
-        el = context.createElement('div');
-    }
-    return text.replace(entityRegex, function (entity) {
-        el.innerHTML = entity;
-        return el.textContent;
-    });
-}
-});
-
-var strings$1 = createCommonjsModule(function (module, exports) {
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-exports.default = function (html) {
-    var options = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
-
-    var context = options.context || document;
-
-    // If there's nothing here, return null;
-    if (!html) {
-        return null;
-    }
-
-    // Maintain a list of created vnodes so we can call the create hook.
-    var createdVNodes = [];
-
-    // Parse the string into the AST and convert to VNodes.
-    var vnodes = convertNodes((0, _parse2.default)(html), createdVNodes, context);
-
-    var res = void 0;
-    if (!vnodes) {
-        // If there are no vnodes but there is string content, then the string
-        // must be just text or at least invalid HTML that we should treat as
-        // text (since the AST parser didn't find any well-formed HTML).
-        res = toVNode({ type: 'text', content: html }, createdVNodes, context);
-    } else if (vnodes.length === 1) {
-        // If there's only one root node, just return it as opposed to an array.
-        res = vnodes[0];
-    } else {
-        // Otherwise we have an array of VNodes, which we should return.
-        res = vnodes;
-    }
-
-    // Call the 'create' hook for each created node.
-    options.hooks && options.hooks.create && createdVNodes.forEach(function (node) {
-        options.hooks.create(node);
-    });
-    return res;
-};
-
-var _parse = parse$2;
-
-var _parse2 = _interopRequireDefault(_parse);
-
-var _h = h;
-
-var _h2 = _interopRequireDefault(_h);
-
-var _utils = utils;
-
-function _interopRequireDefault(obj) {
-    return obj && obj.__esModule ? obj : { default: obj };
-}
-
-function _defineProperty(obj, key, value) {
-    if (key in obj) {
-        Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true });
-    } else {
-        obj[key] = value;
-    }return obj;
-}
-
-function convertNodes(nodes, createdVNodes, context) {
-    if (nodes instanceof Array && nodes.length > 0) {
+    if (boolean(safe)) {
+      if (safe || !string(content) || !tag.test(content)) {
+        return toString$1(content);
+      } else {
+        var nodes = compile$$1(content, TRUE);
         return nodes.map(function (node) {
-            return toVNode(node, createdVNodes, context);
+          return render(node, createText, createElement).node;
         });
+      }
     } else {
-        return undefined;
+      return content;
     }
-}
+  };
 
-function toVNode(node, createdVNodes, context) {
-    var newNode = void 0;
-    if (node.type === 'text') {
-        newNode = (0, _utils.createTextVNode)(node.content, context);
-    } else {
-        newNode = (0, _h2.default)(node.name, buildVNodeData(node, context), convertNodes(node.children, createdVNodes, context));
-    }
-    createdVNodes.push(newNode);
-    return newNode;
-}
+  var createElement = function createElement(node, isRootElement, isComponent) {
 
-function buildVNodeData(node, context) {
-    var data = {};
-    if (!node.attrs) {
-        return data;
-    }
+    var attrs = {},
+        directives = [],
+        styles = void 0;
 
-    var attrs = Object.keys(node.attrs).reduce(function (memo, name) {
-        if (name !== 'style' && name !== 'class') {
-            var val = (0, _utils.unescapeEntities)(node.attrs[name], context);
-            memo ? memo[name] = val : memo = _defineProperty({}, name, val);
+    var data = { attrs: attrs };
+
+    // 指令的创建要确保顺序
+    // 组件必须第一个执行
+    // 因为如果在组件上写了 on-click="xx" 其实是监听从组件 fire 出的 click 事件
+    // 因此 component 必须在 event 指令之前执行
+
+    if (isComponent) {
+      directives.push({
+        node: node,
+        name: 'component',
+        directive: instance.directive('component')
+      });
+    } else if (array(node.attributes)) {
+      each(node.attributes, function (node) {
+        var name = node.name,
+            value = node.value;
+
+        if (name === 'style') {
+          var list = parse$1(value, ';', ':');
+          if (list.length) {
+            styles = {};
+            each(list, function (item) {
+              if (item.value) {
+                styles[camelCase(item.key)] = item.value;
+              }
+            });
+          }
+        } else {
+          attrs[name] = value;
         }
-        return memo;
-    }, null);
-    if (attrs) {
-        data.attrs = attrs;
+      });
     }
 
-    var style = parseStyle(node);
-    if (style) {
-        data.style = style;
+    if (array(node.directives)) {
+      each(node.directives, function (node) {
+        var name = node.name;
+
+        if (name === KEYWORD_UNIQUE) {
+          data.key = node.value;
+        } else {
+          directives.push({
+            name: name,
+            node: node,
+            directive: instance.directive(name)
+          });
+        }
+      });
     }
 
-    var classes = parseClass(node);
-    if (classes) {
-        data.class = classes;
+    if (styles) {
+      data.style = styles;
     }
 
-    return data;
-}
+    if (isRootElement || directives.length) {
+      (function () {
 
-function parseStyle(node) {
-    try {
-        return node.attrs.style.split(';').reduce(function (memo, styleProp) {
-            var res = styleProp.split(':');
-            var name = (0, _utils.transformName)(res[0].trim());
-            if (name) {
-                var val = res[1].replace('!important', '').trim();
-                memo ? memo[name] = val : memo = _defineProperty({}, name, val);
+        var map = toObject(directives, 'name');
+
+        var notify = function notify(vnode, type) {
+          each(directives, function (item) {
+            var directive = item.directive;
+
+            if (directive && func(directive[type])) {
+              directive[type]({
+                el: vnode.elm,
+                node: item.node,
+                directives: map,
+                attrs: attrs,
+                instance: instance
+              });
             }
-            return memo;
-        }, null);
-    } catch (e) {
-        return null;
-    }
-}
+          });
+        };
 
-function parseClass(node) {
-    try {
-        return node.attrs.class.split(' ').reduce(function (memo, className) {
-            className = className.trim();
-            if (className) {
-                memo ? memo[className] = true : memo = _defineProperty({}, className, true);
-            }
-            return memo;
-        }, null);
-    } catch (e) {
-        return null;
-    }
-}
-});
+        var update = function update(oldNode, vnode) {
+          if (oldNode.attached) {
+            notify(vnode, 'update');
+          } else {
+            notify(oldNode, 'attach');
+            vnode = oldNode;
+          }
+          vnode.attached = TRUE;
+        };
 
-var strings = strings$1;
+        data.hook = {
+          insert: update,
+          postpatch: update,
+          destroy: function destroy(vnode) {
+            notify(vnode, 'detach');
+          }
+        };
+      })();
+    }
+
+    return h(isComponent ? 'div' : node.name, data, node.children);
+  };
+
+  var importTemplate = function importTemplate(name) {
+    return instance.partial(name);
+  };
+
+  return render(ast, createText, createElement, importTemplate, context);
+}
 
 function addListener(element, type, listener) {
   element.addEventListener(type, listener, FALSE);
@@ -4333,146 +4197,6 @@ var native = Object.freeze({
 	on: on$1,
 	off: off$1
 });
-
-var toString$1 = function (str) {
-  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
-
-  try {
-    return str.toString();
-  } catch (e) {
-    return defaultValue;
-  }
-};
-
-var patch = snabbdom.init([attributes, style]);
-
-function createText(node) {
-  var safe = node.safe,
-      content = node.content;
-
-  if (boolean(safe)) {
-    if (safe || !string(content) || !tag.test(content)) {
-      return toString$1(content);
-    } else {
-      return strings.default(content);
-    }
-  } else {
-    return content;
-  }
-}
-
-function create$1(ast, context, instance) {
-
-  var deps = {};
-
-  var node = render(ast, context, createText, function (node, isRootElement, isComponent) {
-
-    var attrs = {},
-        directives = [],
-        styles = void 0;
-
-    var data = { attrs: attrs };
-
-    // 指令的创建要确保顺序
-    // 组件必须第一个执行
-    // 因为如果在组件上写了 on-click="xx" 其实是监听从组件 fire 出的 click 事件
-    // 因此 component 必须在 event 指令之前执行
-
-    if (isComponent) {
-      directives.push({
-        node: node,
-        name: 'component',
-        directive: instance.directive('component')
-      });
-    } else {
-      each(node.attributes, function (node) {
-        var name = node.name,
-            value = node.value;
-
-        if (name === 'style') {
-          var list = parse$1(value, ';', ':');
-          if (list.length) {
-            styles = {};
-            each(list, function (item) {
-              if (item.value) {
-                styles[camelCase(item.key)] = item.value;
-              }
-            });
-          }
-        } else {
-          attrs[name] = value;
-        }
-      });
-    }
-
-    each(node.directives, function (node) {
-      var name = node.name;
-
-      if (name === KEYWORD_UNIQUE) {
-        data.key = node.value;
-      } else {
-        directives.push({
-          name: name,
-          node: node,
-          directive: instance.directive(name)
-        });
-      }
-    });
-
-    if (styles) {
-      data.style = styles;
-    }
-
-    if (isRootElement || directives.length) {
-      (function () {
-
-        var map = toObject(directives, 'name');
-
-        var notify = function notify(vnode, type) {
-          each(directives, function (item) {
-            var directive = item.directive;
-
-            if (directive && func(directive[type])) {
-              directive[type]({
-                el: vnode.elm,
-                node: item.node,
-                directives: map,
-                attrs: attrs,
-                instance: instance
-              });
-            }
-          });
-        };
-
-        var update = function update(oldNode, vnode) {
-          if (oldNode.attached) {
-            notify(vnode, 'update');
-          } else {
-            notify(oldNode, 'attach');
-            vnode = oldNode;
-          }
-          vnode.attached = TRUE;
-        };
-
-        data.hook = {
-          insert: update,
-          postpatch: update,
-          destroy: function destroy(vnode) {
-            notify(vnode, 'detach');
-          }
-        };
-      })();
-    }
-
-    return h(isComponent ? 'div' : node.name, data, node.children);
-  }, function (newDeps, getKeypath) {
-    each$1(newDeps, function (value, key) {
-      deps[resolve(getKeypath(), key)] = value;
-    });
-  });
-
-  return { node: node, deps: deps };
-}
 
 /**
  * <Component ref="component" />
@@ -4806,9 +4530,11 @@ function getComponentInfo(node, instance, directives, callback) {
 
   instance.component(name, function (options) {
     var props = {};
-    each(attributes, function (node) {
-      props[camelCase(node.name)] = node.value;
-    });
+    if (array(attributes)) {
+      each(attributes, function (node) {
+        props[camelCase(node.name)] = node.value;
+      });
+    }
     if (!has$2(props, 'value')) {
       var model = directives.model;
 
@@ -5704,7 +5430,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.20.0';
+Yox.version = '0.20.1';
 
 /**
  * 工具，便于扩展、插件使用

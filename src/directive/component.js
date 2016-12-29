@@ -11,12 +11,14 @@ function getComponentInfo(node, instance, directives, callback) {
     name,
     function (options) {
       let props = { }
-      array.each(
-        attributes,
-        function (node) {
-          props[string.camelCase(node.name)] = node.value
-        }
-      )
+      if (is.array(attributes)) {
+        array.each(
+          attributes,
+          function (node) {
+            props[string.camelCase(node.name)] = node.value
+          }
+        )
+      }
       if (!object.has(props, 'value')) {
         let { model } = directives
         if (model) {
