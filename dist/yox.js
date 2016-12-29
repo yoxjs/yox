@@ -1439,7 +1439,9 @@ var Each = function (_Node) {
     var _this = possibleConstructorReturn(this, (Each.__proto__ || Object.getPrototypeOf(Each)).call(this, EACH$1));
 
     _this.expr = expr;
-    _this.index = index;
+    if (index) {
+      _this.index = index;
+    }
     return _this;
   }
 
@@ -2647,9 +2649,13 @@ var parsers = [{
 var LEVEL_ATTRIBUTE = 1;
 var LEVEL_TEXT = 2;
 
+// 属性层级的节点类型
+var attrTypes = {};
+attrTypes[ATTRIBUTE] = attrTypes[DIRECTIVE] = TRUE;
+
 // 触发 level 变化的节点类型
-var levelTypes = {};
-levelTypes[ELEMENT] = levelTypes[ATTRIBUTE] = levelTypes[DIRECTIVE] = TRUE;
+var levelTypes = extend({}, attrTypes);
+levelTypes[ELEMENT] = TRUE;
 
 // 叶子节点类型
 var leafTypes = {};
@@ -2723,7 +2729,7 @@ function traverseList(nodes, recursion) {
       node = void 0;
   while (node = nodes[i]) {
     item = recursion(node);
-    if (item) {
+    if (item !== UNDEFINED) {
       push$1(list, item);
       if (node.type === IF$1 || node.type === ELSE_IF$1) {
         // 跳过后面紧跟着的 elseif else
@@ -3152,8 +3158,9 @@ function compile$$1(template, loose) {
   };
 
   var addChild = function addChild(node) {
-    var type = node.type,
-        content = node.content;
+    var _node = node,
+        type = _node.type,
+        content = _node.content;
 
 
     if (type === TEXT) {
@@ -3161,6 +3168,9 @@ function compile$$1(template, loose) {
         return;
       }
       node.content = content;
+    } else if (type === EXPRESSION && level === LEVEL_ATTRIBUTE) {
+      node = levelNode = new Attribute(node);
+      type = ATTRIBUTE;
     }
 
     if (level === LEVEL_ATTRIBUTE && currentNode.addAttr) {
@@ -3171,6 +3181,10 @@ function compile$$1(template, loose) {
 
     if (!leafTypes[type]) {
       pushStack(node);
+    }
+
+    if (attrTypes[type]) {
+      level = LEVEL_TEXT;
     }
   };
 
@@ -3242,7 +3256,6 @@ function compile$$1(template, loose) {
             }
 
             addChild(levelNode);
-            level = LEVEL_TEXT;
 
             content = parseAttribute(content);
           }
@@ -3266,10 +3279,6 @@ function compile$$1(template, loose) {
               index = parser.create(content, delimiter, popStack);
               if (string(index)) {
                 parseError(index, mainScanner.pos + helperScanner.pos);
-              } else if (level === LEVEL_ATTRIBUTE && index.type === EXPRESSION) {
-                levelNode = new Attribute(index);
-                addChild(levelNode);
-                level = LEVEL_TEXT;
               } else {
                 addChild(index);
               }
@@ -3359,12 +3368,12 @@ function compile$$1(template, loose) {
   cache[template] = children;
 
   if (loose) {
-    return template;
+    return children;
   }
 
   var root = children[0];
   if (children.length > 1 || root.type !== ELEMENT) {
-    error$1('Component template should contain exactly one root element.');
+    error$1('Template should contain exactly one root element.');
   }
   return root;
 }
@@ -5546,7 +5555,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.20.4';
+Yox.version = '0.20.5';
 
 /**
  * 工具，便于扩展、插件使用
