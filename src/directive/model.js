@@ -83,7 +83,7 @@ export default {
       keypath = result.keypath
     }
     else {
-      logger.error(`The ${keypath} being used for two-way binding is ambiguous.`)
+      return logger.error(`The ${keypath} being used for two-way binding is ambiguous.`)
     }
 
     let type = 'change', control, needSet

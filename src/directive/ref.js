@@ -17,7 +17,7 @@ export default {
       let { $refs } = instance
       if (is.object($refs)) {
         if (object.has($refs, value)) {
-          logger.error(`Ref ${value} is existed.`)
+          logger.error(`Registering a ref "${value}" is existed.`)
         }
       }
       else {

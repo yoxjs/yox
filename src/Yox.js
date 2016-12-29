@@ -147,7 +147,6 @@ export default class Yox {
 
               return result
             }
-            getter.$binded =
             getter.$computed = env.TRUE
             instance.$computedGetters[keypath] = getter
           }
@@ -533,22 +532,23 @@ export default class Yox {
       context,
       // 全局过滤器
       registry.filter.data,
-      // 本地数据，这意味着 data 也能写函数，只是用 filter 来隔离过滤器
-      $data,
       // 本地过滤器
-      $filters.data,
-      // 本地计算属性
-      $computedGetters
+      $filters.data
     )
 
     object.each(
       context,
       function (value, key) {
-        if (is.func(value) && !value.$binded) {
+        if (is.func(value)) {
           context[key] = value.bind(instance)
         }
       }
     )
+
+    // data 中的函数不需要强制绑定 this
+    // 不是不想管，是没法管，因为每层级都可能出现函数，但不可能每层都绑定
+    // 而且让 data 中的函数完全动态化说不定还是一个好设计呢
+    object.extend(context, $data, $computedGetters)
 
     let { node, deps } = vdom.create($template, context, instance)
 
@@ -900,7 +900,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.20.3'
+Yox.version = '0.20.4'
 
 /**
  * 工具，便于扩展、插件使用

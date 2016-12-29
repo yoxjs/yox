@@ -6,7 +6,7 @@ import * as object from 'yox-common/util/object'
 import Event from 'yox-common/util/Event'
 import Emitter from 'yox-common/util/Emitter'
 
-import * as native from './nativeModern'
+import * as native from './nativeCompat'
 
 export function find(selector, context) {
   return native.findElement(selector, context)

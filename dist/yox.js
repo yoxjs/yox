@@ -1379,19 +1379,17 @@ var Node = function () {
  * 属性节点
  *
  * @param {string|Expression} name 属性名
- * @param {?*} value 属性值
  */
 
 var Attribute = function (_Node) {
   inherits(Attribute, _Node);
 
-  function Attribute(name, value) {
+  function Attribute(name) {
     classCallCheck(this, Attribute);
 
     var _this = possibleConstructorReturn(this, (Attribute.__proto__ || Object.getPrototypeOf(Attribute)).call(this, ATTRIBUTE));
 
     _this.name = name;
-    _this.value = value;
     return _this;
   }
 
@@ -1405,20 +1403,20 @@ var Attribute = function (_Node) {
  *
  * @param {string} name 指令名
  * @param {?string} subName 指令子名
- * @param {?*} value 指令值
  */
 
 var Directive = function (_Node) {
   inherits(Directive, _Node);
 
-  function Directive(name, subName, value) {
+  function Directive(name, subName) {
     classCallCheck(this, Directive);
 
     var _this = possibleConstructorReturn(this, (Directive.__proto__ || Object.getPrototypeOf(Directive)).call(this, DIRECTIVE));
 
-    _this.name = name;
-    _this.subName = subName;
-    _this.value = value;
+    _this.name = camelCase(name);
+    if (subName) {
+      _this.subName = camelCase(subName);
+    }
     return _this;
   }
 
@@ -3102,8 +3100,9 @@ function parseAttributeValue(content, quote) {
  */
 function compile$$1(template, loose) {
 
-  if (cache[template]) {
-    return cache[template];
+  var result = cache[template];
+  if (result) {
+    return loose ? result : result[0];
   }
 
   // 当前内容
@@ -3114,8 +3113,6 @@ function compile$$1(template, loose) {
   var quote = void 0;
   // 标签是否子闭合
   var isSelfClosing = void 0;
-  // 正则匹配结果
-  var match = void 0;
   // 分隔符
   var delimiter = void 0;
 
@@ -3199,15 +3196,15 @@ function compile$$1(template, loose) {
       }
     }
 
-    match = parseAttributeValue(content, quote);
-    if (match.value) {
-      addChild(new Text(match.value));
+    result = parseAttributeValue(content, quote);
+    if (result.value) {
+      addChild(new Text(result.value));
     }
-    if (match.end) {
+    if (result.end) {
       popStack();
       level = LEVEL_ATTRIBUTE;
     }
-    return match.content;
+    return result.content;
   };
 
   // 核心函数，负责分隔符和普通字符串的深度解析
@@ -3226,9 +3223,9 @@ function compile$$1(template, loose) {
         }
 
         if (level === LEVEL_ATTRIBUTE) {
-          while (content && (match = attributePattern.exec(content))) {
-            content = content.slice(match.index + match[0].length);
-            name = match[1];
+          while (content && (result = attributePattern.exec(content))) {
+            content = content.slice(result.index + result[0].length);
+            name = result[1];
 
             if (buildInDirectives[name]) {
               levelNode = new Directive(name);
@@ -3359,15 +3356,17 @@ function compile$$1(template, loose) {
 
   var children = rootNode.children;
 
+  cache[template] = children;
+
   if (loose) {
-    return cache[template] = children;
+    return template;
   }
 
   var root = children[0];
   if (children.length > 1 || root.type !== ELEMENT) {
     error$1('Component template should contain exactly one root element.');
   }
-  return cache[template] = root;
+  return root;
 }
 
 /**
@@ -4113,12 +4112,11 @@ function create$1(ast, context, instance) {
       })();
     }
 
+    return h(isComponent ? 'div' : name, data,
     // snabbdom 只支持字符串形式的 children
-    children = children.map(function (child) {
+    children.map(function (child) {
       return child && has$2(child, 'sel') && has$2(child, 'elm') ? child : toString$1(child);
-    });
-
-    return h(isComponent ? 'div' : name, data, children);
+    }));
   };
 
   var importTemplate = function importTemplate(name) {
@@ -4128,24 +4126,117 @@ function create$1(ast, context, instance) {
   return render(ast, createText, createElement, importTemplate, context);
 }
 
-function addListener(element, type, listener) {
+function addListener$1(element, type, listener) {
   element.addEventListener(type, listener, FALSE);
 }
 
-function removeListener(element, type, listener) {
+function removeListener$1(element, type, listener) {
   element.removeEventListener(type, listener, FALSE);
 }
 
-function createEvent(event) {
+function createEvent$1(event) {
   return event;
 }
 
-function findElement(selector, context) {
+function findElement$1(selector, context) {
   return (context || doc).querySelector(selector);
 }
 
+var modern = Object.freeze({
+	addListener: addListener$1,
+	removeListener: removeListener$1,
+	createEvent: createEvent$1,
+	findElement: findElement$1
+});
+
+var IEEvent = function () {
+  function IEEvent(event, element) {
+    classCallCheck(this, IEEvent);
+
+
+    extend(this, event);
+
+    this.currentTarget = element;
+    this.target = event.srcElement || element;
+    this.originalEvent = event;
+  }
+
+  createClass(IEEvent, [{
+    key: 'preventDefault',
+    value: function preventDefault() {
+      this.originalEvent.returnValue = FALSE;
+    }
+  }, {
+    key: 'stopPropagation',
+    value: function stopPropagation() {
+      this.originalEvent.cancelBubble = TRUE;
+    }
+  }]);
+  return IEEvent;
+}();
+
+function addInputListener(element, listener) {
+  var oldValue = element.value;
+  listener.$listener = function (e) {
+    if (e.originalEvent.originalEvent.propertyName === 'value') {
+      var newValue = element.value;
+      if (newValue !== oldValue) {
+        var result = listener.apply(this, arguments);
+        oldValue = newValue;
+        return result;
+      }
+    }
+  };
+  element.attachEvent('onpropertychange', listener.$listener);
+}
+
+function removeInputListener(element, listener) {
+  element.detachEvent('onpropertychange', listener.$listener);
+  delete listener.$listener;
+}
+
+function addListener$2(element, type, listener) {
+  if (type === 'input') {
+    addInputListener(element, listener);
+  } else {
+    element.attachEvent('on' + type, listener);
+  }
+}
+
+function removeListener$2(element, type, listener) {
+  if (type === 'input') {
+    removeInputListener(element, listener);
+  } else {
+    element.detachEvent('on' + type, listener);
+  }
+}
+
+function createEvent$2(event, element) {
+  return new IEEvent(event, element);
+}
+
+function findElement$2(selector, context) {
+  return (context || doc).querySelector(selector);
+}
+
+
+
+var oldie = Object.freeze({
+	addListener: addListener$2,
+	removeListener: removeListener$2,
+	createEvent: createEvent$2,
+	findElement: findElement$2
+});
+
+var native$1 = doc.addEventListener ? modern : oldie;
+
+var addListener$$1 = native$1.addListener;
+var removeListener$$1 = native$1.removeListener;
+var createEvent$$1 = native$1.createEvent;
+var findElement$$1 = native$1.findElement;
+
 function find(selector, context) {
-  return findElement(selector, context);
+  return findElement$$1(selector, context);
 }
 
 function create$2(tagName, parent) {
@@ -4176,11 +4267,11 @@ function on$1(element, type, listener, context) {
   var $emitter = element.$emitter || (element.$emitter = new Emitter());
   if (!$emitter.has(type)) {
     var nativeListener = function nativeListener(e) {
-      e = new Event(createEvent(e, element));
+      e = new Event(createEvent$$1(e, element));
       $emitter.fire(e.type, e, context);
     };
     $emitter[type] = nativeListener;
-    addListener(element, type, nativeListener);
+    addListener$$1(element, type, nativeListener);
   }
   $emitter.on(type, listener);
 }
@@ -4201,7 +4292,7 @@ function off$1(element, type, listener) {
   // 根据 emitter 的删除结果来操作这里的事件 listener
   each(types, function (type) {
     if ($emitter[type] && !$emitter.has(type)) {
-      removeListener(element, type, $emitter[type]);
+      removeListener$$1(element, type, $emitter[type]);
       delete $emitter[type];
     }
   });
@@ -4234,7 +4325,7 @@ var refDt = {
 
         if (object($refs)) {
           if (has$2($refs, value)) {
-            error$1('Ref ' + value + ' is existed.');
+            error$1('Registering a ref "' + value + '" is existed.');
           }
         } else {
           $refs = instance.$refs = {};
@@ -4485,7 +4576,7 @@ var modelDt = {
     if (result) {
       keypath = result.keypath;
     } else {
-      error$1('The ' + keypath + ' being used for two-way binding is ambiguous.');
+      return error$1('The ' + keypath + ' being used for two-way binding is ambiguous.');
     }
 
     var type = 'change',
@@ -4548,11 +4639,9 @@ function getComponentInfo(node, instance, directives, callback) {
 
   instance.component(name, function (options) {
     var props = {};
-    if (array(attributes)) {
-      each(attributes, function (node) {
-        props[camelCase(node.name)] = node.value;
-      });
-    }
+    each(attributes, function (node) {
+      props[camelCase(node.name)] = node.value;
+    });
     if (!has$2(props, 'value')) {
       var model = directives.model;
 
@@ -4727,7 +4816,7 @@ var Yox = function () {
 
               return result;
             };
-            getter.$binded = getter.$computed = TRUE;
+            getter.$computed = TRUE;
             instance.$computedGetters[keypath] = getter;
           })();
         }
@@ -5105,18 +5194,19 @@ var Yox = function () {
       extend(context,
       // 全局过滤器
       filter.data,
-      // 本地数据，这意味着 data 也能写函数，只是用 filter 来隔离过滤器
-      $data,
       // 本地过滤器
-      $filters.data,
-      // 本地计算属性
-      $computedGetters);
+      $filters.data);
 
       each$1(context, function (value, key) {
-        if (func(value) && !value.$binded) {
+        if (func(value)) {
           context[key] = value.bind(instance);
         }
       });
+
+      // data 中的函数不需要强制绑定 this
+      // 不是不想管，是没法管，因为每层级都可能出现函数，但不可能每层都绑定
+      // 而且让 data 中的函数完全动态化说不定还是一个好设计呢
+      extend(context, $data, $computedGetters);
 
       var _vdom$create = create$1($template, context, instance),
           node = _vdom$create.node,
@@ -5456,7 +5546,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.20.3';
+Yox.version = '0.20.4';
 
 /**
  * 工具，便于扩展、插件使用

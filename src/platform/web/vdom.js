@@ -149,16 +149,18 @@ export function create(ast, context, instance) {
       }
     }
 
-    // snabbdom 只支持字符串形式的 children
-    children = children.map(
-      function (child) {
-        return child && object.has(child, 'sel') && object.has(child, 'elm')
-          ? child
-          : toString(child)
-      }
+    return h(
+      isComponent ? 'div' : name,
+      data,
+      // snabbdom 只支持字符串形式的 children
+      children.map(
+        function (child) {
+          return child && object.has(child, 'sel') && object.has(child, 'elm')
+            ? child
+            : toString(child)
+        }
+      )
     )
-
-    return h(isComponent ? 'div' : name, data, children)
 
   }
 
