@@ -1003,56 +1003,6 @@ function run() {
   });
 }
 
-var breaklinePattern = /^[ \t]*\n[ \t]*$/;
-var breaklinePrefixPattern = /^[ \t]*\n/;
-var breaklineSuffixPattern = /\n[ \t]*$/;
-
-function trimBreakline(str) {
-  if (breaklinePattern.test(str)) {
-    return '';
-  }
-  return str.replace(breaklinePrefixPattern, '').replace(breaklineSuffixPattern, '');
-}
-
-function getLocationByIndex(str, index) {
-
-  var line = 0,
-      col = 0,
-      pos = 0;
-
-  each(str.split('\n'), function (lineStr) {
-    line++;
-    col = 0;
-
-    var length = lineStr.length;
-
-    if (index >= pos && index <= pos + length) {
-      col = index - pos;
-      return FALSE;
-    }
-
-    pos += length;
-  });
-
-  return {
-    line: line,
-    col: col
-  };
-}
-
-function parseError(str, errorMsg, errorIndex) {
-  if (errorIndex == NULL) {
-    errorMsg += '.';
-  } else {
-    var _getLocationByIndex = getLocationByIndex(str, errorIndex),
-        line = _getLocationByIndex.line,
-        col = _getLocationByIndex.col;
-
-    errorMsg += ', at line ' + line + ', col ' + col + '.';
-  }
-  error$1(errorMsg);
-}
-
 var IF = '#if';
 var ELSE = 'else';
 var ELSE_IF = 'else if';
@@ -1065,7 +1015,7 @@ var SPREAD = '...';
 var SPECIAL_EVENT = '$event';
 var SPECIAL_KEYPATH = '$keypath';
 
-var DIRECTIVE_PREFIX = 'o-';
+var DIRECTIVE_CUSTOM_PREFIX = 'o-';
 var DIRECTIVE_EVENT_PREFIX = 'on-';
 
 var DIRECTIVE_REF = 'ref';
@@ -1769,15 +1719,6 @@ function matchBestToken(content, sortedTokens) {
 }
 
 /**
- * 懒得说各种细节错误，表达式都输出了看不出原因我也没办法
- *
- * @param {string} expression
- */
-function parseError$1(expression) {
-  error$1('Failed to parse expression: [' + expression + '].');
-}
-
-/**
  * 数组表达式，如 [ 1, 2, 3 ]
  *
  * @type {number}
@@ -2089,19 +2030,19 @@ var Literal = function (_Node) {
  * Member 节点
  *
  * @param {Identifier} object
- * @param {Node} property
+ * @param {Node} prop
  */
 
 var Member = function (_Node) {
   inherits(Member, _Node);
 
-  function Member(object, property) {
+  function Member(object, prop) {
     classCallCheck(this, Member);
 
     var _this = possibleConstructorReturn(this, (Member.__proto__ || Object.getPrototypeOf(Member)).call(this, MEMBER));
 
     _this.object = object;
-    _this.property = property;
+    _this.prop = prop;
     return _this;
   }
 
@@ -2116,7 +2057,7 @@ Member.flatten = function (node) {
   do {
     next = node.object;
     if (node.type === MEMBER) {
-      result.unshift(node.property);
+      result.unshift(node.prop);
     } else {
       result.unshift(node);
     }
@@ -2147,9 +2088,10 @@ var keyword = {
   'undefined': UNDEFINED
 };
 
-// 编译结果缓存
+// 缓存编译结果
 var cache$1 = {};
 
+// 下面用了几次，提一个函数比较方便
 function stringifyRecursion(node) {
   return stringify$1(node);
 }
@@ -2277,7 +2219,6 @@ function execute(node, context) {
 
       case MEMBER:
         var keys$$1 = [];
-
         each(Member.flatten(node), function (node, index) {
           var type = node.type;
 
@@ -2293,9 +2234,7 @@ function execute(node, context) {
             push$1(keys$$1, node.value);
           }
         });
-
         result = context.get(stringify(keys$$1));
-
         value = result.value;
         deps[result.keypath] = value;
         break;
@@ -2332,8 +2271,11 @@ function compile$1(content) {
   var getChar = function getChar() {
     return charAt$1(content, index);
   };
-  var getCharCode = function getCharCode(i) {
-    return charCodeAt$1(content, i != NULL ? i : index);
+  var getCharCode = function getCharCode() {
+    return charCodeAt$1(content, index);
+  };
+  var parseError = function parseError() {
+    error$1('Failed to compile expression: \n' + content);
   };
 
   var skipWhitespace = function skipWhitespace() {
@@ -2354,13 +2296,13 @@ function compile$1(content) {
     index++;
     while (index < length) {
       index++;
-      if (getCharCode(index - 1) === quote) {
+      if (charCodeAt$1(content, index - 1) === quote) {
         closed = TRUE;
         break;
       }
     }
     if (!closed) {
-      return parseError$1(content);
+      return parseError();
     }
   };
 
@@ -2409,7 +2351,7 @@ function compile$1(content) {
       return new Identifier(value);
     }
 
-    parseError$1(content);
+    parseError();
   };
 
   var parseTuple = function parseTuple(delimiter) {
@@ -2434,7 +2376,7 @@ function compile$1(content) {
       return args;
     }
 
-    parseError$1(content);
+    parseError();
   };
 
   var parseOperator = function parseOperator(sortedOperatorList) {
@@ -2504,7 +2446,7 @@ function compile$1(content) {
     if (value) {
       return parseUnary(value);
     }
-    parseError$1(content);
+    parseError();
   };
 
   var parseUnary = function parseUnary(op) {
@@ -2512,7 +2454,7 @@ function compile$1(content) {
     if (value) {
       return new Unary(op, value);
     }
-    parseError$1(content);
+    parseError();
   };
 
   var parseBinary = function parseBinary() {
@@ -2537,7 +2479,7 @@ function compile$1(content) {
       if (right) {
         stack.push(op, binaryMap[op], right);
       } else {
-        parseError$1(content);
+        parseError();
       }
     }
 
@@ -2561,7 +2503,7 @@ function compile$1(content) {
       index++;
       return value;
     }
-    parseError$1(content);
+    parseError();
   };
 
   var parseExpression = function parseExpression() {
@@ -2588,7 +2530,7 @@ function compile$1(content) {
         skipWhitespace();
         return new Conditional(test, consequent, alternate);
       } else {
-        parseError$1(content);
+        parseError();
       }
     }
 
@@ -2602,8 +2544,7 @@ var EQUAL = 61; // =
 var SLASH = 47; // /
 var ARROW_LEFT = 60; // <
 var ARROW_RIGHT = 62; // >
-// 缓存编译结果
-var cache = {};
+var BREAKLINE = '\n';
 
 var openingDelimiterPattern = new RegExp(DELIMITER_OPENING);
 var closingDelimiterPattern = new RegExp(DELIMITER_CLOSING);
@@ -2615,6 +2556,9 @@ var attributePattern = /([-:@a-z0-9]+)(?==["'])?/i;
 
 var nonSingleQuotePattern = /^[^']*/;
 var nonDoubleQuotePattern = /^[^"]*/;
+
+var breaklinePrefixPattern = /^[ \t]*\n/;
+var breaklineSuffixPattern = /\n[ \t]*$/;
 
 var componentNamePattern = /[-A-Z]/;
 var selfClosingTagNamePattern = /input|img|br/i;
@@ -3071,6 +3015,52 @@ function render(ast, createText, createElement, importTemplate, data) {
   return { node: node, deps: deps };
 }
 
+// 缓存编译结果
+var cache = {};
+
+function getLocationByPos(str, pos) {
+
+  var line = 0,
+      col = 0,
+      index = 0;
+
+  each(str.split(BREAKLINE), function (lineStr) {
+    line++;
+    col = 0;
+
+    var length = lineStr.length;
+
+    if (pos >= index && pos <= index + length) {
+      col = pos - index;
+      return FALSE;
+    }
+
+    index += length;
+  });
+
+  return { line: line, col: col };
+}
+
+/**
+ * 是否是纯粹的换行
+ *
+ * @param {string} content
+ * @return {boolean}
+ */
+function isBreakline(content) {
+  return content.indexOf(BREAKLINE) >= 0 && content.trim() === '';
+}
+
+/**
+ * trim 文本开始和结束位置的换行符
+ *
+ * @param {string} content
+ * @return {boolean}
+ */
+function trimBreakline(content) {
+  return content.replace(breaklinePrefixPattern, '').replace(breaklineSuffixPattern, '');
+}
+
 /**
  * 解析属性值，传入开始引号，匹配结束引号
  *
@@ -3141,6 +3131,19 @@ function compile$$1(template, loose) {
   var rootNode = new Element('root');
   var currentNode = rootNode;
 
+  var parseError = function parseError(msg, pos) {
+    if (pos == NULL) {
+      msg += '.';
+    } else {
+      var _getLocationByPos = getLocationByPos(template, pos),
+          line = _getLocationByPos.line,
+          col = _getLocationByPos.col;
+
+      msg += ', at line ' + line + ', col ' + col + '.';
+    }
+    error$1('' + msg + BREAKLINE + template);
+  };
+
   var pushStack = function pushStack(node) {
     push$1(nodeStack, currentNode);
     currentNode = node;
@@ -3157,11 +3160,10 @@ function compile$$1(template, loose) {
 
 
     if (type === TEXT) {
-      if (content = trimBreakline(content)) {
-        node.content = content;
-      } else {
+      if (isBreakline(content) || !(content = trimBreakline(content))) {
         return;
       }
+      node.content = content;
     }
 
     if (level === LEVEL_ATTRIBUTE && currentNode.addAttr) {
@@ -3234,8 +3236,8 @@ function compile$$1(template, loose) {
               if (name.startsWith(DIRECTIVE_EVENT_PREFIX)) {
                 name = name.slice(DIRECTIVE_EVENT_PREFIX.length);
                 levelNode = new Directive('event', name);
-              } else if (name.startsWith(DIRECTIVE_PREFIX)) {
-                name = name.slice(DIRECTIVE_PREFIX.length);
+              } else if (name.startsWith(DIRECTIVE_CUSTOM_PREFIX)) {
+                name = name.slice(DIRECTIVE_CUSTOM_PREFIX.length);
                 levelNode = new Directive(name);
               } else {
                 levelNode = new Attribute(name);
@@ -3266,7 +3268,7 @@ function compile$$1(template, loose) {
               // 用 index 节省一个变量定义
               index = parser.create(content, delimiter, popStack);
               if (string(index)) {
-                parseError(template, index, mainScanner.pos + helperScanner.pos);
+                parseError(index, mainScanner.pos + helperScanner.pos);
               } else if (level === LEVEL_ATTRIBUTE && index.type === EXPRESSION) {
                 levelNode = new Attribute(index);
                 addChild(levelNode);
@@ -3304,9 +3306,9 @@ function compile$$1(template, loose) {
 
       // 没有匹配到 >
       if (mainScanner.charCodeAt(0) !== ARROW_RIGHT) {
-        return parseError(template, 'Illegal tag name', mainScanner.pos);
+        return parseError('Illegal tag name', mainScanner.pos);
       } else if (currentNode.type === ELEMENT && name !== currentNode.name) {
-        return parseError(template, 'Unexpected closing tag', mainScanner.pos);
+        return parseError('Unexpected closing tag', mainScanner.pos);
       }
 
       popStack();
@@ -3342,7 +3344,7 @@ function compile$$1(template, loose) {
         content = mainScanner.nextAfter(elementEndPattern);
         // 没有匹配到 > 或 />
         if (!content) {
-          return parseError(template, 'Illegal tag name', mainScanner.pos);
+          return parseError('Illegal tag name', mainScanner.pos);
         }
 
         if (isSelfClosing) {
@@ -3352,11 +3354,10 @@ function compile$$1(template, loose) {
   }
 
   if (nodeStack.length) {
-    return parseError(template, 'Missing end tag (</' + nodeStack[0].name + '>)', mainScanner.pos);
+    return parseError('Missing end tag (</' + nodeStack[0].name + '>)', mainScanner.pos);
   }
 
   var children = rootNode.children;
-
 
   if (loose) {
     return cache[template] = children;
@@ -4114,10 +4115,7 @@ function create$1(ast, context, instance) {
 
     // snabbdom 只支持字符串形式的 children
     children = children.map(function (child) {
-      if (child && has$2(child, 'sel') && has$2(child, 'elm')) {
-        return child;
-      }
-      return toString$1(child);
+      return child && has$2(child, 'sel') && has$2(child, 'elm') ? child : toString$1(child);
     });
 
     return h(isComponent ? 'div' : name, data, children);
@@ -5204,7 +5202,7 @@ var Yox = function () {
                         return keypath;
                       }
                     } else if (type === MEMBER) {
-                      name = node.stringify();
+                      name = stringify$1(node);
                     }
 
                     var result = instance.get(name, keypath);
@@ -5213,8 +5211,7 @@ var Yox = function () {
                     }
                   });
                 }
-                var name = ast.callee.name;
-
+                var name = stringify$1(ast.callee);
                 var fn = instance[name];
                 if (!fn) {
                   var result = instance.get(name, keypath);
@@ -5459,7 +5456,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.20.2';
+Yox.version = '0.20.3';
 
 /**
  * 工具，便于扩展、插件使用

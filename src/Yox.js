@@ -632,7 +632,7 @@ export default class Yox {
                   }
                 }
                 else if (type === expressionNodeType.MEMBER) {
-                  name = node.stringify()
+                  name = expressionEnginer.stringify(node)
                 }
 
                 let result = instance.get(name, keypath)
@@ -642,7 +642,7 @@ export default class Yox {
               }
             )
           }
-          let { name } = ast.callee
+          let name = expressionEnginer.stringify(ast.callee)
           let fn = instance[name]
           if (!fn) {
             let result = instance.get(name, keypath)
@@ -900,7 +900,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.20.2'
+Yox.version = '0.20.3'
 
 /**
  * 工具，便于扩展、插件使用

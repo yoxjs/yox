@@ -152,13 +152,9 @@ export function create(ast, context, instance) {
     // snabbdom 只支持字符串形式的 children
     children = children.map(
       function (child) {
-        if (child
-          && object.has(child, 'sel')
-          && object.has(child, 'elm')
-        ) {
-          return child
-        }
-        return toString(child)
+        return child && object.has(child, 'sel') && object.has(child, 'elm')
+          ? child
+          : toString(child)
       }
     )
 
