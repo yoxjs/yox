@@ -3399,13 +3399,13 @@ var tag = /<[^>]+>/;
  */
 var selector = /^[#.]\w+$/;
 
-var component$1 = new Store();
+var component = new Store();
 var directive = new Store();
 var filter = new Store();
 var partial = new Store();
 
 var registry = Object.freeze({
-	component: component$1,
+	component: component,
 	directive: directive,
 	filter: filter,
 	partial: partial
@@ -4330,7 +4330,7 @@ var native = Object.freeze({
  * <input ref="input">
  */
 
-var refDt = {
+var ref = {
   attach: function attach(_ref) {
     var el = _ref.el,
         node = _ref.node,
@@ -4579,7 +4579,7 @@ var specialControls = {
   checkbox: checkboxControl
 };
 
-var modelDt = {
+var model = {
   attach: function attach(_ref9) {
     var el = _ref9.el,
         node = _ref9.node,
@@ -4675,7 +4675,7 @@ function getComponentInfo(node, instance, directives, callback) {
   });
 }
 
-var componentDt = {
+var component$1 = {
   attach: function attach(_ref) {
     var el = _ref.el,
         node = _ref.node,
@@ -4992,19 +4992,19 @@ var Yox = function () {
     key: 'set',
     value: function set(keypath, value) {
 
-      var model = void 0,
+      var model$$1 = void 0,
           immediate = void 0;
       if (string(keypath)) {
-        model = {};
-        model[keypath] = value;
+        model$$1 = {};
+        model$$1[keypath] = value;
       } else if (object(keypath)) {
-        model = copy(keypath);
+        model$$1 = copy(keypath);
         immediate = value === TRUE;
       } else {
         return;
       }
 
-      this.updateModel(model, immediate);
+      this.updateModel(model$$1, immediate);
     }
 
     /**
@@ -5136,7 +5136,7 @@ var Yox = function () {
 
   }, {
     key: 'updateModel',
-    value: function updateModel(model) {
+    value: function updateModel(model$$1) {
 
       var instance = this;
 
@@ -5144,16 +5144,16 @@ var Yox = function () {
           $computedSetters = instance.$computedSetters;
 
 
-      each$1(model, function (newValue, key) {
+      each$1(model$$1, function (newValue, key) {
         // 格式化 Keypath
         var keypath = normalize(key);
         if (keypath !== key) {
-          delete model[key];
-          model[keypath] = newValue;
+          delete model$$1[key];
+          model$$1[keypath] = newValue;
         }
       });
 
-      each$1(model, function (value, keypath) {
+      each$1(model$$1, function (value, keypath) {
         if ($computedSetters) {
           var setter = $computedSetters[keypath];
           if (setter) {
@@ -5350,7 +5350,7 @@ var Yox = function () {
 
   }, {
     key: 'component',
-    value: function component(id, value) {
+    value: function component$1(id, value) {
 
       var callback = void 0;
       if (func(value)) {
@@ -5574,7 +5574,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.20.8';
+Yox.version = '0.20.9';
 
 /**
  * 工具，便于扩展、插件使用
@@ -5796,12 +5796,7 @@ function handleArray(instance, keypath, handler) {
 }
 
 // 全局注册内置指令
-Yox.directive({
-  ref: refDt,
-  event: event,
-  model: modelDt,
-  component: componentDt
-});
+Yox.directive({ ref: ref, event: event, model: model, component: component$1 });
 
 return Yox;
 

@@ -903,7 +903,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.20.8'
+Yox.version = '0.20.9'
 
 /**
  * 工具，便于扩展、插件使用
@@ -1164,15 +1164,10 @@ function handleArray(instance, keypath, handler) {
   return result
 }
 
-import refDt from './directive/ref'
-import eventDt from './directive/event'
-import modelDt from './directive/model'
-import componentDt from './directive/component'
+import ref from './directive/ref'
+import event from './directive/event'
+import model from './directive/model'
+import component from './directive/component'
 
 // 全局注册内置指令
-Yox.directive({
-  ref: refDt,
-  event: eventDt,
-  model: modelDt,
-  component: componentDt,
-})
+Yox.directive({ ref, event, model, component })
