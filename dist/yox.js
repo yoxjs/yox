@@ -19,7 +19,7 @@ var UNDEFINED = undefined;
  *
  * @type {?Window}
  */
-
+var win = typeof window !== 'undefined' ? window : NULL;
 
 /**
  * 浏览器环境下的 document 对象
@@ -914,15 +914,29 @@ var string$1 = Object.freeze({
 var hasConsole = typeof console !== 'undefined';
 
 var tester = function tester() {/** yox */};
-var isDebug = /yox/.test(tester.toString());
+var debug = /yox/.test(tester.toString());
+
+// 全局可覆盖
+// 比如开发环境，开了 debug 模式，但是有时候觉得看着一堆日志特烦，想强制关掉
+// 比如线上环境，关了 debug 模式，为了调试，想强制打开
+function isDebug() {
+  if (win) {
+    var DEBUG = win.DEBUG;
+
+    if (boolean(DEBUG)) {
+      return BEBUG;
+    }
+  }
+  return debug;
+}
 
 /**
  * 打印普通日志
  *
  * @param {string} msg
  */
-function log(msg) {
-  if (hasConsole && isDebug) {
+function log$1(msg) {
+  if (hasConsole && isDebug()) {
     console.log('[Yox log]: ' + msg);
   }
 }
@@ -932,8 +946,8 @@ function log(msg) {
  *
  * @param {string} msg
  */
-function warn(msg) {
-  if (hasConsole && isDebug) {
+function warn$1(msg) {
+  if (hasConsole && isDebug()) {
     console.warn('[Yox warn]: ' + msg);
   }
 }
@@ -948,12 +962,6 @@ function error$1(msg) {
     console.error('[Yox error]: ' + msg);
   }
 }
-
-var logger = Object.freeze({
-	log: log,
-	warn: warn,
-	error: error$1
-});
 
 var nextTick$1 = void 0;
 
@@ -4750,7 +4758,7 @@ var Yox = function () {
     }
     // 如果传了 props，则 data 应该是个 function
     if (props && data && !func(data)) {
-      warn('Passing a `data` option should be a function.');
+      warn$1('Passing a `data` option should be a function.');
     }
 
     // 先放 props
@@ -5551,18 +5559,28 @@ var Yox = function () {
         list.splice(index, 1);
       });
     }
+  }, {
+    key: 'log',
+    value: function log(msg) {
+      log$1(msg);
+    }
+  }, {
+    key: 'warn',
+    value: function warn(msg) {
+      warn$1(msg);
+    }
   }]);
   return Yox;
 }();
 
-Yox.version = '0.20.5';
+Yox.version = '0.20.6';
 
 /**
  * 工具，便于扩展、插件使用
  *
  * @type {Object}
  */
-Yox.utils = { is: is$1, array: array$1, object: object$1, string: string$1, logger: logger, native: native, Store: Store, Emitter: Emitter, Event: Event };
+Yox.utils = { is: is$1, array: array$1, object: object$1, string: string$1, native: native, Emitter: Emitter, Event: Event };
 
 var prototype = Yox.prototype;
 
@@ -5658,12 +5676,12 @@ Yox.validate = function (props, schema) {
           if (matched === TRUE) {
             result[key] = target;
           } else {
-            warn('Passing a "' + key + '" prop is not matched.');
+            warn$1('Passing a "' + key + '" prop is not matched.');
           }
         })();
       }
-    } else if (required) {
-      warn('Passing a "' + key + '" prop is not found.');
+    } else if (required === TRUE || func(required) && required(props)) {
+      warn$1('Passing a "' + key + '" prop is not found.');
     } else if (has$2(rule, 'value')) {
       result[key] = func(value) ? value(props) : value;
     }

@@ -892,6 +892,14 @@ export default class Yox {
     )
   }
 
+  log(msg) {
+    logger.log(msg)
+  }
+
+  warn(msg) {
+    logger.warn(msg)
+  }
+
 }
 
 
@@ -900,14 +908,14 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.20.5'
+Yox.version = '0.20.6'
 
 /**
  * 工具，便于扩展、插件使用
  *
  * @type {Object}
  */
-Yox.utils = { is, array, object, string, logger, native, Store, Emitter, Event }
+Yox.utils = { is, array, object, string, native, Emitter, Event }
 
 let { prototype } = Yox
 
@@ -1014,7 +1022,9 @@ Yox.validate = function (props, schema) {
           }
         }
       }
-      else if (required) {
+      else if (required === env.TRUE
+        || (is.func(required) && required(props))
+      ) {
         logger.warn(`Passing a "${key}" prop is not found.`)
       }
       else if (object.has(rule, 'value')) {
