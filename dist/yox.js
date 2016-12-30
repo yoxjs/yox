@@ -863,10 +863,10 @@ function parse$1(str, separator, pair) {
         value = terms[1];
         if (key) {
           item = {
-            key: key.trim()
+            key: trim(key)
           };
           if (string(value)) {
-            item.value = value.trim();
+            item.value = trim(value);
           }
           result.push(item);
         }
@@ -877,8 +877,11 @@ function parse$1(str, separator, pair) {
 }
 
 /**
- * 为了压缩而存在的两个方法
+ * 为了压缩而存在的几个方法
  */
+function trim(str) {
+  return str ? str.trim() : '';
+}
 function charAt$1(str, index) {
   return str.charAt(index);
 }
@@ -902,6 +905,7 @@ var string$1 = Object.freeze({
 	camelCase: camelCase,
 	capitalize: capitalize,
 	parse: parse$1,
+	trim: trim,
 	charAt: charAt$1,
 	charCodeAt: charCodeAt$1
 });
@@ -2571,45 +2575,44 @@ var breaklineSuffixPattern = /\n[ \t]*$/;
 var componentNamePattern = /[-A-Z]/;
 var selfClosingTagNamePattern = /input|img|br/i;
 
-var ERROR_PARTIAL_NAME = 'Expected legal partial name';
-var ERROR_EXPRESSION = 'Expected expression';
-
 var parsers = [{
   test: function test(source) {
     return source.startsWith(EACH);
   },
   create: function create(source) {
-    var terms = source.slice(EACH.length).trim().split(':');
+    var terms = trim(source.slice(EACH.length)).split(':');
     var expr = compile$1(terms[0]);
-    var index = void 0;
-    if (terms[1]) {
-      index = terms[1].trim();
-    }
-    return new Each(expr, index);
+    return new Each(expr, trim(terms[1]));
   }
 }, {
   test: function test(source) {
     return source.startsWith(IMPORT);
   },
   create: function create(source) {
-    var name = source.slice(IMPORT.length).trim();
-    return name ? new Import(name) : ERROR_PARTIAL_NAME;
+    var name = trim(source.slice(IMPORT.length));
+    if (name) {
+      new Import(name);
+    }
   }
 }, {
   test: function test(source) {
     return source.startsWith(PARTIAL);
   },
   create: function create(source) {
-    var name = source.slice(PARTIAL.length).trim();
-    return name ? new Partial(name) : ERROR_PARTIAL_NAME;
+    var name = trim(source.slice(PARTIAL.length));
+    if (name) {
+      new Partial(name);
+    }
   }
 }, {
   test: function test(source) {
     return source.startsWith(IF);
   },
   create: function create(source) {
-    var expr = source.slice(IF.length).trim();
-    return expr ? new If(compile$1(expr)) : ERROR_EXPRESSION;
+    var expr = trim(source.slice(IF.length));
+    if (expr) {
+      return new If(compile$1(expr));
+    }
   }
 }, {
   test: function test(source) {
@@ -2621,7 +2624,6 @@ var parsers = [{
       popStack();
       return new ElseIf(compile$1(expr));
     }
-    return ERROR_EXPRESSION;
   }
 }, {
   test: function test(source) {
@@ -2640,7 +2642,6 @@ var parsers = [{
     if (expr) {
       return new Spread(compile$1(expr));
     }
-    return ERROR_EXPRESSION;
   }
 }, {
   test: function test(source) {
@@ -3060,7 +3061,7 @@ function getLocationByPos(str, pos) {
  * @return {boolean}
  */
 function isBreakline(content) {
-  return content.indexOf(BREAKLINE) >= 0 && content.trim() === '';
+  return content.indexOf(BREAKLINE) >= 0 && trim(content) === '';
 }
 
 /**
@@ -3285,9 +3286,7 @@ function compile$$1(template, loose) {
             if (parser.test(content, delimiter)) {
               // 用 index 节省一个变量定义
               index = parser.create(content, delimiter, popStack);
-              if (string(index)) {
-                parseError(index, mainScanner.pos + helperScanner.pos);
-              } else {
+              if (index) {
                 addChild(index);
               }
               return FALSE;
@@ -5575,7 +5574,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.20.7';
+Yox.version = '0.20.8';
 
 /**
  * 工具，便于扩展、插件使用
