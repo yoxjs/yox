@@ -4012,6 +4012,10 @@ var toString$1 = function (str) {
 
 var patch = snabbdom.init([attributes, style]);
 
+function isVNode(node) {
+  return node && has$2(node, 'sel') && has$2(node, 'elm');
+}
+
 function create$1(ast, context, instance) {
 
   var createText = function createText(node) {
@@ -4027,16 +4031,14 @@ function create$1(ast, context, instance) {
   };
 
   var createElement = function createElement(node, isRootElement, isComponent) {
-    var name = node.name,
-        attributes$$1 = node.attributes,
-        directives = node.directives,
-        children = node.children;
 
-
-    var attrs = {},
-        dires = [],
+    var attributes$$1 = {},
+        directives = [],
         styles = void 0;
-    var data = { attrs: attrs };
+
+    var data = {
+      attrs: attributes$$1
+    };
 
     // 指令的创建要确保顺序
     // 组件必须第一个执行
@@ -4044,13 +4046,13 @@ function create$1(ast, context, instance) {
     // 因此 component 必须在 event 指令之前执行
 
     if (isComponent) {
-      push$1(dires, {
+      push$1(directives, {
         node: node,
         name: 'component',
         directive: instance.directive('component')
       });
     } else {
-      each(attributes$$1, function (node) {
+      each(node.attributes, function (node) {
         var name = node.name,
             value = node.value;
 
@@ -4065,18 +4067,18 @@ function create$1(ast, context, instance) {
             });
           }
         } else {
-          attrs[name] = value;
+          attributes$$1[name] = value;
         }
       });
     }
 
-    each(directives, function (node) {
+    each(node.directives, function (node) {
       var name = node.name;
 
       if (name === KEYWORD_UNIQUE) {
         data.key = node.value;
       } else {
-        push$1(dires, {
+        push$1(directives, {
           name: name,
           node: node,
           directive: instance.directive(name)
@@ -4088,13 +4090,13 @@ function create$1(ast, context, instance) {
       data.style = styles;
     }
 
-    if (isRootElement || dires.length) {
+    if (isRootElement || directives.length) {
       (function () {
 
-        var map = toObject(dires, 'name');
+        var map = toObject(directives, 'name');
 
         var notify = function notify(vnode, type) {
-          each(dires, function (item) {
+          each(directives, function (item) {
             var directive = item.directive;
 
             if (directive && func(directive[type])) {
@@ -4102,14 +4104,14 @@ function create$1(ast, context, instance) {
                 el: vnode.elm,
                 node: item.node,
                 directives: map,
-                attrs: attrs,
+                attributes: attributes$$1,
                 instance: instance
               });
             }
           });
         };
 
-        var update = function update(oldNode, vnode) {
+        var upsert = function upsert(oldNode, vnode) {
           if (oldNode.attached) {
             notify(vnode, 'update');
           } else {
@@ -4120,8 +4122,8 @@ function create$1(ast, context, instance) {
         };
 
         data.hook = {
-          insert: update,
-          postpatch: update,
+          insert: upsert,
+          postpatch: upsert,
           destroy: function destroy(vnode) {
             notify(vnode, 'detach');
           }
@@ -4129,10 +4131,10 @@ function create$1(ast, context, instance) {
       })();
     }
 
-    return h(isComponent ? 'div' : name, data,
+    return h(isComponent ? 'div' : node.name, data,
     // snabbdom 只支持字符串形式的 children
-    children.map(function (child) {
-      return child && has$2(child, 'sel') && has$2(child, 'elm') ? child : toString$1(child);
+    node.children.map(function (child) {
+      return isVNode(child) ? child : toString$1(child);
     }));
   };
 
@@ -4584,7 +4586,7 @@ var modelDt = {
         node = _ref9.node,
         instance = _ref9.instance,
         directives = _ref9.directives,
-        attrs = _ref9.attrs;
+        attributes = _ref9.attributes;
     var value = node.value,
         keypath = node.keypath;
 
@@ -4610,7 +4612,7 @@ var modelDt = {
           type = 'input';
         }
       }
-      if (!has$2(attrs, 'value')) {
+      if (!has$2(attributes, 'value')) {
         needSet = TRUE;
       }
     }
@@ -4758,7 +4760,7 @@ var Yox = function () {
     }
     // 如果传了 props，则 data 应该是个 function
     if (props && data && !func(data)) {
-      warn$1('Passing a `data` option should be a function.');
+      warn$1('Passing a "data" option should be a function.');
     }
 
     // 先放 props
@@ -4766,7 +4768,7 @@ var Yox = function () {
     instance.$data = props || {};
 
     // 后放 data
-    extend(instance.$data, func(data) ? data.call(instance) : data);
+    extend(instance.$data, func(data) ? callFunction(data, instance) : data);
 
     // 计算属性也是数据
     if (object(computed)) {
@@ -4875,7 +4877,7 @@ var Yox = function () {
         template = getContent(template);
       }
       if (!tag.test(template)) {
-        error$1('Passing a `template` option must have a root element.');
+        error$1('Passing a "template" option must have a root element.');
       }
     } else {
       template = NULL;
@@ -4893,7 +4895,7 @@ var Yox = function () {
           el = create$2('div', el);
         }
       } else {
-        error$1('Passing a `el` option must be a html element.');
+        error$1('Passing a "el" option must be a html element.');
       }
     }
 
@@ -4904,7 +4906,7 @@ var Yox = function () {
     if (methods) {
       each$1(methods, function (fn, name) {
         if (has$2(prototype, name)) {
-          error$1('Passing a \'' + name + '\' method is conflicted with built-in methods.');
+          error$1('Passing a "' + name + '" method is conflicted with built-in methods.');
         }
         instance[name] = fn;
       });
@@ -5573,7 +5575,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.20.6';
+Yox.version = '0.20.7';
 
 /**
  * 工具，便于扩展、插件使用

@@ -64,7 +64,7 @@ export default class Yox {
     }
     // 如果传了 props，则 data 应该是个 function
     if (props && data && !is.func(data)) {
-      logger.warn('Passing a `data` option should be a function.')
+      logger.warn('Passing a "data" option should be a function.')
     }
 
     // 先放 props
@@ -74,7 +74,7 @@ export default class Yox {
     // 后放 data
     object.extend(
       instance.$data,
-      is.func(data) ? data.call(instance) : data
+      is.func(data) ? execute(data, instance) : data
     )
 
     // 计算属性也是数据
@@ -134,12 +134,7 @@ export default class Yox {
               let newDeps = deps || instance.$computedStack.pop()
               let oldDeps = instance.$computedDeps[keypath]
               if (newDeps !== oldDeps) {
-                updateDeps(
-                  instance,
-                  newDeps,
-                  oldDeps,
-                  watcher
-                )
+                updateDeps(instance, newDeps, oldDeps, watcher)
               }
 
               instance.$computedDeps[keypath] = newDeps
@@ -199,7 +194,7 @@ export default class Yox {
         template = native.getContent(template)
       }
       if (!pattern.tag.test(template)) {
-        logger.error('Passing a `template` option must have a root element.')
+        logger.error('Passing a "template" option must have a root element.')
       }
     }
     else {
@@ -219,7 +214,7 @@ export default class Yox {
         }
       }
       else {
-        logger.error('Passing a `el` option must be a html element.')
+        logger.error('Passing a "el" option must be a html element.')
       }
     }
 
@@ -232,7 +227,7 @@ export default class Yox {
         methods,
         function (fn, name) {
           if (object.has(prototype, name)) {
-            logger.error(`Passing a '${name}' method is conflicted with built-in methods.`)
+            logger.error(`Passing a "${name}" method is conflicted with built-in methods.`)
           }
           instance[name] = fn
         }
@@ -908,7 +903,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.20.6'
+Yox.version = '0.20.7'
 
 /**
  * 工具，便于扩展、插件使用

@@ -20,6 +20,12 @@ import * as viewSyntax from 'yox-template-compiler/src/syntax'
 
 export let patch = snabbdom.init([ attributes, style ])
 
+function isVNode(node) {
+  return node
+    && object.has(node, 'sel')
+    && object.has(node, 'elm')
+}
+
 export function create(ast, context, instance) {
 
   let createText = function (node) {
@@ -37,10 +43,11 @@ export function create(ast, context, instance) {
 
   let createElement = function (node, isRootElement, isComponent) {
 
-    let { name, attributes, directives, children } = node
+    let attributes = { }, directives = [ ], styles
 
-    let attrs = { }, dires = [ ], styles
-    let data = { attrs }
+    let data = {
+      attrs: attributes,
+    }
 
     // 指令的创建要确保顺序
     // 组件必须第一个执行
@@ -49,7 +56,7 @@ export function create(ast, context, instance) {
 
     if (isComponent) {
       array.push(
-        dires,
+        directives,
         {
           node,
           name: 'component',
@@ -59,7 +66,7 @@ export function create(ast, context, instance) {
     }
     else {
       array.each(
-        attributes,
+        node.attributes,
         function (node) {
           let { name, value } = node
           if (name === 'style') {
@@ -77,14 +84,14 @@ export function create(ast, context, instance) {
             }
           }
           else {
-            attrs[name] = value
+            attributes[name] = value
           }
         }
       )
     }
 
     array.each(
-      directives,
+      node.directives,
       function (node) {
         let { name } = node
         if (name === viewSyntax.KEYWORD_UNIQUE) {
@@ -92,7 +99,7 @@ export function create(ast, context, instance) {
         }
         else {
           array.push(
-            dires,
+            directives,
             {
               name,
               node,
@@ -107,13 +114,13 @@ export function create(ast, context, instance) {
       data.style = styles
     }
 
-    if (isRootElement || dires.length) {
+    if (isRootElement || directives.length) {
 
-      let map = array.toObject(dires, 'name')
+      let map = array.toObject(directives, 'name')
 
       let notify = function (vnode, type) {
         array.each(
-          dires,
+          directives,
           function (item) {
             let { directive } = item
             if (directive && is.func(directive[type])) {
@@ -121,7 +128,7 @@ export function create(ast, context, instance) {
                 el: vnode.elm,
                 node: item.node,
                 directives: map,
-                attrs,
+                attributes,
                 instance,
               })
             }
@@ -129,7 +136,7 @@ export function create(ast, context, instance) {
         )
       }
 
-      let update = function (oldNode, vnode) {
+      let upsert = function (oldNode, vnode) {
         if (oldNode.attached) {
           notify(vnode, 'update')
         }
@@ -141,8 +148,8 @@ export function create(ast, context, instance) {
       }
 
       data.hook = {
-        insert: update,
-        postpatch: update,
+        insert: upsert,
+        postpatch: upsert,
         destroy(vnode) {
           notify(vnode, 'detach')
         }
@@ -150,14 +157,12 @@ export function create(ast, context, instance) {
     }
 
     return h(
-      isComponent ? 'div' : name,
+      isComponent ? 'div' : node.name,
       data,
       // snabbdom 只支持字符串形式的 children
-      children.map(
+      node.children.map(
         function (child) {
-          return child && object.has(child, 'sel') && object.has(child, 'elm')
-            ? child
-            : toString(child)
+          return isVNode(child) ? child : toString(child)
         }
       )
     )

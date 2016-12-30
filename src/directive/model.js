@@ -74,7 +74,7 @@ const specialControls = {
 
 export default {
 
-  attach({ el, node, instance, directives, attrs }) {
+  attach({ el, node, instance, directives, attributes }) {
 
     let { value, keypath } = node
 
@@ -99,7 +99,7 @@ export default {
           type = 'input'
         }
       }
-      if (!object.has(attrs, 'value')) {
+      if (!object.has(attributes, 'value')) {
         needSet = env.TRUE
       }
     }
