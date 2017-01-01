@@ -6,6 +6,7 @@
 
 import * as is from 'yox-common/util/is'
 import * as env from 'yox-common/util/env'
+import * as array from 'yox-common/util/array'
 import * as object from 'yox-common/util/object'
 import * as logger from 'yox-common/util/logger'
 
@@ -35,7 +36,7 @@ export default {
       let { $component } = el
       if ($component) {
         if (is.array($component)) {
-          $component.push(setRef)
+          array.push($component, setRef)
         }
         else {
           setRef($component)

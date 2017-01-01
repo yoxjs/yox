@@ -345,7 +345,7 @@ function resolve(base, path) {
     if (term === LEVEL_PARENT) {
       list.pop();
     } else {
-      list.push(normalize(term));
+      push$1(list, normalize(term));
     }
   });
   return stringify(list);
@@ -671,9 +671,9 @@ var Emitter = function () {
         if (func(listener)) {
           var list = listeners[type] || (listeners[type] = []);
           if (!list.length) {
-            added.push(type);
+            push$1(added, type);
           }
-          list.push(listener);
+          push$1(list, listener);
         }
       };
 
@@ -721,7 +721,7 @@ var Emitter = function () {
         each$1(listeners, function (list, type) {
           if (array(listeners[type])) {
             listeners[type].length = 0;
-            removed.push(type);
+            push$1(removed, type);
           }
         });
       } else {
@@ -733,7 +733,7 @@ var Emitter = function () {
             remove$1(list, listener);
           }
           if (!list.length) {
-            removed.push(type);
+            push$1(removed, type);
           }
         }
       }
@@ -1001,7 +1001,7 @@ function add(task) {
   if (!nextTasks.length) {
     nextTick$2(run);
   }
-  nextTasks.push(task);
+  push$1(nextTasks, task);
 }
 
 /**
@@ -1380,8 +1380,7 @@ var Node = function () {
   createClass(Node, [{
     key: 'addChild',
     value: function addChild(child) {
-      var children = this.children || (this.children = []);
-      children.push(child);
+      push$1(this.children || (this.children = []), child);
     }
   }]);
   return Node;
@@ -1485,8 +1484,7 @@ var Element = function (_Node) {
   createClass(Element, [{
     key: 'addAttr',
     value: function addAttr(child) {
-      var attrs = this.attrs || (this.attrs = []);
-      attrs.push(child);
+      push$1(this.attrs || (this.attrs = []), child);
     }
   }]);
   return Element;
@@ -1847,9 +1845,9 @@ var Binary = function (_Node) {
 
     var _this = possibleConstructorReturn(this, (Binary.__proto__ || Object.getPrototypeOf(Binary)).call(this, BINARY));
 
-    _this.left = left;
-    _this.operator = operator;
     _this.right = right;
+    _this.operator = operator;
+    _this.left = left;
     return _this;
   }
 
@@ -2380,7 +2378,7 @@ function compile$1(content) {
       } else if (charCode === COMMA) {
         index++;
       } else {
-        args.push(parseExpression());
+        push$1(args, parseExpression());
       }
     }
 
@@ -2484,7 +2482,7 @@ function compile$1(content) {
 
       // 处理左边
       if (stack.length > 3 && binaryMap[op] < stack[stack.length - 2]) {
-        stack.push(new Binary(stack.pop(), (stack.pop(), stack.pop()), stack.pop()));
+        push$1(stack, new Binary(stack.pop(), (stack.pop(), stack.pop()), stack.pop()));
       }
 
       right = parseToken();
@@ -2591,7 +2589,7 @@ var parsers = [{
   create: function create(source) {
     var name = trim(source.slice(IMPORT.length));
     if (name) {
-      new Import(name);
+      return new Import(name);
     }
   }
 }, {
@@ -2601,7 +2599,7 @@ var parsers = [{
   create: function create(source) {
     var name = trim(source.slice(PARTIAL.length));
     if (name) {
-      new Partial(name);
+      return new Partial(name);
     }
   }
 }, {
@@ -2835,7 +2833,7 @@ function render(ast, createText, createElement, importTemplate, data) {
                 v: traverseList(partial.children, recursion)
               };
             }
-            error$1('Importing partial \'' + name + '\' is not found.');
+            error$1('Importing partial "' + name + '" is not found.');
             break;
 
           // 条件判断失败就没必要往下走了
@@ -3378,11 +3376,11 @@ function compile$$1(template, loose) {
     return children;
   }
 
-  var root = children[0];
-  if (children.length > 1 || root.type !== ELEMENT) {
+  result = children[0];
+  if (children.length > 1 || result.type !== ELEMENT) {
     error$1('Template should contain exactly one root element.');
   }
-  return root;
+  return result;
 }
 
 /**
@@ -4361,7 +4359,7 @@ var ref = {
 
         if ($component) {
           if (array($component)) {
-            $component.push(setRef);
+            push$1($component, setRef);
           } else {
             setRef($component);
           }
@@ -4460,7 +4458,7 @@ var event = {
           };
         };
         if (array($component)) {
-          $component.push(bind);
+          push$1($component, bind);
         } else {
           bind($component);
         }
@@ -4563,7 +4561,7 @@ var checkboxControl = {
     var value = instance.get(keypath);
     if (array(value)) {
       if (el.checked) {
-        value.push(el.value);
+        push$1(value, el.value);
       } else {
         remove$1(value, el.value, FALSE);
       }
@@ -4963,7 +4961,7 @@ var Yox = function () {
       if (string(context)) {
         var keys$$1 = parse(context);
         while (TRUE) {
-          keys$$1.push(keypath);
+          push$1(keys$$1, keypath);
           context = stringify(keys$$1);
           result = getValue(context);
           if (result || keys$$1.length <= 1) {
@@ -4979,7 +4977,7 @@ var Yox = function () {
         if ($computedStack) {
           result = last($computedStack);
           if (result) {
-            result.push(keypath);
+            push$1(result, keypath);
           }
         }
         result = getValue(keypath);
@@ -5269,7 +5267,7 @@ var Yox = function () {
       options.parent = this;
       var child = new Yox(options);
       var children = this.$children || (this.$children = []);
-      children.push(child);
+      push$1(children, child);
       return child;
     }
   }, {
@@ -5291,7 +5289,7 @@ var Yox = function () {
                 var args = copy(ast.args);
                 if (!args.length) {
                   if (isEvent) {
-                    args.push(e);
+                    push$1(args, e);
                   }
                 } else {
                   args = args.map(function (node) {
@@ -5389,7 +5387,7 @@ var Yox = function () {
                   });
                 });
               } else {
-                $pending.push(callback);
+                push$1($pending, callback);
               }
             })();
           } else if (object(options)) {
@@ -5574,7 +5572,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.20.9';
+Yox.version = '0.20.10';
 
 /**
  * 工具，便于扩展、插件使用

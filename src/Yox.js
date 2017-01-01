@@ -285,7 +285,7 @@ export default class Yox {
     if (is.string(context)) {
       let keys = keypathUtil.parse(context)
       while (env.TRUE) {
-        keys.push(keypath)
+        array.push(keys, keypath)
         context = keypathUtil.stringify(keys)
         result = getValue(context)
         if (result || keys.length <= 1) {
@@ -303,7 +303,7 @@ export default class Yox {
       if ($computedStack) {
         result = array.last($computedStack)
         if (result) {
-          result.push(keypath)
+          array.push(result, keypath)
         }
       }
       result = getValue(keypath)
@@ -587,7 +587,7 @@ export default class Yox {
     options.parent = this
     let child = new Yox(options)
     let children = this.$children || (this.$children = [ ])
-    children.push(child)
+    array.push(children, child)
     return child
   }
 
@@ -606,7 +606,7 @@ export default class Yox {
           let args = object.copy(ast.args)
           if (!args.length) {
             if (isEvent) {
-              args.push(e)
+              array.push(args, e)
             }
           }
           else {
@@ -702,7 +702,7 @@ export default class Yox {
             })
           }
           else {
-            $pending.push(callback)
+            array.push($pending, callback)
           }
         }
         else if (is.object(options)) {
@@ -903,7 +903,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.20.9'
+Yox.version = '0.20.10'
 
 /**
  * 工具，便于扩展、插件使用

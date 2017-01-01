@@ -53,7 +53,7 @@ const checkboxControl = {
     let value = instance.get(keypath)
     if (is.array(value)) {
       if (el.checked) {
-        value.push(el.value)
+        array.push(value, el.value)
       }
       else {
         array.remove(value, el.value, env.FALSE)
