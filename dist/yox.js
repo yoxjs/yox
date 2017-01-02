@@ -1242,6 +1242,9 @@ Unary[Unary.BANG = '!'] = function (value) {
 Unary[Unary.WAVE = '~'] = function (value) {
   return ~value;
 };
+Unary[Unary.DOUBLE_BANG = '!!'] = function (value) {
+  return !!value;
+};
 
 /**
  * Binary 节点
@@ -1317,7 +1320,7 @@ Binary[Binary.MODULO = '%'] = function (a, b) {
 // 一元操作符
 var unaryMap = {};
 
-unaryMap[Unary.PLUS] = unaryMap[Unary.MINUS] = unaryMap[Unary.BANG] = unaryMap[Unary.WAVE] = TRUE;
+unaryMap[Unary.PLUS] = unaryMap[Unary.MINUS] = unaryMap[Unary.BANG] = unaryMap[Unary.WAVE] = unaryMap[Unary.DOUBLE_BANG] = TRUE;
 
 var unaryList = sortKeys(unaryMap);
 
@@ -5602,7 +5605,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.21.1';
+Yox.version = '0.21.2';
 
 /**
  * 工具，便于扩展、插件使用
