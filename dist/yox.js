@@ -15,6 +15,13 @@ var NULL = null;
 var UNDEFINED = undefined;
 
 /**
+ * 换行符
+ *
+ * @type {string}
+ */
+var BREAKLINE = '\n';
+
+/**
  * 浏览器环境下的 window 对象
  *
  * @type {?Window}
@@ -79,6 +86,16 @@ var is$1 = Object.freeze({
 	numeric: numeric
 });
 
+var callFunction = function (fn, context, args) {
+  if (func(fn)) {
+    if (array(args)) {
+      return fn.apply(context, args);
+    } else {
+      return fn.call(context, args);
+    }
+  }
+};
+
 var slice = Array.prototype.slice;
 
 /**
@@ -131,27 +148,30 @@ function diff$1(array1, array2, strict) {
  * @return {Array}
  */
 function merge() {
+  var args = toArray(arguments);
   var result = [];
-  each(arguments, function (array$$1) {
-    push$1(result, array$$1);
-  });
+  args.unshift(result);
+  callFunction(push$1, NULL, args);
   return result;
 }
 
 /**
- * 压入一个数组
+ * 压入数组
  *
  * @param {Array} original
- * @param {Array|*} array
  */
-function push$1(original, array$$1) {
-  if (array(array$$1)) {
-    each(array$$1, function (item) {
-      original.push(item);
-    });
-  } else {
-    original.push(array$$1);
-  }
+function push$1(original) {
+  each(arguments, function (array$$1, index) {
+    if (index > 0) {
+      if (array(array$$1)) {
+        each(array$$1, function (item) {
+          original.push(item);
+        });
+      } else {
+        original.push(array$$1);
+      }
+    }
+  });
 }
 
 /**
@@ -261,16 +281,6 @@ var array$1 = Object.freeze({
 	remove: remove$1,
 	falsy: falsy
 });
-
-var callFunction = function (fn, context, args) {
-  if (func(fn)) {
-    if (array(args)) {
-      return fn.apply(context, args);
-    } else {
-      return fn.call(context, args);
-    }
-  }
-};
 
 /**
  * getter / setter 的判断
@@ -2091,7 +2101,7 @@ var COLON = 58; // :
 // 区分关键字和普通变量
 // 举个例子：a === true
 // 从解析器的角度来说，a 和 true 是一样的 token
-var keyword = {
+var keywords = {
   'true': TRUE,
   'false': FALSE,
   'null': NULL,
@@ -2285,7 +2295,7 @@ function compile$1(content) {
     return charCodeAt$1(content, index);
   };
   var parseError = function parseError() {
-    error$1('Failed to compile expression: \n' + content);
+    error$1('Failed to compile expression: ' + BREAKLINE + content);
   };
 
   var skipWhitespace = function skipWhitespace() {
@@ -2352,8 +2362,8 @@ function compile$1(content) {
     skipIdentifier();
 
     value = content.substring(start, index);
-    if (keyword[value]) {
-      return new Literal(keyword[value]);
+    if (keywords[value]) {
+      return new Literal(keywords[value]);
     }
 
     // this 也视为 IDENTIFIER
@@ -2487,7 +2497,7 @@ function compile$1(content) {
 
       right = parseToken();
       if (right) {
-        stack.push(op, binaryMap[op], right);
+        push$1(stack, op, binaryMap[op], right);
       } else {
         parseError();
       }
@@ -2554,8 +2564,6 @@ var EQUAL = 61; // =
 var SLASH = 47; // /
 var ARROW_LEFT = 60; // <
 var ARROW_RIGHT = 62; // >
-var BREAKLINE = '\n';
-
 var openingDelimiterPattern = new RegExp(DELIMITER_OPENING);
 var closingDelimiterPattern = new RegExp(DELIMITER_CLOSING);
 
@@ -2572,83 +2580,6 @@ var breaklineSuffixPattern = /\n[ \t]*$/;
 
 var componentNamePattern = /[-A-Z]/;
 var selfClosingTagNamePattern = /input|img|br/i;
-
-var parsers = [{
-  test: function test(source) {
-    return source.startsWith(EACH);
-  },
-  create: function create(source) {
-    var terms = trim(source.slice(EACH.length)).split(':');
-    var expr = compile$1(terms[0]);
-    return new Each(expr, trim(terms[1]));
-  }
-}, {
-  test: function test(source) {
-    return source.startsWith(IMPORT);
-  },
-  create: function create(source) {
-    var name = trim(source.slice(IMPORT.length));
-    if (name) {
-      return new Import(name);
-    }
-  }
-}, {
-  test: function test(source) {
-    return source.startsWith(PARTIAL);
-  },
-  create: function create(source) {
-    var name = trim(source.slice(PARTIAL.length));
-    if (name) {
-      return new Partial(name);
-    }
-  }
-}, {
-  test: function test(source) {
-    return source.startsWith(IF);
-  },
-  create: function create(source) {
-    var expr = trim(source.slice(IF.length));
-    if (expr) {
-      return new If(compile$1(expr));
-    }
-  }
-}, {
-  test: function test(source) {
-    return source.startsWith(ELSE_IF);
-  },
-  create: function create(source, delimiter, popStack) {
-    var expr = source.slice(ELSE_IF.length);
-    if (expr) {
-      popStack();
-      return new ElseIf(compile$1(expr));
-    }
-  }
-}, {
-  test: function test(source) {
-    return source.startsWith(ELSE);
-  },
-  create: function create(source, delimiter, popStack) {
-    popStack();
-    return new Else();
-  }
-}, {
-  test: function test(source) {
-    return source.startsWith(SPREAD);
-  },
-  create: function create(source) {
-    var expr = source.slice(SPREAD.length);
-    if (expr) {
-      return new Spread(compile$1(expr));
-    }
-  }
-}, {
-  test: function test(source) {
-    return !source.startsWith(COMMENT);
-  },
-  create: function create(source, delimiter) {
-    return new Expression(compile$1(source), !delimiter.endsWith('}}}'));
-  }
-}];
 
 // 2 种 level
 // 当 level 为 LEVEL_ATTRIBUTE 时，表示只可以处理属性和指令
@@ -3029,6 +2960,88 @@ function render(ast, createText, createElement, importTemplate, data) {
 // 缓存编译结果
 var cache = {};
 
+var parsers = [{
+  test: function test(source) {
+    return source.startsWith(EACH);
+  },
+  create: function create(source) {
+    var terms = trim(source.slice(EACH.length)).split(':');
+    var expr = trim(terms[0]);
+    if (terms.length > 0 && expr) {
+      return new Each(compile$1(expr), trim(terms[1]));
+    }
+  }
+}, {
+  test: function test(source) {
+    return source.startsWith(IMPORT);
+  },
+  create: function create(source) {
+    var name = trim(source.slice(IMPORT.length));
+    if (name) {
+      return new Import(name);
+    }
+  }
+}, {
+  test: function test(source) {
+    return source.startsWith(PARTIAL);
+  },
+  create: function create(source) {
+    var name = trim(source.slice(PARTIAL.length));
+    if (name) {
+      return new Partial(name);
+    }
+  }
+}, {
+  test: function test(source) {
+    return source.startsWith(IF);
+  },
+  create: function create(source) {
+    var expr = trim(source.slice(IF.length));
+    if (expr) {
+      return new If(compile$1(expr));
+    }
+  }
+}, {
+  test: function test(source) {
+    return source.startsWith(ELSE_IF);
+  },
+  create: function create(source, delimiter, popStack) {
+    var expr = source.slice(ELSE_IF.length);
+    if (expr) {
+      popStack();
+      return new ElseIf(compile$1(expr));
+    }
+  }
+}, {
+  test: function test(source) {
+    return source.startsWith(ELSE);
+  },
+  create: function create(source, delimiter, popStack) {
+    popStack();
+    return new Else();
+  }
+}, {
+  test: function test(source) {
+    return source.startsWith(SPREAD);
+  },
+  create: function create(source) {
+    var expr = source.slice(SPREAD.length);
+    if (expr) {
+      return new Spread(compile$1(expr));
+    }
+  }
+}, {
+  test: function test(source) {
+    return !source.startsWith(COMMENT);
+  },
+  create: function create(source, delimiter) {
+    source = trim(source);
+    if (source) {
+      return new Expression(compile$1(source), !delimiter.endsWith('}}}'));
+    }
+  }
+}];
+
 function getLocationByPos(str, pos) {
 
   var line = 0,
@@ -3286,6 +3299,8 @@ function compile$$1(template, loose) {
               index = parser.create(content, delimiter, popStack);
               if (index) {
                 addChild(index);
+              } else {
+                parseError('Expected expression', mainScanner.pos + helperScanner.pos);
               }
               return FALSE;
             }
@@ -3365,7 +3380,7 @@ function compile$$1(template, loose) {
   }
 
   if (nodeStack.length) {
-    return parseError('Missing end tag (</' + nodeStack[0].name + '>)', mainScanner.pos);
+    return parseError('Expected end tag (</' + nodeStack[0].name + '>)', mainScanner.pos);
   }
 
   var children = rootNode.children;
