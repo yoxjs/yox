@@ -599,10 +599,53 @@ var Store = function () {
     this.data = {};
   }
 
+  /**
+   * 同步取值
+   *
+   * @param {string} key
+   * @return {*}
+   */
+
+
   createClass(Store, [{
     key: 'get',
     value: function get(key) {
       return this.data[key];
+    }
+
+    /**
+     * 异步取值
+     *
+     * @param {string} key
+     * @param {Function} callback
+     */
+
+  }, {
+    key: 'getAsync',
+    value: function getAsync(key, callback) {
+      var data = this.data;
+
+      var value = data[key];
+      if (func(value)) {
+        (function () {
+          var $pending = value.$pending;
+
+          if (!$pending) {
+            $pending = value.$pending = [callback];
+            value(function (replacement) {
+              delete value.$pending;
+              data[key] = replacement;
+              each($pending, function (callback) {
+                callback(replacement);
+              });
+            });
+          } else {
+            push$1($pending, callback);
+          }
+        })();
+      } else {
+        callback(value);
+      }
     }
   }, {
     key: 'set',
@@ -2580,9 +2623,12 @@ var breaklineSuffixPattern = /\n[ \t]*$/;
 var componentNamePattern = /[-A-Z]/;
 var selfClosingTagNamePattern = /input|img|br/i;
 
+var toString$1 = Function.prototype.toString;
+
 // 2 种 level
 // 当 level 为 LEVEL_ATTRIBUTE 时，表示只可以处理属性和指令
 // 当 level 为 LEVEL_TEXT 时，表示只可以处理属性和指令的值
+
 var LEVEL_ATTRIBUTE = 1;
 var LEVEL_TEXT = 2;
 
@@ -2717,7 +2763,7 @@ function render(ast, createText, createElement, importTemplate, data) {
     getKeypath = function getKeypath() {
       return stringify(keys$$1);
     };
-    getKeypath.$computed = TRUE;
+    getKeypath.toString = getKeypath;
     data[SPECIAL_KEYPATH] = getKeypath;
     context = new Context(data);
   }
@@ -2855,7 +2901,7 @@ function render(ast, createText, createElement, importTemplate, data) {
                 safe = node.safe;
 
             content = executeExpr(expr);
-            if (func(content) && content.$computed) {
+            if (func(content) && content.toString !== toString$1) {
               content = content();
             }
             return {
@@ -4011,7 +4057,7 @@ function updateAttrs(oldVnode, vnode) {
 
 var attributes = { create: updateAttrs, update: updateAttrs };
 
-var toString$1 = function (str) {
+var toString$2 = function (str) {
   var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
 
   try {
@@ -4145,7 +4191,7 @@ function create$1(ast, context, instance) {
     return h(isComponent ? 'div' : node.name, data,
     // snabbdom 只支持字符串形式的 children
     node.children.map(function (child) {
-      return isVNode(child) ? child : toString$1(child);
+      return isVNode(child) ? child : toString$2(child);
     }));
   };
 
@@ -4846,7 +4892,7 @@ var Yox = function () {
 
               return result;
             };
-            getter.$computed = TRUE;
+            getter.toString = getter;
             instance.$computedGetters[keypath] = getter;
           })();
         }
@@ -5374,39 +5420,9 @@ var Yox = function () {
       magic({
         args: value ? [id, value] : [id],
         get: function get(id) {
-
-          var options = store.get(id),
-              fromGlobal = void 0;
-          if (!options) {
-            options = Yox.component(id);
-            fromGlobal = TRUE;
-          }
-
-          if (func(options)) {
-            (function () {
-              var _options2 = options,
-                  $pending = _options2.$pending;
-
-              if (!$pending) {
-                $pending = options.$pending = [callback];
-                options(function (replacement) {
-                  delete options.$pending;
-                  if (fromGlobal) {
-                    Yox.component(id, replacement);
-                  } else {
-                    store.set(id, replacement);
-                  }
-                  each($pending, function (callback) {
-                    callback(replacement);
-                  });
-                });
-              } else {
-                push$1($pending, callback);
-              }
-            })();
-          } else if (object(options)) {
-            callback(options);
-          }
+          store.getAsync(id, function (options) {
+            callback(options || Yox.component(id));
+          });
         },
         set: function set(id, value) {
           store.set(id, value);
@@ -5586,7 +5602,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.21.0';
+Yox.version = '0.21.1';
 
 /**
  * 工具，便于扩展、插件使用

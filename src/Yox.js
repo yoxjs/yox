@@ -142,7 +142,7 @@ export default class Yox {
 
               return result
             }
-            getter.$computed = env.TRUE
+            getter.toString = getter
             instance.$computedGetters[keypath] = getter
           }
 
@@ -674,40 +674,14 @@ export default class Yox {
     magic({
       args: value ? [ id, value ] : [ id ],
       get(id) {
-
-        let options = store.get(id), fromGlobal
-        if (!options) {
-          options = Yox.component(id)
-          fromGlobal = env.TRUE
-        }
-
-        if (is.func(options)) {
-          let { $pending } = options
-          if (!$pending) {
-            $pending = options.$pending = [ callback ]
-            options(function (replacement) {
-              delete options.$pending
-              if (fromGlobal) {
-                Yox.component(id, replacement)
-              }
-              else {
-                store.set(id, replacement)
-              }
-              array.each(
-                $pending,
-                function (callback) {
-                  callback(replacement)
-                }
-              )
-            })
+        store.getAsync(
+          id,
+          function (options) {
+            callback(
+              options || Yox.component(id)
+            )
           }
-          else {
-            array.push($pending, callback)
-          }
-        }
-        else if (is.object(options)) {
-          callback(options)
-        }
+        )
       },
       set(id, value) {
         store.set(id, value)
@@ -903,7 +877,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.21.0'
+Yox.version = '0.21.1'
 
 /**
  * 工具，便于扩展、插件使用
