@@ -716,7 +716,7 @@ var Emitter = function () {
     key: 'on',
     value: function on(type, listener) {
       var listeners = this.listeners,
-          onAdd = this.onAdd;
+          afterAdd = this.afterAdd;
 
       var added = [];
 
@@ -736,8 +736,8 @@ var Emitter = function () {
         addListener(listener, type);
       }
 
-      if (added.length && func(onAdd)) {
-        onAdd(added);
+      if (added.length && func(afterAdd)) {
+        afterAdd(added);
       }
     }
   }, {
@@ -766,7 +766,7 @@ var Emitter = function () {
     key: 'off',
     value: function off(type, listener) {
       var listeners = this.listeners,
-          onRemove = this.onRemove;
+          afterRemove = this.afterRemove;
 
       var removed = [];
 
@@ -791,8 +791,8 @@ var Emitter = function () {
         }
       }
 
-      if (removed.length && func(onRemove)) {
-        onRemove(removed);
+      if (removed.length && func(afterRemove)) {
+        afterRemove(removed);
       }
     }
   }, {
@@ -1198,6 +1198,52 @@ var MEMBER = 7;
  */
 var UNARY = 8;
 
+var PLUS = '+';
+var MINUS = '-';
+var MULTIPLY = '*';
+var DIVIDE = '/';
+var MODULO = '%';
+var WAVE = '~';
+
+var AND = '&&';
+var OR = '||';
+var NOT = '!';
+var BOOLEAN = '!!';
+
+var SE = '===';
+var SNE = '!==';
+var LE = '==';
+var LNE = '!=';
+var LT = '<';
+var LTE = '<=';
+var GT = '>';
+var GTE = '>=';
+
+// 一元操作符
+var unaryMap = {};
+
+unaryMap[PLUS] = unaryMap[MINUS] = unaryMap[NOT] = unaryMap[WAVE] = unaryMap[BOOLEAN] = TRUE;
+
+var unaryList = sortKeys(unaryMap);
+
+// 二元操作符
+// 操作符和对应的优先级，数字越大优先级越高
+var binaryMap = {};
+
+binaryMap[OR] = 1;
+
+binaryMap[AND] = 2;
+
+binaryMap[LE] = binaryMap[LNE] = binaryMap[SE] = binaryMap[SNE] = 3;
+
+binaryMap[LT] = binaryMap[LTE] = binaryMap[GT] = binaryMap[GTE] = 4;
+
+binaryMap[PLUS] = binaryMap[MINUS] = 5;
+
+binaryMap[MULTIPLY] = binaryMap[DIVIDE] = binaryMap[MODULO] = 6;
+
+var binaryList = sortKeys(binaryMap);
+
 /**
  * 节点基类
  */
@@ -1208,43 +1254,25 @@ var Node = function Node(type) {
 };
 
 /**
- * Unary 节点
+ * Array 节点
  *
- * @param {string} operator
- * @param {Node} arg
+ * @param {Array.<Node>} elements
  */
 
-var Unary = function (_Node) {
-  inherits(Unary, _Node);
+var Array$1 = function (_Node) {
+  inherits(Array, _Node);
 
-  function Unary(operator, arg) {
-    classCallCheck(this, Unary);
+  function Array(elements) {
+    classCallCheck(this, Array);
 
-    var _this = possibleConstructorReturn(this, (Unary.__proto__ || Object.getPrototypeOf(Unary)).call(this, UNARY));
+    var _this = possibleConstructorReturn(this, (Array.__proto__ || Object.getPrototypeOf(Array)).call(this, ARRAY));
 
-    _this.operator = operator;
-    _this.arg = arg;
+    _this.elements = elements;
     return _this;
   }
 
-  return Unary;
+  return Array;
 }(Node);
-
-Unary[Unary.PLUS = '+'] = function (value) {
-  return +value;
-};
-Unary[Unary.MINUS = '-'] = function (value) {
-  return -value;
-};
-Unary[Unary.BANG = '!'] = function (value) {
-  return !value;
-};
-Unary[Unary.WAVE = '~'] = function (value) {
-  return ~value;
-};
-Unary[Unary.DOUBLE_BANG = '!!'] = function (value) {
-  return !!value;
-};
 
 /**
  * Binary 节点
@@ -1271,97 +1299,51 @@ var Binary = function (_Node) {
   return Binary;
 }(Node);
 
-Binary[Binary.OR = '||'] = function (a, b) {
+Binary[OR] = function (a, b) {
   return a || b;
 };
-Binary[Binary.AND = '&&'] = function (a, b) {
+Binary[AND] = function (a, b) {
   return a && b;
 };
-Binary[Binary.SE = '==='] = function (a, b) {
+Binary[SE] = function (a, b) {
   return a === b;
 };
-Binary[Binary.SNE = '!=='] = function (a, b) {
+Binary[SNE] = function (a, b) {
   return a !== b;
 };
-Binary[Binary.LE = '=='] = function (a, b) {
+Binary[LE] = function (a, b) {
   return a == b;
 };
-Binary[Binary.LNE = '!='] = function (a, b) {
+Binary[LNE] = function (a, b) {
   return a != b;
 };
-Binary[Binary.LT = '<'] = function (a, b) {
+Binary[LT] = function (a, b) {
   return a < b;
 };
-Binary[Binary.LTE = '<='] = function (a, b) {
+Binary[LTE] = function (a, b) {
   return a <= b;
 };
-Binary[Binary.GT = '>'] = function (a, b) {
+Binary[GT] = function (a, b) {
   return a > b;
 };
-Binary[Binary.GTE = '>='] = function (a, b) {
+Binary[GTE] = function (a, b) {
   return a >= b;
 };
-Binary[Binary.PLUS = '+'] = function (a, b) {
+Binary[PLUS] = function (a, b) {
   return a + b;
 };
-Binary[Binary.MINUS = '-'] = function (a, b) {
+Binary[MINUS] = function (a, b) {
   return a - b;
 };
-Binary[Binary.MULTIPLY = '*'] = function (a, b) {
+Binary[MULTIPLY] = function (a, b) {
   return a * b;
 };
-Binary[Binary.DIVIDE = '/'] = function (a, b) {
+Binary[DIVIDE] = function (a, b) {
   return a / b;
 };
-Binary[Binary.MODULO = '%'] = function (a, b) {
+Binary[MODULO] = function (a, b) {
   return a % b;
 };
-
-// 一元操作符
-var unaryMap = {};
-
-unaryMap[Unary.PLUS] = unaryMap[Unary.MINUS] = unaryMap[Unary.BANG] = unaryMap[Unary.WAVE] = unaryMap[Unary.DOUBLE_BANG] = TRUE;
-
-var unaryList = sortKeys(unaryMap);
-
-// 二元操作符
-// 操作符和对应的优先级，数字越大优先级越高
-var binaryMap = {};
-
-binaryMap[Binary.OR] = 1;
-
-binaryMap[Binary.AND] = 2;
-
-binaryMap[Binary.LE] = binaryMap[Binary.LNE] = binaryMap[Binary.SE] = binaryMap[Binary.SNE] = 3;
-
-binaryMap[Binary.LT] = binaryMap[Binary.LTE] = binaryMap[Binary.GT] = binaryMap[Binary.GTE] = 4;
-
-binaryMap[Binary.PLUS] = binaryMap[Binary.MINUS] = 5;
-
-binaryMap[Binary.MULTIPLY] = binaryMap[Binary.DIVIDE] = binaryMap[Binary.MODULO] = 6;
-
-var binaryList = sortKeys(binaryMap);
-
-/**
- * Array 节点
- *
- * @param {Array.<Node>} elements
- */
-
-var Array$1 = function (_Node) {
-  inherits(Array, _Node);
-
-  function Array(elements) {
-    classCallCheck(this, Array);
-
-    var _this = possibleConstructorReturn(this, (Array.__proto__ || Object.getPrototypeOf(Array)).call(this, ARRAY));
-
-    _this.elements = elements;
-    return _this;
-  }
-
-  return Array;
-}(Node);
 
 /**
  * Call 节点
@@ -1491,6 +1473,45 @@ Member.flatten = function (node) {
   } while (node = next);
 
   return result;
+};
+
+/**
+ * Unary 节点
+ *
+ * @param {string} operator
+ * @param {Node} arg
+ */
+
+var Unary = function (_Node) {
+  inherits(Unary, _Node);
+
+  function Unary(operator, arg) {
+    classCallCheck(this, Unary);
+
+    var _this = possibleConstructorReturn(this, (Unary.__proto__ || Object.getPrototypeOf(Unary)).call(this, UNARY));
+
+    _this.operator = operator;
+    _this.arg = arg;
+    return _this;
+  }
+
+  return Unary;
+}(Node);
+
+Unary[PLUS] = function (value) {
+  return +value;
+};
+Unary[MINUS] = function (value) {
+  return -value;
+};
+Unary[NOT] = function (value) {
+  return !value;
+};
+Unary[WAVE] = function (value) {
+  return ~value;
+};
+Unary[BOOLEAN] = function (value) {
+  return !!value;
 };
 
 // 分隔符
@@ -4912,14 +4933,14 @@ var Yox = function () {
 
     var $watchCache = instance.$watchCache = {};
     instance.$watchEmitter = new Emitter({
-      onAdd: function onAdd(added) {
+      afterAdd: function afterAdd(added) {
         each(added, function (keypath) {
           if (keypath.indexOf('*') < 0 && !has$2($watchCache, keypath)) {
             $watchCache[keypath] = instance.get(keypath);
           }
         });
       },
-      onRemove: function onRemove(removed) {
+      afterRemove: function afterRemove(removed) {
         each(removed, function (keypath) {
           if (has$2($watchCache, keypath)) {
             delete $watchCache[keypath];
@@ -5605,7 +5626,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.21.2';
+Yox.version = '0.21.3';
 
 /**
  * 工具，便于扩展、插件使用

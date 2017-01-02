@@ -161,7 +161,7 @@ export default class Yox {
     let $watchCache =
     instance.$watchCache = { }
     instance.$watchEmitter = new Emitter({
-      onAdd(added) {
+      afterAdd(added) {
         array.each(
           added,
           function (keypath) {
@@ -173,7 +173,7 @@ export default class Yox {
           }
         )
       },
-      onRemove(removed) {
+      afterRemove(removed) {
         array.each(
           removed,
           function (keypath) {
@@ -877,7 +877,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.21.2'
+Yox.version = '0.21.3'
 
 /**
  * 工具，便于扩展、插件使用
