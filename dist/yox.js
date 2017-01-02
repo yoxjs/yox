@@ -878,7 +878,7 @@ function parse$1(str, separator, pair) {
           if (string(value)) {
             item.value = trim(value);
           }
-          result.push(item);
+          push$1(result, item);
         }
       });
     })();
@@ -1023,6 +1023,901 @@ function run() {
   each(tasks, function (task) {
     task();
   });
+}
+
+/**
+ * 是否是数字
+ *
+ * @param {number} charCode
+ * @return {boolean}
+ */
+function isNumber(charCode) {
+  return charCode >= 48 && charCode <= 57; // 0...9
+}
+
+/**
+ * 是否是空白符
+ *
+ * @param {number} charCode
+ * @return {boolean}
+ */
+function isWhitespace(charCode) {
+  return charCode === 32 // space
+  || charCode === 9; // tab
+}
+
+/**
+ * 变量开始字符必须是 字母、下划线、$
+ *
+ * @param {number} charCode
+ * @return {boolean}
+ */
+function isIdentifierStart(charCode) {
+  return charCode === 36 // $
+  || charCode === 95 // _
+  || charCode >= 97 && charCode <= 122 // a...z
+  || charCode >= 65 && charCode <= 90; // A...Z
+}
+
+/**
+ * 变量剩余的字符必须是 字母、下划线、$、数字
+ *
+ * @param {number} charCode
+ * @return {boolean}
+ */
+function isIdentifierPart(charCode) {
+  return isIdentifierStart(charCode) || isNumber(charCode);
+}
+
+/**
+ * 倒排对象的 key
+ *
+ * @param {Object} obj
+ * @return {Array.<string>}
+ */
+function sortKeys(obj) {
+  return keys(obj).sort(function (a, b) {
+    return b.length - a.length;
+  });
+}
+
+/**
+ * 用倒排 token 去匹配 content 的开始内容
+ *
+ * @param {string} content
+ * @param {Array.<string>} sortedTokens 数组长度从大到小排序
+ * @return {?string}
+ */
+function matchBestToken(content, sortedTokens) {
+  var result = void 0;
+  each(sortedTokens, function (token) {
+    if (content.startsWith(token)) {
+      result = token;
+      return FALSE;
+    }
+  });
+  return result;
+}
+
+/**
+ * 数组表达式，如 [ 1, 2, 3 ]
+ *
+ * @type {number}
+ */
+var ARRAY = 1;
+
+/**
+ * 二元表达式，如 a + b
+ *
+ * @type {number}
+ */
+var BINARY = 2;
+
+/**
+ * 函数调用表达式，如 a()
+ *
+ * @type {number}
+ */
+var CALL = 3;
+
+/**
+ * 三元表达式，如 a ? b : c
+ *
+ * @type {number}
+ */
+var CONDITIONAL = 4;
+
+/**
+ * 标识符
+ *
+ * @type {number}
+ */
+var IDENTIFIER = 5;
+
+/**
+ * 字面量
+ *
+ * @type {number}
+ */
+var LITERAL = 6;
+
+/**
+ * 对象属性或数组下标
+ *
+ * @type {number}
+ */
+var MEMBER = 7;
+
+/**
+ * 一元表达式，如 - a
+ *
+ * @type {number}
+ */
+var UNARY = 8;
+
+/**
+ * 节点基类
+ */
+var Node = function Node(type) {
+  classCallCheck(this, Node);
+
+  this.type = type;
+};
+
+/**
+ * Unary 节点
+ *
+ * @param {string} operator
+ * @param {Node} arg
+ */
+
+var Unary = function (_Node) {
+  inherits(Unary, _Node);
+
+  function Unary(operator, arg) {
+    classCallCheck(this, Unary);
+
+    var _this = possibleConstructorReturn(this, (Unary.__proto__ || Object.getPrototypeOf(Unary)).call(this, UNARY));
+
+    _this.operator = operator;
+    _this.arg = arg;
+    return _this;
+  }
+
+  return Unary;
+}(Node);
+
+Unary[Unary.PLUS = '+'] = function (value) {
+  return +value;
+};
+Unary[Unary.MINUS = '-'] = function (value) {
+  return -value;
+};
+Unary[Unary.BANG = '!'] = function (value) {
+  return !value;
+};
+Unary[Unary.WAVE = '~'] = function (value) {
+  return ~value;
+};
+
+/**
+ * Binary 节点
+ *
+ * @param {Node} right
+ * @param {string} operator
+ * @param {Node} left
+ */
+
+var Binary = function (_Node) {
+  inherits(Binary, _Node);
+
+  function Binary(right, operator, left) {
+    classCallCheck(this, Binary);
+
+    var _this = possibleConstructorReturn(this, (Binary.__proto__ || Object.getPrototypeOf(Binary)).call(this, BINARY));
+
+    _this.right = right;
+    _this.operator = operator;
+    _this.left = left;
+    return _this;
+  }
+
+  return Binary;
+}(Node);
+
+Binary[Binary.OR = '||'] = function (a, b) {
+  return a || b;
+};
+Binary[Binary.AND = '&&'] = function (a, b) {
+  return a && b;
+};
+Binary[Binary.SE = '==='] = function (a, b) {
+  return a === b;
+};
+Binary[Binary.SNE = '!=='] = function (a, b) {
+  return a !== b;
+};
+Binary[Binary.LE = '=='] = function (a, b) {
+  return a == b;
+};
+Binary[Binary.LNE = '!='] = function (a, b) {
+  return a != b;
+};
+Binary[Binary.LT = '<'] = function (a, b) {
+  return a < b;
+};
+Binary[Binary.LTE = '<='] = function (a, b) {
+  return a <= b;
+};
+Binary[Binary.GT = '>'] = function (a, b) {
+  return a > b;
+};
+Binary[Binary.GTE = '>='] = function (a, b) {
+  return a >= b;
+};
+Binary[Binary.PLUS = '+'] = function (a, b) {
+  return a + b;
+};
+Binary[Binary.MINUS = '-'] = function (a, b) {
+  return a - b;
+};
+Binary[Binary.MULTIPLY = '*'] = function (a, b) {
+  return a * b;
+};
+Binary[Binary.DIVIDE = '/'] = function (a, b) {
+  return a / b;
+};
+Binary[Binary.MODULO = '%'] = function (a, b) {
+  return a % b;
+};
+
+// 一元操作符
+var unaryMap = {};
+
+unaryMap[Unary.PLUS] = unaryMap[Unary.MINUS] = unaryMap[Unary.BANG] = unaryMap[Unary.WAVE] = TRUE;
+
+var unaryList = sortKeys(unaryMap);
+
+// 二元操作符
+// 操作符和对应的优先级，数字越大优先级越高
+var binaryMap = {};
+
+binaryMap[Binary.OR] = 1;
+
+binaryMap[Binary.AND] = 2;
+
+binaryMap[Binary.LE] = binaryMap[Binary.LNE] = binaryMap[Binary.SE] = binaryMap[Binary.SNE] = 3;
+
+binaryMap[Binary.LT] = binaryMap[Binary.LTE] = binaryMap[Binary.GT] = binaryMap[Binary.GTE] = 4;
+
+binaryMap[Binary.PLUS] = binaryMap[Binary.MINUS] = 5;
+
+binaryMap[Binary.MULTIPLY] = binaryMap[Binary.DIVIDE] = binaryMap[Binary.MODULO] = 6;
+
+var binaryList = sortKeys(binaryMap);
+
+/**
+ * Array 节点
+ *
+ * @param {Array.<Node>} elements
+ */
+
+var Array$1 = function (_Node) {
+  inherits(Array, _Node);
+
+  function Array(elements) {
+    classCallCheck(this, Array);
+
+    var _this = possibleConstructorReturn(this, (Array.__proto__ || Object.getPrototypeOf(Array)).call(this, ARRAY));
+
+    _this.elements = elements;
+    return _this;
+  }
+
+  return Array;
+}(Node);
+
+/**
+ * Call 节点
+ *
+ * @param {Node} callee
+ * @param {Array.<Node>} args
+ */
+
+var Call = function (_Node) {
+  inherits(Call, _Node);
+
+  function Call(callee, args) {
+    classCallCheck(this, Call);
+
+    var _this = possibleConstructorReturn(this, (Call.__proto__ || Object.getPrototypeOf(Call)).call(this, CALL));
+
+    _this.callee = callee;
+    _this.args = args;
+    return _this;
+  }
+
+  return Call;
+}(Node);
+
+/**
+ * Conditional 节点
+ *
+ * @param {Node} test
+ * @param {Node} consequent
+ * @param {Node} alternate
+ */
+
+var Conditional = function (_Node) {
+  inherits(Conditional, _Node);
+
+  function Conditional(test, consequent, alternate) {
+    classCallCheck(this, Conditional);
+
+    var _this = possibleConstructorReturn(this, (Conditional.__proto__ || Object.getPrototypeOf(Conditional)).call(this, CONDITIONAL));
+
+    _this.test = test;
+    _this.consequent = consequent;
+    _this.alternate = alternate;
+    return _this;
+  }
+
+  return Conditional;
+}(Node);
+
+/**
+ * Identifier 节点
+ *
+ * @param {string} name
+ */
+
+var Identifier = function (_Node) {
+  inherits(Identifier, _Node);
+
+  function Identifier(name) {
+    classCallCheck(this, Identifier);
+
+    var _this = possibleConstructorReturn(this, (Identifier.__proto__ || Object.getPrototypeOf(Identifier)).call(this, IDENTIFIER));
+
+    _this.name = name;
+    return _this;
+  }
+
+  return Identifier;
+}(Node);
+
+/**
+ * Literal 节点
+ *
+ * @param {string} value
+ */
+
+var Literal = function (_Node) {
+  inherits(Literal, _Node);
+
+  function Literal(value) {
+    classCallCheck(this, Literal);
+
+    var _this = possibleConstructorReturn(this, (Literal.__proto__ || Object.getPrototypeOf(Literal)).call(this, LITERAL));
+
+    _this.value = value;
+    return _this;
+  }
+
+  return Literal;
+}(Node);
+
+/**
+ * Member 节点
+ *
+ * @param {Identifier} object
+ * @param {Node} prop
+ */
+
+var Member = function (_Node) {
+  inherits(Member, _Node);
+
+  function Member(object, prop) {
+    classCallCheck(this, Member);
+
+    var _this = possibleConstructorReturn(this, (Member.__proto__ || Object.getPrototypeOf(Member)).call(this, MEMBER));
+
+    _this.object = object;
+    _this.prop = prop;
+    return _this;
+  }
+
+  return Member;
+}(Node);
+
+Member.flatten = function (node) {
+
+  var result = [];
+
+  var next = void 0;
+  do {
+    next = node.object;
+    if (node.type === MEMBER) {
+      result.unshift(node.prop);
+    } else {
+      result.unshift(node);
+    }
+  } while (node = next);
+
+  return result;
+};
+
+// 分隔符
+var COMMA = 44; // ,
+var PERIOD = 46; // .
+var SQUOTE = 39; // '
+var DQUOTE = 34; // "
+var OPAREN = 40; // (
+var CPAREN = 41; // )
+var OBRACK = 91; // [
+var CBRACK = 93; // ]
+var QUMARK = 63; // ?
+var COLON = 58; // :
+
+// 区分关键字和普通变量
+// 举个例子：a === true
+// 从解析器的角度来说，a 和 true 是一样的 token
+var keywords = {
+  'true': TRUE,
+  'false': FALSE,
+  'null': NULL,
+  'undefined': UNDEFINED
+};
+
+// 缓存编译结果
+var cache$1 = {};
+
+/**
+ * 序列化表达式
+ *
+ * @param {Node} node
+ * @return {string}
+ */
+function stringify$1(node) {
+
+  var recursion = function recursion(node) {
+    return stringify$1(node);
+  };
+
+  switch (node.type) {
+    case ARRAY:
+      return '[' + node.elements.map(recursion).join(', ') + ']';
+
+    case BINARY:
+      return stringify$1(node.left) + ' ' + node.operator + ' ' + stringify$1(node.right);
+
+    case CALL:
+      return stringify$1(node.callee) + '(' + node.args.map(recursion).join(', ') + ')';
+
+    case CONDITIONAL:
+      return stringify$1(node.test) + ' ? ' + stringify$1(node.consequent) + ' : ' + stringify$1(node.alternate);
+
+    case IDENTIFIER:
+      return node.name;
+
+    case LITERAL:
+      var value = node.value;
+
+      if (string(value)) {
+        return value.indexOf('"') >= 0 ? '\'' + value + '\'' : '"' + value + '"';
+      }
+      return value;
+
+    case MEMBER:
+      return Member.flatten(node).map(function (node, index) {
+        if (node.type === LITERAL) {
+          var _node = node,
+              _value = _node.value;
+
+          return numeric(_value) ? '[' + _value + ']' : '.' + _value;
+        } else {
+          node = stringify$1(node);
+          return index > 0 ? '[' + node + ']' : node;
+        }
+      }).join('');
+
+    case UNARY:
+      return '' + node.operator + stringify$1(node.arg);
+  }
+}
+
+/**
+ * 表达式求值
+ *
+ * @param {Node} node
+ * @param {Context} context
+ * @return {*}
+ */
+function execute(node, context) {
+
+  var deps = {},
+      value = void 0,
+      result = void 0;
+
+  (function () {
+    switch (node.type) {
+      case ARRAY:
+        value = [];
+        each(node.elements, function (node) {
+          result = execute(node, context);
+          push$1(value, result.value);
+          extend(deps, result.deps);
+        });
+        break;
+
+      case BINARY:
+        var left = node.left,
+            right = node.right;
+
+        left = execute(left, context);
+        right = execute(right, context);
+        value = Binary[node.operator](left.value, right.value);
+        deps = extend(left.deps, right.deps);
+        break;
+
+      case CALL:
+        result = execute(node.callee, context);
+        deps = result.deps;
+        value = callFunction(result.value, NULL, node.args.map(function (node) {
+          var result = execute(node, context);
+          extend(deps, result.deps);
+          return result.value;
+        }));
+        break;
+
+      case CONDITIONAL:
+        var test = node.test,
+            consequent = node.consequent,
+            alternate = node.alternate;
+
+        test = execute(test, context);
+        if (test.value) {
+          consequent = execute(consequent, context);
+          value = consequent.value;
+          deps = extend(test.deps, consequent.deps);
+        } else {
+          alternate = execute(alternate, context);
+          value = alternate.value;
+          deps = extend(test.deps, alternate.deps);
+        }
+        break;
+
+      case IDENTIFIER:
+        result = context.get(node.name);
+        value = result.value;
+        deps[result.keypath] = value;
+        break;
+
+      case LITERAL:
+        value = node.value;
+        break;
+
+      case MEMBER:
+        var keys$$1 = [];
+        each(Member.flatten(node), function (node, index) {
+          var type = node.type;
+
+          if (type !== LITERAL) {
+            if (index > 0) {
+              var _result = execute(node, context);
+              push$1(keys$$1, _result.value);
+              extend(deps, _result.deps);
+            } else if (type === IDENTIFIER) {
+              push$1(keys$$1, node.name);
+            }
+          } else {
+            push$1(keys$$1, node.value);
+          }
+        });
+        result = context.get(stringify(keys$$1));
+        value = result.value;
+        deps[result.keypath] = value;
+        break;
+
+      case UNARY:
+        result = execute(node.arg, context);
+        value = Unary[node.operator](result.value);
+        deps = result.deps;
+        break;
+    }
+  })();
+
+  return { value: value, deps: deps };
+}
+
+/**
+ * 把表达式编译成抽象语法树
+ *
+ * @param {string} content 表达式字符串
+ * @return {Object}
+ */
+function compile$1(content) {
+
+  if (has$2(cache$1, content)) {
+    return cache$1[content];
+  }
+
+  var length = content.length;
+
+  var index = 0,
+      charCode = void 0,
+      value = void 0;
+
+  var getChar = function getChar() {
+    return charAt$1(content, index);
+  };
+  var getCharCode = function getCharCode() {
+    return charCodeAt$1(content, index);
+  };
+  var throwError = function throwError() {
+    error$1('Failed to compile expression: ' + BREAKLINE + content);
+  };
+
+  var skipWhitespace = function skipWhitespace() {
+    while (isWhitespace(getCharCode())) {
+      index++;
+    }
+  };
+
+  var skipNumber = function skipNumber() {
+    while (isNumber(getCharCode())) {
+      index++;
+    }
+  };
+
+  var skipString = function skipString() {
+    var closed = void 0,
+        quote = getCharCode();
+    index++;
+    while (index < length) {
+      index++;
+      if (charCodeAt$1(content, index - 1) === quote) {
+        closed = TRUE;
+        break;
+      }
+    }
+    if (!closed) {
+      return throwError();
+    }
+  };
+
+  var skipIdentifier = function skipIdentifier() {
+    // 第一个字符一定是经过 isIdentifierStart 判断的
+    // 因此循环至少要执行一次
+    do {
+      index++;
+    } while (isIdentifierPart(getCharCode()));
+  };
+
+  var parseNumber = function parseNumber() {
+
+    var start = index;
+
+    skipNumber();
+    if (getCharCode() === PERIOD) {
+      index++;
+      skipNumber();
+    }
+
+    return new Literal(parseFloat(content.substring(start, index)));
+  };
+
+  var parseString = function parseString() {
+
+    var start = index;
+
+    skipString();
+
+    return new Literal(content.substring(start + 1, index - 1));
+  };
+
+  var parseIdentifier = function parseIdentifier() {
+
+    var start = index;
+    skipIdentifier();
+
+    value = content.substring(start, index);
+    if (keywords[value]) {
+      return new Literal(keywords[value]);
+    }
+
+    // this 也视为 IDENTIFIER
+    if (value) {
+      return new Identifier(value);
+    }
+
+    throwError();
+  };
+
+  var parseTuple = function parseTuple(delimiter) {
+
+    var args = [],
+        closed = void 0;
+
+    while (index < length) {
+      charCode = getCharCode();
+      if (charCode === delimiter) {
+        index++;
+        closed = TRUE;
+        break;
+      } else if (charCode === COMMA) {
+        index++;
+      } else {
+        push$1(args, parseExpression());
+      }
+    }
+
+    if (closed) {
+      return args;
+    }
+
+    throwError();
+  };
+
+  var parseOperator = function parseOperator(sortedOperatorList) {
+    skipWhitespace();
+    value = matchBestToken(content.slice(index), sortedOperatorList);
+    if (value) {
+      index += value.length;
+      return value;
+    }
+  };
+
+  var parseVariable = function parseVariable() {
+
+    value = parseIdentifier();
+
+    while (index < length) {
+      // a(x)
+      charCode = getCharCode();
+      if (charCode === OPAREN) {
+        index++;
+        value = new Call(value, parseTuple(CPAREN));
+        break;
+      } else {
+        // a.x
+        if (charCode === PERIOD) {
+          index++;
+          value = new Member(value, new Literal(parseIdentifier().name));
+        }
+        // a[x]
+        else if (charCode === OBRACK) {
+            index++;
+            value = new Member(value, parseSubexpression(CBRACK));
+          } else {
+            break;
+          }
+      }
+    }
+
+    return value;
+  };
+
+  var parseToken = function parseToken() {
+    skipWhitespace();
+
+    charCode = getCharCode();
+    // 'xx' 或 "xx"
+    if (charCode === SQUOTE || charCode === DQUOTE) {
+      return parseString();
+    }
+    // 1.1 或 .1
+    else if (isNumber(charCode) || charCode === PERIOD) {
+        return parseNumber();
+      }
+      // [xx, xx]
+      else if (charCode === OBRACK) {
+          index++;
+          return new Array$1(parseTuple(CBRACK));
+        }
+        // (xx, xx)
+        else if (charCode === OPAREN) {
+            index++;
+            return parseSubexpression(CPAREN);
+          } else if (isIdentifierStart(charCode)) {
+            return parseVariable();
+          }
+    value = parseOperator(unaryList);
+    if (value) {
+      return parseUnary(value);
+    }
+    throwError();
+  };
+
+  var parseUnary = function parseUnary(op) {
+    value = parseToken();
+    if (value) {
+      return new Unary(op, value);
+    }
+    throwError();
+  };
+
+  var parseBinary = function parseBinary() {
+
+    var left = parseToken();
+    var op = parseOperator(binaryList);
+    if (!op) {
+      return left;
+    }
+
+    var right = parseToken();
+    var stack = [left, op, binaryMap[op], right];
+
+    while (op = parseOperator(binaryList)) {
+
+      // 处理左边
+      if (stack.length > 3 && binaryMap[op] < stack[stack.length - 2]) {
+        push$1(stack, new Binary(stack.pop(), (stack.pop(), stack.pop()), stack.pop()));
+      }
+
+      right = parseToken();
+      if (right) {
+        push$1(stack, op, binaryMap[op], right);
+      } else {
+        throwError();
+      }
+    }
+
+    // 处理右边
+    // 右边只有等到所有 token 解析完成才能开始
+    // 比如 a + b * c / d
+    // 此时右边的优先级 >= 左边的优先级，因此可以脑残的直接逆序遍历
+
+    right = stack.pop();
+    while (stack.length > 1) {
+      right = new Binary(right, (stack.pop(), stack.pop()), stack.pop());
+    }
+
+    return right;
+  };
+
+  // (xx) 和 [xx] 都可能是子表达式，因此
+  var parseSubexpression = function parseSubexpression(delimiter) {
+    value = parseExpression();
+    if (getCharCode() === delimiter) {
+      index++;
+      return value;
+    }
+    throwError();
+  };
+
+  var parseExpression = function parseExpression() {
+
+    // 主要是区分三元和二元表达式
+    // 三元表达式可以认为是 3 个二元表达式组成的
+    // test ? consequent : alternate
+
+    var test = parseBinary();
+
+    skipWhitespace();
+    if (getCharCode() === QUMARK) {
+      index++;
+
+      var consequent = parseBinary();
+
+      skipWhitespace();
+      if (getCharCode() === COLON) {
+        index++;
+
+        var alternate = parseBinary();
+
+        // 保证调用 parseExpression() 之后无需再次调用 skipWhitespace()
+        skipWhitespace();
+        return new Conditional(test, consequent, alternate);
+      } else {
+        throwError();
+      }
+    }
+
+    return test;
+  };
+
+  return cache$1[content] = parseExpression();
 }
 
 var IF = '#if';
@@ -1380,7 +2275,7 @@ var Scanner = function () {
  * 节点基类
  */
 
-var Node = function () {
+var Node$2 = function () {
   function Node(type, hasChildren) {
     classCallCheck(this, Node);
 
@@ -1415,7 +2310,7 @@ var Attribute = function (_Node) {
   }
 
   return Attribute;
-}(Node);
+}(Node$2);
 
 /**
  * 指令节点
@@ -1442,7 +2337,7 @@ var Directive = function (_Node) {
   }
 
   return Directive;
-}(Node);
+}(Node$2);
 
 /**
  * each 节点
@@ -1467,7 +2362,7 @@ var Each = function (_Node) {
   }
 
   return Each;
-}(Node);
+}(Node$2);
 
 /**
  * 元素节点
@@ -1498,7 +2393,7 @@ var Element = function (_Node) {
     }
   }]);
   return Element;
-}(Node);
+}(Node$2);
 
 /**
  * else 节点
@@ -1513,7 +2408,7 @@ var Else = function (_Node) {
   }
 
   return Else;
-}(Node);
+}(Node$2);
 
 /**
  * else if 节点
@@ -1534,7 +2429,7 @@ var ElseIf = function (_Node) {
   }
 
   return ElseIf;
-}(Node);
+}(Node$2);
 
 /**
  * 表达式节点
@@ -1557,7 +2452,7 @@ var Expression = function (_Node) {
   }
 
   return Expression;
-}(Node);
+}(Node$2);
 
 /**
  * if 节点
@@ -1578,7 +2473,7 @@ var If = function (_Node) {
   }
 
   return If;
-}(Node);
+}(Node$2);
 
 /**
  * import 节点
@@ -1599,7 +2494,7 @@ var Import = function (_Node) {
   }
 
   return Import;
-}(Node);
+}(Node$2);
 
 /**
  * Partial 节点
@@ -1620,7 +2515,7 @@ var Partial = function (_Node) {
   }
 
   return Partial;
-}(Node);
+}(Node$2);
 
 /**
  * 延展操作 节点
@@ -1641,7 +2536,7 @@ var Spread = function (_Node) {
   }
 
   return Spread;
-}(Node);
+}(Node$2);
 
 /**
  * 文本节点
@@ -1662,903 +2557,7 @@ var Text = function (_Node) {
   }
 
   return Text;
-}(Node);
-
-/**
- * 是否是数字
- *
- * @param {number} charCode
- * @return {boolean}
- */
-function isNumber(charCode) {
-  return charCode >= 48 && charCode <= 57; // 0...9
-}
-
-/**
- * 是否是空白符
- *
- * @param {number} charCode
- * @return {boolean}
- */
-function isWhitespace(charCode) {
-  return charCode === 32 // space
-  || charCode === 9; // tab
-}
-
-/**
- * 变量开始字符必须是 字母、下划线、$
- *
- * @param {number} charCode
- * @return {boolean}
- */
-function isIdentifierStart(charCode) {
-  return charCode === 36 // $
-  || charCode === 95 // _
-  || charCode >= 97 && charCode <= 122 // a...z
-  || charCode >= 65 && charCode <= 90; // A...Z
-}
-
-/**
- * 变量剩余的字符必须是 字母、下划线、$、数字
- *
- * @param {number} charCode
- * @return {boolean}
- */
-function isIdentifierPart(charCode) {
-  return isIdentifierStart(charCode) || isNumber(charCode);
-}
-
-/**
- * 倒排对象的 key
- *
- * @param {Object} obj
- * @return {Array.<string>}
- */
-function sortKeys(obj) {
-  return keys(obj).sort(function (a, b) {
-    return b.length - a.length;
-  });
-}
-
-/**
- * 用倒排 token 去匹配 content 的开始内容
- *
- * @param {string} content
- * @param {Array.<string>} sortedTokens 数组长度从大到小排序
- * @return {?string}
- */
-function matchBestToken(content, sortedTokens) {
-  var result = void 0;
-  each(sortedTokens, function (token) {
-    if (content.startsWith(token)) {
-      result = token;
-      return FALSE;
-    }
-  });
-  return result;
-}
-
-/**
- * 数组表达式，如 [ 1, 2, 3 ]
- *
- * @type {number}
- */
-var ARRAY = 1;
-
-/**
- * 二元表达式，如 a + b
- *
- * @type {number}
- */
-var BINARY = 2;
-
-/**
- * 函数调用表达式，如 a()
- *
- * @type {number}
- */
-var CALL = 3;
-
-/**
- * 三元表达式，如 a ? b : c
- *
- * @type {number}
- */
-var CONDITIONAL = 4;
-
-/**
- * 标识符
- *
- * @type {number}
- */
-var IDENTIFIER = 5;
-
-/**
- * 字面量
- *
- * @type {number}
- */
-var LITERAL = 6;
-
-/**
- * 对象属性或数组下标
- *
- * @type {number}
- */
-var MEMBER = 7;
-
-/**
- * 一元表达式，如 - a
- *
- * @type {number}
- */
-var UNARY = 8;
-
-/**
- * 节点基类
- */
-var Node$2 = function Node$2(type) {
-  classCallCheck(this, Node$2);
-
-  this.type = type;
-};
-
-/**
- * Unary 节点
- *
- * @param {string} operator
- * @param {Node} arg
- */
-
-var Unary = function (_Node) {
-  inherits(Unary, _Node);
-
-  function Unary(operator, arg) {
-    classCallCheck(this, Unary);
-
-    var _this = possibleConstructorReturn(this, (Unary.__proto__ || Object.getPrototypeOf(Unary)).call(this, UNARY));
-
-    _this.operator = operator;
-    _this.arg = arg;
-    return _this;
-  }
-
-  return Unary;
 }(Node$2);
-
-Unary[Unary.PLUS = '+'] = function (value) {
-  return +value;
-};
-Unary[Unary.MINUS = '-'] = function (value) {
-  return -value;
-};
-Unary[Unary.BANG = '!'] = function (value) {
-  return !value;
-};
-Unary[Unary.WAVE = '~'] = function (value) {
-  return ~value;
-};
-
-/**
- * Binary 节点
- *
- * @param {Node} right
- * @param {string} operator
- * @param {Node} left
- */
-
-var Binary = function (_Node) {
-  inherits(Binary, _Node);
-
-  function Binary(right, operator, left) {
-    classCallCheck(this, Binary);
-
-    var _this = possibleConstructorReturn(this, (Binary.__proto__ || Object.getPrototypeOf(Binary)).call(this, BINARY));
-
-    _this.right = right;
-    _this.operator = operator;
-    _this.left = left;
-    return _this;
-  }
-
-  return Binary;
-}(Node$2);
-
-Binary[Binary.OR = '||'] = function (a, b) {
-  return a || b;
-};
-Binary[Binary.AND = '&&'] = function (a, b) {
-  return a && b;
-};
-Binary[Binary.SE = '==='] = function (a, b) {
-  return a === b;
-};
-Binary[Binary.SNE = '!=='] = function (a, b) {
-  return a !== b;
-};
-Binary[Binary.LE = '=='] = function (a, b) {
-  return a == b;
-};
-Binary[Binary.LNE = '!='] = function (a, b) {
-  return a != b;
-};
-Binary[Binary.LT = '<'] = function (a, b) {
-  return a < b;
-};
-Binary[Binary.LTE = '<='] = function (a, b) {
-  return a <= b;
-};
-Binary[Binary.GT = '>'] = function (a, b) {
-  return a > b;
-};
-Binary[Binary.GTE = '>='] = function (a, b) {
-  return a >= b;
-};
-Binary[Binary.PLUS = '+'] = function (a, b) {
-  return a + b;
-};
-Binary[Binary.MINUS = '-'] = function (a, b) {
-  return a - b;
-};
-Binary[Binary.MULTIPLY = '*'] = function (a, b) {
-  return a * b;
-};
-Binary[Binary.DIVIDE = '/'] = function (a, b) {
-  return a / b;
-};
-Binary[Binary.MODULO = '%'] = function (a, b) {
-  return a % b;
-};
-
-// 一元操作符
-var unaryMap = {};
-
-unaryMap[Unary.PLUS] = unaryMap[Unary.MINUS] = unaryMap[Unary.BANG] = unaryMap[Unary.WAVE] = TRUE;
-
-var unaryList = sortKeys(unaryMap);
-
-// 二元操作符
-// 操作符和对应的优先级，数字越大优先级越高
-var binaryMap = {};
-
-binaryMap[Binary.OR] = 1;
-
-binaryMap[Binary.AND] = 2;
-
-binaryMap[Binary.LE] = binaryMap[Binary.LNE] = binaryMap[Binary.SE] = binaryMap[Binary.SNE] = 3;
-
-binaryMap[Binary.LT] = binaryMap[Binary.LTE] = binaryMap[Binary.GT] = binaryMap[Binary.GTE] = 4;
-
-binaryMap[Binary.PLUS] = binaryMap[Binary.MINUS] = 5;
-
-binaryMap[Binary.MULTIPLY] = binaryMap[Binary.DIVIDE] = binaryMap[Binary.MODULO] = 6;
-
-var binaryList = sortKeys(binaryMap);
-
-/**
- * Array 节点
- *
- * @param {Array.<Node>} elements
- */
-
-var Array$1 = function (_Node) {
-  inherits(Array, _Node);
-
-  function Array(elements) {
-    classCallCheck(this, Array);
-
-    var _this = possibleConstructorReturn(this, (Array.__proto__ || Object.getPrototypeOf(Array)).call(this, ARRAY));
-
-    _this.elements = elements;
-    return _this;
-  }
-
-  return Array;
-}(Node$2);
-
-/**
- * Call 节点
- *
- * @param {Node} callee
- * @param {Array.<Node>} args
- */
-
-var Call = function (_Node) {
-  inherits(Call, _Node);
-
-  function Call(callee, args) {
-    classCallCheck(this, Call);
-
-    var _this = possibleConstructorReturn(this, (Call.__proto__ || Object.getPrototypeOf(Call)).call(this, CALL));
-
-    _this.callee = callee;
-    _this.args = args;
-    return _this;
-  }
-
-  return Call;
-}(Node$2);
-
-/**
- * Conditional 节点
- *
- * @param {Node} test
- * @param {Node} consequent
- * @param {Node} alternate
- */
-
-var Conditional = function (_Node) {
-  inherits(Conditional, _Node);
-
-  function Conditional(test, consequent, alternate) {
-    classCallCheck(this, Conditional);
-
-    var _this = possibleConstructorReturn(this, (Conditional.__proto__ || Object.getPrototypeOf(Conditional)).call(this, CONDITIONAL));
-
-    _this.test = test;
-    _this.consequent = consequent;
-    _this.alternate = alternate;
-    return _this;
-  }
-
-  return Conditional;
-}(Node$2);
-
-/**
- * Identifier 节点
- *
- * @param {string} name
- */
-
-var Identifier = function (_Node) {
-  inherits(Identifier, _Node);
-
-  function Identifier(name) {
-    classCallCheck(this, Identifier);
-
-    var _this = possibleConstructorReturn(this, (Identifier.__proto__ || Object.getPrototypeOf(Identifier)).call(this, IDENTIFIER));
-
-    _this.name = name;
-    return _this;
-  }
-
-  return Identifier;
-}(Node$2);
-
-/**
- * Literal 节点
- *
- * @param {string} value
- */
-
-var Literal = function (_Node) {
-  inherits(Literal, _Node);
-
-  function Literal(value) {
-    classCallCheck(this, Literal);
-
-    var _this = possibleConstructorReturn(this, (Literal.__proto__ || Object.getPrototypeOf(Literal)).call(this, LITERAL));
-
-    _this.value = value;
-    return _this;
-  }
-
-  return Literal;
-}(Node$2);
-
-/**
- * Member 节点
- *
- * @param {Identifier} object
- * @param {Node} prop
- */
-
-var Member = function (_Node) {
-  inherits(Member, _Node);
-
-  function Member(object, prop) {
-    classCallCheck(this, Member);
-
-    var _this = possibleConstructorReturn(this, (Member.__proto__ || Object.getPrototypeOf(Member)).call(this, MEMBER));
-
-    _this.object = object;
-    _this.prop = prop;
-    return _this;
-  }
-
-  return Member;
-}(Node$2);
-
-Member.flatten = function (node) {
-
-  var result = [];
-
-  var next = void 0;
-  do {
-    next = node.object;
-    if (node.type === MEMBER) {
-      result.unshift(node.prop);
-    } else {
-      result.unshift(node);
-    }
-  } while (node = next);
-
-  return result;
-};
-
-// 分隔符
-var COMMA = 44; // ,
-var PERIOD = 46; // .
-var SQUOTE = 39; // '
-var DQUOTE = 34; // "
-var OPAREN = 40; // (
-var CPAREN = 41; // )
-var OBRACK = 91; // [
-var CBRACK = 93; // ]
-var QUMARK = 63; // ?
-var COLON = 58; // :
-
-// 区分关键字和普通变量
-// 举个例子：a === true
-// 从解析器的角度来说，a 和 true 是一样的 token
-var keywords = {
-  'true': TRUE,
-  'false': FALSE,
-  'null': NULL,
-  'undefined': UNDEFINED
-};
-
-// 缓存编译结果
-var cache$1 = {};
-
-// 下面用了几次，提一个函数比较方便
-function stringifyRecursion(node) {
-  return stringify$1(node);
-}
-
-/**
- * 序列化表达式
- *
- * @param {Node} node
- * @return {string}
- */
-function stringify$1(node) {
-
-  switch (node.type) {
-    case ARRAY:
-      return '[' + node.elements.map(stringifyRecursion).join(', ') + ']';
-
-    case BINARY:
-      return stringify$1(node.left) + ' ' + node.operator + ' ' + stringify$1(node.right);
-
-    case CALL:
-      return stringify$1(node.callee) + '(' + node.args.map(stringifyRecursion).join(', ') + ')';
-
-    case CONDITIONAL:
-      return stringify$1(node.test) + ' ? ' + stringify$1(node.consequent) + ' : ' + stringify$1(node.alternate);
-
-    case IDENTIFIER:
-      return node.name;
-
-    case LITERAL:
-      var value = node.value;
-
-      if (string(value)) {
-        return value.indexOf('"') >= 0 ? '\'' + value + '\'' : '"' + value + '"';
-      }
-      return value;
-
-    case MEMBER:
-      return Member.flatten(node).map(function (node, index) {
-        if (node.type === LITERAL) {
-          var _node = node,
-              _value = _node.value;
-
-          return numeric(_value) ? '[' + _value + ']' : '.' + _value;
-        } else {
-          node = stringify$1(node);
-          return index > 0 ? '[' + node + ']' : node;
-        }
-      }).join('');
-
-    case UNARY:
-      return '' + node.operator + stringify$1(node.arg);
-  }
-}
-
-/**
- * 表达式求值
- *
- * @param {Node} node
- * @param {Context} context
- * @return {*}
- */
-function execute(node, context) {
-
-  var deps = {},
-      value = void 0,
-      result = void 0;
-
-  (function () {
-    switch (node.type) {
-      case ARRAY:
-        value = [];
-        each(node.elements, function (node) {
-          result = execute(node, context);
-          push$1(value, result.value);
-          extend(deps, result.deps);
-        });
-        break;
-
-      case BINARY:
-        var left = node.left,
-            right = node.right;
-
-        left = execute(left, context);
-        right = execute(right, context);
-        value = Binary[node.operator](left.value, right.value);
-        deps = extend(left.deps, right.deps);
-        break;
-
-      case CALL:
-        result = execute(node.callee, context);
-        deps = result.deps;
-        value = callFunction(result.value, NULL, node.args.map(function (node) {
-          var result = execute(node, context);
-          extend(deps, result.deps);
-          return result.value;
-        }));
-        break;
-
-      case CONDITIONAL:
-        var test = node.test,
-            consequent = node.consequent,
-            alternate = node.alternate;
-
-        test = execute(test, context);
-        if (test.value) {
-          consequent = execute(consequent, context);
-          value = consequent.value;
-          deps = extend(test.deps, consequent.deps);
-        } else {
-          alternate = execute(alternate, context);
-          value = alternate.value;
-          deps = extend(test.deps, alternate.deps);
-        }
-        break;
-
-      case IDENTIFIER:
-        result = context.get(node.name);
-        value = result.value;
-        deps[result.keypath] = value;
-        break;
-
-      case LITERAL:
-        value = node.value;
-        break;
-
-      case MEMBER:
-        var keys$$1 = [];
-        each(Member.flatten(node), function (node, index) {
-          var type = node.type;
-
-          if (type !== LITERAL) {
-            if (index > 0) {
-              var _result = execute(node, context);
-              push$1(keys$$1, _result.value);
-              extend(deps, _result.deps);
-            } else if (type === IDENTIFIER) {
-              push$1(keys$$1, node.name);
-            }
-          } else {
-            push$1(keys$$1, node.value);
-          }
-        });
-        result = context.get(stringify(keys$$1));
-        value = result.value;
-        deps[result.keypath] = value;
-        break;
-
-      case UNARY:
-        result = execute(node.arg, context);
-        value = Unary[node.operator](result.value);
-        deps = result.deps;
-        break;
-    }
-  })();
-
-  return { value: value, deps: deps };
-}
-
-/**
- * 把表达式编译成抽象语法树
- *
- * @param {string} content 表达式字符串
- * @return {Object}
- */
-function compile$1(content) {
-
-  if (has$2(cache$1, content)) {
-    return cache$1[content];
-  }
-
-  var length = content.length;
-
-  var index = 0,
-      charCode = void 0,
-      value = void 0;
-
-  var getChar = function getChar() {
-    return charAt$1(content, index);
-  };
-  var getCharCode = function getCharCode() {
-    return charCodeAt$1(content, index);
-  };
-  var parseError = function parseError() {
-    error$1('Failed to compile expression: ' + BREAKLINE + content);
-  };
-
-  var skipWhitespace = function skipWhitespace() {
-    while (isWhitespace(getCharCode())) {
-      index++;
-    }
-  };
-
-  var skipNumber = function skipNumber() {
-    while (isNumber(getCharCode())) {
-      index++;
-    }
-  };
-
-  var skipString = function skipString() {
-    var closed = void 0,
-        quote = getCharCode();
-    index++;
-    while (index < length) {
-      index++;
-      if (charCodeAt$1(content, index - 1) === quote) {
-        closed = TRUE;
-        break;
-      }
-    }
-    if (!closed) {
-      return parseError();
-    }
-  };
-
-  var skipIdentifier = function skipIdentifier() {
-    // 第一个字符一定是经过 isIdentifierStart 判断的
-    // 因此循环至少要执行一次
-    do {
-      index++;
-    } while (isIdentifierPart(getCharCode()));
-  };
-
-  var parseNumber = function parseNumber() {
-
-    var start = index;
-
-    skipNumber();
-    if (getCharCode() === PERIOD) {
-      index++;
-      skipNumber();
-    }
-
-    return new Literal(parseFloat(content.substring(start, index)));
-  };
-
-  var parseString = function parseString() {
-
-    var start = index;
-
-    skipString();
-
-    return new Literal(content.substring(start + 1, index - 1));
-  };
-
-  var parseIdentifier = function parseIdentifier() {
-
-    var start = index;
-    skipIdentifier();
-
-    value = content.substring(start, index);
-    if (keywords[value]) {
-      return new Literal(keywords[value]);
-    }
-
-    // this 也视为 IDENTIFIER
-    if (value) {
-      return new Identifier(value);
-    }
-
-    parseError();
-  };
-
-  var parseTuple = function parseTuple(delimiter) {
-
-    var args = [],
-        closed = void 0;
-
-    while (index < length) {
-      charCode = getCharCode();
-      if (charCode === delimiter) {
-        index++;
-        closed = TRUE;
-        break;
-      } else if (charCode === COMMA) {
-        index++;
-      } else {
-        push$1(args, parseExpression());
-      }
-    }
-
-    if (closed) {
-      return args;
-    }
-
-    parseError();
-  };
-
-  var parseOperator = function parseOperator(sortedOperatorList) {
-    skipWhitespace();
-    value = matchBestToken(content.slice(index), sortedOperatorList);
-    if (value) {
-      index += value.length;
-      return value;
-    }
-  };
-
-  var parseVariable = function parseVariable() {
-
-    value = parseIdentifier();
-
-    while (index < length) {
-      // a(x)
-      charCode = getCharCode();
-      if (charCode === OPAREN) {
-        index++;
-        value = new Call(value, parseTuple(CPAREN));
-        break;
-      } else {
-        // a.x
-        if (charCode === PERIOD) {
-          index++;
-          value = new Member(value, new Literal(parseIdentifier().name));
-        }
-        // a[x]
-        else if (charCode === OBRACK) {
-            index++;
-            value = new Member(value, parseSubexpression(CBRACK));
-          } else {
-            break;
-          }
-      }
-    }
-
-    return value;
-  };
-
-  var parseToken = function parseToken() {
-    skipWhitespace();
-
-    charCode = getCharCode();
-    // 'xx' 或 "xx"
-    if (charCode === SQUOTE || charCode === DQUOTE) {
-      return parseString();
-    }
-    // 1.1 或 .1
-    else if (isNumber(charCode) || charCode === PERIOD) {
-        return parseNumber();
-      }
-      // [xx, xx]
-      else if (charCode === OBRACK) {
-          index++;
-          return new Array$1(parseTuple(CBRACK));
-        }
-        // (xx, xx)
-        else if (charCode === OPAREN) {
-            index++;
-            return parseSubexpression(CPAREN);
-          } else if (isIdentifierStart(charCode)) {
-            return parseVariable();
-          }
-    value = parseOperator(unaryList);
-    if (value) {
-      return parseUnary(value);
-    }
-    parseError();
-  };
-
-  var parseUnary = function parseUnary(op) {
-    value = parseToken();
-    if (value) {
-      return new Unary(op, value);
-    }
-    parseError();
-  };
-
-  var parseBinary = function parseBinary() {
-
-    var left = parseToken();
-    var op = parseOperator(binaryList);
-    if (!op) {
-      return left;
-    }
-
-    var right = parseToken();
-    var stack = [left, op, binaryMap[op], right];
-
-    while (op = parseOperator(binaryList)) {
-
-      // 处理左边
-      if (stack.length > 3 && binaryMap[op] < stack[stack.length - 2]) {
-        push$1(stack, new Binary(stack.pop(), (stack.pop(), stack.pop()), stack.pop()));
-      }
-
-      right = parseToken();
-      if (right) {
-        push$1(stack, op, binaryMap[op], right);
-      } else {
-        parseError();
-      }
-    }
-
-    // 处理右边
-    // 右边只有等到所有 token 解析完成才能开始
-    // 比如 a + b * c / d
-    // 此时右边的优先级 >= 左边的优先级，因此可以脑残的直接逆序遍历
-
-    right = stack.pop();
-    while (stack.length > 1) {
-      right = new Binary(right, (stack.pop(), stack.pop()), stack.pop());
-    }
-
-    return right;
-  };
-
-  // (xx) 和 [xx] 都可能是子表达式，因此
-  var parseSubexpression = function parseSubexpression(delimiter) {
-    value = parseExpression();
-    if (getCharCode() === delimiter) {
-      index++;
-      return value;
-    }
-    parseError();
-  };
-
-  var parseExpression = function parseExpression() {
-
-    // 主要是区分三元和二元表达式
-    // 三元表达式可以认为是 3 个二元表达式组成的
-    // test ? consequent : alternate
-
-    var test = parseBinary();
-
-    skipWhitespace();
-    if (getCharCode() === QUMARK) {
-      index++;
-
-      var consequent = parseBinary();
-
-      skipWhitespace();
-      if (getCharCode() === COLON) {
-        index++;
-
-        var alternate = parseBinary();
-
-        // 保证调用 parseExpression() 之后无需再次调用 skipWhitespace()
-        skipWhitespace();
-        return new Conditional(test, consequent, alternate);
-      } else {
-        parseError();
-      }
-    }
-
-    return test;
-  };
-
-  return cache$1[content] = parseExpression();
-}
 
 var EQUAL = 61; // =
 var SLASH = 47; // /
@@ -3154,7 +3153,7 @@ function compile$$1(template, loose) {
   var rootNode = new Element('root');
   var currentNode = rootNode;
 
-  var parseError = function parseError(msg, pos) {
+  var throwError = function throwError(msg, pos) {
     if (pos == NULL) {
       msg += '.';
     } else {
@@ -3300,7 +3299,7 @@ function compile$$1(template, loose) {
               if (index) {
                 addChild(index);
               } else {
-                parseError('Expected expression', mainScanner.pos + helperScanner.pos);
+                throwError('Expected expression', mainScanner.pos + helperScanner.pos);
               }
               return FALSE;
             }
@@ -3332,9 +3331,9 @@ function compile$$1(template, loose) {
 
       // 没有匹配到 >
       if (mainScanner.charCodeAt(0) !== ARROW_RIGHT) {
-        return parseError('Illegal tag name', mainScanner.pos);
+        return throwError('Illegal tag name', mainScanner.pos);
       } else if (currentNode.type === ELEMENT && name !== currentNode.name) {
-        return parseError('Unexpected closing tag', mainScanner.pos);
+        return throwError('Unexpected closing tag', mainScanner.pos);
       }
 
       popStack();
@@ -3370,7 +3369,7 @@ function compile$$1(template, loose) {
         content = mainScanner.nextAfter(elementEndPattern);
         // 没有匹配到 > 或 />
         if (!content) {
-          return parseError('Illegal tag name', mainScanner.pos);
+          return throwError('Illegal tag name', mainScanner.pos);
         }
 
         if (isSelfClosing) {
@@ -3380,7 +3379,7 @@ function compile$$1(template, loose) {
   }
 
   if (nodeStack.length) {
-    return parseError('Expected end tag (</' + nodeStack[0].name + '>)', mainScanner.pos);
+    return throwError('Expected end tag (</' + nodeStack[0].name + '>)', mainScanner.pos);
   }
 
   var children = rootNode.children;
@@ -5587,7 +5586,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.20.10';
+Yox.version = '0.21.0';
 
 /**
  * 工具，便于扩展、插件使用
