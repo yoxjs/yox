@@ -67,7 +67,7 @@
             },
             template: `
                 <div id="root">
-                    <input ref="input" style="font-size: 18px;color: red;">
+                    <input ref="input" model="title" style="font-size: 18px;color: red;">
                     <Custom ref="child" name="123{{name}}" age="{{user.age}}{{#if user.age}}1{{/if}}" user="{{user}}" />
                 </div>
             `,

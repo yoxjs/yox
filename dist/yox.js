@@ -3481,18 +3481,6 @@ var tag = /<[^>]+>/;
  */
 var selector = /^[#.]\w+$/;
 
-var component = new Store();
-var directive = new Store();
-var filter = new Store();
-var partial = new Store();
-
-var registry = Object.freeze({
-	component: component,
-	directive: directive,
-	filter: filter,
-	partial: partial
-});
-
 /**
  * 进入 `new Yox(options)` 之后立即触发，钩子函数会传入 `options`
  *
@@ -4757,7 +4745,7 @@ function getComponentInfo(node, instance, directives, callback) {
   });
 }
 
-var component$1 = {
+var component = {
   attach: function attach(_ref) {
     var el = _ref.el,
         node = _ref.node,
@@ -5133,17 +5121,11 @@ var Yox = function () {
      *
      * @param {string} type
      * @param {?*} data
-     * @param {?boolean} noBubble 事件默认冒泡，不冒泡请传 true
      */
 
   }, {
     key: 'fire',
-    value: function fire(type, data, noBubble) {
-
-      if (data === TRUE) {
-        noBubble = data;
-        data = NULL;
-      }
+    value: function fire(type, data) {
 
       // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
       // 内部为了保持格式统一
@@ -5177,7 +5159,7 @@ var Yox = function () {
       }
 
       var done = $eventEmitter.fire(type, event$$1, instance);
-      if (done && $parent && !noBubble) {
+      if (done && $parent) {
         done = $parent.fire(type, event$$1);
       }
 
@@ -5290,10 +5272,12 @@ var Yox = function () {
       }
 
       var context = {};
+      var filter = registry.filter;
+
 
       extend(context,
       // 全局过滤器
-      filter.data,
+      filter && filter.data,
       // 本地过滤器
       $filters.data);
 
@@ -5421,37 +5405,6 @@ var Yox = function () {
           instance.fire(value, event$$1);
         };
       }
-    }
-
-    /**
-     * 本地组件的 getter/setter
-     *
-     * @param {string|Object} id
-     * @param {?string|Function} value
-     */
-
-  }, {
-    key: 'component',
-    value: function component$1(id, value) {
-
-      var callback = void 0;
-      if (func(value)) {
-        callback = value;
-        value = NULL;
-      }
-
-      var store = this.$components || (this.$components = new Store());
-      magic({
-        args: value ? [id, value] : [id],
-        get: function get(id) {
-          store.getAsync(id, function (options) {
-            callback(options || Yox.component(id));
-          });
-        },
-        set: function set(id, value) {
-          store.set(id, value);
-        }
-      });
     }
 
     /**
@@ -5626,7 +5579,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.21.3';
+Yox.version = '0.21.4';
 
 /**
  * 工具，便于扩展、插件使用
@@ -5637,37 +5590,81 @@ Yox.utils = { is: is$1, array: array$1, object: object$1, string: string$1, nati
 
 var prototype = Yox.prototype;
 
+// 全局注册
+
+var registry = {};
+
+// 支持异步注册
+var supportRegisterAsync = ['component'];
+
+// 解析注册参数
+function parseRegisterArguments(type, args) {
+  var id = args[0];
+  var value = args[1];
+  var callback = void 0;
+  if (has$1(supportRegisterAsync, type) && func(value)) {
+    callback = value;
+    value = UNDEFINED;
+  }
+  return {
+    callback: callback,
+    args: value === UNDEFINED ? [id] : [id, value]
+  };
+}
+
 /**
  * 全局/本地注册
  *
  * @param {Object|string} id
  * @param {?Object} value
  */
+each(merge(supportRegisterAsync, ['directive', 'filter', 'partial']), function (type) {
+  prototype[type] = function () {
+    var prop = '$' + type + 's';
+    var store = this[prop] || (this[prop] = new Store());
 
-each(['component', 'directive', 'filter', 'partial'], function (type) {
-  if (!has$2(prototype, type)) {
-    prototype[type] = function () {
-      var prop = '$' + type + 's';
-      var store = this[prop] || (this[prop] = new Store());
-      return magic({
-        args: arguments,
-        get: function get(id) {
-          return store.get(id) || Yox[type](id);
-        },
-        set: function set(id, value) {
-          store.set(id, value);
-        }
-      });
-    };
-  }
-  Yox[type] = function () {
+    var _parseRegisterArgumen = parseRegisterArguments(type, arguments),
+        args = _parseRegisterArgumen.args,
+        callback = _parseRegisterArgumen.callback;
+
     return magic({
-      args: arguments,
+      args: args,
       get: function get(id) {
-        return registry[type].get(id);
+        if (callback) {
+          store.getAsync(id, function (value) {
+            if (value) {
+              callback(value);
+            } else {
+              Yox[type](id, callback);
+            }
+          });
+        } else {
+          return store.get(id) || Yox[type](id);
+        }
       },
       set: function set(id, value) {
-        registry[type].set(id, value);
+        store.set(id, value);
+      }
+    });
+  };
+  Yox[type] = function () {
+    var store = registry[type] || (registry[type] = new Store());
+
+    var _parseRegisterArgumen2 = parseRegisterArguments(type, arguments),
+        args = _parseRegisterArgumen2.args,
+        callback = _parseRegisterArgumen2.callback;
+
+    return magic({
+      args: args,
+      get: function get(id) {
+        if (callback) {
+          store.getAsync(id, callback);
+        } else {
+          return store.get(id);
+        }
+      },
+      set: function set(id, value) {
+        store.set(id, value);
       }
     });
   };
@@ -5807,8 +5804,6 @@ function diff$$1(instance) {
     pickDeps(key);
   });
 
-  var changes = {};
-
   each(keys$$1, function (key) {
     var oldValue = $watchCache[key];
     var newValue = instance.get(key);
@@ -5848,7 +5843,7 @@ function handleArray(instance, keypath, handler) {
 }
 
 // 全局注册内置指令
-Yox.directive({ ref: ref, event: event, model: model, component: component$1 });
+Yox.directive({ ref: ref, event: event, model: model, component: component });
 
 return Yox;
 

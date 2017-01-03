@@ -23,7 +23,6 @@ import * as expressionEnginer from 'yox-expression-compiler'
 import * as expressionNodeType from 'yox-expression-compiler/src/nodeType'
 
 import * as pattern from './config/pattern'
-import * as registry from './config/registry'
 import * as lifecycle from './config/lifecycle'
 
 import * as vdom from './platform/web/vdom'
@@ -368,14 +367,8 @@ export default class Yox {
    *
    * @param {string} type
    * @param {?*} data
-   * @param {?boolean} noBubble 事件默认冒泡，不冒泡请传 true
    */
-  fire(type, data, noBubble) {
-
-    if (data === env.TRUE) {
-      noBubble = data
-      data = env.NULL
-    }
+  fire(type, data) {
 
     // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
     // 内部为了保持格式统一
@@ -407,7 +400,7 @@ export default class Yox {
     }
 
     let done = $eventEmitter.fire(type, event, instance)
-    if (done && $parent && !noBubble) {
+    if (done && $parent) {
       done = $parent.fire(type, event)
     }
 
@@ -522,11 +515,12 @@ export default class Yox {
     }
 
     let context = { }
+    let { filter } = registry
 
     object.extend(
       context,
       // 全局过滤器
-      registry.filter.data,
+      filter && filter.data,
       // 本地过滤器
       $filters.data
     )
@@ -654,40 +648,6 @@ export default class Yox {
         instance.fire(value, event)
       }
     }
-  }
-
-  /**
-   * 本地组件的 getter/setter
-   *
-   * @param {string|Object} id
-   * @param {?string|Function} value
-   */
-  component(id, value) {
-
-    let callback
-    if (is.func(value)) {
-      callback = value
-      value = env.NULL
-    }
-
-    let store = this.$components || (this.$components = new Store())
-    magic({
-      args: value ? [ id, value ] : [ id ],
-      get(id) {
-        store.getAsync(
-          id,
-          function (options) {
-            callback(
-              options || Yox.component(id)
-            )
-          }
-        )
-      },
-      set(id, value) {
-        store.set(id, value)
-      }
-    })
-
   }
 
   /**
@@ -877,7 +837,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.21.3'
+Yox.version = '0.21.4'
 
 /**
  * 工具，便于扩展、插件使用
@@ -888,6 +848,29 @@ Yox.utils = { is, array, object, string, native, Emitter, Event }
 
 let { prototype } = Yox
 
+// 全局注册
+let registry = { }
+
+// 支持异步注册
+const supportRegisterAsync = [ 'component' ]
+
+// 解析注册参数
+function parseRegisterArguments(type, args) {
+  let id = args[0]
+  let value = args[1]
+  let callback
+  if (array.has(supportRegisterAsync, type)
+    && is.func(value)
+  ) {
+    callback = value
+    value = env.UNDEFINED
+  }
+  return {
+    callback,
+    args: value === env.UNDEFINED ? [ id ] : [ id, value ],
+  }
+}
+
 /**
  * 全局/本地注册
  *
@@ -895,31 +878,56 @@ let { prototype } = Yox
  * @param {?Object} value
  */
 array.each(
-  [ 'component', 'directive', 'filter', 'partial' ],
+  array.merge(
+    supportRegisterAsync,
+    [ 'directive', 'filter', 'partial' ]
+  ),
   function (type) {
-    if (!object.has(prototype, type)) {
-      prototype[type] = function () {
-        let prop = `$${type}s`
-        let store = this[prop] || (this[prop] = new Store())
-        return magic({
-          args: arguments,
-          get(id) {
-            return store.get(id) || Yox[type](id)
-          },
-          set(id, value) {
-            store.set(id, value)
-          }
-        })
-      }
-    }
-    Yox[type] = function () {
+    prototype[type] = function () {
+      let prop = `$${type}s`
+      let store = this[prop] || (this[prop] = new Store())
+      let { args, callback } = parseRegisterArguments(type, arguments)
       return magic({
-        args: arguments,
+        args,
         get(id) {
-          return registry[type].get(id)
+          if (callback) {
+            store.getAsync(
+              id,
+              function (value) {
+                if (value) {
+                  callback(value)
+                }
+                else {
+                  Yox[type](id, callback)
+                }
+              }
+            )
+          }
+          else {
+            return store.get(id) || Yox[type](id)
+          }
         },
         set(id, value) {
-          registry[type].set(id, value)
+          store.set(id, value)
+        }
+      })
+
+    }
+    Yox[type] = function () {
+      let store = registry[type] || (registry[type] = new Store())
+      let { args, callback } = parseRegisterArguments(type, arguments)
+      return magic({
+        args,
+        get(id) {
+          if (callback) {
+            store.getAsync(id, callback)
+          }
+          else {
+            return store.get(id)
+          }
+        },
+        set(id, value) {
+          store.set(id, value)
         }
       })
     }
@@ -1016,6 +1024,14 @@ Yox.use = function (plugin) {
 }
 
 
+function getSync(id) {
+
+}
+
+function getAsync(id, callback) {
+
+}
+
 function updateDeps(instance, newDeps, oldDeps, watcher) {
 
   let addedDeps, removedDeps
@@ -1086,8 +1102,6 @@ function diff(instance) {
       pickDeps(key)
     }
   )
-
-  let changes = { }
 
   array.each(
     keys,
