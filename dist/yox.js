@@ -704,6 +704,107 @@ var Event = function () {
   return Event;
 }();
 
+/**
+ * 转成驼峰
+ *
+ * @param {string} str
+ * @return {string}
+ */
+function camelCase(str) {
+  return str.replace(/-([a-z])/gi, function ($0, $1) {
+    return $1.toUpperCase();
+  });
+}
+
+/**
+ * 首字母大写
+ *
+ * @param {string} str
+ * @return {string}
+ */
+function capitalize(str) {
+  return charAt$1(str, 0).toUpperCase() + str.slice(1);
+}
+
+/**
+ * 把字符串解析成对象形式
+ *
+ * 为了给外部去重的机会，返回的是数组而不是对象
+ *
+ * @param {string} str
+ * @param {string} separator 分隔符，如 & ;
+ * @param {string} pair 键值对分隔符，如 = :
+ * @return {Array}
+ */
+function parse$1(str, separator, pair) {
+  var result = [];
+  if (string(str)) {
+    (function () {
+      var terms = void 0,
+          key = void 0,
+          value = void 0,
+          item = void 0;
+      each(str.split(separator), function (term) {
+        terms = term.split(pair);
+        key = terms[0];
+        value = terms[1];
+        if (key) {
+          item = {
+            key: trim(key)
+          };
+          if (string(value)) {
+            item.value = trim(value);
+          }
+          push$1(result, item);
+        }
+      });
+    })();
+  }
+  return result;
+}
+
+/**
+ * 为了压缩而存在的几个方法
+ */
+function trim(str) {
+  return str ? str.trim() : '';
+}
+function charAt$1(str, index) {
+  return str.charAt(index);
+}
+function charCodeAt$1(str, index) {
+  return str.charCodeAt(index);
+}
+function startsWith(str, part) {
+  return str.indexOf(part) === 0;
+}
+function endsWith(str, part) {
+  return str.lastIndexOf(part) === part.length;
+}
+
+// export function replace(str, pattern, replacement) {
+//   pattern = pattern.replace(/[$.]/g, '\\$&')
+//   return str.replace(
+//     new RegExp(`(?:^|\\b)${pattern}(?:$|\\b)`, 'g'),
+//     replacement
+//   )
+// }
+//
+// export function falsy(str) {
+//   return !is.string(str) || str === ''
+// }
+
+var string$1 = Object.freeze({
+	camelCase: camelCase,
+	capitalize: capitalize,
+	parse: parse$1,
+	trim: trim,
+	charAt: charAt$1,
+	charCodeAt: charCodeAt$1,
+	startsWith: startsWith,
+	endsWith: endsWith
+});
+
 var Emitter = function () {
   function Emitter(options) {
     classCallCheck(this, Emitter);
@@ -844,7 +945,7 @@ var Emitter = function () {
       if (done) {
         each$1(listeners, function (list, key) {
           if (key !== type || key.indexOf('*') >= 0) {
-            key = ['^', key.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)'), key.endsWith('**') ? '' : '$'];
+            key = ['^', key.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)'), endsWith(key, '**') ? '' : '$'];
             var match = type.match(new RegExp(key.join('')));
             if (match) {
               handle(list, merge(data, toArray(match).slice(1)));
@@ -869,99 +970,6 @@ var Emitter = function () {
   }]);
   return Emitter;
 }();
-
-/**
- * 转成驼峰
- *
- * @param {string} str
- * @return {string}
- */
-function camelCase(str) {
-  return str.replace(/-([a-z])/gi, function ($0, $1) {
-    return $1.toUpperCase();
-  });
-}
-
-/**
- * 首字母大写
- *
- * @param {string} str
- * @return {string}
- */
-function capitalize(str) {
-  return charAt$1(str, 0).toUpperCase() + str.slice(1);
-}
-
-/**
- * 把字符串解析成对象形式
- *
- * 为了给外部去重的机会，返回的是数组而不是对象
- *
- * @param {string} str
- * @param {string} separator 分隔符，如 & ;
- * @param {string} pair 键值对分隔符，如 = :
- * @return {Array}
- */
-function parse$1(str, separator, pair) {
-  var result = [];
-  if (string(str)) {
-    (function () {
-      var terms = void 0,
-          key = void 0,
-          value = void 0,
-          item = void 0;
-      each(str.split(separator), function (term) {
-        terms = term.split(pair);
-        key = terms[0];
-        value = terms[1];
-        if (key) {
-          item = {
-            key: trim(key)
-          };
-          if (string(value)) {
-            item.value = trim(value);
-          }
-          push$1(result, item);
-        }
-      });
-    })();
-  }
-  return result;
-}
-
-/**
- * 为了压缩而存在的几个方法
- */
-function trim(str) {
-  return str ? str.trim() : '';
-}
-function charAt$1(str, index) {
-  return str.charAt(index);
-}
-function charCodeAt$1(str, index) {
-  return str.charCodeAt(index);
-}
-
-// export function replace(str, pattern, replacement) {
-//   pattern = pattern.replace(/[$.]/g, '\\$&')
-//   return str.replace(
-//     new RegExp(`(?:^|\\b)${pattern}(?:$|\\b)`, 'g'),
-//     replacement
-//   )
-// }
-//
-// export function falsy(str) {
-//   return !is.string(str) || str === ''
-// }
-
-var string$1 = Object.freeze({
-	camelCase: camelCase,
-	capitalize: capitalize,
-	parse: parse$1,
-	trim: trim,
-	charAt: charAt$1,
-	charCodeAt: charCodeAt$1
-});
 
 /**
  * 是否有原生的日志特性，没有必要单独实现
@@ -1134,7 +1142,7 @@ function sortKeys(obj) {
 function matchBestToken(content, sortedTokens) {
   var result = void 0;
   each(sortedTokens, function (token) {
-    if (content.startsWith(token)) {
+    if (startsWith(content, token)) {
       result = token;
       return FALSE;
     }
@@ -3031,18 +3039,18 @@ var cache = {};
 
 var parsers = [{
   test: function test(source) {
-    return source.startsWith(EACH);
+    return startsWith(source, EACH);
   },
   create: function create(source) {
     var terms = trim(source.slice(EACH.length)).split(':');
     var expr = trim(terms[0]);
-    if (terms.length > 0 && expr) {
+    if (expr) {
       return new Each(compile$1(expr), trim(terms[1]));
     }
   }
 }, {
   test: function test(source) {
-    return source.startsWith(IMPORT);
+    return startsWith(source, IMPORT);
   },
   create: function create(source) {
     var name = trim(source.slice(IMPORT.length));
@@ -3052,7 +3060,7 @@ var parsers = [{
   }
 }, {
   test: function test(source) {
-    return source.startsWith(PARTIAL);
+    return startsWith(source, PARTIAL);
   },
   create: function create(source) {
     var name = trim(source.slice(PARTIAL.length));
@@ -3062,7 +3070,7 @@ var parsers = [{
   }
 }, {
   test: function test(source) {
-    return source.startsWith(IF);
+    return startsWith(source, IF);
   },
   create: function create(source) {
     var expr = trim(source.slice(IF.length));
@@ -3072,7 +3080,7 @@ var parsers = [{
   }
 }, {
   test: function test(source) {
-    return source.startsWith(ELSE_IF);
+    return startsWith(source, ELSE_IF);
   },
   create: function create(source, delimiter, popStack) {
     var expr = source.slice(ELSE_IF.length);
@@ -3083,7 +3091,7 @@ var parsers = [{
   }
 }, {
   test: function test(source) {
-    return source.startsWith(ELSE);
+    return startsWith(source, ELSE);
   },
   create: function create(source, delimiter, popStack) {
     popStack();
@@ -3091,7 +3099,7 @@ var parsers = [{
   }
 }, {
   test: function test(source) {
-    return source.startsWith(SPREAD);
+    return startsWith(source, SPREAD);
   },
   create: function create(source) {
     var expr = source.slice(SPREAD.length);
@@ -3101,12 +3109,12 @@ var parsers = [{
   }
 }, {
   test: function test(source) {
-    return !source.startsWith(COMMENT);
+    return !startsWith(source, COMMENT);
   },
   create: function create(source, delimiter) {
     source = trim(source);
     if (source) {
-      return new Expression(compile$1(source), !delimiter.endsWith('}}}'));
+      return new Expression(compile$1(source), !endsWith(delimiter, '}}}'));
     }
   }
 }];
@@ -3333,10 +3341,10 @@ function compile$$1(template, loose) {
             if (buildInDirectives[name]) {
               levelNode = new Directive(name);
             } else {
-              if (name.startsWith(DIRECTIVE_EVENT_PREFIX)) {
+              if (startsWith(name, DIRECTIVE_EVENT_PREFIX)) {
                 name = name.slice(DIRECTIVE_EVENT_PREFIX.length);
                 levelNode = new Directive('event', name);
-              } else if (name.startsWith(DIRECTIVE_CUSTOM_PREFIX)) {
+              } else if (startsWith(name, DIRECTIVE_CUSTOM_PREFIX)) {
                 name = name.slice(DIRECTIVE_CUSTOM_PREFIX.length);
                 levelNode = new Directive(name);
               } else {
@@ -5579,7 +5587,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.21.4';
+Yox.version = '0.21.5';
 
 /**
  * 工具，便于扩展、插件使用
