@@ -779,7 +779,7 @@ function startsWith(str, part) {
   return str.indexOf(part) === 0;
 }
 function endsWith(str, part) {
-  return str.lastIndexOf(part) === part.length;
+  return str === part || str.lastIndexOf(part) === part.length;
 }
 
 // export function replace(str, pattern, replacement) {
@@ -5587,7 +5587,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.21.5';
+Yox.version = '0.21.6';
 
 /**
  * 工具，便于扩展、插件使用
