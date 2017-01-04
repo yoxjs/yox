@@ -163,9 +163,9 @@ export function create(ast, context, instance) {
     return h(
       isComponent ? 'div' : node.name,
       data,
-      // snabbdom 只支持字符串形式的 children
       node.children.map(
         function (child) {
+          // snabbdom 只支持字符串形式的 children
           return isVNode(child) ? child : toString(child)
         }
       )

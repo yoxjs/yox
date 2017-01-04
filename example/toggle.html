@@ -16,18 +16,18 @@
             }
           },
           template: `
-            <div id="root">
-                {{#if open}}
-                    <div>
-                      <div on-click="set('open', false)">
-                        close
-                      </div>
-                    </div>
-                {{/if}}
-                <div key="haha" on-click="set('open', true)">
-                  open
-                </div>
+<div id="root">
+    {{#if open}}
+        <div>
+            <div on-click="set('open', false)">
+                close
             </div>
+        </div>
+    {{/if}}
+    <div on-click="set('open', true)">
+        open
+    </div>
+</div>
           `,
           watchers: {
             open: function (newValue, oldValue) {

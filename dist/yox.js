@@ -2683,18 +2683,35 @@ buildInDirectives[DIRECTIVE_REF] = buildInDirectives[DIRECTIVE_LAZY] = buildInDi
 /**
  * 合并多个节点
  *
- * 用于处理属性值，如 name="xx{{xx}}xx"  name="xx"  name="{{xx}}"
+ * 用于处理属性值和指令值
  *
  * @param {?Array} nodes
  * @return {*}
  */
 function mergeNodes(nodes) {
   if (array(nodes)) {
-    if (nodes.length === 1) {
-      return nodes[0];
-    } else if (nodes.length > 1) {
-      return nodes.join('');
+    var length = nodes.length;
+    // name=""
+
+    if (length === 0) {
+      return '';
     }
+    // name="{{value}}"
+    else if (length === 1) {
+        return nodes[0];
+      }
+      // name="{{value1}}{{value2}}"
+      else if (length > 1) {
+          // 因为 traverseList 用 array.push 收集数据
+          // 因此有可能数据本身就是一个数组，却走近这个分支了
+          var stringable = TRUE;
+          each(nodes, function (node) {
+            if (!primitive$1(node)) {
+              return stringable = FALSE;
+            }
+          });
+          return stringable ? nodes.join('') : nodes;
+        }
   }
 }
 
@@ -4212,9 +4229,8 @@ function create$1(ast, context, instance) {
       })();
     }
 
-    return h(isComponent ? 'div' : node.name, data,
-    // snabbdom 只支持字符串形式的 children
-    node.children.map(function (child) {
+    return h(isComponent ? 'div' : node.name, data, node.children.map(function (child) {
+      // snabbdom 只支持字符串形式的 children
       return isVNode(child) ? child : toString$2(child);
     }));
   };
@@ -5607,7 +5623,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.21.8';
+Yox.version = '0.21.9';
 
 /**
  * 工具，便于扩展、插件使用
