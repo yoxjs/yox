@@ -41,7 +41,7 @@ export function create(ast, context, instance) {
       )
   }
 
-  let createElement = function (node, isRootElement, isComponent) {
+  let createElement = function (node, isComponent) {
 
     let directives = [ ], attributes, styles
 

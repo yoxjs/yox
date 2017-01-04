@@ -2675,10 +2675,6 @@ var LEVEL_TEXT = 2;
 var attrTypes = {};
 attrTypes[ATTRIBUTE] = attrTypes[DIRECTIVE] = TRUE;
 
-// 触发 level 变化的节点类型
-var levelTypes = extend({}, attrTypes);
-levelTypes[ELEMENT] = TRUE;
-
 // 叶子节点类型
 var leafTypes = {};
 leafTypes[EXPRESSION] = leafTypes[IMPORT$1] = leafTypes[SPREAD$1] = leafTypes[TEXT] = TRUE;
@@ -2686,6 +2682,19 @@ leafTypes[EXPRESSION] = leafTypes[IMPORT$1] = leafTypes[SPREAD$1] = leafTypes[TE
 // 内置指令，无需加前缀
 var buildInDirectives = {};
 buildInDirectives[DIRECTIVE_REF] = buildInDirectives[DIRECTIVE_LAZY] = buildInDirectives[DIRECTIVE_MODEL] = buildInDirectives[KEYWORD_UNIQUE] = TRUE;
+
+var NODES_FLAG = '$nodes';
+
+/**
+ * 创建专门存放节点的数组，以区别普通数组
+ *
+ * @return {Array}
+ */
+function createNodes() {
+  var nodes = [];
+  nodes[NODES_FLAG] = TRUE;
+  return nodes;
+}
 
 /**
  * 合并多个节点
@@ -2709,15 +2718,7 @@ function mergeNodes(nodes) {
       }
       // name="{{value1}}{{value2}}"
       else if (length > 1) {
-          // 因为 traverseList 用 array.push 收集数据
-          // 因此有可能数据本身就是一个数组，却走近这个分支了
-          var stringable = TRUE;
-          each(nodes, function (node) {
-            if (!primitive$1(node)) {
-              return stringable = FALSE;
-            }
-          });
-          return stringable ? nodes.join(EMPTY) : nodes;
+          return nodes.join(EMPTY);
         }
   }
 }
@@ -2734,24 +2735,22 @@ function mergeNodes(nodes) {
  */
 function traverseTree(node, enter, leave, traverseList, recursion) {
 
-  var result = enter(node);
-  if (result) {
-    return result;
-  } else if (result === FALSE) {
-    return;
-  }
+  var value = enter(node);
+  if (value !== FALSE) {
+    if (!value) {
+      var children = node.children,
+          attrs = node.attrs;
 
-  var children = node.children,
-      attrs = node.attrs;
-
-  if (array(children)) {
-    children = traverseList(children, recursion);
+      if (array(children)) {
+        children = traverseList(children, recursion);
+      }
+      if (array(attrs)) {
+        attrs = traverseList(attrs, recursion);
+      }
+      value = leave(node, children, attrs);
+    }
+    return value;
   }
-  if (array(attrs)) {
-    attrs = traverseList(attrs, recursion);
-  }
-
-  return leave(node, children, attrs);
 }
 
 /**
@@ -2762,14 +2761,18 @@ function traverseTree(node, enter, leave, traverseList, recursion) {
  * @return {Array}
  */
 function traverseList(nodes, recursion) {
-  var list = [],
+  var list = createNodes(),
       item = void 0;
   var i = 0,
       node = void 0;
   while (node = nodes[i]) {
     item = recursion(node);
     if (item !== UNDEFINED) {
-      push$1(list, item);
+      if (array(item) && !item[NODES_FLAG]) {
+        list.push(item);
+      } else {
+        push$1(list, item);
+      }
       if (node.type === IF$1 || node.type === ELSE_IF$1) {
         // 跳过后面紧跟着的 elseif else
         while (node = nodes[i + 1]) {
@@ -2824,7 +2827,6 @@ function render(ast, createText, createElement, importTemplate, data) {
     context = new Context(data);
   }
 
-  var count = 0;
   var partials = {};
 
   var deps = {};
@@ -2878,7 +2880,6 @@ function render(ast, createText, createElement, importTemplate, data) {
             }
             break;
 
-          // each 比较特殊，只能放在 enter 里执行
           case EACH$1:
             var index = node.index,
                 children = node.children;
@@ -2896,7 +2897,7 @@ function render(ast, createText, createElement, importTemplate, data) {
               };
             }
 
-            var result = [];
+            var list = createNodes();
 
             push$1(keys$$1, stringifyExpr(expr));
             context = context.push(value);
@@ -2909,7 +2910,7 @@ function render(ast, createText, createElement, importTemplate, data) {
               push$1(keys$$1, i);
               context = context.push(item);
 
-              push$1(result, traverseList(children, recursion));
+              push$1(list, traverseList(children, recursion));
 
               keys$$1.pop();
               context = context.pop();
@@ -2919,16 +2920,13 @@ function render(ast, createText, createElement, importTemplate, data) {
             context = context.pop();
 
             return {
-              v: result
+              v: list
             };
 
         }
       }();
 
       if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
-      if (has$2(levelTypes, type)) {
-        count++;
-      }
     }, function (node, children, attrs) {
       var type = node.type,
           name = node.name,
@@ -2937,10 +2935,6 @@ function render(ast, createText, createElement, importTemplate, data) {
           content = node.content;
 
       var keypath = getKeypath();
-
-      if (has$2(levelTypes, type)) {
-        count--;
-      }
 
       var _ret2 = function () {
         switch (type) {
@@ -3001,9 +2995,9 @@ function render(ast, createText, createElement, importTemplate, data) {
             content = executeExpr(node.expr);
             if (object(content)) {
               var _ret3 = function () {
-                var result = [];
+                var list = createNodes();
                 each$1(content, function (value, name) {
-                  push$1(result, {
+                  push$1(list, {
                     name: name,
                     value: value,
                     keypath: keypath
@@ -3011,7 +3005,7 @@ function render(ast, createText, createElement, importTemplate, data) {
                 });
                 return {
                   v: {
-                    v: result
+                    v: list
                   }
                 };
               }();
@@ -3044,7 +3038,7 @@ function render(ast, createText, createElement, importTemplate, data) {
                 directives: directives,
                 children: children,
                 keypath: keypath
-              }, !count, component)
+              }, component)
             };
         }
       }();
@@ -4131,7 +4125,7 @@ function create$1(ast, context, instance) {
     });
   };
 
-  var createElement = function createElement(node, isRootElement, isComponent) {
+  var createElement = function createElement(node, isComponent) {
 
     var directives = [],
         attributes$$1 = void 0,
@@ -5630,7 +5624,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.22.0';
+Yox.version = '0.22.1';
 
 /**
  * 工具，便于扩展、插件使用
