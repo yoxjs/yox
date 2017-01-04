@@ -43,11 +43,9 @@ export function create(ast, context, instance) {
 
   let createElement = function (node, isRootElement, isComponent) {
 
-    let attributes = { }, directives = [ ], styles
+    let directives = [ ], attributes, styles
 
-    let data = {
-      attrs: attributes,
-    }
+    let data = { }
 
     // 指令的创建要确保顺序
     // 组件必须第一个执行
@@ -84,6 +82,9 @@ export function create(ast, context, instance) {
             }
           }
           else {
+            if (!attributes) {
+              attributes = [ ]
+            }
             attributes[name] = value
           }
         }
@@ -110,11 +111,14 @@ export function create(ast, context, instance) {
       }
     )
 
+    if (attributes) {
+      data.attrs = attributes
+    }
     if (styles) {
       data.style = styles
     }
 
-    if (isRootElement || directives.length) {
+    if (directives.length) {
 
       let map = array.toObject(directives, 'name')
 

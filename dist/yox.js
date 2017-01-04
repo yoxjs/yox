@@ -4109,13 +4109,11 @@ function create$1(ast, context, instance) {
 
   var createElement = function createElement(node, isRootElement, isComponent) {
 
-    var attributes$$1 = {},
-        directives = [],
+    var directives = [],
+        attributes$$1 = void 0,
         styles = void 0;
 
-    var data = {
-      attrs: attributes$$1
-    };
+    var data = {};
 
     // 指令的创建要确保顺序
     // 组件必须第一个执行
@@ -4144,6 +4142,9 @@ function create$1(ast, context, instance) {
             });
           }
         } else {
+          if (!attributes$$1) {
+            attributes$$1 = [];
+          }
           attributes$$1[name] = value;
         }
       });
@@ -4163,19 +4164,19 @@ function create$1(ast, context, instance) {
       }
     });
 
+    if (attributes$$1) {
+      data.attrs = attributes$$1;
+    }
     if (styles) {
       data.style = styles;
     }
 
-    if (isRootElement || directives.length) {
+    if (directives.length) {
       (function () {
 
         var map = toObject(directives, 'name');
 
         var notify = function notify(vnode, type) {
-          console.log('')
-          console.log('>>>>>>>>>', type, vnode.elm, directives)
-          console.log('')
           each(directives, function (item) {
             var directive = item.directive;
 
@@ -4202,39 +4203,11 @@ function create$1(ast, context, instance) {
         };
 
         data.hook = {
-          pre: function (node1, node2) {
-            console.log('pre', node1 && node1.elm, node2 && node2.elm)
-          },
-          init: function (node1, node2) {
-            console.log('init', node1 && node1.elm, node2 && node2.elm)
-          },
-          create: function (node1, node2) {
-            console.log('create', node1 && node1.elm, node2 && node2.elm)
-          },
-          insert: function (node1, node2) {
-            console.log('insert', node1 && node1.elm, node2 && node2.elm)
-            upsert(node1, node2)
-          },
-          prepatch: function (node1, node2) {
-            console.log('prepatch', node1 && node1.elm, node2 && node2.elm)
-          },
-          update: function (node1, node2) {
-            console.log('update', node1 && node1.elm, node2 && node2.elm)
-          },
-          postpatch: function (node1, node2) {
-            console.log('postpatch', node1 && node1.elm, node2 && node2.elm)
-            upsert(node1, node2)
-          },
-          destroy: function (node1, node2) {
-            console.log('destroy', node1 && node1.elm, node2 && node2.elm)
-            notify(node1, 'detach');
-          },
-          remove: function (node1, node2) {
-            console.log('remove', node1 && node1.elm, node2 && node2.elm)
-          },
-          post: function (node1, node2) {
-            console.log('post', node1 && node1.elm, node2 && node2.elm)
-          },
+          insert: upsert,
+          postpatch: upsert,
+          destroy: function destroy(vnode) {
+            notify(vnode, 'detach');
+          }
         };
       })();
     }
@@ -4600,6 +4573,7 @@ var event = {
         $event = el.$event;
 
     if ($event) {
+      el.$event = NULL;
       each($event, function (item) {
         if (item.native) {
           off$1(el, item.type, item.listener);
@@ -5633,7 +5607,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.21.7';
+Yox.version = '0.21.8';
 
 /**
  * 工具，便于扩展、插件使用

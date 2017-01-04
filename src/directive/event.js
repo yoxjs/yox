@@ -30,14 +30,21 @@ export default {
         }
       }
 
-      let { $component } = el
+      let { $component, $event } = el
+      if (!$event) {
+        $event = el.$event = [ ]
+      }
+
       if ($component) {
         let bind = function ($component) {
           $component.on(type, listener)
-          el.$event = function () {
-            $component.off(type, listener)
-            el.$event = env.NULL
-          }
+          array.push(
+            $event,
+            {
+              type,
+              listener,
+            }
+          )
         }
         if (is.array($component)) {
           array.push($component, bind)
@@ -48,10 +55,14 @@ export default {
       }
       else {
         native.on(el, type, listener)
-        el.$event = function () {
-          native.off(el, type, listener)
-          el.$event = env.NULL
-        }
+        array.push(
+          $event,
+          {
+            type,
+            listener,
+            native: env.TRUE,
+          }
+        )
       }
     }
 
@@ -63,9 +74,20 @@ export default {
   },
 
   detach({ el }) {
-    let { $event } = el
+    let { $component, $event } = el
     if ($event) {
-      $event()
+      el.$event = env.NULL
+      array.each(
+        $event,
+        function (item) {
+          if (item.native) {
+            native.off(el, item.type, item.listener)
+          }
+          else {
+            $component.off(item.type, item.listener)
+          }
+        }
+      )
     }
   }
 
