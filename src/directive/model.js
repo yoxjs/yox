@@ -99,7 +99,7 @@ export default {
           type = 'input'
         }
       }
-      if (!object.has(attributes, 'value')) {
+      if (attributes && !object.has(attributes, 'value')) {
         needSet = env.TRUE
       }
     }

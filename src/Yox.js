@@ -684,7 +684,7 @@ export default class Yox {
 
     if ($currentNode) {
       if (arguments[0] !== env.TRUE) {
-        vdom.patch($currentNode, { text: '' })
+        vdom.patch($currentNode, { text: env.EMPTY })
       }
     }
 
@@ -837,7 +837,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.21.9'
+Yox.version = '0.22.0'
 
 /**
  * 工具，便于扩展、插件使用

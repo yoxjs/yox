@@ -22,6 +22,13 @@ var UNDEFINED = undefined;
 var BREAKLINE = '\n';
 
 /**
+ * 空字符串
+ *
+ * @type {string}
+ */
+var EMPTY = '';
+
+/**
  * 浏览器环境下的 window 对象
  *
  * @type {?Window}
@@ -345,7 +352,7 @@ function parse(str) {
 
 function stringify(keypaths) {
   return keypaths.filter(function (term) {
-    return term !== '' && term !== LEVEL_CURRENT;
+    return term !== EMPTY && term !== LEVEL_CURRENT;
   }).join(SEPARATOR_KEY);
 }
 
@@ -767,7 +774,7 @@ function parse$1(str, separator, pair) {
  * 为了压缩而存在的几个方法
  */
 function trim(str) {
-  return str ? str.trim() : '';
+  return str ? str.trim() : EMPTY;
 }
 function charAt$1(str, index) {
   return str.charAt(index);
@@ -791,7 +798,7 @@ function endsWith(str, part) {
 // }
 //
 // export function falsy(str) {
-//   return !is.string(str) || str === ''
+//   return !is.string(str) || str === env.EMPTY
 // }
 
 var string$1 = Object.freeze({
@@ -945,8 +952,8 @@ var Emitter = function () {
       if (done) {
         each$1(listeners, function (list, key) {
           if (key !== type || key.indexOf('*') >= 0) {
-            key = ['^', key.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)'), endsWith(key, '**') ? '' : '$'];
-            var match = type.match(new RegExp(key.join('')));
+            key = ['^', key.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)'), endsWith(key, '**') ? EMPTY : '$'];
+            var match = type.match(new RegExp(key.join(EMPTY)));
             if (match) {
               handle(list, merge(data, toArray(match).slice(1)));
             }
@@ -1033,7 +1040,7 @@ var nextTick$1 = void 0;
 if (typeof MutationObserver === 'function') {
   nextTick$1 = function nextTick$1(fn) {
     var observer = new MutationObserver(fn);
-    var textNode = doc.createTextNode('');
+    var textNode = doc.createTextNode(EMPTY);
     observer.observe(textNode, {
       characterData: TRUE
     });
@@ -1594,7 +1601,7 @@ function stringify$1(node) {
           node = stringify$1(node);
           return index > 0 ? '[' + node + ']' : node;
         }
-      }).join('');
+      }).join(EMPTY);
 
     case UNARY:
       return '' + node.operator + stringify$1(node.arg);
@@ -2288,7 +2295,7 @@ var Scanner = function () {
 
       var matches = tail.match(pattern);
       if (!matches || matches.index) {
-        return '';
+        return EMPTY;
       }
       var result = matches[0];
       this.forward(result.length);
@@ -2316,7 +2323,7 @@ var Scanner = function () {
         var index = matches.index;
 
         if (!index) {
-          return '';
+          return EMPTY;
         }
         var result = tail.substr(0, index);
         this.forward(index);
@@ -2694,7 +2701,7 @@ function mergeNodes(nodes) {
     // name=""
 
     if (length === 0) {
-      return '';
+      return EMPTY;
     }
     // name="{{value}}"
     else if (length === 1) {
@@ -2710,7 +2717,7 @@ function mergeNodes(nodes) {
               return stringable = FALSE;
             }
           });
-          return stringable ? nodes.join('') : nodes;
+          return stringable ? nodes.join(EMPTY) : nodes;
         }
   }
 }
@@ -2804,7 +2811,7 @@ function render(ast, createText, createElement, importTemplate, data) {
   var context = void 0,
       keys$$1 = void 0;
   var getKeypath = function getKeypath() {
-    return '';
+    return EMPTY;
   };
 
   if (data) {
@@ -3019,7 +3026,7 @@ function render(ast, createText, createElement, importTemplate, data) {
             if (attrs) {
               each(attrs, function (node) {
                 if (has$2(node, 'subName')) {
-                  if (node.name && node.subName !== '') {
+                  if (node.name && node.subName !== EMPTY) {
                     push$1(directives, node);
                   }
                 } else {
@@ -3166,7 +3173,7 @@ function getLocationByPos(str, pos) {
  * @return {boolean}
  */
 function isBreakline(content) {
-  return content.indexOf(BREAKLINE) >= 0 && trim(content) === '';
+  return content.indexOf(BREAKLINE) >= 0 && trim(content) === EMPTY;
 }
 
 /**
@@ -3176,7 +3183,7 @@ function isBreakline(content) {
  * @return {boolean}
  */
 function trimBreakline(content) {
-  return content.replace(breaklinePrefixPattern, '').replace(breaklineSuffixPattern, '');
+  return content.replace(breaklinePrefixPattern, EMPTY).replace(breaklineSuffixPattern, EMPTY);
 }
 
 /**
@@ -4095,7 +4102,7 @@ function updateAttrs(oldVnode, vnode) {
 var attributes = { create: updateAttrs, update: updateAttrs };
 
 var toString$2 = function (str) {
-  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : EMPTY;
 
   try {
     return str.toString();
@@ -4725,7 +4732,7 @@ var model = {
           type = 'input';
         }
       }
-      if (!has$2(attributes, 'value')) {
+      if (attributes && !has$2(attributes, 'value')) {
         needSet = TRUE;
       }
     }
@@ -5483,7 +5490,7 @@ var Yox = function () {
 
       if ($currentNode) {
         if (arguments[0] !== TRUE) {
-          patch($currentNode, { text: '' });
+          patch($currentNode, { text: EMPTY });
         }
       }
 
@@ -5623,7 +5630,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.21.9';
+Yox.version = '0.22.0';
 
 /**
  * 工具，便于扩展、插件使用
