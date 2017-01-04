@@ -36,9 +36,15 @@
 
         var instance = new Yox({
             el: '#app',
+            data: {
+              open: false
+            },
             template: `
                 <div id="root">
                     <Custom on-click1="click1" on-click2="click3" />
+                    {{#if open}}
+                      open
+                    {{/if}}
                 </div>
             `,
             components: {

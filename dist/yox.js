@@ -1797,7 +1797,7 @@ function compile$1(content) {
     skipIdentifier();
 
     value = content.substring(start, index);
-    if (keywords[value]) {
+    if (has$2(keywords, value)) {
       return new Literal(keywords[value]);
     }
 
@@ -4173,6 +4173,9 @@ function create$1(ast, context, instance) {
         var map = toObject(directives, 'name');
 
         var notify = function notify(vnode, type) {
+          console.log('')
+          console.log('>>>>>>>>>', type, vnode.elm, directives)
+          console.log('')
           each(directives, function (item) {
             var directive = item.directive;
 
@@ -4199,11 +4202,39 @@ function create$1(ast, context, instance) {
         };
 
         data.hook = {
-          insert: upsert,
-          postpatch: upsert,
-          destroy: function destroy(vnode) {
-            notify(vnode, 'detach');
-          }
+          pre: function (node1, node2) {
+            console.log('pre', node1 && node1.elm, node2 && node2.elm)
+          },
+          init: function (node1, node2) {
+            console.log('init', node1 && node1.elm, node2 && node2.elm)
+          },
+          create: function (node1, node2) {
+            console.log('create', node1 && node1.elm, node2 && node2.elm)
+          },
+          insert: function (node1, node2) {
+            console.log('insert', node1 && node1.elm, node2 && node2.elm)
+            upsert(node1, node2)
+          },
+          prepatch: function (node1, node2) {
+            console.log('prepatch', node1 && node1.elm, node2 && node2.elm)
+          },
+          update: function (node1, node2) {
+            console.log('update', node1 && node1.elm, node2 && node2.elm)
+          },
+          postpatch: function (node1, node2) {
+            console.log('postpatch', node1 && node1.elm, node2 && node2.elm)
+            upsert(node1, node2)
+          },
+          destroy: function (node1, node2) {
+            console.log('destroy', node1 && node1.elm, node2 && node2.elm)
+            notify(node1, 'detach');
+          },
+          remove: function (node1, node2) {
+            console.log('remove', node1 && node1.elm, node2 && node2.elm)
+          },
+          post: function (node1, node2) {
+            console.log('post', node1 && node1.elm, node2 && node2.elm)
+          },
         };
       })();
     }
@@ -4515,40 +4546,48 @@ var event = {
     }
 
     if (listener) {
-      var lazy = directives.lazy;
+      (function () {
+        var lazy = directives.lazy;
 
-      if (lazy) {
-        var value = lazy.node.value;
+        if (lazy) {
+          var value = lazy.node.value;
 
-        if (numeric(value) && value >= 0) {
-          listener = debounce(listener, value);
-        } else if (type === 'input') {
-          type = 'change';
+          if (numeric(value) && value >= 0) {
+            listener = debounce(listener, value);
+          } else if (type === 'input') {
+            type = 'change';
+          }
         }
-      }
 
-      var $component = el.$component;
+        var $component = el.$component,
+            $event = el.$event;
 
-      if ($component) {
-        var bind = function bind($component) {
-          $component.on(type, listener);
-          el.$event = function () {
-            $component.off(type, listener);
-            el.$event = NULL;
+        if (!$event) {
+          $event = el.$event = [];
+        }
+
+        if ($component) {
+          var bind = function bind($component) {
+            $component.on(type, listener);
+            push$1($event, {
+              type: type,
+              listener: listener
+            });
           };
-        };
-        if (array($component)) {
-          push$1($component, bind);
+          if (array($component)) {
+            push$1($component, bind);
+          } else {
+            bind($component);
+          }
         } else {
-          bind($component);
+          on$1(el, type, listener);
+          push$1($event, {
+            type: type,
+            listener: listener,
+            native: TRUE
+          });
         }
-      } else {
-        on$1(el, type, listener);
-        el.$event = function () {
-          off$1(el, type, listener);
-          el.$event = NULL;
-        };
-      }
+      })();
     }
   },
   update: function update(options) {
@@ -4557,10 +4596,17 @@ var event = {
   },
   detach: function detach(_ref2) {
     var el = _ref2.el;
-    var $event = el.$event;
+    var $component = el.$component,
+        $event = el.$event;
 
     if ($event) {
-      $event();
+      each($event, function (item) {
+        if (item.native) {
+          off$1(el, item.type, item.listener);
+        } else {
+          $component.off(item.type, item.listener);
+        }
+      });
     }
   }
 };
@@ -5587,7 +5633,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.21.6';
+Yox.version = '0.21.7';
 
 /**
  * 工具，便于扩展、插件使用
