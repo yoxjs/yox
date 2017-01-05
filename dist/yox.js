@@ -2685,14 +2685,10 @@ buildInDirectives[DIRECTIVE_REF] = buildInDirectives[DIRECTIVE_LAZY] = buildInDi
 
 var NODES_FLAG = '$nodes';
 
-/**
- * 创建专门存放节点的数组，以区别普通数组
- *
- * @return {Array}
- */
-function createNodes() {
-  var nodes = [];
-  nodes[NODES_FLAG] = TRUE;
+function markNodes(nodes) {
+  if (array(nodes)) {
+    nodes[NODES_FLAG] = TRUE;
+  }
   return nodes;
 }
 
@@ -2761,7 +2757,7 @@ function traverseTree(node, enter, leave, traverseList, recursion) {
  * @return {Array}
  */
 function traverseList(nodes, recursion) {
-  var list = createNodes(),
+  var list = markNodes([]),
       item = void 0;
   var i = 0,
       node = void 0;
@@ -2897,7 +2893,7 @@ function render(ast, createText, createElement, importTemplate, data) {
               };
             }
 
-            var list = createNodes();
+            var list = markNodes([]);
 
             push$1(keys$$1, stringifyExpr(expr));
             context = context.push(value);
@@ -2940,10 +2936,10 @@ function render(ast, createText, createElement, importTemplate, data) {
         switch (type) {
           case TEXT:
             return {
-              v: createText({
+              v: markNodes(createText({
                 keypath: keypath,
                 content: content
-              })
+              }))
             };
 
           case EXPRESSION:
@@ -2955,11 +2951,11 @@ function render(ast, createText, createElement, importTemplate, data) {
               content = content();
             }
             return {
-              v: createText({
+              v: markNodes(createText({
                 safe: safe,
                 keypath: keypath,
                 content: content
-              })
+              }))
             };
 
           case ATTRIBUTE:
@@ -2995,7 +2991,7 @@ function render(ast, createText, createElement, importTemplate, data) {
             content = executeExpr(node.expr);
             if (object(content)) {
               var _ret3 = function () {
-                var list = createNodes();
+                var list = markNodes([]);
                 each$1(content, function (value, name) {
                   push$1(list, {
                     name: name,
@@ -5624,7 +5620,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.22.1';
+Yox.version = '0.22.2';
 
 /**
  * 工具，便于扩展、插件使用
