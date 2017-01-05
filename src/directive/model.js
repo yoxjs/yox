@@ -8,13 +8,11 @@ import * as logger from 'yox-common/util/logger'
 import event from './event'
 
 const componentControl = {
-  set({ el, keypath, instance }) {
-    let { $component } = el
-    $component.set('value', instance.get(keypath))
+  set({ keypath, component, instance }) {
+    component.set('value', instance.get(keypath))
   },
-  update({ el, keypath, instance }) {
-    let { $component } = el
-    instance.set(keypath, $component.get('value'))
+  update({ keypath, component, instance }) {
+    instance.set(keypath, component.get('value'))
   }
 }
 
@@ -71,10 +69,9 @@ const specialControls = {
   checkbox: checkboxControl,
 }
 
-
 export default {
 
-  attach({ el, node, instance, directives, attributes }) {
+  attach({ el, key, node, instance, directives, attributes, component }) {
 
     let { value, keypath } = node
 
@@ -88,7 +85,7 @@ export default {
 
     let type = 'change', control, needSet
 
-    if (el.$component) {
+    if (component) {
       control = componentControl
     }
     else {
@@ -108,6 +105,7 @@ export default {
       el,
       keypath,
       instance,
+      component,
     }
 
     let set = function () {
@@ -124,10 +122,12 @@ export default {
     )
 
     event.attach({
+      key,
       el,
       node,
       instance,
       directives,
+      component,
       type,
       listener() {
         control.update(data)
@@ -136,8 +136,8 @@ export default {
 
   },
 
-  detach({ el }) {
-    event.detach({ el })
+  detach({ el, key }) {
+    event.detach({ el, key })
   }
 
 }

@@ -2956,13 +2956,12 @@ function render(ast, createText, createElement, importTemplate, data) {
             if (func(content) && content.toString !== toString$1) {
               content = content();
             }
-            content = createText({
-              safe: safe,
-              keypath: keypath,
-              content: content
-            });
             return {
-              v: safe ? content : markNodes(content)
+              v: markNodes(createText({
+                safe: safe,
+                keypath: keypath,
+                content: content
+              }))
             };
 
           case ATTRIBUTE:
@@ -4147,7 +4146,10 @@ function create$1(ast, context, instance) {
     };
 
     var addDirective = function addDirective(name, node) {
-      var key = name + (node.subName || '');
+
+      // 用于唯一标识一个指令
+      var key = [isComponent ? DIRECTIVE_COMPONENT : 'native', name, node.subName].join(':');
+
       if (!directiveMap[key]) {
         directiveMap[key] = {
           name: name,
@@ -4218,9 +4220,10 @@ function create$1(ast, context, instance) {
           key: key,
           node: node,
           el: el,
+          instance: instance,
           directives: directives,
           attributes: attributes$$1,
-          instance: instance
+          component: isComponent ? el.$component : UNDEFINED
         });
       }
     };
@@ -4242,6 +4245,10 @@ function create$1(ast, context, instance) {
         callHook(key, HOOK_DETACH, vnode.elm, vnode.directiveMap, vnode.attributes);
       };
 
+      // 用占位元素创建组件时
+      // 占位元素和组件真实的根元素都会触发一次钩子
+      // 坑爹的是，两次钩子的元素是相同的（都是组件根元素）
+      // 因此，区分占位元素和组件根元素变得很蛋疼
       each(directiveKeys, function (key, directive) {
         // 更新
         if (newVnode && vnode.directiveMap) {
@@ -4494,8 +4501,10 @@ var native = Object.freeze({
 var ref = {
   attach: function attach(_ref) {
     var el = _ref.el,
+        key = _ref.key,
         node = _ref.node,
-        instance = _ref.instance;
+        instance = _ref.instance,
+        component = _ref.component;
     var value = node.value;
 
     if (value && string(value)) {
@@ -4504,7 +4513,7 @@ var ref = {
 
         if (object($refs)) {
           if (has$2($refs, value)) {
-            error$1('Registering a ref "' + value + '" is existed.');
+            error$1('Passing a ref "' + value + '" is existed.');
           }
         } else {
           $refs = instance.$refs = {};
@@ -4512,19 +4521,16 @@ var ref = {
 
         var setRef = function setRef(target) {
           $refs[value] = target;
-          el.$ref = function () {
+          el[key] = function () {
             delete $refs[value];
-            el.$ref = NULL;
           };
         };
 
-        var $component = el.$component;
-
-        if ($component) {
-          if (array($component)) {
-            push$1($component, setRef);
+        if (component) {
+          if (array(component)) {
+            push$1(component, setRef);
           } else {
-            setRef($component);
+            setRef(component);
           }
         } else {
           setRef(el);
@@ -4533,11 +4539,12 @@ var ref = {
     }
   },
   detach: function detach(_ref2) {
-    var el = _ref2.el;
-    var $ref = el.$ref;
+    var el = _ref2.el,
+        key = _ref2.key;
 
-    if ($ref) {
-      $ref();
+    if (el[key]) {
+      el[key]();
+      el[key] = NULL;
     }
   }
 };
@@ -4578,9 +4585,11 @@ var debounce = function (fn, delay, lazy) {
 
 var event = {
   attach: function attach(_ref) {
-    var el = _ref.el,
+    var key = _ref.key,
+        el = _ref.el,
         node = _ref.node,
         instance = _ref.instance,
+        component = _ref.component,
         directives = _ref.directives,
         type = _ref.type,
         listener = _ref.listener;
@@ -4594,84 +4603,63 @@ var event = {
     }
 
     if (listener) {
-      (function () {
-        var lazy = directives.lazy;
+      var lazy = directives.lazy;
 
-        if (lazy) {
-          var value = lazy.node.value;
+      if (lazy) {
+        var value = lazy.node.value;
 
-          if (numeric(value) && value >= 0) {
-            listener = debounce(listener, value);
-          } else if (type === 'input') {
-            type = 'change';
-          }
+        if (numeric(value) && value >= 0) {
+          listener = debounce(listener, value);
+        } else if (type === 'input') {
+          type = 'change';
         }
+      }
 
-        var $component = el.$component,
-            $event = el.$event;
-
-        if (!$event) {
-          $event = el.$event = [];
-        }
-
-        if ($component) {
-          var bind = function bind($component) {
-            $component.on(type, listener);
-            push$1($event, {
-              type: type,
-              listener: listener
-            });
+      if (component) {
+        var bind = function bind(component) {
+          component.on(type, listener);
+          el[key] = function () {
+            component.off(type, listener);
           };
-          if (array($component)) {
-            push$1($component, bind);
-          } else {
-            bind($component);
-          }
+        };
+        if (array(component)) {
+          push$1(component, bind);
         } else {
-          on$1(el, type, listener);
-          push$1($event, {
-            type: type,
-            listener: listener,
-            native: TRUE
-          });
+          bind(component);
         }
-      })();
+      } else {
+        on$1(el, type, listener);
+        el[key] = function () {
+          off$1(el, type, listener);
+        };
+      }
     }
   },
   detach: function detach(_ref2) {
-    var el = _ref2.el;
-    var $component = el.$component,
-        $event = el.$event;
+    var key = _ref2.key,
+        el = _ref2.el;
 
-    if ($event) {
-      el.$event = NULL;
-      each($event, function (item) {
-        if (item.native) {
-          off$1(el, item.type, item.listener);
-        } else {
-          $component.off(item.type, item.listener);
-        }
-      });
+    if (el[key]) {
+      el[key]();
+      el[key] = NULL;
     }
   }
 };
 
 var componentControl = {
   set: function set(_ref) {
-    var el = _ref.el,
-        keypath = _ref.keypath,
+    var keypath = _ref.keypath,
+        component = _ref.component,
         instance = _ref.instance;
-    var $component = el.$component;
 
-    $component.set('value', instance.get(keypath));
+    component.set('value', instance.get(keypath));
   },
   update: function update(_ref2) {
-    var el = _ref2.el,
-        keypath = _ref2.keypath,
+    var keypath = _ref2.keypath,
+        component = _ref2.component,
         instance = _ref2.instance;
-    var $component = el.$component;
 
-    instance.set(keypath, $component.get('value'));
+    instance.set(keypath, component.get('value'));
   }
 };
 
@@ -4751,10 +4739,12 @@ var specialControls = {
 var model = {
   attach: function attach(_ref9) {
     var el = _ref9.el,
+        key = _ref9.key,
         node = _ref9.node,
         instance = _ref9.instance,
         directives = _ref9.directives,
-        attributes = _ref9.attributes;
+        attributes = _ref9.attributes,
+        component = _ref9.component;
     var value = node.value,
         keypath = node.keypath;
 
@@ -4770,7 +4760,7 @@ var model = {
         control = void 0,
         needSet = void 0;
 
-    if (el.$component) {
+    if (component) {
       control = componentControl;
     } else {
       control = specialControls[el.type];
@@ -4788,7 +4778,8 @@ var model = {
     var data = {
       el: el,
       keypath: keypath,
-      instance: instance
+      instance: instance,
+      component: component
     };
 
     var set$$1 = function set$$1() {
@@ -4802,10 +4793,12 @@ var model = {
     instance.watch(keypath, set$$1);
 
     event.attach({
+      key: key,
       el: el,
       node: node,
       instance: instance,
       directives: directives,
+      component: component,
       type: type,
       listener: function listener() {
         control.update(data);
@@ -4813,9 +4806,10 @@ var model = {
     });
   },
   detach: function detach(_ref10) {
-    var el = _ref10.el;
+    var el = _ref10.el,
+        key = _ref10.key;
 
-    event.detach({ el: el });
+    event.detach({ el: el, key: key });
   }
 };
 
@@ -5678,7 +5672,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.22.2';
+Yox.version = '0.22.3';
 
 /**
  * 工具，便于扩展、插件使用

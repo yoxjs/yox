@@ -27,7 +27,7 @@
                     this.fire('increase');
                 },
                 submit: function () {
-                    console.log('submit')
+                    this.fire('increase');
                 }
             },
             beforeCreate: function (options) {
@@ -67,7 +67,7 @@
             },
             template: `
                 <div id="root">
-                    <Custom ref="child" name="123{{name}}" age="{{user.age}}{{#if user.age}}1{{/if}}" user="{{user}}" on-select="haha" />
+                    <Custom ref="child" name="123{{name}}" age="{{user.age}}{{#if user.age}}1{{/if}}" user="{{user}}" on-select="increase" />
                 </div>
             `,
             components: {
@@ -81,6 +81,7 @@
                 }
             },
             events: {
+
                 increase: function (e) {
                     this.increase('user.age')
                 },

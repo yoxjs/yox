@@ -58,7 +58,14 @@ export function create(ast, context, instance) {
     }
 
     let addDirective = function (name, node) {
-      let key = [ name, node.subName ].join(':')
+
+      // 用于唯一标识一个指令
+      let key = [
+        isComponent ? DIRECTIVE_COMPONENT : 'native',
+        name,
+        node.subName
+      ].join(':')
+
       if (!directiveMap[ key ]) {
         directiveMap[ key ] = {
           name,
@@ -70,6 +77,7 @@ export function create(ast, context, instance) {
           key
         )
       }
+
     }
 
     // 指令的创建要确保顺序
@@ -140,9 +148,10 @@ export function create(ast, context, instance) {
             key,
             node,
             el,
+            instance,
             directives,
             attributes,
-            instance,
+            component: isComponent ? el.$component : env.UNDEFINED,
           }
         )
       }
