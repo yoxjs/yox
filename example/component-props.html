@@ -12,22 +12,22 @@
 
         let Custom = {
             template: `
-                <div id="custom-component">
+                <div id="custom-component" on-click="submit()">
                     name: {{name}}
-                    <br>
-                    age: {{age}}
-                    <br>
-                    name: {{user.name}}
-                    <br>
-                    age: {{user.age}}
-                    <button on-click="increase()">
-                        increase
-                    </button>
+
                 </div>
             `,
+            watchers: {
+                age: function () {
+                  console.log('age change', arguments)
+                }
+            },
             methods: {
                 increase: function () {
                     this.fire('increase');
+                },
+                submit: function () {
+                    console.log('submit')
                 }
             },
             beforeCreate: function (options) {
@@ -67,8 +67,7 @@
             },
             template: `
                 <div id="root">
-                    <input ref="input" model="title" style="font-size: 18px;color: red;">
-                    <Custom ref="child" name="123{{name}}" age="{{user.age}}{{#if user.age}}1{{/if}}" user="{{user}}" />
+                    <Custom ref="child" name="123{{name}}" age="{{user.age}}{{#if user.age}}1{{/if}}" user="{{user}}" on-select="haha" />
                 </div>
             `,
             components: {
@@ -77,7 +76,7 @@
                         function () {
                             callback(Custom)
                         },
-                        4000
+                        40
                     );
                 }
             },

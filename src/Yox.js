@@ -837,7 +837,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.22.2'
+Yox.version = '0.22.3'
 
 /**
  * 工具，便于扩展、插件使用
@@ -966,6 +966,10 @@ Yox.validate = function (props, schema) {
     schema,
     function (rule, key) {
       let { type, value, required } = rule
+
+      required = required === env.TRUE
+        || (is.func(required) && required(props))
+
       if (object.has(props, key)) {
         // 如果不写 type 或 type 不是 字符串 或 数组
         // 就当做此规则无效，和没写一样
@@ -994,14 +998,12 @@ Yox.validate = function (props, schema) {
           if (matched === env.TRUE) {
             result[key] = target
           }
-          else {
+          else if (required) {
             logger.warn(`Passing a "${key}" prop is not matched.`)
           }
         }
       }
-      else if (required === env.TRUE
-        || (is.func(required) && required(props))
-      ) {
+      else if (required) {
         logger.warn(`Passing a "${key}" prop is not found.`)
       }
       else if (object.has(rule, 'value')) {
@@ -1021,15 +1023,6 @@ Yox.validate = function (props, schema) {
  */
 Yox.use = function (plugin) {
   plugin.install(Yox)
-}
-
-
-function getSync(id) {
-
-}
-
-function getAsync(id, callback) {
-
 }
 
 function updateDeps(instance, newDeps, oldDeps, watcher) {

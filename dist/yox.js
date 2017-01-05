@@ -42,6 +42,13 @@ var win = typeof window !== 'undefined' ? window : NULL;
  */
 var doc = typeof document !== 'undefined' ? document : NULL;
 
+/**
+ * 空函数
+ *
+ * @return {Function} 
+ */
+var noop = function noop() {/** yox */};
+
 var toString = Object.prototype.toString;
 
 
@@ -93,7 +100,7 @@ var is$1 = Object.freeze({
 	numeric: numeric
 });
 
-var callFunction = function (fn, context, args) {
+var execute = function (fn, context, args) {
   if (func(fn)) {
     if (array(args)) {
       return fn.apply(context, args);
@@ -158,7 +165,7 @@ function merge() {
   var args = toArray(arguments);
   var result = [];
   args.unshift(result);
-  callFunction(push$1, NULL, args);
+  execute(push$1, NULL, args);
   return result;
 }
 
@@ -304,15 +311,15 @@ var magic = function (options) {
   var key = args[0],
       value = args[1];
   if (object(key)) {
-    callFunction(set, NULL, key);
+    execute(set, NULL, key);
   } else if (string(key)) {
     var _args = args,
         length = _args.length;
 
     if (length === 2) {
-      callFunction(set, NULL, args);
+      execute(set, NULL, args);
     } else if (length === 1) {
-      return callFunction(get, NULL, key);
+      return execute(get, NULL, key);
     }
   }
 };
@@ -915,7 +922,7 @@ var Emitter = function () {
       var handle = function handle(list, data) {
         if (array(list)) {
           each(list, function (listener) {
-            var result = callFunction(listener, context, data);
+            var result = execute(listener, context, data);
 
             var $once = listener.$once;
 
@@ -985,8 +992,7 @@ var Emitter = function () {
  */
 var hasConsole = typeof console !== 'undefined';
 
-var tester = function tester() {/** yox */};
-var debug = /yox/.test(tester.toString());
+var debug = /yox/.test(noop.toString());
 
 // 全局可覆盖
 // 比如开发环境，开了 debug 模式，但是有时候觉得看着一堆日志特烦，想强制关掉
@@ -1615,7 +1621,7 @@ function stringify$1(node) {
  * @param {Context} context
  * @return {*}
  */
-function execute(node, context) {
+function execute$1(node, context) {
 
   var deps = {},
       value = void 0,
@@ -1626,7 +1632,7 @@ function execute(node, context) {
       case ARRAY:
         value = [];
         each(node.elements, function (node) {
-          result = execute(node, context);
+          result = execute$1(node, context);
           push$1(value, result.value);
           extend(deps, result.deps);
         });
@@ -1636,17 +1642,17 @@ function execute(node, context) {
         var left = node.left,
             right = node.right;
 
-        left = execute(left, context);
-        right = execute(right, context);
+        left = execute$1(left, context);
+        right = execute$1(right, context);
         value = Binary[node.operator](left.value, right.value);
         deps = extend(left.deps, right.deps);
         break;
 
       case CALL:
-        result = execute(node.callee, context);
+        result = execute$1(node.callee, context);
         deps = result.deps;
-        value = callFunction(result.value, NULL, node.args.map(function (node) {
-          var result = execute(node, context);
+        value = execute(result.value, NULL, node.args.map(function (node) {
+          var result = execute$1(node, context);
           extend(deps, result.deps);
           return result.value;
         }));
@@ -1657,13 +1663,13 @@ function execute(node, context) {
             consequent = node.consequent,
             alternate = node.alternate;
 
-        test = execute(test, context);
+        test = execute$1(test, context);
         if (test.value) {
-          consequent = execute(consequent, context);
+          consequent = execute$1(consequent, context);
           value = consequent.value;
           deps = extend(test.deps, consequent.deps);
         } else {
-          alternate = execute(alternate, context);
+          alternate = execute$1(alternate, context);
           value = alternate.value;
           deps = extend(test.deps, alternate.deps);
         }
@@ -1686,7 +1692,7 @@ function execute(node, context) {
 
           if (type !== LITERAL) {
             if (index > 0) {
-              var _result = execute(node, context);
+              var _result = execute$1(node, context);
               push$1(keys$$1, _result.value);
               extend(deps, _result.deps);
             } else if (type === IDENTIFIER) {
@@ -1702,7 +1708,7 @@ function execute(node, context) {
         break;
 
       case UNARY:
-        result = execute(node.arg, context);
+        result = execute$1(node.arg, context);
         value = Unary[node.operator](result.value);
         deps = result.deps;
         break;
@@ -2827,7 +2833,7 @@ function render(ast, createText, createElement, importTemplate, data) {
 
   var deps = {};
   var executeExpr = function executeExpr(expr) {
-    var result = execute(expr, context);
+    var result = execute$1(expr, context);
     each$1(result.deps, function (value, key) {
       deps[resolve(getKeypath(), key)] = value;
     });
@@ -2950,12 +2956,13 @@ function render(ast, createText, createElement, importTemplate, data) {
             if (func(content) && content.toString !== toString$1) {
               content = content();
             }
+            content = createText({
+              safe: safe,
+              keypath: keypath,
+              content: content
+            });
             return {
-              v: markNodes(createText({
-                safe: safe,
-                keypath: keypath,
-                content: content
-              }))
+              v: safe ? content : markNodes(content)
             };
 
           case ATTRIBUTE:
@@ -4107,6 +4114,12 @@ function isVNode(node) {
   return node && has$2(node, 'sel') && has$2(node, 'elm');
 }
 
+var DIRECTIVE_COMPONENT = 'component';
+
+var HOOK_ATTACH = 'attach';
+var HOOK_UPDATE = 'update';
+var HOOK_DETACH = 'detach';
+
 function create$1(ast, context, instance) {
 
   var createText = function createText(node) {
@@ -4123,23 +4136,39 @@ function create$1(ast, context, instance) {
 
   var createElement = function createElement(node, isComponent) {
 
-    var directives = [],
-        attributes$$1 = void 0,
+    var hooks = {},
+        attributes$$1 = {},
         styles = void 0;
+    var directiveMap = {},
+        directiveKeys = [];
 
-    var data = {};
+    var data = {
+      hook: hooks
+    };
+
+    var addDirective = function addDirective(name, node) {
+      var key = name + (node.subName || '');
+      if (!directiveMap[key]) {
+        directiveMap[key] = {
+          name: name,
+          node: node,
+          options: instance.directive(name)
+        };
+        push$1(directiveKeys, key);
+      }
+    };
 
     // 指令的创建要确保顺序
     // 组件必须第一个执行
     // 因为如果在组件上写了 on-click="xx" 其实是监听从组件 fire 出的 click 事件
     // 因此 component 必须在 event 指令之前执行
 
+    // 销毁时，
+    // 数组要逆序执行
+    // 否则先销毁组件指令，会导致后面依赖组件指令的指令全挂
+
     if (isComponent) {
-      push$1(directives, {
-        node: node,
-        name: 'component',
-        directive: instance.directive('component')
-      });
+      addDirective(DIRECTIVE_COMPONENT, node);
     } else {
       each(node.attributes, function (node) {
         var name = node.name,
@@ -4156,75 +4185,112 @@ function create$1(ast, context, instance) {
             });
           }
         } else {
-          if (!attributes$$1) {
-            attributes$$1 = [];
-          }
           attributes$$1[name] = value;
         }
       });
     }
 
     each(node.directives, function (node) {
-      var name = node.name;
+      var name = node.name,
+          subName = node.subName;
 
       if (name === KEYWORD_UNIQUE) {
         data.key = node.value;
       } else {
-        push$1(directives, {
-          name: name,
-          node: node,
-          directive: instance.directive(name)
-        });
+        addDirective(name, node);
       }
     });
 
-    if (attributes$$1) {
+    if (keys(attributes$$1).length) {
       data.attrs = attributes$$1;
     }
     if (styles) {
       data.style = styles;
     }
 
-    if (directives.length) {
-      (function () {
+    var callHook = function callHook(key, type, el, directives, attributes$$1) {
+      var _directives$key = directives[key],
+          options = _directives$key.options,
+          node = _directives$key.node;
 
-        var map = toObject(directives, 'name');
+      if (options) {
+        execute(options[type], NULL, {
+          key: key,
+          node: node,
+          el: el,
+          directives: directives,
+          attributes: attributes$$1,
+          instance: instance
+        });
+      }
+    };
+    var upsert = function upsert(vnode, newVnode) {
 
-        var notify = function notify(vnode, type) {
-          each(directives, function (item) {
-            var directive = item.directive;
+      // 如果只有 vnode，且 vnode 没有 directiveMap，表示插入
+      // 如果只有 vnode，且 vnode 有 directiveMap，表示销毁
+      // 如果有 vnode 和 newVnode，表示更新
 
-            if (directive && func(directive[type])) {
-              directive[type]({
-                el: vnode.elm,
-                node: item.node,
-                directives: map,
-                attributes: attributes$$1,
-                instance: instance
-              });
+      var attach = function attach(key) {
+        callHook(key, HOOK_ATTACH, vnode.elm, directiveMap, attributes$$1);
+      };
+
+      var update = function update(key) {
+        callHook(key, HOOK_UPDATE, vnode.elm, directiveMap, attributes$$1);
+      };
+
+      var detach = function detach(key) {
+        callHook(key, HOOK_DETACH, vnode.elm, vnode.directiveMap, vnode.attributes);
+      };
+
+      each(directiveKeys, function (key, directive) {
+        // 更新
+        if (newVnode && vnode.directiveMap) {
+          // 更新时可能出现新指令
+          directive = vnode.directiveMap[key];
+          if (directive) {
+            if (directive.name === DIRECTIVE_COMPONENT) {
+              update(key);
+            } else if (directive.node.value !== directiveMap[key].node.value) {
+              detach(key);
+              attach(key);
             }
-          });
-        };
-
-        var upsert = function upsert(oldNode, vnode) {
-          if (oldNode.attached) {
-            notify(vnode, 'update');
           } else {
-            notify(oldNode, 'attach');
-            vnode = oldNode;
+            attach(key);
           }
-          vnode.attached = TRUE;
-        };
+        }
+        // 插入
+        else {
+            attach(key);
+          }
+      });
 
-        data.hook = {
-          insert: upsert,
-          postpatch: upsert,
-          destroy: function destroy(vnode) {
-            notify(vnode, 'detach');
+      // 1. 销毁
+      // 2. 更新时的删除
+      if (vnode.directiveKeys) {
+        each(vnode.directiveKeys.reverse(), function (key) {
+          if (!newVnode || !directiveMap[key]) {
+            detach(key);
           }
-        };
-      })();
-    }
+        });
+      }
+
+      var nextVnode = newVnode || vnode;
+      nextVnode.attributes = attributes$$1;
+      nextVnode.directiveMap = directiveMap;
+      nextVnode.directiveKeys = directiveKeys;
+
+      hooks.insert = hooks.postpatch = hooks.destroy = noop;
+    };
+
+    /**
+     * 指令的生命周期
+     *
+     * attach: 新增指令 或 元素被插入
+     * detach: 删除指令 或 元素被移除
+     * update: 指令变化
+     */
+
+    hooks.insert = hooks.postpatch = hooks.destroy = upsert;
 
     return h(isComponent ? 'div' : node.name, data, node.children.map(function (child) {
       // snabbdom 只支持字符串形式的 children
@@ -4466,10 +4532,6 @@ var ref = {
       })();
     }
   },
-  update: function update(options) {
-    this.detach(options);
-    this.attach(options);
-  },
   detach: function detach(_ref2) {
     var el = _ref2.el;
     var $ref = el.$ref;
@@ -4575,10 +4637,6 @@ var event = {
         }
       })();
     }
-  },
-  update: function update(options) {
-    this.detach(options);
-    this.attach(options);
   },
   detach: function detach(_ref2) {
     var el = _ref2.el;
@@ -4722,7 +4780,7 @@ var model = {
           type = 'input';
         }
       }
-      if (attributes && !has$2(attributes, 'value')) {
+      if (!has$2(attributes, 'value')) {
         needSet = TRUE;
       }
     }
@@ -4842,7 +4900,7 @@ var Yox = function () {
 
     var instance = this;
 
-    callFunction(options[BEFORE_CREATE], instance, options);
+    execute(options[BEFORE_CREATE], instance, options);
 
     var el = options.el,
         data = options.data,
@@ -4878,7 +4936,7 @@ var Yox = function () {
     instance.$data = props || {};
 
     // 后放 data
-    extend(instance.$data, func(data) ? callFunction(data, instance) : data);
+    extend(instance.$data, func(data) ? execute(data, instance) : data);
 
     // 计算属性也是数据
     if (object(computed)) {
@@ -4932,7 +4990,7 @@ var Yox = function () {
               if (!deps) {
                 instance.$computedStack.push([]);
               }
-              var result = callFunction(get$$1, instance);
+              var result = execute(get$$1, instance);
 
               var newDeps = deps || instance.$computedStack.pop();
               var oldDeps = instance.$computedDeps[keypath];
@@ -4979,7 +5037,7 @@ var Yox = function () {
     });
     instance.watch(watchers);
 
-    callFunction(options[AFTER_CREATE], instance);
+    execute(options[AFTER_CREATE], instance);
 
     // 检查 template
     if (string(template)) {
@@ -5032,7 +5090,7 @@ var Yox = function () {
       instance.$viewWatcher = function () {
         instance.$dirty = TRUE;
       };
-      callFunction(options[BEFORE_MOUNT], instance);
+      execute(options[BEFORE_MOUNT], instance);
       instance.$template = Yox.compile(template);
       instance.updateView(el || create$2('div'));
     }
@@ -5309,7 +5367,7 @@ var Yox = function () {
 
 
       if ($currentNode) {
-        callFunction($options[BEFORE_UPDATE], instance);
+        execute($options[BEFORE_UPDATE], instance);
       }
 
       var context = {};
@@ -5351,7 +5409,7 @@ var Yox = function () {
       }
 
       instance.$currentNode = $currentNode;
-      callFunction($options[afterHook], instance);
+      execute($options[afterHook], instance);
     }
 
     /**
@@ -5434,7 +5492,7 @@ var Yox = function () {
                     fn = result.value;
                   }
                 }
-                callFunction(fn, instance, args);
+                execute(fn, instance, args);
               }
             };
           }
@@ -5466,7 +5524,7 @@ var Yox = function () {
           $eventEmitter = instance.$eventEmitter;
 
 
-      callFunction($options[BEFORE_DESTROY], instance);
+      execute($options[BEFORE_DESTROY], instance);
 
       if ($children) {
         each($children, function (child) {
@@ -5491,7 +5549,7 @@ var Yox = function () {
         delete instance[key];
       });
 
-      callFunction($options[AFTER_DESTROY], instance);
+      execute($options[AFTER_DESTROY], instance);
     }
 
     /**
@@ -5742,6 +5800,9 @@ Yox.validate = function (props, schema) {
         value = rule.value,
         required = rule.required;
 
+
+    required = required === TRUE || func(required) && required(props);
+
     if (has$2(props, key)) {
       // 如果不写 type 或 type 不是 字符串 或 数组
       // 就当做此规则无效，和没写一样
@@ -5766,12 +5827,12 @@ Yox.validate = function (props, schema) {
           }
           if (matched === TRUE) {
             result[key] = target;
-          } else {
+          } else if (required) {
             warn$1('Passing a "' + key + '" prop is not matched.');
           }
         })();
       }
-    } else if (required === TRUE || func(required) && required(props)) {
+    } else if (required) {
       warn$1('Passing a "' + key + '" prop is not found.');
     } else if (has$2(rule, 'value')) {
       result[key] = func(value) ? value(props) : value;

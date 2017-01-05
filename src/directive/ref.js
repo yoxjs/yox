@@ -18,7 +18,7 @@ export default {
       let { $refs } = instance
       if (is.object($refs)) {
         if (object.has($refs, value)) {
-          logger.error(`Registering a ref "${value}" is existed.`)
+          logger.error(`Passing a ref "${value}" is existed.`)
         }
       }
       else {
@@ -47,11 +47,6 @@ export default {
       }
 
     }
-  },
-
-  update(options) {
-    this.detach(options)
-    this.attach(options)
   },
 
   detach({ el }) {
