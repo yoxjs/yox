@@ -20,8 +20,7 @@ function getComponentInfo(node, instance, directives, callback) {
       if (!object.has(props, 'value')) {
         let { model } = directives
         if (model) {
-          node = model.node
-          let result = instance.get(node.value, node.keypath)
+          let result = instance.get(model.value, model.keypath)
           if (result) {
             props.value = result.value
           }
@@ -60,6 +59,15 @@ export default {
         }
       }
     )
+    return function () {
+      let { $component } = el
+      if ($component) {
+        if (is.object($component)) {
+          $component.destroy(env.TRUE)
+        }
+        el.$component = env.NULL
+      }
+    }
   },
 
   update({ el, node, instance, directives }) {
@@ -73,16 +81,6 @@ export default {
           $component.set(props, env.TRUE)
         }
       )
-    }
-  },
-
-  detach({ el }) {
-    let { $component } = el
-    if ($component) {
-      if (is.object($component)) {
-        $component.destroy(env.TRUE)
-      }
-      el.$component = env.NULL
     }
   }
 

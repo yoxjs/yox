@@ -71,7 +71,7 @@ const specialControls = {
 
 export default {
 
-  attach({ el, key, node, instance, directives, attributes, component }) {
+  attach({ el, node, instance, directives, attributes, component }) {
 
     let { value, keypath } = node
 
@@ -121,8 +121,7 @@ export default {
       set
     )
 
-    event.attach({
-      key,
+    return event.attach({
       el,
       node,
       instance,
@@ -134,10 +133,6 @@ export default {
       }
     })
 
-  },
-
-  detach({ el, key }) {
-    event.detach({ el, key })
   }
 
 }

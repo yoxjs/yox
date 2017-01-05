@@ -31,7 +31,6 @@ const DIRECTIVE_COMPONENT = 'component'
 
 const HOOK_ATTACH = 'attach'
 const HOOK_UPDATE = 'update'
-const HOOK_DETACH = 'detach'
 
 export function create(ast, context, instance) {
 
@@ -50,7 +49,7 @@ export function create(ast, context, instance) {
 
   let createElement = function (node, isComponent) {
 
-    let hooks = { }, attributes = { }, styles
+    let hooks = { }, attributes = { }, directives = { }, styles
     let directiveMap = { }, directiveKeys = [ ]
 
     let data = {
@@ -60,13 +59,14 @@ export function create(ast, context, instance) {
     let addDirective = function (name, node) {
 
       // 用于唯一标识一个指令
-      let key = [
-        isComponent ? DIRECTIVE_COMPONENT : 'native',
-        name,
-        node.subName
-      ].join(':')
+      let key = [ name ]
+      if (node.subName) {
+        key.push(node.subName)
+      }
+      key = key.join(':')
 
       if (!directiveMap[ key ]) {
+        directives[ name ] = node
         directiveMap[ key ] = {
           name,
           node,
@@ -112,7 +112,9 @@ export function create(ast, context, instance) {
             }
           }
           else {
-            attributes[ name ] = value
+            attributes[ name ] = node
+            let attrs = data.attrs || (data.attrs = { })
+            attrs[ name ] = value
           }
         }
       )
@@ -131,71 +133,38 @@ export function create(ast, context, instance) {
       }
     )
 
-    if (object.keys(attributes).length) {
-      data.attrs = attributes
-    }
     if (styles) {
       data.style = styles
     }
 
-    let callHook = function (key, type, el, directives, attributes) {
-      let { options, node } = directives[ key ]
-      if (options) {
-        execute(
-          options[type],
-          env.NULL,
-          {
-            key,
-            node,
-            el,
-            instance,
-            directives,
-            attributes,
-            component: isComponent ? el.$component : env.UNDEFINED,
-          }
-        )
-      }
-    }
     let upsert = function (vnode, newVnode) {
 
       // 如果只有 vnode，且 vnode 没有 directiveMap，表示插入
       // 如果只有 vnode，且 vnode 有 directiveMap，表示销毁
       // 如果有 vnode 和 newVnode，表示更新
 
-      let attach = function (key) {
-        callHook(
-          key,
-          HOOK_ATTACH,
-          vnode.elm,
-          directiveMap,
-          attributes
-        )
+      let callHook = function (key, type) {
+        let { options, node } = directiveMap[ key ]
+        if (options) {
+          let el = vnode.elm
+          return execute(
+            options[type],
+            env.NULL,
+            {
+              el,
+              node,
+              instance,
+              directives,
+              attributes,
+              component: isComponent && el.$component,
+            }
+          )
+        }
       }
 
-      let update = function (key) {
-        callHook(
-          key,
-          HOOK_UPDATE,
-          vnode.elm,
-          directiveMap,
-          attributes
-        )
-      }
+      // 销毁指令
+      let directiveDestroies = vnode.directiveDestroies || { }
 
-      let detach = function (key) {
-        callHook(
-          key,
-          HOOK_DETACH,
-          vnode.elm,
-          vnode.directiveMap,
-          vnode.attributes
-        )
-      }
-
-      // 用占位元素创建组件时
-      // 占位元素和组件真实的根元素都会触发一次钩子
-      // 坑爹的是，两次钩子的元素是相同的（都是组件根元素）
-      // 因此，区分占位元素和组件根元素变得很蛋疼
       array.each(
         directiveKeys,
         function (key, directive) {
@@ -205,20 +174,22 @@ export function create(ast, context, instance) {
             directive = vnode.directiveMap[key]
             if (directive) {
               if (directive.name === DIRECTIVE_COMPONENT) {
-                update(key)
+                callHook(key, HOOK_UPDATE)
               }
               else if (directive.node.value !== directiveMap[key].node.value) {
-                detach(key)
-                attach(key)
+                if (directiveDestroies[key]) {
+                  directiveDestroies[key]()
+                }
+                directiveDestroies[key] = callHook(key, HOOK_ATTACH)
               }
             }
             else {
-              attach(key)
+              directiveDestroies[key] = callHook(key, HOOK_ATTACH)
             }
           }
           // 插入
           else {
-            attach(key)
+            directiveDestroies[key] = callHook(key, HOOK_ATTACH)
           }
         }
       )
@@ -229,8 +200,9 @@ export function create(ast, context, instance) {
         array.each(
           vnode.directiveKeys.reverse(),
           function (key) {
-            if (!newVnode || !directiveMap[key]) {
-              detach(key)
+            if (directiveDestroies[key] && (!newVnode || !directiveMap[key])) {
+              directiveDestroies[key]()
+              delete directiveDestroies[key]
             }
           }
         )
@@ -240,6 +212,7 @@ export function create(ast, context, instance) {
       nextVnode.attributes = attributes
       nextVnode.directiveMap = directiveMap
       nextVnode.directiveKeys = directiveKeys
+      nextVnode.directiveDestroies = directiveDestroies
 
       hooks.insert =
       hooks.postpatch =

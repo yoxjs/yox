@@ -12,7 +12,7 @@ import * as logger from 'yox-common/util/logger'
 
 export default {
 
-  attach({ el, key, node, instance, component }) {
+  attach({ el, node, instance, component }) {
     let { value } = node
     if (value && is.string(value)) {
       let { $refs } = instance
@@ -27,9 +27,6 @@ export default {
 
       let setRef = function (target) {
         $refs[value] = target
-        el[key] = function () {
-          delete $refs[value]
-        }
       }
 
       if (component) {
@@ -44,13 +41,15 @@ export default {
         setRef(el)
       }
 
-    }
-  },
+      return function () {
+        if (object.has($refs, value)) {
+          delete $refs[value]
+        }
+        else if (is.array(component)) {
+          array.remove(component, setRef)
+        }
+      }
 
-  detach({ el, key }) {
-    if (el[key]) {
-      el[key]()
-      el[key] = env.NULL
     }
   }
 

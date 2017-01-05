@@ -4117,7 +4117,6 @@ var DIRECTIVE_COMPONENT = 'component';
 
 var HOOK_ATTACH = 'attach';
 var HOOK_UPDATE = 'update';
-var HOOK_DETACH = 'detach';
 
 function create$1(ast, context, instance) {
 
@@ -4137,6 +4136,7 @@ function create$1(ast, context, instance) {
 
     var hooks = {},
         attributes$$1 = {},
+        directives = {},
         styles = void 0;
     var directiveMap = {},
         directiveKeys = [];
@@ -4148,9 +4148,14 @@ function create$1(ast, context, instance) {
     var addDirective = function addDirective(name, node) {
 
       // 用于唯一标识一个指令
-      var key = [isComponent ? DIRECTIVE_COMPONENT : 'native', name, node.subName].join(':');
+      var key = [name];
+      if (node.subName) {
+        key.push(node.subName);
+      }
+      key = key.join(':');
 
       if (!directiveMap[key]) {
+        directives[name] = node;
         directiveMap[key] = {
           name: name,
           node: node,
@@ -4187,7 +4192,9 @@ function create$1(ast, context, instance) {
             });
           }
         } else {
-          attributes$$1[name] = value;
+          attributes$$1[name] = node;
+          var attrs = data.attrs || (data.attrs = {});
+          attrs[name] = value;
         }
       });
     }
@@ -4203,52 +4210,37 @@ function create$1(ast, context, instance) {
       }
     });
 
-    if (keys(attributes$$1).length) {
-      data.attrs = attributes$$1;
-    }
     if (styles) {
       data.style = styles;
     }
 
-    var callHook = function callHook(key, type, el, directives, attributes$$1) {
-      var _directives$key = directives[key],
-          options = _directives$key.options,
-          node = _directives$key.node;
-
-      if (options) {
-        execute(options[type], NULL, {
-          key: key,
-          node: node,
-          el: el,
-          instance: instance,
-          directives: directives,
-          attributes: attributes$$1,
-          component: isComponent ? el.$component : UNDEFINED
-        });
-      }
-    };
     var upsert = function upsert(vnode, newVnode) {
 
       // 如果只有 vnode，且 vnode 没有 directiveMap，表示插入
       // 如果只有 vnode，且 vnode 有 directiveMap，表示销毁
       // 如果有 vnode 和 newVnode，表示更新
 
-      var attach = function attach(key) {
-        callHook(key, HOOK_ATTACH, vnode.elm, directiveMap, attributes$$1);
+      var callHook = function callHook(key, type) {
+        var _directiveMap$key = directiveMap[key],
+            options = _directiveMap$key.options,
+            node = _directiveMap$key.node;
+
+        if (options) {
+          var el = vnode.elm;
+          return execute(options[type], NULL, {
+            el: el,
+            node: node,
+            instance: instance,
+            directives: directives,
+            attributes: attributes$$1,
+            component: isComponent && el.$component
+          });
+        }
       };
 
-      var update = function update(key) {
-        callHook(key, HOOK_UPDATE, vnode.elm, directiveMap, attributes$$1);
-      };
+      // 销毁指令
+      var directiveDestroies = vnode.directiveDestroies || {};
 
-      var detach = function detach(key) {
-        callHook(key, HOOK_DETACH, vnode.elm, vnode.directiveMap, vnode.attributes);
-      };
-
-      // 用占位元素创建组件时
-      // 占位元素和组件真实的根元素都会触发一次钩子
-      // 坑爹的是，两次钩子的元素是相同的（都是组件根元素）
-      // 因此，区分占位元素和组件根元素变得很蛋疼
       each(directiveKeys, function (key, directive) {
         // 更新
         if (newVnode && vnode.directiveMap) {
@@ -4256,18 +4248,20 @@ function create$1(ast, context, instance) {
           directive = vnode.directiveMap[key];
           if (directive) {
             if (directive.name === DIRECTIVE_COMPONENT) {
-              update(key);
+              callHook(key, HOOK_UPDATE);
             } else if (directive.node.value !== directiveMap[key].node.value) {
-              detach(key);
-              attach(key);
+              if (directiveDestroies[key]) {
+                directiveDestroies[key]();
+              }
+              directiveDestroies[key] = callHook(key, HOOK_ATTACH);
             }
           } else {
-            attach(key);
+            directiveDestroies[key] = callHook(key, HOOK_ATTACH);
           }
         }
         // 插入
         else {
-            attach(key);
+            directiveDestroies[key] = callHook(key, HOOK_ATTACH);
           }
       });
 
@@ -4275,8 +4269,9 @@ function create$1(ast, context, instance) {
       // 2. 更新时的删除
       if (vnode.directiveKeys) {
         each(vnode.directiveKeys.reverse(), function (key) {
-          if (!newVnode || !directiveMap[key]) {
-            detach(key);
+          if (directiveDestroies[key] && (!newVnode || !directiveMap[key])) {
+            directiveDestroies[key]();
+            delete directiveDestroies[key];
           }
         });
       }
@@ -4285,6 +4280,7 @@ function create$1(ast, context, instance) {
       nextVnode.attributes = attributes$$1;
       nextVnode.directiveMap = directiveMap;
       nextVnode.directiveKeys = directiveKeys;
+      nextVnode.directiveDestroies = directiveDestroies;
 
       hooks.insert = hooks.postpatch = hooks.destroy = noop;
     };
@@ -4501,14 +4497,13 @@ var native = Object.freeze({
 var ref = {
   attach: function attach(_ref) {
     var el = _ref.el,
-        key = _ref.key,
         node = _ref.node,
         instance = _ref.instance,
         component = _ref.component;
     var value = node.value;
 
     if (value && string(value)) {
-      (function () {
+      var _ret = function () {
         var $refs = instance.$refs;
 
         if (object($refs)) {
@@ -4521,9 +4516,6 @@ var ref = {
 
         var setRef = function setRef(target) {
           $refs[value] = target;
-          el[key] = function () {
-            delete $refs[value];
-          };
         };
 
         if (component) {
@@ -4535,16 +4527,19 @@ var ref = {
         } else {
           setRef(el);
         }
-      })();
-    }
-  },
-  detach: function detach(_ref2) {
-    var el = _ref2.el,
-        key = _ref2.key;
 
-    if (el[key]) {
-      el[key]();
-      el[key] = NULL;
+        return {
+          v: function v() {
+            if (has$2($refs, value)) {
+              delete $refs[value];
+            } else if (array(component)) {
+              remove$1(component, setRef);
+            }
+          }
+        };
+      }();
+
+      if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
     }
   }
 };
@@ -4585,8 +4580,7 @@ var debounce = function (fn, delay, lazy) {
 
 var event = {
   attach: function attach(_ref) {
-    var key = _ref.key,
-        el = _ref.el,
+    var el = _ref.el,
         node = _ref.node,
         instance = _ref.instance,
         component = _ref.component,
@@ -4606,42 +4600,40 @@ var event = {
       var lazy = directives.lazy;
 
       if (lazy) {
-        var value = lazy.node.value;
-
-        if (numeric(value) && value >= 0) {
-          listener = debounce(listener, value);
+        if (numeric(lazy.value) && lazy.value >= 0) {
+          listener = debounce(listener, lazy.value);
         } else if (type === 'input') {
           type = 'change';
         }
       }
 
       if (component) {
-        var bind = function bind(component) {
-          component.on(type, listener);
-          el[key] = function () {
-            component.off(type, listener);
+        var _ret = function () {
+          var bind = function bind(component) {
+            component.on(type, listener);
           };
-        };
-        if (array(component)) {
-          push$1(component, bind);
-        } else {
-          bind(component);
-        }
+          if (array(component)) {
+            push$1(component, bind);
+          } else {
+            bind(component);
+          }
+          return {
+            v: function v() {
+              component.off(type, listener);
+              if (array(component)) {
+                remove$1(component, bind);
+              }
+            }
+          };
+        }();
+
+        if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
       } else {
         on$1(el, type, listener);
-        el[key] = function () {
+        return function () {
           off$1(el, type, listener);
         };
       }
-    }
-  },
-  detach: function detach(_ref2) {
-    var key = _ref2.key,
-        el = _ref2.el;
-
-    if (el[key]) {
-      el[key]();
-      el[key] = NULL;
     }
   }
 };
@@ -4739,7 +4731,6 @@ var specialControls = {
 var model = {
   attach: function attach(_ref9) {
     var el = _ref9.el,
-        key = _ref9.key,
         node = _ref9.node,
         instance = _ref9.instance,
         directives = _ref9.directives,
@@ -4792,8 +4783,7 @@ var model = {
 
     instance.watch(keypath, set$$1);
 
-    event.attach({
-      key: key,
+    return event.attach({
       el: el,
       node: node,
       instance: instance,
@@ -4804,19 +4794,12 @@ var model = {
         control.update(data);
       }
     });
-  },
-  detach: function detach(_ref10) {
-    var el = _ref10.el,
-        key = _ref10.key;
-
-    event.detach({ el: el, key: key });
   }
 };
 
 function getComponentInfo(node, instance, directives, callback) {
-  var _node = node,
-      name = _node.name,
-      attributes = _node.attributes;
+  var name = node.name,
+      attributes = node.attributes;
 
   instance.component(name, function (options) {
     var props = {};
@@ -4827,8 +4810,7 @@ function getComponentInfo(node, instance, directives, callback) {
       var model = directives.model;
 
       if (model) {
-        node = model.node;
-        var result = instance.get(node.value, node.keypath);
+        var result = instance.get(model.value, model.keypath);
         if (result) {
           props.value = result.value;
         }
@@ -4860,6 +4842,16 @@ var component = {
         });
       }
     });
+    return function () {
+      var $component = el.$component;
+
+      if ($component) {
+        if (object($component)) {
+          $component.destroy(TRUE);
+        }
+        el.$component = NULL;
+      }
+    };
   },
   update: function update(_ref2) {
     var el = _ref2.el,
@@ -4872,17 +4864,6 @@ var component = {
       getComponentInfo(node, instance, directives, function (props) {
         $component.set(props, TRUE);
       });
-    }
-  },
-  detach: function detach(_ref3) {
-    var el = _ref3.el;
-    var $component = el.$component;
-
-    if ($component) {
-      if (object($component)) {
-        $component.destroy(TRUE);
-      }
-      el.$component = NULL;
     }
   }
 };
@@ -5672,7 +5653,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.22.3';
+Yox.version = '0.22.4';
 
 /**
  * 工具，便于扩展、插件使用

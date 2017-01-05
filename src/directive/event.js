@@ -9,7 +9,7 @@ import * as native from '../platform/web/native'
 
 export default {
 
-  attach({ key, el, node, instance, component, directives, type, listener }) {
+  attach({ el, node, instance, component, directives, type, listener }) {
 
     if (!type) {
       type = node.subName
@@ -21,9 +21,8 @@ export default {
     if (listener) {
       let { lazy } = directives
       if (lazy) {
-        let { value } = lazy.node
-        if (is.numeric(value) && value >= 0) {
-          listener = debounce(listener, value)
+        if (is.numeric(lazy.value) && lazy.value >= 0) {
+          listener = debounce(listener, lazy.value)
         }
         else if (type === 'input') {
           type = 'change'
@@ -33,9 +32,6 @@ export default {
       if (component) {
         let bind = function (component) {
           component.on(type, listener)
-          el[key] = function () {
-            component.off(type, listener)
-          }
         }
         if (is.array(component)) {
           array.push(component, bind)
@@ -43,22 +39,21 @@ export default {
         else {
           bind(component)
         }
+        return function () {
+          component.off(type, listener)
+          if (is.array(component)) {
+            array.remove(component, bind)
+          }
+        }
       }
       else {
         native.on(el, type, listener)
-        el[key] = function () {
+        return function () {
           native.off(el, type, listener)
         }
       }
     }
 
-  },
-
-  detach({ key, el }) {
-    if (el[key]) {
-      el[key]()
-      el[key] = env.NULL
-    }
   }
 
 }
