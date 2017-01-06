@@ -2956,12 +2956,13 @@ function render(ast, createText, createElement, importTemplate, data) {
             if (func(content) && content.toString !== toString$1) {
               content = content();
             }
+            content = createText({
+              safe: safe,
+              keypath: keypath,
+              content: content
+            });
             return {
-              v: markNodes(createText({
-                safe: safe,
-                keypath: keypath,
-                content: content
-              }))
+              v: safe ? content : markNodes(content)
             };
 
           case ATTRIBUTE:
@@ -5653,7 +5654,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.22.4';
+Yox.version = '0.22.5';
 
 /**
  * 工具，便于扩展、插件使用
