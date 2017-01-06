@@ -161,17 +161,16 @@ function merge() {
  * @param {Array} original
  */
 function push$1(original) {
-  each(arguments, function (array$$1, index) {
-    if (index > 0) {
-      if (array(array$$1)) {
-        each(array$$1, function (item) {
-          original.push(item);
-        });
-      } else {
-        original.push(array$$1);
-      }
+  var args = arguments;
+  for (var i = 1, len = args.length; i < len; i++) {
+    if (array(args[i])) {
+      each(args[i], function (item) {
+        original.push(item);
+      });
+    } else {
+      original.push(args[i]);
     }
-  });
+  }
 }
 
 /**
@@ -320,13 +319,56 @@ var toNumber = function (str) {
 };
 
 /**
+ * 为了压缩，定义的常用字符
+ *
+ * @type {string}
+ */
+
+var source = {
+  DOT: '.',
+  DASH: '-',
+  EQUAL: '=',
+  SLASH: '/',
+  COMMA: ',',
+  COLON: ':',
+  SEMCOL: ';',
+  SQUOTE: "'",
+  DQUOTE: '"',
+  OPAREN: '(',
+  CPAREN: ')',
+  OBRACK: '[',
+  CBRACK: ']',
+  LEFT: '<',
+  RIGHT: '>',
+  OBRACE: '{',
+  CBRACE: '}',
+  QUMARK: '?',
+  BACKSLASH: '\\',
+  TAB: '\t',
+  BREAKLINE: '\n',
+  WHITESPACE: ' '
+};
+
+var dist = {
+  CHAR_BLANK: ''
+};
+
+// 不能依赖外面的模块，否则会产生循环依赖
+for (var key in source) {
+  dist['CHAR_' + key] = source[key];
+  dist['CODE_' + key] = source[key].charCodeAt(0);
+}
+
+source = NULL;
+
+/**
  * 转成驼峰
  *
  * @param {string} str
  * @return {string}
  */
 function camelCase(str) {
-  if (str.indexOf(CHAR_DASH) >= 0) {
+  if (str.indexOf(dist.CHAR_DASH) >= 0) {
     return str.replace(/-([a-z])/gi, function ($0, $1) {
       return $1.toUpperCase();
     });
@@ -351,7 +393,7 @@ function capitalize(str) {
  * @return {boolean}
  */
 function falsy$1(str) {
-  return !string(str) || str === CHAR_BLANK;
+  return !string(str) || str === dist.CHAR_BLANK;
 }
 
 /**
@@ -364,7 +406,7 @@ function falsy$1(str) {
  * @param {string} pair 键值对分隔符，如 = :
  * @return {Array}
  */
-function parse(str, separator, pair) {
+function parse$1(str, separator, pair) {
   var result = [];
   if (string(str)) {
     (function () {
@@ -395,7 +437,7 @@ function parse(str, separator, pair) {
  * 为了压缩而存在的几个方法
  */
 function trim(str) {
-  return falsy$1(str) ? CHAR_BLANK : str.trim();
+  return falsy$1(str) ? dist.CHAR_BLANK : str.trim();
 }
 function charAt$1(str) {
   var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
@@ -414,80 +456,6 @@ function endsWith(str, part) {
   return str === part || str.lastIndexOf(part) === part.length;
 }
 
-/**
- * 为了压缩，定义的常用字符
- *
- * @type {string}
- */
-
-var CHAR_BLANK = '';
-
-var CHAR_DOT = '.';
-var CODE_DOT = charCodeAt$1(CHAR_DOT);
-
-var CHAR_DASH = '-';
-var CODE_DASH = charCodeAt$1(CHAR_DASH);
-
-var CHAR_EQUAL = '=';
-var CODE_EQUAL = charCodeAt$1(CHAR_EQUAL);
-
-var CHAR_SLASH = '/';
-var CODE_SLASH = charCodeAt$1(CHAR_SLASH);
-
-var CHAR_COMMA = ',';
-var CODE_COMMA = charCodeAt$1(CHAR_COMMA);
-
-var CHAR_COLON = ':';
-var CODE_COLON = charCodeAt$1(CHAR_COLON);
-
-var CHAR_SEMCOL = ';';
-var CODE_SEMCOL = charCodeAt$1(CHAR_SEMCOL);
-
-var CHAR_SQUOTE = "'";
-var CODE_SQUOTE = charCodeAt$1(CHAR_SQUOTE);
-
-var CHAR_DQUOTE = '"';
-var CODE_DQUOTE = charCodeAt$1(CHAR_DQUOTE);
-
-var CHAR_OPAREN = '(';
-var CODE_OPAREN = charCodeAt$1(CHAR_OPAREN);
-
-var CHAR_CPAREN = ')';
-var CODE_CPAREN = charCodeAt$1(CHAR_CPAREN);
-
-var CHAR_OBRACK = '[';
-var CODE_OBRACK = charCodeAt$1(CHAR_OBRACK);
-
-var CHAR_CBRACK = ']';
-var CODE_CBRACK = charCodeAt$1(CHAR_CBRACK);
-
-var CHAR_LEFT = '<';
-var CODE_LEFT = charCodeAt$1(CHAR_LEFT);
-
-var CHAR_RIGHT = '>';
-var CODE_RIGHT = charCodeAt$1(CHAR_RIGHT);
-
-var CHAR_OBRACE = '{';
-var CODE_OBRACE = charCodeAt$1(CHAR_OBRACE);
-
-var CHAR_CBRACE = '}';
-var CODE_CBRACE = charCodeAt$1(CHAR_CBRACE);
-
-var CHAR_QUMARK = '?';
-var CODE_QUMARK = charCodeAt$1(CHAR_QUMARK);
-
-var CHAR_BACKSLASH = '\\';
-var CODE_BACKSLASH = charCodeAt$1(CHAR_BACKSLASH);
-
-var CHAR_TAB = '\t';
-var CODE_TAB = charCodeAt$1(CHAR_TAB);
-
-var CHAR_BREAKLINE = '\n';
-var CODE_BREAKLINE = charCodeAt$1(CHAR_BREAKLINE);
-
-var CHAR_WHITESPACE = ' ';
-var CODE_WHITESPACE = charCodeAt$1(CHAR_WHITESPACE);
-
 // export function replace(str, pattern, replacement) {
 //   pattern = pattern.replace(/[$.]/g, '\\$&')
 //   return str.replace(
@@ -501,71 +469,26 @@ var string$1 = Object.freeze({
 	camelCase: camelCase,
 	capitalize: capitalize,
 	falsy: falsy$1,
-	parse: parse,
+	parse: parse$1,
 	trim: trim,
 	charAt: charAt$1,
 	charCodeAt: charCodeAt$1,
 	startsWith: startsWith,
-	endsWith: endsWith,
-	CHAR_BLANK: CHAR_BLANK,
-	CHAR_DOT: CHAR_DOT,
-	CODE_DOT: CODE_DOT,
-	CHAR_DASH: CHAR_DASH,
-	CODE_DASH: CODE_DASH,
-	CHAR_EQUAL: CHAR_EQUAL,
-	CODE_EQUAL: CODE_EQUAL,
-	CHAR_SLASH: CHAR_SLASH,
-	CODE_SLASH: CODE_SLASH,
-	CHAR_COMMA: CHAR_COMMA,
-	CODE_COMMA: CODE_COMMA,
-	CHAR_COLON: CHAR_COLON,
-	CODE_COLON: CODE_COLON,
-	CHAR_SEMCOL: CHAR_SEMCOL,
-	CODE_SEMCOL: CODE_SEMCOL,
-	CHAR_SQUOTE: CHAR_SQUOTE,
-	CODE_SQUOTE: CODE_SQUOTE,
-	CHAR_DQUOTE: CHAR_DQUOTE,
-	CODE_DQUOTE: CODE_DQUOTE,
-	CHAR_OPAREN: CHAR_OPAREN,
-	CODE_OPAREN: CODE_OPAREN,
-	CHAR_CPAREN: CHAR_CPAREN,
-	CODE_CPAREN: CODE_CPAREN,
-	CHAR_OBRACK: CHAR_OBRACK,
-	CODE_OBRACK: CODE_OBRACK,
-	CHAR_CBRACK: CHAR_CBRACK,
-	CODE_CBRACK: CODE_CBRACK,
-	CHAR_LEFT: CHAR_LEFT,
-	CODE_LEFT: CODE_LEFT,
-	CHAR_RIGHT: CHAR_RIGHT,
-	CODE_RIGHT: CODE_RIGHT,
-	CHAR_OBRACE: CHAR_OBRACE,
-	CODE_OBRACE: CODE_OBRACE,
-	CHAR_CBRACE: CHAR_CBRACE,
-	CODE_CBRACE: CODE_CBRACE,
-	CHAR_QUMARK: CHAR_QUMARK,
-	CODE_QUMARK: CODE_QUMARK,
-	CHAR_BACKSLASH: CHAR_BACKSLASH,
-	CODE_BACKSLASH: CODE_BACKSLASH,
-	CHAR_TAB: CHAR_TAB,
-	CODE_TAB: CODE_TAB,
-	CHAR_BREAKLINE: CHAR_BREAKLINE,
-	CODE_BREAKLINE: CODE_BREAKLINE,
-	CHAR_WHITESPACE: CHAR_WHITESPACE,
-	CODE_WHITESPACE: CODE_WHITESPACE
+	endsWith: endsWith
 });
 
-var SEPARATOR_KEY = CHAR_DOT;
-var SEPARATOR_PATH = CHAR_SLASH;
-var LEVEL_CURRENT = CHAR_DOT;
-var LEVEL_PARENT = '' + CHAR_DOT + CHAR_DOT;
+var SEPARATOR_KEY = dist.CHAR_DOT;
+var SEPARATOR_PATH = dist.CHAR_SLASH;
+var LEVEL_CURRENT = dist.CHAR_DOT;
+var LEVEL_PARENT = '' + dist.CHAR_DOT + dist.CHAR_DOT;
 
 function normalize(str) {
-  if (!falsy$1(str) && str.indexOf(CHAR_OBRACK) > 0 && str.indexOf(CHAR_CBRACK) > 0) {
+  if (!falsy$1(str) && str.indexOf(dist.CHAR_OBRACK) > 0 && str.indexOf(dist.CHAR_CBRACK) > 0) {
     // array[0] => array.0
     // object['key'] => array.key
     return str.replace(/\[\s*?([\S]+)\s*?\]/g, function ($0, $1) {
       var firstChar = $1.charAt[0];
-      if (firstChar === CHAR_DQUOTE || firstChar === CHAR_SQUOTE) {
+      if (firstChar === dist.CHAR_DQUOTE || firstChar === dist.CHAR_SQUOTE) {
         $1 = $1.slice(1, -1);
       }
       return '' + SEPARATOR_KEY + $1;
@@ -574,18 +497,18 @@ function normalize(str) {
   return str;
 }
 
-function parse$1(str) {
+function parse$$1(str) {
   return str ? normalize(str).split(SEPARATOR_KEY) : [];
 }
 
 function stringify(keypaths) {
   return keypaths.filter(function (term) {
-    return term !== CHAR_BLANK && term !== LEVEL_CURRENT;
+    return term !== dist.CHAR_BLANK && term !== LEVEL_CURRENT;
   }).join(SEPARATOR_KEY);
 }
 
 function resolve(base, path) {
-  var list = parse$1(base);
+  var list = parse$$1(base);
   each(path.split(SEPARATOR_PATH), function (term) {
     if (term === LEVEL_PARENT) {
       list.pop();
@@ -690,8 +613,8 @@ function get$1(object$$1, keypath) {
     };
   }
   // 不能以 . 开头
-  if (string(keypath) && keypath.indexOf(CHAR_DOT) > 0) {
-    var list = parse$1(keypath);
+  if (string(keypath) && keypath.indexOf(dist.CHAR_DOT) > 0) {
+    var list = parse$$1(keypath);
     for (var i = 0, len = list.length; i < len && object$$1; i++) {
       if (i < len - 1) {
         object$$1 = object$$1[list[i]];
@@ -713,9 +636,9 @@ function get$1(object$$1, keypath) {
  * @param {?boolean} autofill 是否自动填充不存在的对象，默认自动填充
  */
 function set$1(object$$1, keypath, value, autofill) {
-  if (string(keypath) && keypath.indexOf(CHAR_DOT) > 0) {
+  if (string(keypath) && keypath.indexOf(dist.CHAR_DOT) > 0) {
     var originalObject = object$$1;
-    var list = parse$1(keypath);
+    var list = parse$$1(keypath);
     var prop = list.pop();
     each(list, function (item, index) {
       if (object$$1[item]) {
@@ -1079,8 +1002,8 @@ var Emitter = function () {
       if (done) {
         each$1(listeners, function (list, key) {
           if (key !== type || key.indexOf('*') >= 0) {
-            key = ['^', key.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)'), endsWith(key, '**') ? CHAR_BLANK : '$'];
-            var match = type.match(new RegExp(key.join(CHAR_BLANK)));
+            key = ['^', key.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)'), endsWith(key, '**') ? dist.CHAR_BLANK : '$'];
+            var match = type.match(new RegExp(key.join(dist.CHAR_BLANK)));
             if (match) {
               handle(list, merge(data, toArray(match).slice(1)));
             }
@@ -1166,7 +1089,7 @@ var nextTick$1 = void 0;
 if (typeof MutationObserver === 'function') {
   nextTick$1 = function nextTick$1(fn) {
     var observer = new MutationObserver(fn);
-    var textNode = doc.createTextNode(CHAR_BLANK);
+    var textNode = doc.createTextNode(dist.CHAR_BLANK);
     observer.observe(textNode, {
       characterData: TRUE
     });
@@ -1496,17 +1419,19 @@ var Identifier = function (_Node) {
 /**
  * Literal 节点
  *
- * @param {string} value
+ * @param {string} raw
  */
 
 var Literal = function (_Node) {
   inherits(Literal, _Node);
 
-  function Literal(value) {
+  function Literal(raw) {
+    var value = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : raw;
     classCallCheck(this, Literal);
 
     var _this = possibleConstructorReturn(this, (Literal.__proto__ || Object.getPrototypeOf(Literal)).call(this, LITERAL));
 
+    _this.raw = raw;
     _this.value = value;
     return _this;
   }
@@ -1613,13 +1538,13 @@ function stringify$1(node) {
 
   switch (node.type) {
     case ARRAY:
-      return '[' + node.elements.map(recursion).join(CHAR_COMMA) + ']';
+      return '[' + node.elements.map(recursion).join(dist.CHAR_COMMA) + ']';
 
     case BINARY:
       return stringify$1(node.left) + ' ' + node.operator + ' ' + stringify$1(node.right);
 
     case CALL:
-      return stringify$1(node.callee) + '(' + node.args.map(recursion).join(CHAR_COMMA) + ')';
+      return stringify$1(node.callee) + '(' + node.args.map(recursion).join(dist.CHAR_COMMA) + ')';
 
     case CONDITIONAL:
       return stringify$1(node.test) + ' ? ' + stringify$1(node.consequent) + ' : ' + stringify$1(node.alternate);
@@ -1628,7 +1553,7 @@ function stringify$1(node) {
       return node.name;
 
     case LITERAL:
-      return node.value;
+      return node.raw;
 
     case MEMBER:
       return flattenMember(node).map(function (node, index) {
@@ -1636,22 +1561,18 @@ function stringify$1(node) {
           var _node = node,
               value = _node.value;
 
-          var firstChar = charAt$1(value);
-          if (numeric(value) || firstChar === CHAR_SQUOTE || firstChar === CHAR_DQUOTE) {
-            return '' + CHAR_OBRACK + value + CHAR_CBRACK;
-          }
-          return '' + CHAR_DOT + value;
+          return numeric(value) ? '' + dist.CHAR_OBRACK + value + dist.CHAR_CBRACK : '' + dist.CHAR_DOT + value;
         } else {
           node = stringify$1(node);
-          return index > 0 ? '' + CHAR_OBRACK + node + CHAR_CBRACK : node;
+          return index > 0 ? '' + dist.CHAR_OBRACK + node + dist.CHAR_CBRACK : node;
         }
-      }).join(CHAR_BLANK);
+      }).join(dist.CHAR_BLANK);
 
     case UNARY:
       return '' + node.operator + stringify$1(node.arg);
 
     default:
-      return CHAR_BLANK;
+      return dist.CHAR_BLANK;
   }
 }
 
@@ -1844,21 +1765,21 @@ function compile$1(content) {
     return charCodeAt$1(content, index);
   };
   var throwError = function throwError() {
-    error$1('Failed to compile expression: ' + CHAR_BREAKLINE + content);
+    error$1('Failed to compile expression: ' + dist.CHAR_BREAKLINE + content);
   };
 
   var skipWhitespace = function skipWhitespace() {
-    while ((charCode = getCharCode()) && (charCode === CODE_WHITESPACE || charCode === CODE_TAB)) {
+    while ((charCode = getCharCode()) && (charCode === dist.CODE_WHITESPACE || charCode === dist.CODE_TAB)) {
       index++;
     }
   };
 
   var skipNumber = function skipNumber() {
-    if (getCharCode() === CODE_DOT) {
+    if (getCharCode() === dist.CODE_DOT) {
       skipDecimal();
     } else {
       skipDigit();
-      if (getCharCode() === CODE_DOT) {
+      if (getCharCode() === dist.CODE_DOT) {
         skipDecimal();
       }
     }
@@ -1931,7 +1852,7 @@ function compile$1(content) {
         index++;
         closed = TRUE;
         break;
-      } else if (charCode === CODE_COMMA) {
+      } else if (charCode === dist.CODE_COMMA) {
         index++;
       } else {
         push$1(list, parseExpression());
@@ -1957,17 +1878,17 @@ function compile$1(content) {
     while (index < length) {
       // a(x)
       charCode = getCharCode();
-      if (charCode === CODE_OPAREN) {
-        return new Call(node, parseTuple(CODE_CPAREN));
+      if (charCode === dist.CODE_OPAREN) {
+        return new Call(node, parseTuple(dist.CODE_CPAREN));
       } else {
         // a.x
-        if (charCode === CODE_DOT) {
+        if (charCode === dist.CODE_DOT) {
           index++;
           node = new Member(node, new Literal(parseIdentifier().name));
         }
         // a[x]
-        else if (charCode === CODE_OBRACK) {
-            node = new Member(node, parseExpression(CODE_CBRACK));
+        else if (charCode === dist.CODE_OBRACK) {
+            node = new Member(node, parseExpression(dist.CODE_CBRACK));
           } else {
             break;
           }
@@ -1983,23 +1904,24 @@ function compile$1(content) {
 
     charCode = getCharCode();
     // 'xx' 或 "xx"
-    if (charCode === CODE_SQUOTE || charCode === CODE_DQUOTE) {
+    if (charCode === dist.CODE_SQUOTE || charCode === dist.CODE_DQUOTE) {
       // 截出的字符串包含引号
-      return new Literal(content.substring(index, (skipString(), index)));
+      var value = content.substring(index, (skipString(), index));
+      return new Literal(value, value.slice(1, -1));
     }
     // 1.1 或 .1
-    else if (isDigit(charCode) || charCode === CODE_DOT) {
+    else if (isDigit(charCode) || charCode === dist.CODE_DOT) {
         return new Literal(
         // 写的是什么进制就解析成什么进制
         parseFloat(content.substring(index, (skipNumber(), index))));
       }
       // [xx, xx]
-      else if (charCode === CODE_OBRACK) {
-          return new Array$1(parseTuple(CODE_CBRACK));
+      else if (charCode === dist.CODE_OBRACK) {
+          return new Array$1(parseTuple(dist.CODE_CBRACK));
         }
         // (xx)
-        else if (charCode === CODE_OPAREN) {
-            return parseExpression(CODE_CPAREN);
+        else if (charCode === dist.CODE_OPAREN) {
+            return parseExpression(dist.CODE_CPAREN);
           }
           // 变量
           else if (isIdentifierStart(charCode)) {
@@ -2070,13 +1992,13 @@ function compile$1(content) {
     var test = parseBinary();
     skipWhitespace();
 
-    if (getCharCode() === CODE_QUMARK) {
+    if (getCharCode() === dist.CODE_QUMARK) {
       index++;
 
       var consequent = parseBinary();
       skipWhitespace();
 
-      if (getCharCode() === CODE_COLON) {
+      if (getCharCode() === dist.CODE_COLON) {
         index++;
 
         var alternate = parseBinary();
@@ -2242,7 +2164,7 @@ var Context = function () {
     key: 'format',
     value: function format(keypath) {
       var instance = this,
-          keys$$1 = parse$1(keypath);
+          keys$$1 = parse$$1(keypath);
       if (keys$$1[0] === 'this') {
         keys$$1.shift();
         return {
@@ -2395,7 +2317,7 @@ var Scanner = function () {
 
       var matches = tail.match(pattern);
       if (!matches || matches.index) {
-        return CHAR_BLANK;
+        return dist.CHAR_BLANK;
       }
       var result = matches[0];
       this.forward(result.length);
@@ -2423,7 +2345,7 @@ var Scanner = function () {
         var index = matches.index;
 
         if (!index) {
-          return CHAR_BLANK;
+          return dist.CHAR_BLANK;
         }
         var result = tail.substr(0, index);
         this.forward(index);
@@ -2802,7 +2724,7 @@ function mergeNodes(nodes) {
     // name=""
 
     if (length === 0) {
-      return CHAR_BLANK;
+      return dist.CHAR_BLANK;
     }
     // name="{{value}}"
     else if (length === 1) {
@@ -2810,7 +2732,7 @@ function mergeNodes(nodes) {
       }
       // name="{{value1}}{{value2}}"
       else if (length > 1) {
-          return nodes.join(CHAR_BLANK);
+          return nodes.join(dist.CHAR_BLANK);
         }
   }
 }
@@ -2906,7 +2828,7 @@ function render(ast, createText, createElement, importTemplate, data) {
   var context = void 0,
       keys$$1 = void 0;
   var getKeypath = function getKeypath() {
-    return CHAR_BLANK;
+    return dist.CHAR_BLANK;
   };
 
   if (data) {
@@ -3113,7 +3035,7 @@ function render(ast, createText, createElement, importTemplate, data) {
             if (attrs) {
               each(attrs, function (node) {
                 if (has$2(node, 'subName')) {
-                  if (node.name && node.subName !== CHAR_BLANK) {
+                  if (node.name && node.subName !== dist.CHAR_BLANK) {
                     push$1(directives, node);
                   }
                 } else {
@@ -3153,7 +3075,7 @@ var parsers = [{
     return startsWith(source, EACH);
   },
   create: function create(source) {
-    var terms = trim(source.slice(EACH.length)).split(CHAR_COLON);
+    var terms = trim(source.slice(EACH.length)).split(dist.CHAR_COLON);
     var expr = trim(terms[0]);
     if (expr) {
       return new Each(compile$1(expr), trim(terms[1]));
@@ -3236,7 +3158,7 @@ function getLocationByPos(str, pos) {
       col = 0,
       index = 0;
 
-  each(str.split(CHAR_BREAKLINE), function (lineStr) {
+  each(str.split(dist.CHAR_BREAKLINE), function (lineStr) {
     line++;
     col = 0;
 
@@ -3260,7 +3182,7 @@ function getLocationByPos(str, pos) {
  * @return {boolean}
  */
 function isBreakline(content) {
-  return content.indexOf(CHAR_BREAKLINE) >= 0 && trim(content) === CHAR_BLANK;
+  return content.indexOf(dist.CHAR_BREAKLINE) >= 0 && trim(content) === dist.CHAR_BLANK;
 }
 
 /**
@@ -3270,7 +3192,7 @@ function isBreakline(content) {
  * @return {boolean}
  */
 function trimBreakline(content) {
-  return content.replace(breaklinePrefixPattern, CHAR_BLANK).replace(breaklineSuffixPattern, CHAR_BLANK);
+  return content.replace(breaklinePrefixPattern, dist.CHAR_BLANK).replace(breaklineSuffixPattern, dist.CHAR_BLANK);
 }
 
 /**
@@ -3286,7 +3208,7 @@ function parseAttributeValue(content, quote) {
     content: content
   };
 
-  var match = content.match(quote === CHAR_DQUOTE ? nonDoubleQuotePattern : nonSingleQuotePattern);
+  var match = content.match(quote === dist.CHAR_DQUOTE ? nonDoubleQuotePattern : nonSingleQuotePattern);
 
   if (match) {
     result.value = match[0];
@@ -3344,7 +3266,7 @@ function compile$$1(template, loose) {
 
   var throwError = function throwError(msg, pos) {
     if (pos == NULL) {
-      msg += CHAR_DOT;
+      msg += dist.CHAR_DOT;
     } else {
       var _getLocationByPos = getLocationByPos(template, pos),
           line = _getLocationByPos.line,
@@ -3352,7 +3274,7 @@ function compile$$1(template, loose) {
 
       msg += ', at line ' + line + ', col ' + col + '.';
     }
-    error$1('' + msg + CHAR_BREAKLINE + template);
+    error$1('' + msg + dist.CHAR_BREAKLINE + template);
   };
 
   var pushStack = function pushStack(node) {
@@ -3408,7 +3330,7 @@ function compile$$1(template, loose) {
   var parseAttribute = function parseAttribute(content) {
 
     if (falsy(levelNode.children)) {
-      if (content && charCodeAt$1(content) === CODE_EQUAL) {
+      if (content && charCodeAt$1(content) === dist.CODE_EQUAL) {
         quote = charAt$1(content, 1);
         content = content.slice(2);
       } else {
@@ -3478,7 +3400,7 @@ function compile$$1(template, loose) {
       delimiter = helperScanner.nextAfter(closingDelimiterPattern);
 
       if (content) {
-        if (charCodeAt$1(content) === CODE_SLASH) {
+        if (charCodeAt$1(content) === dist.CODE_SLASH) {
           popStack();
         } else {
           each(parsers, function (parser, index) {
@@ -3508,18 +3430,18 @@ function compile$$1(template, loose) {
 
     // 接下来必须是 < 开头（标签）
     // 如果不是标签，那就该结束了
-    if (mainScanner.charCodeAt(0) !== CODE_LEFT) {
+    if (mainScanner.charCodeAt(0) !== dist.CODE_LEFT) {
       break;
     }
 
     // 结束标签
-    if (mainScanner.charCodeAt(1) === CODE_SLASH) {
+    if (mainScanner.charCodeAt(1) === dist.CODE_SLASH) {
       // 取出 </tagName
       content = mainScanner.nextAfter(elementPattern);
       name = content.slice(2);
 
       // 没有匹配到 >
-      if (mainScanner.charCodeAt(0) !== CODE_RIGHT) {
+      if (mainScanner.charCodeAt(0) !== dist.CODE_RIGHT) {
         return throwError('Illegal tag name', mainScanner.pos);
       } else if (currentNode.type === ELEMENT && name !== currentNode.name) {
         return throwError('Unexpected closing tag', mainScanner.pos);
@@ -4189,7 +4111,7 @@ function updateAttrs(oldVnode, vnode) {
 var attributes = { create: updateAttrs, update: updateAttrs };
 
 var toString$2 = function (str) {
-  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : CHAR_BLANK;
+  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : dist.CHAR_BLANK;
 
   try {
     return str.toString();
@@ -4243,7 +4165,7 @@ function create$1(ast, context, instance) {
       if (node.subName) {
         key.push(node.subName);
       }
-      key = key.join(CHAR_COLON);
+      key = key.join(dist.CHAR_COLON);
 
       if (!directiveMap[key]) {
         directives[name] = node;
@@ -4273,7 +4195,7 @@ function create$1(ast, context, instance) {
             value = node.value;
 
         if (name === 'style') {
-          var list = parse(value, CHAR_SEMCOL, CHAR_COLON);
+          var list = parse$1(value, dist.CHAR_SEMCOL, dist.CHAR_COLON);
           if (list.length) {
             styles = {};
             each(list, function (item) {
@@ -5195,7 +5117,7 @@ var Yox = function () {
       keypath = normalize(keypath);
 
       if (string(context)) {
-        var keys$$1 = parse$1(context);
+        var keys$$1 = parse$$1(context);
         while (TRUE) {
           push$1(keys$$1, keypath);
           context = stringify(keys$$1);
@@ -5511,7 +5433,7 @@ var Yox = function () {
       }
 
       var instance = this;
-      if (value.indexOf(CHAR_OPAREN) > 0) {
+      if (value.indexOf(dist.CHAR_OPAREN) > 0) {
         var _ret2 = function () {
           var ast = compile$1(value);
           if (ast.type === CALL) {
@@ -5526,17 +5448,10 @@ var Yox = function () {
                 } else {
                   args = args.map(function (node) {
                     var name = node.name,
-                        type = node.type,
-                        value = node.value;
+                        type = node.type;
 
                     if (type === LITERAL) {
-                      if (!falsy$1(value)) {
-                        var firstChar = charAt$1(value);
-                        if (firstChar === CHAR_SQUOTE || firstChar === CHAR_DQUOTE) {
-                          value = value.slice(1, -1);
-                        }
-                      }
-                      return value;
+                      return node.value;
                     }
                     if (type === IDENTIFIER) {
                       if (name === SPECIAL_EVENT) {
@@ -5610,7 +5525,7 @@ var Yox = function () {
 
       if ($currentNode) {
         if (arguments[0] !== TRUE) {
-          patch($currentNode, { text: CHAR_BLANK });
+          patch($currentNode, { text: dist.CHAR_BLANK });
         }
       }
 
@@ -5750,7 +5665,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.22.6';
+Yox.version = '0.22.7';
 
 /**
  * 工具，便于扩展、插件使用

@@ -10,6 +10,8 @@ import * as pattern from '../../config/pattern'
 import execute from 'yox-common/function/execute'
 import toString from 'yox-common/function/toString'
 
+import char from 'yox-common/util/char'
+
 import * as is from 'yox-common/util/is'
 import * as env from 'yox-common/util/env'
 import * as array from 'yox-common/util/array'
@@ -63,7 +65,7 @@ export function create(ast, context, instance) {
       if (node.subName) {
         key.push(node.subName)
       }
-      key = key.join(string.CHAR_COLON)
+      key = key.join(char.CHAR_COLON)
 
       if (!directiveMap[ key ]) {
         directives[ name ] = node
@@ -98,7 +100,7 @@ export function create(ast, context, instance) {
         function (node) {
           let { name, value } = node
           if (name === 'style') {
-            let list = string.parse(value, string.CHAR_SEMCOL, string.CHAR_COLON)
+            let list = string.parse(value, char.CHAR_SEMCOL, char.CHAR_COLON)
             if (list.length) {
               styles = { }
               array.each(

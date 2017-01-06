@@ -3,6 +3,7 @@ import magic from 'yox-common/function/magic'
 import execute from 'yox-common/function/execute'
 import toNumber from 'yox-common/function/toNumber'
 
+import char from 'yox-common/util/char'
 import Store from 'yox-common/util/Store'
 import Event from 'yox-common/util/Event'
 import Emitter from 'yox-common/util/Emitter'
@@ -592,7 +593,7 @@ export default class Yox {
     }
 
     let instance = this
-    if (value.indexOf(string.CHAR_OPAREN) > 0) {
+    if (value.indexOf(char.CHAR_OPAREN) > 0) {
       let ast = expressionEnginer.compile(value)
       if (ast.type === expressionNodeType.CALL) {
         return function (event) {
@@ -606,17 +607,9 @@ export default class Yox {
           else {
             args = args.map(
               function (node) {
-                let { name, type, value } = node
+                let { name, type } = node
                 if (type === expressionNodeType.LITERAL) {
-                  if (!string.falsy(value)) {
-                    let firstChar = string.charAt(value)
-                    if (firstChar === string.CHAR_SQUOTE
-                      || firstChar === string.CHAR_DQUOTE
-                    ) {
-                      value = value.slice(1, -1)
-                    }
-                  }
-                  return value
+                  return node.value
                 }
                 if (type === expressionNodeType.IDENTIFIER) {
                   if (name === viewSyntax.SPECIAL_EVENT) {
@@ -692,7 +685,7 @@ export default class Yox {
 
     if ($currentNode) {
       if (arguments[0] !== env.TRUE) {
-        vdom.patch($currentNode, { text: string.CHAR_BLANK })
+        vdom.patch($currentNode, { text: char.CHAR_BLANK })
       }
     }
 
@@ -845,7 +838,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.22.6'
+Yox.version = '0.22.7'
 
 /**
  * 工具，便于扩展、插件使用
