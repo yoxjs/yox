@@ -63,7 +63,7 @@ export function create(ast, context, instance) {
       if (node.subName) {
         key.push(node.subName)
       }
-      key = key.join(':')
+      key = key.join(string.CHAR_COLON)
 
       if (!directiveMap[ key ]) {
         directives[ name ] = node
@@ -98,7 +98,7 @@ export function create(ast, context, instance) {
         function (node) {
           let { name, value } = node
           if (name === 'style') {
-            let list = string.parse(value, ';', ':')
+            let list = string.parse(value, string.CHAR_SEMCOL, string.CHAR_COLON)
             if (list.length) {
               styles = { }
               array.each(
@@ -224,7 +224,6 @@ export function create(ast, context, instance) {
      * 指令的生命周期
      *
      * attach: 新增指令 或 元素被插入
-     * detach: 删除指令 或 元素被移除
      * update: 指令变化
      */
 

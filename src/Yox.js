@@ -587,33 +587,41 @@ export default class Yox {
 
   compileValue(keypath, value) {
 
-    if (!value || !is.string(value)) {
+    if (string.falsy(value)) {
       return
     }
 
     let instance = this
-    if (value.indexOf('(') > 0) {
+    if (value.indexOf(string.CHAR_OPAREN) > 0) {
       let ast = expressionEnginer.compile(value)
       if (ast.type === expressionNodeType.CALL) {
-        return function (e) {
-          let isEvent = e instanceof Event
+        return function (event) {
+          let isEvent = event instanceof Event
           let args = object.copy(ast.args)
           if (!args.length) {
             if (isEvent) {
-              array.push(args, e)
+              array.push(args, event)
             }
           }
           else {
             args = args.map(
               function (node) {
-                let { name, type } = node
+                let { name, type, value } = node
                 if (type === expressionNodeType.LITERAL) {
-                  return node.value
+                  if (!string.falsy(value)) {
+                    let firstChar = string.charAt(value)
+                    if (firstChar === string.CHAR_SQUOTE
+                      || firstChar === string.CHAR_DQUOTE
+                    ) {
+                      value = value.slice(1, -1)
+                    }
+                  }
+                  return value
                 }
                 if (type === expressionNodeType.IDENTIFIER) {
                   if (name === viewSyntax.SPECIAL_EVENT) {
                     if (isEvent) {
-                      return e
+                      return event
                     }
                   }
                   else if (name === viewSyntax.SPECIAL_KEYPATH) {
@@ -684,7 +692,7 @@ export default class Yox {
 
     if ($currentNode) {
       if (arguments[0] !== env.TRUE) {
-        vdom.patch($currentNode, { text: env.EMPTY })
+        vdom.patch($currentNode, { text: string.CHAR_BLANK })
       }
     }
 
@@ -837,7 +845,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.22.5'
+Yox.version = '0.22.6'
 
 /**
  * 工具，便于扩展、插件使用

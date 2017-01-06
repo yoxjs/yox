@@ -15,20 +15,6 @@ var NULL = null;
 var UNDEFINED = undefined;
 
 /**
- * 换行符
- *
- * @type {string}
- */
-var BREAKLINE = '\n';
-
-/**
- * 空字符串
- *
- * @type {string}
- */
-var EMPTY = '';
-
-/**
  * 浏览器环境下的 window 对象
  *
  * @type {?Window}
@@ -45,7 +31,7 @@ var doc = typeof document !== 'undefined' ? document : NULL;
 /**
  * 空函数
  *
- * @return {Function} 
+ * @return {Function}
  */
 var noop = function noop() {/** yox */};
 
@@ -273,7 +259,7 @@ function remove$1(array$$1, item, strict) {
 }
 
 /**
- * 用于判断长度不为 0 的数组
+ * 用于判断长度大于 0 的数组
  *
  * @param {*} array
  * @return {boolean}
@@ -333,38 +319,273 @@ var toNumber = function (str) {
   return defaultValue;
 };
 
-var SEPARATOR_KEY = '.';
-var SEPARATOR_PATH = '/';
-var LEVEL_CURRENT = '.';
-var LEVEL_PARENT = '..';
-
-function normalize(str) {
-  if (str && str.indexOf('[') > 0 && str.indexOf(']') > 0) {
-    // array[0] => array.0
-    // object['key'] => array.key
-    return str.replace(/\[\s*?([\S]+)\s*?\]/g, function ($0, $1) {
-      var firstChar = $1.charAt[0];
-      if (firstChar === '"' || firstChar === "'") {
-        $1 = $1.slice(1, -1);
-      }
-      return '.' + $1;
+/**
+ * 转成驼峰
+ *
+ * @param {string} str
+ * @return {string}
+ */
+function camelCase(str) {
+  if (str.indexOf(CHAR_DASH) >= 0) {
+    return str.replace(/-([a-z])/gi, function ($0, $1) {
+      return $1.toUpperCase();
     });
   }
   return str;
 }
 
-function parse(str) {
+/**
+ * 首字母大写
+ *
+ * @param {string} str
+ * @return {string}
+ */
+function capitalize(str) {
+  return charAt$1(str, 0).toUpperCase() + str.slice(1);
+}
+
+/**
+ * 判断长度大于 0 的字符串
+ *
+ * @param {*} str
+ * @return {boolean}
+ */
+function falsy$1(str) {
+  return !string(str) || str === CHAR_BLANK;
+}
+
+/**
+ * 把字符串解析成对象形式
+ *
+ * 为了给外部去重的机会，返回的是数组而不是对象
+ *
+ * @param {string} str
+ * @param {string} separator 分隔符，如 & ;
+ * @param {string} pair 键值对分隔符，如 = :
+ * @return {Array}
+ */
+function parse(str, separator, pair) {
+  var result = [];
+  if (string(str)) {
+    (function () {
+      var terms = void 0,
+          key = void 0,
+          value = void 0,
+          item = void 0;
+      each(str.split(separator), function (term) {
+        terms = term.split(pair);
+        key = terms[0];
+        value = terms[1];
+        if (key) {
+          item = {
+            key: trim(key)
+          };
+          if (string(value)) {
+            item.value = trim(value);
+          }
+          push$1(result, item);
+        }
+      });
+    })();
+  }
+  return result;
+}
+
+/**
+ * 为了压缩而存在的几个方法
+ */
+function trim(str) {
+  return falsy$1(str) ? CHAR_BLANK : str.trim();
+}
+function charAt$1(str) {
+  var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+
+  return str.charAt(index);
+}
+function charCodeAt$1(str) {
+  var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+
+  return str.charCodeAt(index);
+}
+function startsWith(str, part) {
+  return str.indexOf(part) === 0;
+}
+function endsWith(str, part) {
+  return str === part || str.lastIndexOf(part) === part.length;
+}
+
+/**
+ * 为了压缩，定义的常用字符
+ *
+ * @type {string}
+ */
+
+var CHAR_BLANK = '';
+
+var CHAR_DOT = '.';
+var CODE_DOT = charCodeAt$1(CHAR_DOT);
+
+var CHAR_DASH = '-';
+var CODE_DASH = charCodeAt$1(CHAR_DASH);
+
+var CHAR_EQUAL = '=';
+var CODE_EQUAL = charCodeAt$1(CHAR_EQUAL);
+
+var CHAR_SLASH = '/';
+var CODE_SLASH = charCodeAt$1(CHAR_SLASH);
+
+var CHAR_COMMA = ',';
+var CODE_COMMA = charCodeAt$1(CHAR_COMMA);
+
+var CHAR_COLON = ':';
+var CODE_COLON = charCodeAt$1(CHAR_COLON);
+
+var CHAR_SEMCOL = ';';
+var CODE_SEMCOL = charCodeAt$1(CHAR_SEMCOL);
+
+var CHAR_SQUOTE = "'";
+var CODE_SQUOTE = charCodeAt$1(CHAR_SQUOTE);
+
+var CHAR_DQUOTE = '"';
+var CODE_DQUOTE = charCodeAt$1(CHAR_DQUOTE);
+
+var CHAR_OPAREN = '(';
+var CODE_OPAREN = charCodeAt$1(CHAR_OPAREN);
+
+var CHAR_CPAREN = ')';
+var CODE_CPAREN = charCodeAt$1(CHAR_CPAREN);
+
+var CHAR_OBRACK = '[';
+var CODE_OBRACK = charCodeAt$1(CHAR_OBRACK);
+
+var CHAR_CBRACK = ']';
+var CODE_CBRACK = charCodeAt$1(CHAR_CBRACK);
+
+var CHAR_LEFT = '<';
+var CODE_LEFT = charCodeAt$1(CHAR_LEFT);
+
+var CHAR_RIGHT = '>';
+var CODE_RIGHT = charCodeAt$1(CHAR_RIGHT);
+
+var CHAR_OBRACE = '{';
+var CODE_OBRACE = charCodeAt$1(CHAR_OBRACE);
+
+var CHAR_CBRACE = '}';
+var CODE_CBRACE = charCodeAt$1(CHAR_CBRACE);
+
+var CHAR_QUMARK = '?';
+var CODE_QUMARK = charCodeAt$1(CHAR_QUMARK);
+
+var CHAR_BACKSLASH = '\\';
+var CODE_BACKSLASH = charCodeAt$1(CHAR_BACKSLASH);
+
+var CHAR_TAB = '\t';
+var CODE_TAB = charCodeAt$1(CHAR_TAB);
+
+var CHAR_BREAKLINE = '\n';
+var CODE_BREAKLINE = charCodeAt$1(CHAR_BREAKLINE);
+
+var CHAR_WHITESPACE = ' ';
+var CODE_WHITESPACE = charCodeAt$1(CHAR_WHITESPACE);
+
+// export function replace(str, pattern, replacement) {
+//   pattern = pattern.replace(/[$.]/g, '\\$&')
+//   return str.replace(
+//     new RegExp(`(?:^|\\b)${pattern}(?:$|\\b)`, 'g'),
+//     replacement
+//   )
+// }
+//
+
+var string$1 = Object.freeze({
+	camelCase: camelCase,
+	capitalize: capitalize,
+	falsy: falsy$1,
+	parse: parse,
+	trim: trim,
+	charAt: charAt$1,
+	charCodeAt: charCodeAt$1,
+	startsWith: startsWith,
+	endsWith: endsWith,
+	CHAR_BLANK: CHAR_BLANK,
+	CHAR_DOT: CHAR_DOT,
+	CODE_DOT: CODE_DOT,
+	CHAR_DASH: CHAR_DASH,
+	CODE_DASH: CODE_DASH,
+	CHAR_EQUAL: CHAR_EQUAL,
+	CODE_EQUAL: CODE_EQUAL,
+	CHAR_SLASH: CHAR_SLASH,
+	CODE_SLASH: CODE_SLASH,
+	CHAR_COMMA: CHAR_COMMA,
+	CODE_COMMA: CODE_COMMA,
+	CHAR_COLON: CHAR_COLON,
+	CODE_COLON: CODE_COLON,
+	CHAR_SEMCOL: CHAR_SEMCOL,
+	CODE_SEMCOL: CODE_SEMCOL,
+	CHAR_SQUOTE: CHAR_SQUOTE,
+	CODE_SQUOTE: CODE_SQUOTE,
+	CHAR_DQUOTE: CHAR_DQUOTE,
+	CODE_DQUOTE: CODE_DQUOTE,
+	CHAR_OPAREN: CHAR_OPAREN,
+	CODE_OPAREN: CODE_OPAREN,
+	CHAR_CPAREN: CHAR_CPAREN,
+	CODE_CPAREN: CODE_CPAREN,
+	CHAR_OBRACK: CHAR_OBRACK,
+	CODE_OBRACK: CODE_OBRACK,
+	CHAR_CBRACK: CHAR_CBRACK,
+	CODE_CBRACK: CODE_CBRACK,
+	CHAR_LEFT: CHAR_LEFT,
+	CODE_LEFT: CODE_LEFT,
+	CHAR_RIGHT: CHAR_RIGHT,
+	CODE_RIGHT: CODE_RIGHT,
+	CHAR_OBRACE: CHAR_OBRACE,
+	CODE_OBRACE: CODE_OBRACE,
+	CHAR_CBRACE: CHAR_CBRACE,
+	CODE_CBRACE: CODE_CBRACE,
+	CHAR_QUMARK: CHAR_QUMARK,
+	CODE_QUMARK: CODE_QUMARK,
+	CHAR_BACKSLASH: CHAR_BACKSLASH,
+	CODE_BACKSLASH: CODE_BACKSLASH,
+	CHAR_TAB: CHAR_TAB,
+	CODE_TAB: CODE_TAB,
+	CHAR_BREAKLINE: CHAR_BREAKLINE,
+	CODE_BREAKLINE: CODE_BREAKLINE,
+	CHAR_WHITESPACE: CHAR_WHITESPACE,
+	CODE_WHITESPACE: CODE_WHITESPACE
+});
+
+var SEPARATOR_KEY = CHAR_DOT;
+var SEPARATOR_PATH = CHAR_SLASH;
+var LEVEL_CURRENT = CHAR_DOT;
+var LEVEL_PARENT = '' + CHAR_DOT + CHAR_DOT;
+
+function normalize(str) {
+  if (!falsy$1(str) && str.indexOf(CHAR_OBRACK) > 0 && str.indexOf(CHAR_CBRACK) > 0) {
+    // array[0] => array.0
+    // object['key'] => array.key
+    return str.replace(/\[\s*?([\S]+)\s*?\]/g, function ($0, $1) {
+      var firstChar = $1.charAt[0];
+      if (firstChar === CHAR_DQUOTE || firstChar === CHAR_SQUOTE) {
+        $1 = $1.slice(1, -1);
+      }
+      return '' + SEPARATOR_KEY + $1;
+    });
+  }
+  return str;
+}
+
+function parse$1(str) {
   return str ? normalize(str).split(SEPARATOR_KEY) : [];
 }
 
 function stringify(keypaths) {
   return keypaths.filter(function (term) {
-    return term !== EMPTY && term !== LEVEL_CURRENT;
+    return term !== CHAR_BLANK && term !== LEVEL_CURRENT;
   }).join(SEPARATOR_KEY);
 }
 
 function resolve(base, path) {
-  var list = parse(base);
+  var list = parse$1(base);
   each(path.split(SEPARATOR_PATH), function (term) {
     if (term === LEVEL_PARENT) {
       list.pop();
@@ -469,8 +690,8 @@ function get$1(object$$1, keypath) {
     };
   }
   // 不能以 . 开头
-  if (string(keypath) && keypath.indexOf('.') > 0) {
-    var list = parse(keypath);
+  if (string(keypath) && keypath.indexOf(CHAR_DOT) > 0) {
+    var list = parse$1(keypath);
     for (var i = 0, len = list.length; i < len && object$$1; i++) {
       if (i < len - 1) {
         object$$1 = object$$1[list[i]];
@@ -492,9 +713,9 @@ function get$1(object$$1, keypath) {
  * @param {?boolean} autofill 是否自动填充不存在的对象，默认自动填充
  */
 function set$1(object$$1, keypath, value, autofill) {
-  if (string(keypath) && keypath.indexOf('.') > 0) {
+  if (string(keypath) && keypath.indexOf(CHAR_DOT) > 0) {
     var originalObject = object$$1;
-    var list = parse(keypath);
+    var list = parse$1(keypath);
     var prop = list.pop();
     each(list, function (item, index) {
       if (object$$1[item]) {
@@ -718,107 +939,6 @@ var Event = function () {
   return Event;
 }();
 
-/**
- * 转成驼峰
- *
- * @param {string} str
- * @return {string}
- */
-function camelCase(str) {
-  return str.replace(/-([a-z])/gi, function ($0, $1) {
-    return $1.toUpperCase();
-  });
-}
-
-/**
- * 首字母大写
- *
- * @param {string} str
- * @return {string}
- */
-function capitalize(str) {
-  return charAt$1(str, 0).toUpperCase() + str.slice(1);
-}
-
-/**
- * 把字符串解析成对象形式
- *
- * 为了给外部去重的机会，返回的是数组而不是对象
- *
- * @param {string} str
- * @param {string} separator 分隔符，如 & ;
- * @param {string} pair 键值对分隔符，如 = :
- * @return {Array}
- */
-function parse$1(str, separator, pair) {
-  var result = [];
-  if (string(str)) {
-    (function () {
-      var terms = void 0,
-          key = void 0,
-          value = void 0,
-          item = void 0;
-      each(str.split(separator), function (term) {
-        terms = term.split(pair);
-        key = terms[0];
-        value = terms[1];
-        if (key) {
-          item = {
-            key: trim(key)
-          };
-          if (string(value)) {
-            item.value = trim(value);
-          }
-          push$1(result, item);
-        }
-      });
-    })();
-  }
-  return result;
-}
-
-/**
- * 为了压缩而存在的几个方法
- */
-function trim(str) {
-  return str ? str.trim() : EMPTY;
-}
-function charAt$1(str, index) {
-  return str.charAt(index);
-}
-function charCodeAt$1(str, index) {
-  return str.charCodeAt(index);
-}
-function startsWith(str, part) {
-  return str.indexOf(part) === 0;
-}
-function endsWith(str, part) {
-  return str === part || str.lastIndexOf(part) === part.length;
-}
-
-// export function replace(str, pattern, replacement) {
-//   pattern = pattern.replace(/[$.]/g, '\\$&')
-//   return str.replace(
-//     new RegExp(`(?:^|\\b)${pattern}(?:$|\\b)`, 'g'),
-//     replacement
-//   )
-// }
-//
-// export function falsy(str) {
-//   return !is.string(str) || str === env.EMPTY
-// }
-
-var string$1 = Object.freeze({
-	camelCase: camelCase,
-	capitalize: capitalize,
-	parse: parse$1,
-	trim: trim,
-	charAt: charAt$1,
-	charCodeAt: charCodeAt$1,
-	startsWith: startsWith,
-	endsWith: endsWith
-});
-
 var Emitter = function () {
   function Emitter(options) {
     classCallCheck(this, Emitter);
@@ -959,8 +1079,8 @@ var Emitter = function () {
       if (done) {
         each$1(listeners, function (list, key) {
           if (key !== type || key.indexOf('*') >= 0) {
-            key = ['^', key.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)'), endsWith(key, '**') ? EMPTY : '$'];
-            var match = type.match(new RegExp(key.join(EMPTY)));
+            key = ['^', key.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)'), endsWith(key, '**') ? CHAR_BLANK : '$'];
+            var match = type.match(new RegExp(key.join(CHAR_BLANK)));
             if (match) {
               handle(list, merge(data, toArray(match).slice(1)));
             }
@@ -1046,7 +1166,7 @@ var nextTick$1 = void 0;
 if (typeof MutationObserver === 'function') {
   nextTick$1 = function nextTick$1(fn) {
     var observer = new MutationObserver(fn);
-    var textNode = doc.createTextNode(EMPTY);
+    var textNode = doc.createTextNode(CHAR_BLANK);
     observer.observe(textNode, {
       characterData: TRUE
     });
@@ -1087,80 +1207,6 @@ function run() {
   each(tasks, function (task) {
     task();
   });
-}
-
-/**
- * 是否是数字
- *
- * @param {number} charCode
- * @return {boolean}
- */
-function isNumber(charCode) {
-  return charCode >= 48 && charCode <= 57; // 0...9
-}
-
-/**
- * 是否是空白符
- *
- * @param {number} charCode
- * @return {boolean}
- */
-function isWhitespace(charCode) {
-  return charCode === 32 // space
-  || charCode === 9; // tab
-}
-
-/**
- * 变量开始字符必须是 字母、下划线、$
- *
- * @param {number} charCode
- * @return {boolean}
- */
-function isIdentifierStart(charCode) {
-  return charCode === 36 // $
-  || charCode === 95 // _
-  || charCode >= 97 && charCode <= 122 // a...z
-  || charCode >= 65 && charCode <= 90; // A...Z
-}
-
-/**
- * 变量剩余的字符必须是 字母、下划线、$、数字
- *
- * @param {number} charCode
- * @return {boolean}
- */
-function isIdentifierPart(charCode) {
-  return isIdentifierStart(charCode) || isNumber(charCode);
-}
-
-/**
- * 倒排对象的 key
- *
- * @param {Object} obj
- * @return {Array.<string>}
- */
-function sortKeys(obj) {
-  return keys(obj).sort(function (a, b) {
-    return b.length - a.length;
-  });
-}
-
-/**
- * 用倒排 token 去匹配 content 的开始内容
- *
- * @param {string} content
- * @param {Array.<string>} sortedTokens 数组长度从大到小排序
- * @return {?string}
- */
-function matchBestToken(content, sortedTokens) {
-  var result = void 0;
-  each(sortedTokens, function (token) {
-    if (startsWith(content, token)) {
-      result = token;
-      return FALSE;
-    }
-  });
-  return result;
 }
 
 /**
@@ -1240,6 +1286,18 @@ var LTE = '<=';
 var GT = '>';
 var GTE = '>=';
 
+/**
+ * 倒排对象的 key
+ *
+ * @param {Object} obj
+ * @return {Array.<string>}
+ */
+function sortKeys(obj) {
+  return keys(obj).sort(function (a, b) {
+    return b.length - a.length;
+  });
+}
+
 // 一元操作符
 var unaryMap = {};
 
@@ -1298,22 +1356,22 @@ var Array$1 = function (_Node) {
 /**
  * Binary 节点
  *
- * @param {Node} right
- * @param {string} operator
  * @param {Node} left
+ * @param {string} operator
+ * @param {Node} right
  */
 
 var Binary = function (_Node) {
   inherits(Binary, _Node);
 
-  function Binary(right, operator, left) {
+  function Binary(left, operator, right) {
     classCallCheck(this, Binary);
 
     var _this = possibleConstructorReturn(this, (Binary.__proto__ || Object.getPrototypeOf(Binary)).call(this, BINARY));
 
-    _this.right = right;
-    _this.operator = operator;
     _this.left = left;
+    _this.operator = operator;
+    _this.right = right;
     return _this;
   }
 
@@ -1479,23 +1537,6 @@ var Member = function (_Node) {
   return Member;
 }(Node);
 
-Member.flatten = function (node) {
-
-  var result = [];
-
-  var next = void 0;
-  do {
-    next = node.object;
-    if (node.type === MEMBER) {
-      result.unshift(node.prop);
-    } else {
-      result.unshift(node);
-    }
-  } while (node = next);
-
-  return result;
-};
-
 /**
  * Unary 节点
  *
@@ -1535,30 +1576,28 @@ Unary[BOOLEAN] = function (value) {
   return !!value;
 };
 
-// 分隔符
-var COMMA = 44; // ,
-var PERIOD = 46; // .
-var SQUOTE = 39; // '
-var DQUOTE = 34; // "
-var OPAREN = 40; // (
-var CPAREN = 41; // )
-var OBRACK = 91; // [
-var CBRACK = 93; // ]
-var QUMARK = 63; // ?
-var COLON = 58; // :
+/**
+ * 把树形的 Member 节点转换成一维数组的形式
+ *
+ * @param {Member} node
+ * @return {Array.<Node>}
+ */
+function flattenMember(node) {
 
-// 区分关键字和普通变量
-// 举个例子：a === true
-// 从解析器的角度来说，a 和 true 是一样的 token
-var keywords = {
-  'true': TRUE,
-  'false': FALSE,
-  'null': NULL,
-  'undefined': UNDEFINED
-};
+  var result = [];
 
-// 缓存编译结果
-var cache$1 = {};
+  var next = void 0;
+  do {
+    next = node.object;
+    if (node.type === MEMBER) {
+      result.unshift(node.prop);
+    } else {
+      result.unshift(node);
+    }
+  } while (node = next);
+
+  return result;
+}
 
 /**
  * 序列化表达式
@@ -1574,13 +1613,13 @@ function stringify$1(node) {
 
   switch (node.type) {
     case ARRAY:
-      return '[' + node.elements.map(recursion).join(', ') + ']';
+      return '[' + node.elements.map(recursion).join(CHAR_COMMA) + ']';
 
     case BINARY:
       return stringify$1(node.left) + ' ' + node.operator + ' ' + stringify$1(node.right);
 
     case CALL:
-      return stringify$1(node.callee) + '(' + node.args.map(recursion).join(', ') + ')';
+      return stringify$1(node.callee) + '(' + node.args.map(recursion).join(CHAR_COMMA) + ')';
 
     case CONDITIONAL:
       return stringify$1(node.test) + ' ? ' + stringify$1(node.consequent) + ' : ' + stringify$1(node.alternate);
@@ -1589,28 +1628,30 @@ function stringify$1(node) {
       return node.name;
 
     case LITERAL:
-      var value = node.value;
-
-      if (string(value)) {
-        return value.indexOf('"') >= 0 ? '\'' + value + '\'' : '"' + value + '"';
-      }
-      return value;
+      return node.value;
 
     case MEMBER:
-      return Member.flatten(node).map(function (node, index) {
+      return flattenMember(node).map(function (node, index) {
         if (node.type === LITERAL) {
           var _node = node,
-              _value = _node.value;
+              value = _node.value;
 
-          return numeric(_value) ? '[' + _value + ']' : '.' + _value;
+          var firstChar = charAt$1(value);
+          if (numeric(value) || firstChar === CHAR_SQUOTE || firstChar === CHAR_DQUOTE) {
+            return '' + CHAR_OBRACK + value + CHAR_CBRACK;
+          }
+          return '' + CHAR_DOT + value;
         } else {
           node = stringify$1(node);
-          return index > 0 ? '[' + node + ']' : node;
+          return index > 0 ? '' + CHAR_OBRACK + node + CHAR_CBRACK : node;
         }
-      }).join(EMPTY);
+      }).join(CHAR_BLANK);
 
     case UNARY:
       return '' + node.operator + stringify$1(node.arg);
+
+    default:
+      return CHAR_BLANK;
   }
 }
 
@@ -1645,7 +1686,7 @@ function execute$1(node, context) {
         left = execute$1(left, context);
         right = execute$1(right, context);
         value = Binary[node.operator](left.value, right.value);
-        deps = extend(left.deps, right.deps);
+        extend(deps, left.deps, right.deps);
         break;
 
       case CALL:
@@ -1667,11 +1708,11 @@ function execute$1(node, context) {
         if (test.value) {
           consequent = execute$1(consequent, context);
           value = consequent.value;
-          deps = extend(test.deps, consequent.deps);
+          extend(deps, test.deps, consequent.deps);
         } else {
           alternate = execute$1(alternate, context);
           value = alternate.value;
-          deps = extend(test.deps, alternate.deps);
+          extend(deps, test.deps, alternate.deps);
         }
         break;
 
@@ -1687,7 +1728,7 @@ function execute$1(node, context) {
 
       case MEMBER:
         var keys$$1 = [];
-        each(Member.flatten(node), function (node, index) {
+        each(flattenMember(node), function (node, index) {
           var type = node.type;
 
           if (type !== LITERAL) {
@@ -1718,6 +1759,70 @@ function execute$1(node, context) {
   return { value: value, deps: deps };
 }
 
+// 区分关键字和普通变量
+// 举个例子：a === true
+// 从解析器的角度来说，a 和 true 是一样的 token
+var keywords = {
+  'true': TRUE,
+  'false': FALSE,
+  'null': NULL,
+  'undefined': UNDEFINED
+};
+
+// 缓存编译结果
+var compileCache$1 = {};
+
+/**
+ * 是否是数字
+ *
+ * @param {number} charCode
+ * @return {boolean}
+ */
+function isDigit(charCode) {
+  return charCode >= 48 && charCode <= 57; // 0...9
+}
+
+/**
+ * 变量开始字符必须是 字母、下划线、$
+ *
+ * @param {number} charCode
+ * @return {boolean}
+ */
+function isIdentifierStart(charCode) {
+  return charCode === 36 // $
+  || charCode === 95 // _
+  || charCode >= 97 && charCode <= 122 // a...z
+  || charCode >= 65 && charCode <= 90; // A...Z
+}
+
+/**
+ * 变量剩余的字符必须是 字母、下划线、$、数字
+ *
+ * @param {number} charCode
+ * @return {boolean}
+ */
+function isIdentifierPart(charCode) {
+  return isIdentifierStart(charCode) || isDigit(charCode);
+}
+
+/**
+ * 用倒排 token 去匹配 content 的开始内容
+ *
+ * @param {string} content
+ * @param {Array.<string>} sortedTokens 数组长度从大到小排序
+ * @return {?string}
+ */
+function matchBestToken(content, sortedTokens) {
+  var result = void 0;
+  each(sortedTokens, function (token) {
+    if (startsWith(content, token)) {
+      result = token;
+      return FALSE;
+    }
+  });
+  return result;
+}
+
 /**
  * 把表达式编译成抽象语法树
  *
@@ -1726,52 +1831,70 @@ function execute$1(node, context) {
  */
 function compile$1(content) {
 
-  if (has$2(cache$1, content)) {
-    return cache$1[content];
+  if (has$2(compileCache$1, content)) {
+    return compileCache$1[content];
   }
 
   var length = content.length;
 
   var index = 0,
-      charCode = void 0,
-      value = void 0;
+      charCode = void 0;
 
-  var getChar = function getChar() {
-    return charAt$1(content, index);
-  };
   var getCharCode = function getCharCode() {
     return charCodeAt$1(content, index);
   };
   var throwError = function throwError() {
-    error$1('Failed to compile expression: ' + BREAKLINE + content);
+    error$1('Failed to compile expression: ' + CHAR_BREAKLINE + content);
   };
 
   var skipWhitespace = function skipWhitespace() {
-    while (isWhitespace(getCharCode())) {
+    while ((charCode = getCharCode()) && (charCode === CODE_WHITESPACE || charCode === CODE_TAB)) {
       index++;
     }
   };
 
   var skipNumber = function skipNumber() {
-    while (isNumber(getCharCode())) {
+    if (getCharCode() === CODE_DOT) {
+      skipDecimal();
+    } else {
+      skipDigit();
+      if (getCharCode() === CODE_DOT) {
+        skipDecimal();
+      }
+    }
+  };
+
+  var skipDigit = function skipDigit() {
+    do {
       index++;
+    } while (isDigit(getCharCode()));
+  };
+
+  var skipDecimal = function skipDecimal() {
+    // 跳过 PERIOD
+    index++;
+    // 后面必须紧跟数字
+    if (isDigit(getCharCode())) {
+      skipDigit();
+    } else {
+      throwError();
     }
   };
 
   var skipString = function skipString() {
-    var closed = void 0,
-        quote = getCharCode();
+
+    var quote = getCharCode();
+
+    // 跳过引号
     index++;
     while (index < length) {
       index++;
       if (charCodeAt$1(content, index - 1) === quote) {
-        closed = TRUE;
-        break;
+        return;
       }
     }
-    if (!closed) {
-      return throwError();
-    }
+
+    throwError();
   };
 
   var skipIdentifier = function skipIdentifier() {
@@ -1782,41 +1905,13 @@ function compile$1(content) {
     } while (isIdentifierPart(getCharCode()));
   };
 
-  var parseNumber = function parseNumber() {
+  var parseIdentifier = function parseIdentifier(careKeyword) {
 
-    var start = index;
-
-    skipNumber();
-    if (getCharCode() === PERIOD) {
-      index++;
-      skipNumber();
-    }
-
-    return new Literal(parseFloat(content.substring(start, index)));
-  };
-
-  var parseString = function parseString() {
-
-    var start = index;
-
-    skipString();
-
-    return new Literal(content.substring(start + 1, index - 1));
-  };
-
-  var parseIdentifier = function parseIdentifier() {
-
-    var start = index;
-    skipIdentifier();
-
-    value = content.substring(start, index);
-    if (has$2(keywords, value)) {
-      return new Literal(keywords[value]);
-    }
-
-    // this 也视为 IDENTIFIER
-    if (value) {
-      return new Identifier(value);
+    var literal = content.substring(index, (skipIdentifier(), index));
+    if (literal) {
+      return careKeyword && has$2(keywords, literal) ? new Literal(keywords[literal])
+      // this 也视为 IDENTIFIER
+      : new Identifier(literal);
     }
 
     throwError();
@@ -1824,8 +1919,11 @@ function compile$1(content) {
 
   var parseTuple = function parseTuple(delimiter) {
 
-    var args = [],
+    var list = [],
         closed = void 0;
+
+    // 跳过开始字符，如 [、(
+    index++;
 
     while (index < length) {
       charCode = getCharCode();
@@ -1833,94 +1931,84 @@ function compile$1(content) {
         index++;
         closed = TRUE;
         break;
-      } else if (charCode === COMMA) {
+      } else if (charCode === CODE_COMMA) {
         index++;
       } else {
-        push$1(args, parseExpression());
+        push$1(list, parseExpression());
       }
     }
 
-    if (closed) {
-      return args;
-    }
-
-    throwError();
+    return closed ? list : throwError();
   };
 
   var parseOperator = function parseOperator(sortedOperatorList) {
     skipWhitespace();
-    value = matchBestToken(content.slice(index), sortedOperatorList);
-    if (value) {
-      index += value.length;
-      return value;
+    var literal = matchBestToken(content.slice(index), sortedOperatorList);
+    if (literal) {
+      index += literal.length;
+      return literal;
     }
   };
 
   var parseVariable = function parseVariable() {
 
-    value = parseIdentifier();
+    var node = parseIdentifier(TRUE);
 
     while (index < length) {
       // a(x)
       charCode = getCharCode();
-      if (charCode === OPAREN) {
-        index++;
-        value = new Call(value, parseTuple(CPAREN));
-        break;
+      if (charCode === CODE_OPAREN) {
+        return new Call(node, parseTuple(CODE_CPAREN));
       } else {
         // a.x
-        if (charCode === PERIOD) {
+        if (charCode === CODE_DOT) {
           index++;
-          value = new Member(value, new Literal(parseIdentifier().name));
+          node = new Member(node, new Literal(parseIdentifier().name));
         }
         // a[x]
-        else if (charCode === OBRACK) {
-            index++;
-            value = new Member(value, parseSubexpression(CBRACK));
+        else if (charCode === CODE_OBRACK) {
+            node = new Member(node, parseExpression(CODE_CBRACK));
           } else {
             break;
           }
       }
     }
 
-    return value;
+    return node;
   };
 
   var parseToken = function parseToken() {
+
     skipWhitespace();
 
     charCode = getCharCode();
     // 'xx' 或 "xx"
-    if (charCode === SQUOTE || charCode === DQUOTE) {
-      return parseString();
+    if (charCode === CODE_SQUOTE || charCode === CODE_DQUOTE) {
+      // 截出的字符串包含引号
+      return new Literal(content.substring(index, (skipString(), index)));
     }
     // 1.1 或 .1
-    else if (isNumber(charCode) || charCode === PERIOD) {
-        return parseNumber();
+    else if (isDigit(charCode) || charCode === CODE_DOT) {
+        return new Literal(
+        // 写的是什么进制就解析成什么进制
+        parseFloat(content.substring(index, (skipNumber(), index))));
       }
       // [xx, xx]
-      else if (charCode === OBRACK) {
-          index++;
-          return new Array$1(parseTuple(CBRACK));
+      else if (charCode === CODE_OBRACK) {
+          return new Array$1(parseTuple(CODE_CBRACK));
         }
-        // (xx, xx)
-        else if (charCode === OPAREN) {
-            index++;
-            return parseSubexpression(CPAREN);
-          } else if (isIdentifierStart(charCode)) {
-            return parseVariable();
+        // (xx)
+        else if (charCode === CODE_OPAREN) {
+            return parseExpression(CODE_CPAREN);
           }
-    value = parseOperator(unaryList);
-    if (value) {
-      return parseUnary(value);
-    }
-    throwError();
-  };
-
-  var parseUnary = function parseUnary(op) {
-    value = parseToken();
-    if (value) {
-      return new Unary(op, value);
+          // 变量
+          else if (isIdentifierStart(charCode)) {
+              return parseVariable();
+            }
+    // 一元操作
+    var action = parseOperator(unaryList);
+    if (action) {
+      return new Unary(action, parseToken());
     }
     throwError();
   };
@@ -1928,27 +2016,27 @@ function compile$1(content) {
   var parseBinary = function parseBinary() {
 
     var left = parseToken();
-    var op = parseOperator(binaryList);
-    if (!op) {
+    var action = parseOperator(binaryList);
+    if (!action) {
       return left;
     }
 
-    var right = parseToken();
-    var stack = [left, op, binaryMap[op], right];
+    var stack = [left, action, binaryMap[action], parseToken()];
+    var right = void 0,
+        next = void 0;
 
-    while (op = parseOperator(binaryList)) {
+    while (next = parseOperator(binaryList)) {
 
       // 处理左边
-      if (stack.length > 3 && binaryMap[op] < stack[stack.length - 2]) {
-        push$1(stack, new Binary(stack.pop(), (stack.pop(), stack.pop()), stack.pop()));
+      if (stack.length > 3 && binaryMap[next] < stack[stack.length - 2]) {
+        right = stack.pop();
+        stack.pop();
+        action = stack.pop();
+        left = stack.pop();
+        push$1(stack, new Binary(left, action, right));
       }
 
-      right = parseToken();
-      if (right) {
-        push$1(stack, op, binaryMap[op], right);
-      } else {
-        throwError();
-      }
+      push$1(stack, next, binaryMap[next], parseToken());
     }
 
     // 处理右边
@@ -1958,45 +2046,51 @@ function compile$1(content) {
 
     right = stack.pop();
     while (stack.length > 1) {
-      right = new Binary(right, (stack.pop(), stack.pop()), stack.pop());
+      stack.pop();
+      action = stack.pop();
+      left = stack.pop();
+      right = new Binary(left, action, right);
     }
 
     return right;
   };
 
-  // (xx) 和 [xx] 都可能是子表达式，因此
-  var parseSubexpression = function parseSubexpression(delimiter) {
-    value = parseExpression();
-    if (getCharCode() === delimiter) {
-      index++;
-      return value;
-    }
-    throwError();
-  };
-
-  var parseExpression = function parseExpression() {
+  var parseExpression = function parseExpression(delimiter) {
 
     // 主要是区分三元和二元表达式
     // 三元表达式可以认为是 3 个二元表达式组成的
     // test ? consequent : alternate
 
-    var test = parseBinary();
+    // 跳过开始字符
+    if (delimiter) {
+      index++;
+    }
 
+    // 保证调用 parseExpression() 之后无需再次调用 skipWhitespace()
+    var test = parseBinary();
     skipWhitespace();
-    if (getCharCode() === QUMARK) {
+
+    if (getCharCode() === CODE_QUMARK) {
       index++;
 
       var consequent = parseBinary();
-
       skipWhitespace();
-      if (getCharCode() === COLON) {
+
+      if (getCharCode() === CODE_COLON) {
         index++;
 
         var alternate = parseBinary();
-
-        // 保证调用 parseExpression() 之后无需再次调用 skipWhitespace()
         skipWhitespace();
+
         return new Conditional(test, consequent, alternate);
+      } else {
+        throwError();
+      }
+    }
+
+    if (delimiter) {
+      if (getCharCode() === delimiter) {
+        index++;
       } else {
         throwError();
       }
@@ -2005,7 +2099,7 @@ function compile$1(content) {
     return test;
   };
 
-  return cache$1[content] = parseExpression();
+  return compileCache$1[content] = parseExpression();
 }
 
 var IF = '#if';
@@ -2148,7 +2242,7 @@ var Context = function () {
     key: 'format',
     value: function format(keypath) {
       var instance = this,
-          keys$$1 = parse(keypath);
+          keys$$1 = parse$1(keypath);
       if (keys$$1[0] === 'this') {
         keys$$1.shift();
         return {
@@ -2301,7 +2395,7 @@ var Scanner = function () {
 
       var matches = tail.match(pattern);
       if (!matches || matches.index) {
-        return EMPTY;
+        return CHAR_BLANK;
       }
       var result = matches[0];
       this.forward(result.length);
@@ -2329,7 +2423,7 @@ var Scanner = function () {
         var index = matches.index;
 
         if (!index) {
-          return EMPTY;
+          return CHAR_BLANK;
         }
         var result = tail.substr(0, index);
         this.forward(index);
@@ -2403,7 +2497,7 @@ var Attribute = function (_Node) {
 /**
  * 指令节点
  *
- * on-click="submit"  name 是 event, subName 是 click，value 是 submit
+ * on-click="submit"  name 是 event, subName 是 click
  *
  * @param {string} name 指令名
  * @param {?string} subName 指令子名
@@ -2647,10 +2741,6 @@ var Text = function (_Node) {
   return Text;
 }(Node$2);
 
-var EQUAL = 61; // =
-var SLASH = 47; // /
-var ARROW_LEFT = 60; // <
-var ARROW_RIGHT = 62; // >
 var openingDelimiterPattern = new RegExp(DELIMITER_OPENING);
 var closingDelimiterPattern = new RegExp(DELIMITER_CLOSING);
 
@@ -2712,7 +2802,7 @@ function mergeNodes(nodes) {
     // name=""
 
     if (length === 0) {
-      return EMPTY;
+      return CHAR_BLANK;
     }
     // name="{{value}}"
     else if (length === 1) {
@@ -2720,7 +2810,7 @@ function mergeNodes(nodes) {
       }
       // name="{{value1}}{{value2}}"
       else if (length > 1) {
-          return nodes.join(EMPTY);
+          return nodes.join(CHAR_BLANK);
         }
   }
 }
@@ -2816,7 +2906,7 @@ function render(ast, createText, createElement, importTemplate, data) {
   var context = void 0,
       keys$$1 = void 0;
   var getKeypath = function getKeypath() {
-    return EMPTY;
+    return CHAR_BLANK;
   };
 
   if (data) {
@@ -3023,7 +3113,7 @@ function render(ast, createText, createElement, importTemplate, data) {
             if (attrs) {
               each(attrs, function (node) {
                 if (has$2(node, 'subName')) {
-                  if (node.name && node.subName !== EMPTY) {
+                  if (node.name && node.subName !== CHAR_BLANK) {
                     push$1(directives, node);
                   }
                 } else {
@@ -3056,14 +3146,14 @@ function render(ast, createText, createElement, importTemplate, data) {
 }
 
 // 缓存编译结果
-var cache = {};
+var compileCache = {};
 
 var parsers = [{
   test: function test(source) {
     return startsWith(source, EACH);
   },
   create: function create(source) {
-    var terms = trim(source.slice(EACH.length)).split(':');
+    var terms = trim(source.slice(EACH.length)).split(CHAR_COLON);
     var expr = trim(terms[0]);
     if (expr) {
       return new Each(compile$1(expr), trim(terms[1]));
@@ -3146,7 +3236,7 @@ function getLocationByPos(str, pos) {
       col = 0,
       index = 0;
 
-  each(str.split(BREAKLINE), function (lineStr) {
+  each(str.split(CHAR_BREAKLINE), function (lineStr) {
     line++;
     col = 0;
 
@@ -3170,7 +3260,7 @@ function getLocationByPos(str, pos) {
  * @return {boolean}
  */
 function isBreakline(content) {
-  return content.indexOf(BREAKLINE) >= 0 && trim(content) === EMPTY;
+  return content.indexOf(CHAR_BREAKLINE) >= 0 && trim(content) === CHAR_BLANK;
 }
 
 /**
@@ -3180,7 +3270,7 @@ function isBreakline(content) {
  * @return {boolean}
  */
 function trimBreakline(content) {
-  return content.replace(breaklinePrefixPattern, EMPTY).replace(breaklineSuffixPattern, EMPTY);
+  return content.replace(breaklinePrefixPattern, CHAR_BLANK).replace(breaklineSuffixPattern, CHAR_BLANK);
 }
 
 /**
@@ -3196,7 +3286,7 @@ function parseAttributeValue(content, quote) {
     content: content
   };
 
-  var match = content.match(quote === '"' ? nonDoubleQuotePattern : nonSingleQuotePattern);
+  var match = content.match(quote === CHAR_DQUOTE ? nonDoubleQuotePattern : nonSingleQuotePattern);
 
   if (match) {
     result.value = match[0];
@@ -3224,7 +3314,7 @@ function parseAttributeValue(content, quote) {
  */
 function compile$$1(template, loose) {
 
-  var result = cache[template];
+  var result = compileCache[template];
   if (result) {
     return loose ? result : result[0];
   }
@@ -3254,7 +3344,7 @@ function compile$$1(template, loose) {
 
   var throwError = function throwError(msg, pos) {
     if (pos == NULL) {
-      msg += '.';
+      msg += CHAR_DOT;
     } else {
       var _getLocationByPos = getLocationByPos(template, pos),
           line = _getLocationByPos.line,
@@ -3262,7 +3352,7 @@ function compile$$1(template, loose) {
 
       msg += ', at line ' + line + ', col ' + col + '.';
     }
-    error$1('' + msg + BREAKLINE + template);
+    error$1('' + msg + CHAR_BREAKLINE + template);
   };
 
   var pushStack = function pushStack(node) {
@@ -3318,7 +3408,7 @@ function compile$$1(template, loose) {
   var parseAttribute = function parseAttribute(content) {
 
     if (falsy(levelNode.children)) {
-      if (content && charCodeAt$1(content, 0) === EQUAL) {
+      if (content && charCodeAt$1(content) === CODE_EQUAL) {
         quote = charAt$1(content, 1);
         content = content.slice(2);
       } else {
@@ -3388,7 +3478,7 @@ function compile$$1(template, loose) {
       delimiter = helperScanner.nextAfter(closingDelimiterPattern);
 
       if (content) {
-        if (charCodeAt$1(content, 0) === SLASH) {
+        if (charCodeAt$1(content) === CODE_SLASH) {
           popStack();
         } else {
           each(parsers, function (parser, index) {
@@ -3418,18 +3508,18 @@ function compile$$1(template, loose) {
 
     // 接下来必须是 < 开头（标签）
     // 如果不是标签，那就该结束了
-    if (mainScanner.charCodeAt(0) !== ARROW_LEFT) {
+    if (mainScanner.charCodeAt(0) !== CODE_LEFT) {
       break;
     }
 
     // 结束标签
-    if (mainScanner.charCodeAt(1) === SLASH) {
+    if (mainScanner.charCodeAt(1) === CODE_SLASH) {
       // 取出 </tagName
       content = mainScanner.nextAfter(elementPattern);
       name = content.slice(2);
 
       // 没有匹配到 >
-      if (mainScanner.charCodeAt(0) !== ARROW_RIGHT) {
+      if (mainScanner.charCodeAt(0) !== CODE_RIGHT) {
         return throwError('Illegal tag name', mainScanner.pos);
       } else if (currentNode.type === ELEMENT && name !== currentNode.name) {
         return throwError('Unexpected closing tag', mainScanner.pos);
@@ -3483,7 +3573,7 @@ function compile$$1(template, loose) {
 
   var children = rootNode.children;
 
-  cache[template] = children;
+  compileCache[template] = children;
 
   if (loose) {
     return children;
@@ -4099,7 +4189,7 @@ function updateAttrs(oldVnode, vnode) {
 var attributes = { create: updateAttrs, update: updateAttrs };
 
 var toString$2 = function (str) {
-  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : EMPTY;
+  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : CHAR_BLANK;
 
   try {
     return str.toString();
@@ -4153,7 +4243,7 @@ function create$1(ast, context, instance) {
       if (node.subName) {
         key.push(node.subName);
       }
-      key = key.join(':');
+      key = key.join(CHAR_COLON);
 
       if (!directiveMap[key]) {
         directives[name] = node;
@@ -4183,7 +4273,7 @@ function create$1(ast, context, instance) {
             value = node.value;
 
         if (name === 'style') {
-          var list = parse$1(value, ';', ':');
+          var list = parse(value, CHAR_SEMCOL, CHAR_COLON);
           if (list.length) {
             styles = {};
             each(list, function (item) {
@@ -4290,7 +4380,6 @@ function create$1(ast, context, instance) {
      * 指令的生命周期
      *
      * attach: 新增指令 或 元素被插入
-     * detach: 删除指令 或 元素被移除
      * update: 指令变化
      */
 
@@ -4561,14 +4650,14 @@ var debounce = function (fn, delay, lazy) {
   function createTimer(args) {
     timer = setTimeout(function () {
       timer = NULL;
-      prevTime = Date.now();
+      prevTime = +new Date();
       fn.apply(NULL, toArray(args));
     }, delay);
   }
 
   return function () {
 
-    if (lazy && prevTime > 0 && Date.now() - prevTime < delay) {
+    if (lazy && prevTime > 0 && +new Date() - prevTime < delay) {
       clearTimeout(timer);
       timer = NULL;
     }
@@ -5106,7 +5195,7 @@ var Yox = function () {
       keypath = normalize(keypath);
 
       if (string(context)) {
-        var keys$$1 = parse(context);
+        var keys$$1 = parse$1(context);
         while (TRUE) {
           push$1(keys$$1, keypath);
           context = stringify(keys$$1);
@@ -5417,35 +5506,42 @@ var Yox = function () {
     key: 'compileValue',
     value: function compileValue(keypath, value) {
 
-      if (!value || !string(value)) {
+      if (falsy$1(value)) {
         return;
       }
 
       var instance = this;
-      if (value.indexOf('(') > 0) {
+      if (value.indexOf(CHAR_OPAREN) > 0) {
         var _ret2 = function () {
           var ast = compile$1(value);
           if (ast.type === CALL) {
             return {
-              v: function v(e) {
-                var isEvent = e instanceof Event;
+              v: function v(event$$1) {
+                var isEvent = event$$1 instanceof Event;
                 var args = copy(ast.args);
                 if (!args.length) {
                   if (isEvent) {
-                    push$1(args, e);
+                    push$1(args, event$$1);
                   }
                 } else {
                   args = args.map(function (node) {
                     var name = node.name,
-                        type = node.type;
+                        type = node.type,
+                        value = node.value;
 
                     if (type === LITERAL) {
-                      return node.value;
+                      if (!falsy$1(value)) {
+                        var firstChar = charAt$1(value);
+                        if (firstChar === CHAR_SQUOTE || firstChar === CHAR_DQUOTE) {
+                          value = value.slice(1, -1);
+                        }
+                      }
+                      return value;
                     }
                     if (type === IDENTIFIER) {
                       if (name === SPECIAL_EVENT) {
                         if (isEvent) {
-                          return e;
+                          return event$$1;
                         }
                       } else if (name === SPECIAL_KEYPATH) {
                         return keypath;
@@ -5514,7 +5610,7 @@ var Yox = function () {
 
       if ($currentNode) {
         if (arguments[0] !== TRUE) {
-          patch($currentNode, { text: EMPTY });
+          patch($currentNode, { text: CHAR_BLANK });
         }
       }
 
@@ -5654,7 +5750,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.22.5';
+Yox.version = '0.22.6';
 
 /**
  * 工具，便于扩展、插件使用
