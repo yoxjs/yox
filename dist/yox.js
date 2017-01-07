@@ -2310,7 +2310,7 @@ var Context = function () {
         }
       }
 
-      logger.warn('Failed to lookup "' + key + '" data.');
+      warn$1('Failed to lookup "' + key + '" data.');
 
       return {
         keypath: key
@@ -5614,7 +5614,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.22.9';
+Yox.version = '0.22.10';
 
 /**
  * 工具，便于扩展、插件使用
