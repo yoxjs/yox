@@ -99,17 +99,15 @@ export function create(ast, context, instance) {
     array.each(
       node.directives,
       function (node) {
-        let { name, subName } = node
+        let { name, modifier } = node
         if (name === viewSyntax.KEYWORD_UNIQUE) {
           data.key = node.value
         }
         else {
-          // 用于唯一标识一个指令
-          let key = [ name ]
-          if (subName) {
-            array.push(key, subName)
+          let key = name
+          if (modifier) {
+            key = `${name}${char.CHAR_DOT}${modifier}`
           }
-          key = key.join(char.CHAR_COLON)
           if (!directives[ key ]) {
             directives[ key ] = node
           }

@@ -351,6 +351,9 @@ var CHAR_BLANK = '';
 var CHAR_DOT = '.';
 var CODE_DOT = codeAt$1(CHAR_DOT);
 
+var CHAR_HASH = '#';
+var CODE_HASH = codeAt$1(CHAR_HASH);
+
 var CHAR_DASH = '-';
 var CODE_DASH = codeAt$1(CHAR_DASH);
 
@@ -387,17 +390,17 @@ var CODE_OBRACK = codeAt$1(CHAR_OBRACK);
 var CHAR_CBRACK = ']';
 var CODE_CBRACK = codeAt$1(CHAR_CBRACK);
 
-var CHAR_LEFT = '<';
-var CODE_LEFT = codeAt$1(CHAR_LEFT);
-
-var CHAR_RIGHT = '>';
-var CODE_RIGHT = codeAt$1(CHAR_RIGHT);
-
 var CHAR_OBRACE = '{';
 var CODE_OBRACE = codeAt$1(CHAR_OBRACE);
 
 var CHAR_CBRACE = '}';
 var CODE_CBRACE = codeAt$1(CHAR_CBRACE);
+
+var CHAR_LEFT = '<';
+var CODE_LEFT = codeAt$1(CHAR_LEFT);
+
+var CHAR_RIGHT = '>';
+var CODE_RIGHT = codeAt$1(CHAR_RIGHT);
 
 var CHAR_QUMARK = '?';
 var CODE_QUMARK = codeAt$1(CHAR_QUMARK);
@@ -436,7 +439,7 @@ function camelCase(str) {
  * @return {string}
  */
 function capitalize(str) {
-  return charAt(str, 0).toUpperCase() + str.slice(1);
+  return charAt$1(str, 0).toUpperCase() + str.slice(1);
 }
 
 /**
@@ -2216,8 +2219,8 @@ var Context = function () {
           var lookup = TRUE,
               index = 0;
           var levelMap = {};
-          levelMap[LEVEL_CURRENT] = 0;
-          levelMap[LEVEL_PARENT] = 1;
+          levelMap[LEVEL_CURRENT] = FALSE;
+          levelMap[LEVEL_PARENT] = TRUE;
 
           each(keys$$1, function (key, i) {
             if (has$2(levelMap, key)) {
@@ -2299,12 +2302,15 @@ var Context = function () {
             cache[keypath] = data;
           }
         }
-
-        return {
-          keypath: keypath,
-          value: cache[keypath]
-        };
+        if (has$2(cache, keypath)) {
+          return {
+            keypath: keypath,
+            value: cache[keypath]
+          };
+        }
       }
+
+      logger.warn('Failed to lookup "' + key + '" data.');
 
       return {
         keypath: key
@@ -2459,23 +2465,23 @@ var Attribute = function (_Node) {
 /**
  * 指令节点
  *
- * on-click="submit"  name 是 event, subName 是 click
+ * on-click="submit"  name 是 event, modifier 是 click
  *
  * @param {string} name 指令名
- * @param {?string} subName 指令子名
+ * @param {?string} modifier 指令修饰符
  */
 
 var Directive = function (_Node) {
   inherits(Directive, _Node);
 
-  function Directive(name, subName) {
+  function Directive(name, modifier) {
     classCallCheck(this, Directive);
 
     var _this = possibleConstructorReturn(this, (Directive.__proto__ || Object.getPrototypeOf(Directive)).call(this, DIRECTIVE));
 
     _this.name = camelCase(name);
-    if (subName) {
-      _this.subName = camelCase(subName);
+    if (modifier) {
+      _this.modifier = camelCase(modifier);
     }
     return _this;
   }
@@ -2751,6 +2757,10 @@ function markNodes(nodes) {
   return nodes;
 }
 
+function isNodes(nodes) {
+  return nodes[NODES_FLAG] === TRUE;
+}
+
 /**
  * 合并多个节点
  *
@@ -2823,7 +2833,7 @@ function traverseList(nodes, recursion) {
   while (node = nodes[i]) {
     item = recursion(node);
     if (item !== UNDEFINED) {
-      if (array(item) && !item[NODES_FLAG]) {
+      if (array(item) && !isNodes(item)) {
         list.push(item);
       } else {
         push$1(list, item);
@@ -2985,7 +2995,7 @@ function render(ast, createText, createElement, importTemplate, data) {
     }, function (node, children, attrs) {
       var type = node.type,
           name = node.name,
-          subName = node.subName,
+          modifier = node.modifier,
           component = node.component,
           content = node.content;
 
@@ -3034,7 +3044,7 @@ function render(ast, createText, createElement, importTemplate, data) {
             return {
               v: {
                 name: name,
-                subName: subName,
+                modifier: modifier,
                 keypath: keypath,
                 value: mergeNodes(children)
               }
@@ -3075,8 +3085,8 @@ function render(ast, createText, createElement, importTemplate, data) {
                 directives = [];
             if (attrs) {
               each(attrs, function (node) {
-                if (has$2(node, 'subName')) {
-                  if (node.name && node.subName !== CHAR_BLANK) {
+                if (has$2(node, 'modifier')) {
+                  if (node.name && node.modifier !== CHAR_BLANK) {
                     push$1(directives, node);
                   }
                 } else {
@@ -3157,10 +3167,10 @@ var parsers = [{
     return startsWith(source, ELSE_IF);
   },
   create: function create(source, delimiter, popStack) {
-    var expr = source.slice(ELSE_IF.length);
-    if (expr) {
+    source = trim(source.slice(ELSE_IF.length));
+    if (source) {
       popStack();
-      return new ElseIf(compile$1(expr));
+      return new ElseIf(compile$1(source));
     }
   }
 }, {
@@ -3176,9 +3186,9 @@ var parsers = [{
     return startsWith(source, SPREAD);
   },
   create: function create(source) {
-    var expr = source.slice(SPREAD.length);
-    if (expr) {
-      return new Spread(compile$1(expr));
+    source = trim(source.slice(SPREAD.length));
+    if (source) {
+      return new Spread(compile$1(source));
     }
   }
 }, {
@@ -3223,7 +3233,7 @@ function getLocationByPos(str, pos) {
  * @return {boolean}
  */
 function isBreakline(content) {
-  return content.indexOf(CHAR_BREAKLINE) >= 0 && trim(content) === CHAR_BLANK;
+  return content.indexOf(CHAR_BREAKLINE) >= 0 && !trim(content);
 }
 
 /**
@@ -4230,17 +4240,15 @@ function create$1(ast, context, instance) {
 
     each(node.directives, function (node) {
       var name = node.name,
-          subName = node.subName;
+          modifier = node.modifier;
 
       if (name === KEYWORD_UNIQUE) {
         data.key = node.value;
       } else {
-        // 用于唯一标识一个指令
-        var key = [name];
-        if (subName) {
-          push$1(key, subName);
+        var key = name;
+        if (modifier) {
+          key = '' + name + CHAR_DOT + modifier;
         }
-        key = key.join(CHAR_COLON);
         if (!directives[key]) {
           directives[key] = node;
         }
@@ -4642,7 +4650,7 @@ var event = {
 
 
     if (!type) {
-      type = node.subName;
+      type = node.modifier;
     }
     if (!listener) {
       listener = instance.compileValue(node.keypath, node.value);
@@ -5606,7 +5614,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.22.8';
+Yox.version = '0.22.9';
 
 /**
  * 工具，便于扩展、插件使用

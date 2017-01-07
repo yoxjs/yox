@@ -12,7 +12,7 @@ export default {
   attach({ el, node, instance, component, directives, type, listener }) {
 
     if (!type) {
-      type = node.subName
+      type = node.modifier
     }
     if (!listener) {
       listener = instance.compileValue(node.keypath, node.value)
