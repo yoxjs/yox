@@ -3,13 +3,13 @@ import magic from 'yox-common/function/magic'
 import execute from 'yox-common/function/execute'
 import toNumber from 'yox-common/function/toNumber'
 
-import char from 'yox-common/util/char'
 import Store from 'yox-common/util/Store'
 import Event from 'yox-common/util/Event'
 import Emitter from 'yox-common/util/Emitter'
 
 import * as is from 'yox-common/util/is'
 import * as env from 'yox-common/util/env'
+import * as char from 'yox-common/util/char'
 import * as array from 'yox-common/util/array'
 import * as object from 'yox-common/util/object'
 import * as string from 'yox-common/util/string'
@@ -838,7 +838,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.22.7'
+Yox.version = '0.22.8'
 
 /**
  * 工具，便于扩展、插件使用
@@ -1149,7 +1149,6 @@ function handleArray(instance, keypath, handler) {
 import ref from './directive/ref'
 import event from './directive/event'
 import model from './directive/model'
-import component from './directive/component'
 
 // 全局注册内置指令
-Yox.directive({ ref, event, model, component })
+Yox.directive({ ref, event, model })

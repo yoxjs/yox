@@ -10,7 +10,7 @@ import * as pattern from '../../config/pattern'
 import execute from 'yox-common/function/execute'
 import toString from 'yox-common/function/toString'
 
-import char from 'yox-common/util/char'
+import * as char from 'yox-common/util/char'
 
 import * as is from 'yox-common/util/is'
 import * as env from 'yox-common/util/env'
@@ -23,16 +23,24 @@ import * as viewSyntax from 'yox-template-compiler/src/syntax'
 
 export const patch = snabbdom.init([ attributes, style ])
 
+const HOOK_ATTACH = 'attach'
+
 function isVNode(node) {
   return node
     && object.has(node, 'sel')
     && object.has(node, 'elm')
 }
 
-const DIRECTIVE_COMPONENT = 'component'
-
-const HOOK_ATTACH = 'attach'
-const HOOK_UPDATE = 'update'
+function parseProps(node) {
+  let props = { }
+  array.each(
+    node.attributes,
+    function (node) {
+      props[string.camelCase(node.name)] = node.value
+    }
+  )
+  return props
+}
 
 export function create(ast, context, instance) {
 
@@ -51,48 +59,14 @@ export function create(ast, context, instance) {
 
   let createElement = function (node, isComponent) {
 
-    let hooks = { }, attributes = { }, directives = { }, styles
-    let directiveMap = { }, directiveKeys = [ ]
+    let hooks = { }, attributes = { }, directives = { }, styles, component
 
     let data = {
       hook: hooks,
     }
 
-    let addDirective = function (name, node) {
-
-      // 用于唯一标识一个指令
-      let key = [ name ]
-      if (node.subName) {
-        key.push(node.subName)
-      }
-      key = key.join(char.CHAR_COLON)
-
-      if (!directiveMap[ key ]) {
-        directives[ name ] = node
-        directiveMap[ key ] = {
-          name,
-          node,
-          options: instance.directive(name),
-        }
-        array.push(
-          directiveKeys,
-          key
-        )
-      }
-
-    }
-
-    // 指令的创建要确保顺序
-    // 组件必须第一个执行
-    // 因为如果在组件上写了 on-click="xx" 其实是监听从组件 fire 出的 click 事件
-    // 因此 component 必须在 event 指令之前执行
-
-    // 销毁时，
-    // 数组要逆序执行
-    // 否则先销毁组件指令，会导致后面依赖组件指令的指令全挂
-
     if (isComponent) {
-      addDirective(DIRECTIVE_COMPONENT, node)
+      component = [ ]
     }
     else {
       array.each(
@@ -130,7 +104,15 @@ export function create(ast, context, instance) {
           data.key = node.value
         }
         else {
-          addDirective(name, node)
+          // 用于唯一标识一个指令
+          let key = [ name ]
+          if (subName) {
+            array.push(key, subName)
+          }
+          key = key.join(char.CHAR_COLON)
+          if (!directives[ key ]) {
+            directives[ key ] = node
+          }
         }
       }
     )
@@ -139,82 +121,111 @@ export function create(ast, context, instance) {
       data.style = styles
     }
 
-    let upsert = function (vnode, newVnode) {
+    let upsert = function (oldVnode, vnode) {
 
-      // 如果只有 vnode，且 vnode 没有 directiveMap，表示插入
-      // 如果只有 vnode，且 vnode 有 directiveMap，表示销毁
-      // 如果有 vnode 和 newVnode，表示更新
+      // 如果只有 oldVnode，且 oldVnode 没有 directives，表示插入
+      // 如果只有 oldVnode，且 oldVnode 有 directives，表示销毁
+      // 如果有 oldVnode 和 vnode，表示更新
 
-      let callHook = function (key, type) {
-        let { options, node } = directiveMap[ key ]
-        if (options) {
-          let el = vnode.elm
-          return execute(
-            options[type],
-            env.NULL,
-            {
-              el,
-              node,
-              instance,
-              directives,
-              attributes,
-              component: isComponent && el.$component,
-            }
+      let nextVnode = vnode || oldVnode
+
+      // 数据要挂在元素上，vnode 非常不稳定，内部很可能新建了一个对象
+      let $data = oldVnode.elm.$data || (oldVnode.elm.$data = { })
+
+      let oldDestroies = $data.destroies || { }
+      let oldDirectives = $data.directives
+      let oldComponent = $data.component
+
+      if (oldComponent) {
+        component = oldComponent
+        if (is.object(component)) {
+          component.set(
+            parseProps(node),
+            env.TRUE
           )
         }
       }
-
-      // 销毁指令
-      let directiveDestroies = vnode.directiveDestroies || { }
-
-      array.each(
-        directiveKeys,
-        function (key, directive) {
-          // 更新
-          if (newVnode && vnode.directiveMap) {
-            // 更新时可能出现新指令
-            directive = vnode.directiveMap[key]
-            if (directive) {
-              if (directive.name === DIRECTIVE_COMPONENT) {
-                callHook(key, HOOK_UPDATE)
-              }
-              else if (directive.node.value !== directiveMap[key].node.value) {
-                if (directiveDestroies[key]) {
-                  directiveDestroies[key]()
+      else if (component) {
+        instance.component(
+          node.name,
+          function (options) {
+            if (is.array(component)) {
+              oldComponent = component
+              component = instance.create(
+                options,
+                {
+                  el: nextVnode.elm,
+                  props: parseProps(node),
+                  replace: env.TRUE,
                 }
-                directiveDestroies[key] = callHook(key, HOOK_ATTACH)
-              }
-            }
-            else {
-              directiveDestroies[key] = callHook(key, HOOK_ATTACH)
-            }
-          }
-          // 插入
-          else {
-            directiveDestroies[key] = callHook(key, HOOK_ATTACH)
-          }
-        }
-      )
-
-      // 1. 销毁
-      // 2. 更新时的删除
-      if (vnode.directiveKeys) {
-        array.each(
-          vnode.directiveKeys.reverse(),
-          function (key) {
-            if (directiveDestroies[key] && (!newVnode || !directiveMap[key])) {
-              directiveDestroies[key]()
-              delete directiveDestroies[key]
+              )
+              $data.component = component
+              array.each(
+                oldComponent,
+                function (callback) {
+                  callback(component)
+                }
+              )
             }
           }
         )
       }
 
-      let nextVnode = newVnode || vnode
-      nextVnode.attributes = attributes
-      nextVnode.directiveMap = directiveMap
-      nextVnode.directiveKeys = directiveKeys
-      nextVnode.directiveDestroies = directiveDestroies
+
+      let attach = function (key) {
+        let node = directives[ key ]
+        let directive = instance.directive(node.name)
+        if (directive && directive[HOOK_ATTACH]) {
+          return directive[HOOK_ATTACH]({
+            el: nextVnode.elm,
+            node,
+            instance,
+            directives,
+            attributes,
+            component,
+          })
+        }
+      }
+
+      object.each(
+        directives,
+        function (directive, key) {
+          if (vnode && oldDirectives) {
+            let oldDirective = oldDirectives[key]
+            if (oldDirective) {
+              if (oldDirective.value !== directive.value) {
+                if (oldDestroies[key]) {
+                  oldDestroies[key]()
+                }
+                oldDestroies[key] = attach(key)
+              }
+              return
+            }
+          }
+          oldDestroies[key] = attach(key)
+        }
+      )
+
+      if (oldDirectives) {
+        object.each(
+          oldDirectives,
+          function (oldDirective, key) {
+            if (oldDestroies[key] && (!vnode || !directives[key])) {
+              oldDestroies[key]()
+              delete oldDestroies[key]
+            }
+          }
+        )
+        // 元素被销毁
+        if (!vnode) {
+          oldVnode.elm.$data = env.NULL
+        }
+      }
+
+
+      $data.attributes = attributes
+      $data.directives = directives
+      $data.destroies = oldDestroies
 
       hooks.insert =
       hooks.postpatch =
@@ -226,7 +237,6 @@ export function create(ast, context, instance) {
      * 指令的生命周期
      *
      * attach: 新增指令 或 元素被插入
-     * update: 指令变化
      */
 
     hooks.insert =

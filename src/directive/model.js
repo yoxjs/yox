@@ -7,15 +7,6 @@ import * as logger from 'yox-common/util/logger'
 
 import event from './event'
 
-const componentControl = {
-  set({ keypath, component, instance }) {
-    component.set('value', instance.get(keypath))
-  },
-  update({ keypath, component, instance }) {
-    instance.set(keypath, component.get('value'))
-  }
-}
-
 const inputControl = {
   set({ el, keypath, instance }) {
     let value = instance.get(keypath)
@@ -71,7 +62,7 @@ const specialControls = {
 
 export default {
 
-  attach({ el, node, instance, directives, attributes, component }) {
+  attach({ el, node, instance, directives, attributes }) {
 
     let { value, keypath } = node
 
@@ -83,21 +74,13 @@ export default {
       return logger.error(`The ${keypath} being used for two-way binding is ambiguous.`)
     }
 
-    let type = 'change', control, needSet
+    let type = 'change', control
 
-    if (component) {
-      control = componentControl
-    }
-    else {
-      control = specialControls[el.type]
-      if (!control) {
-        control = inputControl
-        if ('oninput' in el) {
-          type = 'input'
-        }
-      }
-      if (!object.has(attributes, 'value')) {
-        needSet = env.TRUE
+    control = specialControls[el.type]
+    if (!control) {
+      control = inputControl
+      if ('oninput' in el) {
+        type = 'input'
       }
     }
 
@@ -105,14 +88,13 @@ export default {
       el,
       keypath,
       instance,
-      component,
     }
 
     let set = function () {
       control.set(data)
     }
 
-    if (needSet) {
+    if (!object.has(attributes, 'value')) {
       set()
     }
 
@@ -126,7 +108,6 @@ export default {
       node,
       instance,
       directives,
-      component,
       type,
       listener() {
         control.update(data)

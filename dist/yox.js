@@ -86,7 +86,7 @@ var is$1 = Object.freeze({
 	numeric: numeric
 });
 
-var execute = function (fn, context, args) {
+var executeFunction = function (fn, context, args) {
   if (func(fn)) {
     if (array(args)) {
       return fn.apply(context, args);
@@ -151,27 +151,38 @@ function merge() {
   var args = toArray(arguments);
   var result = [];
   args.unshift(result);
-  execute(push$1, NULL, args);
+  executeFunction(push$1, NULL, args);
   return result;
 }
 
+function add(action) {
+  return function (original) {
+    var args = arguments;
+    for (var i = 1, len = args.length; i < len; i++) {
+      if (array(args[i])) {
+        each(args[i], function (item) {
+          original[action](item);
+        });
+      } else {
+        original[action](args[i]);
+      }
+    }
+  };
+}
+
 /**
- * 压入数组
+ * push 数组
  *
  * @param {Array} original
  */
-function push$1(original) {
-  var args = arguments;
-  for (var i = 1, len = args.length; i < len; i++) {
-    if (array(args[i])) {
-      each(args[i], function (item) {
-        original.push(item);
-      });
-    } else {
-      original.push(args[i]);
-    }
-  }
-}
+var push$1 = add('push');
+
+/**
+ * unshift 数组
+ *
+ * @param {Array} original
+ */
+var unshift$1 = add('unshift');
 
 /**
  * 把类数组转成数组
@@ -272,6 +283,7 @@ var array$1 = Object.freeze({
 	diff: diff$1,
 	merge: merge,
 	push: push$1,
+	unshift: unshift$1,
 	toArray: toArray,
 	toObject: toObject,
 	indexOf: indexOf,
@@ -296,15 +308,15 @@ var magic = function (options) {
   var key = args[0],
       value = args[1];
   if (object(key)) {
-    execute(set, NULL, key);
+    executeFunction(set, NULL, key);
   } else if (string(key)) {
     var _args = args,
         length = _args.length;
 
     if (length === 2) {
-      execute(set, NULL, args);
+      executeFunction(set, NULL, args);
     } else if (length === 1) {
-      return execute(get, NULL, key);
+      return executeFunction(get, NULL, key);
     }
   }
 };
@@ -320,46 +332,87 @@ var toNumber = function (str) {
 
 /**
  * 为了压缩，定义的常用字符
- *
- * @type {string}
  */
 
-var source = {
-  DOT: '.',
-  DASH: '-',
-  EQUAL: '=',
-  SLASH: '/',
-  COMMA: ',',
-  COLON: ':',
-  SEMCOL: ';',
-  SQUOTE: "'",
-  DQUOTE: '"',
-  OPAREN: '(',
-  CPAREN: ')',
-  OBRACK: '[',
-  CBRACK: ']',
-  LEFT: '<',
-  RIGHT: '>',
-  OBRACE: '{',
-  CBRACE: '}',
-  QUMARK: '?',
-  BACKSLASH: '\\',
-  TAB: '\t',
-  BREAKLINE: '\n',
-  WHITESPACE: ' '
-};
+function charAt$1(str) {
+  var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
 
-var dist = {
-  CHAR_BLANK: ''
-};
-
-// 不能依赖外面的模块，否则会产生循环依赖
-for (var key in source) {
-  dist['CHAR_' + key] = source[key];
-  dist['CODE_' + key] = source[key].charCodeAt(0);
+  return str.charAt(index);
 }
 
-source = NULL;
+function codeAt$1(str) {
+  var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+
+  return str.charCodeAt(index);
+}
+
+var CHAR_BLANK = '';
+
+var CHAR_DOT = '.';
+var CODE_DOT = codeAt$1(CHAR_DOT);
+
+var CHAR_DASH = '-';
+var CODE_DASH = codeAt$1(CHAR_DASH);
+
+var CHAR_EQUAL = '=';
+var CODE_EQUAL = codeAt$1(CHAR_EQUAL);
+
+var CHAR_SLASH = '/';
+var CODE_SLASH = codeAt$1(CHAR_SLASH);
+
+var CHAR_COMMA = ',';
+var CODE_COMMA = codeAt$1(CHAR_COMMA);
+
+var CHAR_COLON = ':';
+var CODE_COLON = codeAt$1(CHAR_COLON);
+
+var CHAR_SEMCOL = ';';
+var CODE_SEMCOL = codeAt$1(CHAR_SEMCOL);
+
+var CHAR_SQUOTE = "'";
+var CODE_SQUOTE = codeAt$1(CHAR_SQUOTE);
+
+var CHAR_DQUOTE = '"';
+var CODE_DQUOTE = codeAt$1(CHAR_DQUOTE);
+
+var CHAR_OPAREN = '(';
+var CODE_OPAREN = codeAt$1(CHAR_OPAREN);
+
+var CHAR_CPAREN = ')';
+var CODE_CPAREN = codeAt$1(CHAR_CPAREN);
+
+var CHAR_OBRACK = '[';
+var CODE_OBRACK = codeAt$1(CHAR_OBRACK);
+
+var CHAR_CBRACK = ']';
+var CODE_CBRACK = codeAt$1(CHAR_CBRACK);
+
+var CHAR_LEFT = '<';
+var CODE_LEFT = codeAt$1(CHAR_LEFT);
+
+var CHAR_RIGHT = '>';
+var CODE_RIGHT = codeAt$1(CHAR_RIGHT);
+
+var CHAR_OBRACE = '{';
+var CODE_OBRACE = codeAt$1(CHAR_OBRACE);
+
+var CHAR_CBRACE = '}';
+var CODE_CBRACE = codeAt$1(CHAR_CBRACE);
+
+var CHAR_QUMARK = '?';
+var CODE_QUMARK = codeAt$1(CHAR_QUMARK);
+
+var CHAR_BACKSLASH = '\\';
+var CODE_BACKSLASH = codeAt$1(CHAR_BACKSLASH);
+
+var CHAR_TAB = '\t';
+var CODE_TAB = codeAt$1(CHAR_TAB);
+
+var CHAR_BREAKLINE = '\n';
+var CODE_BREAKLINE = codeAt$1(CHAR_BREAKLINE);
+
+var CHAR_WHITESPACE = ' ';
+var CODE_WHITESPACE = codeAt$1(CHAR_WHITESPACE);
 
 /**
  * 转成驼峰
@@ -368,7 +421,7 @@ source = NULL;
  * @return {string}
  */
 function camelCase(str) {
-  if (str.indexOf(dist.CHAR_DASH) >= 0) {
+  if (str.indexOf(CHAR_DASH) >= 0) {
     return str.replace(/-([a-z])/gi, function ($0, $1) {
       return $1.toUpperCase();
     });
@@ -383,7 +436,7 @@ function camelCase(str) {
  * @return {string}
  */
 function capitalize(str) {
-  return charAt$1(str, 0).toUpperCase() + str.slice(1);
+  return charAt(str, 0).toUpperCase() + str.slice(1);
 }
 
 /**
@@ -393,7 +446,7 @@ function capitalize(str) {
  * @return {boolean}
  */
 function falsy$1(str) {
-  return !string(str) || str === dist.CHAR_BLANK;
+  return !string(str) || str === CHAR_BLANK;
 }
 
 /**
@@ -437,17 +490,7 @@ function parse$1(str, separator, pair) {
  * 为了压缩而存在的几个方法
  */
 function trim(str) {
-  return falsy$1(str) ? dist.CHAR_BLANK : str.trim();
-}
-function charAt$1(str) {
-  var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-
-  return str.charAt(index);
-}
-function charCodeAt$1(str) {
-  var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-
-  return str.charCodeAt(index);
+  return falsy$1(str) ? CHAR_BLANK : str.trim();
 }
 function startsWith(str, part) {
   return str.indexOf(part) === 0;
@@ -471,24 +514,22 @@ var string$1 = Object.freeze({
 	falsy: falsy$1,
 	parse: parse$1,
 	trim: trim,
-	charAt: charAt$1,
-	charCodeAt: charCodeAt$1,
 	startsWith: startsWith,
 	endsWith: endsWith
 });
 
-var SEPARATOR_KEY = dist.CHAR_DOT;
-var SEPARATOR_PATH = dist.CHAR_SLASH;
-var LEVEL_CURRENT = dist.CHAR_DOT;
-var LEVEL_PARENT = '' + dist.CHAR_DOT + dist.CHAR_DOT;
+var SEPARATOR_KEY = CHAR_DOT;
+var SEPARATOR_PATH = CHAR_SLASH;
+var LEVEL_CURRENT = CHAR_DOT;
+var LEVEL_PARENT = '' + CHAR_DOT + CHAR_DOT;
 
 function normalize(str) {
-  if (!falsy$1(str) && str.indexOf(dist.CHAR_OBRACK) > 0 && str.indexOf(dist.CHAR_CBRACK) > 0) {
+  if (!falsy$1(str) && str.indexOf(CHAR_OBRACK) > 0 && str.indexOf(CHAR_CBRACK) > 0) {
     // array[0] => array.0
     // object['key'] => array.key
     return str.replace(/\[\s*?([\S]+)\s*?\]/g, function ($0, $1) {
       var firstChar = $1.charAt[0];
-      if (firstChar === dist.CHAR_DQUOTE || firstChar === dist.CHAR_SQUOTE) {
+      if (firstChar === CHAR_DQUOTE || firstChar === CHAR_SQUOTE) {
         $1 = $1.slice(1, -1);
       }
       return '' + SEPARATOR_KEY + $1;
@@ -503,7 +544,7 @@ function parse$$1(str) {
 
 function stringify(keypaths) {
   return keypaths.filter(function (term) {
-    return term !== dist.CHAR_BLANK && term !== LEVEL_CURRENT;
+    return term !== CHAR_BLANK && term !== LEVEL_CURRENT;
   }).join(SEPARATOR_KEY);
 }
 
@@ -613,7 +654,7 @@ function get$1(object$$1, keypath) {
     };
   }
   // 不能以 . 开头
-  if (string(keypath) && keypath.indexOf(dist.CHAR_DOT) > 0) {
+  if (string(keypath) && keypath.indexOf(CHAR_DOT) > 0) {
     var list = parse$$1(keypath);
     for (var i = 0, len = list.length; i < len && object$$1; i++) {
       if (i < len - 1) {
@@ -636,7 +677,7 @@ function get$1(object$$1, keypath) {
  * @param {?boolean} autofill 是否自动填充不存在的对象，默认自动填充
  */
 function set$1(object$$1, keypath, value, autofill) {
-  if (string(keypath) && keypath.indexOf(dist.CHAR_DOT) > 0) {
+  if (string(keypath) && keypath.indexOf(CHAR_DOT) > 0) {
     var originalObject = object$$1;
     var list = parse$$1(keypath);
     var prop = list.pop();
@@ -965,7 +1006,7 @@ var Emitter = function () {
       var handle = function handle(list, data) {
         if (array(list)) {
           each(list, function (listener) {
-            var result = execute(listener, context, data);
+            var result = executeFunction(listener, context, data);
 
             var $once = listener.$once;
 
@@ -1002,8 +1043,8 @@ var Emitter = function () {
       if (done) {
         each$1(listeners, function (list, key) {
           if (key !== type || key.indexOf('*') >= 0) {
-            key = ['^', key.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)'), endsWith(key, '**') ? dist.CHAR_BLANK : '$'];
-            var match = type.match(new RegExp(key.join(dist.CHAR_BLANK)));
+            key = ['^', key.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)'), endsWith(key, '**') ? CHAR_BLANK : '$'];
+            var match = type.match(new RegExp(key.join(CHAR_BLANK)));
             if (match) {
               handle(list, merge(data, toArray(match).slice(1)));
             }
@@ -1089,7 +1130,7 @@ var nextTick$1 = void 0;
 if (typeof MutationObserver === 'function') {
   nextTick$1 = function nextTick$1(fn) {
     var observer = new MutationObserver(fn);
-    var textNode = doc.createTextNode(dist.CHAR_BLANK);
+    var textNode = doc.createTextNode(CHAR_BLANK);
     observer.observe(textNode, {
       characterData: TRUE
     });
@@ -1114,7 +1155,7 @@ var nextTasks = [];
  *
  * @param {Function} task
  */
-function add(task) {
+function add$1(task) {
   if (!nextTasks.length) {
     nextTick$2(run);
   }
@@ -1425,14 +1466,15 @@ var Identifier = function (_Node) {
 var Literal = function (_Node) {
   inherits(Literal, _Node);
 
-  function Literal(raw) {
-    var value = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : raw;
+  function Literal(value, raw) {
     classCallCheck(this, Literal);
 
     var _this = possibleConstructorReturn(this, (Literal.__proto__ || Object.getPrototypeOf(Literal)).call(this, LITERAL));
 
-    _this.raw = raw;
     _this.value = value;
+    if (raw) {
+      _this.raw = raw;
+    }
     return _this;
   }
 
@@ -1515,9 +1557,9 @@ function flattenMember(node) {
   do {
     next = node.object;
     if (node.type === MEMBER) {
-      result.unshift(node.prop);
+      unshift$1(result, node.prop);
     } else {
-      result.unshift(node);
+      unshift$1(result, node);
     }
   } while (node = next);
 
@@ -1538,13 +1580,13 @@ function stringify$1(node) {
 
   switch (node.type) {
     case ARRAY:
-      return '[' + node.elements.map(recursion).join(dist.CHAR_COMMA) + ']';
+      return '[' + node.elements.map(recursion).join(CHAR_COMMA) + ']';
 
     case BINARY:
       return stringify$1(node.left) + ' ' + node.operator + ' ' + stringify$1(node.right);
 
     case CALL:
-      return stringify$1(node.callee) + '(' + node.args.map(recursion).join(dist.CHAR_COMMA) + ')';
+      return stringify$1(node.callee) + '(' + node.args.map(recursion).join(CHAR_COMMA) + ')';
 
     case CONDITIONAL:
       return stringify$1(node.test) + ' ? ' + stringify$1(node.consequent) + ' : ' + stringify$1(node.alternate);
@@ -1553,7 +1595,7 @@ function stringify$1(node) {
       return node.name;
 
     case LITERAL:
-      return node.raw;
+      return has$2(node, 'raw') ? node.raw : node.value;
 
     case MEMBER:
       return flattenMember(node).map(function (node, index) {
@@ -1561,18 +1603,18 @@ function stringify$1(node) {
           var _node = node,
               value = _node.value;
 
-          return numeric(value) ? '' + dist.CHAR_OBRACK + value + dist.CHAR_CBRACK : '' + dist.CHAR_DOT + value;
+          return numeric(value) ? '' + CHAR_OBRACK + value + CHAR_CBRACK : '' + CHAR_DOT + value;
         } else {
           node = stringify$1(node);
-          return index > 0 ? '' + dist.CHAR_OBRACK + node + dist.CHAR_CBRACK : node;
+          return index > 0 ? '' + CHAR_OBRACK + node + CHAR_CBRACK : node;
         }
-      }).join(dist.CHAR_BLANK);
+      }).join(CHAR_BLANK);
 
     case UNARY:
       return '' + node.operator + stringify$1(node.arg);
 
     default:
-      return dist.CHAR_BLANK;
+      return CHAR_BLANK;
   }
 }
 
@@ -1583,7 +1625,7 @@ function stringify$1(node) {
  * @param {Context} context
  * @return {*}
  */
-function execute$1(node, context) {
+function execute(node, context) {
 
   var deps = {},
       value = void 0,
@@ -1594,7 +1636,7 @@ function execute$1(node, context) {
       case ARRAY:
         value = [];
         each(node.elements, function (node) {
-          result = execute$1(node, context);
+          result = execute(node, context);
           push$1(value, result.value);
           extend(deps, result.deps);
         });
@@ -1604,17 +1646,17 @@ function execute$1(node, context) {
         var left = node.left,
             right = node.right;
 
-        left = execute$1(left, context);
-        right = execute$1(right, context);
+        left = execute(left, context);
+        right = execute(right, context);
         value = Binary[node.operator](left.value, right.value);
         extend(deps, left.deps, right.deps);
         break;
 
       case CALL:
-        result = execute$1(node.callee, context);
+        result = execute(node.callee, context);
         deps = result.deps;
-        value = execute(result.value, NULL, node.args.map(function (node) {
-          var result = execute$1(node, context);
+        value = executeFunction(result.value, NULL, node.args.map(function (node) {
+          var result = execute(node, context);
           extend(deps, result.deps);
           return result.value;
         }));
@@ -1625,13 +1667,13 @@ function execute$1(node, context) {
             consequent = node.consequent,
             alternate = node.alternate;
 
-        test = execute$1(test, context);
+        test = execute(test, context);
         if (test.value) {
-          consequent = execute$1(consequent, context);
+          consequent = execute(consequent, context);
           value = consequent.value;
           extend(deps, test.deps, consequent.deps);
         } else {
-          alternate = execute$1(alternate, context);
+          alternate = execute(alternate, context);
           value = alternate.value;
           extend(deps, test.deps, alternate.deps);
         }
@@ -1654,7 +1696,7 @@ function execute$1(node, context) {
 
           if (type !== LITERAL) {
             if (index > 0) {
-              var _result = execute$1(node, context);
+              var _result = execute(node, context);
               push$1(keys$$1, _result.value);
               extend(deps, _result.deps);
             } else if (type === IDENTIFIER) {
@@ -1670,7 +1712,7 @@ function execute$1(node, context) {
         break;
 
       case UNARY:
-        result = execute$1(node.arg, context);
+        result = execute(node.arg, context);
         value = Unary[node.operator](result.value);
         deps = result.deps;
         break;
@@ -1762,24 +1804,24 @@ function compile$1(content) {
       charCode = void 0;
 
   var getCharCode = function getCharCode() {
-    return charCodeAt$1(content, index);
+    return codeAt$1(content, index);
   };
   var throwError = function throwError() {
-    error$1('Failed to compile expression: ' + dist.CHAR_BREAKLINE + content);
+    error$1('Failed to compile expression: ' + CHAR_BREAKLINE + content);
   };
 
   var skipWhitespace = function skipWhitespace() {
-    while ((charCode = getCharCode()) && (charCode === dist.CODE_WHITESPACE || charCode === dist.CODE_TAB)) {
+    while ((charCode = getCharCode()) && (charCode === CODE_WHITESPACE || charCode === CODE_TAB)) {
       index++;
     }
   };
 
   var skipNumber = function skipNumber() {
-    if (getCharCode() === dist.CODE_DOT) {
+    if (getCharCode() === CODE_DOT) {
       skipDecimal();
     } else {
       skipDigit();
-      if (getCharCode() === dist.CODE_DOT) {
+      if (getCharCode() === CODE_DOT) {
         skipDecimal();
       }
     }
@@ -1792,7 +1834,7 @@ function compile$1(content) {
   };
 
   var skipDecimal = function skipDecimal() {
-    // 跳过 PERIOD
+    // 跳过点号
     index++;
     // 后面必须紧跟数字
     if (isDigit(getCharCode())) {
@@ -1810,7 +1852,7 @@ function compile$1(content) {
     index++;
     while (index < length) {
       index++;
-      if (charCodeAt$1(content, index - 1) === quote) {
+      if (codeAt$1(content, index - 1) === quote) {
         return;
       }
     }
@@ -1840,8 +1882,7 @@ function compile$1(content) {
 
   var parseTuple = function parseTuple(delimiter) {
 
-    var list = [],
-        closed = void 0;
+    var list = [];
 
     // 跳过开始字符，如 [、(
     index++;
@@ -1850,16 +1891,15 @@ function compile$1(content) {
       charCode = getCharCode();
       if (charCode === delimiter) {
         index++;
-        closed = TRUE;
-        break;
-      } else if (charCode === dist.CODE_COMMA) {
+        return list;
+      } else if (charCode === CODE_COMMA) {
         index++;
       } else {
         push$1(list, parseExpression());
       }
     }
 
-    return closed ? list : throwError();
+    throwError();
   };
 
   var parseOperator = function parseOperator(sortedOperatorList) {
@@ -1878,17 +1918,17 @@ function compile$1(content) {
     while (index < length) {
       // a(x)
       charCode = getCharCode();
-      if (charCode === dist.CODE_OPAREN) {
-        return new Call(node, parseTuple(dist.CODE_CPAREN));
+      if (charCode === CODE_OPAREN) {
+        return new Call(node, parseTuple(CODE_CPAREN));
       } else {
         // a.x
-        if (charCode === dist.CODE_DOT) {
+        if (charCode === CODE_DOT) {
           index++;
           node = new Member(node, new Literal(parseIdentifier().name));
         }
         // a[x]
-        else if (charCode === dist.CODE_OBRACK) {
-            node = new Member(node, parseExpression(dist.CODE_CBRACK));
+        else if (charCode === CODE_OBRACK) {
+            node = new Member(node, parseExpression(CODE_CBRACK));
           } else {
             break;
           }
@@ -1904,24 +1944,24 @@ function compile$1(content) {
 
     charCode = getCharCode();
     // 'xx' 或 "xx"
-    if (charCode === dist.CODE_SQUOTE || charCode === dist.CODE_DQUOTE) {
+    if (charCode === CODE_SQUOTE || charCode === CODE_DQUOTE) {
       // 截出的字符串包含引号
       var value = content.substring(index, (skipString(), index));
-      return new Literal(value, value.slice(1, -1));
+      return new Literal(value.slice(1, -1), value);
     }
     // 1.1 或 .1
-    else if (isDigit(charCode) || charCode === dist.CODE_DOT) {
+    else if (isDigit(charCode) || charCode === CODE_DOT) {
         return new Literal(
         // 写的是什么进制就解析成什么进制
         parseFloat(content.substring(index, (skipNumber(), index))));
       }
       // [xx, xx]
-      else if (charCode === dist.CODE_OBRACK) {
-          return new Array$1(parseTuple(dist.CODE_CBRACK));
+      else if (charCode === CODE_OBRACK) {
+          return new Array$1(parseTuple(CODE_CBRACK));
         }
         // (xx)
-        else if (charCode === dist.CODE_OPAREN) {
-            return parseExpression(dist.CODE_CPAREN);
+        else if (charCode === CODE_OPAREN) {
+            return parseExpression(CODE_CPAREN);
           }
           // 变量
           else if (isIdentifierStart(charCode)) {
@@ -1992,13 +2032,13 @@ function compile$1(content) {
     var test = parseBinary();
     skipWhitespace();
 
-    if (getCharCode() === dist.CODE_QUMARK) {
+    if (getCharCode() === CODE_QUMARK) {
       index++;
 
       var consequent = parseBinary();
       skipWhitespace();
 
-      if (getCharCode() === dist.CODE_COLON) {
+      if (getCharCode() === CODE_COLON) {
         index++;
 
         var alternate = parseBinary();
@@ -2244,7 +2284,7 @@ var Context = function () {
                   break;
                 } else {
                   instance = instance.parent;
-                  keys$$1.unshift(LEVEL_PARENT);
+                  unshift$1(keys$$1, LEVEL_PARENT);
                 }
               }
               keypath = keys$$1.join(SEPARATOR_PATH);
@@ -2317,7 +2357,7 @@ var Scanner = function () {
 
       var matches = tail.match(pattern);
       if (!matches || matches.index) {
-        return dist.CHAR_BLANK;
+        return CHAR_BLANK;
       }
       var result = matches[0];
       this.forward(result.length);
@@ -2345,7 +2385,7 @@ var Scanner = function () {
         var index = matches.index;
 
         if (!index) {
-          return dist.CHAR_BLANK;
+          return CHAR_BLANK;
         }
         var result = tail.substr(0, index);
         this.forward(index);
@@ -2367,9 +2407,9 @@ var Scanner = function () {
       return charAt$1(this.tail, index);
     }
   }, {
-    key: 'charCodeAt',
-    value: function charCodeAt(index) {
-      return charCodeAt$1(this.tail, index);
+    key: 'codeAt',
+    value: function codeAt(index) {
+      return codeAt$1(this.tail, index);
     }
   }]);
   return Scanner;
@@ -2680,6 +2720,7 @@ var breaklineSuffixPattern = /\n[ \t]*$/;
 var componentNamePattern = /[-A-Z]/;
 var selfClosingTagNamePattern = /input|img|br/i;
 
+// 如果传入的函数改写了 toString，就调用 toString() 求值
 var toString$1 = Function.prototype.toString;
 
 // 2 种 level
@@ -2724,7 +2765,7 @@ function mergeNodes(nodes) {
     // name=""
 
     if (length === 0) {
-      return dist.CHAR_BLANK;
+      return CHAR_BLANK;
     }
     // name="{{value}}"
     else if (length === 1) {
@@ -2732,7 +2773,7 @@ function mergeNodes(nodes) {
       }
       // name="{{value1}}{{value2}}"
       else if (length > 1) {
-          return nodes.join(dist.CHAR_BLANK);
+          return nodes.join(CHAR_BLANK);
         }
   }
 }
@@ -2828,7 +2869,7 @@ function render(ast, createText, createElement, importTemplate, data) {
   var context = void 0,
       keys$$1 = void 0;
   var getKeypath = function getKeypath() {
-    return dist.CHAR_BLANK;
+    return CHAR_BLANK;
   };
 
   if (data) {
@@ -2845,7 +2886,7 @@ function render(ast, createText, createElement, importTemplate, data) {
 
   var deps = {};
   var executeExpr = function executeExpr(expr) {
-    var result = execute$1(expr, context);
+    var result = execute(expr, context);
     each$1(result.deps, function (value, key) {
       deps[resolve(getKeypath(), key)] = value;
     });
@@ -2966,7 +3007,7 @@ function render(ast, createText, createElement, importTemplate, data) {
 
             content = executeExpr(expr);
             if (func(content) && content.toString !== toString$1) {
-              content = content();
+              content = content.toString();
             }
             content = createText({
               safe: safe,
@@ -3035,7 +3076,7 @@ function render(ast, createText, createElement, importTemplate, data) {
             if (attrs) {
               each(attrs, function (node) {
                 if (has$2(node, 'subName')) {
-                  if (node.name && node.subName !== dist.CHAR_BLANK) {
+                  if (node.name && node.subName !== CHAR_BLANK) {
                     push$1(directives, node);
                   }
                 } else {
@@ -3075,7 +3116,7 @@ var parsers = [{
     return startsWith(source, EACH);
   },
   create: function create(source) {
-    var terms = trim(source.slice(EACH.length)).split(dist.CHAR_COLON);
+    var terms = trim(source.slice(EACH.length)).split(CHAR_COLON);
     var expr = trim(terms[0]);
     if (expr) {
       return new Each(compile$1(expr), trim(terms[1]));
@@ -3158,7 +3199,7 @@ function getLocationByPos(str, pos) {
       col = 0,
       index = 0;
 
-  each(str.split(dist.CHAR_BREAKLINE), function (lineStr) {
+  each(str.split(CHAR_BREAKLINE), function (lineStr) {
     line++;
     col = 0;
 
@@ -3182,7 +3223,7 @@ function getLocationByPos(str, pos) {
  * @return {boolean}
  */
 function isBreakline(content) {
-  return content.indexOf(dist.CHAR_BREAKLINE) >= 0 && trim(content) === dist.CHAR_BLANK;
+  return content.indexOf(CHAR_BREAKLINE) >= 0 && trim(content) === CHAR_BLANK;
 }
 
 /**
@@ -3192,7 +3233,7 @@ function isBreakline(content) {
  * @return {boolean}
  */
 function trimBreakline(content) {
-  return content.replace(breaklinePrefixPattern, dist.CHAR_BLANK).replace(breaklineSuffixPattern, dist.CHAR_BLANK);
+  return content.replace(breaklinePrefixPattern, CHAR_BLANK).replace(breaklineSuffixPattern, CHAR_BLANK);
 }
 
 /**
@@ -3208,7 +3249,7 @@ function parseAttributeValue(content, quote) {
     content: content
   };
 
-  var match = content.match(quote === dist.CHAR_DQUOTE ? nonDoubleQuotePattern : nonSingleQuotePattern);
+  var match = content.match(quote === CHAR_DQUOTE ? nonDoubleQuotePattern : nonSingleQuotePattern);
 
   if (match) {
     result.value = match[0];
@@ -3266,7 +3307,7 @@ function compile$$1(template, loose) {
 
   var throwError = function throwError(msg, pos) {
     if (pos == NULL) {
-      msg += dist.CHAR_DOT;
+      msg += CHAR_DOT;
     } else {
       var _getLocationByPos = getLocationByPos(template, pos),
           line = _getLocationByPos.line,
@@ -3274,7 +3315,7 @@ function compile$$1(template, loose) {
 
       msg += ', at line ' + line + ', col ' + col + '.';
     }
-    error$1('' + msg + dist.CHAR_BREAKLINE + template);
+    error$1('' + msg + CHAR_BREAKLINE + template);
   };
 
   var pushStack = function pushStack(node) {
@@ -3330,7 +3371,7 @@ function compile$$1(template, loose) {
   var parseAttribute = function parseAttribute(content) {
 
     if (falsy(levelNode.children)) {
-      if (content && charCodeAt$1(content) === dist.CODE_EQUAL) {
+      if (content && codeAt$1(content) === CODE_EQUAL) {
         quote = charAt$1(content, 1);
         content = content.slice(2);
       } else {
@@ -3400,7 +3441,7 @@ function compile$$1(template, loose) {
       delimiter = helperScanner.nextAfter(closingDelimiterPattern);
 
       if (content) {
-        if (charCodeAt$1(content) === dist.CODE_SLASH) {
+        if (codeAt$1(content) === CODE_SLASH) {
           popStack();
         } else {
           each(parsers, function (parser, index) {
@@ -3430,18 +3471,18 @@ function compile$$1(template, loose) {
 
     // 接下来必须是 < 开头（标签）
     // 如果不是标签，那就该结束了
-    if (mainScanner.charCodeAt(0) !== dist.CODE_LEFT) {
+    if (mainScanner.codeAt(0) !== CODE_LEFT) {
       break;
     }
 
     // 结束标签
-    if (mainScanner.charCodeAt(1) === dist.CODE_SLASH) {
+    if (mainScanner.codeAt(1) === CODE_SLASH) {
       // 取出 </tagName
       content = mainScanner.nextAfter(elementPattern);
       name = content.slice(2);
 
       // 没有匹配到 >
-      if (mainScanner.charCodeAt(0) !== dist.CODE_RIGHT) {
+      if (mainScanner.codeAt(0) !== CODE_RIGHT) {
         return throwError('Illegal tag name', mainScanner.pos);
       } else if (currentNode.type === ELEMENT && name !== currentNode.name) {
         return throwError('Unexpected closing tag', mainScanner.pos);
@@ -4111,7 +4152,7 @@ function updateAttrs(oldVnode, vnode) {
 var attributes = { create: updateAttrs, update: updateAttrs };
 
 var toString$2 = function (str) {
-  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : dist.CHAR_BLANK;
+  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : CHAR_BLANK;
 
   try {
     return str.toString();
@@ -4122,14 +4163,19 @@ var toString$2 = function (str) {
 
 var patch = snabbdom.init([attributes, style]);
 
+var HOOK_ATTACH = 'attach';
+
 function isVNode(node) {
   return node && has$2(node, 'sel') && has$2(node, 'elm');
 }
 
-var DIRECTIVE_COMPONENT = 'component';
-
-var HOOK_ATTACH = 'attach';
-var HOOK_UPDATE = 'update';
+function parseProps(node) {
+  var props = {};
+  each(node.attributes, function (node) {
+    props[camelCase(node.name)] = node.value;
+  });
+  return props;
+}
 
 function create$1(ast, context, instance) {
 
@@ -4150,52 +4196,22 @@ function create$1(ast, context, instance) {
     var hooks = {},
         attributes$$1 = {},
         directives = {},
-        styles = void 0;
-    var directiveMap = {},
-        directiveKeys = [];
+        styles = void 0,
+        component = void 0;
 
     var data = {
       hook: hooks
     };
 
-    var addDirective = function addDirective(name, node) {
-
-      // 用于唯一标识一个指令
-      var key = [name];
-      if (node.subName) {
-        key.push(node.subName);
-      }
-      key = key.join(dist.CHAR_COLON);
-
-      if (!directiveMap[key]) {
-        directives[name] = node;
-        directiveMap[key] = {
-          name: name,
-          node: node,
-          options: instance.directive(name)
-        };
-        push$1(directiveKeys, key);
-      }
-    };
-
-    // 指令的创建要确保顺序
-    // 组件必须第一个执行
-    // 因为如果在组件上写了 on-click="xx" 其实是监听从组件 fire 出的 click 事件
-    // 因此 component 必须在 event 指令之前执行
-
-    // 销毁时，
-    // 数组要逆序执行
-    // 否则先销毁组件指令，会导致后面依赖组件指令的指令全挂
-
     if (isComponent) {
-      addDirective(DIRECTIVE_COMPONENT, node);
+      component = [];
     } else {
       each(node.attributes, function (node) {
         var name = node.name,
             value = node.value;
 
         if (name === 'style') {
-          var list = parse$1(value, dist.CHAR_SEMCOL, dist.CHAR_COLON);
+          var list = parse$1(value, CHAR_SEMCOL, CHAR_COLON);
           if (list.length) {
             styles = {};
             each(list, function (item) {
@@ -4219,7 +4235,15 @@ function create$1(ast, context, instance) {
       if (name === KEYWORD_UNIQUE) {
         data.key = node.value;
       } else {
-        addDirective(name, node);
+        // 用于唯一标识一个指令
+        var key = [name];
+        if (subName) {
+          push$1(key, subName);
+        }
+        key = key.join(CHAR_COLON);
+        if (!directives[key]) {
+          directives[key] = node;
+        }
       }
     });
 
@@ -4227,73 +4251,90 @@ function create$1(ast, context, instance) {
       data.style = styles;
     }
 
-    var upsert = function upsert(vnode, newVnode) {
+    var upsert = function upsert(oldVnode, vnode) {
 
-      // 如果只有 vnode，且 vnode 没有 directiveMap，表示插入
-      // 如果只有 vnode，且 vnode 有 directiveMap，表示销毁
-      // 如果有 vnode 和 newVnode，表示更新
+      // 如果只有 oldVnode，且 oldVnode 没有 directives，表示插入
+      // 如果只有 oldVnode，且 oldVnode 有 directives，表示销毁
+      // 如果有 oldVnode 和 vnode，表示更新
 
-      var callHook = function callHook(key, type) {
-        var _directiveMap$key = directiveMap[key],
-            options = _directiveMap$key.options,
-            node = _directiveMap$key.node;
+      var nextVnode = vnode || oldVnode;
 
-        if (options) {
-          var el = vnode.elm;
-          return execute(options[type], NULL, {
-            el: el,
-            node: node,
-            instance: instance,
-            directives: directives,
-            attributes: attributes$$1,
-            component: isComponent && el.$component
-          });
+      // 数据要挂在元素上，vnode 非常不稳定，内部很可能新建了一个对象
+      var $data = oldVnode.elm.$data || (oldVnode.elm.$data = {});
+
+      var oldDestroies = $data.destroies || {};
+      var oldDirectives = $data.directives;
+      var oldComponent = $data.component;
+
+      if (oldComponent) {
+        component = oldComponent;
+        if (object(component)) {
+          component.set(parseProps(node), TRUE);
         }
-      };
-
-      // 销毁指令
-      var directiveDestroies = vnode.directiveDestroies || {};
-
-      each(directiveKeys, function (key, directive) {
-        // 更新
-        if (newVnode && vnode.directiveMap) {
-          // 更新时可能出现新指令
-          directive = vnode.directiveMap[key];
-          if (directive) {
-            if (directive.name === DIRECTIVE_COMPONENT) {
-              callHook(key, HOOK_UPDATE);
-            } else if (directive.node.value !== directiveMap[key].node.value) {
-              if (directiveDestroies[key]) {
-                directiveDestroies[key]();
-              }
-              directiveDestroies[key] = callHook(key, HOOK_ATTACH);
-            }
-          } else {
-            directiveDestroies[key] = callHook(key, HOOK_ATTACH);
-          }
-        }
-        // 插入
-        else {
-            directiveDestroies[key] = callHook(key, HOOK_ATTACH);
-          }
-      });
-
-      // 1. 销毁
-      // 2. 更新时的删除
-      if (vnode.directiveKeys) {
-        each(vnode.directiveKeys.reverse(), function (key) {
-          if (directiveDestroies[key] && (!newVnode || !directiveMap[key])) {
-            directiveDestroies[key]();
-            delete directiveDestroies[key];
+      } else if (component) {
+        instance.component(node.name, function (options) {
+          if (array(component)) {
+            oldComponent = component;
+            component = instance.create(options, {
+              el: nextVnode.elm,
+              props: parseProps(node),
+              replace: TRUE
+            });
+            $data.component = component;
+            each(oldComponent, function (callback) {
+              callback(component);
+            });
           }
         });
       }
 
-      var nextVnode = newVnode || vnode;
-      nextVnode.attributes = attributes$$1;
-      nextVnode.directiveMap = directiveMap;
-      nextVnode.directiveKeys = directiveKeys;
-      nextVnode.directiveDestroies = directiveDestroies;
+      var attach = function attach(key) {
+        var node = directives[key];
+        var directive = instance.directive(node.name);
+        if (directive && directive[HOOK_ATTACH]) {
+          return directive[HOOK_ATTACH]({
+            el: nextVnode.elm,
+            node: node,
+            instance: instance,
+            directives: directives,
+            attributes: attributes$$1,
+            component: component
+          });
+        }
+      };
+
+      each$1(directives, function (directive, key) {
+        if (vnode && oldDirectives) {
+          var oldDirective = oldDirectives[key];
+          if (oldDirective) {
+            if (oldDirective.value !== directive.value) {
+              if (oldDestroies[key]) {
+                oldDestroies[key]();
+              }
+              oldDestroies[key] = attach(key);
+            }
+            return;
+          }
+        }
+        oldDestroies[key] = attach(key);
+      });
+
+      if (oldDirectives) {
+        each$1(oldDirectives, function (oldDirective, key) {
+          if (oldDestroies[key] && (!vnode || !directives[key])) {
+            oldDestroies[key]();
+            delete oldDestroies[key];
+          }
+        });
+        // 元素被销毁
+        if (!vnode) {
+          oldVnode.elm.$data = NULL;
+        }
+      }
+
+      $data.attributes = attributes$$1;
+      $data.directives = directives;
+      $data.destroies = oldDestroies;
 
       hooks.insert = hooks.postpatch = hooks.destroy = noop;
     };
@@ -4302,7 +4343,6 @@ function create$1(ast, context, instance) {
      * 指令的生命周期
      *
      * attach: 新增指令 或 元素被插入
-     * update: 指令变化
      */
 
     hooks.insert = hooks.postpatch = hooks.destroy = upsert;
@@ -4650,28 +4690,11 @@ var event = {
   }
 };
 
-var componentControl = {
-  set: function set(_ref) {
-    var keypath = _ref.keypath,
-        component = _ref.component,
-        instance = _ref.instance;
-
-    component.set('value', instance.get(keypath));
-  },
-  update: function update(_ref2) {
-    var keypath = _ref2.keypath,
-        component = _ref2.component,
-        instance = _ref2.instance;
-
-    instance.set(keypath, component.get('value'));
-  }
-};
-
 var inputControl = {
-  set: function set(_ref3) {
-    var el = _ref3.el,
-        keypath = _ref3.keypath,
-        instance = _ref3.instance;
+  set: function set(_ref) {
+    var el = _ref.el,
+        keypath = _ref.keypath,
+        instance = _ref.instance;
 
     var value = instance.get(keypath);
     // 如果输入框的值相同，赋值会导致光标变化，不符合用户体验
@@ -4679,27 +4702,27 @@ var inputControl = {
       el.value = value;
     }
   },
-  update: function update(_ref4) {
-    var el = _ref4.el,
-        keypath = _ref4.keypath,
-        instance = _ref4.instance;
+  update: function update(_ref2) {
+    var el = _ref2.el,
+        keypath = _ref2.keypath,
+        instance = _ref2.instance;
 
     instance.set(keypath, el.value);
   }
 };
 
 var radioControl = {
-  set: function set(_ref5) {
-    var el = _ref5.el,
-        keypath = _ref5.keypath,
-        instance = _ref5.instance;
+  set: function set(_ref3) {
+    var el = _ref3.el,
+        keypath = _ref3.keypath,
+        instance = _ref3.instance;
 
     el.checked = el.value == instance.get(keypath);
   },
-  update: function update(_ref6) {
-    var el = _ref6.el,
-        keypath = _ref6.keypath,
-        instance = _ref6.instance;
+  update: function update(_ref4) {
+    var el = _ref4.el,
+        keypath = _ref4.keypath,
+        instance = _ref4.instance;
 
     if (el.checked) {
       instance.set(keypath, el.value);
@@ -4708,18 +4731,18 @@ var radioControl = {
 };
 
 var checkboxControl = {
-  set: function set(_ref7) {
-    var el = _ref7.el,
-        keypath = _ref7.keypath,
-        instance = _ref7.instance;
+  set: function set(_ref5) {
+    var el = _ref5.el,
+        keypath = _ref5.keypath,
+        instance = _ref5.instance;
 
     var value = instance.get(keypath);
     el.checked = array(value) ? has$1(value, el.value, FALSE) : !!value;
   },
-  update: function update(_ref8) {
-    var el = _ref8.el,
-        keypath = _ref8.keypath,
-        instance = _ref8.instance;
+  update: function update(_ref6) {
+    var el = _ref6.el,
+        keypath = _ref6.keypath,
+        instance = _ref6.instance;
 
     var value = instance.get(keypath);
     if (array(value)) {
@@ -4741,13 +4764,12 @@ var specialControls = {
 };
 
 var model = {
-  attach: function attach(_ref9) {
-    var el = _ref9.el,
-        node = _ref9.node,
-        instance = _ref9.instance,
-        directives = _ref9.directives,
-        attributes = _ref9.attributes,
-        component = _ref9.component;
+  attach: function attach(_ref7) {
+    var el = _ref7.el,
+        node = _ref7.node,
+        instance = _ref7.instance,
+        directives = _ref7.directives,
+        attributes = _ref7.attributes;
     var value = node.value,
         keypath = node.keypath;
 
@@ -4760,36 +4782,27 @@ var model = {
     }
 
     var type = 'change',
-        control = void 0,
-        needSet = void 0;
+        control = void 0;
 
-    if (component) {
-      control = componentControl;
-    } else {
-      control = specialControls[el.type];
-      if (!control) {
-        control = inputControl;
-        if ('oninput' in el) {
-          type = 'input';
-        }
-      }
-      if (!has$2(attributes, 'value')) {
-        needSet = TRUE;
+    control = specialControls[el.type];
+    if (!control) {
+      control = inputControl;
+      if ('oninput' in el) {
+        type = 'input';
       }
     }
 
     var data = {
       el: el,
       keypath: keypath,
-      instance: instance,
-      component: component
+      instance: instance
     };
 
     var set$$1 = function set$$1() {
       control.set(data);
     };
 
-    if (needSet) {
+    if (!has$2(attributes, 'value')) {
       set$$1();
     }
 
@@ -4800,83 +4813,11 @@ var model = {
       node: node,
       instance: instance,
       directives: directives,
-      component: component,
       type: type,
       listener: function listener() {
         control.update(data);
       }
     });
-  }
-};
-
-function getComponentInfo(node, instance, directives, callback) {
-  var name = node.name,
-      attributes = node.attributes;
-
-  instance.component(name, function (options) {
-    var props = {};
-    each(attributes, function (node) {
-      props[camelCase(node.name)] = node.value;
-    });
-    if (!has$2(props, 'value')) {
-      var model = directives.model;
-
-      if (model) {
-        var result = instance.get(model.value, model.keypath);
-        if (result) {
-          props.value = result.value;
-        }
-      }
-    }
-    callback(props, options);
-  });
-}
-
-var component = {
-  attach: function attach(_ref) {
-    var el = _ref.el,
-        node = _ref.node,
-        instance = _ref.instance,
-        directives = _ref.directives;
-
-    el.$component = [];
-    getComponentInfo(node, instance, directives, function (props, options) {
-      var $component = el.$component;
-
-      if (array($component)) {
-        el.$component = instance.create(options, {
-          el: el,
-          props: props,
-          replace: TRUE
-        });
-        each($component, function (callback) {
-          callback(el.$component);
-        });
-      }
-    });
-    return function () {
-      var $component = el.$component;
-
-      if ($component) {
-        if (object($component)) {
-          $component.destroy(TRUE);
-        }
-        el.$component = NULL;
-      }
-    };
-  },
-  update: function update(_ref2) {
-    var el = _ref2.el,
-        node = _ref2.node,
-        instance = _ref2.instance,
-        directives = _ref2.directives;
-    var $component = el.$component;
-
-    if (object($component)) {
-      getComponentInfo(node, instance, directives, function (props) {
-        $component.set(props, TRUE);
-      });
-    }
   }
 };
 
@@ -4887,7 +4828,7 @@ var Yox = function () {
 
     var instance = this;
 
-    execute(options[BEFORE_CREATE], instance, options);
+    executeFunction(options[BEFORE_CREATE], instance, options);
 
     var el = options.el,
         data = options.data,
@@ -4923,7 +4864,7 @@ var Yox = function () {
     instance.$data = props || {};
 
     // 后放 data
-    extend(instance.$data, func(data) ? execute(data, instance) : data);
+    extend(instance.$data, func(data) ? executeFunction(data, instance) : data);
 
     // 计算属性也是数据
     if (object(computed)) {
@@ -4977,7 +4918,7 @@ var Yox = function () {
               if (!deps) {
                 instance.$computedStack.push([]);
               }
-              var result = execute(get$$1, instance);
+              var result = executeFunction(get$$1, instance);
 
               var newDeps = deps || instance.$computedStack.pop();
               var oldDeps = instance.$computedDeps[keypath];
@@ -5024,7 +4965,7 @@ var Yox = function () {
     });
     instance.watch(watchers);
 
-    execute(options[AFTER_CREATE], instance);
+    executeFunction(options[AFTER_CREATE], instance);
 
     // 检查 template
     if (string(template)) {
@@ -5077,7 +5018,7 @@ var Yox = function () {
       instance.$viewWatcher = function () {
         instance.$dirty = TRUE;
       };
-      execute(options[BEFORE_MOUNT], instance);
+      executeFunction(options[BEFORE_MOUNT], instance);
       instance.$template = Yox.compile(template);
       instance.updateView(el || create$2('div'));
     }
@@ -5326,7 +5267,7 @@ var Yox = function () {
         diff$$1(instance);
       } else if (!instance.$diffing) {
         instance.$diffing = TRUE;
-        add(function () {
+        add$1(function () {
           delete instance.$diffing;
           diff$$1(instance);
         });
@@ -5354,7 +5295,7 @@ var Yox = function () {
 
 
       if ($currentNode) {
-        execute($options[BEFORE_UPDATE], instance);
+        executeFunction($options[BEFORE_UPDATE], instance);
       }
 
       var context = {};
@@ -5396,7 +5337,7 @@ var Yox = function () {
       }
 
       instance.$currentNode = $currentNode;
-      execute($options[afterHook], instance);
+      executeFunction($options[afterHook], instance);
     }
 
     /**
@@ -5433,7 +5374,7 @@ var Yox = function () {
       }
 
       var instance = this;
-      if (value.indexOf(dist.CHAR_OPAREN) > 0) {
+      if (value.indexOf(CHAR_OPAREN) > 0) {
         var _ret2 = function () {
           var ast = compile$1(value);
           if (ast.type === CALL) {
@@ -5479,7 +5420,7 @@ var Yox = function () {
                     fn = result.value;
                   }
                 }
-                execute(fn, instance, args);
+                executeFunction(fn, instance, args);
               }
             };
           }
@@ -5511,7 +5452,7 @@ var Yox = function () {
           $eventEmitter = instance.$eventEmitter;
 
 
-      execute($options[BEFORE_DESTROY], instance);
+      executeFunction($options[BEFORE_DESTROY], instance);
 
       if ($children) {
         each($children, function (child) {
@@ -5525,7 +5466,7 @@ var Yox = function () {
 
       if ($currentNode) {
         if (arguments[0] !== TRUE) {
-          patch($currentNode, { text: dist.CHAR_BLANK });
+          patch($currentNode, { text: CHAR_BLANK });
         }
       }
 
@@ -5536,7 +5477,7 @@ var Yox = function () {
         delete instance[key];
       });
 
-      execute($options[AFTER_DESTROY], instance);
+      executeFunction($options[AFTER_DESTROY], instance);
     }
 
     /**
@@ -5548,7 +5489,7 @@ var Yox = function () {
   }, {
     key: 'nextTick',
     value: function nextTick(fn) {
-      add(fn);
+      add$1(fn);
     }
 
     /**
@@ -5665,7 +5606,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.22.7';
+Yox.version = '0.22.8';
 
 /**
  * 工具，便于扩展、插件使用
@@ -5761,7 +5702,7 @@ each(merge(supportRegisterAsync, ['directive', 'filter', 'partial']), function (
  *
  * @param {Function} fn
  */
-Yox.nextTick = add;
+Yox.nextTick = add$1;
 
 /**
  * 编译模板，暴露出来是为了打包阶段的模板预编译
@@ -5932,7 +5873,7 @@ function handleArray(instance, keypath, handler) {
 }
 
 // 全局注册内置指令
-Yox.directive({ ref: ref, event: event, model: model, component: component });
+Yox.directive({ ref: ref, event: event, model: model });
 
 return Yox;
 

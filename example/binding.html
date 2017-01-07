@@ -23,19 +23,6 @@
         <div>
             <form class="ui form">
 
-                <div class="field">
-                    <label class="title">
-                        组件同步
-                    </label>
-                </div>
-                <div class="field">
-                    <Child name="username" model="title" />
-                </div>
-                <div class="ui message">
-                    {{title}}
-                </div>
-
-
 
                 <div class="field">
                     <label class="title">
@@ -117,12 +104,10 @@
                 <div class="field">
                     <label class="title">
                         textarea change 同步
-                        组件同步
                     </label>
                 </div>
                 <div class="field">
                     <textarea model="title" lazy></textarea>
-                    <Child name="username" model="title" />
                 </div>
                 <div class="ui message">
                     {{title}}
@@ -219,24 +204,6 @@
     </script>
     <script src="../dist/yox.js"></script>
     <script>
-        var Child = {
-            template: '<input type="text" name="{{name}}" model="value">',
-            propTypes: {
-                name: {
-                    type: 'string',
-                    required: true,
-                },
-                value: {
-                    type: 'string',
-                    value: ''
-                }
-            },
-            watchers: {
-                value: function (value) {
-                    this.fire('change', { value })
-                }
-            }
-        };
 
         var instance = new Yox({
             el: '#app',
@@ -264,9 +231,6 @@
                 formatSelectedNames: function (selectedNames) {
                     return '[' + selectedNames.toString() + ']';
                 }
-            },
-            components: {
-                Child: Child,
             }
         });
 
