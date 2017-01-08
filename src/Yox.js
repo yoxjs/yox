@@ -558,7 +558,7 @@ export default class Yox {
     else {
       afterHook = lifecycle.AFTER_MOUNT
       $currentNode = vdom.patch(arguments[0], node)
-      instance.$el = $currentNode.elm
+      instance.$el = $currentNode.el
     }
 
     instance.$currentNode = $currentNode
@@ -838,7 +838,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.22.10'
+Yox.version = '0.23.0'
 
 /**
  * 工具，便于扩展、插件使用

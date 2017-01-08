@@ -19,17 +19,11 @@
                     <button on-click="click2()">
                         click2
                     </button>
-                    <button on-click="noBubble()">
-                        noBubble
-                    </button>
                 </div>
             `,
             methods: {
                 click2: function (e) {
                     this.fire('click2', { name: 'component' });
-                },
-                noBubble: function (event) {
-                    this.fire('noBubble', event, true);
                 }
             }
         };

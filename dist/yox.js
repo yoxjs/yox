@@ -66,7 +66,7 @@ function boolean(arg) {
   return is(arg, 'boolean');
 }
 
-function primitive$1(arg) {
+function primitive(arg) {
   return string(arg) || number(arg) || boolean(arg) || arg == NULL;
 }
 
@@ -82,7 +82,7 @@ var is$1 = Object.freeze({
 	string: string,
 	number: number,
 	boolean: boolean,
-	primitive: primitive$1,
+	primitive: primitive,
 	numeric: numeric
 });
 
@@ -3631,41 +3631,49 @@ var BEFORE_DESTROY = 'beforeDestroy';
  */
 var AFTER_DESTROY = 'afterDestroy';
 
-var vnode = function (sel, data, children, text, elm) {
-  var key = data === undefined ? undefined : data.key;
-  return { sel: sel, data: data, children: children,
-    text: text, elm: elm, key: key };
-};
+/**
+ * @param {?string} options.el
+ * @param {?string} options.sel
+ * @param {?string} options.data
+ * @param {?string} options.text
+ * @param {?string} options.html
+ * @param {?string|Array} options.children
+ */
 
-var is$3 = {
-  array: Array.isArray,
-  primitive: function primitive(s) {
-    return typeof s === 'string' || typeof s === 'number';
-  }
+var Vnode = function Vnode(options) {
+  classCallCheck(this, Vnode);
+
+  extend(this, options);
 };
 
 function createElement(tagName) {
-  return document.createElement(tagName);
+  return doc.createElement(tagName);
 }
 
-function createElementNS(namespaceURI, qualifiedName) {
-  return document.createElementNS(namespaceURI, qualifiedName);
+function createFragment(html) {
+  var fragment = doc.createDocumentFragment();
+  setHtmlContent(fragment, html);
+  return fragment;
 }
 
 function createTextNode(text) {
-  return document.createTextNode(text);
+  return doc.createTextNode(text);
 }
 
 function insertBefore(parentNode, newNode, referenceNode) {
   parentNode.insertBefore(newNode, referenceNode);
 }
 
-function removeChild(node, child) {
-  node.removeChild(child);
+function replaceChild(parentNode, newNode, oldNode) {
+  parentNode.replaceChild(newNode, oldNode);
 }
 
-function appendChild(node, child) {
-  node.appendChild(child);
+function removeChild(parentNode, child) {
+  parentNode.removeChild(child);
+}
+
+function appendChild(parentNode, child) {
+  parentNode.appendChild(child);
 }
 
 function parentNode(node) {
@@ -3684,482 +3692,552 @@ function setTextContent(node, text) {
   node.textContent = text;
 }
 
-var htmldomapi = {
-  createElement: createElement,
-  createElementNS: createElementNS,
-  createTextNode: createTextNode,
-  appendChild: appendChild,
-  removeChild: removeChild,
-  insertBefore: insertBefore,
-  parentNode: parentNode,
-  nextSibling: nextSibling,
-  tagName: tagName,
-  setTextContent: setTextContent
-};
-
-var VNode = vnode;
-var is$2 = is$3;
-var domApi = htmldomapi;
-
-function isUndef(s) {
-  return s === undefined;
-}
-function isDef(s) {
-  return s !== undefined;
+function setHtmlContent(node, html) {
+  if (tagName(node)) {
+    node.innerHTML = html;
+  } else {
+    each(node.childNodes, function (child) {
+      node.removeChild(child);
+    });
+    var element = createElement('div');
+    element.innerHTML = html;
+    each(element.childNodes, function (child) {
+      node.appendChild(child);
+    });
+  }
 }
 
-var emptyNode = VNode('', {}, [], undefined, undefined);
+var domApi = Object.freeze({
+	createElement: createElement,
+	createFragment: createFragment,
+	createTextNode: createTextNode,
+	insertBefore: insertBefore,
+	replaceChild: replaceChild,
+	removeChild: removeChild,
+	appendChild: appendChild,
+	parentNode: parentNode,
+	nextSibling: nextSibling,
+	tagName: tagName,
+	setTextContent: setTextContent,
+	setHtmlContent: setHtmlContent
+});
 
-function sameVnode(vnode1, vnode2) {
+var HOOK_INIT = 'init';
+var HOOK_CREATE = 'create';
+var HOOK_INSERT = 'insert';
+
+var HOOK_REMOVE = 'remove';
+var HOOK_DESTROY = 'destroy';
+
+var HOOK_PRE = 'pre';
+var HOOK_POST = 'post';
+
+var HOOK_PREPATCH = 'prepatch';
+var HOOK_UPDATE = 'update';
+var HOOK_POSTPATCH = 'postpatch';
+
+var moduleHooks = [HOOK_CREATE, HOOK_UPDATE, HOOK_REMOVE, HOOK_DESTROY, HOOK_PRE, HOOK_POST];
+
+var whitespacePattern = /\s+/;
+
+var emptyNode = new Vnode({
+  sel: CHAR_BLANK,
+  data: {},
+  children: []
+});
+
+function isSameVnode(vnode1, vnode2) {
   return vnode1.key === vnode2.key && vnode1.sel === vnode2.sel;
 }
 
-function createKeyToOldIdx(children, beginIdx, endIdx) {
-  var i,
-      map = {},
-      key;
-  for (i = beginIdx; i <= endIdx; ++i) {
-    key = children[i].key;
-    if (isDef(key)) map[key] = i;
+function createKeyToIndex(vnodes, startIndex, endIndex) {
+  var result = {};
+  for (var i = startIndex, key; i <= endIndex; i++) {
+    key = vnodes[i].key;
+    if (key != NULL) {
+      result[key] = i;
+    }
   }
-  return map;
+  return result;
 }
 
-var hooks = ['create', 'update', 'remove', 'destroy', 'pre', 'post'];
+function init$1(modules) {
+  var api = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : domApi;
 
-function init$1(modules, api) {
-  var i,
-      j,
-      cbs = {};
 
-  if (isUndef(api)) api = domApi;
+  var hookEmitter = new Emitter(),
+      result = void 0;
 
-  for (i = 0; i < hooks.length; ++i) {
-    cbs[hooks[i]] = [];
-    for (j = 0; j < modules.length; ++j) {
-      if (modules[j][hooks[i]] !== undefined) cbs[hooks[i]].push(modules[j][hooks[i]]);
+  each(moduleHooks, function (hook) {
+    each(modules, function (mod) {
+      hookEmitter.on(hook, mod[hook]);
+    });
+  });
+
+  var stringifySel = function stringifySel(el) {
+    var terms = [api.tagName(el).toLowerCase()];
+    var id = el.id,
+        className = el.className;
+
+    if (id) {
+      push$1(terms, '' + CHAR_HASH + id);
     }
-  }
+    if (className) {
+      push$1(terms, '' + CHAR_DOT + className.split(whitespacePattern).join(CHAR_DOT));
+    }
+    return terms.join(CHAR_BLANK);
+  };
 
-  function emptyNodeAt(elm) {
-    var id = elm.id ? '#' + elm.id : '';
-    var c = elm.className ? '.' + elm.className.split(' ').join('.') : '';
-    return VNode(api.tagName(elm).toLowerCase() + id + c, {}, [], undefined, elm);
-  }
+  var parseSel = function parseSel(sel) {
 
-  function createRmCb(childElm, listeners) {
-    return function () {
-      if (--listeners === 0) {
-        var parent = api.parentNode(childElm);
-        api.removeChild(parent, childElm);
+    var tagName$$1 = void 0,
+        id = void 0,
+        className = void 0;
+
+    var hashIndex = sel.indexOf(CHAR_HASH);
+    if (hashIndex > 0) {
+      tagName$$1 = sel.slice(0, hashIndex);
+      sel = sel.slice(hashIndex + 1);
+    }
+
+    var dotIndex = sel.indexOf(CHAR_DOT);
+    if (dotIndex > 0) {
+      var temp = sel.slice(0, dotIndex);
+      if (tagName$$1) {
+        id = temp;
+      } else {
+        tagName$$1 = temp;
       }
-    };
-  }
-
-  function createElm(vnode$$1, insertedVnodeQueue) {
-    var i,
-        data = vnode$$1.data;
-    if (isDef(data)) {
-      if (isDef(i = data.hook) && isDef(i = i.init)) {
-        i(vnode$$1);
-        data = vnode$$1.data;
+      className = sel.slice(dotIndex + 1).split(CHAR_DOT).join(' ');
+    } else {
+      if (tagName$$1) {
+        id = sel;
+      } else {
+        tagName$$1 = sel;
       }
     }
-    var elm,
-        children = vnode$$1.children,
-        sel = vnode$$1.sel;
-    if (isDef(sel)) {
-      // Parse selector
-      var hashIdx = sel.indexOf('#');
-      var dotIdx = sel.indexOf('.', hashIdx);
-      var hash = hashIdx > 0 ? hashIdx : sel.length;
-      var dot = dotIdx > 0 ? dotIdx : sel.length;
-      var tag = hashIdx !== -1 || dotIdx !== -1 ? sel.slice(0, Math.min(hash, dot)) : sel;
-      elm = vnode$$1.elm = isDef(data) && isDef(i = data.ns) ? api.createElementNS(i, tag) : api.createElement(tag);
-      if (hash < dot) elm.id = sel.slice(hash + 1, dot);
-      if (dotIdx > 0) elm.className = sel.slice(dot + 1).replace(/\./g, ' ');
-      if (is$2.array(children)) {
-        for (i = 0; i < children.length; ++i) {
-          api.appendChild(elm, createElm(children[i], insertedVnodeQueue));
-        }
-      } else if (is$2.primitive(vnode$$1.text)) {
-        api.appendChild(elm, api.createTextNode(vnode$$1.text));
+
+    return { tagName: tagName$$1, id: id, className: className };
+  };
+
+  var createVnode = function createVnode(el) {
+    return new Vnode({
+      sel: stringifySel(el),
+      data: {},
+      children: [],
+      el: el
+    });
+  };
+
+  var replaceVnode = function replaceVnode(parentEl, oldVnode, vnode) {
+    if (parentEl) {
+      api.insertBefore(parentEl, vnode.el, oldVnode.el);
+      removeVnode(parentEl, oldVnode);
+    }
+  };
+
+  var createElement$$1 = function createElement$$1(vnode, insertedQueue) {
+
+    var hook = get$1(vnode, 'data.hook');
+    hook = hook ? hook.value : {};
+
+    if (hook[HOOK_INIT]) {
+      hook[HOOK_INIT](vnode);
+    }
+
+    var sel = vnode.sel,
+        children = vnode.children,
+        text = vnode.text;
+
+    if (string(sel)) {
+      var _parseSel = parseSel(sel),
+          tagName$$1 = _parseSel.tagName,
+          id = _parseSel.id,
+          className = _parseSel.className;
+
+      var el = api.createElement(tagName$$1);
+      if (id) {
+        el.id = id;
       }
-      for (i = 0; i < cbs.create.length; ++i) {
-        cbs.create[i](emptyNode, vnode$$1);
-      }i = vnode$$1.data.hook; // Reuse variable
-      if (isDef(i)) {
-        if (i.create) i.create(emptyNode, vnode$$1);
-        if (i.insert) insertedVnodeQueue.push(vnode$$1);
+      if (className) {
+        el.className = className;
+      }
+
+      vnode.el = el;
+
+      if (array(children)) {
+        addVnodes(el, children, 0, children.length - 1, insertedQueue);
+      } else if (string(text)) {
+        api.appendChild(el, api.createTextNode(text));
+      }
+
+      hookEmitter.fire(HOOK_CREATE, [emptyNode, vnode]);
+
+      if (hook[HOOK_CREATE]) {
+        hook.create(emptyNode, vnode);
+      }
+      if (hook[HOOK_INSERT]) {
+        insertedQueue.push(vnode);
+      }
+
+      return el;
+    } else {
+      return vnode.el = vnode.raw ? api.createFragment(text) : api.createTextNode(text);
+    }
+  };
+
+  var addVnodes = function addVnodes(parentEl, vnodes, startIndex, endIndex, insertedQueue, before) {
+    for (var i = startIndex; i <= endIndex; i++) {
+      addVnode(parentEl, vnodes[i], insertedQueue, before);
+    }
+  };
+
+  var addVnode = function addVnode(parentEl, vnode, insertedQueue, before) {
+    api.insertBefore(parentEl, createElement$$1(vnode, insertedQueue), before);
+  };
+
+  var removeVnodes = function removeVnodes(parentEl, vnodes, startIndex, endIndex) {
+    for (var i = startIndex; i <= endIndex; i++) {
+      removeVnode(parentEl, vnodes[i]);
+    }
+  };
+
+  var removeVnode = function removeVnode(parentEl, vnode) {
+    var sel = vnode.sel,
+        el = vnode.el;
+
+    if (sel) {
+      destroyVnode(vnode);
+      api.removeChild(parentEl, el);
+      hookEmitter.fire(HOOK_REMOVE, vnode);
+
+      result = get$1(vnode, 'data.hook.' + HOOK_REMOVE);
+      if (result) {
+        result.value(vnode);
       }
     } else {
-      elm = vnode$$1.elm = api.createTextNode(vnode$$1.text);
+      api.removeChild(parentEl, el);
     }
-    return vnode$$1.elm;
-  }
+  };
 
-  function addVnodes(parentElm, before, vnodes, startIdx, endIdx, insertedVnodeQueue) {
-    for (; startIdx <= endIdx; ++startIdx) {
-      api.insertBefore(parentElm, createElm(vnodes[startIdx], insertedVnodeQueue), before);
-    }
-  }
+  var destroyVnode = function destroyVnode(vnode) {
+    var data = vnode.data,
+        children = vnode.children;
 
-  function invokeDestroyHook(vnode$$1) {
-    var i,
-        j,
-        data = vnode$$1.data;
-    if (isDef(data)) {
-      if (isDef(i = data.hook) && isDef(i = i.destroy)) i(vnode$$1);
-      for (i = 0; i < cbs.destroy.length; ++i) {
-        cbs.destroy[i](vnode$$1);
-      }if (isDef(i = vnode$$1.children)) {
-        for (j = 0; j < vnode$$1.children.length; ++j) {
-          invokeDestroyHook(vnode$$1.children[j]);
-        }
+    if (data) {
+
+      // 先销毁 children
+      if (children) {
+        each(children, function (child) {
+          destroyVnode(child);
+        });
       }
-    }
-  }
 
-  function removeVnodes(parentElm, vnodes, startIdx, endIdx) {
-    for (; startIdx <= endIdx; ++startIdx) {
-      var i,
-          listeners,
-          rm,
-          ch = vnodes[startIdx];
-      if (isDef(ch)) {
-        if (isDef(ch.sel)) {
-          invokeDestroyHook(ch);
-          listeners = cbs.remove.length + 1;
-          rm = createRmCb(ch.elm, listeners);
-          for (i = 0; i < cbs.remove.length; ++i) {
-            cbs.remove[i](ch, rm);
-          }if (isDef(i = ch.data) && isDef(i = i.hook) && isDef(i = i.remove)) {
-            i(ch, rm);
-          } else {
-            rm();
+      result = get$1(data, 'hook.' + HOOK_DESTROY);
+      if (result) {
+        result.value(vnode);
+      }
+
+      hookEmitter.fire(HOOK_DESTROY, vnode);
+    }
+  };
+
+  var updateChildren = function updateChildren(parentEl, oldChildren, newChildren, insertedQueue) {
+
+    var oldStartIndex = 0;
+    var oldEndIndex = oldChildren.length - 1;
+    var oldStartVnode = oldChildren[oldStartIndex];
+    var oldEndVnode = oldChildren[oldEndIndex];
+
+    var newStartIndex = 0;
+    var newEndIndex = newChildren.length - 1;
+    var newStartVnode = newChildren[newStartIndex];
+    var newEndVnode = newChildren[newEndIndex];
+
+    var oldKeyToIndex = void 0,
+        oldIndex = void 0,
+        activeVnode = void 0;
+
+    while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
+
+      // 下面有设为 NULL 的逻辑
+      if (!oldStartVnode) {
+        oldStartVnode = oldChildren[++oldStartIndex]; // Vnode has been moved left
+      } else if (!oldEndVnode) {
+        oldEndVnode = oldChildren[--oldEndIndex];
+      }
+
+      // 优先从头到尾比较，位置相同且值得 patch
+      else if (isSameVnode(oldStartVnode, newStartVnode)) {
+          patchVnode(oldStartVnode, newStartVnode, insertedQueue);
+          oldStartVnode = oldChildren[++oldStartIndex];
+          newStartVnode = newChildren[++newStartIndex];
+        }
+
+        // 再从尾到头比较，位置相同且值得 patch
+        else if (isSameVnode(oldEndVnode, newEndVnode)) {
+            patchVnode(oldEndVnode, newEndVnode, insertedQueue);
+            oldEndVnode = oldChildren[--oldEndIndex];
+            newEndVnode = newChildren[--newEndIndex];
           }
-        } else {
-          // Text node
-          api.removeChild(parentElm, ch.elm);
-        }
-      }
-    }
-  }
 
-  function updateChildren(parentElm, oldCh, newCh, insertedVnodeQueue) {
-    var oldStartIdx = 0,
-        newStartIdx = 0;
-    var oldEndIdx = oldCh.length - 1;
-    var oldStartVnode = oldCh[0];
-    var oldEndVnode = oldCh[oldEndIdx];
-    var newEndIdx = newCh.length - 1;
-    var newStartVnode = newCh[0];
-    var newEndVnode = newCh[newEndIdx];
-    var oldKeyToIdx, idxInOld, elmToMove, before;
+          // 比较完两侧的节点，剩下就是 位置发生改变的节点 和 全新的节点
 
-    while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
-      if (isUndef(oldStartVnode)) {
-        oldStartVnode = oldCh[++oldStartIdx]; // Vnode has been moved left
-      } else if (isUndef(oldEndVnode)) {
-        oldEndVnode = oldCh[--oldEndIdx];
-      } else if (sameVnode(oldStartVnode, newStartVnode)) {
-        patchVnode(oldStartVnode, newStartVnode, insertedVnodeQueue);
-        oldStartVnode = oldCh[++oldStartIdx];
-        newStartVnode = newCh[++newStartIdx];
-      } else if (sameVnode(oldEndVnode, newEndVnode)) {
-        patchVnode(oldEndVnode, newEndVnode, insertedVnodeQueue);
-        oldEndVnode = oldCh[--oldEndIdx];
-        newEndVnode = newCh[--newEndIdx];
-      } else if (sameVnode(oldStartVnode, newEndVnode)) {
-        // Vnode moved right
-        patchVnode(oldStartVnode, newEndVnode, insertedVnodeQueue);
-        api.insertBefore(parentElm, oldStartVnode.elm, api.nextSibling(oldEndVnode.elm));
-        oldStartVnode = oldCh[++oldStartIdx];
-        newEndVnode = newCh[--newEndIdx];
-      } else if (sameVnode(oldEndVnode, newStartVnode)) {
-        // Vnode moved left
-        patchVnode(oldEndVnode, newStartVnode, insertedVnodeQueue);
-        api.insertBefore(parentElm, oldEndVnode.elm, oldStartVnode.elm);
-        oldEndVnode = oldCh[--oldEndIdx];
-        newStartVnode = newCh[++newStartIdx];
-      } else {
-        if (isUndef(oldKeyToIdx)) oldKeyToIdx = createKeyToOldIdx(oldCh, oldStartIdx, oldEndIdx);
-        idxInOld = oldKeyToIdx[newStartVnode.key];
-        if (isUndef(idxInOld)) {
-          // New element
-          api.insertBefore(parentElm, createElm(newStartVnode, insertedVnodeQueue), oldStartVnode.elm);
-          newStartVnode = newCh[++newStartIdx];
-        } else {
-          elmToMove = oldCh[idxInOld];
-          patchVnode(elmToMove, newStartVnode, insertedVnodeQueue);
-          oldCh[idxInOld] = undefined;
-          api.insertBefore(parentElm, elmToMove.elm, oldStartVnode.elm);
-          newStartVnode = newCh[++newStartIdx];
-        }
-      }
-    }
-    if (oldStartIdx > oldEndIdx) {
-      before = isUndef(newCh[newEndIdx + 1]) ? null : newCh[newEndIdx + 1].elm;
-      addVnodes(parentElm, before, newCh, newStartIdx, newEndIdx, insertedVnodeQueue);
-    } else if (newStartIdx > newEndIdx) {
-      removeVnodes(parentElm, oldCh, oldStartIdx, oldEndIdx);
-    }
-  }
+          // 当 oldStartVnode 和 newEndVnode 值得 patch
+          // 说明元素被移到右边了
+          else if (isSameVnode(oldStartVnode, newEndVnode)) {
+              patchVnode(oldStartVnode, newEndVnode, insertedQueue);
+              api.insertBefore(parentEl, oldStartVnode.el, api.nextSibling(oldEndVnode.el));
+              oldStartVnode = oldChildren[++oldStartIndex];
+              newEndVnode = newChildren[--newEndIndex];
+            }
 
-  function patchVnode(oldVnode, vnode$$1, insertedVnodeQueue) {
-    var i, hook;
-    if (isDef(i = vnode$$1.data) && isDef(hook = i.hook) && isDef(i = hook.prepatch)) {
-      i(oldVnode, vnode$$1);
+            // 当 oldEndVnode 和 newStartVnode 值得 patch
+            // 说明元素被移到左边了
+            else if (isSameVnode(oldEndVnode, newStartVnode)) {
+                patchVnode(oldEndVnode, newStartVnode, insertedQueue);
+                api.insertBefore(parentEl, oldEndVnode.el, oldStartVnode.el);
+                oldEndVnode = oldChildren[--oldEndIndex];
+                newStartVnode = newChildren[++newStartIndex];
+              }
+
+              // 尝试同级元素的 key
+              else {
+
+                  if (!oldKeyToIndex) {
+                    oldKeyToIndex = createKeyToIndex(oldChildren, oldStartIndex, oldEndIndex);
+                  }
+
+                  oldIndex = oldKeyToIndex[newStartVnode.key];
+
+                  // 移动元素
+                  if (number(oldIndex)) {
+                    activeVnode = oldChildren[oldIndex];
+                    patchVnode(activeVnode, newStartVnode, insertedQueue);
+                    oldChildren[oldIndex] = NULL;
+                  }
+                  // 新元素
+                  else {
+                      createElement$$1(newStartVnode, insertedQueue);
+                      activeVnode = newStartVnode;
+                    }
+
+                  api.insertBefore(parentEl, activeVnode.el, oldStartVnode.el);
+                  newStartVnode = newChildren[++newStartIndex];
+                }
     }
-    var elm = vnode$$1.elm = oldVnode.elm,
-        oldCh = oldVnode.children,
-        ch = vnode$$1.children;
-    if (oldVnode === vnode$$1) return;
-    if (!sameVnode(oldVnode, vnode$$1)) {
-      var parentElm = api.parentNode(oldVnode.elm);
-      elm = createElm(vnode$$1, insertedVnodeQueue);
-      api.insertBefore(parentElm, elm, oldVnode.elm);
-      removeVnodes(parentElm, [oldVnode], 0, 0);
+
+    if (oldStartIndex > oldEndIndex) {
+      activeVnode = newChildren[newEndIndex + 1];
+      addVnodes(parentEl, newChildren, newStartIndex, newEndIndex, insertedQueue, activeVnode ? activeVnode.el : NULL);
+    } else if (newStartIndex > newEndIndex) {
+      removeVnodes(parentEl, oldChildren, oldStartIndex, oldEndIndex);
+    }
+  };
+
+  var patchVnode = function patchVnode(oldVnode, vnode, insertedQueue) {
+
+    if (oldVnode === vnode) {
       return;
     }
-    if (isDef(vnode$$1.data)) {
-      for (i = 0; i < cbs.update.length; ++i) {
-        cbs.update[i](oldVnode, vnode$$1);
-      }i = vnode$$1.data.hook;
-      if (isDef(i) && isDef(i = i.update)) i(oldVnode, vnode$$1);
+
+    var hook = get$1(vnode, 'data.hook');
+    hook = hook ? hook.value : {};
+
+    if (hook[HOOK_PREPATCH]) {
+      hook[HOOK_PREPATCH](oldVnode, vnode);
     }
-    if (isUndef(vnode$$1.text)) {
-      if (isDef(oldCh) && isDef(ch)) {
-        if (oldCh !== ch) updateChildren(elm, oldCh, ch, insertedVnodeQueue);
-      } else if (isDef(ch)) {
-        if (isDef(oldVnode.text)) api.setTextContent(elm, '');
-        addVnodes(elm, null, ch, 0, ch.length - 1, insertedVnodeQueue);
-      } else if (isDef(oldCh)) {
-        removeVnodes(elm, oldCh, 0, oldCh.length - 1);
-      } else if (isDef(oldVnode.text)) {
-        api.setTextContent(elm, '');
+
+    var el = vnode.el = oldVnode.el;
+    if (!isSameVnode(oldVnode, vnode)) {
+      createElement$$1(vnode, insertedQueue);
+      replaceVnode(api.parentNode(el), oldVnode, vnode);
+      return;
+    }
+
+    if (vnode.data) {
+      hookEmitter.fire(HOOK_UPDATE, [oldVnode, vnode]);
+    }
+
+    if (hook[HOOK_UPDATE]) {
+      hook[HOOK_UPDATE](oldVnode, vnode);
+    }
+
+    var newRaw = vnode.raw;
+    var newText = vnode.text;
+    var newChildren = vnode.children;
+
+    var oldRaw = oldVnode.raw;
+    var oldText = oldVnode.text;
+    var oldChildren = oldVnode.children;
+
+    if (string(newText)) {
+      if (newText !== oldText) {
+        if (newRaw) {
+          api.replaceChild(api.parentNode(el), api.createFragment(newText), el);
+        } else {
+          api.setTextContent(el, newText);
+        }
       }
-    } else if (oldVnode.text !== vnode$$1.text) {
-      api.setTextContent(elm, vnode$$1.text);
-    }
-    if (isDef(hook) && isDef(i = hook.postpatch)) {
-      i(oldVnode, vnode$$1);
-    }
-  }
-
-  return function (oldVnode, vnode$$1) {
-    var i, elm, parent;
-    var insertedVnodeQueue = [];
-    for (i = 0; i < cbs.pre.length; ++i) {
-      cbs.pre[i]();
-    }if (isUndef(oldVnode.sel)) {
-      oldVnode = emptyNodeAt(oldVnode);
-    }
-
-    if (sameVnode(oldVnode, vnode$$1)) {
-      patchVnode(oldVnode, vnode$$1, insertedVnodeQueue);
     } else {
-      elm = oldVnode.elm;
-      parent = api.parentNode(elm);
-
-      createElm(vnode$$1, insertedVnodeQueue);
-
-      if (parent !== null) {
-        api.insertBefore(parent, vnode$$1.elm, api.nextSibling(elm));
-        removeVnodes(parent, [oldVnode], 0, 0);
+      // 两个都有需要 diff
+      if (newChildren && oldChildren) {
+        if (newChildren !== oldChildren) {
+          updateChildren(el, oldChildren, newChildren, insertedQueue);
+        }
       }
+      // 有新的没旧的 - 新增节点
+      else if (newChildren) {
+          if (string(oldText)) {
+            api[oldRaw ? 'setHtmlContent' : 'setTextContent'](el, CHAR_BLANK);
+          }
+          addVnodes(el, newChildren, 0, newChildren.length - 1, insertedQueue);
+        }
+        // 有旧的没新的 - 删除节点
+        else if (oldChildren) {
+            removeVnodes(el, oldChildren, 0, oldChildren.length - 1);
+          }
+          // 有旧的 text 没有新的 text
+          else if (string(oldText)) {
+              api[oldRaw ? 'setHtmlContent' : 'setTextContent'](el, CHAR_BLANK);
+            }
     }
 
-    for (i = 0; i < insertedVnodeQueue.length; ++i) {
-      insertedVnodeQueue[i].data.hook.insert(insertedVnodeQueue[i]);
+    if (hook[HOOK_POSTPATCH]) {
+      hook[HOOK_POSTPATCH](oldVnode, vnode);
     }
-    for (i = 0; i < cbs.post.length; ++i) {
-      cbs.post[i]();
-    }return vnode$$1;
+  };
+
+  return function (oldVnode, vnode) {
+
+    hookEmitter.fire(HOOK_PRE);
+
+    if (!oldVnode.sel && oldVnode.tagName) {
+      oldVnode = createVnode(oldVnode);
+    }
+
+    var insertedQueue = [];
+
+    if (isSameVnode(oldVnode, vnode)) {
+      patchVnode(oldVnode, vnode, insertedQueue);
+    } else {
+      createElement$$1(vnode, insertedQueue);
+      replaceVnode(api.parentNode(oldVnode.el), oldVnode, vnode);
+    }
+
+    each(insertedQueue, function (vnode) {
+      var hook = get$1(vnode, 'data.hook.' + HOOK_INSERT);
+      if (hook) {
+        hook.value(vnode);
+      }
+    });
+
+    hookEmitter.fire(HOOK_POST);
+
+    return vnode;
   };
 }
 
-var snabbdom = { init: init$1 };
+var h = function (sel, data) {
 
-var VNode$1 = vnode;
-var is$5 = is$3;
+  var children = void 0,
+      text = void 0;
 
-function addNS(data, children, sel) {
-  data.ns = 'http://www.w3.org/2000/svg';
-
-  if (sel !== 'foreignObject' && children !== undefined) {
-    for (var i = 0; i < children.length; ++i) {
-      addNS(children[i].data, children[i].children, children[i].sel);
-    }
+  var lastArg = last(arguments);
+  if (array(lastArg)) {
+    children = lastArg;
+    each(children, function (child, i) {
+      if (!(child instanceof Vnode)) {
+        children[i] = new Vnode({
+          text: child
+        });
+      }
+    });
+  } else if (string(lastArg)) {
+    text = lastArg;
   }
-}
 
-var h = function h(sel, b, c) {
-  var data = {},
-      children,
-      text,
-      i;
-  if (c !== undefined) {
-    data = b;
-    if (is$5.array(c)) {
-      children = c;
-    } else if (is$5.primitive(c)) {
-      text = c;
-    }
-  } else if (b !== undefined) {
-    if (is$5.array(b)) {
-      children = b;
-    } else if (is$5.primitive(b)) {
-      text = b;
-    } else {
-      data = b;
-    }
-  }
-  if (is$5.array(children)) {
-    for (i = 0; i < children.length; ++i) {
-      if (is$5.primitive(children[i])) children[i] = VNode$1(undefined, undefined, undefined, children[i]);
-    }
-  }
-  if (sel[0] === 's' && sel[1] === 'v' && sel[2] === 'g') {
-    addNS(data, children, sel);
-  }
-  return VNode$1(sel, data, children, text, undefined);
-};
-
-var raf = typeof window !== 'undefined' && window.requestAnimationFrame || setTimeout;
-var nextFrame = function nextFrame(fn) {
-  raf(function () {
-    raf(fn);
+  return new Vnode({
+    sel: sel,
+    text: text,
+    children: children,
+    data: object(data) ? data : {}
   });
 };
-
-function setNextFrame(obj, prop, val) {
-  nextFrame(function () {
-    obj[prop] = val;
-  });
-}
 
 function updateStyle(oldVnode, vnode) {
-  var cur,
-      name,
-      elm = vnode.elm,
-      oldStyle = oldVnode.data.style,
-      style = vnode.data.style;
 
-  if (!oldStyle && !style) return;
-  oldStyle = oldStyle || {};
-  style = style || {};
-  var oldHasDel = 'delayed' in oldStyle;
+  var oldStyle = oldVnode.data.style;
+  var newStyle = vnode.data.style;
 
-  for (name in oldStyle) {
-    if (!style[name]) {
-      elm.style[name] = '';
-    }
-  }
-  for (name in style) {
-    cur = style[name];
-    if (name === 'delayed') {
-      for (name in style.delayed) {
-        cur = style.delayed[name];
-        if (!oldHasDel || cur !== oldStyle.delayed[name]) {
-          setNextFrame(elm.style, name, cur);
-        }
-      }
-    } else if (name !== 'remove' && cur !== oldStyle[name]) {
-      elm.style[name] = cur;
-    }
-  }
-}
-
-function applyDestroyStyle(vnode) {
-  var style,
-      name,
-      elm = vnode.elm,
-      s = vnode.data.style;
-  if (!s || !(style = s.destroy)) return;
-  for (name in style) {
-    elm.style[name] = style[name];
-  }
-}
-
-function applyRemoveStyle(vnode, rm) {
-  var s = vnode.data.style;
-  if (!s || !s.remove) {
-    rm();
+  if (!oldStyle && !newStyle) {
     return;
   }
-  var name,
-      elm = vnode.elm,
-      idx,
-      i = 0,
-      maxDur = 0,
-      compStyle,
-      style = s.remove,
-      amount = 0,
-      applied = [];
-  for (name in style) {
-    applied.push(name);
-    elm.style[name] = style[name];
-  }
-  compStyle = getComputedStyle(elm);
-  var props = compStyle['transition-property'].split(', ');
-  for (; i < props.length; ++i) {
-    if (applied.indexOf(props[i]) !== -1) amount++;
-  }
-  elm.addEventListener('transitionend', function (ev) {
-    if (ev.target === elm) --amount;
-    if (amount === 0) rm();
+
+  oldStyle = oldStyle || {};
+  newStyle = newStyle || {};
+
+  var style = vnode.el.style;
+
+
+  each$1(newStyle, function (value, name) {
+    if (value !== oldStyle[name]) {
+      style[name] = value;
+    }
+  });
+
+  each$1(oldStyle, function (value, name) {
+    if (!has$2(newStyle, name)) {
+      style[name] = CHAR_BLANK;
+    }
   });
 }
 
-var style = { create: updateStyle, update: updateStyle, destroy: applyDestroyStyle, remove: applyRemoveStyle };
-
-var NamespaceURIs = {
-  "xlink": "http://www.w3.org/1999/xlink"
+var style = {
+  create: updateStyle,
+  update: updateStyle
 };
 
-var booleanAttrs = ["allowfullscreen", "async", "autofocus", "autoplay", "checked", "compact", "controls", "declare", "default", "defaultchecked", "defaultmuted", "defaultselected", "defer", "disabled", "draggable", "enabled", "formnovalidate", "hidden", "indeterminate", "inert", "ismap", "itemscope", "loop", "multiple", "muted", "nohref", "noresize", "noshade", "novalidate", "nowrap", "open", "pauseonexit", "readonly", "required", "reversed", "scoped", "seamless", "selected", "sortable", "spellcheck", "translate", "truespeed", "typemustmatch", "visible"];
+var booleanLiteral = 'allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare' + 'default,defaultchecked,defaultmuted,defaultselected,defer,disabled,draggable' + 'enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple' + 'muted,nohref,noresize,noshade,novalidate,nowrap,open,pauseonexit,readonly' + 'required,reversed,scoped,seamless,selected,sortable,spellcheck,translate' + 'truespeed,typemustmatch,visible';
 
-var booleanAttrsDict = Object.create(null);
-for (var i = 0, len = booleanAttrs.length; i < len; i++) {
-  booleanAttrsDict[booleanAttrs[i]] = true;
-}
+var booleanMap = toObject(booleanLiteral.split(CHAR_COMMA));
 
 function updateAttrs(oldVnode, vnode) {
-  var key,
-      cur,
-      old,
-      elm = vnode.elm,
-      oldAttrs = oldVnode.data.attrs,
-      attrs = vnode.data.attrs,
-      namespaceSplit;
 
-  if (!oldAttrs && !attrs) return;
+  var oldAttrs = oldVnode.data.attrs;
+  var newAttrs = vnode.data.attrs;
+
+  if (!oldAttrs && !newAttrs) {
+    return;
+  }
+
   oldAttrs = oldAttrs || {};
-  attrs = attrs || {};
+  newAttrs = newAttrs || {};
 
-  // update modified attributes, add new attributes
-  for (key in attrs) {
-    cur = attrs[key];
-    old = oldAttrs[key];
-    if (old !== cur) {
-      if (!cur && booleanAttrsDict[key]) elm.removeAttribute(key);else {
-        namespaceSplit = key.split(":");
-        if (namespaceSplit.length > 1 && NamespaceURIs.hasOwnProperty(namespaceSplit[0])) elm.setAttributeNS(NamespaceURIs[namespaceSplit[0]], key, cur);else elm.setAttribute(key, cur);
+  var el = vnode.el;
+
+
+  each$1(newAttrs, function (value, name) {
+    if (value !== oldAttrs[name]) {
+      if (!value && booleanMap[name]) {
+        el.removeAttribute(name);
+      } else {
+        el.setAttribute(name, value);
       }
     }
-  }
-  //remove removed attributes
-  // use `in` operator since the previous `for` iteration uses it (.i.e. add even attributes with undefined value)
-  // the other option is to remove all attributes with value == undefined
-  for (key in oldAttrs) {
-    if (!(key in attrs)) {
-      elm.removeAttribute(key);
+  });
+
+  each$1(oldAttrs, function (value, name) {
+    if (!has$2(newAttrs, name)) {
+      el.removeAttribute(name);
     }
-  }
+  });
 }
 
-var attributes = { create: updateAttrs, update: updateAttrs };
+var attributes = {
+  create: updateAttrs,
+  update: updateAttrs
+};
 
 var toString$2 = function (str) {
   var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : CHAR_BLANK;
@@ -4171,12 +4249,10 @@ var toString$2 = function (str) {
   }
 };
 
-var patch = snabbdom.init([attributes, style]);
+var patch = init$1([attributes, style]);
 
-var HOOK_ATTACH = 'attach';
-
-function isVNode(node) {
-  return node && has$2(node, 'sel') && has$2(node, 'elm');
+function isVnode(node) {
+  return node instanceof Vnode;
 }
 
 function parseProps(node) {
@@ -4196,8 +4272,9 @@ function create$1(ast, context, instance) {
     if (safe !== FALSE || !string(content) || !tag.test(content)) {
       return content;
     }
-    return compile$$1(content, TRUE).map(function (node) {
-      return render(node, createText, createElement).node;
+    return new Vnode({
+      text: content,
+      raw: TRUE
     });
   };
 
@@ -4268,7 +4345,7 @@ function create$1(ast, context, instance) {
       var nextVnode = vnode || oldVnode;
 
       // 数据要挂在元素上，vnode 非常不稳定，内部很可能新建了一个对象
-      var $data = oldVnode.elm.$data || (oldVnode.elm.$data = {});
+      var $data = oldVnode.el.$data || (oldVnode.el.$data = {});
 
       var oldDestroies = $data.destroies || {};
       var oldDirectives = $data.directives;
@@ -4284,7 +4361,7 @@ function create$1(ast, context, instance) {
           if (array(component)) {
             oldComponent = component;
             component = instance.create(options, {
-              el: nextVnode.elm,
+              el: nextVnode.el,
               props: parseProps(node),
               replace: TRUE
             });
@@ -4299,9 +4376,9 @@ function create$1(ast, context, instance) {
       var attach = function attach(key) {
         var node = directives[key];
         var directive = instance.directive(node.name);
-        if (directive && directive[HOOK_ATTACH]) {
-          return directive[HOOK_ATTACH]({
-            el: nextVnode.elm,
+        if (directive) {
+          return directive({
+            el: nextVnode.el,
             node: node,
             instance: instance,
             directives: directives,
@@ -4336,7 +4413,7 @@ function create$1(ast, context, instance) {
         });
         // 元素被销毁
         if (!vnode) {
-          oldVnode.elm.$data = NULL;
+          oldVnode.el.$data = NULL;
         }
       }
 
@@ -4357,7 +4434,7 @@ function create$1(ast, context, instance) {
 
     return h(isComponent ? 'div' : node.name, data, node.children.map(function (child) {
       // snabbdom 只支持字符串形式的 children
-      return isVNode(child) ? child : toString$2(child);
+      return isVnode(child) ? child : toString$2(child);
     }));
   };
 
@@ -4554,53 +4631,51 @@ var native = Object.freeze({
  * <input ref="input">
  */
 
-var ref = {
-  attach: function attach(_ref) {
-    var el = _ref.el,
-        node = _ref.node,
-        instance = _ref.instance,
-        component = _ref.component;
-    var value = node.value;
+var ref = function (_ref) {
+  var el = _ref.el,
+      node = _ref.node,
+      instance = _ref.instance,
+      component = _ref.component;
+  var value = node.value;
 
-    if (value && string(value)) {
-      var _ret = function () {
-        var $refs = instance.$refs;
+  if (value && string(value)) {
+    var _ret = function () {
+      var $refs = instance.$refs;
 
-        if (object($refs)) {
+      if (object($refs)) {
+        if (has$2($refs, value)) {
+          error$1('Passing a ref "' + value + '" is existed.');
+        }
+      } else {
+        $refs = instance.$refs = {};
+      }
+
+      var setRef = function setRef(target) {
+        $refs[value] = target;
+      };
+
+      if (component) {
+        if (array(component)) {
+          push$1(component, setRef);
+        } else {
+          setRef(component);
+        }
+      } else {
+        setRef(el);
+      }
+
+      return {
+        v: function v() {
           if (has$2($refs, value)) {
-            error$1('Passing a ref "' + value + '" is existed.');
+            delete $refs[value];
+          } else if (array(component)) {
+            remove$1(component, setRef);
           }
-        } else {
-          $refs = instance.$refs = {};
         }
+      };
+    }();
 
-        var setRef = function setRef(target) {
-          $refs[value] = target;
-        };
-
-        if (component) {
-          if (array(component)) {
-            push$1(component, setRef);
-          } else {
-            setRef(component);
-          }
-        } else {
-          setRef(el);
-        }
-
-        return {
-          v: function v() {
-            if (has$2($refs, value)) {
-              delete $refs[value];
-            } else if (array(component)) {
-              remove$1(component, setRef);
-            }
-          }
-        };
-      }();
-
-      if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
-    }
+    if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
   }
 };
 
@@ -4638,62 +4713,60 @@ var debounce = function (fn, delay, lazy) {
   };
 };
 
-var event = {
-  attach: function attach(_ref) {
-    var el = _ref.el,
-        node = _ref.node,
-        instance = _ref.instance,
-        component = _ref.component,
-        directives = _ref.directives,
-        type = _ref.type,
-        listener = _ref.listener;
+var event = function (_ref) {
+  var el = _ref.el,
+      node = _ref.node,
+      instance = _ref.instance,
+      component = _ref.component,
+      directives = _ref.directives,
+      type = _ref.type,
+      listener = _ref.listener;
 
 
-    if (!type) {
-      type = node.modifier;
-    }
-    if (!listener) {
-      listener = instance.compileValue(node.keypath, node.value);
-    }
+  if (!type) {
+    type = node.modifier;
+  }
+  if (!listener) {
+    listener = instance.compileValue(node.keypath, node.value);
+  }
 
-    if (listener) {
-      var lazy = directives.lazy;
+  if (listener) {
+    var lazy = directives.lazy;
 
-      if (lazy) {
-        if (numeric(lazy.value) && lazy.value >= 0) {
-          listener = debounce(listener, lazy.value);
-        } else if (type === 'input') {
-          type = 'change';
-        }
+    if (lazy) {
+      if (numeric(lazy.value) && lazy.value >= 0) {
+        listener = debounce(listener, lazy.value);
+      } else if (type === 'input') {
+        type = 'change';
       }
+    }
 
-      if (component) {
-        var _ret = function () {
-          var bind = function bind(component) {
-            component.on(type, listener);
-          };
-          if (array(component)) {
-            push$1(component, bind);
-          } else {
-            bind(component);
-          }
-          return {
-            v: function v() {
-              component.off(type, listener);
-              if (array(component)) {
-                remove$1(component, bind);
-              }
-            }
-          };
-        }();
-
-        if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
-      } else {
-        on$1(el, type, listener);
-        return function () {
-          off$1(el, type, listener);
+    if (component) {
+      var _ret = function () {
+        var bind = function bind(component) {
+          component.on(type, listener);
         };
-      }
+        if (array(component)) {
+          push$1(component, bind);
+        } else {
+          bind(component);
+        }
+        return {
+          v: function v() {
+            component.off(type, listener);
+            if (array(component)) {
+              remove$1(component, bind);
+            }
+          }
+        };
+      }();
+
+      if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
+    } else {
+      on$1(el, type, listener);
+      return function () {
+        off$1(el, type, listener);
+      };
     }
   }
 };
@@ -4771,62 +4844,60 @@ var specialControls = {
   checkbox: checkboxControl
 };
 
-var model = {
-  attach: function attach(_ref7) {
-    var el = _ref7.el,
-        node = _ref7.node,
-        instance = _ref7.instance,
-        directives = _ref7.directives,
-        attributes = _ref7.attributes;
-    var value = node.value,
-        keypath = node.keypath;
+var model = function (_ref7) {
+  var el = _ref7.el,
+      node = _ref7.node,
+      instance = _ref7.instance,
+      directives = _ref7.directives,
+      attributes = _ref7.attributes;
+  var value = node.value,
+      keypath = node.keypath;
 
 
-    var result = instance.get(value, keypath);
-    if (result) {
-      keypath = result.keypath;
-    } else {
-      return error$1('The ' + keypath + ' being used for two-way binding is ambiguous.');
-    }
-
-    var type = 'change',
-        control = void 0;
-
-    control = specialControls[el.type];
-    if (!control) {
-      control = inputControl;
-      if ('oninput' in el) {
-        type = 'input';
-      }
-    }
-
-    var data = {
-      el: el,
-      keypath: keypath,
-      instance: instance
-    };
-
-    var set$$1 = function set$$1() {
-      control.set(data);
-    };
-
-    if (!has$2(attributes, 'value')) {
-      set$$1();
-    }
-
-    instance.watch(keypath, set$$1);
-
-    return event.attach({
-      el: el,
-      node: node,
-      instance: instance,
-      directives: directives,
-      type: type,
-      listener: function listener() {
-        control.update(data);
-      }
-    });
+  var result = instance.get(value, keypath);
+  if (result) {
+    keypath = result.keypath;
+  } else {
+    return error$1('The ' + keypath + ' being used for two-way binding is ambiguous.');
   }
+
+  var type = 'change',
+      control = void 0;
+
+  control = specialControls[el.type];
+  if (!control) {
+    control = inputControl;
+    if ('oninput' in el) {
+      type = 'input';
+    }
+  }
+
+  var data = {
+    el: el,
+    keypath: keypath,
+    instance: instance
+  };
+
+  var set$$1 = function set$$1() {
+    control.set(data);
+  };
+
+  if (!has$2(attributes, 'value')) {
+    set$$1();
+  }
+
+  instance.watch(keypath, set$$1);
+
+  return event.attach({
+    el: el,
+    node: node,
+    instance: instance,
+    directives: directives,
+    type: type,
+    listener: function listener() {
+      control.update(data);
+    }
+  });
 };
 
 var Yox = function () {
@@ -5341,7 +5412,7 @@ var Yox = function () {
       } else {
         afterHook = AFTER_MOUNT;
         $currentNode = patch(arguments[0], node);
-        instance.$el = $currentNode.elm;
+        instance.$el = $currentNode.el;
       }
 
       instance.$currentNode = $currentNode;
@@ -5614,7 +5685,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.22.10';
+Yox.version = '0.23.0';
 
 /**
  * 工具，便于扩展、插件使用

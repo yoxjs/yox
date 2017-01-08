@@ -60,60 +60,56 @@ const specialControls = {
   checkbox: checkboxControl,
 }
 
-export default {
+export default function ({ el, node, instance, directives, attributes }) {
 
-  attach({ el, node, instance, directives, attributes }) {
+  let { value, keypath } = node
 
-    let { value, keypath } = node
-
-    let result = instance.get(value, keypath)
-    if (result) {
-      keypath = result.keypath
-    }
-    else {
-      return logger.error(`The ${keypath} being used for two-way binding is ambiguous.`)
-    }
-
-    let type = 'change', control
-
-    control = specialControls[el.type]
-    if (!control) {
-      control = inputControl
-      if ('oninput' in el) {
-        type = 'input'
-      }
-    }
-
-    let data = {
-      el,
-      keypath,
-      instance,
-    }
-
-    let set = function () {
-      control.set(data)
-    }
-
-    if (!object.has(attributes, 'value')) {
-      set()
-    }
-
-    instance.watch(
-      keypath,
-      set
-    )
-
-    return event.attach({
-      el,
-      node,
-      instance,
-      directives,
-      type,
-      listener() {
-        control.update(data)
-      }
-    })
-
+  let result = instance.get(value, keypath)
+  if (result) {
+    keypath = result.keypath
   }
+  else {
+    return logger.error(`The ${keypath} being used for two-way binding is ambiguous.`)
+  }
+
+  let type = 'change', control
+
+  control = specialControls[el.type]
+  if (!control) {
+    control = inputControl
+    if ('oninput' in el) {
+      type = 'input'
+    }
+  }
+
+  let data = {
+    el,
+    keypath,
+    instance,
+  }
+
+  let set = function () {
+    control.set(data)
+  }
+
+  if (!object.has(attributes, 'value')) {
+    set()
+  }
+
+  instance.watch(
+    keypath,
+    set
+  )
+
+  return event.attach({
+    el,
+    node,
+    instance,
+    directives,
+    type,
+    listener() {
+      control.update(data)
+    }
+  })
 
 }

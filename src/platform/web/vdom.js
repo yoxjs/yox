@@ -1,9 +1,10 @@
 
-import snabbdom from 'snabbdom'
+import * as snabbdom from 'yox-snabbdom'
 
-import h from 'snabbdom/h'
-import style from 'snabbdom/modules/style'
-import attributes from 'snabbdom/modules/attributes'
+import h from 'yox-snabbdom/h'
+import Vnode from 'yox-snabbdom/Vnode'
+import style from 'yox-snabbdom/modules/style'
+import attributes from 'yox-snabbdom/modules/attributes'
 
 import * as pattern from '../../config/pattern'
 
@@ -23,12 +24,8 @@ import * as viewSyntax from 'yox-template-compiler/src/syntax'
 
 export const patch = snabbdom.init([ attributes, style ])
 
-const HOOK_ATTACH = 'attach'
-
-function isVNode(node) {
-  return node
-    && object.has(node, 'sel')
-    && object.has(node, 'elm')
+function isVnode(node) {
+  return node instanceof Vnode
 }
 
 function parseProps(node) {
@@ -49,12 +46,10 @@ export function create(ast, context, instance) {
     if (safe !== env.FALSE || !is.string(content) || !pattern.tag.test(content)) {
       return content
     }
-    return viewEnginer.compile(content, env.TRUE)
-      .map(
-        function (node) {
-          return viewEnginer.render(node, createText, createElement).node
-        }
-      )
+    return new Vnode({
+      text: content,
+      raw: env.TRUE,
+    })
   }
 
   let createElement = function (node, isComponent) {
@@ -128,7 +123,7 @@ export function create(ast, context, instance) {
       let nextVnode = vnode || oldVnode
 
       // 数据要挂在元素上，vnode 非常不稳定，内部很可能新建了一个对象
-      let $data = oldVnode.elm.$data || (oldVnode.elm.$data = { })
+      let $data = oldVnode.el.$data || (oldVnode.el.$data = { })
 
       let oldDestroies = $data.destroies || { }
       let oldDirectives = $data.directives
@@ -152,7 +147,7 @@ export function create(ast, context, instance) {
               component = instance.create(
                 options,
                 {
-                  el: nextVnode.elm,
+                  el: nextVnode.el,
                   props: parseProps(node),
                   replace: env.TRUE,
                 }
@@ -173,9 +168,9 @@ export function create(ast, context, instance) {
       let attach = function (key) {
         let node = directives[ key ]
         let directive = instance.directive(node.name)
-        if (directive && directive[HOOK_ATTACH]) {
-          return directive[HOOK_ATTACH]({
-            el: nextVnode.elm,
+        if (directive) {
+          return directive({
+            el: nextVnode.el,
             node,
             instance,
             directives,
@@ -216,7 +211,7 @@ export function create(ast, context, instance) {
         )
         // 元素被销毁
         if (!vnode) {
-          oldVnode.elm.$data = env.NULL
+          oldVnode.el.$data = env.NULL
         }
       }
 
@@ -247,7 +242,7 @@ export function create(ast, context, instance) {
       node.children.map(
         function (child) {
           // snabbdom 只支持字符串形式的 children
-          return isVNode(child) ? child : toString(child)
+          return isVnode(child) ? child : toString(child)
         }
       )
     )
