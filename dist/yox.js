@@ -182,7 +182,7 @@ var push$1 = add('push');
  *
  * @param {Array} original
  */
-var unshift$1 = add('unshift');
+var unshift = add('unshift');
 
 /**
  * 把类数组转成数组
@@ -261,7 +261,7 @@ function last(array$$1) {
  * @param {*} item 待删除项
  * @param {?boolean} strict 是否全等判断，默认是全等
  */
-function remove$1(array$$1, item, strict) {
+function remove(array$$1, item, strict) {
   var index = indexOf(array$$1, item, strict);
   if (index >= 0) {
     array$$1.splice(index, 1);
@@ -283,13 +283,13 @@ var array$1 = Object.freeze({
 	diff: diff$1,
 	merge: merge,
 	push: push$1,
-	unshift: unshift$1,
+	unshift: unshift,
 	toArray: toArray,
 	toObject: toObject,
 	indexOf: indexOf,
 	has: has$1,
 	last: last,
-	remove: remove$1,
+	remove: remove,
 	falsy: falsy
 });
 
@@ -621,17 +621,17 @@ function extend() {
  * @param {?boolean} deep 是否需要深拷贝
  * @return {*}
  */
-function copy(object$$1, deep) {
+function copy$1(object$$1, deep) {
   var result = object$$1;
   if (array(object$$1)) {
     result = [];
     each(object$$1, function (item, index) {
-      result[index] = deep ? copy(item) : item;
+      result[index] = deep ? copy$1(item) : item;
     });
   } else if (object(object$$1)) {
     result = {};
     each$1(object$$1, function (value, key) {
-      result[key] = deep ? copy(value) : value;
+      result[key] = deep ? copy$1(value) : value;
     });
   }
   return result;
@@ -707,7 +707,7 @@ var object$1 = Object.freeze({
 	each: each$1,
 	has: has$2,
 	extend: extend,
-	copy: copy,
+	copy: copy$1,
 	get: get$1,
 	set: set$1
 });
@@ -985,7 +985,7 @@ var Emitter = function () {
           if (listener == NULL) {
             list.length = 0;
           } else {
-            remove$1(list, listener);
+            remove(list, listener);
           }
           if (!list.length) {
             push$1(removed, type);
@@ -1560,9 +1560,9 @@ function flattenMember(node) {
   do {
     next = node.object;
     if (node.type === MEMBER) {
-      unshift$1(result, node.prop);
+      unshift(result, node.prop);
     } else {
-      unshift$1(result, node);
+      unshift(result, node);
     }
   } while (node = next);
 
@@ -2188,7 +2188,7 @@ var Context = function () {
   function Context(data, parent) {
     classCallCheck(this, Context);
 
-    this.data = copy(data);
+    this.data = copy$1(data);
     this.parent = parent;
     this.cache = {};
   }
@@ -2287,7 +2287,7 @@ var Context = function () {
                   break;
                 } else {
                   instance = instance.parent;
-                  unshift$1(keys$$1, LEVEL_PARENT);
+                  unshift(keys$$1, LEVEL_PARENT);
                 }
               }
               keypath = keys$$1.join(SEPARATOR_PATH);
@@ -2870,27 +2870,20 @@ function stringifyExpr(expr) {
  * @param {Object} ast 编译出来的抽象语法树
  * @param {Function} createText 创建文本节点
  * @param {Function} createElement 创建元素节点
- * @param {?Function} importTemplate 导入子模板，如果是纯模板，可不传
- * @param {?Object} data 渲染模板的数据，如果渲染纯模板，可不传
+ * @param {Function} importTemplate 导入子模板，如果是纯模板，可不传
+ * @param {Object} data 渲染模板的数据，如果渲染纯模板，可不传
  * @return {Object} { node: x, deps: { } }
  */
 function render(ast, createText, createElement, importTemplate, data) {
 
-  var context = void 0,
-      keys$$1 = void 0;
+  var keys$$1 = [];
   var getKeypath = function getKeypath() {
-    return CHAR_BLANK;
+    return stringify(keys$$1);
   };
+  getKeypath.toString = getKeypath;
 
-  if (data) {
-    keys$$1 = [];
-    getKeypath = function getKeypath() {
-      return stringify(keys$$1);
-    };
-    getKeypath.toString = getKeypath;
-    data[SPECIAL_KEYPATH] = getKeypath;
-    context = new Context(data);
-  }
+  data[SPECIAL_KEYPATH] = getKeypath;
+  var context = new Context(data);
 
   var partials = {};
 
@@ -3282,14 +3275,13 @@ function parseAttributeValue(content, quote) {
  * 把模板编译为抽象语法树
  *
  * @param {string} template
- * @param {?boolean} loose
  * @return {Object}
  */
-function compile$$1(template, loose) {
+function compile$$1(template) {
 
   var result = compileCache[template];
   if (result) {
-    return loose ? result : result[0];
+    return result;
   }
 
   // 当前内容
@@ -3546,17 +3538,12 @@ function compile$$1(template, loose) {
 
   var children = rootNode.children;
 
-  compileCache[template] = children;
-
-  if (loose) {
-    return children;
-  }
-
   result = children[0];
   if (children.length > 1 || result.type !== ELEMENT) {
     error$1('Template should contain exactly one root element.');
   }
-  return result;
+
+  return compileCache[template] = result;
 }
 
 /**
@@ -4373,7 +4360,7 @@ function create$1(ast, context, instance) {
         });
       }
 
-      var attach = function attach(key) {
+      var bind = function bind(key) {
         var node = directives[key];
         var directive = instance.directive(node.name);
         if (directive) {
@@ -4396,12 +4383,12 @@ function create$1(ast, context, instance) {
               if (oldDestroies[key]) {
                 oldDestroies[key]();
               }
-              oldDestroies[key] = attach(key);
+              oldDestroies[key] = bind(key);
             }
             return;
           }
         }
-        oldDestroies[key] = attach(key);
+        oldDestroies[key] = bind(key);
       });
 
       if (oldDirectives) {
@@ -4664,7 +4651,7 @@ var ref = function (_ref) {
     if (has$2($refs, value)) {
       delete $refs[value];
     } else if (array(component)) {
-      remove$1(component, set$$1);
+      remove(component, set$$1);
     }
   };
 };
@@ -4720,7 +4707,7 @@ var event = function (_ref) {
     listener = instance.compileValue(node.keypath, node.value);
   }
 
-  if (listener) {
+  if (type && listener) {
     var lazy = directives.lazy;
 
     if (lazy) {
@@ -4745,7 +4732,7 @@ var event = function (_ref) {
           v: function v() {
             component.off(type, listener);
             if (array(component)) {
-              remove$1(component, bind);
+              remove(component, bind);
             }
           }
         };
@@ -4767,13 +4754,12 @@ var inputControl = {
         keypath = _ref.keypath,
         instance = _ref.instance;
 
-    var value = instance.get(keypath);
-    // 如果输入框的值相同，赋值会导致光标变化，不符合用户体验
+    var value = toString$2(instance.get(keypath));
     if (value !== el.value) {
       el.value = value;
     }
   },
-  update: function update(_ref2) {
+  sync: function sync(_ref2) {
     var el = _ref2.el,
         keypath = _ref2.keypath,
         instance = _ref2.instance;
@@ -4788,9 +4774,9 @@ var radioControl = {
         keypath = _ref3.keypath,
         instance = _ref3.instance;
 
-    el.checked = el.value == instance.get(keypath);
+    el.checked = el.value === toString$2(instance.get(keypath));
   },
-  update: function update(_ref4) {
+  sync: function sync(_ref4) {
     var el = _ref4.el,
         keypath = _ref4.keypath,
         instance = _ref4.instance;
@@ -4808,9 +4794,9 @@ var checkboxControl = {
         instance = _ref5.instance;
 
     var value = instance.get(keypath);
-    el.checked = array(value) ? has$1(value, el.value, FALSE) : !!value;
+    el.checked = array(value) ? has$1(value, el.value, FALSE) : boolean(value) ? value : !!value;
   },
-  update: function update(_ref6) {
+  sync: function sync(_ref6) {
     var el = _ref6.el,
         keypath = _ref6.keypath,
         instance = _ref6.instance;
@@ -4820,9 +4806,9 @@ var checkboxControl = {
       if (el.checked) {
         push$1(value, el.value);
       } else {
-        remove$1(value, el.value, FALSE);
+        remove(value, el.value, FALSE);
       }
-      instance.set(keypath, copy(value));
+      instance.set(keypath, copy$1(value));
     } else {
       instance.set(keypath, el.checked);
     }
@@ -4848,13 +4834,12 @@ var model = function (_ref7) {
   if (result) {
     keypath = result.keypath;
   } else {
-    return error$1('The ' + keypath + ' being used for two-way binding is ambiguous.');
+    error$1('The ' + keypath + ' being used for two-way binding is ambiguous.');
+    return;
   }
 
-  var type = 'change',
-      control = void 0;
-
-  control = specialControls[el.type];
+  var type = 'change';
+  var control = specialControls[el.type];
   if (!control) {
     control = inputControl;
     if ('oninput' in el) {
@@ -4885,7 +4870,7 @@ var model = function (_ref7) {
     directives: directives,
     type: type,
     listener: function listener() {
-      control.update(data);
+      control.sync(data);
     }
   });
 };
@@ -5164,7 +5149,7 @@ var Yox = function () {
         model$$1 = {};
         model$$1[keypath] = value;
       } else if (object(keypath)) {
-        model$$1 = copy(keypath);
+        model$$1 = copy$1(keypath);
         immediate = value === TRUE;
       } else {
         return;
@@ -5450,7 +5435,7 @@ var Yox = function () {
             return {
               v: function v(event$$1) {
                 var isEvent = event$$1 instanceof Event;
-                var args = copy(ast.args);
+                var args = copy$1(ast.args);
                 if (!args.length) {
                   if (isEvent) {
                     push$1(args, event$$1);
@@ -5530,7 +5515,7 @@ var Yox = function () {
       }
 
       if ($parent && $parent.$children) {
-        remove$1($parent.$children, instance);
+        remove($parent.$children, instance);
       }
 
       if ($currentNode) {
@@ -5620,46 +5605,9 @@ var Yox = function () {
       return value;
     }
   }, {
-    key: 'unshift',
-    value: function unshift(keypath, item) {
-      handleArray(this, keypath, function (list) {
-        list.unshift(item);
-      });
-    }
-  }, {
-    key: 'shift',
-    value: function shift(keypath) {
-      return handleArray(this, keypath, function (list) {
-        return list.shift();
-      });
-    }
-  }, {
-    key: 'push',
-    value: function push(keypath, item) {
-      handleArray(this, keypath, function (list) {
-        list.push(item);
-      });
-    }
-  }, {
-    key: 'pop',
-    value: function pop(keypath) {
-      return handleArray(this, keypath, function (list) {
-        return list.pop();
-      });
-    }
-  }, {
-    key: 'remove',
-    value: function remove(keypath, item) {
-      handleArray(this, keypath, function (list) {
-        remove$1(list, item);
-      });
-    }
-  }, {
-    key: 'removeAt',
-    value: function removeAt(keypath, index) {
-      handleArray(this, keypath, function (list) {
-        list.splice(index, 1);
-      });
+    key: 'copy',
+    value: function copy(target, deep) {
+      return copy$1(target, deep);
     }
   }, {
     key: 'log',
@@ -5675,7 +5623,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.23.1';
+Yox.version = '0.23.2';
 
 /**
  * 工具，便于扩展、插件使用
@@ -5931,14 +5879,6 @@ function diff$$1(instance) {
       diff$$1(child);
     });
   }
-}
-
-function handleArray(instance, keypath, handler) {
-  var array$$1 = instance.get(keypath);
-  array$$1 = array(array$$1) ? copy(array$$1) : [];
-  var result = handler(array$$1);
-  instance.set(keypath, array$$1);
-  return result;
 }
 
 // 全局注册内置指令

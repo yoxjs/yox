@@ -16,7 +16,7 @@ export default function ({ el, node, instance, component, directives, type, list
     listener = instance.compileValue(node.keypath, node.value)
   }
 
-  if (listener) {
+  if (type && listener) {
     let { lazy } = directives
     if (lazy) {
       if (is.numeric(lazy.value) && lazy.value >= 0) {

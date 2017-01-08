@@ -35,7 +35,7 @@ export default class Yox {
 
     let instance = this
 
-    execute(options[lifecycle.BEFORE_CREATE], instance, options)
+    execute(options[ lifecycle.BEFORE_CREATE ], instance, options)
 
     let {
       el,
@@ -119,7 +119,7 @@ export default class Yox {
             let getter = function () {
               if (!getter.$dirty) {
                 if (cache && object.has($watchCache, keypath)) {
-                  return $watchCache[keypath]
+                  return $watchCache[ keypath ]
                 }
               }
               else {
@@ -132,22 +132,22 @@ export default class Yox {
               let result = execute(get, instance)
 
               let newDeps = deps || instance.$computedStack.pop()
-              let oldDeps = instance.$computedDeps[keypath]
+              let oldDeps = instance.$computedDeps[ keypath ]
               if (newDeps !== oldDeps) {
                 updateDeps(instance, newDeps, oldDeps, watcher)
               }
 
-              instance.$computedDeps[keypath] = newDeps
-              $watchCache[keypath] = result
+              instance.$computedDeps[ keypath ] = newDeps
+              $watchCache[ keypath ] = result
 
               return result
             }
             getter.toString = getter
-            instance.$computedGetters[keypath] = getter
+            instance.$computedGetters[ keypath ] = getter
           }
 
           if (set) {
-            instance.$computedSetters[keypath] = set
+            instance.$computedSetters[ keypath ] = set
           }
 
         }
@@ -168,7 +168,7 @@ export default class Yox {
             if (keypath.indexOf('*') < 0
               && !object.has($watchCache, keypath)
             ) {
-              $watchCache[keypath] = instance.get(keypath)
+              $watchCache[ keypath ] = instance.get(keypath)
             }
           }
         )
@@ -178,7 +178,7 @@ export default class Yox {
           removed,
           function (keypath) {
             if (object.has($watchCache, keypath)) {
-              delete $watchCache[keypath]
+              delete $watchCache[ keypath ]
             }
           }
         )
@@ -186,7 +186,7 @@ export default class Yox {
     })
     instance.watch(watchers)
 
-    execute(options[lifecycle.AFTER_CREATE], instance)
+    execute(options[ lifecycle.AFTER_CREATE ], instance)
 
     // 检查 template
     if (is.string(template)) {
@@ -229,7 +229,7 @@ export default class Yox {
           if (object.has(prototype, name)) {
             logger.error(`Passing a "${name}" method is conflicted with built-in methods.`)
           }
-          instance[name] = fn
+          instance[ name ] = fn
         }
       )
     }
@@ -244,7 +244,7 @@ export default class Yox {
       instance.$viewWatcher = function () {
         instance.$dirty = env.TRUE
       }
-      execute(options[lifecycle.BEFORE_MOUNT], instance)
+      execute(options[ lifecycle.BEFORE_MOUNT ], instance)
       instance.$template = Yox.compile(template)
       instance.updateView(el || native.create('div'))
     }
@@ -270,7 +270,7 @@ export default class Yox {
 
     let getValue = function (keypath) {
       if ($computedGetters) {
-        result = $computedGetters[keypath]
+        result = $computedGetters[ keypath ]
         if (result) {
           return {
             value: result(),
@@ -319,7 +319,7 @@ export default class Yox {
     let model, immediate
     if (is.string(keypath)) {
       model = { }
-      model[keypath] = value
+      model[ keypath ] = value
     }
     else if (is.object(keypath)) {
       model = object.copy(keypath)
@@ -449,8 +449,8 @@ export default class Yox {
         // 格式化 Keypath
         let keypath = keypathUtil.normalize(key)
         if (keypath !== key) {
-          delete model[key]
-          model[keypath] = newValue
+          delete model[ key ]
+          model[ keypath ] = newValue
         }
       }
     )
@@ -459,7 +459,7 @@ export default class Yox {
       model,
       function (value, keypath) {
         if ($computedSetters) {
-          let setter = $computedSetters[keypath]
+          let setter = $computedSetters[ keypath ]
           if (setter) {
             setter.call(instance, value)
             return
@@ -512,7 +512,7 @@ export default class Yox {
     } = instance
 
     if ($currentNode) {
-      execute($options[lifecycle.BEFORE_UPDATE], instance)
+      execute($options[ lifecycle.BEFORE_UPDATE ], instance)
     }
 
     let context = { }
@@ -530,7 +530,7 @@ export default class Yox {
       context,
       function (value, key) {
         if (is.func(value)) {
-          context[key] = value.bind(instance)
+          context[ key ] = value.bind(instance)
         }
       }
     )
@@ -562,7 +562,7 @@ export default class Yox {
     }
 
     instance.$currentNode = $currentNode
-    execute($options[afterHook], instance)
+    execute($options[ afterHook ], instance)
 
   }
 
@@ -633,7 +633,7 @@ export default class Yox {
             )
           }
           let name = expressionEnginer.stringify(ast.callee)
-          let fn = instance[name]
+          let fn = instance[ name ]
           if (!fn) {
             let result = instance.get(name, keypath)
             if (result) {
@@ -667,7 +667,7 @@ export default class Yox {
       $eventEmitter,
     } = instance
 
-    execute($options[lifecycle.BEFORE_DESTROY], instance)
+    execute($options[ lifecycle.BEFORE_DESTROY ], instance)
 
     if ($children) {
       array.each(
@@ -695,11 +695,11 @@ export default class Yox {
     object.each(
       instance,
       function (value, key) {
-        delete instance[key]
+        delete instance[ key ]
       }
     )
 
-    execute($options[lifecycle.AFTER_DESTROY], instance)
+    execute($options[ lifecycle.AFTER_DESTROY ], instance)
 
   }
 
@@ -762,64 +762,8 @@ export default class Yox {
     return value
   }
 
-  unshift(keypath, item) {
-    handleArray(
-      this,
-      keypath,
-      function (list) {
-        list.unshift(item)
-      }
-    )
-  }
-
-  shift(keypath) {
-    return handleArray(
-      this,
-      keypath,
-      function (list) {
-        return list.shift()
-      }
-    )
-  }
-
-  push(keypath, item) {
-    handleArray(
-      this,
-      keypath,
-      function (list) {
-        list.push(item)
-      }
-    )
-  }
-
-  pop(keypath) {
-    return handleArray(
-      this,
-      keypath,
-      function (list) {
-        return list.pop()
-      }
-    )
-  }
-
-  remove(keypath, item) {
-    handleArray(
-      this,
-      keypath,
-      function (list) {
-        array.remove(list, item)
-      }
-    )
-  }
-
-  removeAt(keypath, index) {
-    handleArray(
-      this,
-      keypath,
-      function (list) {
-        list.splice(index, 1)
-      }
-    )
+  copy(target, deep) {
+    return object.copy(target, deep)
   }
 
   log(msg) {
@@ -838,7 +782,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.23.1'
+Yox.version = '0.23.2'
 
 /**
  * 工具，便于扩展、插件使用
@@ -884,9 +828,9 @@ array.each(
     [ 'directive', 'filter', 'partial' ]
   ),
   function (type) {
-    prototype[type] = function () {
+    prototype[ type ] = function () {
       let prop = `$${type}s`
-      let store = this[prop] || (this[prop] = new Store())
+      let store = this[ prop ] || (this[ prop ] = new Store())
       let { args, callback } = parseRegisterArguments(type, arguments)
       return magic({
         args,
@@ -899,13 +843,13 @@ array.each(
                   callback(value)
                 }
                 else {
-                  Yox[type](id, callback)
+                  Yox[ type ](id, callback)
                 }
               }
             )
           }
           else {
-            return store.get(id) || Yox[type](id)
+            return store.get(id) || Yox[ type ](id)
           }
         },
         set(id, value) {
@@ -914,8 +858,8 @@ array.each(
       })
 
     }
-    Yox[type] = function () {
-      let store = registry[type] || (registry[type] = new Store())
+    Yox[ type ] = function () {
+      let store = registry[ type ] || (registry[ type ] = new Store())
       let { args, callback } = parseRegisterArguments(type, arguments)
       return magic({
         args,
@@ -975,7 +919,7 @@ Yox.validate = function (props, schema) {
         // 如果不写 type 或 type 不是 字符串 或 数组
         // 就当做此规则无效，和没写一样
         if (type) {
-          let target = props[key], matched
+          let target = props[ key ], matched
           // 比较类型
           if (is.string(type)) {
             matched = is.is(target, type)
@@ -997,7 +941,7 @@ Yox.validate = function (props, schema) {
             matched = type(target, props)
           }
           if (matched === env.TRUE) {
-            result[key] = target
+            result[ key ] = target
           }
           else if (required) {
             logger.warn(`Passing a "${key}" prop is not matched.`)
@@ -1008,7 +952,7 @@ Yox.validate = function (props, schema) {
         logger.warn(`Passing a "${key}" prop is not found.`)
       }
       else if (object.has(rule, 'value')) {
-        result[key] = is.func(value) ? value(props) : value
+        result[ key ] = is.func(value) ? value(props) : value
       }
     }
   )
@@ -1078,9 +1022,9 @@ function diff(instance) {
   }
 
   let pickDeps = function (key) {
-    if ($computedDeps && !array.falsy($computedDeps[key])) {
+    if ($computedDeps && !array.falsy($computedDeps[ key ])) {
       array.each(
-        $computedDeps[key],
+        $computedDeps[ key ],
         pickDeps
       )
       addKey(key, env.TRUE)
@@ -1100,10 +1044,10 @@ function diff(instance) {
   array.each(
     keys,
     function (key) {
-      let oldValue = $watchCache[key]
+      let oldValue = $watchCache[ key ]
       let newValue = instance.get(key)
       if (newValue !== oldValue) {
-        $watchCache[key] = newValue
+        $watchCache[ key ] = newValue
         $watchEmitter.fire(key, [ newValue, oldValue, key ], instance)
       }
     }
@@ -1134,16 +1078,6 @@ function diff(instance) {
     )
   }
 
-}
-
-function handleArray(instance, keypath, handler) {
-  let array = instance.get(keypath)
-  array = is.array(array)
-    ? object.copy(array)
-    : [ ]
-  let result = handler(array)
-  instance.set(keypath, array)
-  return result
 }
 
 import ref from './directive/ref'

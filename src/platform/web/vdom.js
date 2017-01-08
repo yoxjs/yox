@@ -33,7 +33,7 @@ function parseProps(node) {
   array.each(
     node.attributes,
     function (node) {
-      props[string.camelCase(node.name)] = node.value
+      props[ string.camelCase(node.name) ] = node.value
     }
   )
   return props
@@ -165,7 +165,7 @@ export function create(ast, context, instance) {
       }
 
 
-      let attach = function (key) {
+      let bind = function (key) {
         let node = directives[ key ]
         let directive = instance.directive(node.name)
         if (directive) {
@@ -184,18 +184,18 @@ export function create(ast, context, instance) {
         directives,
         function (directive, key) {
           if (vnode && oldDirectives) {
-            let oldDirective = oldDirectives[key]
+            let oldDirective = oldDirectives[ key ]
             if (oldDirective) {
               if (oldDirective.value !== directive.value) {
-                if (oldDestroies[key]) {
-                  oldDestroies[key]()
+                if (oldDestroies[ key ]) {
+                  oldDestroies[ key ]()
                 }
-                oldDestroies[key] = attach(key)
+                oldDestroies[ key ] = bind(key)
               }
               return
             }
           }
-          oldDestroies[key] = attach(key)
+          oldDestroies[ key ] = bind(key)
         }
       )
 
@@ -203,9 +203,9 @@ export function create(ast, context, instance) {
         object.each(
           oldDirectives,
           function (oldDirective, key) {
-            if (oldDestroies[key] && (!vnode || !directives[key])) {
-              oldDestroies[key]()
-              delete oldDestroies[key]
+            if (oldDestroies[ key ] && (!vnode || !directives[ key ])) {
+              oldDestroies[ key ]()
+              delete oldDestroies[ key ]
             }
           }
         )

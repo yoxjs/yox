@@ -1,4 +1,6 @@
 
+import toString from 'yox-common/function/toString'
+
 import * as is from 'yox-common/util/is'
 import * as env from 'yox-common/util/env'
 import * as array from 'yox-common/util/array'
@@ -9,22 +11,21 @@ import event from './event'
 
 const inputControl = {
   set({ el, keypath, instance }) {
-    let value = instance.get(keypath)
-    // 如果输入框的值相同，赋值会导致光标变化，不符合用户体验
+    let value = toString(instance.get(keypath))
     if (value !== el.value) {
       el.value = value
     }
   },
-  update({ el, keypath, instance }) {
+  sync({ el, keypath, instance }) {
     instance.set(keypath, el.value)
   }
 }
 
 const radioControl = {
   set({ el, keypath, instance }) {
-    el.checked = el.value == instance.get(keypath)
+    el.checked = el.value === toString(instance.get(keypath))
   },
-  update({ el, keypath, instance }) {
+  sync({ el, keypath, instance }) {
     if (el.checked) {
       instance.set(keypath, el.value)
     }
@@ -36,9 +37,9 @@ const checkboxControl = {
     let value = instance.get(keypath)
     el.checked = is.array(value)
       ? array.has(value, el.value, env.FALSE)
-      : !!value
+      : (is.boolean(value) ? value : !!value)
   },
-  update({ el, keypath, instance }) {
+  sync({ el, keypath, instance }) {
     let value = instance.get(keypath)
     if (is.array(value)) {
       if (el.checked) {
@@ -69,12 +70,12 @@ export default function ({ el, node, instance, directives, attributes }) {
     keypath = result.keypath
   }
   else {
-    return logger.error(`The ${keypath} being used for two-way binding is ambiguous.`)
+    logger.error(`The ${keypath} being used for two-way binding is ambiguous.`)
+    return
   }
 
-  let type = 'change', control
-
-  control = specialControls[el.type]
+  let type = 'change'
+  let control = specialControls[ el.type ]
   if (!control) {
     control = inputControl
     if ('oninput' in el) {
@@ -96,10 +97,7 @@ export default function ({ el, node, instance, directives, attributes }) {
     set()
   }
 
-  instance.watch(
-    keypath,
-    set
-  )
+  instance.watch(keypath, set)
 
   return event({
     el,
@@ -108,7 +106,7 @@ export default function ({ el, node, instance, directives, attributes }) {
     directives,
     type,
     listener() {
-      control.update(data)
+      control.sync(data)
     }
   })
 
