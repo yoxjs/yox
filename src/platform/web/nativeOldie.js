@@ -44,7 +44,7 @@ function removeInputListener(element, listener) {
   delete listener.$listener
 }
 
-export function addListener(element, type, listener) {
+export function on(element, type, listener) {
   if (type === 'input') {
     addInputListener(element, listener)
   }
@@ -53,7 +53,7 @@ export function addListener(element, type, listener) {
   }
 }
 
-export function removeListener(element, type, listener) {
+export function off(element, type, listener) {
   if (type === 'input') {
     removeInputListener(element, listener)
   }
@@ -65,8 +65,3 @@ export function removeListener(element, type, listener) {
 export function createEvent(event, element) {
   return new IEEvent(event, element)
 }
-
-export function findElement(selector, context) {
-  return (context || env.doc).querySelector(selector)
-}
-

@@ -1,4 +1,6 @@
 
+import * as domApi from 'yox-snabbdom/htmldomapi'
+
 import * as env from 'yox-common/util/env'
 import * as array from 'yox-common/util/array'
 import * as object from 'yox-common/util/object'
@@ -6,22 +8,18 @@ import * as object from 'yox-common/util/object'
 import Event from 'yox-common/util/Event'
 import Emitter from 'yox-common/util/Emitter'
 
-import * as native from './nativeCompat'
-
-export function find(selector, context) {
-  return native.findElement(selector, context)
-}
+export const find = domApi.find
 
 export function create(tagName, parent) {
   if (parent) {
-    parent.innerHTML = `<${tagName}></${tagName}>`
+    domApi.html(parent, `<${tagName}></${tagName}>`)
     return parent.firstChild
   }
-  return env.doc.createElement(tagName)
+  return domApi.createElement(tagName)
 }
 
 export function getContent(selector) {
-  return find(selector).innerHTML
+  return domApi.find(selector).innerHTML
 }
 
 export function isElement(node) {
@@ -40,11 +38,11 @@ export function on(element, type, listener, context) {
   let $emitter = element.$emitter || (element.$emitter = new Emitter())
   if (!$emitter.has(type)) {
     let nativeListener = function (e) {
-      e = new Event(native.createEvent(e, element))
+      e = new Event(domApi.createEvent(e, element))
       $emitter.fire(e.type, e, context)
     }
-    $emitter[type] = nativeListener
-    native.addListener(element, type, nativeListener)
+    $emitter[ type ] = nativeListener
+    domApi.on(element, type, nativeListener)
   }
   $emitter.on(type, listener)
 }
@@ -65,9 +63,9 @@ export function off(element, type, listener) {
   array.each(
     types,
     function (type) {
-      if ($emitter[type] && !$emitter.has(type)) {
-        native.removeListener(element, type, $emitter[type])
-        delete $emitter[type]
+      if ($emitter[ type ] && !$emitter.has(type)) {
+        domApi.off(element, type, $emitter[ type ])
+        delete $emitter[ type ]
       }
     }
   )
