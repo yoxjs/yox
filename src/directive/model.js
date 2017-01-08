@@ -101,7 +101,7 @@ export default function ({ el, node, instance, directives, attributes }) {
     set
   )
 
-  return event.attach({
+  return event({
     el,
     node,
     instance,

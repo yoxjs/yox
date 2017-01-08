@@ -226,12 +226,6 @@ export function create(ast, context, instance) {
 
     }
 
-    /**
-     * 指令的生命周期
-     *
-     * attach: 新增指令 或 元素被插入
-     */
-
     hooks.insert =
     hooks.postpatch =
     hooks.destroy = upsert

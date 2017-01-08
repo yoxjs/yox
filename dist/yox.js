@@ -4424,12 +4424,6 @@ function create$1(ast, context, instance) {
       hooks.insert = hooks.postpatch = hooks.destroy = noop;
     };
 
-    /**
-     * 指令的生命周期
-     *
-     * attach: 新增指令 或 元素被插入
-     */
-
     hooks.insert = hooks.postpatch = hooks.destroy = upsert;
 
     return h(isComponent ? 'div' : node.name, data, node.children.map(function (child) {
@@ -4638,45 +4632,41 @@ var ref = function (_ref) {
       component = _ref.component;
   var value = node.value;
 
-  if (value && string(value)) {
-    var _ret = function () {
-      var $refs = instance.$refs;
-
-      if (object($refs)) {
-        if (has$2($refs, value)) {
-          error$1('Passing a ref "' + value + '" is existed.');
-        }
-      } else {
-        $refs = instance.$refs = {};
-      }
-
-      var setRef = function setRef(target) {
-        $refs[value] = target;
-      };
-
-      if (component) {
-        if (array(component)) {
-          push$1(component, setRef);
-        } else {
-          setRef(component);
-        }
-      } else {
-        setRef(el);
-      }
-
-      return {
-        v: function v() {
-          if (has$2($refs, value)) {
-            delete $refs[value];
-          } else if (array(component)) {
-            remove$1(component, setRef);
-          }
-        }
-      };
-    }();
-
-    if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
+  if (falsy$1(value)) {
+    return;
   }
+
+  var $refs = instance.$refs;
+
+  if (object($refs)) {
+    if (has$2($refs, value)) {
+      error$1('Passing a ref "' + value + '" is existed.');
+    }
+  } else {
+    $refs = instance.$refs = {};
+  }
+
+  var set$$1 = function set$$1(target) {
+    $refs[value] = target;
+  };
+
+  if (component) {
+    if (array(component)) {
+      push$1(component, set$$1);
+    } else {
+      set$$1(component);
+    }
+  } else {
+    set$$1(el);
+  }
+
+  return function () {
+    if (has$2($refs, value)) {
+      delete $refs[value];
+    } else if (array(component)) {
+      remove$1(component, set$$1);
+    }
+  };
 };
 
 /**
@@ -4888,7 +4878,7 @@ var model = function (_ref7) {
 
   instance.watch(keypath, set$$1);
 
-  return event.attach({
+  return event({
     el: el,
     node: node,
     instance: instance,
@@ -5685,7 +5675,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.23.0';
+Yox.version = '0.23.1';
 
 /**
  * 工具，便于扩展、插件使用
