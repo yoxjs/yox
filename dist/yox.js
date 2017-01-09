@@ -4524,32 +4524,22 @@ var ref = function (_ref) {
  * 节流调用
  *
  * @param {Function} fn 需要节制调用的函数
- * @param {number=} delay 调用的时间间隔，默认 50ms
- * @param {boolean=} lazy 是否在最后调用
+ * @param {number} delay 调用的时间间隔
  * @return {Function}
  */
-var debounce = function (fn, delay, lazy) {
+var debounce = function (fn, delay) {
 
-  var prevTime = void 0,
-      timer = void 0;
-
-  function createTimer(args) {
-    timer = setTimeout(function () {
-      timer = NULL;
-      prevTime = +new Date();
-      fn.apply(NULL, toArray(args));
-    }, delay);
-  }
+  var timer = void 0;
 
   return function () {
 
-    if (lazy && prevTime > 0 && +new Date() - prevTime < delay) {
-      clearTimeout(timer);
-      timer = NULL;
-    }
-
     if (!timer) {
-      createTimer(arguments);
+
+      execute(fn, NULL, toArray(arguments));
+
+      timer = setTimeout(function () {
+        timer = NULL;
+      }, delay);
     }
   };
 };
@@ -5500,7 +5490,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.23.5';
+Yox.version = '0.24.0';
 
 /**
  * 工具，便于扩展、插件使用
