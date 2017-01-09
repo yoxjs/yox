@@ -36,11 +36,11 @@ function addInputListener(element, listener) {
       }
     }
   }
-  element.attachEvent('onpropertychange', listener.$listener)
+  on(element, 'propertychange', listener.$listener)
 }
 
 function removeInputListener(element, listener) {
-  element.detachEvent('onpropertychange', listener.$listener)
+  off(element, 'propertychange', listener.$listener)
   delete listener.$listener
 }
 

@@ -24,10 +24,6 @@ import * as viewSyntax from 'yox-template-compiler/src/syntax'
 
 export const patch = snabbdom.init([ attributes, style ])
 
-function isVnode(node) {
-  return node instanceof Vnode
-}
-
 function parseProps(node) {
   let props = { }
   array.each(
@@ -235,8 +231,7 @@ export function create(ast, context, instance) {
       data,
       node.children.map(
         function (child) {
-          // snabbdom 只支持字符串形式的 children
-          return isVnode(child) ? child : toString(child)
+          return (child instanceof Vnode) ? child : toString(child)
         }
       )
     )

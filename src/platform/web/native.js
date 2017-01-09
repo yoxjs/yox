@@ -9,6 +9,7 @@ import Event from 'yox-common/util/Event'
 import Emitter from 'yox-common/util/Emitter'
 
 export const find = domApi.find
+export const isElement = domApi.isElement
 
 export function create(tagName, parent) {
   if (parent) {
@@ -20,10 +21,6 @@ export function create(tagName, parent) {
 
 export function getContent(selector) {
   return domApi.find(selector).innerHTML
-}
-
-export function isElement(node) {
-  return node.nodeType === 1
 }
 
 /**

@@ -3651,6 +3651,14 @@ function createEvent(event) {
   return event;
 }
 
+function isElement(node) {
+  return node.nodeType === 1;
+}
+
+function isFragment(node) {
+  return node.nodeType === 11;
+}
+
 function before(parentNode, newNode, referenceNode) {
   parentNode.insertBefore(newNode, referenceNode);
 }
@@ -3686,20 +3694,18 @@ function text(node, content) {
 }
 
 function html(node, content) {
-  if (tag$1(node)) {
+  if (isElement(node)) {
     node.innerHTML = content;
+  } else if (isFragment(node)) {
+    each(node.childNodes, function (child) {
+      remove$1(node, child);
+    });
+    var element = createElement('div');
+    element.innerHTML = content;
+    each(element.childNodes, function (child) {
+      append(node, child);
+    });
   }
-  // DocumentFragment
-  else if (node.nodeType === 11) {
-      each(node.childNodes, function (child) {
-        remove$1(node, child);
-      });
-      var element = createElement('div');
-      element.innerHTML = content;
-      each(element.childNodes, function (child) {
-        append(node, child);
-      });
-    }
 }
 
 function find(selector, context) {
@@ -3719,6 +3725,8 @@ var domApi = Object.freeze({
 	createFragment: createFragment,
 	createText: createText,
 	createEvent: createEvent,
+	isElement: isElement,
+	isFragment: isFragment,
 	before: before,
 	replace: replace,
 	remove: remove$1,
@@ -3916,10 +3924,8 @@ function init$1(modules) {
 
       if (data) {
         moduleEmitter.fire(HOOK_REMOVE, vnode);
-
-        data = get$1(data, 'hook.' + HOOK_REMOVE);
-        if (data) {
-          execute(data.value, NULL, vnode);
+        if (data.hook) {
+          execute(data.hook[HOOK_REMOVE], NULL, vnode);
         }
       }
     } else {
@@ -3942,9 +3948,8 @@ function init$1(modules) {
 
       moduleEmitter.fire(HOOK_DESTROY, vnode);
 
-      data = get$1(data, 'hook.' + HOOK_DESTROY);
-      if (data) {
-        execute(data.value, NULL, vnode);
+      if (data.hook) {
+        execute(data.hook[HOOK_DESTROY], NULL, vnode);
       }
     }
   };
@@ -4121,7 +4126,7 @@ function init$1(modules) {
 
     moduleEmitter.fire(HOOK_PRE);
 
-    if (!oldVnode.sel && api.tag(oldVnode)) {
+    if (!oldVnode.sel && api.isElement(oldVnode)) {
       oldVnode = createVnode(oldVnode);
     }
 
@@ -4255,10 +4260,6 @@ var toString$2 = function (str) {
 };
 
 var patch = init$1([attributes, style]);
-
-function isVnode(node) {
-  return node instanceof Vnode;
-}
 
 function parseProps(node) {
   var props = {};
@@ -4432,8 +4433,7 @@ function create$1(ast, context, instance) {
     hooks.insert = hooks.postpatch = hooks.destroy = upsert;
 
     return h(isComponent ? 'div' : node.name, data, node.children.map(function (child) {
-      // snabbdom 只支持字符串形式的 children
-      return isVnode(child) ? child : toString$2(child);
+      return child instanceof Vnode ? child : toString$2(child);
     }));
   };
 
@@ -4445,6 +4445,7 @@ function create$1(ast, context, instance) {
 }
 
 var find$1 = find;
+var isElement$1 = isElement;
 
 function create$2(tagName, parent$$1) {
   if (parent$$1) {
@@ -4456,10 +4457,6 @@ function create$2(tagName, parent$$1) {
 
 function getContent(selector) {
   return find(selector).innerHTML;
-}
-
-function isElement(node) {
-  return node.nodeType === 1;
 }
 
 /**
@@ -4507,9 +4504,9 @@ function off$2(element, type, listener) {
 
 var native = Object.freeze({
 	find: find$1,
+	isElement: isElement$1,
 	create: create$2,
 	getContent: getContent,
-	isElement: isElement,
 	on: on$2,
 	off: off$2
 });
@@ -4947,7 +4944,7 @@ var Yox = function () {
       }
     }
     if (el) {
-      if (isElement(el)) {
+      if (isElement$1(el)) {
         if (!replace) {
           el = create$2('div', el);
         }
@@ -5530,7 +5527,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.23.3';
+Yox.version = '0.23.4';
 
 /**
  * 工具，便于扩展、插件使用
