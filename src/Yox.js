@@ -430,6 +430,16 @@ export default class Yox {
   }
 
   /**
+   * 取消监听数据变化
+   *
+   * @param {string|Object} keypath
+   * @param {?Function} watcher
+   */
+  unwatch(keypath, watcher) {
+    this.$watchEmitter.off(keypath, watcher)
+  }
+
+  /**
    * 只更新数据，不更新视图
    *
    * @param {Object} model
@@ -782,14 +792,18 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.23.4'
+Yox.version = '0.23.5'
 
 /**
  * 工具，便于扩展、插件使用
- *
- * @type {Object}
  */
-Yox.utils = { is, array, object, string, native, Emitter, Event }
+Yox.is = is
+Yox.array = array
+Yox.object = object
+Yox.string = string
+Yox.native = native
+Yox.Event = Event
+Yox.Emitter = Emitter
 
 let { prototype } = Yox
 
@@ -972,30 +986,25 @@ Yox.use = function (plugin) {
 
 function updateDeps(instance, newDeps, oldDeps, watcher) {
 
-  let addedDeps, removedDeps
-  if (is.array(oldDeps)) {
-    addedDeps = array.diff(oldDeps, newDeps)
-    removedDeps = array.diff(newDeps, oldDeps)
-  }
-  else {
-    addedDeps = newDeps
-  }
+  oldDeps = oldDeps || [ ]
 
   array.each(
-    addedDeps,
-    function (keypath) {
-      instance.watch(keypath, watcher)
+    newDeps,
+    function (dep) {
+      if (!array.has(oldDeps, dep)) {
+        instance.watch(dep, watcher)
+      }
     }
   )
 
-  if (removedDeps) {
-    array.each(
-      removedDeps,
-      function (dep) {
-        instance.$watchEmitter.off(dep, watcher)
+  array.each(
+    oldDeps,
+    function (dep) {
+      if (!array.has(newDeps, dep)) {
+        instance.unwatch(dep, watcher)
       }
-    )
-  }
+    }
+  )
 
 }
 

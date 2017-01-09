@@ -125,24 +125,6 @@ function each(array$$1, callback, reversed) {
 }
 
 /**
- * 返回 array2 中包含，array1 中不包含的数组项
- *
- * @param {Array} array1
- * @param {Array} array2
- * @param {?boolean} strict 是否全等判断，默认是全等
- * @return {Array}
- */
-function diff$1(array1, array2, strict) {
-  var result = [];
-  each(array2, function (item) {
-    if (!has$1(array1, item, strict)) {
-      result.push(item);
-    }
-  });
-  return result;
-}
-
-/**
  * 合并多个数组，不去重
  *
  * @return {Array}
@@ -201,10 +183,10 @@ function toArray(array$$1) {
  * @param {?string} key 数组项包含的字段名称，如果数组项是基本类型，可不传
  * @return {Object}
  */
-function toObject(array$$1, key) {
+function toObject(array$$1, key, value) {
   var result = {};
   each(array$$1, function (item) {
-    result[key ? item[key] : item] = item;
+    result[key ? item[key] : item] = value ? item[value] : item;
   });
   return result;
 }
@@ -280,7 +262,6 @@ function falsy(array$$1) {
 
 var array$1 = Object.freeze({
 	each: each,
-	diff: diff$1,
 	merge: merge,
 	push: push$1,
 	unshift: unshift,
@@ -531,7 +512,7 @@ function normalize(str) {
     // array[0] => array.0
     // object['key'] => array.key
     return str.replace(/\[\s*?([\S]+)\s*?\]/g, function ($0, $1) {
-      var firstChar = $1.charAt[0];
+      var firstChar = charAt$1($1);
       if (firstChar === CHAR_DQUOTE || firstChar === CHAR_SQUOTE) {
         $1 = $1.slice(1, -1);
       }
@@ -1075,7 +1056,7 @@ var Emitter = function () {
 /**
  * 是否有原生的日志特性，没有必要单独实现
  *
- * @param {boolean}
+ * @type {boolean}
  */
 var hasConsole = typeof console !== 'undefined';
 
@@ -1137,7 +1118,7 @@ if (typeof MutationObserver === 'function') {
     observer.observe(textNode, {
       characterData: TRUE
     });
-    textNode.data = ' ';
+    textNode.data = CHAR_WHITESPACE;
   };
 } else if (typeof setImmediate === 'function') {
   nextTick$1 = function nextTick$1(fn) {
@@ -2426,7 +2407,7 @@ var Scanner = function () {
  */
 
 var Node$2 = function () {
-  function Node(type, hasChildren) {
+  function Node(type) {
     classCallCheck(this, Node);
 
     this.type = type;
@@ -2479,9 +2460,9 @@ var Directive = function (_Node) {
 
     var _this = possibleConstructorReturn(this, (Directive.__proto__ || Object.getPrototypeOf(Directive)).call(this, DIRECTIVE));
 
-    _this.name = camelCase(name);
+    _this.name = name;
     if (modifier) {
-      _this.modifier = camelCase(modifier);
+      _this.modifier = modifier;
     }
     return _this;
   }
@@ -2720,9 +2701,6 @@ var attributePattern = /([-:@a-z0-9]+)(?==["'])?/i;
 var nonSingleQuotePattern = /^[^']*/;
 var nonDoubleQuotePattern = /^[^"]*/;
 
-var breaklinePrefixPattern = /^[ \t]*\n/;
-var breaklineSuffixPattern = /\n[ \t]*$/;
-
 var componentNamePattern = /[-A-Z]/;
 var selfClosingTagNamePattern = /input|img|br/i;
 
@@ -2748,17 +2726,15 @@ leafTypes[EXPRESSION] = leafTypes[IMPORT$1] = leafTypes[SPREAD$1] = leafTypes[TE
 var buildInDirectives = {};
 buildInDirectives[DIRECTIVE_REF] = buildInDirectives[DIRECTIVE_LAZY] = buildInDirectives[DIRECTIVE_MODEL] = buildInDirectives[KEYWORD_UNIQUE] = TRUE;
 
-var NODES_FLAG = '$nodes';
-
 function markNodes(nodes) {
   if (array(nodes)) {
-    nodes[NODES_FLAG] = TRUE;
+    nodes[CHAR_DASH] = TRUE;
   }
   return nodes;
 }
 
 function isNodes(nodes) {
-  return nodes[NODES_FLAG] === TRUE;
+  return nodes[CHAR_DASH] === TRUE;
 }
 
 /**
@@ -3022,9 +2998,6 @@ function render(ast, createText, createElement, importTemplate, data) {
             };
 
           case ATTRIBUTE:
-            if (name.type === EXPRESSION) {
-              name = executeExpr(name.expr);
-            }
             return {
               v: {
                 name: name,
@@ -3236,7 +3209,7 @@ function isBreakline(content) {
  * @return {boolean}
  */
 function trimBreakline(content) {
-  return content.replace(breaklinePrefixPattern, CHAR_BLANK).replace(breaklineSuffixPattern, CHAR_BLANK);
+  return content.replace(/^[ \t]*\n|\n[ \t]*$/g, CHAR_BLANK);
 }
 
 /**
@@ -3331,9 +3304,8 @@ function compile$$1(template) {
   };
 
   var addChild = function addChild(node) {
-    var _node = node,
-        type = _node.type,
-        content = _node.content;
+    var type = node.type,
+        content = node.content;
 
 
     if (type === TEXT) {
@@ -3341,9 +3313,6 @@ function compile$$1(template) {
         return;
       }
       node.content = content;
-    } else if (type === EXPRESSION && level === LEVEL_ATTRIBUTE) {
-      node = levelNode = new Attribute(node);
-      type = ATTRIBUTE;
     }
 
     if (level === LEVEL_ATTRIBUTE && currentNode.addAttr) {
@@ -3361,15 +3330,11 @@ function compile$$1(template) {
     }
   };
 
-  // 属性和指令支持以下 8 种写法：
+  // 属性和指令支持以下 4 种写法：
   // 1. name
   // 2. name="value"
   // 3. name="{{value}}"
   // 4. name="prefix{{value}}suffix"
-  // 5. {{name}}
-  // 6. {{name}}="value"
-  // 7. {{name}}="{{value}}"
-  // 8. {{name}}="prefix{{value}}suffix"
   var parseAttribute = function parseAttribute(content) {
 
     if (falsy(levelNode.children)) {
@@ -3415,15 +3380,18 @@ function compile$$1(template) {
             name = result[1];
 
             if (buildInDirectives[name]) {
-              levelNode = new Directive(name);
+              levelNode = new Directive(camelCase(name));
             } else {
               if (startsWith(name, DIRECTIVE_EVENT_PREFIX)) {
                 name = name.slice(DIRECTIVE_EVENT_PREFIX.length);
-                levelNode = new Directive('event', name);
+                levelNode = new Directive('event', camelCase(name));
               } else if (startsWith(name, DIRECTIVE_CUSTOM_PREFIX)) {
                 name = name.slice(DIRECTIVE_CUSTOM_PREFIX.length);
-                levelNode = new Directive(name);
+                levelNode = new Directive(camelCase(name));
               } else {
+                if (levelNode.component) {
+                  name = camelCase(name);
+                }
                 levelNode = new Attribute(name);
               }
             }
@@ -4261,14 +4229,6 @@ var toString$2 = function (str) {
 
 var patch = init$1([attributes, style]);
 
-function parseProps(node) {
-  var props = {};
-  each(node.attributes, function (node) {
-    props[camelCase(node.name)] = node.value;
-  });
-  return props;
-}
-
 function create$1(ast, context, instance) {
 
   var createText = function createText(node) {
@@ -4360,7 +4320,7 @@ function create$1(ast, context, instance) {
       if (oldComponent) {
         component = oldComponent;
         if (object(component)) {
-          component.set(parseProps(node), TRUE);
+          component.set(toObject(node.attributes, 'name', 'value'), TRUE);
         }
       } else if (component) {
         instance.component(node.name, function (options) {
@@ -4368,7 +4328,7 @@ function create$1(ast, context, instance) {
             oldComponent = component;
             component = instance.create(options, {
               el: nextVnode.el,
-              props: parseProps(node),
+              props: toObject(node.attributes, 'name', 'value'),
               replace: TRUE
             });
             $data.component = component;
@@ -5178,6 +5138,19 @@ var Yox = function () {
     }
 
     /**
+     * 取消监听数据变化
+     *
+     * @param {string|Object} keypath
+     * @param {?Function} watcher
+     */
+
+  }, {
+    key: 'unwatch',
+    value: function unwatch(keypath, watcher) {
+      this.$watchEmitter.off(keypath, watcher);
+    }
+
+    /**
      * 只更新数据，不更新视图
      *
      * @param {Object} model
@@ -5222,12 +5195,12 @@ var Yox = function () {
       }
 
       if (immediate) {
-        diff$$1(instance);
+        diff(instance);
       } else if (!instance.$diffing) {
         instance.$diffing = TRUE;
         add$1(function () {
           delete instance.$diffing;
-          diff$$1(instance);
+          diff(instance);
         });
       }
     }
@@ -5527,14 +5500,18 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.23.4';
+Yox.version = '0.23.5';
 
 /**
  * 工具，便于扩展、插件使用
- *
- * @type {Object}
  */
-Yox.utils = { is: is$1, array: array$1, object: object$1, string: string$1, native: native, Emitter: Emitter, Event: Event };
+Yox.is = is$1;
+Yox.array = array$1;
+Yox.object = object$1;
+Yox.string = string$1;
+Yox.native = native;
+Yox.Event = Event;
+Yox.Emitter = Emitter;
 
 var prototype = Yox.prototype;
 
@@ -5703,27 +5680,22 @@ Yox.use = function (plugin) {
 
 function updateDeps(instance, newDeps, oldDeps, watcher) {
 
-  var addedDeps = void 0,
-      removedDeps = void 0;
-  if (array(oldDeps)) {
-    addedDeps = diff$1(oldDeps, newDeps);
-    removedDeps = diff$1(newDeps, oldDeps);
-  } else {
-    addedDeps = newDeps;
-  }
+  oldDeps = oldDeps || [];
 
-  each(addedDeps, function (keypath) {
-    instance.watch(keypath, watcher);
+  each(newDeps, function (dep) {
+    if (!has$1(oldDeps, dep)) {
+      instance.watch(dep, watcher);
+    }
   });
 
-  if (removedDeps) {
-    each(removedDeps, function (dep) {
-      instance.$watchEmitter.off(dep, watcher);
-    });
-  }
+  each(oldDeps, function (dep) {
+    if (!has$1(newDeps, dep)) {
+      instance.unwatch(dep, watcher);
+    }
+  });
 }
 
-function diff$$1(instance) {
+function diff(instance) {
   var $children = instance.$children,
       $watchCache = instance.$watchCache,
       $watchEmitter = instance.$watchEmitter,
@@ -5780,7 +5752,7 @@ function diff$$1(instance) {
     instance.updateView();
   } else if ($children) {
     each($children, function (child) {
-      diff$$1(child);
+      diff(child);
     });
   }
 }

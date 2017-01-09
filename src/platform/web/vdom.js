@@ -24,17 +24,6 @@ import * as viewSyntax from 'yox-template-compiler/src/syntax'
 
 export const patch = snabbdom.init([ attributes, style ])
 
-function parseProps(node) {
-  let props = { }
-  array.each(
-    node.attributes,
-    function (node) {
-      props[ string.camelCase(node.name) ] = node.value
-    }
-  )
-  return props
-}
-
 export function create(ast, context, instance) {
 
   let createText = function (node) {
@@ -129,7 +118,7 @@ export function create(ast, context, instance) {
         component = oldComponent
         if (is.object(component)) {
           component.set(
-            parseProps(node),
+            array.toObject(node.attributes, 'name', 'value'),
             env.TRUE
           )
         }
@@ -144,7 +133,7 @@ export function create(ast, context, instance) {
                 options,
                 {
                   el: nextVnode.el,
-                  props: parseProps(node),
+                  props: array.toObject(node.attributes, 'name', 'value'),
                   replace: env.TRUE,
                 }
               )
