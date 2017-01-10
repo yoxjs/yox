@@ -6,8 +6,6 @@ import Vnode from 'yox-snabbdom/Vnode'
 import style from 'yox-snabbdom/modules/style'
 import attributes from 'yox-snabbdom/modules/attributes'
 
-import * as pattern from '../../config/pattern'
-
 import execute from 'yox-common/function/execute'
 import toString from 'yox-common/function/toString'
 
@@ -21,6 +19,8 @@ import * as string from 'yox-common/util/string'
 
 import * as viewEnginer from 'yox-template-compiler'
 import * as viewSyntax from 'yox-template-compiler/src/syntax'
+
+import * as pattern from '../../config/pattern'
 
 export const patch = snabbdom.init([ attributes, style ])
 

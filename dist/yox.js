@@ -3263,10 +3263,10 @@ function compile$$1(template) {
   var name = void 0;
   // 记录属性值、指令值的开始引号，方便匹配结束引号
   var quote = void 0;
-  // 标签是否子闭合
-  var isSelfClosing = void 0;
   // 分隔符
   var delimiter = void 0;
+  // 是否自闭合
+  var isSelfClosing = void 0;
 
   // 主扫描器
   var mainScanner = new Scanner(template);
@@ -3476,7 +3476,6 @@ function compile$$1(template) {
           levelNode = new Element(name);
           isSelfClosing = selfClosingTagNamePattern.test(name);
         }
-
         addChild(levelNode);
 
         // 截取 <name 和 > 之间的内容
@@ -3524,7 +3523,7 @@ var tag = /<[^>]+>/;
 /**
  * 选择器
  *
- * @type {string}
+ * @type {RegExp}
  */
 var selector = /^[#.]\w+$/;
 
@@ -5490,7 +5489,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.24.0';
+Yox.version = '0.24.1';
 
 /**
  * 工具，便于扩展、插件使用

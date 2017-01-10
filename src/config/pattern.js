@@ -9,7 +9,6 @@ export const tag = /<[^>]+>/
 /**
  * 选择器
  *
- * @type {string}
+ * @type {RegExp}
  */
 export const selector = /^[#.]\w+$/
-
