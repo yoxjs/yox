@@ -14,7 +14,7 @@ export const isElement = domApi.isElement
 export function create(tagName, parent) {
   if (parent) {
     domApi.html(parent, `<${tagName}></${tagName}>`)
-    return parent.firstChild
+    return domApi.children(parent)[ 0 ]
   }
   return domApi.createElement(tagName)
 }

@@ -165,7 +165,7 @@ export default class Yox {
         array.each(
           added,
           function (keypath) {
-            if (keypath.indexOf('*') < 0
+            if (!string.has(keypath, char.CHAR_ASTERISK)
               && !object.has($watchCache, keypath)
             ) {
               $watchCache[ keypath ] = instance.get(keypath)
@@ -603,7 +603,7 @@ export default class Yox {
     }
 
     let instance = this
-    if (value.indexOf(char.CHAR_OPAREN) > 0) {
+    if (string.indexOf(value, char.CHAR_OPAREN) > 0) {
       let ast = expressionEnginer.compile(value)
       if (ast.type === expressionNodeType.CALL) {
         return function (event) {
@@ -792,7 +792,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.24.1'
+Yox.version = '0.24.2'
 
 /**
  * 工具，便于扩展、插件使用

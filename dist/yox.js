@@ -328,6 +328,7 @@ function codeAt$1(str) {
 }
 
 var CHAR_BLANK = '';
+var CHAR_ASTERISK = '*';
 
 var CHAR_DOT = '.';
 var CODE_DOT = codeAt$1(CHAR_DOT);
@@ -385,9 +386,6 @@ var CODE_RIGHT = codeAt$1(CHAR_RIGHT);
 
 var CHAR_QUMARK = '?';
 var CODE_QUMARK = codeAt$1(CHAR_QUMARK);
-
-var CHAR_BACKSLASH = '\\';
-var CODE_BACKSLASH = codeAt$1(CHAR_BACKSLASH);
 
 var CHAR_TAB = '\t';
 var CODE_TAB = codeAt$1(CHAR_TAB);
@@ -470,14 +468,17 @@ function parse$1(str, separator, pair) {
   return result;
 }
 
-/**
- * 为了压缩而存在的几个方法
- */
 function trim(str) {
   return falsy$1(str) ? CHAR_BLANK : str.trim();
 }
+function indexOf$1(str, part) {
+  return str.indexOf(part);
+}
+function has$3(str, part) {
+  return indexOf$1(str, part) >= 0;
+}
 function startsWith(str, part) {
-  return str.indexOf(part) === 0;
+  return indexOf$1(str, part) === 0;
 }
 function endsWith(str, part) {
   return str === part || str.lastIndexOf(part) === part.length;
@@ -498,6 +499,8 @@ var string$1 = Object.freeze({
 	falsy: falsy$1,
 	parse: parse$1,
 	trim: trim,
+	indexOf: indexOf$1,
+	has: has$3,
 	startsWith: startsWith,
 	endsWith: endsWith
 });
@@ -508,12 +511,12 @@ var LEVEL_CURRENT = CHAR_DOT;
 var LEVEL_PARENT = '' + CHAR_DOT + CHAR_DOT;
 
 function normalize(str) {
-  if (!falsy$1(str) && str.indexOf(CHAR_OBRACK) > 0 && str.indexOf(CHAR_CBRACK) > 0) {
+  if (!falsy$1(str) && indexOf$1(str, CHAR_OBRACK) > 0 && indexOf$1(str, CHAR_CBRACK) > 0) {
     // array[0] => array.0
     // object['key'] => array.key
     return str.replace(/\[\s*?([\S]+)\s*?\]/g, function ($0, $1) {
-      var firstChar = charAt$1($1);
-      if (firstChar === CHAR_DQUOTE || firstChar === CHAR_SQUOTE) {
+      var code = codeAt$1($1);
+      if (code === CODE_SQUOTE || code === CODE_DQUOTE) {
         $1 = $1.slice(1, -1);
       }
       return '' + SEPARATOR_KEY + $1;
@@ -523,7 +526,7 @@ function normalize(str) {
 }
 
 function parse$$1(str) {
-  return str ? normalize(str).split(SEPARATOR_KEY) : [];
+  return falsy$1(str) ? [] : normalize(str).split(SEPARATOR_KEY);
 }
 
 function stringify(keypaths) {
@@ -1026,8 +1029,8 @@ var Emitter = function () {
       // ** 可以响应所有数据变化，是一个超级通配符的存在
       if (done) {
         each$1(listeners, function (list, key) {
-          if (key !== type || key.indexOf('*') >= 0) {
-            key = ['^', key.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)'), endsWith(key, '**') ? CHAR_BLANK : '$'];
+          if (key !== type || key.indexOf(CHAR_ASTERISK) >= 0) {
+            key = ['^', key.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)'), endsWith(key, '' + CHAR_ASTERISK + CHAR_ASTERISK) ? CHAR_BLANK : '$'];
             var match = type.match(new RegExp(key.join(CHAR_BLANK)));
             if (match) {
               handle(list, merge(data, toArray(match).slice(1)));
@@ -1121,13 +1124,9 @@ if (typeof MutationObserver === 'function') {
     textNode.data = CHAR_WHITESPACE;
   };
 } else if (typeof setImmediate === 'function') {
-  nextTick$1 = function nextTick$1(fn) {
-    setImmediate(fn);
-  };
+  nextTick$1 = setImmediate;
 } else {
-  nextTick$1 = function nextTick$1(fn) {
-    setTimeout(fn);
-  };
+  nextTick$1 = setTimeout;
 }
 
 var nextTick$2 = nextTick$1;
@@ -2802,7 +2801,7 @@ function traverseTree(node, enter, leave, traverseList, recursion) {
  * @return {Array}
  */
 function traverseList(nodes, recursion) {
-  var list = markNodes([]),
+  var list = [],
       item = void 0;
   var i = 0,
       node = void 0;
@@ -2827,7 +2826,7 @@ function traverseList(nodes, recursion) {
     }
     i++;
   }
-  return list;
+  return markNodes(list);
 }
 
 /**
@@ -2931,7 +2930,7 @@ function render(ast, createText, createElement, importTemplate, data) {
               };
             }
 
-            var list = markNodes([]);
+            var list = [];
 
             push$1(keys$$1, stringifyExpr(expr));
             context = context.push(value);
@@ -2954,7 +2953,7 @@ function render(ast, createText, createElement, importTemplate, data) {
             context = context.pop();
 
             return {
-              v: list
+              v: markNodes(list)
             };
 
         }
@@ -3027,7 +3026,7 @@ function render(ast, createText, createElement, importTemplate, data) {
             content = executeExpr(node.expr);
             if (object(content)) {
               var _ret3 = function () {
-                var list = markNodes([]);
+                var list = [];
                 each$1(content, function (value, name) {
                   push$1(list, {
                     name: name,
@@ -3037,7 +3036,7 @@ function render(ast, createText, createElement, importTemplate, data) {
                 });
                 return {
                   v: {
-                    v: list
+                    v: markNodes(list)
                   }
                 };
               }();
@@ -3169,29 +3168,6 @@ var parsers = [{
   }
 }];
 
-function getLocationByPos(str, pos) {
-
-  var line = 0,
-      col = 0,
-      index = 0;
-
-  each(str.split(CHAR_BREAKLINE), function (lineStr) {
-    line++;
-    col = 0;
-
-    var length = lineStr.length;
-
-    if (pos >= index && pos <= index + length) {
-      col = pos - index;
-      return FALSE;
-    }
-
-    index += length;
-  });
-
-  return { line: line, col: col };
-}
-
 /**
  * 是否是纯粹的换行
  *
@@ -3199,7 +3175,7 @@ function getLocationByPos(str, pos) {
  * @return {boolean}
  */
 function isBreakline(content) {
-  return content.indexOf(CHAR_BREAKLINE) >= 0 && !trim(content);
+  return has$3(content, CHAR_BREAKLINE) >= 0 && !trim(content);
 }
 
 /**
@@ -3284,11 +3260,25 @@ function compile$$1(template) {
     if (pos == NULL) {
       msg += CHAR_DOT;
     } else {
-      var _getLocationByPos = getLocationByPos(template, pos),
-          line = _getLocationByPos.line,
-          col = _getLocationByPos.col;
+      (function () {
+        var line = 0,
+            col = 0,
+            index = 0;
+        each(template.split(CHAR_BREAKLINE), function (lineStr) {
+          line++;
+          col = 0;
 
-      msg += ', at line ' + line + ', col ' + col + '.';
+          var length = lineStr.length;
+
+          if (pos >= index && pos <= index + length) {
+            col = pos - index;
+            return FALSE;
+          }
+
+          index += length;
+        });
+        msg += ', at line ' + line + ', col ' + col + '.';
+      })();
     }
     error$1('' + msg + CHAR_BREAKLINE + template);
   };
@@ -3656,6 +3646,10 @@ function tag$1(node) {
   return falsy$1(tagName) ? CHAR_BLANK : tagName.toLowerCase();
 }
 
+function children(node) {
+  return node.childNodes;
+}
+
 function text(node, content) {
   node.textContent = content;
 }
@@ -3664,12 +3658,12 @@ function html(node, content) {
   if (isElement(node)) {
     node.innerHTML = content;
   } else if (isFragment(node)) {
-    each(node.childNodes, function (child) {
+    each(children(node), function (child) {
       remove$1(node, child);
     });
     var element = createElement('div');
     element.innerHTML = content;
-    each(element.childNodes, function (child) {
+    each(children(element), function (child) {
       append(node, child);
     });
   }
@@ -3701,6 +3695,7 @@ var domApi = Object.freeze({
 	parent: parent,
 	next: next,
 	tag: tag$1,
+	children: children,
 	text: text,
 	html: html,
 	find: find,
@@ -3779,13 +3774,13 @@ function init$1(modules) {
         id = void 0,
         className = void 0;
 
-    var hashIndex = sel.indexOf(CHAR_HASH);
+    var hashIndex = indexOf$1(sel, CHAR_HASH);
     if (hashIndex > 0) {
       tagName = sel.slice(0, hashIndex);
       sel = sel.slice(hashIndex + 1);
     }
 
-    var dotIndex = sel.indexOf(CHAR_DOT);
+    var dotIndex = indexOf$1(sel, CHAR_DOT);
     if (dotIndex > 0) {
       var temp = sel.slice(0, dotIndex);
       if (tagName) {
@@ -3817,7 +3812,7 @@ function init$1(modules) {
   var createElement$$1 = function createElement$$1(vnode, insertedQueue) {
     var sel = vnode.sel,
         data = vnode.data,
-        children = vnode.children,
+        children$$1 = vnode.children,
         raw = vnode.raw,
         text$$1 = vnode.text;
 
@@ -3841,8 +3836,8 @@ function init$1(modules) {
 
       vnode.el = el;
 
-      if (array(children)) {
-        addVnodes(el, children, 0, children.length - 1, insertedQueue);
+      if (array(children$$1)) {
+        addVnodes(el, children$$1, 0, children$$1.length - 1, insertedQueue);
       } else if (string(text$$1)) {
         api.append(el, api[raw ? 'createFragment' : 'createText'](text$$1));
       }
@@ -3902,13 +3897,13 @@ function init$1(modules) {
 
   var destroyVnode = function destroyVnode(vnode) {
     var data = vnode.data,
-        children = vnode.children;
+        children$$1 = vnode.children;
 
     if (data) {
 
       // 先销毁 children
-      if (children) {
-        each(children, function (child) {
+      if (children$$1) {
+        each(children$$1, function (child) {
           destroyVnode(child);
         });
       }
@@ -4409,7 +4404,7 @@ var isElement$1 = isElement;
 function create$2(tagName, parent$$1) {
   if (parent$$1) {
     html(parent$$1, '<' + tagName + '></' + tagName + '>');
-    return parent$$1.firstChild;
+    return children(parent$$1)[0];
   }
   return createElement(tagName);
 }
@@ -4857,7 +4852,7 @@ var Yox = function () {
     instance.$watchEmitter = new Emitter({
       afterAdd: function afterAdd(added) {
         each(added, function (keypath) {
-          if (keypath.indexOf('*') < 0 && !has$2($watchCache, keypath)) {
+          if (!has$3(keypath, CHAR_ASTERISK) && !has$2($watchCache, keypath)) {
             $watchCache[keypath] = instance.get(keypath);
           }
         });
@@ -5294,7 +5289,7 @@ var Yox = function () {
       }
 
       var instance = this;
-      if (value.indexOf(CHAR_OPAREN) > 0) {
+      if (indexOf$1(value, CHAR_OPAREN) > 0) {
         var _ret2 = function () {
           var ast = compile$1(value);
           if (ast.type === CALL) {
@@ -5489,7 +5484,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.24.1';
+Yox.version = '0.24.2';
 
 /**
  * 工具，便于扩展、插件使用
