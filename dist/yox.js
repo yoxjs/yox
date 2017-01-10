@@ -403,7 +403,7 @@ var CODE_WHITESPACE = codeAt$1(CHAR_WHITESPACE);
  * @return {string}
  */
 function camelCase(str) {
-  if (str.indexOf(CHAR_DASH) >= 0) {
+  if (has$3(str, CHAR_DASH)) {
     return str.replace(/-([a-z])/gi, function ($0, $1) {
       return $1.toUpperCase();
     });
@@ -441,7 +441,7 @@ function falsy$1(str) {
  * @param {string} pair 键值对分隔符，如 = :
  * @return {Array}
  */
-function parse$1(str, separator, pair) {
+function parse(str, separator, pair) {
   var result = [];
   if (string(str)) {
     (function () {
@@ -497,7 +497,7 @@ var string$1 = Object.freeze({
 	camelCase: camelCase,
 	capitalize: capitalize,
 	falsy: falsy$1,
-	parse: parse$1,
+	parse: parse,
 	trim: trim,
 	indexOf: indexOf$1,
 	has: has$3,
@@ -525,7 +525,7 @@ function normalize(str) {
   return str;
 }
 
-function parse$$1(str) {
+function parse$1(str) {
   return falsy$1(str) ? [] : normalize(str).split(SEPARATOR_KEY);
 }
 
@@ -536,7 +536,7 @@ function stringify(keypaths) {
 }
 
 function resolve(base, path) {
-  var list = parse$$1(base);
+  var list = parse$1(base);
   each(path.split(SEPARATOR_PATH), function (term) {
     if (term === LEVEL_PARENT) {
       list.pop();
@@ -641,8 +641,8 @@ function get$1(object$$1, keypath) {
     };
   }
   // 不能以 . 开头
-  if (string(keypath) && keypath.indexOf(CHAR_DOT) > 0) {
-    var list = parse$$1(keypath);
+  if (string(keypath) && indexOf$1(keypath, CHAR_DOT) > 0) {
+    var list = parse$1(keypath);
     for (var i = 0, len = list.length; i < len && object$$1; i++) {
       if (i < len - 1) {
         object$$1 = object$$1[list[i]];
@@ -664,9 +664,9 @@ function get$1(object$$1, keypath) {
  * @param {?boolean} autofill 是否自动填充不存在的对象，默认自动填充
  */
 function set$1(object$$1, keypath, value, autofill) {
-  if (string(keypath) && keypath.indexOf(CHAR_DOT) > 0) {
+  if (string(keypath) && indexOf$1(keypath, CHAR_DOT) > 0) {
     var originalObject = object$$1;
-    var list = parse$$1(keypath);
+    var list = parse$1(keypath);
     var prop = list.pop();
     each(list, function (item, index) {
       if (object$$1[item]) {
@@ -1029,7 +1029,7 @@ var Emitter = function () {
       // ** 可以响应所有数据变化，是一个超级通配符的存在
       if (done) {
         each$1(listeners, function (list, key) {
-          if (key !== type || key.indexOf(CHAR_ASTERISK) >= 0) {
+          if (key !== type || has$3(key, CHAR_ASTERISK)) {
             key = ['^', key.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)'), endsWith(key, '' + CHAR_ASTERISK + CHAR_ASTERISK) ? CHAR_BLANK : '$'];
             var match = type.match(new RegExp(key.join(CHAR_BLANK)));
             if (match) {
@@ -1047,8 +1047,7 @@ var Emitter = function () {
     value: function has(type, listener) {
       var list = this.listeners[type];
       if (listener == NULL) {
-        // 是否注册过 type 事件
-        return array(list) && list.length > 0;
+        return !falsy(list);
       }
       return array(list) ? has$1(list, listener) : FALSE;
     }
@@ -2187,7 +2186,7 @@ var Context = function () {
     key: 'format',
     value: function format(keypath) {
       var instance = this,
-          keys$$1 = parse$$1(keypath);
+          keys$$1 = parse$1(keypath);
       if (keys$$1[0] === 'this') {
         keys$$1.shift();
         return {
@@ -4258,7 +4257,7 @@ function create$1(ast, context, instance) {
             value = node.value;
 
         if (name === 'style') {
-          var list = parse$1(value, CHAR_SEMCOL, CHAR_COLON);
+          var list = parse(value, CHAR_SEMCOL, CHAR_COLON);
           if (list.length) {
             styles = {};
             each(list, function (item) {
@@ -4960,7 +4959,7 @@ var Yox = function () {
       keypath = normalize(keypath);
 
       if (string(context)) {
-        var keys$$1 = parse$$1(context);
+        var keys$$1 = parse$1(context);
         while (TRUE) {
           push$1(keys$$1, keypath);
           context = stringify(keys$$1);
@@ -5484,7 +5483,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.24.2';
+Yox.version = '0.24.3';
 
 /**
  * 工具，便于扩展、插件使用
