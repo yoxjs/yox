@@ -2695,8 +2695,8 @@ var Text = function (_Node) {
 var openingDelimiterPattern = new RegExp(DELIMITER_OPENING);
 var closingDelimiterPattern = new RegExp(DELIMITER_CLOSING);
 
-var elementPattern = /<(?:\/)?[-a-z]\w*/i;
-var elementEndPattern = /(?:\/)?>/;
+var openingTagPattern = /<(?:\/)?[-a-z]\w*/i;
+var closingTagPattern = /(?:\/)?>/;
 
 var attributePattern = /([-:@a-z0-9]+)(?==["'])?/i;
 
@@ -2706,6 +2706,9 @@ var selfClosingTagNamePattern = /input|img|br/i;
 // 如果传入的函数改写了 toString，就调用 toString() 求值
 var toString$1 = Function.prototype.toString;
 
+
+var ifTypes = {};
+ifTypes[IF$1] = ifTypes[ELSE_IF$1] = TRUE;
 
 var elseTypes = {};
 elseTypes[ELSE_IF$1] = elseTypes[ELSE$1] = TRUE;
@@ -2808,18 +2811,18 @@ function traverseTree(node, enter, leave, traverseList, recursion) {
  */
 function traverseList(nodes, recursion) {
   var list = [],
-      item = void 0;
-  var i = 0,
-      node = void 0;
+      i = 0,
+      node = void 0,
+      value = void 0;
   while (node = nodes[i]) {
-    item = recursion(node);
-    if (item !== UNDEFINED) {
-      if (isNodes(item)) {
-        push$1(list, item);
+    value = recursion(node);
+    if (value !== UNDEFINED) {
+      if (isNodes(value)) {
+        push$1(list, value);
       } else {
-        list.push(item);
+        list.push(value);
       }
-      if (node.type === IF$1 || node.type === ELSE_IF$1) {
+      if (ifTypes[node.type]) {
         // 跳过后面紧跟着的 elseif else
         while (node = nodes[i + 1]) {
           if (elseTypes[node.type]) {
@@ -3080,85 +3083,16 @@ function render(ast, createText, createElement, importTemplate, data) {
 // 缓存编译结果
 var compileCache = {};
 
-var parsers = [{
-  test: function test(source) {
-    return startsWith(source, EACH);
-  },
-  create: function create(source) {
-    var terms = trim(slice$1(source, EACH.length)).split(CHAR_COLON);
-    var expr = trim(terms[0]);
-    if (expr) {
-      return new Each(compile$1(expr), trim(terms[1]));
-    }
-  }
-}, {
-  test: function test(source) {
-    return startsWith(source, IMPORT);
-  },
-  create: function create(source) {
-    var name = trim(slice$1(source, IMPORT.length));
-    if (name) {
-      return new Import(name);
-    }
-  }
-}, {
-  test: function test(source) {
-    return startsWith(source, PARTIAL);
-  },
-  create: function create(source) {
-    var name = trim(slice$1(source, PARTIAL.length));
-    if (name) {
-      return new Partial(name);
-    }
-  }
-}, {
-  test: function test(source) {
-    return startsWith(source, IF);
-  },
-  create: function create(source) {
-    var expr = trim(slice$1(source, IF.length));
-    if (expr) {
-      return new If(compile$1(expr));
-    }
-  }
-}, {
-  test: function test(source) {
-    return startsWith(source, ELSE_IF);
-  },
-  create: function create(source) {
-    source = trim(slice$1(source, ELSE_IF.length));
-    if (source) {
-      return new ElseIf(compile$1(source));
-    }
-  }
-}, {
-  test: function test(source) {
-    return startsWith(source, ELSE);
-  },
-  create: function create(source) {
-    return new Else();
-  }
-}, {
-  test: function test(source) {
-    return startsWith(source, SPREAD);
-  },
-  create: function create(source) {
-    source = trim(slice$1(source, SPREAD.length));
-    if (source) {
-      return new Spread(compile$1(source));
-    }
-  }
-}, {
-  test: function test(source) {
-    return !startsWith(source, COMMENT);
-  },
-  create: function create(source, delimiter) {
-    source = trim(source);
-    if (source) {
-      return new Expression(compile$1(source), !endsWith(delimiter, '}}}'));
-    }
-  }
-}];
+/**
+ * 截取前缀之后的字符串
+ *
+ * @param {string} str
+ * @param {string} prefix
+ * @return {string}
+ */
+function slicePrefix(str, prefix) {
+  return trim(slice$1(str, prefix.length));
+}
 
 /**
  * 是否是纯粹的换行
@@ -3180,6 +3114,86 @@ function trimBreakline(content) {
   return content.replace(/^[ \t]*\n|\n[ \t]*$/g, CHAR_BLANK);
 }
 
+var parsers = [{
+  test: function test(source) {
+    return startsWith(source, EACH);
+  },
+  create: function create(source, terms) {
+    terms = slicePrefix(source, EACH).split(CHAR_COLON);
+    source = trim(terms[0]);
+    if (source) {
+      return new Each(compile$1(source), trim(terms[1]));
+    }
+  }
+}, {
+  test: function test(source) {
+    return startsWith(source, IMPORT);
+  },
+  create: function create(source) {
+    source = slicePrefix(source, IMPORT);
+    if (source) {
+      return new Import(source);
+    }
+  }
+}, {
+  test: function test(source) {
+    return startsWith(source, PARTIAL);
+  },
+  create: function create(source) {
+    source = slicePrefix(source, PARTIAL);
+    if (source) {
+      return new Partial(source);
+    }
+  }
+}, {
+  test: function test(source) {
+    return startsWith(source, IF);
+  },
+  create: function create(source) {
+    source = slicePrefix(source, IF);
+    if (source) {
+      return new If(compile$1(source));
+    }
+  }
+}, {
+  test: function test(source) {
+    return startsWith(source, ELSE_IF);
+  },
+  create: function create(source) {
+    source = slicePrefix(source, ELSE_IF);
+    if (source) {
+      return new ElseIf(compile$1(source));
+    }
+  }
+}, {
+  test: function test(source) {
+    return startsWith(source, ELSE);
+  },
+  create: function create(source) {
+    return new Else();
+  }
+}, {
+  test: function test(source) {
+    return startsWith(source, SPREAD);
+  },
+  create: function create(source) {
+    source = slicePrefix(source, SPREAD);
+    if (source) {
+      return new Spread(compile$1(source));
+    }
+  }
+}, {
+  test: function test(source) {
+    return !startsWith(source, COMMENT);
+  },
+  create: function create(source, delimiter) {
+    source = trim(source);
+    if (source) {
+      return new Expression(compile$1(source), !endsWith(delimiter, '}}}'));
+    }
+  }
+}];
+
 /**
  * 把模板编译为抽象语法树
  *
@@ -3200,8 +3214,6 @@ function compile$$1(template) {
   var content = void 0;
   // 记录标签名、属性名、指令名
   var name = void 0;
-  // 分隔符
-  var delimiter = void 0;
 
   // 主扫描器
   var mainScanner = new Scanner(template);
@@ -3378,15 +3390,15 @@ function compile$$1(template) {
       // 分隔符之间的内容
       content = helperScanner.nextBefore(closingDelimiterPattern);
       // 结束分隔符
-      delimiter = helperScanner.nextAfter(closingDelimiterPattern);
+      name = helperScanner.nextAfter(closingDelimiterPattern);
 
       if (content) {
         if (codeAt$1(content) === CODE_SLASH) {
           popStack();
         } else {
           each(parsers, function (parser, index) {
-            if (parser.test(content, delimiter)) {
-              index = parser.create(content, delimiter);
+            if (parser.test(content, name)) {
+              index = parser.create(content, name);
               if (index) {
                 if (elseTypes[index.type]) {
                   popStack();
@@ -3404,7 +3416,7 @@ function compile$$1(template) {
   };
 
   while (mainScanner.hasNext()) {
-    content = mainScanner.nextBefore(elementPattern);
+    content = mainScanner.nextBefore(openingTagPattern);
 
     // 处理标签之间的内容
     if (content) {
@@ -3420,7 +3432,7 @@ function compile$$1(template) {
     // 结束标签
     if (mainScanner.codeAt(1) === CODE_SLASH) {
       // 取出 </tagName
-      content = mainScanner.nextAfter(elementPattern);
+      content = mainScanner.nextAfter(openingTagPattern);
       name = slice$1(content, 2);
 
       // 没有匹配到 >
@@ -3438,29 +3450,29 @@ function compile$$1(template) {
     // 开始标签
     else {
         // 取出 <tagName
-        content = mainScanner.nextAfter(elementPattern);
+        content = mainScanner.nextAfter(openingTagPattern);
         name = slice$1(content, 1);
 
         levelNode = addChild(new Element(name, componentNamePattern.test(name)));
 
         // 截取 <name 和 > 之间的内容
         // 用于提取 Attribute 和 Directive
-        content = mainScanner.nextBefore(elementEndPattern);
+        content = mainScanner.nextBefore(closingTagPattern);
         if (content) {
           parseContent(content);
         }
 
-        levelNode = NULL;
-
-        content = mainScanner.nextAfter(elementEndPattern);
+        content = mainScanner.nextAfter(closingTagPattern);
         // 没有匹配到 > 或 />
         if (!content) {
           return throwError('Illegal tag name', mainScanner.pos);
         }
 
-        if (currentNode.component || selfClosingTagNamePattern.test(currentNode.name)) {
+        if (levelNode.component || selfClosingTagNamePattern.test(levelNode.name)) {
           popStack();
         }
+
+        levelNode = NULL;
       }
   }
 
@@ -5461,7 +5473,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.24.5';
+Yox.version = '0.24.6';
 
 /**
  * 工具，便于扩展、插件使用
@@ -5570,7 +5582,7 @@ Yox.nextTick = add$1;
  * @return {Object}
  */
 Yox.compile = function (template) {
-  return string(template) ? compile$$1(template) : template;
+  return falsy$1(template) ? template : compile$$1(template);
 };
 
 /**
