@@ -772,14 +772,31 @@ export default class Yox {
     return value
   }
 
-  copy(target, deep) {
-    return object.copy(target, deep)
+  /**
+   * 拷贝任意数据，支持深拷贝
+   *
+   * @param {*} data
+   * @param {?boolean} deep 是否深拷贝
+   * @return {*}
+   */
+  copy(data, deep) {
+    return object.copy(data, deep)
   }
 
+  /**
+   * 打印普通日志
+   *
+   * @param {string} msg
+   */
   log(msg) {
     logger.log(msg)
   }
 
+  /**
+   * 打印警告日志
+   *
+   * @param {string} msg
+   */
   warn(msg) {
     logger.warn(msg)
   }
@@ -792,7 +809,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.24.4'
+Yox.version = '0.24.5'
 
 /**
  * 工具，便于扩展、插件使用

@@ -3998,6 +3998,8 @@ function init$1(modules) {
     execute(hook[HOOK_PREPATCH], NULL, args);
 
     var el = vnode.el = oldVnode.el;
+    vnode.payload = oldVnode.payload;
+
     if (!isSameVnode(oldVnode, vnode)) {
       createElement$$1(vnode, insertedQueue);
       replaceVnode(api.parent(el), oldVnode, vnode);
@@ -4056,7 +4058,7 @@ function init$1(modules) {
 
     moduleEmitter.fire(HOOK_PRE);
 
-    if (!oldVnode.sel && api.isElement(oldVnode)) {
+    if (api.isElement(oldVnode)) {
       oldVnode = createVnode(oldVnode);
     }
 
@@ -4218,9 +4220,7 @@ function create$1(ast, context, instance) {
       hook: hooks
     };
 
-    if (isComponent) {
-      component = [];
-    } else {
+    if (!isComponent) {
       each(node.attributes, function (node) {
         var name = node.name,
             value = node.value;
@@ -4250,12 +4250,9 @@ function create$1(ast, context, instance) {
       if (name === KEYWORD_UNIQUE) {
         data.key = node.value;
       } else {
-        var key = name;
-        if (modifier) {
-          key = '' + name + CHAR_DOT + modifier;
-        }
-        if (!directives[key]) {
-          directives[key] = node;
+        name = modifier ? '' + name + CHAR_DOT + modifier : name;
+        if (!directives[name]) {
+          directives[name] = node;
         }
       }
     });
@@ -4264,7 +4261,7 @@ function create$1(ast, context, instance) {
       data.style = styles;
     }
 
-    var upsert = function upsert(oldVnode, vnode) {
+    hooks.insert = hooks.postpatch = hooks.destroy = function (oldVnode, vnode) {
 
       // 如果只有 oldVnode，且 oldVnode 没有 directives，表示插入
       // 如果只有 oldVnode，且 oldVnode 有 directives，表示销毁
@@ -4272,28 +4269,27 @@ function create$1(ast, context, instance) {
 
       var nextVnode = vnode || oldVnode;
 
-      // 数据要挂在元素上，vnode 非常不稳定，内部很可能新建了一个对象
-      var $data = oldVnode.el.$data || (oldVnode.el.$data = {});
+      var payload = oldVnode.payload || (oldVnode.payload = {});
+      var destroies = payload.destroies || (payload.destroies = {});
 
-      var oldDestroies = $data.destroies || {};
-      var oldDirectives = $data.directives;
-      var oldComponent = $data.component;
+      var oldComponent = payload.component;
+      var oldDirectives = payload.directives;
 
       if (oldComponent) {
         component = oldComponent;
         if (object(component)) {
           component.set(toObject(node.attributes, 'name', 'value'), TRUE);
         }
-      } else if (component) {
+      } else if (isComponent) {
+        component = payload.component = [];
         instance.component(node.name, function (options) {
           if (array(component)) {
             oldComponent = component;
-            component = instance.create(options, {
+            component = payload.component = instance.create(options, {
               el: nextVnode.el,
               props: toObject(node.attributes, 'name', 'value'),
               replace: TRUE
             });
-            $data.component = component;
             each(oldComponent, function (callback) {
               callback(component);
             });
@@ -4303,17 +4299,14 @@ function create$1(ast, context, instance) {
 
       var bind = function bind(key) {
         var node = directives[key];
-        var directive = instance.directive(node.name);
-        if (directive) {
-          return directive({
-            el: nextVnode.el,
-            node: node,
-            instance: instance,
-            directives: directives,
-            attributes: attributes$$1,
-            component: component
-          });
-        }
+        return execute(instance.directive(node.name), NULL, {
+          el: nextVnode.el,
+          node: node,
+          instance: instance,
+          directives: directives,
+          attributes: attributes$$1,
+          component: component
+        });
       };
 
       each$1(directives, function (directive, key) {
@@ -4321,38 +4314,31 @@ function create$1(ast, context, instance) {
           var oldDirective = oldDirectives[key];
           if (oldDirective) {
             if (oldDirective.value !== directive.value) {
-              if (oldDestroies[key]) {
-                oldDestroies[key]();
+              if (destroies[key]) {
+                destroies[key]();
               }
-              oldDestroies[key] = bind(key);
+              destroies[key] = bind(key);
             }
             return;
           }
         }
-        oldDestroies[key] = bind(key);
+        destroies[key] = bind(key);
       });
 
       if (oldDirectives) {
         each$1(oldDirectives, function (oldDirective, key) {
-          if (oldDestroies[key] && (!vnode || !directives[key])) {
-            oldDestroies[key]();
-            delete oldDestroies[key];
+          if (destroies[key] && (!vnode || !directives[key])) {
+            destroies[key]();
+            delete destroies[key];
           }
         });
-        // 元素被销毁
-        if (!vnode) {
-          oldVnode.el.$data = NULL;
-        }
       }
 
-      $data.attributes = attributes$$1;
-      $data.directives = directives;
-      $data.destroies = oldDestroies;
+      payload.attributes = attributes$$1;
+      payload.directives = directives;
 
       hooks.insert = hooks.postpatch = hooks.destroy = noop;
     };
-
-    hooks.insert = hooks.postpatch = hooks.destroy = upsert;
 
     return h(isComponent ? 'div' : node.name, data, node.children.map(function (child) {
       return child instanceof Vnode ? child : toString$2(child);
@@ -5433,16 +5419,39 @@ var Yox = function () {
       }
       return value;
     }
+
+    /**
+     * 拷贝任意数据，支持深拷贝
+     *
+     * @param {*} data
+     * @param {?boolean} deep 是否深拷贝
+     * @return {*}
+     */
+
   }, {
     key: 'copy',
-    value: function copy(target, deep) {
-      return copy$1(target, deep);
+    value: function copy(data, deep) {
+      return copy$1(data, deep);
     }
+
+    /**
+     * 打印普通日志
+     *
+     * @param {string} msg
+     */
+
   }, {
     key: 'log',
     value: function log(msg) {
       log$1(msg);
     }
+
+    /**
+     * 打印警告日志
+     *
+     * @param {string} msg
+     */
+
   }, {
     key: 'warn',
     value: function warn(msg) {
@@ -5452,7 +5461,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.24.4';
+Yox.version = '0.24.5';
 
 /**
  * 工具，便于扩展、插件使用

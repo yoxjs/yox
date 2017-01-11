@@ -45,10 +45,7 @@ export function create(ast, context, instance) {
       hook: hooks,
     }
 
-    if (isComponent) {
-      component = [ ]
-    }
-    else {
+    if (!isComponent) {
       array.each(
         node.attributes,
         function (node) {
@@ -84,12 +81,11 @@ export function create(ast, context, instance) {
           data.key = node.value
         }
         else {
-          let key = name
-          if (modifier) {
-            key = `${name}${char.CHAR_DOT}${modifier}`
-          }
-          if (!directives[ key ]) {
-            directives[ key ] = node
+          name = modifier
+            ? `${name}${char.CHAR_DOT}${modifier}`
+            : name
+          if (!directives[ name ]) {
+            directives[ name ] = node
           }
         }
       }
@@ -99,7 +95,9 @@ export function create(ast, context, instance) {
       data.style = styles
     }
 
-    let upsert = function (oldVnode, vnode) {
+    hooks.insert =
+    hooks.postpatch =
+    hooks.destroy = function (oldVnode, vnode) {
 
       // 如果只有 oldVnode，且 oldVnode 没有 directives，表示插入
       // 如果只有 oldVnode，且 oldVnode 有 directives，表示销毁
@@ -107,12 +105,11 @@ export function create(ast, context, instance) {
 
       let nextVnode = vnode || oldVnode
 
-      // 数据要挂在元素上，vnode 非常不稳定，内部很可能新建了一个对象
-      let $data = oldVnode.el.$data || (oldVnode.el.$data = { })
+      let payload = oldVnode.payload || (oldVnode.payload = { })
+      let destroies = payload.destroies || (payload.destroies = { })
 
-      let oldDestroies = $data.destroies || { }
-      let oldDirectives = $data.directives
-      let oldComponent = $data.component
+      let oldComponent = payload.component
+      let oldDirectives = payload.directives
 
       if (oldComponent) {
         component = oldComponent
@@ -123,13 +120,16 @@ export function create(ast, context, instance) {
           )
         }
       }
-      else if (component) {
+      else if (isComponent) {
+        component = payload.component = [ ]
         instance.component(
           node.name,
           function (options) {
             if (is.array(component)) {
               oldComponent = component
-              component = instance.create(
+              component =
+              payload.component =
+              instance.create(
                 options,
                 {
                   el: nextVnode.el,
@@ -137,7 +137,6 @@ export function create(ast, context, instance) {
                   replace: env.TRUE,
                 }
               )
-              $data.component = component
               array.each(
                 oldComponent,
                 function (callback) {
@@ -152,17 +151,18 @@ export function create(ast, context, instance) {
 
       let bind = function (key) {
         let node = directives[ key ]
-        let directive = instance.directive(node.name)
-        if (directive) {
-          return directive({
+        return execute(
+          instance.directive(node.name),
+          env.NULL,
+          {
             el: nextVnode.el,
             node,
             instance,
             directives,
             attributes,
             component,
-          })
-        }
+          }
+        )
       }
 
       object.each(
@@ -172,15 +172,15 @@ export function create(ast, context, instance) {
             let oldDirective = oldDirectives[ key ]
             if (oldDirective) {
               if (oldDirective.value !== directive.value) {
-                if (oldDestroies[ key ]) {
-                  oldDestroies[ key ]()
+                if (destroies[ key ]) {
+                  destroies[ key ]()
                 }
-                oldDestroies[ key ] = bind(key)
+                destroies[ key ] = bind(key)
               }
               return
             }
           }
-          oldDestroies[ key ] = bind(key)
+          destroies[ key ] = bind(key)
         }
       )
 
@@ -188,22 +188,16 @@ export function create(ast, context, instance) {
         object.each(
           oldDirectives,
           function (oldDirective, key) {
-            if (oldDestroies[ key ] && (!vnode || !directives[ key ])) {
-              oldDestroies[ key ]()
-              delete oldDestroies[ key ]
+            if (destroies[ key ] && (!vnode || !directives[ key ])) {
+              destroies[ key ]()
+              delete destroies[ key ]
             }
           }
         )
-        // 元素被销毁
-        if (!vnode) {
-          oldVnode.el.$data = env.NULL
-        }
       }
 
-
-      $data.attributes = attributes
-      $data.directives = directives
-      $data.destroies = oldDestroies
+      payload.attributes = attributes
+      payload.directives = directives
 
       hooks.insert =
       hooks.postpatch =
@@ -211,16 +205,14 @@ export function create(ast, context, instance) {
 
     }
 
-    hooks.insert =
-    hooks.postpatch =
-    hooks.destroy = upsert
-
     return h(
       isComponent ? 'div' : node.name,
       data,
       node.children.map(
         function (child) {
-          return (child instanceof Vnode) ? child : toString(child)
+          return child instanceof Vnode
+            ? child
+            : toString(child)
         }
       )
     )

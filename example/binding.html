@@ -231,7 +231,13 @@
                 formatSelectedNames: function (selectedNames) {
                     return '[' + selectedNames.toString() + ']';
                 }
-            }
+            },
+            beforeUpdate: function () {
+                console.log('    beforeUpdate');
+            },
+            afterUpdate: function () {
+                console.log('    afterUpdate');
+            },
         });
 
     </script>
