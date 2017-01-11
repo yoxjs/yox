@@ -418,7 +418,7 @@ function camelCase(str) {
  * @return {string}
  */
 function capitalize(str) {
-  return charAt$1(str, 0).toUpperCase() + str.slice(1);
+  return charAt$1(str, 0).toUpperCase() + slice$1(str, 1);
 }
 
 /**
@@ -471,6 +471,9 @@ function parse(str, separator, pair) {
 function trim(str) {
   return falsy$1(str) ? CHAR_BLANK : str.trim();
 }
+function slice$1(str, start, end) {
+  return number(end) ? str.slice(start, end) : str.slice(start);
+}
 function indexOf$1(str, part) {
   return str.indexOf(part);
 }
@@ -499,6 +502,7 @@ var string$1 = Object.freeze({
 	falsy: falsy$1,
 	parse: parse,
 	trim: trim,
+	slice: slice$1,
 	indexOf: indexOf$1,
 	has: has$3,
 	startsWith: startsWith,
@@ -517,7 +521,7 @@ function normalize(str) {
     return str.replace(/\[\s*?([\S]+)\s*?\]/g, function ($0, $1) {
       var code = codeAt$1($1);
       if (code === CODE_SQUOTE || code === CODE_DQUOTE) {
-        $1 = $1.slice(1, -1);
+        $1 = slice$1($1, 1, -1);
       }
       return '' + SEPARATOR_KEY + $1;
     });
@@ -1886,7 +1890,7 @@ function compile$1(content) {
 
   var parseOperator = function parseOperator(sortedOperatorList) {
     skipWhitespace();
-    var literal = matchBestToken(content.slice(index), sortedOperatorList);
+    var literal = matchBestToken(slice$1(content, index), sortedOperatorList);
     if (literal) {
       index += literal.length;
       return literal;
@@ -1929,7 +1933,7 @@ function compile$1(content) {
     if (charCode === CODE_SQUOTE || charCode === CODE_DQUOTE) {
       // 截出的字符串包含引号
       var value = content.substring(index, (skipString(), index));
-      return new Literal(value.slice(1, -1), value);
+      return new Literal(slice$1(value, 1, -1), value);
     }
     // 1.1 或 .1
     else if (isDigit(charCode) || charCode === CODE_DOT) {
@@ -2384,7 +2388,7 @@ var Scanner = function () {
     key: 'forward',
     value: function forward(offset) {
       this.pos += offset;
-      this.tail = this.tail.slice(offset);
+      this.tail = slice$1(this.tail, offset);
     }
   }, {
     key: 'charAt',
@@ -2696,21 +2700,15 @@ var elementEndPattern = /(?:\/)?>/;
 
 var attributePattern = /([-:@a-z0-9]+)(?==["'])?/i;
 
-var nonSingleQuotePattern = /^[^']*/;
-var nonDoubleQuotePattern = /^[^"]*/;
-
 var componentNamePattern = /[-A-Z]/;
 var selfClosingTagNamePattern = /input|img|br/i;
 
 // 如果传入的函数改写了 toString，就调用 toString() 求值
 var toString$1 = Function.prototype.toString;
 
-// 2 种 level
-// 当 level 为 LEVEL_ATTRIBUTE 时，表示只可以处理属性和指令
-// 当 level 为 LEVEL_TEXT 时，表示只可以处理属性和指令的值
 
-var LEVEL_ATTRIBUTE = 1;
-var LEVEL_TEXT = 2;
+var elseTypes = {};
+elseTypes[ELSE_IF$1] = elseTypes[ELSE$1] = TRUE;
 
 // 属性层级的节点类型
 var attrTypes = {};
@@ -2724,6 +2722,12 @@ leafTypes[EXPRESSION] = leafTypes[IMPORT$1] = leafTypes[SPREAD$1] = leafTypes[TE
 var buildInDirectives = {};
 buildInDirectives[DIRECTIVE_REF] = buildInDirectives[DIRECTIVE_LAZY] = buildInDirectives[DIRECTIVE_MODEL] = buildInDirectives[KEYWORD_UNIQUE] = TRUE;
 
+/**
+ * 标记节点数组，用于区分普通数组
+ *
+ * @param {*} nodes
+ * @return {*}
+ */
 function markNodes(nodes) {
   if (array(nodes)) {
     nodes[CHAR_DASH] = TRUE;
@@ -2731,8 +2735,14 @@ function markNodes(nodes) {
   return nodes;
 }
 
+/**
+ * 是否是节点数组
+ *
+ * @param {*} nodes
+ * @return {boolean}
+ */
 function isNodes(nodes) {
-  return nodes[CHAR_DASH] === TRUE;
+  return array(nodes) && nodes[CHAR_DASH] === TRUE;
 }
 
 /**
@@ -2745,20 +2755,17 @@ function isNodes(nodes) {
  */
 function mergeNodes(nodes) {
   if (array(nodes)) {
-    var length = nodes.length;
-    // name=""
-
-    if (length === 0) {
-      return CHAR_BLANK;
-    }
-    // name="{{value}}"
-    else if (length === 1) {
+    switch (nodes.length) {
+      // name=""
+      case 0:
+        return CHAR_BLANK;
+      // name="{{value}}"
+      case 1:
         return nodes[0];
-      }
       // name="{{value1}}{{value2}}"
-      else if (length > 1) {
-          return nodes.join(CHAR_BLANK);
-        }
+      default:
+        return nodes.join(CHAR_BLANK);
+    }
   }
 }
 
@@ -2780,10 +2787,10 @@ function traverseTree(node, enter, leave, traverseList, recursion) {
       var children = node.children,
           attrs = node.attrs;
 
-      if (array(children)) {
+      if (children) {
         children = traverseList(children, recursion);
       }
-      if (array(attrs)) {
+      if (attrs) {
         attrs = traverseList(attrs, recursion);
       }
       value = leave(node, children, attrs);
@@ -2807,15 +2814,15 @@ function traverseList(nodes, recursion) {
   while (node = nodes[i]) {
     item = recursion(node);
     if (item !== UNDEFINED) {
-      if (array(item) && !isNodes(item)) {
-        list.push(item);
-      } else {
+      if (isNodes(item)) {
         push$1(list, item);
+      } else {
+        list.push(item);
       }
       if (node.type === IF$1 || node.type === ELSE_IF$1) {
         // 跳过后面紧跟着的 elseif else
         while (node = nodes[i + 1]) {
-          if (node.type === ELSE_IF$1 || node.type === ELSE$1) {
+          if (elseTypes[node.type]) {
             i++;
           } else {
             break;
@@ -2826,16 +2833,6 @@ function traverseList(nodes, recursion) {
     i++;
   }
   return markNodes(list);
-}
-
-/**
- * 序列化表达式
- *
- * @param {Object} expr
- * @return {string}
- */
-function stringifyExpr(expr) {
-  return normalize(stringify$1(expr));
 }
 
 /**
@@ -2931,7 +2928,7 @@ function render(ast, createText, createElement, importTemplate, data) {
 
             var list = [];
 
-            push$1(keys$$1, stringifyExpr(expr));
+            push$1(keys$$1, normalize(stringify$1(expr)));
             context = context.push(value);
 
             iterate(value, function (item, i) {
@@ -3058,16 +3055,13 @@ function render(ast, createText, createElement, importTemplate, data) {
                 }
               });
             }
-            if (!children) {
-              children = [];
-            }
             return {
               v: createElement({
                 name: name,
+                keypath: keypath,
                 attributes: attributes,
                 directives: directives,
-                children: children,
-                keypath: keypath
+                children: children || []
               }, component)
             };
         }
@@ -3077,9 +3071,10 @@ function render(ast, createText, createElement, importTemplate, data) {
     }, traverseList, recursion);
   };
 
-  var node = recursion(ast);
-
-  return { node: node, deps: deps };
+  return {
+    node: recursion(ast),
+    deps: deps
+  };
 }
 
 // 缓存编译结果
@@ -3090,7 +3085,7 @@ var parsers = [{
     return startsWith(source, EACH);
   },
   create: function create(source) {
-    var terms = trim(source.slice(EACH.length)).split(CHAR_COLON);
+    var terms = trim(slice$1(source, EACH.length)).split(CHAR_COLON);
     var expr = trim(terms[0]);
     if (expr) {
       return new Each(compile$1(expr), trim(terms[1]));
@@ -3101,7 +3096,7 @@ var parsers = [{
     return startsWith(source, IMPORT);
   },
   create: function create(source) {
-    var name = trim(source.slice(IMPORT.length));
+    var name = trim(slice$1(source, IMPORT.length));
     if (name) {
       return new Import(name);
     }
@@ -3111,7 +3106,7 @@ var parsers = [{
     return startsWith(source, PARTIAL);
   },
   create: function create(source) {
-    var name = trim(source.slice(PARTIAL.length));
+    var name = trim(slice$1(source, PARTIAL.length));
     if (name) {
       return new Partial(name);
     }
@@ -3121,7 +3116,7 @@ var parsers = [{
     return startsWith(source, IF);
   },
   create: function create(source) {
-    var expr = trim(source.slice(IF.length));
+    var expr = trim(slice$1(source, IF.length));
     if (expr) {
       return new If(compile$1(expr));
     }
@@ -3130,10 +3125,9 @@ var parsers = [{
   test: function test(source) {
     return startsWith(source, ELSE_IF);
   },
-  create: function create(source, delimiter, popStack) {
-    source = trim(source.slice(ELSE_IF.length));
+  create: function create(source) {
+    source = trim(slice$1(source, ELSE_IF.length));
     if (source) {
-      popStack();
       return new ElseIf(compile$1(source));
     }
   }
@@ -3141,8 +3135,7 @@ var parsers = [{
   test: function test(source) {
     return startsWith(source, ELSE);
   },
-  create: function create(source, delimiter, popStack) {
-    popStack();
+  create: function create(source) {
     return new Else();
   }
 }, {
@@ -3150,7 +3143,7 @@ var parsers = [{
     return startsWith(source, SPREAD);
   },
   create: function create(source) {
-    source = trim(source.slice(SPREAD.length));
+    source = trim(slice$1(source, SPREAD.length));
     if (source) {
       return new Spread(compile$1(source));
     }
@@ -3174,7 +3167,7 @@ var parsers = [{
  * @return {boolean}
  */
 function isBreakline(content) {
-  return has$3(content, CHAR_BREAKLINE) >= 0 && !trim(content);
+  return has$3(content, CHAR_BREAKLINE) && !trim(content);
 }
 
 /**
@@ -3185,38 +3178,6 @@ function isBreakline(content) {
  */
 function trimBreakline(content) {
   return content.replace(/^[ \t]*\n|\n[ \t]*$/g, CHAR_BLANK);
-}
-
-/**
- * 解析属性值，传入开始引号，匹配结束引号
- *
- * @param {string} content
- * @param {string} quote
- * @return {Object}
- */
-function parseAttributeValue(content, quote) {
-
-  var result = {
-    content: content
-  };
-
-  var match = content.match(quote === CHAR_DQUOTE ? nonDoubleQuotePattern : nonSingleQuotePattern);
-
-  if (match) {
-    result.value = match[0];
-
-    var length = match[0].length;
-
-    if (charAt$1(content, length) === quote) {
-      result.end = TRUE;
-      length++;
-    }
-    if (length) {
-      result.content = content.slice(length);
-    }
-  }
-
-  return result;
 }
 
 /**
@@ -3232,28 +3193,24 @@ function compile$$1(template) {
     return result;
   }
 
+  // 第一级的所有节点
+  var nodes = [];
+
   // 当前内容
   var content = void 0;
   // 记录标签名、属性名、指令名
   var name = void 0;
-  // 记录属性值、指令值的开始引号，方便匹配结束引号
-  var quote = void 0;
   // 分隔符
   var delimiter = void 0;
-  // 是否自闭合
-  var isSelfClosing = void 0;
 
   // 主扫描器
   var mainScanner = new Scanner(template);
   // 辅扫描器
   var helperScanner = new Scanner();
 
-  var level = void 0,
-      levelNode = void 0;
-
   var nodeStack = [];
-  var rootNode = new Element('root');
-  var currentNode = rootNode;
+  var currentNode = void 0,
+      levelNode = void 0;
 
   var throwError = function throwError(msg, pos) {
     if (pos == NULL) {
@@ -3283,13 +3240,27 @@ function compile$$1(template) {
   };
 
   var pushStack = function pushStack(node) {
-    push$1(nodeStack, currentNode);
+    if (currentNode) {
+      push$1(nodeStack, currentNode);
+    } else {
+      push$1(nodes, node);
+    }
     currentNode = node;
+    if (attrTypes[node.type]) {
+      levelNode = node;
+    }
   };
 
   var popStack = function popStack() {
+    if (attrTypes[currentNode.type]) {
+      each(nodeStack, function (node) {
+        if (node.type === ELEMENT) {
+          levelNode = node;
+          return FALSE;
+        }
+      }, TRUE);
+    }
     currentNode = nodeStack.pop();
-    return currentNode;
   };
 
   var addChild = function addChild(node) {
@@ -3304,19 +3275,19 @@ function compile$$1(template) {
       node.content = content;
     }
 
-    if (level === LEVEL_ATTRIBUTE && currentNode.addAttr) {
-      currentNode.addAttr(node);
-    } else {
-      currentNode.addChild(node);
+    if (currentNode) {
+      if (levelNode && levelNode.type === ELEMENT && currentNode.addAttr) {
+        currentNode.addAttr(node);
+      } else {
+        currentNode.addChild(node);
+      }
     }
 
     if (!leafTypes[type]) {
       pushStack(node);
     }
 
-    if (attrTypes[type]) {
-      level = LEVEL_TEXT;
-    }
+    return node;
   };
 
   // 属性和指令支持以下 4 种写法：
@@ -3328,24 +3299,37 @@ function compile$$1(template) {
 
     if (falsy(levelNode.children)) {
       if (content && codeAt$1(content) === CODE_EQUAL) {
-        quote = charAt$1(content, 1);
-        content = content.slice(2);
+        // 第一个是引号
+        result = charAt$1(content, 1);
+        content = slice$1(content, 2);
       } else {
         popStack();
-        level = LEVEL_ATTRIBUTE;
         return content;
       }
     }
 
-    result = parseAttributeValue(content, quote);
-    if (result.value) {
-      addChild(new Text(result.value));
+    var i = 0,
+        currentChar = void 0,
+        closed = void 0;
+    while (currentChar = charAt$1(content, i)) {
+      // 如果是引号，属性值匹配结束
+      if (currentChar === result) {
+        closed = TRUE;
+        break;
+      }
+      i++;
     }
-    if (result.end) {
+
+    if (i) {
+      addChild(new Text(slice$1(content, 0, i)));
+      content = slice$1(content, closed ? i + 1 : i);
+    }
+
+    if (closed) {
       popStack();
-      level = LEVEL_ATTRIBUTE;
     }
-    return result.content;
+
+    return content;
   };
 
   // 核心函数，负责分隔符和普通字符串的深度解析
@@ -3359,34 +3343,31 @@ function compile$$1(template) {
 
       if (content) {
 
-        if (level === LEVEL_TEXT) {
+        if (levelNode && attrTypes[levelNode.type]) {
           content = parseAttribute(content);
         }
 
-        if (level === LEVEL_ATTRIBUTE) {
+        if (levelNode && levelNode.type === ELEMENT) {
           while (content && (result = attributePattern.exec(content))) {
-            content = content.slice(result.index + result[0].length);
+            content = slice$1(content, result.index + result[0].length);
             name = result[1];
 
             if (buildInDirectives[name]) {
-              levelNode = new Directive(camelCase(name));
+              addChild(new Directive(camelCase(name)));
             } else {
               if (startsWith(name, DIRECTIVE_EVENT_PREFIX)) {
                 name = name.slice(DIRECTIVE_EVENT_PREFIX.length);
-                levelNode = new Directive('event', camelCase(name));
+                addChild(new Directive('event', camelCase(name)));
               } else if (startsWith(name, DIRECTIVE_CUSTOM_PREFIX)) {
                 name = name.slice(DIRECTIVE_CUSTOM_PREFIX.length);
-                levelNode = new Directive(camelCase(name));
+                addChild(new Directive(camelCase(name)));
               } else {
                 if (levelNode.component) {
                   name = camelCase(name);
                 }
-                levelNode = new Attribute(name);
+                addChild(new Attribute(name));
               }
             }
-
-            addChild(levelNode);
-
             content = parseAttribute(content);
           }
         } else if (content) {
@@ -3405,9 +3386,11 @@ function compile$$1(template) {
         } else {
           each(parsers, function (parser, index) {
             if (parser.test(content, delimiter)) {
-              // 用 index 节省一个变量定义
-              index = parser.create(content, delimiter, popStack);
+              index = parser.create(content, delimiter);
               if (index) {
+                if (elseTypes[index.type]) {
+                  popStack();
+                }
                 addChild(index);
               } else {
                 throwError('Expected expression', mainScanner.pos + helperScanner.pos);
@@ -3438,12 +3421,12 @@ function compile$$1(template) {
     if (mainScanner.codeAt(1) === CODE_SLASH) {
       // 取出 </tagName
       content = mainScanner.nextAfter(elementPattern);
-      name = content.slice(2);
+      name = slice$1(content, 2);
 
       // 没有匹配到 >
       if (mainScanner.codeAt(0) !== CODE_RIGHT) {
         return throwError('Illegal tag name', mainScanner.pos);
-      } else if (currentNode.type === ELEMENT && name !== currentNode.name) {
+      } else if (name !== currentNode.name) {
         return throwError('Unexpected closing tag', mainScanner.pos);
       }
 
@@ -3456,25 +3439,18 @@ function compile$$1(template) {
     else {
         // 取出 <tagName
         content = mainScanner.nextAfter(elementPattern);
-        name = content.slice(1);
+        name = slice$1(content, 1);
 
-        if (componentNamePattern.test(name)) {
-          levelNode = new Element(name, TRUE);
-          isSelfClosing = TRUE;
-        } else {
-          levelNode = new Element(name);
-          isSelfClosing = selfClosingTagNamePattern.test(name);
-        }
-        addChild(levelNode);
+        levelNode = addChild(new Element(name, componentNamePattern.test(name)));
 
         // 截取 <name 和 > 之间的内容
         // 用于提取 Attribute 和 Directive
         content = mainScanner.nextBefore(elementEndPattern);
         if (content) {
-          level = LEVEL_ATTRIBUTE;
           parseContent(content);
-          level = NULL;
         }
+
+        levelNode = NULL;
 
         content = mainScanner.nextAfter(elementEndPattern);
         // 没有匹配到 > 或 />
@@ -3482,7 +3458,7 @@ function compile$$1(template) {
           return throwError('Illegal tag name', mainScanner.pos);
         }
 
-        if (isSelfClosing) {
+        if (currentNode.component || selfClosingTagNamePattern.test(currentNode.name)) {
           popStack();
         }
       }
@@ -3492,14 +3468,7 @@ function compile$$1(template) {
     return throwError('Expected end tag (</' + nodeStack[0].name + '>)', mainScanner.pos);
   }
 
-  var children = rootNode.children;
-
-  result = children[0];
-  if (children.length > 1 || result.type !== ELEMENT) {
-    error$1('Template should contain exactly one root element.');
-  }
-
-  return compileCache[template] = result;
+  return compileCache[template] = nodes[0];
 }
 
 /**
@@ -3775,19 +3744,19 @@ function init$1(modules) {
 
     var hashIndex = indexOf$1(sel, CHAR_HASH);
     if (hashIndex > 0) {
-      tagName = sel.slice(0, hashIndex);
-      sel = sel.slice(hashIndex + 1);
+      tagName = slice$1(sel, 0, hashIndex);
+      sel = slice$1(sel, hashIndex + 1);
     }
 
     var dotIndex = indexOf$1(sel, CHAR_DOT);
     if (dotIndex > 0) {
-      var temp = sel.slice(0, dotIndex);
+      var temp = slice$1(sel, 0, dotIndex);
       if (tagName) {
         id = temp;
       } else {
         tagName = temp;
       }
-      className = sel.slice(dotIndex + 1).split(CHAR_DOT).join(CHAR_WHITESPACE);
+      className = slice$1(sel, dotIndex + 1).split(CHAR_DOT).join(CHAR_WHITESPACE);
     } else {
       if (tagName) {
         id = sel;
@@ -5483,7 +5452,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.24.3';
+Yox.version = '0.24.4';
 
 /**
  * 工具，便于扩展、插件使用
