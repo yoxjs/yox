@@ -75,11 +75,14 @@ The key is that yox supports IE8.
   // 以下是组件生命周期钩子
   beforeCreate: function,
   afterCreate: function,
+
   beforeMount: function,
   // 一般在 afterMount 初始化第三方 DOM 库
   afterMount: function,
+
   beforeUpdate: function,
   afterUpdate: function,
+
   // 一般在 beforeDestroy 销毁第三方 DOM 库
   beforeDestroy: function,
   afterDestroy: function
