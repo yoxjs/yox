@@ -4518,24 +4518,39 @@ var ref = function (_ref) {
  *
  * @param {Function} fn 需要节制调用的函数
  * @param {number} delay 调用的时间间隔
+ * @param {?boolean} immediate 是否立即触发
  * @return {Function}
  */
-var debounce = function (fn, delay) {
+var debounce = function (fn, delay, immediate) {
 
   var timer = void 0;
 
   return function () {
+    var _arguments = arguments;
+
 
     if (!timer) {
+      (function () {
 
-      execute(fn, NULL, toArray(arguments));
+        var args = toArray(_arguments);
+        if (immediate) {
+          execute(fn, NULL, args);
+        }
 
-      timer = setTimeout(function () {
-        timer = NULL;
-      }, delay);
+        timer = setTimeout(function () {
+          timer = NULL;
+          if (!immediate) {
+            execute(fn, NULL, args);
+          }
+        }, delay);
+      })();
     }
   };
 };
+
+// 避免连续多次点击，主要用于提交表单场景
+// 移动端的 tap 事件可自行在业务层打补丁实现
+var immediateTypes = ['click', 'tap'];
 
 var event = function (_ref) {
   var el = _ref.el,
@@ -4559,7 +4574,7 @@ var event = function (_ref) {
 
     if (lazy) {
       if (numeric(lazy.value) && lazy.value >= 0) {
-        listener = debounce(listener, lazy.value);
+        listener = debounce(listener, lazy.value, has$1(immediateTypes, type));
       } else if (type === 'input') {
         type = 'change';
       }
@@ -5506,7 +5521,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.25.1';
+Yox.version = '0.25.2';
 
 /**
  * 工具，便于扩展、插件使用

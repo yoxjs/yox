@@ -7,6 +7,10 @@ import * as array from 'yox-common/util/array'
 
 import * as native from '../platform/web/native'
 
+// 避免连续多次点击，主要用于提交表单场景
+// 移动端的 tap 事件可自行在业务层打补丁实现
+const immediateTypes = [ 'click', 'tap' ]
+
 export default function ({ el, node, instance, component, directives, type, listener }) {
 
   if (!type) {
@@ -20,7 +24,7 @@ export default function ({ el, node, instance, component, directives, type, list
     let { lazy } = directives
     if (lazy) {
       if (is.numeric(lazy.value) && lazy.value >= 0) {
-        listener = debounce(listener, lazy.value)
+        listener = debounce(listener, lazy.value, array.has(immediateTypes, type))
       }
       else if (type === 'input') {
         type = 'change'
