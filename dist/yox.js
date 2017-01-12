@@ -449,8 +449,8 @@ function parse(str, separator, pair) {
           key = void 0,
           value = void 0,
           item = void 0;
-      each(str.split(separator), function (term) {
-        terms = term.split(pair);
+      each(split(str, separator), function (term) {
+        terms = split(term, pair);
         key = terms[0];
         value = terms[1];
         if (key) {
@@ -468,11 +468,31 @@ function parse(str, separator, pair) {
   return result;
 }
 
+/**
+ * 替换可正则可用的字符串
+ *
+ * @param {string} str
+ * @param {string} pattern
+ * @param {string} replacement
+ * @return {string}
+ */
+// export function replace(str, pattern, replacement) {
+//   pattern = pattern.replace(/[$.]/g, '\\$&')
+//   return str.replace(
+//     new RegExp(`(?:^|\\b)${pattern}(?:$|\\b)`, 'g'),
+//     replacement
+//   )
+// }
+
+
 function trim(str) {
   return falsy$1(str) ? CHAR_BLANK : str.trim();
 }
 function slice$1(str, start, end) {
   return number(end) ? str.slice(start, end) : str.slice(start);
+}
+function split(str, delimiter) {
+  return falsy$1(str) ? [] : str.split(new RegExp('\\s*' + delimiter.replace(/[.*?]/g, '\\$&') + '\\s*'));
 }
 function indexOf$1(str, part) {
   return str.indexOf(part);
@@ -487,15 +507,6 @@ function endsWith(str, part) {
   return str === part || str.lastIndexOf(part) === part.length;
 }
 
-// export function replace(str, pattern, replacement) {
-//   pattern = pattern.replace(/[$.]/g, '\\$&')
-//   return str.replace(
-//     new RegExp(`(?:^|\\b)${pattern}(?:$|\\b)`, 'g'),
-//     replacement
-//   )
-// }
-//
-
 var string$1 = Object.freeze({
 	camelCase: camelCase,
 	capitalize: capitalize,
@@ -503,6 +514,7 @@ var string$1 = Object.freeze({
 	parse: parse,
 	trim: trim,
 	slice: slice$1,
+	split: split,
 	indexOf: indexOf$1,
 	has: has$3,
 	startsWith: startsWith,
@@ -530,7 +542,7 @@ function normalize(str) {
 }
 
 function parse$1(str) {
-  return falsy$1(str) ? [] : normalize(str).split(SEPARATOR_KEY);
+  return split(normalize(str), SEPARATOR_KEY);
 }
 
 function stringify(keypaths) {
@@ -541,7 +553,7 @@ function stringify(keypaths) {
 
 function resolve(base, path) {
   var list = parse$1(base);
-  each(path.split(SEPARATOR_PATH), function (term) {
+  each(split(path, SEPARATOR_PATH), function (term) {
     if (term === LEVEL_PARENT) {
       list.pop();
     } else {
@@ -3127,10 +3139,9 @@ var parsers = [{
     return startsWith(source, EACH);
   },
   create: function create(source, terms) {
-    terms = slicePrefix(source, EACH).split(CHAR_COLON);
-    source = trim(terms[0]);
-    if (source) {
-      return new Each(compile$1(source), trim(terms[1]));
+    terms = split(slicePrefix(source, EACH), CHAR_COLON);
+    if (terms[0]) {
+      return new Each(compile$1(terms[0]), terms[1]);
     }
   }
 }, {
@@ -3584,12 +3595,14 @@ function createElement(tagName) {
 
 function createFragment(content) {
   var fragment = doc.createDocumentFragment();
-  html(fragment, content);
+  if (content) {
+    html(fragment, content);
+  }
   return fragment;
 }
 
 function createText(text) {
-  return doc.createTextNode(text);
+  return doc.createTextNode(text || CHAR_BLANK);
 }
 
 function createComment(text) {
@@ -3714,8 +3727,6 @@ var HOOK_POSTPATCH = 'postpatch';
 
 var moduleHooks = [HOOK_CREATE, HOOK_UPDATE, HOOK_REMOVE, HOOK_DESTROY, HOOK_PRE, HOOK_POST];
 
-var whitespacePattern = /\s+/;
-
 var emptyNode = new Vnode({
   sel: CHAR_BLANK,
   data: {},
@@ -3758,7 +3769,7 @@ function init$1(modules) {
       push$1(list, '' + CHAR_HASH + id);
     }
     if (className) {
-      push$1(list, '' + CHAR_DOT + className.split(whitespacePattern).join(CHAR_DOT));
+      push$1(list, '' + CHAR_DOT + split(className, CHAR_BLANK).join(CHAR_DOT));
     }
     return list.join(CHAR_BLANK);
   };
@@ -3783,7 +3794,7 @@ function init$1(modules) {
       } else {
         tagName = temp;
       }
-      className = slice$1(sel, dotIndex + 1).split(CHAR_DOT).join(CHAR_WHITESPACE);
+      className = split(slice$1(sel, dotIndex + 1), CHAR_DOT).join(CHAR_WHITESPACE);
     } else {
       if (tagName) {
         id = sel;
@@ -4172,7 +4183,7 @@ var style = {
 
 var booleanLiteral = 'allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare' + 'default,defaultchecked,defaultmuted,defaultselected,defer,disabled,draggable' + 'enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple' + 'muted,nohref,noresize,noshade,novalidate,nowrap,open,pauseonexit,readonly' + 'required,reversed,scoped,seamless,selected,sortable,spellcheck,translate' + 'truespeed,typemustmatch,visible';
 
-var booleanMap = toObject(booleanLiteral.split(CHAR_COMMA));
+var booleanMap = toObject(split(booleanLiteral, CHAR_COMMA));
 
 function updateAttrs(oldVnode, vnode) {
 
@@ -4226,9 +4237,7 @@ var patch = init$1([attributes, style]);
 function create$1(ast, context, instance) {
 
   var createComment = function createComment() {
-    return new Vnode({
-      sel: '!'
-    });
+    return h('!');
   };
 
   var createText = function createText(node) {
@@ -5497,7 +5506,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.25.0';
+Yox.version = '0.25.1';
 
 /**
  * 工具，便于扩展、插件使用
