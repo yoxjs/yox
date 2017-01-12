@@ -2794,6 +2794,9 @@ function render(ast, createComment, createText, createElement, importTemplate, d
   data[SPECIAL_KEYPATH] = getKeypath;
   var context = new Context(data);
 
+  // 是否正在渲染属性
+  var isAttrRendering = void 0;
+
   var partials = {};
 
   var deps = {};
@@ -2905,7 +2908,7 @@ function render(ast, createComment, createText, createElement, importTemplate, d
           case ELSE_IF$1:
             if (!executeExpr(expr)) {
               return {
-                v: !nextNode || elseTypes[nextNode.type] ? FALSE : markNodes(createComment())
+                v: isAttrRendering || !nextNode || elseTypes[nextNode.type] ? FALSE : markNodes(createComment())
               };
             }
             break;
@@ -2957,6 +2960,9 @@ function render(ast, createComment, createText, createElement, importTemplate, d
       }();
 
       if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
+      if (attrTypes[type]) {
+        isAttrRendering = TRUE;
+      }
     }, function (node, children, attrs) {
       var type = node.type,
           name = node.name,
@@ -2965,6 +2971,10 @@ function render(ast, createComment, createText, createElement, importTemplate, d
           content = node.content;
 
       var keypath = getKeypath();
+
+      if (attrTypes[type]) {
+        isAttrRendering = FALSE;
+      }
 
       var _ret2 = function () {
         switch (type) {
@@ -5487,7 +5497,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.24.9';
+Yox.version = '0.25.0';
 
 /**
  * 工具，便于扩展、插件使用
