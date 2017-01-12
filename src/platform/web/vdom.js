@@ -26,6 +26,12 @@ export const patch = snabbdom.init([ attributes, style ])
 
 export function create(ast, context, instance) {
 
+  let createComment = function () {
+    return new Vnode({
+      sel: '!',
+    })
+  }
+
   let createText = function (node) {
     let { safe, content } = node
     if (safe !== env.FALSE || !is.string(content) || !pattern.tag.test(content)) {
@@ -222,6 +228,6 @@ export function create(ast, context, instance) {
     return instance.partial(name)
   }
 
-  return viewEnginer.render(ast, createText, createElement, importTemplate, context)
+  return viewEnginer.render(ast, createComment, createText, createElement, importTemplate, context)
 
 }

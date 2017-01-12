@@ -2773,82 +2773,17 @@ function mergeNodes(nodes) {
 }
 
 /**
- * 遍历节点树
- *
- * @param {Node} node
- * @param {Function} enter
- * @param {Function} leave
- * @param {Function} traverseList
- * @param {Function} recursion
- * @return {*}
- */
-function traverseTree(node, enter, leave, traverseList, recursion) {
-
-  var value = enter(node);
-  if (value !== FALSE) {
-    if (!value) {
-      var children = node.children,
-          attrs = node.attrs;
-
-      if (children) {
-        children = traverseList(children, recursion);
-      }
-      if (attrs) {
-        attrs = traverseList(attrs, recursion);
-      }
-      value = leave(node, children, attrs);
-    }
-    return value;
-  }
-}
-
-/**
- * 遍历节点列表
- *
- * @param {Array.<Node>} nodes
- * @param {Function} recursion
- * @return {Array}
- */
-function traverseList(nodes, recursion) {
-  var list = [],
-      i = 0,
-      node = void 0,
-      value = void 0;
-  while (node = nodes[i]) {
-    value = recursion(node);
-    if (value !== UNDEFINED) {
-      if (isNodes(value)) {
-        push$1(list, value);
-      } else {
-        list.push(value);
-      }
-      if (ifTypes[node.type]) {
-        // 跳过后面紧跟着的 elseif else
-        while (node = nodes[i + 1]) {
-          if (elseTypes[node.type]) {
-            i++;
-          } else {
-            break;
-          }
-        }
-      }
-    }
-    i++;
-  }
-  return markNodes(list);
-}
-
-/**
  * 渲染抽象语法树
  *
  * @param {Object} ast 编译出来的抽象语法树
+ * @param {Function} createComment 创建注释节点
  * @param {Function} createText 创建文本节点
  * @param {Function} createElement 创建元素节点
  * @param {Function} importTemplate 导入子模板，如果是纯模板，可不传
  * @param {Object} data 渲染模板的数据，如果渲染纯模板，可不传
  * @return {Object} { node: x, deps: { } }
  */
-function render(ast, createText, createElement, importTemplate, data) {
+function render(ast, createComment, createText, createElement, importTemplate, data) {
 
   var keys$$1 = [];
   var getKeypath = function getKeypath() {
@@ -2870,7 +2805,70 @@ function render(ast, createText, createElement, importTemplate, data) {
     return result.value;
   };
 
-  var recursion = function recursion(node) {
+  /**
+   * 遍历节点树
+   *
+   * @param {Node} node
+   * @param {Function} enter
+   * @param {Function} leave
+   * @return {*}
+   */
+  var traverseTree = function traverseTree(node, enter, leave) {
+
+    var value = enter(node);
+    if (value !== FALSE) {
+      if (!value) {
+        var children = node.children,
+            attrs = node.attrs;
+
+        if (children) {
+          children = traverseList(children);
+        }
+        if (attrs) {
+          attrs = traverseList(attrs);
+        }
+        value = leave(node, children, attrs);
+      }
+      return value;
+    }
+  };
+
+  /**
+   * 遍历节点列表
+   *
+   * @param {Array.<Node>} nodes
+   * @return {Array}
+   */
+  var traverseList = function traverseList(nodes) {
+    var list = [],
+        i = 0,
+        node = void 0,
+        value = void 0;
+    while (node = nodes[i]) {
+      value = recursion(node, nodes[i + 1]);
+      if (value !== UNDEFINED) {
+        if (isNodes(value)) {
+          push$1(list, value);
+        } else {
+          list.push(value);
+        }
+        if (ifTypes[node.type]) {
+          // 跳过后面紧跟着的 elseif else
+          while (node = nodes[i + 1]) {
+            if (elseTypes[node.type]) {
+              i++;
+            } else {
+              break;
+            }
+          }
+        }
+      }
+      i++;
+    }
+    return markNodes(list);
+  };
+
+  var recursion = function recursion(node, nextNode) {
     return traverseTree(node, function (node) {
       var type = node.type,
           name = node.name,
@@ -2891,12 +2889,12 @@ function render(ast, createText, createElement, importTemplate, data) {
             var partial = partials[name] || importTemplate(name);
             if (partial) {
               if (string(partial)) {
-                return {
-                  v: traverseList(compile$$1(partial, TRUE), recursion)
-                };
+                partial = compile$$1(partial);
+              } else if (partial.type === PARTIAL$1) {
+                partial = partial.children;
               }
               return {
-                v: traverseList(partial.children, recursion)
+                v: array(partial) ? traverseList(partial) : recursion(partial)
               };
             }
             error$1('Importing partial "' + name + '" is not found.');
@@ -2907,7 +2905,7 @@ function render(ast, createText, createElement, importTemplate, data) {
           case ELSE_IF$1:
             if (!executeExpr(expr)) {
               return {
-                v: FALSE
+                v: !nextNode || elseTypes[nextNode.type] ? FALSE : markNodes(createComment())
               };
             }
             break;
@@ -2942,7 +2940,7 @@ function render(ast, createText, createElement, importTemplate, data) {
               push$1(keys$$1, i);
               context = context.push(item);
 
-              push$1(list, traverseList(children, recursion));
+              push$1(list, traverseList(children));
 
               keys$$1.pop();
               context = context.pop();
@@ -3071,7 +3069,7 @@ function render(ast, createText, createElement, importTemplate, data) {
       }();
 
       if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
-    }, traverseList, recursion);
+    });
   };
 
   return {
@@ -3584,6 +3582,10 @@ function createText(text) {
   return doc.createTextNode(text);
 }
 
+function createComment(text) {
+  return doc.createComment(text || CHAR_BLANK);
+}
+
 function createEvent(event) {
   return event;
 }
@@ -3665,6 +3667,7 @@ var domApi = Object.freeze({
 	createElement: createElement,
 	createFragment: createFragment,
 	createText: createText,
+	createComment: createComment,
 	createEvent: createEvent,
 	isElement: isElement,
 	isFragment: isFragment,
@@ -3682,6 +3685,8 @@ var domApi = Object.freeze({
 	on: on$1,
 	off: off$1
 });
+
+var SEL_COMMENT = '!';
 
 var HOOK_INIT = 'init';
 var HOOK_CREATE = 'create';
@@ -3800,43 +3805,46 @@ function init$1(modules) {
     var hook = data && data.hook || {};
     execute(hook[HOOK_INIT], NULL, vnode);
 
-    if (string(sel)) {
-      var _parseSel = parseSel(sel),
-          tagName = _parseSel.tagName,
-          id = _parseSel.id,
-          className = _parseSel.className;
-
-      var el = api.createElement(tagName);
-      if (id) {
-        el.id = id;
-      }
-      if (className) {
-        el.className = className;
-      }
-
-      vnode.el = el;
-
-      if (array(children$$1)) {
-        addVnodes(el, children$$1, 0, children$$1.length - 1, insertedQueue);
-      } else if (string(text$$1)) {
-        api.append(el, api[raw ? 'createFragment' : 'createText'](text$$1));
-      }
-
-      if (data) {
-        data = [emptyNode, vnode];
-        moduleEmitter.fire(HOOK_CREATE, data);
-
-        execute(hook[HOOK_CREATE], NULL, data);
-
-        if (hook[HOOK_INSERT]) {
-          insertedQueue.push(vnode);
-        }
-      }
-
-      return el;
-    } else {
+    if (falsy$1(sel)) {
       return vnode.el = api[raw ? 'createFragment' : 'createText'](text$$1);
     }
+
+    if (sel === SEL_COMMENT) {
+      return vnode.el = api.createComment(text$$1);
+    }
+
+    var _parseSel = parseSel(sel),
+        tagName = _parseSel.tagName,
+        id = _parseSel.id,
+        className = _parseSel.className;
+
+    var el = api.createElement(tagName);
+    if (id) {
+      el.id = id;
+    }
+    if (className) {
+      el.className = className;
+    }
+
+    vnode.el = el;
+
+    if (array(children$$1)) {
+      addVnodes(el, children$$1, 0, children$$1.length - 1, insertedQueue);
+    } else if (string(text$$1)) {
+      api.append(el, api[raw ? 'createFragment' : 'createText'](text$$1));
+    }
+
+    if (data) {
+      data = [emptyNode, vnode];
+      moduleEmitter.fire(HOOK_CREATE, data);
+
+      execute(hook[HOOK_CREATE], NULL, data);
+
+      if (hook[HOOK_INSERT]) {
+        insertedQueue.push(vnode);
+      }
+    }
+    return el;
   };
 
   var addVnodes = function addVnodes(parentNode, vnodes, startIndex, endIndex, insertedQueue, before$$1) {
@@ -4207,6 +4215,12 @@ var patch = init$1([attributes, style]);
 
 function create$1(ast, context, instance) {
 
+  var createComment = function createComment() {
+    return new Vnode({
+      sel: '!'
+    });
+  };
+
   var createText = function createText(node) {
     var safe = node.safe,
         content = node.content;
@@ -4361,7 +4375,7 @@ function create$1(ast, context, instance) {
     return instance.partial(name);
   };
 
-  return render(ast, createText, createElement, importTemplate, context);
+  return render(ast, createComment, createText, createElement, importTemplate, context);
 }
 
 var find$1 = find;
@@ -5473,7 +5487,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.24.8';
+Yox.version = '0.24.9';
 
 /**
  * 工具，便于扩展、插件使用
