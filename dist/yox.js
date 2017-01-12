@@ -5473,7 +5473,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.24.7';
+Yox.version = '0.24.8';
 
 /**
  * 工具，便于扩展、插件使用
@@ -5610,9 +5610,9 @@ Yox.validate = function (props, schema) {
           var target = props[key],
               matched = void 0;
           // 比较类型
-          if (string(type)) {
+          if (!falsy$1(type)) {
             matched = is(target, type);
-          } else if (array(type)) {
+          } else if (!falsy(type)) {
             each(type, function (t) {
               if (is(target, t)) {
                 matched = TRUE;

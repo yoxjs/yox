@@ -127,8 +127,7 @@ export function create(ast, context, instance) {
           function (options) {
             if (is.array(component)) {
               oldComponent = component
-              component =
-              payload.component =
+              component = payload.component =
               instance.create(
                 options,
                 {

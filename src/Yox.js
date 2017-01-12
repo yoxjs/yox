@@ -809,7 +809,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.24.7'
+Yox.version = '0.24.8'
 
 /**
  * 工具，便于扩展、插件使用
@@ -952,10 +952,10 @@ Yox.validate = function (props, schema) {
         if (type) {
           let target = props[ key ], matched
           // 比较类型
-          if (is.string(type)) {
+          if (!string.falsy(type)) {
             matched = is.is(target, type)
           }
-          else if (is.array(type)) {
+          else if (!array.falsy(type)) {
             array.each(
               type,
               function (t) {
