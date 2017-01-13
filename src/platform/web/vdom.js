@@ -27,7 +27,7 @@ export const patch = snabbdom.init([ attributes, style ])
 export function create(ast, context, instance) {
 
   let createComment = function () {
-    return h('!')
+    return h(Vnode.SEL_COMMENT)
   }
 
   let createText = function (node) {

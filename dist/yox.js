@@ -3589,8 +3589,13 @@ var Vnode = function Vnode(options) {
   extend(this, options);
 };
 
-function createElement(tagName) {
-  return doc.createElement(tagName);
+Vnode.SEL_COMMENT = '!';
+
+var SVGElement = win.SVGElement;
+
+
+function createElement(tagName, parentNode) {
+  return tagName === 'svg' || parentNode && parentNode instanceof SVGElement ? doc.createElementNS('http://www.w3.org/2000/svg', tagName) : doc.createElement(tagName);
 }
 
 function createFragment(content) {
@@ -3709,8 +3714,6 @@ var domApi = Object.freeze({
 	off: off$1
 });
 
-var SEL_COMMENT = '!';
-
 var HOOK_INIT = 'init';
 var HOOK_CREATE = 'create';
 var HOOK_INSERT = 'insert';
@@ -3815,7 +3818,7 @@ function init$1(modules) {
     });
   };
 
-  var createElement$$1 = function createElement$$1(vnode, insertedQueue) {
+  var createElement$$1 = function createElement$$1(parentNode, vnode, insertedQueue) {
     var sel = vnode.sel,
         data = vnode.data,
         children$$1 = vnode.children,
@@ -3830,7 +3833,7 @@ function init$1(modules) {
       return vnode.el = api[raw ? 'createFragment' : 'createText'](text$$1);
     }
 
-    if (sel === SEL_COMMENT) {
+    if (sel === Vnode.SEL_COMMENT) {
       return vnode.el = api.createComment(text$$1);
     }
 
@@ -3839,7 +3842,7 @@ function init$1(modules) {
         id = _parseSel.id,
         className = _parseSel.className;
 
-    var el = api.createElement(tagName);
+    var el = api.createElement(tagName, parentNode);
     if (id) {
       el.id = id;
     }
@@ -3875,7 +3878,7 @@ function init$1(modules) {
   };
 
   var addVnode = function addVnode(parentNode, vnode, insertedQueue, before$$1) {
-    api.before(parentNode, createElement$$1(vnode, insertedQueue), before$$1);
+    api.before(parentNode, createElement$$1(parentNode, vnode, insertedQueue), before$$1);
   };
 
   var removeVnodes = function removeVnodes(parentNode, vnodes, startIndex, endIndex) {
@@ -4008,7 +4011,7 @@ function init$1(modules) {
                   }
                   // 新元素
                   else {
-                      createElement$$1(newStartVnode, insertedQueue);
+                      createElement$$1(parentNode, newStartVnode, insertedQueue);
                       activeVnode = newStartVnode;
                     }
 
@@ -4041,9 +4044,10 @@ function init$1(modules) {
     var el = vnode.el = oldVnode.el;
     vnode.payload = oldVnode.payload;
 
+    var parentNode = api.parent(el);
     if (!isSameVnode(oldVnode, vnode)) {
-      createElement$$1(vnode, insertedQueue);
-      replaceVnode(api.parent(el), oldVnode, vnode);
+      createElement$$1(parentNode, vnode, insertedQueue);
+      replaceVnode(parentNode, oldVnode, vnode);
       return;
     }
 
@@ -4063,7 +4067,7 @@ function init$1(modules) {
     if (string(newText)) {
       if (newText !== oldText) {
         if (newRaw) {
-          api.replace(api.parent(el), api.createFragment(newText), el);
+          api.replace(parentNode, api.createFragment(newText), el);
         } else {
           api.text(el, newText);
         }
@@ -4107,8 +4111,9 @@ function init$1(modules) {
     if (isSameVnode(oldVnode, vnode)) {
       patchVnode(oldVnode, vnode, insertedQueue);
     } else {
-      createElement$$1(vnode, insertedQueue);
-      replaceVnode(api.parent(oldVnode.el), oldVnode, vnode);
+      var parentNode = api.parent(oldVnode.el);
+      createElement$$1(parentNode, vnode, insertedQueue);
+      replaceVnode(parentNode, oldVnode, vnode);
     }
 
     each(insertedQueue, function (vnode) {
@@ -4237,7 +4242,7 @@ var patch = init$1([attributes, style]);
 function create$1(ast, context, instance) {
 
   var createComment = function createComment() {
-    return h('!');
+    return h(Vnode.SEL_COMMENT);
   };
 
   var createText = function createText(node) {
@@ -5521,7 +5526,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.25.3';
+Yox.version = '0.25.4';
 
 /**
  * 工具，便于扩展、插件使用
