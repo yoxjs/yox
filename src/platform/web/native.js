@@ -11,10 +11,10 @@ import Emitter from 'yox-common/util/Emitter'
 export const find = domApi.find
 export const isElement = domApi.isElement
 
-export function create(tagName, parent) {
-  if (parent) {
-    domApi.html(parent, `<${tagName}></${tagName}>`)
-    return domApi.children(parent)[ 0 ]
+export function create(tagName, parentNode) {
+  if (parentNode) {
+    domApi.html(parentNode, `<${tagName}></${tagName}>`)
+    return domApi.children(parentNode)[ 0 ]
   }
   return domApi.createElement(tagName)
 }
