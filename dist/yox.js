@@ -3487,7 +3487,7 @@ function compile$$1(template) {
           return throwError('Illegal tag name', mainScanner.pos);
         }
 
-        if (levelNode.component || selfClosingTagNamePattern.test(levelNode.name)) {
+        if (levelNode.component || selfClosingTagNamePattern.test(levelNode.name) || codeAt$1(content) === CODE_SLASH) {
           popStack();
         }
 
@@ -5526,7 +5526,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.25.4';
+Yox.version = '0.25.5';
 
 /**
  * 工具，便于扩展、插件使用
