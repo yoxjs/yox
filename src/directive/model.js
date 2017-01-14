@@ -17,9 +17,7 @@ const inputControl = {
     }
   },
   sync({ el, keypath, instance }) {
-    // 有些移动端浏览器，输入框弹起时貌似会阻塞进程，导致迟迟无法触发 nextTick 执行
-    // 因此这里改成同步设值
-    instance.set(keypath, el.value, env.TRUE)
+    instance.set(keypath, el.value)
   }
 }
 

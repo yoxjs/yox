@@ -1132,12 +1132,20 @@ var nextTick$1 = void 0;
 
 if (typeof MutationObserver === 'function') {
   nextTick$1 = function nextTick$1(fn) {
-    var observer = new MutationObserver(fn);
-    var textNode = doc.createTextNode(CHAR_BLANK);
-    observer.observe(textNode, {
-      characterData: TRUE
-    });
-    textNode.data = CHAR_WHITESPACE;
+    // 移动端的输入法唤起时，貌似会影响 MutationObserver 的 nextTick 触发
+    // 因此当输入框是激活状态时，改用 setTimeout
+    var activeElement = doc.activeElement;
+
+    if (activeElement && 'oninput' in activeElement) {
+      setTimeout(fn);
+    } else {
+      var observer = new MutationObserver(fn);
+      var textNode = doc.createTextNode(CHAR_BLANK);
+      observer.observe(textNode, {
+        characterData: TRUE
+      });
+      textNode.data = CHAR_WHITESPACE;
+    }
   };
 } else if (typeof setImmediate === 'function') {
   nextTick$1 = setImmediate;
@@ -4636,9 +4644,7 @@ var inputControl = {
         keypath = _ref2.keypath,
         instance = _ref2.instance;
 
-    // 有些移动端浏览器，输入框弹起时貌似会阻塞进程，导致迟迟无法触发 nextTick 执行
-    // 因此这里改成同步设值
-    instance.set(keypath, el.value, TRUE);
+    instance.set(keypath, el.value);
   }
 };
 
@@ -5533,7 +5539,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.25.8';
+Yox.version = '0.25.9';
 
 /**
  * 工具，便于扩展、插件使用
