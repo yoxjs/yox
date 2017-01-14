@@ -1,12 +1,87 @@
 
+import execute from 'yox-common/function/execute'
+
 import * as env from 'yox-common/util/env'
+import * as array from 'yox-common/util/array'
 import * as object from 'yox-common/util/object'
+
+Object.keys = function (obj) {
+  let result = [ ]
+  for (let key in obj) {
+    array.push(result, key)
+  }
+  return result
+}
+
+Object.freeze = function (obj) {
+  return obj
+}
+Object.defineProperty = function (obj, key, descriptor) {
+  obj[ key ] = descriptor.value
+}
+Object.create = function (proto) {
+  function Class() { }
+  Class.prototype = proto
+  return new Class()
+}
+String.prototype.trim = function () {
+  return this.replace(/^\s*|\s*$/g, '')
+}
+
+Array.prototype.indexOf = function (target) {
+  let result = -1
+  array.each(
+    this,
+    function (item, index) {
+      if (item === target) {
+        result = index
+        return env.FALSE
+      }
+    }
+  )
+  return result
+}
+
+Array.prototype.map = function (fn) {
+  let result = [ ]
+  array.each(
+    this,
+    function (item, index) {
+      result.push(fn(item, index))
+    }
+  )
+  return result
+}
+
+Array.prototype.filter = function (fn) {
+  let result = [ ]
+  array.each(
+    this,
+    function (item, index) {
+      if (fn(item, index)) {
+        result.push(item)
+      }
+    }
+  )
+  return result
+}
+
+Function.prototype.bind = function (context) {
+  let fn = this
+  return function () {
+    return execute(
+      fn,
+      context,
+      array.toArray(arguments)
+    )
+  }
+}
 
 class IEEvent {
 
   constructor(event, element) {
 
-    object.extend(this, event)
+    // object.extend(this, event)
 
     this.currentTarget = element
     this.target = event.srcElement || element
