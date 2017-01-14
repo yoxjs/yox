@@ -51,7 +51,8 @@ function array(arg) {
 }
 
 function object(arg) {
-  return is(arg, 'object');
+  // 低版本 IE 会把 null 和 undefined 当作 object
+  return arg && is(arg, 'object');
 }
 
 function string(arg) {
@@ -3595,7 +3596,7 @@ var SVGElement = win.SVGElement;
 
 
 function createElement(tagName, parentNode) {
-  return tagName === 'svg' || parentNode && parentNode instanceof SVGElement ? doc.createElementNS('http://www.w3.org/2000/svg', tagName) : doc.createElement(tagName);
+  return tagName === 'svg' || parentNode && SVGElement && parentNode instanceof SVGElement ? doc.createElementNS('http://www.w3.org/2000/svg', tagName) : doc.createElement(tagName);
 }
 
 function createFragment(content) {
@@ -3627,7 +3628,11 @@ function isFragment(node) {
 }
 
 function before(parentNode, newNode, referenceNode) {
-  parentNode.insertBefore(newNode, referenceNode);
+  if (referenceNode) {
+    parentNode.insertBefore(newNode, referenceNode);
+  } else {
+    append(parentNode, newNode);
+  }
 }
 
 function replace(parentNode, newNode, oldNode) {
@@ -3691,7 +3696,7 @@ function off$1(element, type, listener) {
   element.removeEventListener(type, listener, FALSE);
 }
 
-var domApi = Object.freeze({
+var api = Object.freeze({
 	createElement: createElement,
 	createFragment: createFragment,
 	createText: createText,
@@ -3752,7 +3757,7 @@ function createKeyToIndex(vnodes, startIndex, endIndex) {
 }
 
 function init$1(modules) {
-  var api = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : domApi;
+  var api = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : api;
 
 
   var moduleEmitter = new Emitter();
@@ -4237,7 +4242,7 @@ var toString$2 = function (str) {
   }
 };
 
-var patch = init$1([attributes, style]);
+var patch = init$1([attributes, style], api);
 
 function create$1(ast, context, instance) {
 
@@ -4402,19 +4407,19 @@ function create$1(ast, context, instance) {
   return render(ast, createComment, createText, createElement, importTemplate, context);
 }
 
-var find$1 = find;
-var isElement$1 = isElement;
+var find$1 = api.find;
+var isElement$1 = api.isElement;
 
-function create$2(tagName, parent$$1) {
-  if (parent$$1) {
-    html(parent$$1, '<' + tagName + '></' + tagName + '>');
-    return children(parent$$1)[0];
+function create$2(tagName, parentNode) {
+  if (parentNode) {
+    api.html(parentNode, '<' + tagName + '></' + tagName + '>');
+    return api.children(parentNode)[0];
   }
-  return createElement(tagName);
+  return api.createElement(tagName);
 }
 
 function getContent(selector) {
-  return find(selector).innerHTML;
+  return api.find(selector).innerHTML;
 }
 
 /**
@@ -4429,11 +4434,11 @@ function on$2(element, type, listener, context) {
   var $emitter = element.$emitter || (element.$emitter = new Emitter());
   if (!$emitter.has(type)) {
     var nativeListener = function nativeListener(e) {
-      e = new Event(createEvent(e, element));
+      e = new Event(api.createEvent(e, element));
       $emitter.fire(e.type, e, context);
     };
     $emitter[type] = nativeListener;
-    on$1(element, type, nativeListener);
+    api.on(element, type, nativeListener);
   }
   $emitter.on(type, listener);
 }
@@ -4454,7 +4459,7 @@ function off$2(element, type, listener) {
   // 根据 emitter 的删除结果来操作这里的事件 listener
   each(types, function (type) {
     if ($emitter[type] && !$emitter.has(type)) {
-      off$1(element, type, $emitter[type]);
+      api.off(element, type, $emitter[type]);
       delete $emitter[type];
     }
   });
@@ -5526,7 +5531,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.25.5';
+Yox.version = '0.25.6';
 
 /**
  * 工具，便于扩展、插件使用

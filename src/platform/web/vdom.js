@@ -21,8 +21,9 @@ import * as viewEnginer from 'yox-template-compiler'
 import * as viewSyntax from 'yox-template-compiler/src/syntax'
 
 import * as pattern from '../../config/pattern'
+import api from './api'
 
-export const patch = snabbdom.init([ attributes, style ])
+export const patch = snabbdom.init([ attributes, style ], api)
 
 export function create(ast, context, instance) {
 
