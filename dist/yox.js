@@ -4242,143 +4242,6 @@ var toString$2 = function (str) {
   }
 };
 
-Object.keys = function (obj) {
-  var result = [];
-  for (var key in obj) {
-    push$1(result, key);
-  }
-  return result;
-};
-
-Object.freeze = function (obj) {
-  return obj;
-};
-Object.defineProperty = function (obj, key, descriptor) {
-  obj[key] = descriptor.value;
-};
-Object.create = function (proto) {
-  function Class() {}
-  Class.prototype = proto;
-  return new Class();
-};
-String.prototype.trim = function () {
-  return this.replace(/^\s*|\s*$/g, '');
-};
-
-Array.prototype.indexOf = function (target) {
-  var result = -1;
-  each(this, function (item, index) {
-    if (item === target) {
-      result = index;
-      return FALSE;
-    }
-  });
-  return result;
-};
-
-Array.prototype.map = function (fn) {
-  var result = [];
-  each(this, function (item, index) {
-    result.push(fn(item, index));
-  });
-  return result;
-};
-
-Array.prototype.filter = function (fn) {
-  var result = [];
-  each(this, function (item, index) {
-    if (fn(item, index)) {
-      result.push(item);
-    }
-  });
-  return result;
-};
-
-Function.prototype.bind = function (context) {
-  var fn = this;
-  return function () {
-    return execute(fn, context, toArray(arguments));
-  };
-};
-
-var IEEvent = function () {
-  function IEEvent(event, element) {
-    classCallCheck(this, IEEvent);
-
-
-    // object.extend(this, event)
-
-    this.currentTarget = element;
-    this.target = event.srcElement || element;
-    this.originalEvent = event;
-  }
-
-  createClass(IEEvent, [{
-    key: 'preventDefault',
-    value: function preventDefault() {
-      this.originalEvent.returnValue = FALSE;
-    }
-  }, {
-    key: 'stopPropagation',
-    value: function stopPropagation() {
-      this.originalEvent.cancelBubble = TRUE;
-    }
-  }]);
-  return IEEvent;
-}();
-
-function addInputListener(element, listener) {
-  var oldValue = element.value;
-  listener.$listener = function (e) {
-    if (e.originalEvent.originalEvent.propertyName === 'value') {
-      var newValue = element.value;
-      if (newValue !== oldValue) {
-        var result = listener.apply(this, arguments);
-        oldValue = newValue;
-        return result;
-      }
-    }
-  };
-  on$2(element, 'propertychange', listener.$listener);
-}
-
-function removeInputListener(element, listener) {
-  off$2(element, 'propertychange', listener.$listener);
-  delete listener.$listener;
-}
-
-function on$2(element, type, listener) {
-  if (type === 'input') {
-    addInputListener(element, listener);
-  } else {
-    element.attachEvent('on' + type, listener);
-  }
-}
-
-function off$2(element, type, listener) {
-  if (type === 'input') {
-    removeInputListener(element, listener);
-  } else {
-    element.detachEvent('on' + type, listener);
-  }
-}
-
-function createEvent$1(event, element) {
-  return new IEEvent(event, element);
-}
-
-
-
-var oldApi = Object.freeze({
-	on: on$2,
-	off: off$2,
-	createEvent: createEvent$1
-});
-
-if (!doc.addEventListener) {
-  extend(api, oldApi);
-}
-
 var patch = init$1([attributes, style], api);
 
 function create$1(ast, context, instance) {
@@ -4567,7 +4430,7 @@ function getContent(selector) {
  * @param {Function} listener
  * @param {?*} context
  */
-function on$3(element, type, listener, context) {
+function on$2(element, type, listener, context) {
   var $emitter = element.$emitter || (element.$emitter = new Emitter());
   if (!$emitter.has(type)) {
     var nativeListener = function nativeListener(e) {
@@ -4587,7 +4450,7 @@ function on$3(element, type, listener, context) {
  * @param {string} type
  * @param {Function} listener
  */
-function off$3(element, type, listener) {
+function off$2(element, type, listener) {
   var $emitter = element.$emitter;
 
   var types = keys($emitter.listeners);
@@ -4607,8 +4470,8 @@ var native = Object.freeze({
 	isElement: isElement$1,
 	create: create$2,
 	getContent: getContent,
-	on: on$3,
-	off: off$3
+	on: on$2,
+	off: off$2
 });
 
 /**
@@ -4749,9 +4612,9 @@ var event = function (_ref) {
 
       if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
     } else {
-      on$3(el, type, listener);
+      on$2(el, type, listener);
       return function () {
-        off$3(el, type, listener);
+        off$2(el, type, listener);
       };
     }
   }
@@ -5670,7 +5533,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.25.7';
+Yox.version = '0.25.8';
 
 /**
  * 工具，便于扩展、插件使用
