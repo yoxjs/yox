@@ -3656,7 +3656,7 @@ function append(parentNode, child) {
 }
 
 function parent(node) {
-  return node.parentElement;
+  return node.parentNode;
 }
 
 function next(node) {
@@ -3674,7 +3674,7 @@ function children(node) {
 }
 
 function text(node, content) {
-  node.textContent = content;
+  node.nodeValue = content;
 }
 
 function html(node, content) {
@@ -4442,7 +4442,9 @@ function on$2(element, type, listener, context) {
   var $emitter = element.$emitter || (element.$emitter = new Emitter());
   if (!$emitter.has(type)) {
     var nativeListener = function nativeListener(e) {
-      e = new Event(api.createEvent(e, element));
+      if (!(e instanceof Event)) {
+        e = new Event(api.createEvent(e, element));
+      }
       $emitter.fire(e.type, e, context);
     };
     $emitter[type] = nativeListener;
@@ -4648,18 +4650,47 @@ var inputControl = {
   }
 };
 
-var radioControl = {
+var selectControl = {
   set: function set(_ref3) {
     var el = _ref3.el,
         keypath = _ref3.keypath,
         instance = _ref3.instance;
 
-    el.checked = el.value === toString$2(instance.get(keypath));
+    var value = toString$2(instance.get(keypath));
+    var options = el.options,
+        selectedIndex = el.selectedIndex;
+
+    if (value !== options[selectedIndex].value) {
+      each(options, function (option, index) {
+        if (options.value === value) {
+          el.selectedIndex = index;
+          return FALSE;
+        }
+      });
+    }
   },
   sync: function sync(_ref4) {
     var el = _ref4.el,
         keypath = _ref4.keypath,
         instance = _ref4.instance;
+    var value = el.options[el.selectedIndex].value;
+
+    instance.set(keypath, value);
+  }
+};
+
+var radioControl = {
+  set: function set(_ref5) {
+    var el = _ref5.el,
+        keypath = _ref5.keypath,
+        instance = _ref5.instance;
+
+    el.checked = el.value === toString$2(instance.get(keypath));
+  },
+  sync: function sync(_ref6) {
+    var el = _ref6.el,
+        keypath = _ref6.keypath,
+        instance = _ref6.instance;
 
     if (el.checked) {
       instance.set(keypath, el.value);
@@ -4668,18 +4699,18 @@ var radioControl = {
 };
 
 var checkboxControl = {
-  set: function set(_ref5) {
-    var el = _ref5.el,
-        keypath = _ref5.keypath,
-        instance = _ref5.instance;
+  set: function set(_ref7) {
+    var el = _ref7.el,
+        keypath = _ref7.keypath,
+        instance = _ref7.instance;
 
     var value = instance.get(keypath);
     el.checked = array(value) ? has$1(value, el.value, FALSE) : boolean(value) ? value : !!value;
   },
-  sync: function sync(_ref6) {
-    var el = _ref6.el,
-        keypath = _ref6.keypath,
-        instance = _ref6.instance;
+  sync: function sync(_ref8) {
+    var el = _ref8.el,
+        keypath = _ref8.keypath,
+        instance = _ref8.instance;
 
     var value = instance.get(keypath);
     if (array(value)) {
@@ -4697,15 +4728,16 @@ var checkboxControl = {
 
 var specialControls = {
   radio: radioControl,
-  checkbox: checkboxControl
+  checkbox: checkboxControl,
+  SELECT: selectControl
 };
 
-var model = function (_ref7) {
-  var el = _ref7.el,
-      node = _ref7.node,
-      instance = _ref7.instance,
-      directives = _ref7.directives,
-      attributes = _ref7.attributes;
+var model = function (_ref9) {
+  var el = _ref9.el,
+      node = _ref9.node,
+      instance = _ref9.instance,
+      directives = _ref9.directives,
+      attributes = _ref9.attributes;
   var value = node.value,
       keypath = node.keypath;
 
@@ -4718,11 +4750,15 @@ var model = function (_ref7) {
     return;
   }
 
-  var type = 'change';
-  var control = specialControls[el.type];
+  var type = 'change',
+      tagName = el.tagName,
+      controlType = el.type;
+  var control = specialControls[controlType] || specialControls[tagName];
   if (!control) {
     control = inputControl;
-    if ('oninput' in el) {
+    if ('oninput' in el
+    // 为了兼容 IE8
+    || tagName === 'TEXTAREA' || controlType === 'text' || controlType === 'password') {
       type = 'input';
     }
   }
@@ -5003,7 +5039,8 @@ var Yox = function () {
             }
             return result;
           } else {
-            keys$$1.splice(-2);
+            // IE8 必须指定长度
+            keys$$1.splice(-2, 2);
           }
         }
       } else {
@@ -5539,7 +5576,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.25.9';
+Yox.version = '0.26.0';
 
 /**
  * 工具，便于扩展、插件使用

@@ -7,20 +7,29 @@
 </head>
 <body>
     <div id="app"></div>
+    <script id="template1" type="plain/text">
+      <div id="custom-component">
+          <button on-click="click1">
+              click1
+          </button>
+          <button on-click="click2()">
+              click2
+          </button>
+      </div>
+    </script>
+    <script id="template2" type="plain/text">
+      <div id="root">
+          <Custom on-click1="click1" on-click2="click3" />
+          {{#if open}}
+            open
+          {{/if}}
+      </div>
+    </script>
     <script src="../dist/yox.js"></script>
     <script>
 
-        let Custom = {
-            template: `
-                <div id="custom-component">
-                    <button on-click="click1">
-                        click1
-                    </button>
-                    <button on-click="click2()">
-                        click2
-                    </button>
-                </div>
-            `,
+        var Custom = {
+            template: '#template1',
             methods: {
                 click2: function (e) {
                     this.fire('click2', { name: 'component' });
@@ -33,14 +42,7 @@
             data: {
               open: false
             },
-            template: `
-                <div id="root">
-                    <Custom on-click1="click1" on-click2="click3" />
-                    {{#if open}}
-                      open
-                    {{/if}}
-                </div>
-            `,
+            template: '#template2',
             components: {
                 Custom: Custom
             },

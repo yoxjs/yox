@@ -295,7 +295,8 @@ export default class Yox {
           return result
         }
         else {
-          keys.splice(-2)
+          // IE8 必须指定长度
+          keys.splice(-2, 2)
         }
       }
     }
@@ -809,7 +810,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.25.9'
+Yox.version = '0.26.0'
 
 /**
  * 工具，便于扩展、插件使用

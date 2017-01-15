@@ -5,6 +5,8 @@ import * as env from 'yox-common/util/env'
 import * as array from 'yox-common/util/array'
 import * as object from 'yox-common/util/object'
 
+import Event from 'yox-common/util/Event'
+
 Object.keys = function (obj) {
   let result = [ ]
   for (let key in obj) {
@@ -77,11 +79,17 @@ Function.prototype.bind = function (context) {
   }
 }
 
+
+const clickType = 'click'
+const inputType = 'input'
+const changeType = 'change'
+const propertychangeType = 'propertychange'
+
 class IEEvent {
 
   constructor(event, element) {
 
-    // object.extend(this, event)
+    object.extend(this, event)
 
     this.currentTarget = element
     this.target = event.srcElement || element
@@ -102,26 +110,50 @@ class IEEvent {
 function addInputListener(element, listener) {
   let oldValue = element.value
   listener.$listener = function (e) {
-    if (e.originalEvent.originalEvent.propertyName === 'value') {
+    if (e.propertyName === 'value') {
       let newValue = element.value
       if (newValue !== oldValue) {
-        let result = listener.apply(this, arguments)
+        e = new Event(e)
+        e.type = inputType
+        listener.call(this, e)
         oldValue = newValue
-        return result
       }
     }
   }
-  on(element, 'propertychange', listener.$listener)
+  on(element, propertychangeType, listener.$listener)
 }
 
 function removeInputListener(element, listener) {
-  off(element, 'propertychange', listener.$listener)
+  off(element, propertychangeType, listener.$listener)
   delete listener.$listener
 }
 
+function addChangeListener(element, listener) {
+  listener.$listener = function (e) {
+    e = new Event(e)
+    e.type = changeType
+    listener.call(this, e)
+  }
+  on(element, clickType, listener.$listener)
+}
+
+function removeChangeListener(element, listener) {
+  off(element, clickType, listener.$listener)
+  delete listener.$listener
+}
+
+function isBox(element) {
+  return element.tagName === 'INPUT'
+  || element.type === 'radio'
+  || element.type === 'checkbox'
+}
+
 export function on(element, type, listener) {
-  if (type === 'input') {
+  if (type === inputType) {
     addInputListener(element, listener)
+  }
+  else if (type === changeType && isBox(element)) {
+    addChangeListener(element, listener)
   }
   else {
     element.attachEvent(`on${type}`, listener)
@@ -129,8 +161,11 @@ export function on(element, type, listener) {
 }
 
 export function off(element, type, listener) {
-  if (type === 'input') {
+  if (type === inputType) {
     removeInputListener(element, listener)
+  }
+  else if (type === changeType && isBox(element)) {
+    removeChangeListener(element, listener)
   }
   else {
     element.detachEvent(`on${type}`, listener)

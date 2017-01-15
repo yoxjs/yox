@@ -7,24 +7,31 @@
 </head>
 <body>
     <div id="app"></div>
+    <script id="template1" type="plain/text">
+      <div id="custom-component">
+          name: {{name}}
+          <br>
+          age: {{age}}
+          <br>
+          name: {{user.name}}
+          <br>
+          age: {{user.age}}
+          <button on-click="increase()">
+              increase
+          </button>
+      </div>
+    </script>
+    <script id="template2" type="plain/text">
+      <div id="root">
+          <input ref="input" model="title" style="font-size: 18px;color: red;">
+          <Custom ref="child" name="123{{name}}" age="{{user.age}}{{#if user.age}}1{{/if}}" user="{{user}}" />
+      </div>
+    </script>
     <script src="../dist/yox.js"></script>
     <script>
 
-        let Custom = {
-            template: `
-                <div id="custom-component">
-                    name: {{name}}
-                    <br>
-                    age: {{age}}
-                    <br>
-                    name: {{user.name}}
-                    <br>
-                    age: {{user.age}}
-                    <button on-click="increase()">
-                        increase
-                    </button>
-                </div>
-            `,
+        var Custom = {
+            template: '#template1',
             methods: {
                 increase: function () {
                     this.fire('increase');
@@ -65,12 +72,7 @@
                     age: 0,
                 }
             },
-            template: `
-                <div id="root">
-                    <input ref="input" model="title" style="font-size: 18px;color: red;">
-                    <Custom ref="child" name="123{{name}}" age="{{user.age}}{{#if user.age}}1{{/if}}" user="{{user}}" />
-                </div>
-            `,
+            template: '#template2',
             components: {
                 Custom: function (callback) {
                     setTimeout(

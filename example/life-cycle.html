@@ -8,14 +8,28 @@
 <body>
     <div id="app"></div>
     <script src="../dist/yox.js"></script>
+    <script id="template1" type="plain/text">
+      <div id="custom-component">
+        {{counter}}
+      </div>
+    </script>
+    <script id="template2" type="plain/text">
+      <div id="root">
+          <button on-click="increase('counter')">
+              increase
+          </button>
+          <p>
+              {{counter}}
+          </p>
+          {{#if counter % 4 !== 0}}
+          <Custom counter="{{counter}}" />
+          {{/if}}
+      </div>
+    </script>
     <script>
 
-        let Custom = {
-            template: `
-                <div id="custom-component">
-                  {{counter}}
-                </div>
-            `,
+        var Custom = {
+            template: '#template1',
             beforeCreate: function (options) {
                 console.log('    beforeCreate', options);
             },
@@ -47,19 +61,7 @@
             data: {
               counter: 0,
             },
-            template: `
-                <div id="root">
-                    <button on-click="increase('counter')">
-                        increase
-                    </button>
-                    <p>
-                        {{counter}}
-                    </p>
-                    {{#if counter % 4 !== 0}}
-                    <Custom counter="{{counter}}" />
-                    {{/if}}
-                </div>
-            `,
+            template: '#template2',
             components: {
                 Custom: Custom
             },

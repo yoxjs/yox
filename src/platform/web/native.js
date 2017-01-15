@@ -35,7 +35,9 @@ export function on(element, type, listener, context) {
   let $emitter = element.$emitter || (element.$emitter = new Emitter())
   if (!$emitter.has(type)) {
     let nativeListener = function (e) {
-      e = new Event(api.createEvent(e, element))
+      if (!(e instanceof Event)) {
+        e = new Event(api.createEvent(e, element))
+      }
       $emitter.fire(e.type, e, context)
     }
     $emitter[ type ] = nativeListener

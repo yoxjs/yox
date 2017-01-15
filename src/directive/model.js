@@ -21,6 +21,28 @@ const inputControl = {
   }
 }
 
+const selectControl = {
+  set({ el, keypath, instance }) {
+    let value = toString(instance.get(keypath))
+    let { options, selectedIndex } = el
+    if (value !== options[ selectedIndex ].value) {
+      array.each(
+        options,
+        function (option, index) {
+          if (options.value === value) {
+            el.selectedIndex = index
+            return env.FALSE
+          }
+        }
+      )
+    }
+  },
+  sync({ el, keypath, instance }) {
+    let { value } = el.options[ el.selectedIndex ]
+    instance.set(keypath, value)
+  }
+}
+
 const radioControl = {
   set({ el, keypath, instance }) {
     el.checked = el.value === toString(instance.get(keypath))
@@ -59,6 +81,7 @@ const checkboxControl = {
 const specialControls = {
   radio: radioControl,
   checkbox: checkboxControl,
+  SELECT: selectControl,
 }
 
 export default function ({ el, node, instance, directives, attributes }) {
@@ -74,11 +97,16 @@ export default function ({ el, node, instance, directives, attributes }) {
     return
   }
 
-  let type = 'change'
-  let control = specialControls[ el.type ]
+  let type = 'change', tagName = el.tagName, controlType = el.type
+  let control = specialControls[ controlType ] || specialControls[ tagName ]
   if (!control) {
     control = inputControl
-    if ('oninput' in el) {
+    if ('oninput' in el
+      // 为了兼容 IE8
+      || tagName === 'TEXTAREA'
+      || controlType === 'text'
+      || controlType === 'password'
+    ) {
       type = 'input'
     }
   }

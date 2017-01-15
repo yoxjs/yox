@@ -7,28 +7,49 @@
 </head>
 <body>
     <div id="app"></div>
+    <script id="template1" type="plain/text">
+      <div id="custom-component">
+          title: {{title}}
+          <br>
+          name: {{user.name}}
+          <br>
+          age: {{user.age}}
+          <button on-click="innerIncrease()">
+              innerIncrease
+          </button>
+          <button on-click="outerIncrease()">
+              outerIncrease
+          </button>
+          <button on-click="user.increase()">
+              userIncrease
+          </button>
+      </div>
+    </script>
+    <script id="template2" type="plain/text">
+      <div id="root">
+          {{user.name}}
+          <br>
+          {{user['name']}}
+          <br>
+          {{user[variable]}}
+          <br>
+          {{ user.age > 10 ? title : variable }}
+          <Custom ref="child" title="{{title}}" user="{{user}}" outerIncrease="{{increase}}" />
+          <ul>
+              {{#each list:index}}
+              <li>
+                  {{name}} - {{user.name}}
+                  <Custom ref="child{{index}}" title="{{user.age}}" user="{{user}}" />
+              </li>
+              {{/each}}
+          </ul>
+      </div>
+    </script>
     <script src="../dist/yox.js"></script>
     <script>
 
-        let Custom = {
-            template: `
-                <div id="custom-component">
-                    title: {{title}}
-                    <br>
-                    name: {{user.name}}
-                    <br>
-                    age: {{user.age}}
-                    <button on-click="innerIncrease()">
-                        innerIncrease
-                    </button>
-                    <button on-click="outerIncrease()">
-                        outerIncrease
-                    </button>
-                    <button on-click="user.increase()">
-                        userIncrease
-                    </button>
-                </div>
-            `,
+        var Custom = {
+            template: '#template1',
             watchers: {
               'user.age': function (newValue, oldValue) {
                 console.log('   ', newValue, oldValue)
@@ -86,32 +107,13 @@
                     },
                     {
                         name: 'h3',
-                    },
+                    }
                 ],
                 increase: function () {
                     console.log(this === instance, 'xxx')
                 }
             },
-            template: `
-                <div id="root">
-                    {{user.name}}
-                    <br>
-                    {{user['name']}}
-                    <br>
-                    {{user[variable]}}
-                    <br>
-                    {{ user.age > 10 ? title : variable }}
-                    <Custom ref="child" title="{{title}}" user="{{user}}" outerIncrease="{{increase}}" />
-                    <ul>
-                        {{#each list:index}}
-                        <li>
-                            {{name}} - {{user.name}}
-                            <Custom ref="child{{index}}" title="{{user.age}}" user="{{user}}" />
-                        </li>
-                        {{/each}}
-                    </ul>
-                </div>
-            `,
+            template: '#template2',
             components: {
                 Custom: Custom
             },
