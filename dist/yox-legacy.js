@@ -1361,7 +1361,7 @@ var binaryList = sortKeys(binaryMap);
 /**
  * 节点基类
  */
-var Node = function Node(type) {
+var Node = function(type) {
   classCallCheck(this, Node);
 
   this.type = type;
@@ -3655,7 +3655,7 @@ var AFTER_DESTROY = 'afterDestroy';
  * @param {?string|Array} options.children
  */
 
-var Vnode = function Vnode(options) {
+var Vnode = function (options) {
   classCallCheck(this, Vnode);
 
   extend(this, options);
