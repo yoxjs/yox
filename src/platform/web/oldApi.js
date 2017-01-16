@@ -21,10 +21,15 @@ Object.freeze = function (obj) {
 Object.defineProperty = function (obj, key, descriptor) {
   obj[ key ] = descriptor.value
 }
-Object.create = function (proto) {
+Object.create = function (proto, descriptor) {
   function Class() { }
   Class.prototype = proto
-  return new Class()
+  proto = new Class()
+  let constructor = descriptor && descriptor.constructor
+  if (constructor) {
+    proto.constructor = constructor.value
+  }
+  return proto
 }
 String.prototype.trim = function () {
   return this.replace(/^\s*|\s*$/g, '')
