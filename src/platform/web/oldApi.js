@@ -108,16 +108,11 @@ class IEEvent {
 }
 
 function addInputListener(element, listener) {
-  let oldValue = element.value
   listener.$listener = function (e) {
     if (e.propertyName === 'value') {
-      let newValue = element.value
-      if (newValue !== oldValue) {
-        e = new Event(e)
-        e.type = inputType
-        listener.call(this, e)
-        oldValue = newValue
-      }
+      e = new Event(e)
+      e.type = inputType
+      listener.call(this, e)
     }
   }
   on(element, propertychangeType, listener.$listener)
