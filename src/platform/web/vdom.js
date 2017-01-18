@@ -27,6 +27,10 @@ export const patch = snabbdom.init([ attributes, style ], api)
 
 export function create(ast, context, instance) {
 
+  let render = function (ast) {
+    return viewEnginer.render(ast, createComment, createText, createElement, importTemplate, context)
+  }
+
   let createComment = function () {
     return h(Vnode.SEL_COMMENT)
   }
@@ -36,10 +40,11 @@ export function create(ast, context, instance) {
     if (safe !== env.FALSE || !is.string(content) || !pattern.tag.test(content)) {
       return content
     }
-    return new Vnode({
-      text: content,
-      raw: env.TRUE,
-    })
+    return viewEnginer.compile(content).map(
+      function (ast) {
+        return render(ast).node
+      }
+    )
   }
 
   let createElement = function (node, isComponent) {
@@ -227,6 +232,6 @@ export function create(ast, context, instance) {
     return instance.partial(name)
   }
 
-  return viewEnginer.render(ast, createComment, createText, createElement, importTemplate, context)
+  return render(ast)
 
 }

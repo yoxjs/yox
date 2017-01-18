@@ -1361,7 +1361,7 @@ var binaryList = sortKeys(binaryMap);
 /**
  * 节点基类
  */
-var Node = function(type) {
+var Node = function (type) {
   classCallCheck(this, Node);
 
   this.type = type;
@@ -3289,7 +3289,7 @@ var parsers = [{
  * 把模板编译为抽象语法树
  *
  * @param {string} template
- * @return {Object}
+ * @return {Array}
  */
 function compile$$1(template) {
 
@@ -3571,7 +3571,7 @@ function compile$$1(template) {
     return throwError('Expected end tag (</' + nodeStack[0].name + '>)', mainScanner.pos);
   }
 
-  return compileCache[template] = nodes[0];
+  return compileCache[template] = nodes;
 }
 
 /**
@@ -3670,14 +3670,6 @@ function createElement(tagName, parentNode) {
   return tagName === 'svg' || parentNode && SVGElement && parentNode instanceof SVGElement ? doc.createElementNS('http://www.w3.org/2000/svg', tagName) : doc.createElement(tagName);
 }
 
-function createFragment(content) {
-  var fragment = doc.createDocumentFragment();
-  if (content) {
-    html(fragment, content);
-  }
-  return fragment;
-}
-
 function createText(text) {
   return doc.createTextNode(text || CHAR_BLANK);
 }
@@ -3692,10 +3684,6 @@ function createEvent(event) {
 
 function isElement(node) {
   return node.nodeType === 1;
-}
-
-function isFragment(node) {
-  return node.nodeType === 11;
 }
 
 function before(parentNode, newNode, referenceNode) {
@@ -3737,22 +3725,11 @@ function children(node) {
 }
 
 function text(node, content) {
-  node.nodeValue = content;
+  return content == null ? node.nodeValue : node.nodeValue = content;
 }
 
 function html(node, content) {
-  if (isElement(node)) {
-    node.innerHTML = content;
-  } else if (isFragment(node)) {
-    each(children(node), function (child) {
-      remove$1(node, child);
-    });
-    var element = createElement('div');
-    element.innerHTML = content;
-    each(children(element), function (child) {
-      append(node, child);
-    });
-  }
+  return content == null ? node.innerHTML : node.innerHTML = content;
 }
 
 function find(selector, context) {
@@ -3769,12 +3746,10 @@ function off(element, type, listener) {
 
 var api = Object.freeze({
 	createElement: createElement,
-	createFragment: createFragment,
 	createText: createText,
 	createComment: createComment,
 	createEvent: createEvent,
 	isElement: isElement,
-	isFragment: isFragment,
 	before: before,
 	replace: replace,
 	remove: remove$1,
@@ -3898,7 +3873,6 @@ function init(modules) {
     var sel = vnode.sel,
         data = vnode.data,
         children$$1 = vnode.children,
-        raw = vnode.raw,
         text$$1 = vnode.text;
 
 
@@ -3906,7 +3880,7 @@ function init(modules) {
     execute(hook[HOOK_INIT], NULL, vnode);
 
     if (falsy$1(sel)) {
-      return vnode.el = api[raw ? 'createFragment' : 'createText'](text$$1);
+      return vnode.el = api.createText(text$$1);
     }
 
     if (sel === Vnode.SEL_COMMENT) {
@@ -3931,7 +3905,7 @@ function init(modules) {
     if (array(children$$1)) {
       addVnodes(el, children$$1, 0, children$$1.length - 1, insertedQueue);
     } else if (string(text$$1)) {
-      api.append(el, api[raw ? 'createFragment' : 'createText'](text$$1));
+      api.append(el, api.createText(text$$1));
     }
 
     if (data) {
@@ -4132,21 +4106,15 @@ function init(modules) {
       execute(hook[HOOK_UPDATE], NULL, args);
     }
 
-    var newRaw = vnode.raw;
     var newText = vnode.text;
     var newChildren = vnode.children;
 
-    var oldRaw = oldVnode.raw;
     var oldText = oldVnode.text;
     var oldChildren = oldVnode.children;
 
     if (string(newText)) {
       if (newText !== oldText) {
-        if (newRaw) {
-          api.replace(parentNode, api.createFragment(newText), el);
-        } else {
-          api.text(el, newText);
-        }
+        api.text(el, newText);
       }
     } else {
       // 两个都有需要 diff
@@ -4158,7 +4126,7 @@ function init(modules) {
       // 有新的没旧的 - 新增节点
       else if (newChildren) {
           if (string(oldText)) {
-            api[oldRaw ? 'html' : 'text'](el, CHAR_BLANK);
+            api.text(el, CHAR_BLANK);
           }
           addVnodes(el, newChildren, 0, newChildren.length - 1, insertedQueue);
         }
@@ -4168,7 +4136,7 @@ function init(modules) {
           }
           // 有旧的 text 没有新的 text
           else if (string(oldText)) {
-              api[oldRaw ? 'html' : 'text'](el, CHAR_BLANK);
+              api.text(el, CHAR_BLANK);
             }
     }
 
@@ -4418,6 +4386,10 @@ var patch = init([attributes, style], api);
 
 function create(ast, context, instance) {
 
+  var render$$1 = function render$$1(ast) {
+    return render(ast, createComment, createText, createElement, importTemplate, context);
+  };
+
   var createComment = function createComment() {
     return h(Vnode.SEL_COMMENT);
   };
@@ -4429,9 +4401,8 @@ function create(ast, context, instance) {
     if (safe !== FALSE || !string(content) || !tag.test(content)) {
       return content;
     }
-    return new Vnode({
-      text: content,
-      raw: TRUE
+    return compile$$1(content).map(function (ast) {
+      return render$$1(ast).node;
     });
   };
 
@@ -4576,7 +4547,7 @@ function create(ast, context, instance) {
     return instance.partial(name);
   };
 
-  return render(ast, createComment, createText, createElement, importTemplate, context);
+  return render$$1(ast);
 }
 
 var find$1 = api.find;
@@ -4591,7 +4562,7 @@ function create$1(tagName, parentNode) {
 }
 
 function getContent(selector) {
-  return api.find(selector).innerHTML;
+  return api.html(api.find(selector));
 }
 
 /**
@@ -5740,7 +5711,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.26.0';
+Yox.version = '0.26.1';
 
 /**
  * 工具，便于扩展、插件使用
@@ -5849,7 +5820,7 @@ Yox.nextTick = add$1;
  * @return {Object}
  */
 Yox.compile = function (template) {
-  return falsy$1(template) ? template : compile$$1(template);
+  return falsy$1(template) ? template : compile$$1(template)[0];
 };
 
 /**

@@ -20,7 +20,9 @@ export function create(tagName, parentNode) {
 }
 
 export function getContent(selector) {
-  return api.find(selector).innerHTML
+  return api.html(
+    api.find(selector)
+  )
 }
 
 /**

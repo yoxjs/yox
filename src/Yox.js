@@ -810,7 +810,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.26.0'
+Yox.version = '0.26.1'
 
 /**
  * 工具，便于扩展、插件使用
@@ -927,7 +927,7 @@ Yox.nextTick = nextTask.add
 Yox.compile = function (template) {
   return string.falsy(template)
     ? template
-    : viewEnginer.compile(template)
+    : viewEnginer.compile(template)[0]
 }
 
 /**
