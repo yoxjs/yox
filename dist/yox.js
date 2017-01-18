@@ -3507,6 +3507,10 @@ function compile$$1(template) {
     return throwError('Expected end tag (</' + nodeStack[0].name + '>)', mainScanner.pos);
   }
 
+  if (!nodes.length) {
+    push(nodes, new Text(template));
+  }
+
   return compileCache[template] = nodes;
 }
 
@@ -3723,8 +3727,8 @@ var emptyNode = new Vnode({
   children: []
 });
 
-function isSameVnode(vnode1, vnode2) {
-  return vnode1.key === vnode2.key && vnode1.sel === vnode2.sel;
+function needPatch(vnode1, vnode2) {
+  return vnode1.sel && vnode1.key === vnode2.key && vnode1.sel === vnode2.sel;
 }
 
 function createKeyToIndex(vnodes, startIndex, endIndex) {
@@ -3839,7 +3843,12 @@ function init(modules) {
     vnode.el = el;
 
     if (array(children$$1)) {
-      addVnodes(el, children$$1, 0, children$$1.length - 1, insertedQueue);
+      var firstChild = children$$1[0];
+      if (children$$1.length === 1 && firstChild.raw) {
+        api.html(el, firstChild.text);
+      } else {
+        addVnodes(el, children$$1, 0, children$$1.length - 1, insertedQueue);
+      }
     } else if (string(text$$1)) {
       api.append(el, api.createText(text$$1));
     }
@@ -3888,7 +3897,7 @@ function init(modules) {
           execute(data.hook[HOOK_REMOVE], NULL, vnode);
         }
       }
-    } else {
+    } else if (el) {
       api.remove(parentNode, el);
     }
   };
@@ -3947,14 +3956,14 @@ function init(modules) {
       }
 
       // 优先从头到尾比较，位置相同且值得 patch
-      else if (isSameVnode(oldStartVnode, newStartVnode)) {
+      else if (needPatch(oldStartVnode, newStartVnode)) {
           patchVnode(oldStartVnode, newStartVnode, insertedQueue);
           oldStartVnode = oldChildren[++oldStartIndex];
           newStartVnode = newChildren[++newStartIndex];
         }
 
         // 再从尾到头比较，位置相同且值得 patch
-        else if (isSameVnode(oldEndVnode, newEndVnode)) {
+        else if (needPatch(oldEndVnode, newEndVnode)) {
             patchVnode(oldEndVnode, newEndVnode, insertedQueue);
             oldEndVnode = oldChildren[--oldEndIndex];
             newEndVnode = newChildren[--newEndIndex];
@@ -3964,7 +3973,7 @@ function init(modules) {
 
           // 当 oldStartVnode 和 newEndVnode 值得 patch
           // 说明元素被移到右边了
-          else if (isSameVnode(oldStartVnode, newEndVnode)) {
+          else if (needPatch(oldStartVnode, newEndVnode)) {
               patchVnode(oldStartVnode, newEndVnode, insertedQueue);
               api.before(parentNode, oldStartVnode.el, api.next(oldEndVnode.el));
               oldStartVnode = oldChildren[++oldStartIndex];
@@ -3973,7 +3982,7 @@ function init(modules) {
 
             // 当 oldEndVnode 和 newStartVnode 值得 patch
             // 说明元素被移到左边了
-            else if (isSameVnode(oldEndVnode, newStartVnode)) {
+            else if (needPatch(oldEndVnode, newStartVnode)) {
                 patchVnode(oldEndVnode, newStartVnode, insertedQueue);
                 api.before(parentNode, oldEndVnode.el, oldStartVnode.el);
                 oldEndVnode = oldChildren[--oldEndIndex];
@@ -3997,11 +4006,19 @@ function init(modules) {
                   }
                   // 新元素
                   else {
-                      createElement$$1(parentNode, newStartVnode, insertedQueue);
-                      activeVnode = newStartVnode;
+                      if (newStartVnode.raw) {
+                        api.html(parentNode, newStartVnode.text);
+                        activeVnode = NULL;
+                      } else {
+                        createElement$$1(parentNode, newStartVnode, insertedQueue);
+                        activeVnode = newStartVnode;
+                      }
                     }
 
-                  api.before(parentNode, activeVnode.el, oldStartVnode.el);
+                  if (activeVnode) {
+                    api.before(parentNode, activeVnode.el, oldStartVnode.el);
+                  }
+
                   newStartVnode = newChildren[++newStartIndex];
                 }
     }
@@ -4031,7 +4048,7 @@ function init(modules) {
     vnode.payload = oldVnode.payload;
 
     var parentNode = api.parent(el);
-    if (!isSameVnode(oldVnode, vnode)) {
+    if (!needPatch(oldVnode, vnode)) {
       createElement$$1(parentNode, vnode, insertedQueue);
       replaceVnode(parentNode, oldVnode, vnode);
       return;
@@ -4088,7 +4105,7 @@ function init(modules) {
     }
 
     var insertedQueue = [];
-    if (isSameVnode(oldVnode, vnode)) {
+    if (needPatch(oldVnode, vnode)) {
       patchVnode(oldVnode, vnode, insertedQueue);
     } else {
       var parentNode = api.parent(oldVnode.el);
@@ -4111,7 +4128,8 @@ var h = function (sel, data) {
   var children = void 0,
       text = void 0;
 
-  var lastArg = last(arguments);
+  var args = arguments;
+  var lastArg = last(args);
   if (array(lastArg)) {
     children = lastArg;
     each(children, function (child, i) {
@@ -4121,7 +4139,7 @@ var h = function (sel, data) {
         });
       }
     });
-  } else if (string(lastArg)) {
+  } else if (string(lastArg) && args.length > 1) {
     text = lastArg;
   }
 
@@ -4225,19 +4243,20 @@ function create(ast, context, instance) {
     return render(ast, createComment, createText, createElement, importTemplate, context);
   };
 
-  var createComment = function createComment() {
-    return h(Vnode.SEL_COMMENT);
+  var createComment = function createComment(content) {
+    return h(Vnode.SEL_COMMENT, content);
   };
 
   var createText = function createText(node) {
     var safe = node.safe,
         content = node.content;
 
-    if (safe !== FALSE || !string(content) || !tag.test(content)) {
+    if (safe !== FALSE || falsy$1(content)) {
       return content;
     }
-    return compile$$1(content).map(function (ast) {
-      return render$$1(ast).node;
+    return new Vnode({
+      text: content,
+      raw: TRUE
     });
   };
 
@@ -5546,7 +5565,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.26.1';
+Yox.version = '0.26.2';
 
 /**
  * 工具，便于扩展、插件使用

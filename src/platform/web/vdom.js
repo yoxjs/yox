@@ -31,20 +31,19 @@ export function create(ast, context, instance) {
     return viewEnginer.render(ast, createComment, createText, createElement, importTemplate, context)
   }
 
-  let createComment = function () {
-    return h(Vnode.SEL_COMMENT)
+  let createComment = function (content) {
+    return h(Vnode.SEL_COMMENT, content)
   }
 
   let createText = function (node) {
     let { safe, content } = node
-    if (safe !== env.FALSE || !is.string(content) || !pattern.tag.test(content)) {
+    if (safe !== env.FALSE || string.falsy(content)) {
       return content
     }
-    return viewEnginer.compile(content).map(
-      function (ast) {
-        return render(ast).node
-      }
-    )
+    return new Vnode({
+      text: content,
+      raw: env.TRUE,
+    })
   }
 
   let createElement = function (node, isComponent) {
