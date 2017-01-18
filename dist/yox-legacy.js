@@ -3667,10 +3667,9 @@ var Vnode = function (options) {
 
 Vnode.SEL_COMMENT = '!';
 
-var SVGElement = win.SVGElement;
-
-
 function createElement(tagName, parentNode) {
+  var SVGElement = win.SVGElement;
+
   return tagName === 'svg' || parentNode && SVGElement && parentNode instanceof SVGElement ? doc.createElementNS('http://www.w3.org/2000/svg', tagName) : doc.createElement(tagName);
 }
 
@@ -3792,7 +3791,7 @@ var emptyNode = new Vnode({
 });
 
 function needPatch(vnode1, vnode2) {
-  return vnode1.sel && vnode1.key === vnode2.key && vnode1.sel === vnode2.sel;
+  return vnode1.key === vnode2.key && vnode1.sel === vnode2.sel;
 }
 
 function createKeyToIndex(vnodes, startIndex, endIndex) {
@@ -3877,8 +3876,14 @@ function init(modules) {
     var sel = vnode.sel,
         data = vnode.data,
         children$$1 = vnode.children,
-        text$$1 = vnode.text;
+        text$$1 = vnode.text,
+        html$$1 = vnode.html;
 
+
+    if (html$$1) {
+      api.html(parentNode, html$$1);
+      return;
+    }
 
     var hook = data && data.hook || {};
     execute(hook[HOOK_INIT], NULL, vnode);
@@ -3907,12 +3912,7 @@ function init(modules) {
     vnode.el = el;
 
     if (array(children$$1)) {
-      var firstChild = children$$1[0];
-      if (children$$1.length === 1 && firstChild.raw) {
-        api.html(el, firstChild.text);
-      } else {
-        addVnodes(el, children$$1, 0, children$$1.length - 1, insertedQueue);
-      }
+      addVnodes(el, children$$1, 0, children$$1.length - 1, insertedQueue);
     } else if (string(text$$1)) {
       api.append(el, api.createText(text$$1));
     }
@@ -3937,7 +3937,10 @@ function init(modules) {
   };
 
   var addVnode = function addVnode(parentNode, vnode, insertedQueue, before$$1) {
-    api.before(parentNode, createElement$$1(parentNode, vnode, insertedQueue), before$$1);
+    var el = createElement$$1(parentNode, vnode, insertedQueue);
+    if (el) {
+      api.before(parentNode, el, before$$1);
+    }
   };
 
   var removeVnodes = function removeVnodes(parentNode, vnodes, startIndex, endIndex) {
@@ -4021,7 +4024,12 @@ function init(modules) {
 
       // 优先从头到尾比较，位置相同且值得 patch
       else if (needPatch(oldStartVnode, newStartVnode)) {
-          patchVnode(oldStartVnode, newStartVnode, insertedQueue);
+          if (oldStartVnode.el) {
+            patchVnode(oldStartVnode, newStartVnode, insertedQueue);
+          } else if (oldStartVnode.html !== newStartVnode.html) {
+            api.html(parentNode, newStartVnode.html);
+            return;
+          }
           oldStartVnode = oldChildren[++oldStartIndex];
           newStartVnode = newChildren[++newStartIndex];
         }
@@ -4070,11 +4078,8 @@ function init(modules) {
                   }
                   // 新元素
                   else {
-                      if (newStartVnode.raw) {
-                        api.html(parentNode, newStartVnode.text);
-                        activeVnode = NULL;
-                      } else {
-                        createElement$$1(parentNode, newStartVnode, insertedQueue);
+                      activeVnode = createElement$$1(parentNode, newStartVnode, insertedQueue);
+                      if (activeVnode) {
                         activeVnode = newStartVnode;
                       }
                     }
@@ -4113,8 +4118,9 @@ function init(modules) {
 
     var parentNode = api.parent(el);
     if (!needPatch(oldVnode, vnode)) {
-      createElement$$1(parentNode, vnode, insertedQueue);
-      replaceVnode(parentNode, oldVnode, vnode);
+      if (createElement$$1(parentNode, vnode, insertedQueue)) {
+        replaceVnode(parentNode, oldVnode, vnode);
+      }
       return;
     }
 
@@ -4173,8 +4179,9 @@ function init(modules) {
       patchVnode(oldVnode, vnode, insertedQueue);
     } else {
       var parentNode = api.parent(oldVnode.el);
-      createElement$$1(parentNode, vnode, insertedQueue);
-      replaceVnode(parentNode, oldVnode, vnode);
+      if (createElement$$1(parentNode, vnode, insertedQueue)) {
+        replaceVnode(parentNode, oldVnode, vnode);
+      }
     }
 
     each(insertedQueue, function (vnode) {
@@ -4420,8 +4427,7 @@ function create(ast, context, instance) {
       return content;
     }
     return new Vnode({
-      text: content,
-      raw: TRUE
+      html: content
     });
   };
 
@@ -5730,7 +5736,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.26.2';
+Yox.version = '0.26.3';
 
 /**
  * 工具，便于扩展、插件使用

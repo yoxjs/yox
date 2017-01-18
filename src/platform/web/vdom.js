@@ -41,8 +41,7 @@ export function create(ast, context, instance) {
       return content
     }
     return new Vnode({
-      text: content,
-      raw: env.TRUE,
+      html: content,
     })
   }
 
