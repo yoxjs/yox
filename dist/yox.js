@@ -3664,11 +3664,11 @@ function children(node) {
 }
 
 function text(node, content) {
-  return content == null ? node.nodeValue : node.nodeValue = content;
+  return content == NULL ? node.nodeValue : node.nodeValue = content;
 }
 
 function html(node, content) {
-  return content == null ? node.innerHTML : node.innerHTML = content;
+  return content == NULL ? node.innerHTML : node.innerHTML = content;
 }
 
 function find(selector, context) {
@@ -3960,11 +3960,13 @@ function init(modules) {
 
       // 优先从头到尾比较，位置相同且值得 patch
       else if (needPatch(oldStartVnode, newStartVnode)) {
-          if (oldStartVnode.el) {
-            patchVnode(oldStartVnode, newStartVnode, insertedQueue);
-          } else if (oldStartVnode.html !== newStartVnode.html) {
-            api.html(parentNode, newStartVnode.html);
+          if (string(newStartVnode.html)) {
+            if (oldStartVnode.html !== newStartVnode.html) {
+              api.html(parentNode, newStartVnode.html);
+            }
             return;
+          } else {
+            patchVnode(oldStartVnode, newStartVnode, insertedQueue);
           }
           oldStartVnode = oldChildren[++oldStartIndex];
           newStartVnode = newChildren[++newStartIndex];
@@ -4242,13 +4244,13 @@ var toString$2 = function (str) {
   }
 };
 
+function setHook(hooks, listener) {
+  hooks.insert = hooks.postpatch = hooks.destroy = listener;
+}
+
 var patch = init([attributes, style], api);
 
 function create(ast, context, instance) {
-
-  var render$$1 = function render$$1(ast) {
-    return render(ast, createComment, createText, createElement, importTemplate, context);
-  };
 
   var createComment = function createComment(content) {
     return h(Vnode.SEL_COMMENT, content);
@@ -4319,7 +4321,7 @@ function create(ast, context, instance) {
       data.style = styles;
     }
 
-    hooks.insert = hooks.postpatch = hooks.destroy = function (oldVnode, vnode) {
+    setHook(hooks, function (oldVnode, vnode) {
 
       // 如果只有 oldVnode，且 oldVnode 没有 directives，表示插入
       // 如果只有 oldVnode，且 oldVnode 有 directives，表示销毁
@@ -4395,8 +4397,8 @@ function create(ast, context, instance) {
       payload.attributes = attributes$$1;
       payload.directives = directives;
 
-      hooks.insert = hooks.postpatch = hooks.destroy = noop;
-    };
+      setHook(hooks, noop);
+    });
 
     return h(isComponent ? 'div' : node.name, data, node.children.map(function (child) {
       return child instanceof Vnode ? child : toString$2(child);
@@ -4407,7 +4409,7 @@ function create(ast, context, instance) {
     return instance.partial(name);
   };
 
-  return render$$1(ast);
+  return render(ast, createComment, createText, createElement, importTemplate, context);
 }
 
 var find$1 = api.find;
@@ -4588,8 +4590,10 @@ var event = function (_ref) {
     var lazy = directives.lazy;
 
     if (lazy) {
-      if (numeric(lazy.value) && lazy.value >= 0) {
-        listener = debounce(listener, lazy.value, has(immediateTypes, type));
+      var value = lazy.value;
+
+      if (numeric(value) && value >= 0) {
+        listener = debounce(listener, value, has(immediateTypes, type));
       } else if (type === 'input') {
         type = 'change';
       }
@@ -5571,7 +5575,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.26.3';
+Yox.version = '0.26.4';
 
 /**
  * 工具，便于扩展、插件使用

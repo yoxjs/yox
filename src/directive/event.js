@@ -23,8 +23,9 @@ export default function ({ el, node, instance, component, directives, type, list
   if (type && listener) {
     let { lazy } = directives
     if (lazy) {
-      if (is.numeric(lazy.value) && lazy.value >= 0) {
-        listener = debounce(listener, lazy.value, array.has(immediateTypes, type))
+      let { value } = lazy
+      if (is.numeric(value) && value >= 0) {
+        listener = debounce(listener, value, array.has(immediateTypes, type))
       }
       else if (type === 'input') {
         type = 'change'

@@ -20,16 +20,17 @@ import * as string from 'yox-common/util/string'
 import * as viewEnginer from 'yox-template-compiler'
 import * as viewSyntax from 'yox-template-compiler/src/syntax'
 
-import * as pattern from '../../config/pattern'
 import api from './api'
+
+function setHook(hooks, listener) {
+  hooks.insert =
+  hooks.postpatch =
+  hooks.destroy = listener
+}
 
 export const patch = snabbdom.init([ attributes, style ], api)
 
 export function create(ast, context, instance) {
-
-  let render = function (ast) {
-    return viewEnginer.render(ast, createComment, createText, createElement, importTemplate, context)
-  }
 
   let createComment = function (content) {
     return h(Vnode.SEL_COMMENT, content)
@@ -103,114 +104,114 @@ export function create(ast, context, instance) {
       data.style = styles
     }
 
-    hooks.insert =
-    hooks.postpatch =
-    hooks.destroy = function (oldVnode, vnode) {
 
-      // 如果只有 oldVnode，且 oldVnode 没有 directives，表示插入
-      // 如果只有 oldVnode，且 oldVnode 有 directives，表示销毁
-      // 如果有 oldVnode 和 vnode，表示更新
+    setHook(
+      hooks,
+      function (oldVnode, vnode) {
 
-      let nextVnode = vnode || oldVnode
+        // 如果只有 oldVnode，且 oldVnode 没有 directives，表示插入
+        // 如果只有 oldVnode，且 oldVnode 有 directives，表示销毁
+        // 如果有 oldVnode 和 vnode，表示更新
 
-      let payload = oldVnode.payload || (oldVnode.payload = { })
-      let destroies = payload.destroies || (payload.destroies = { })
+        let nextVnode = vnode || oldVnode
 
-      let oldComponent = payload.component
-      let oldDirectives = payload.directives
+        let payload = oldVnode.payload || (oldVnode.payload = { })
+        let destroies = payload.destroies || (payload.destroies = { })
 
-      if (oldComponent) {
-        component = oldComponent
-        if (is.object(component)) {
-          component.set(
-            array.toObject(node.attributes, 'name', 'value'),
-            env.TRUE
+        let oldComponent = payload.component
+        let oldDirectives = payload.directives
+
+        if (oldComponent) {
+          component = oldComponent
+          if (is.object(component)) {
+            component.set(
+              array.toObject(node.attributes, 'name', 'value'),
+              env.TRUE
+            )
+          }
+        }
+        else if (isComponent) {
+          component = payload.component = [ ]
+          instance.component(
+            node.name,
+            function (options) {
+              if (is.array(component)) {
+                oldComponent = component
+                component = payload.component =
+                instance.create(
+                  options,
+                  {
+                    el: nextVnode.el,
+                    props: array.toObject(node.attributes, 'name', 'value'),
+                    replace: env.TRUE,
+                  }
+                )
+                array.each(
+                  oldComponent,
+                  function (callback) {
+                    callback(component)
+                  }
+                )
+              }
+            }
           )
         }
-      }
-      else if (isComponent) {
-        component = payload.component = [ ]
-        instance.component(
-          node.name,
-          function (options) {
-            if (is.array(component)) {
-              oldComponent = component
-              component = payload.component =
-              instance.create(
-                options,
-                {
-                  el: nextVnode.el,
-                  props: array.toObject(node.attributes, 'name', 'value'),
-                  replace: env.TRUE,
-                }
-              )
-              array.each(
-                oldComponent,
-                function (callback) {
-                  callback(component)
-                }
-              )
+
+
+        let bind = function (key) {
+          let node = directives[ key ]
+          return execute(
+            instance.directive(node.name),
+            env.NULL,
+            {
+              el: nextVnode.el,
+              node,
+              instance,
+              directives,
+              attributes,
+              component,
             }
-          }
-        )
-      }
-
-
-      let bind = function (key) {
-        let node = directives[ key ]
-        return execute(
-          instance.directive(node.name),
-          env.NULL,
-          {
-            el: nextVnode.el,
-            node,
-            instance,
-            directives,
-            attributes,
-            component,
-          }
-        )
-      }
-
-      object.each(
-        directives,
-        function (directive, key) {
-          if (vnode && oldDirectives) {
-            let oldDirective = oldDirectives[ key ]
-            if (oldDirective) {
-              if (oldDirective.value !== directive.value) {
-                if (destroies[ key ]) {
-                  destroies[ key ]()
-                }
-                destroies[ key ] = bind(key)
-              }
-              return
-            }
-          }
-          destroies[ key ] = bind(key)
+          )
         }
-      )
 
-      if (oldDirectives) {
         object.each(
-          oldDirectives,
-          function (oldDirective, key) {
-            if (destroies[ key ] && (!vnode || !directives[ key ])) {
-              destroies[ key ]()
-              delete destroies[ key ]
+          directives,
+          function (directive, key) {
+            if (vnode && oldDirectives) {
+              let oldDirective = oldDirectives[ key ]
+              if (oldDirective) {
+                if (oldDirective.value !== directive.value) {
+                  if (destroies[ key ]) {
+                    destroies[ key ]()
+                  }
+                  destroies[ key ] = bind(key)
+                }
+                return
+              }
             }
+            destroies[ key ] = bind(key)
           }
         )
+
+        if (oldDirectives) {
+          object.each(
+            oldDirectives,
+            function (oldDirective, key) {
+              if (destroies[ key ] && (!vnode || !directives[ key ])) {
+                destroies[ key ]()
+                delete destroies[ key ]
+              }
+            }
+          )
+        }
+
+        payload.attributes = attributes
+        payload.directives = directives
+
+        setHook(hooks, env.noop)
+
       }
-
-      payload.attributes = attributes
-      payload.directives = directives
-
-      hooks.insert =
-      hooks.postpatch =
-      hooks.destroy = env.noop
-
-    }
+    )
 
     return h(
       isComponent ? 'div' : node.name,
@@ -230,6 +231,6 @@ export function create(ast, context, instance) {
     return instance.partial(name)
   }
 
-  return render(ast)
+  return viewEnginer.render(ast, createComment, createText, createElement, importTemplate, context)
 
 }
