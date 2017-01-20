@@ -3960,14 +3960,7 @@ function init(modules) {
 
       // 优先从头到尾比较，位置相同且值得 patch
       else if (needPatch(oldStartVnode, newStartVnode)) {
-          if (string(newStartVnode.html)) {
-            if (oldStartVnode.html !== newStartVnode.html) {
-              api.html(parentNode, newStartVnode.html);
-            }
-            return;
-          } else {
-            patchVnode(oldStartVnode, newStartVnode, insertedQueue);
-          }
+          patchVnode(oldStartVnode, newStartVnode, insertedQueue);
           oldStartVnode = oldChildren[++oldStartIndex];
           newStartVnode = newChildren[++newStartIndex];
         }
@@ -4081,7 +4074,15 @@ function init(modules) {
       // 两个都有需要 diff
       if (newChildren && oldChildren) {
         if (newChildren !== oldChildren) {
-          updateChildren(el, oldChildren, newChildren, insertedQueue);
+          var newFirstChild = newChildren[0];
+          var oldFirstChild = oldChildren[0];
+          if (newFirstChild && oldFirstChild && string(newFirstChild.html)) {
+            if (newFirstChild.html !== oldFirstChild.html) {
+              api.html(el, newFirstChild.html);
+            }
+          } else {
+            updateChildren(el, oldChildren, newChildren, insertedQueue);
+          }
         }
       }
       // 有新的没旧的 - 新增节点
@@ -5575,7 +5576,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.26.4';
+Yox.version = '0.26.5';
 
 /**
  * 工具，便于扩展、插件使用
