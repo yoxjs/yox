@@ -26,6 +26,7 @@ import * as expressionNodeType from 'yox-expression-compiler/src/nodeType'
 import * as pattern from './config/pattern'
 import * as lifecycle from './config/lifecycle'
 
+import api from './platform/web/api'
 import * as vdom from './platform/web/vdom'
 import * as native from './platform/web/native'
 
@@ -191,7 +192,9 @@ export default class Yox {
     // 检查 template
     if (is.string(template)) {
       if (pattern.selector.test(template)) {
-        template = native.getContent(template)
+        template = api.html(
+          api.find(template)
+        )
       }
       if (!pattern.tag.test(template)) {
         logger.error('Passing a "template" option must have a root element.')
@@ -204,13 +207,14 @@ export default class Yox {
     // 检查 el
     if (is.string(el)) {
       if (pattern.selector.test(el)) {
-        el = native.find(el)
+        el = api.find(el)
       }
     }
     if (el) {
-      if (native.isElement(el)) {
+      if (api.isElement(el)) {
         if (!replace) {
-          el = native.create('div', el)
+          api.html(el, '<div></div>')
+          el = api.children(el)[ 0 ]
         }
       }
       else {
@@ -246,7 +250,7 @@ export default class Yox {
       }
       execute(options[ lifecycle.BEFORE_MOUNT ], instance)
       instance.$template = Yox.compile(template)
-      instance.updateView(el || native.create('div'))
+      instance.updateView(el || api.createElement('div'))
     }
 
   }

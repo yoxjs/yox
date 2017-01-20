@@ -29,7 +29,7 @@ const selectControl = {
       array.each(
         options,
         function (option, index) {
-          if (options.value === value) {
+          if (option.value === value) {
             el.selectedIndex = index
             return env.FALSE
           }

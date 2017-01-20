@@ -3586,23 +3586,6 @@ var BEFORE_DESTROY = 'beforeDestroy';
  */
 var AFTER_DESTROY = 'afterDestroy';
 
-/**
- * @param {?string} options.el
- * @param {?string} options.sel
- * @param {?string} options.data
- * @param {?string} options.text
- * @param {?string} options.html
- * @param {?string|Array} options.children
- */
-
-var Vnode = function Vnode(options) {
-  classCallCheck(this, Vnode);
-
-  extend(this, options);
-};
-
-Vnode.SEL_COMMENT = '!';
-
 function createElement(tagName, parentNode) {
   var SVGElement = win.SVGElement;
 
@@ -3683,7 +3666,7 @@ function off(element, type, listener) {
   element.removeEventListener(type, listener, FALSE);
 }
 
-var api = Object.freeze({
+var api$1 = Object.freeze({
 	createElement: createElement,
 	createText: createText,
 	createComment: createComment,
@@ -3703,6 +3686,23 @@ var api = Object.freeze({
 	on: on,
 	off: off
 });
+
+/**
+ * @param {?string} options.el
+ * @param {?string} options.sel
+ * @param {?string} options.data
+ * @param {?string} options.text
+ * @param {?string} options.html
+ * @param {?string|Array} options.children
+ */
+
+var Vnode = function Vnode(options) {
+  classCallCheck(this, Vnode);
+
+  extend(this, options);
+};
+
+Vnode.SEL_COMMENT = '!';
 
 var HOOK_INIT = 'init';
 var HOOK_CREATE = 'create';
@@ -3742,7 +3742,7 @@ function createKeyToIndex(vnodes, startIndex, endIndex) {
 }
 
 function init(modules) {
-  var api = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : api;
+  var api = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : api$1;
 
 
   var moduleEmitter = new Emitter();
@@ -4249,7 +4249,7 @@ function setHook(hooks, listener) {
   hooks.insert = hooks.postpatch = hooks.destroy = listener;
 }
 
-var patch = init([attributes, style], api);
+var patch = init([attributes, style], api$1);
 
 function create(ast, context, instance) {
 
@@ -4413,21 +4413,6 @@ function create(ast, context, instance) {
   return render(ast, createComment, createText, createElement, importTemplate, context);
 }
 
-var find$1 = api.find;
-var isElement$1 = api.isElement;
-
-function create$1(tagName, parentNode) {
-  if (parentNode) {
-    api.html(parentNode, '<' + tagName + '></' + tagName + '>');
-    return api.children(parentNode)[0];
-  }
-  return api.createElement(tagName);
-}
-
-function getContent(selector) {
-  return api.html(api.find(selector));
-}
-
 /**
  * 绑定事件
  *
@@ -4441,12 +4426,12 @@ function on$1(element, type, listener, context) {
   if (!$emitter.has(type)) {
     var nativeListener = function nativeListener(e) {
       if (!(e instanceof Event)) {
-        e = new Event(api.createEvent(e, element));
+        e = new Event(api$1.createEvent(e, element));
       }
       $emitter.fire(e.type, e, context);
     };
     $emitter[type] = nativeListener;
-    api.on(element, type, nativeListener);
+    api$1.on(element, type, nativeListener);
   }
   $emitter.on(type, listener);
 }
@@ -4467,17 +4452,13 @@ function off$1(element, type, listener) {
   // 根据 emitter 的删除结果来操作这里的事件 listener
   each(types, function (type) {
     if ($emitter[type] && !$emitter.has(type)) {
-      api.off(element, type, $emitter[type]);
+      api$1.off(element, type, $emitter[type]);
       delete $emitter[type];
     }
   });
 }
 
 var native = Object.freeze({
-	find: find$1,
-	isElement: isElement$1,
-	create: create$1,
-	getContent: getContent,
 	on: on$1,
 	off: off$1
 });
@@ -4662,7 +4643,7 @@ var selectControl = {
 
     if (value !== options[selectedIndex].value) {
       each(options, function (option, index) {
-        if (options.value === value) {
+        if (option.value === value) {
           el.selectedIndex = index;
           return FALSE;
         }
@@ -4940,7 +4921,7 @@ var Yox = function () {
     // 检查 template
     if (string(template)) {
       if (selector.test(template)) {
-        template = getContent(template);
+        template = api$1.html(api$1.find(template));
       }
       if (!tag.test(template)) {
         error$1('Passing a "template" option must have a root element.');
@@ -4952,13 +4933,14 @@ var Yox = function () {
     // 检查 el
     if (string(el)) {
       if (selector.test(el)) {
-        el = find$1(el);
+        el = api$1.find(el);
       }
     }
     if (el) {
-      if (isElement$1(el)) {
+      if (api$1.isElement(el)) {
         if (!replace) {
-          el = create$1('div', el);
+          api$1.html(el, '<div></div>');
+          el = api$1.children(el)[0];
         }
       } else {
         error$1('Passing a "el" option must be a html element.');
@@ -4990,7 +4972,7 @@ var Yox = function () {
       };
       execute(options[BEFORE_MOUNT], instance);
       instance.$template = Yox.compile(template);
-      instance.updateView(el || create$1('div'));
+      instance.updateView(el || api$1.createElement('div'));
     }
   }
 

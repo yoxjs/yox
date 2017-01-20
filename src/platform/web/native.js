@@ -8,23 +8,6 @@ import Emitter from 'yox-common/util/Emitter'
 
 import api from './api'
 
-export const find = api.find
-export const isElement = api.isElement
-
-export function create(tagName, parentNode) {
-  if (parentNode) {
-    api.html(parentNode, `<${tagName}></${tagName}>`)
-    return api.children(parentNode)[ 0 ]
-  }
-  return api.createElement(tagName)
-}
-
-export function getContent(selector) {
-  return api.html(
-    api.find(selector)
-  )
-}
-
 /**
  * 绑定事件
  *
