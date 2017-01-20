@@ -174,7 +174,7 @@ var unshift = add('unshift');
  * @return {Array}
  */
 function toArray(array$$1) {
-  return array(array$$1) ? array$$1 : slice.call(array$$1);
+  return array(array$$1) ? array$$1 : execute(slice, array$$1);
 }
 
 /**
@@ -5576,7 +5576,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.26.5';
+Yox.version = '0.26.6';
 
 /**
  * 工具，便于扩展、插件使用
