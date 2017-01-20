@@ -4,6 +4,70 @@
 	(global.Yox = factory());
 }(this, (function () { 'use strict';
 
+Object.keys = function (obj) {
+  var result = [];
+  for (var key in obj) {
+    push(result, key);
+  }
+  return result;
+};
+
+Object.freeze = function (obj) {
+  return obj;
+};
+Object.defineProperty = function (obj, key, descriptor) {
+  obj[key] = descriptor.value;
+};
+Object.create = function (proto, descriptor) {
+  function Class() {}
+  Class.prototype = proto;
+  proto = new Class();
+  var constructor = descriptor && descriptor.constructor;
+  if (constructor) {
+    proto.constructor = constructor.value;
+  }
+  return proto;
+};
+String.prototype.trim = function () {
+  return this.replace(/^\s*|\s*$/g, '');
+};
+
+Array.prototype.indexOf = function (target) {
+  var result = -1;
+  each(this, function (item, index) {
+    if (item === target) {
+      result = index;
+      return FALSE;
+    }
+  });
+  return result;
+};
+
+Array.prototype.map = function (fn) {
+  var result = [];
+  each(this, function (item, index) {
+    result.push(fn(item, index));
+  });
+  return result;
+};
+
+Array.prototype.filter = function (fn) {
+  var result = [];
+  each(this, function (item, index) {
+    if (fn(item, index)) {
+      result.push(item);
+    }
+  });
+  return result;
+};
+
+Function.prototype.bind = function (context) {
+  var fn = this;
+  return function () {
+    return execute(fn, context, toArray(arguments));
+  };
+};
+
 /**
  * 为了压缩，定义的常量
  *
@@ -1297,7 +1361,7 @@ var binaryList = sortKeys(binaryMap);
 /**
  * 节点基类
  */
-var Node = function Node(type) {
+var Node = function (type) {
   classCallCheck(this, Node);
 
   this.type = type;
@@ -3687,70 +3751,6 @@ var api$1 = Object.freeze({
 	off: off
 });
 
-Object.keys = function (obj) {
-  var result = [];
-  for (var key in obj) {
-    push(result, key);
-  }
-  return result;
-};
-
-Object.freeze = function (obj) {
-  return obj;
-};
-Object.defineProperty = function (obj, key, descriptor) {
-  obj[key] = descriptor.value;
-};
-Object.create = function (proto, descriptor) {
-  function Class() {}
-  Class.prototype = proto;
-  proto = new Class();
-  var constructor = descriptor && descriptor.constructor;
-  if (constructor) {
-    proto.constructor = constructor.value;
-  }
-  return proto;
-};
-String.prototype.trim = function () {
-  return this.replace(/^\s*|\s*$/g, '');
-};
-
-Array.prototype.indexOf = function (target) {
-  var result = -1;
-  each(this, function (item, index) {
-    if (item === target) {
-      result = index;
-      return FALSE;
-    }
-  });
-  return result;
-};
-
-Array.prototype.map = function (fn) {
-  var result = [];
-  each(this, function (item, index) {
-    result.push(fn(item, index));
-  });
-  return result;
-};
-
-Array.prototype.filter = function (fn) {
-  var result = [];
-  each(this, function (item, index) {
-    if (fn(item, index)) {
-      result.push(item);
-    }
-  });
-  return result;
-};
-
-Function.prototype.bind = function (context) {
-  var fn = this;
-  return function () {
-    return execute(fn, context, toArray(arguments));
-  };
-};
-
 var clickType = 'click';
 var inputType = 'input';
 var changeType = 'change';
@@ -3861,7 +3861,7 @@ if (!doc.addEventListener) {
  * @param {?string|Array} options.children
  */
 
-var Vnode = function Vnode(options) {
+var Vnode = function (options) {
   classCallCheck(this, Vnode);
 
   extend(this, options);
@@ -5105,7 +5105,7 @@ var Yox = function () {
       if (api$1.isElement(el)) {
         if (!replace) {
           api$1.html(el, '<div></div>');
-          el = api$1.children(parentNode)[0];
+          el = api$1.children(el)[0];
         }
       } else {
         error$1('Passing a "el" option must be a html element.');
