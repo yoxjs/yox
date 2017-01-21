@@ -5,7 +5,7 @@ import * as is from 'yox-common/util/is'
 import * as env from 'yox-common/util/env'
 import * as array from 'yox-common/util/array'
 
-import * as native from '../platform/web/native'
+import api from '../platform/web/api'
 
 // 避免连续多次点击，主要用于提交表单场景
 // 移动端的 tap 事件可自行在业务层打补丁实现
@@ -50,9 +50,9 @@ export default function ({ el, node, instance, component, directives, type, list
       }
     }
     else {
-      native.on(el, type, listener)
+      api.on(el, type, listener)
       return function () {
-        native.off(el, type, listener)
+        api.off(el, type, listener)
       }
     }
   }

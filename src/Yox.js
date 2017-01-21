@@ -28,7 +28,6 @@ import * as lifecycle from './config/lifecycle'
 
 import api from './platform/web/api'
 import * as vdom from './platform/web/vdom'
-import * as native from './platform/web/native'
 
 export default class Yox {
 
@@ -814,16 +813,16 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.26.6'
+Yox.version = '0.27.0'
 
 /**
  * 工具，便于扩展、插件使用
  */
 Yox.is = is
+Yox.dom = api
 Yox.array = array
 Yox.object = object
 Yox.string = string
-Yox.native = native
 Yox.Event = Event
 Yox.Emitter = Emitter
 

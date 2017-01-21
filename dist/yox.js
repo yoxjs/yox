@@ -3666,7 +3666,7 @@ function off(element, type, listener) {
   element.removeEventListener(type, listener, FALSE);
 }
 
-var api$1 = Object.freeze({
+var domApi = Object.freeze({
 	createElement: createElement,
 	createText: createText,
 	createComment: createComment,
@@ -3686,6 +3686,59 @@ var api$1 = Object.freeze({
 	on: on,
 	off: off
 });
+
+var api = copy(domApi);
+
+// import * as oldApi from './oldApi'
+//
+// if (!env.doc.addEventListener) {
+//   object.extend(api, oldApi)
+// }
+
+/**
+ * 绑定事件
+ *
+ * @param {HTMLElement} element
+ * @param {string} type
+ * @param {Function} listener
+ * @param {?*} context
+ */
+api.on = function (element, type, listener, context) {
+  var $emitter = element.$emitter || (element.$emitter = new Emitter());
+  if (!$emitter.has(type)) {
+    var nativeListener = function nativeListener(e) {
+      if (!(e instanceof Event)) {
+        e = new Event(createEvent(e, element));
+      }
+      $emitter.fire(e.type, e, context);
+    };
+    $emitter[type] = nativeListener;
+    on(element, type, nativeListener);
+  }
+  $emitter.on(type, listener);
+};
+
+/**
+ * 解绑事件
+ *
+ * @param {HTMLElement} element
+ * @param {string} type
+ * @param {Function} listener
+ */
+api.off = function (element, type, listener) {
+  var $emitter = element.$emitter;
+
+  var types = keys($emitter.listeners);
+  // emitter 会根据 type 和 listener 参数进行适当的删除
+  $emitter.off(type, listener);
+  // 根据 emitter 的删除结果来操作这里的事件 listener
+  each(types, function (type) {
+    if ($emitter[type] && !$emitter.has(type)) {
+      off(element, type, $emitter[type]);
+      delete $emitter[type];
+    }
+  });
+};
 
 /**
  * @param {?string} options.el
@@ -3742,7 +3795,7 @@ function createKeyToIndex(vnodes, startIndex, endIndex) {
 }
 
 function init(modules) {
-  var api = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : api$1;
+  var api = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : domApi;
 
 
   var moduleEmitter = new Emitter();
@@ -4249,7 +4302,7 @@ function setHook(hooks, listener) {
   hooks.insert = hooks.postpatch = hooks.destroy = listener;
 }
 
-var patch = init([attributes, style], api$1);
+var patch = init([attributes, style], api);
 
 function create(ast, context, instance) {
 
@@ -4414,56 +4467,6 @@ function create(ast, context, instance) {
 }
 
 /**
- * 绑定事件
- *
- * @param {HTMLElement} element
- * @param {string} type
- * @param {Function} listener
- * @param {?*} context
- */
-function on$1(element, type, listener, context) {
-  var $emitter = element.$emitter || (element.$emitter = new Emitter());
-  if (!$emitter.has(type)) {
-    var nativeListener = function nativeListener(e) {
-      if (!(e instanceof Event)) {
-        e = new Event(api$1.createEvent(e, element));
-      }
-      $emitter.fire(e.type, e, context);
-    };
-    $emitter[type] = nativeListener;
-    api$1.on(element, type, nativeListener);
-  }
-  $emitter.on(type, listener);
-}
-
-/**
- * 解绑事件
- *
- * @param {HTMLElement} element
- * @param {string} type
- * @param {Function} listener
- */
-function off$1(element, type, listener) {
-  var $emitter = element.$emitter;
-
-  var types = keys($emitter.listeners);
-  // emitter 会根据 type 和 listener 参数进行适当的删除
-  $emitter.off(type, listener);
-  // 根据 emitter 的删除结果来操作这里的事件 listener
-  each(types, function (type) {
-    if ($emitter[type] && !$emitter.has(type)) {
-      api$1.off(element, type, $emitter[type]);
-      delete $emitter[type];
-    }
-  });
-}
-
-var native = Object.freeze({
-	on: on$1,
-	off: off$1
-});
-
-/**
  * <Component ref="component" />
  * <input ref="input">
  */
@@ -4603,9 +4606,9 @@ var event = function (_ref) {
 
       if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
     } else {
-      on$1(el, type, listener);
+      api.on(el, type, listener);
       return function () {
-        off$1(el, type, listener);
+        api.off(el, type, listener);
       };
     }
   }
@@ -4921,7 +4924,7 @@ var Yox = function () {
     // 检查 template
     if (string(template)) {
       if (selector.test(template)) {
-        template = api$1.html(api$1.find(template));
+        template = api.html(api.find(template));
       }
       if (!tag.test(template)) {
         error$1('Passing a "template" option must have a root element.');
@@ -4933,14 +4936,14 @@ var Yox = function () {
     // 检查 el
     if (string(el)) {
       if (selector.test(el)) {
-        el = api$1.find(el);
+        el = api.find(el);
       }
     }
     if (el) {
-      if (api$1.isElement(el)) {
+      if (api.isElement(el)) {
         if (!replace) {
-          api$1.html(el, '<div></div>');
-          el = api$1.children(el)[0];
+          api.html(el, '<div></div>');
+          el = api.children(el)[0];
         }
       } else {
         error$1('Passing a "el" option must be a html element.');
@@ -4972,7 +4975,7 @@ var Yox = function () {
       };
       execute(options[BEFORE_MOUNT], instance);
       instance.$template = Yox.compile(template);
-      instance.updateView(el || api$1.createElement('div'));
+      instance.updateView(el || api.createElement('div'));
     }
   }
 
@@ -5066,7 +5069,7 @@ var Yox = function () {
 
   }, {
     key: 'on',
-    value: function on$$1(type, listener) {
+    value: function on(type, listener) {
       this.$eventEmitter.on(type, listener);
     }
 
@@ -5092,7 +5095,7 @@ var Yox = function () {
 
   }, {
     key: 'off',
-    value: function off$$1(type, listener) {
+    value: function off(type, listener) {
       this.$eventEmitter.off(type, listener);
     }
 
@@ -5558,16 +5561,16 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.26.6';
+Yox.version = '0.27.0';
 
 /**
  * 工具，便于扩展、插件使用
  */
 Yox.is = is$1;
+Yox.dom = api;
 Yox.array = array$1;
 Yox.object = object$1;
 Yox.string = string$1;
-Yox.native = native;
 Yox.Event = Event;
 Yox.Emitter = Emitter;
 
