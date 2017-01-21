@@ -3695,6 +3695,9 @@ var api = copy(domApi);
 //   object.extend(api, oldApi)
 // }
 
+var domOn = api.on;
+var domOff = api.off;
+
 /**
  * 绑定事件
  *
@@ -3713,7 +3716,7 @@ api.on = function (element, type, listener, context) {
       $emitter.fire(e.type, e, context);
     };
     $emitter[type] = nativeListener;
-    on(element, type, nativeListener);
+    domOn(element, type, nativeListener);
   }
   $emitter.on(type, listener);
 };
@@ -3734,7 +3737,7 @@ api.off = function (element, type, listener) {
   // 根据 emitter 的删除结果来操作这里的事件 listener
   each(types, function (type) {
     if ($emitter[type] && !$emitter.has(type)) {
-      off(element, type, $emitter[type]);
+      domOff(element, type, $emitter[type]);
       delete $emitter[type];
     }
   });

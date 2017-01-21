@@ -16,6 +16,9 @@ let api = object.copy(domApi)
 //   object.extend(api, oldApi)
 // }
 
+let domOn = api.on
+let domOff = api.off
+
 /**
  * 绑定事件
  *
@@ -34,7 +37,7 @@ api.on =  function (element, type, listener, context) {
       $emitter.fire(e.type, e, context)
     }
     $emitter[ type ] = nativeListener
-    domApi.on(element, type, nativeListener)
+    domOn(element, type, nativeListener)
   }
   $emitter.on(type, listener)
 }
@@ -56,7 +59,7 @@ api.off =  function (element, type, listener) {
     types,
     function (type) {
       if ($emitter[ type ] && !$emitter.has(type)) {
-        domApi.off(element, type, $emitter[ type ])
+        domOff(element, type, $emitter[ type ])
         delete $emitter[ type ]
       }
     }
