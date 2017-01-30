@@ -7,80 +7,83 @@ import * as object from 'yox-common/util/object'
 
 import Event from 'yox-common/util/Event'
 
-Object.keys = function (obj) {
-  let result = [ ]
-  for (let key in obj) {
-    array.push(result, key)
+if (!Object.keys) {
+  Object.keys = function (obj) {
+    let result = [ ]
+    for (let key in obj) {
+      array.push(result, key)
+    }
+    return result
   }
-  return result
-}
-
-Object.freeze = function (obj) {
-  return obj
-}
-Object.defineProperty = function (obj, key, descriptor) {
-  obj[ key ] = descriptor.value
-}
-Object.create = function (proto, descriptor) {
-  function Class() { }
-  Class.prototype = proto
-  proto = new Class()
-  let constructor = descriptor && descriptor.constructor
-  if (constructor) {
-    proto.constructor = constructor.value
+  Object.freeze = function (obj) {
+    return obj
   }
-  return proto
+  Object.defineProperty = function (obj, key, descriptor) {
+    obj[ key ] = descriptor.value
+  }
+  Object.create = function (proto, descriptor) {
+    function Class() { }
+    Class.prototype = proto
+    proto = new Class()
+    let constructor = descriptor && descriptor.constructor
+    if (constructor) {
+      proto.constructor = constructor.value
+    }
+    return proto
+  }
 }
-String.prototype.trim = function () {
-  return this.replace(/^\s*|\s*$/g, '')
+if (!String.prototype.trim) {
+  String.prototype.trim = function () {
+    return this.replace(/^\s*|\s*$/g, '')
+  }
 }
-
-Array.prototype.indexOf = function (target) {
-  let result = -1
-  array.each(
-    this,
-    function (item, index) {
-      if (item === target) {
-        result = index
-        return env.FALSE
+if (!Array.prototype.map) {
+  Array.prototype.indexOf = function (target) {
+    let result = -1
+    array.each(
+      this,
+      function (item, index) {
+        if (item === target) {
+          result = index
+          return env.FALSE
+        }
       }
-    }
-  )
-  return result
-}
-
-Array.prototype.map = function (fn) {
-  let result = [ ]
-  array.each(
-    this,
-    function (item, index) {
-      result.push(fn(item, index))
-    }
-  )
-  return result
-}
-
-Array.prototype.filter = function (fn) {
-  let result = [ ]
-  array.each(
-    this,
-    function (item, index) {
-      if (fn(item, index)) {
-        result.push(item)
-      }
-    }
-  )
-  return result
-}
-
-Function.prototype.bind = function (context) {
-  let fn = this
-  return function () {
-    return execute(
-      fn,
-      context,
-      array.toArray(arguments)
     )
+    return result
+  }
+  Array.prototype.map = function (fn) {
+    let result = [ ]
+    array.each(
+      this,
+      function (item, index) {
+        result.push(fn(item, index))
+      }
+    )
+    return result
+  }
+  Array.prototype.filter = function (fn) {
+    let result = [ ]
+    array.each(
+      this,
+      function (item, index) {
+        if (fn(item, index)) {
+          result.push(item)
+        }
+      }
+    )
+    return result
+  }
+}
+if (!Function.prototype.bind) {
+  Function.prototype.bind = function (context) {
+    let fn = this
+    return function () {
+      return execute(
+        fn,
+        context,
+        array.toArray(arguments)
+      )
+    }
   }
 }
 

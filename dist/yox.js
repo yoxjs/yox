@@ -1206,7 +1206,7 @@ var CALL = 3;
  *
  * @type {number}
  */
-var CONDITIONAL = 4;
+var TERNARY = 4;
 
 /**
  * 标识符
@@ -1419,20 +1419,20 @@ var Call = function (_Node) {
 }(Node);
 
 /**
- * Conditional 节点
+ * Ternary 节点
  *
  * @param {Node} test
  * @param {Node} consequent
  * @param {Node} alternate
  */
 
-var Conditional = function (_Node) {
-  inherits(Conditional, _Node);
+var Ternary = function (_Node) {
+  inherits(Ternary, _Node);
 
-  function Conditional(test, consequent, alternate) {
-    classCallCheck(this, Conditional);
+  function Ternary(test, consequent, alternate) {
+    classCallCheck(this, Ternary);
 
-    var _this = possibleConstructorReturn(this, (Conditional.__proto__ || Object.getPrototypeOf(Conditional)).call(this, CONDITIONAL));
+    var _this = possibleConstructorReturn(this, (Ternary.__proto__ || Object.getPrototypeOf(Ternary)).call(this, TERNARY));
 
     _this.test = test;
     _this.consequent = consequent;
@@ -1440,7 +1440,7 @@ var Conditional = function (_Node) {
     return _this;
   }
 
-  return Conditional;
+  return Ternary;
 }(Node);
 
 /**
@@ -1595,7 +1595,7 @@ function stringify$1(node) {
     case CALL:
       return stringify$1(node.callee) + '(' + node.args.map(recursion).join(CHAR_COMMA) + ')';
 
-    case CONDITIONAL:
+    case TERNARY:
       return stringify$1(node.test) + ' ? ' + stringify$1(node.consequent) + ' : ' + stringify$1(node.alternate);
 
     case IDENTIFIER:
@@ -1669,7 +1669,7 @@ function execute$1(node, context) {
         }));
         break;
 
-      case CONDITIONAL:
+      case TERNARY:
         var test = node.test,
             consequent = node.consequent,
             alternate = node.alternate;
@@ -1733,6 +1733,7 @@ function execute$1(node, context) {
 // 举个例子：a === true
 // 从解析器的角度来说，a 和 true 是一样的 token
 var keywords = {};
+// 兼容 IE8
 keywords['true'] = TRUE;
 keywords['false'] = FALSE;
 keywords['null'] = NULL;
@@ -2050,7 +2051,7 @@ function compile$1(content) {
         var alternate = parseBinary();
         skipWhitespace();
 
-        return new Conditional(test, consequent, alternate);
+        return new Ternary(test, consequent, alternate);
       } else {
         throwError();
       }
@@ -5564,7 +5565,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.27.0';
+Yox.version = '0.27.1';
 
 /**
  * 工具，便于扩展、插件使用
