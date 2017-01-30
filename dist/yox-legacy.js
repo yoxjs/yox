@@ -4,69 +4,72 @@
 	(global.Yox = factory());
 }(this, (function () { 'use strict';
 
-Object.keys = function (obj) {
-  var result = [];
-  for (var key in obj) {
-    push(result, key);
-  }
-  return result;
-};
-
-Object.freeze = function (obj) {
-  return obj;
-};
-Object.defineProperty = function (obj, key, descriptor) {
-  obj[key] = descriptor.value;
-};
-Object.create = function (proto, descriptor) {
-  function Class() {}
-  Class.prototype = proto;
-  proto = new Class();
-  var constructor = descriptor && descriptor.constructor;
-  if (constructor) {
-    proto.constructor = constructor.value;
-  }
-  return proto;
-};
-String.prototype.trim = function () {
-  return this.replace(/^\s*|\s*$/g, '');
-};
-
-Array.prototype.indexOf = function (target) {
-  var result = -1;
-  each(this, function (item, index) {
-    if (item === target) {
-      result = index;
-      return FALSE;
+if (!Object.keys) {
+  Object.keys = function (obj) {
+    var result = [];
+    for (var key in obj) {
+      push(result, key);
     }
-  });
-  return result;
-};
-
-Array.prototype.map = function (fn) {
-  var result = [];
-  each(this, function (item, index) {
-    result.push(fn(item, index));
-  });
-  return result;
-};
-
-Array.prototype.filter = function (fn) {
-  var result = [];
-  each(this, function (item, index) {
-    if (fn(item, index)) {
-      result.push(item);
-    }
-  });
-  return result;
-};
-
-Function.prototype.bind = function (context) {
-  var fn = this;
-  return function () {
-    return execute(fn, context, toArray(arguments));
+    return result;
   };
-};
+  Object.freeze = function (obj) {
+    return obj;
+  };
+  Object.defineProperty = function (obj, key, descriptor) {
+    obj[key] = descriptor.value;
+  };
+  Object.create = function (proto, descriptor) {
+    function Class() {}
+    Class.prototype = proto;
+    proto = new Class();
+    var constructor = descriptor && descriptor.constructor;
+    if (constructor) {
+      proto.constructor = constructor.value;
+    }
+    return proto;
+  };
+}
+if (!String.prototype.trim) {
+  String.prototype.trim = function () {
+    return this.replace(/^\s*|\s*$/g, '');
+  };
+}
+if (!Array.prototype.map) {
+  Array.prototype.indexOf = function (target) {
+    var result = -1;
+    each(this, function (item, index) {
+      if (item === target) {
+        result = index;
+        return FALSE;
+      }
+    });
+    return result;
+  };
+  Array.prototype.map = function (fn) {
+    var result = [];
+    each(this, function (item, index) {
+      result.push(fn(item, index));
+    });
+    return result;
+  };
+  Array.prototype.filter = function (fn) {
+    var result = [];
+    each(this, function (item, index) {
+      if (fn(item, index)) {
+        result.push(item);
+      }
+    });
+    return result;
+  };
+}
+if (!Function.prototype.bind) {
+  Function.prototype.bind = function (context) {
+    var fn = this;
+    return function () {
+      return execute(fn, context, toArray(arguments));
+    };
+  };
+}
 
 /**
  * 为了压缩，定义的常量
@@ -1270,7 +1273,7 @@ var CALL = 3;
  *
  * @type {number}
  */
-var CONDITIONAL = 4;
+var TERNARY = 4;
 
 /**
  * 标识符
@@ -1361,7 +1364,7 @@ var binaryList = sortKeys(binaryMap);
 /**
  * 节点基类
  */
-var Node = function (type) {
+var Node = function Node(type) {
   classCallCheck(this, Node);
 
   this.type = type;
@@ -1483,20 +1486,20 @@ var Call = function (_Node) {
 }(Node);
 
 /**
- * Conditional 节点
+ * Ternary 节点
  *
  * @param {Node} test
  * @param {Node} consequent
  * @param {Node} alternate
  */
 
-var Conditional = function (_Node) {
-  inherits(Conditional, _Node);
+var Ternary = function (_Node) {
+  inherits(Ternary, _Node);
 
-  function Conditional(test, consequent, alternate) {
-    classCallCheck(this, Conditional);
+  function Ternary(test, consequent, alternate) {
+    classCallCheck(this, Ternary);
 
-    var _this = possibleConstructorReturn(this, (Conditional.__proto__ || Object.getPrototypeOf(Conditional)).call(this, CONDITIONAL));
+    var _this = possibleConstructorReturn(this, (Ternary.__proto__ || Object.getPrototypeOf(Ternary)).call(this, TERNARY));
 
     _this.test = test;
     _this.consequent = consequent;
@@ -1504,7 +1507,7 @@ var Conditional = function (_Node) {
     return _this;
   }
 
-  return Conditional;
+  return Ternary;
 }(Node);
 
 /**
@@ -1659,7 +1662,7 @@ function stringify$1(node) {
     case CALL:
       return stringify$1(node.callee) + '(' + node.args.map(recursion).join(CHAR_COMMA) + ')';
 
-    case CONDITIONAL:
+    case TERNARY:
       return stringify$1(node.test) + ' ? ' + stringify$1(node.consequent) + ' : ' + stringify$1(node.alternate);
 
     case IDENTIFIER:
@@ -1733,7 +1736,7 @@ function execute$1(node, context) {
         }));
         break;
 
-      case CONDITIONAL:
+      case TERNARY:
         var test = node.test,
             consequent = node.consequent,
             alternate = node.alternate;
@@ -1797,6 +1800,7 @@ function execute$1(node, context) {
 // 举个例子：a === true
 // 从解析器的角度来说，a 和 true 是一样的 token
 var keywords = {};
+// 兼容 IE8
 keywords['true'] = TRUE;
 keywords['false'] = FALSE;
 keywords['null'] = NULL;
@@ -2114,7 +2118,7 @@ function compile$1(content) {
         var alternate = parseBinary();
         skipWhitespace();
 
-        return new Conditional(test, consequent, alternate);
+        return new Ternary(test, consequent, alternate);
       } else {
         throwError();
       }
@@ -3911,7 +3915,7 @@ api.off = function (element, type, listener) {
  * @param {?string|Array} options.children
  */
 
-var Vnode = function (options) {
+var Vnode = function Vnode(options) {
   classCallCheck(this, Vnode);
 
   extend(this, options);
@@ -5723,7 +5727,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.27.0';
+Yox.version = '0.27.1';
 
 /**
  * 工具，便于扩展、插件使用
