@@ -1364,7 +1364,7 @@ var binaryList = sortKeys(binaryMap);
 /**
  * 节点基类
  */
-var Node = function Node(type) {
+var Node = function (type) {
   classCallCheck(this, Node);
 
   this.type = type;
@@ -3915,7 +3915,7 @@ api.off = function (element, type, listener) {
  * @param {?string|Array} options.children
  */
 
-var Vnode = function Vnode(options) {
+var Vnode = function (options) {
   classCallCheck(this, Vnode);
 
   extend(this, options);
@@ -5536,6 +5536,8 @@ var Yox = function () {
                         }
                       } else if (name === SPECIAL_KEYPATH) {
                         return keypath;
+                      } else if (name === 'this') {
+                        return instance.get(keypath);
                       }
                     } else if (type === MEMBER) {
                       name = stringify$1(node);
@@ -5727,7 +5729,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.27.1';
+Yox.version = '0.27.2';
 
 /**
  * 工具，便于扩展、插件使用
