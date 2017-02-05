@@ -5374,6 +5374,8 @@ var Yox = function () {
                         }
                       } else if (name === SPECIAL_KEYPATH) {
                         return keypath;
+                      } else if (name === 'this') {
+                        return instance.get(keypath);
                       }
                     } else if (type === MEMBER) {
                       name = stringify$1(node);
@@ -5565,7 +5567,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.27.1';
+Yox.version = '0.27.2';
 
 /**
  * 工具，便于扩展、插件使用

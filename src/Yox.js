@@ -634,6 +634,9 @@ export default class Yox {
                   else if (name === viewSyntax.SPECIAL_KEYPATH) {
                     return keypath
                   }
+                  else if (name === 'this') {
+                    return instance.get(keypath)
+                  }
                 }
                 else if (type === expressionNodeType.MEMBER) {
                   name = expressionEnginer.stringify(node)
@@ -813,7 +816,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.27.1'
+Yox.version = '0.27.2'
 
 /**
  * 工具，便于扩展、插件使用
