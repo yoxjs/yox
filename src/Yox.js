@@ -489,7 +489,7 @@ export default class Yox {
       instance.$dirtyIgnore = env.TRUE
     }
     else if (args.length === 2) {
-      immediate = args[1]
+      immediate = args[ 1 ]
     }
 
     if (immediate) {
@@ -571,7 +571,7 @@ export default class Yox {
     }
     else {
       afterHook = lifecycle.AFTER_MOUNT
-      $currentNode = vdom.patch(arguments[0], node)
+      $currentNode = vdom.patch(arguments[ 0 ], node)
       instance.$el = $currentNode.el
     }
 
@@ -701,7 +701,7 @@ export default class Yox {
     }
 
     if ($currentNode) {
-      if (arguments[0] !== env.TRUE) {
+      if (arguments[ 0 ] !== env.TRUE) {
         vdom.patch($currentNode, { text: char.CHAR_BLANK })
       }
     }
@@ -839,8 +839,8 @@ const supportRegisterAsync = [ 'component' ]
 
 // 解析注册参数
 function parseRegisterArguments(type, args) {
-  let id = args[0]
-  let value = args[1]
+  let id = args[ 0 ]
+  let value = args[ 1 ]
   let callback
   if (array.has(supportRegisterAsync, type)
     && is.func(value)
@@ -933,7 +933,7 @@ Yox.nextTick = nextTask.add
 Yox.compile = function (template) {
   return string.falsy(template)
     ? template
-    : viewEnginer.compile(template)[0]
+    : viewEnginer.compile(template)[ 0 ]
 }
 
 /**
