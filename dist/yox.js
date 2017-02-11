@@ -1128,6 +1128,12 @@ function error$1(msg) {
   }
 }
 
+var logger = Object.freeze({
+	log: log,
+	warn: warn,
+	error: error$1
+});
+
 var nextTick = void 0;
 
 if (typeof MutationObserver === 'function') {
@@ -4786,6 +4792,9 @@ var Yox = function () {
 
     var instance = this;
 
+    // 如果不绑着，其他方法调不到钩子
+    instance.$options = options;
+
     execute(options[BEFORE_CREATE], instance, options);
 
     var el = options.el,
@@ -4802,19 +4811,23 @@ var Yox = function () {
         filters = options.filters,
         methods = options.methods,
         partials = options.partials,
+        propTypes = options.propTypes,
         extensions = options.extensions;
 
-    // 如果不绑着，其他方法调不到钩子
 
-    instance.$options = options;
+    extend(instance, extensions);
 
     // 检查 props
-    if (props && !object(props)) {
+    if (object(props)) {
+      if (object(propTypes)) {
+        props = Yox.validate(props, propTypes);
+      }
+      // 如果传了 props，则 data 应该是个 function
+      if (data && !func(data)) {
+        warn('Passing a "data" option should be a function.');
+      }
+    } else if (props) {
       props = NULL;
-    }
-    // 如果传了 props，则 data 应该是个 function
-    if (props && data && !func(data)) {
-      warn('Passing a "data" option should be a function.');
     }
 
     // 先放 props
@@ -4966,7 +4979,6 @@ var Yox = function () {
         instance[name] = fn;
       });
     }
-    extend(instance, extensions);
 
     instance.component(components);
     instance.directive(directives);
@@ -5325,13 +5337,6 @@ var Yox = function () {
     key: 'create',
     value: function create$$1(options, extra) {
       options = extend({}, options, extra);
-      var _options = options,
-          props = _options.props,
-          propTypes = _options.propTypes;
-
-      if (object(props) && object(propTypes)) {
-        options.props = Yox.validate(props, propTypes);
-      }
       options.parent = this;
       var child = new Yox(options);
       var children = this.$children || (this.$children = []);
@@ -5539,35 +5544,11 @@ var Yox = function () {
     value: function copy$$1(data, deep) {
       return copy(data, deep);
     }
-
-    /**
-     * 打印普通日志
-     *
-     * @param {string} msg
-     */
-
-  }, {
-    key: 'log',
-    value: function log$$1(msg) {
-      log(msg);
-    }
-
-    /**
-     * 打印警告日志
-     *
-     * @param {string} msg
-     */
-
-  }, {
-    key: 'warn',
-    value: function warn$$1(msg) {
-      warn(msg);
-    }
   }]);
   return Yox;
 }();
 
-Yox.version = '0.27.2';
+Yox.version = '0.28.0';
 
 /**
  * 工具，便于扩展、插件使用
@@ -5577,6 +5558,7 @@ Yox.dom = api;
 Yox.array = array$1;
 Yox.object = object$1;
 Yox.string = string$1;
+Yox.logger = logger;
 Yox.Event = Event;
 Yox.Emitter = Emitter;
 

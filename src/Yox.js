@@ -35,6 +35,9 @@ export default class Yox {
 
     let instance = this
 
+    // 如果不绑着，其他方法调不到钩子
+    instance.$options = options
+
     execute(options[ lifecycle.BEFORE_CREATE ], instance, options)
 
     let {
@@ -52,19 +55,24 @@ export default class Yox {
       filters,
       methods,
       partials,
+      propTypes,
       extensions,
     } = options
 
-    // 如果不绑着，其他方法调不到钩子
-    instance.$options = options
+    object.extend(instance, extensions)
 
     // 检查 props
-    if (props && !is.object(props)) {
-      props = env.NULL
+    if (is.object(props)) {
+      if (is.object(propTypes)) {
+        props = Yox.validate(props, propTypes)
+      }
+      // 如果传了 props，则 data 应该是个 function
+      if (data && !is.func(data)) {
+        logger.warn('Passing a "data" option should be a function.')
+      }
     }
-    // 如果传了 props，则 data 应该是个 function
-    if (props && data && !is.func(data)) {
-      logger.warn('Passing a "data" option should be a function.')
+    else if (props) {
+      props = env.NULL
     }
 
     // 先放 props
@@ -236,7 +244,6 @@ export default class Yox {
         }
       )
     }
-    object.extend(instance, extensions)
 
     instance.component(components)
     instance.directive(directives)
@@ -589,10 +596,6 @@ export default class Yox {
    */
   create(options, extra) {
     options = object.extend({ }, options, extra)
-    let { props, propTypes } = options
-    if (is.object(props) && is.object(propTypes)) {
-      options.props = Yox.validate(props, propTypes)
-    }
     options.parent = this
     let child = new Yox(options)
     let children = this.$children || (this.$children = [ ])
@@ -790,24 +793,6 @@ export default class Yox {
     return object.copy(data, deep)
   }
 
-  /**
-   * 打印普通日志
-   *
-   * @param {string} msg
-   */
-  log(msg) {
-    logger.log(msg)
-  }
-
-  /**
-   * 打印警告日志
-   *
-   * @param {string} msg
-   */
-  warn(msg) {
-    logger.warn(msg)
-  }
-
 }
 
 
@@ -816,7 +801,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.27.2'
+Yox.version = '0.28.0'
 
 /**
  * 工具，便于扩展、插件使用
@@ -826,6 +811,7 @@ Yox.dom = api
 Yox.array = array
 Yox.object = object
 Yox.string = string
+Yox.logger = logger
 Yox.Event = Event
 Yox.Emitter = Emitter
 
