@@ -97,6 +97,15 @@ var execute = function (fn, context, args) {
   }
 };
 
+var toNumber = function (str) {
+  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+
+  if (numeric(str)) {
+    return +str;
+  }
+  return defaultValue;
+};
+
 var slice = Array.prototype.slice;
 
 /**
@@ -274,43 +283,6 @@ var array$1 = Object.freeze({
 	remove: remove,
 	falsy: falsy
 });
-
-/**
- * getter / setter 的判断
- * 直接把最外面传进来参数丢过来用
- */
-
-var magic = function (options) {
-  var args = options.args,
-      get = options.get,
-      set = options.set;
-
-  args = toArray(args);
-
-  var key = args[0],
-      value = args[1];
-  if (object(key)) {
-    execute(set, NULL, key);
-  } else if (string(key)) {
-    var _args = args,
-        length = _args.length;
-
-    if (length === 2) {
-      execute(set, NULL, args);
-    } else if (length === 1) {
-      return execute(get, NULL, key);
-    }
-  }
-};
-
-var toNumber = function (str) {
-  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-
-  if (numeric(str)) {
-    return +str;
-  }
-  return defaultValue;
-};
 
 /**
  * 为了压缩，定义的常用字符
@@ -2320,7 +2292,7 @@ var Context = function () {
         }
       }
 
-      warn('Failed to lookup "' + key + '" data.');
+      warn('Failed to lookup "' + key + '".');
 
       return {
         keypath: key
@@ -2804,13 +2776,12 @@ function mergeNodes(nodes) {
  *
  * @param {Object} ast 编译出来的抽象语法树
  * @param {Function} createComment 创建注释节点
- * @param {Function} createText 创建文本节点
  * @param {Function} createElement 创建元素节点
  * @param {Function} importTemplate 导入子模板，如果是纯模板，可不传
  * @param {Object} data 渲染模板的数据，如果渲染纯模板，可不传
  * @return {Object} { node: x, deps: { } }
  */
-function render(ast, createComment, createText, createElement, importTemplate, data) {
+function render(ast, createComment, createElement, importTemplate, data) {
 
   var keys$$1 = [];
   var getKeypath = function getKeypath() {
@@ -2827,12 +2798,20 @@ function render(ast, createComment, createText, createElement, importTemplate, d
   var partials = {};
 
   var deps = {};
-  var executeExpr = function executeExpr(expr) {
+  var executeExpression = function executeExpression(expr) {
     var result = execute$1(expr, context);
     each$1(result.deps, function (value, key) {
       deps[resolve(getKeypath(), key)] = value;
     });
     return result.value;
+  };
+
+  var getExpressionContent = function getExpressionContent(expr) {
+    var content = executeExpression(expr);
+    if (func(content) && content.toString !== toString$1) {
+      content = content.toString();
+    }
+    return content;
   };
 
   /**
@@ -2851,13 +2830,24 @@ function render(ast, createComment, createText, createElement, importTemplate, d
         var children = node.children,
             attrs = node.attrs;
 
+        var props = {};
+
         if (children) {
-          children = traverseList(children);
+          if (node.type === ELEMENT && children.length === 1) {
+            var child = children[0];
+            if (child.type === EXPRESSION && child.safe === FALSE) {
+              props.innerHTML = getExpressionContent(child.expr);
+              children = NULL;
+            }
+          }
+          if (children) {
+            children = traverseList(children);
+          }
         }
         if (attrs) {
           attrs = traverseList(attrs);
         }
-        value = leave(node, children, attrs);
+        value = leave(node, children, attrs, props);
       }
       return value;
     }
@@ -2933,7 +2923,7 @@ function render(ast, createComment, createText, createElement, importTemplate, d
           // 条件判断失败就没必要往下走了
           case IF$1:
           case ELSE_IF$1:
-            if (!executeExpr(expr)) {
+            if (!executeExpression(expr)) {
               return {
                 v: isAttrRendering || !nextNode || elseTypes[nextNode.type] ? FALSE : markNodes(createComment())
               };
@@ -2944,7 +2934,7 @@ function render(ast, createComment, createText, createElement, importTemplate, d
             var index = node.index,
                 children = node.children;
 
-            var value = executeExpr(expr);
+            var value = executeExpression(expr);
 
             var iterate = void 0;
             if (array(value)) {
@@ -2990,7 +2980,7 @@ function render(ast, createComment, createText, createElement, importTemplate, d
       if (attrTypes[type]) {
         isAttrRendering = TRUE;
       }
-    }, function (node, children, attrs) {
+    }, function (node, children, attrs, properties) {
       var type = node.type,
           name = node.name,
           modifier = node.modifier,
@@ -3007,27 +2997,12 @@ function render(ast, createComment, createText, createElement, importTemplate, d
         switch (type) {
           case TEXT:
             return {
-              v: markNodes(createText({
-                keypath: keypath,
-                content: content
-              }))
+              v: content
             };
 
           case EXPRESSION:
-            var expr = node.expr,
-                safe = node.safe;
-
-            content = executeExpr(expr);
-            if (func(content) && content.toString !== toString$1) {
-              content = content.toString();
-            }
-            content = createText({
-              safe: safe,
-              keypath: keypath,
-              content: content
-            });
             return {
-              v: safe ? content : markNodes(content)
+              v: getExpressionContent(node.expr)
             };
 
           case ATTRIBUTE:
@@ -3057,7 +3032,7 @@ function render(ast, createComment, createText, createElement, importTemplate, d
             };
 
           case SPREAD$1:
-            content = executeExpr(node.expr);
+            content = executeExpression(node.expr);
             if (object(content)) {
               var _ret3 = function () {
                 var list = [];
@@ -3097,6 +3072,7 @@ function render(ast, createComment, createText, createElement, importTemplate, d
               v: createElement({
                 name: name,
                 keypath: keypath,
+                properties: properties,
                 attributes: attributes,
                 directives: directives,
                 children: children || []
@@ -3875,14 +3851,8 @@ function init(modules) {
     var sel = vnode.sel,
         data = vnode.data,
         children$$1 = vnode.children,
-        text$$1 = vnode.text,
-        html$$1 = vnode.html;
+        text$$1 = vnode.text;
 
-
-    if (html$$1) {
-      api.html(parentNode, html$$1);
-      return;
-    }
 
     var hook = data && data.hook || {};
     execute(hook[HOOK_INIT], NULL, vnode);
@@ -4137,15 +4107,7 @@ function init(modules) {
       // 两个都有需要 diff
       if (newChildren && oldChildren) {
         if (newChildren !== oldChildren) {
-          var newFirstChild = newChildren[0];
-          var oldFirstChild = oldChildren[0];
-          if (newFirstChild && oldFirstChild && string(newFirstChild.html)) {
-            if (newFirstChild.html !== oldFirstChild.html) {
-              api.html(el, newFirstChild.html);
-            }
-          } else {
-            updateChildren(el, oldChildren, newChildren, insertedQueue);
-          }
+          updateChildren(el, oldChildren, newChildren, insertedQueue);
         }
       }
       // 有新的没旧的 - 新增节点
@@ -4257,6 +4219,39 @@ var style = {
   update: updateStyle
 };
 
+function updateStyle$1(oldVnode, vnode) {
+
+  var oldProps = oldVnode.data.props;
+  var newProps = vnode.data.props;
+
+  if (!oldProps && !newProps) {
+    return;
+  }
+
+  oldProps = oldProps || {};
+  newProps = newProps || {};
+
+  var el = vnode.el;
+
+
+  each$1(newProps, function (value, name) {
+    if (value !== oldProps[name]) {
+      el[name] = value;
+    }
+  });
+
+  each$1(oldProps, function (value, name) {
+    if (!has$1(newProps, name)) {
+      delete el[name];
+    }
+  });
+}
+
+var props = {
+  create: updateStyle$1,
+  update: updateStyle$1
+};
+
 var booleanLiteral = 'allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare' + 'default,defaultchecked,defaultmuted,defaultselected,defer,disabled,draggable' + 'enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple' + 'muted,nohref,noresize,noshade,novalidate,nowrap,open,pauseonexit,readonly' + 'required,reversed,scoped,seamless,selected,sortable,spellcheck,translate' + 'truespeed,typemustmatch,visible';
 
 var booleanMap = toObject(split(booleanLiteral, CHAR_COMMA));
@@ -4293,7 +4288,7 @@ function updateAttrs(oldVnode, vnode) {
   });
 }
 
-var attributes = {
+var attrs = {
   create: updateAttrs,
   update: updateAttrs
 };
@@ -4312,7 +4307,7 @@ function setHook(hooks, listener) {
   hooks.insert = hooks.postpatch = hooks.destroy = listener;
 }
 
-var patch = init([attributes, style], api);
+var patch = init([attrs, props, style], api);
 
 function create(ast, context, instance) {
 
@@ -4320,28 +4315,17 @@ function create(ast, context, instance) {
     return h(Vnode.SEL_COMMENT, content);
   };
 
-  var createText = function createText(node) {
-    var safe = node.safe,
-        content = node.content;
-
-    if (safe !== FALSE || falsy$1(content)) {
-      return content;
-    }
-    return new Vnode({
-      html: content
-    });
-  };
-
   var createElement = function createElement(node, isComponent) {
 
     var hooks = {},
-        attributes$$1 = {},
+        attributes = {},
         directives = {},
         styles = void 0,
         component = void 0;
 
     var data = {
-      hook: hooks
+      hook: hooks,
+      props: node.properties
     };
 
     if (!isComponent) {
@@ -4360,9 +4344,9 @@ function create(ast, context, instance) {
             });
           }
         } else {
-          attributes$$1[name] = node;
-          var attrs = data.attrs || (data.attrs = {});
-          attrs[name] = value;
+          attributes[name] = node;
+          var _attrs = data.attrs || (data.attrs = {});
+          _attrs[name] = value;
         }
       });
     }
@@ -4428,7 +4412,7 @@ function create(ast, context, instance) {
           node: node,
           instance: instance,
           directives: directives,
-          attributes: attributes$$1,
+          attributes: attributes,
           component: component
         });
       };
@@ -4458,7 +4442,7 @@ function create(ast, context, instance) {
         });
       }
 
-      payload.attributes = attributes$$1;
+      payload.attributes = attributes;
       payload.directives = directives;
 
       setHook(hooks, noop);
@@ -4473,7 +4457,7 @@ function create(ast, context, instance) {
     return instance.partial(name);
   };
 
-  return render(ast, createComment, createText, createElement, importTemplate, context);
+  return render(ast, createComment, createElement, importTemplate, context);
 }
 
 /**
@@ -4824,7 +4808,7 @@ var Yox = function () {
       }
       // 如果传了 props，则 data 应该是个 function
       if (data && !func(data)) {
-        warn('Passing a "data" option should be a function.');
+        warn('"data" option should be a function.');
       }
     } else if (props) {
       props = NULL;
@@ -4835,7 +4819,16 @@ var Yox = function () {
     instance.$data = props || {};
 
     // 后放 data
-    extend(instance.$data, func(data) ? execute(data, instance) : data);
+    var extra = func(data) ? execute(data, instance) : data;
+    if (object(extra)) {
+      each$1(extra, function (value, key) {
+        if (has$1(instance.$data, key)) {
+          warn('"' + key + '" is already defined as a prop. Use prop default value instead.');
+        } else {
+          instance.$data[key] = value;
+        }
+      });
+    }
 
     // 计算属性也是数据
     if (object(computed)) {
@@ -4934,7 +4927,16 @@ var Yox = function () {
         });
       }
     });
-    instance.watch(watchers);
+
+    if (object(watchers)) {
+      each$1(watchers, function (value, keypath) {
+        if (func(value)) {
+          instance.watch(keypath, value);
+        } else if (object(value)) {
+          instance.watch(keypath, value.watcher, value.immediate);
+        }
+      });
+    }
 
     execute(options[AFTER_CREATE], instance);
 
@@ -4944,7 +4946,7 @@ var Yox = function () {
         template = api.html(api.find(template));
       }
       if (!tag.test(template)) {
-        error$1('Passing a "template" option must have a root element.');
+        error$1('"template" option must have a root element.');
       }
     } else {
       template = NULL;
@@ -4963,7 +4965,7 @@ var Yox = function () {
           el = api.children(el)[0];
         }
       } else {
-        error$1('Passing a "el" option must be a html element.');
+        error$1('"el" option must be a html element.');
       }
     }
 
@@ -4974,7 +4976,7 @@ var Yox = function () {
     if (methods) {
       each$1(methods, function (fn, name) {
         if (has$1(prototype, name)) {
-          error$1('Passing a "' + name + '" method is conflicted with built-in methods.');
+          error$1('"' + name + '" method is conflicted with built-in methods.');
         }
         instance[name] = fn;
       });
@@ -5170,12 +5172,16 @@ var Yox = function () {
      *
      * @param {string|Object} keypath
      * @param {?Function} watcher
+     * @param {?boolean} immediate
      */
 
   }, {
     key: 'watch',
-    value: function watch(keypath, watcher) {
+    value: function watch(keypath, watcher, immediate) {
       this.$watchEmitter.on(keypath, watcher);
+      if (immediate === TRUE) {
+        execute(watcher, this, [this.get(keypath), UNDEFINED, keypath]);
+      }
     }
 
     /**
@@ -5548,7 +5554,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.28.0';
+Yox.version = '0.28.1';
 
 /**
  * 工具，便于扩展、插件使用
@@ -5703,12 +5709,12 @@ Yox.validate = function (props, schema) {
           if (matched === TRUE) {
             result[key] = target;
           } else if (required) {
-            warn('Passing a "' + key + '" prop is not matched.');
+            warn('"' + key + '" prop is not matched.');
           }
         })();
       }
     } else if (required) {
-      warn('Passing a "' + key + '" prop is not found.');
+      warn('"' + key + '" prop is not found.');
     } else if (has$1(rule, 'value')) {
       result[key] = func(value) ? value(props) : value;
     }
@@ -5726,6 +5732,29 @@ Yox.validate = function (props, schema) {
 Yox.use = function (plugin) {
   plugin.install(Yox);
 };
+
+function magic(options) {
+  var args = options.args,
+      get$$1 = options.get,
+      set$$1 = options.set;
+
+  args = toArray(args);
+
+  var key = args[0],
+      value = args[1];
+  if (object(key)) {
+    execute(set$$1, NULL, key);
+  } else if (string(key)) {
+    var _args = args,
+        length = _args.length;
+
+    if (length === 2) {
+      execute(set$$1, NULL, args);
+    } else if (length === 1) {
+      return execute(get$$1, NULL, key);
+    }
+  }
+}
 
 function updateDeps(instance, newDeps, oldDeps, watcher) {
 

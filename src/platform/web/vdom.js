@@ -4,7 +4,8 @@ import * as snabbdom from 'yox-snabbdom'
 import h from 'yox-snabbdom/h'
 import Vnode from 'yox-snabbdom/Vnode'
 import style from 'yox-snabbdom/modules/style'
-import attributes from 'yox-snabbdom/modules/attributes'
+import props from 'yox-snabbdom/modules/props'
+import attrs from 'yox-snabbdom/modules/attrs'
 
 import execute from 'yox-common/function/execute'
 import toString from 'yox-common/function/toString'
@@ -28,22 +29,12 @@ function setHook(hooks, listener) {
   hooks.destroy = listener
 }
 
-export const patch = snabbdom.init([ attributes, style ], api)
+export const patch = snabbdom.init([ attrs, props, style ], api)
 
 export function create(ast, context, instance) {
 
   let createComment = function (content) {
     return h(Vnode.SEL_COMMENT, content)
-  }
-
-  let createText = function (node) {
-    let { safe, content } = node
-    if (safe !== env.FALSE || string.falsy(content)) {
-      return content
-    }
-    return new Vnode({
-      html: content,
-    })
   }
 
   let createElement = function (node, isComponent) {
@@ -52,6 +43,7 @@ export function create(ast, context, instance) {
 
     let data = {
       hook: hooks,
+      props: node.properties,
     }
 
     if (!isComponent) {
@@ -231,6 +223,6 @@ export function create(ast, context, instance) {
     return instance.partial(name)
   }
 
-  return viewEnginer.render(ast, createComment, createText, createElement, importTemplate, context)
+  return viewEnginer.render(ast, createComment, createElement, importTemplate, context)
 
 }

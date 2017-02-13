@@ -1,5 +1,4 @@
 
-import magic from 'yox-common/function/magic'
 import execute from 'yox-common/function/execute'
 import toNumber from 'yox-common/function/toNumber'
 
@@ -68,7 +67,7 @@ export default class Yox {
       }
       // 如果传了 props，则 data 应该是个 function
       if (data && !is.func(data)) {
-        logger.warn('Passing a "data" option should be a function.')
+        logger.warn('"data" option should be a function.')
       }
     }
     else if (props) {
@@ -80,10 +79,20 @@ export default class Yox {
     instance.$data = props || { }
 
     // 后放 data
-    object.extend(
-      instance.$data,
-      is.func(data) ? execute(data, instance) : data
-    )
+    let extra = is.func(data) ? execute(data, instance) : data
+    if (is.object(extra)) {
+      object.each(
+        extra,
+        function (value, key) {
+          if (object.has(instance.$data, key)) {
+            logger.warn(`"${key}" is already defined as a prop. Use prop default value instead.`)
+          }
+          else {
+            instance.$data[ key ] = value
+          }
+        }
+      )
+    }
 
     // 计算属性也是数据
     if (is.object(computed)) {
@@ -192,7 +201,20 @@ export default class Yox {
         )
       }
     })
-    instance.watch(watchers)
+
+    if (is.object(watchers)) {
+      object.each(
+        watchers,
+        function (value, keypath) {
+          if (is.func(value)) {
+            instance.watch(keypath, value)
+          }
+          else if (is.object(value)) {
+            instance.watch(keypath, value.watcher, value.immediate)
+          }
+        }
+      )
+    }
 
     execute(options[ lifecycle.AFTER_CREATE ], instance)
 
@@ -204,7 +226,7 @@ export default class Yox {
         )
       }
       if (!pattern.tag.test(template)) {
-        logger.error('Passing a "template" option must have a root element.')
+        logger.error('"template" option must have a root element.')
       }
     }
     else {
@@ -225,7 +247,7 @@ export default class Yox {
         }
       }
       else {
-        logger.error('Passing a "el" option must be a html element.')
+        logger.error('"el" option must be a html element.')
       }
     }
 
@@ -238,7 +260,7 @@ export default class Yox {
         methods,
         function (fn, name) {
           if (object.has(prototype, name)) {
-            logger.error(`Passing a "${name}" method is conflicted with built-in methods.`)
+            logger.error(`"${name}" method is conflicted with built-in methods.`)
           }
           instance[ name ] = fn
         }
@@ -425,9 +447,17 @@ export default class Yox {
    *
    * @param {string|Object} keypath
    * @param {?Function} watcher
+   * @param {?boolean} immediate
    */
-  watch(keypath, watcher) {
+  watch(keypath, watcher, immediate) {
     this.$watchEmitter.on(keypath, watcher)
+    if (immediate === env.TRUE) {
+      execute(
+        watcher,
+        this,
+        [ this.get(keypath), env.UNDEFINED, keypath ]
+      )
+    }
   }
 
   /**
@@ -801,7 +831,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.28.0'
+Yox.version = '0.28.1'
 
 /**
  * 工具，便于扩展、插件使用
@@ -968,12 +998,12 @@ Yox.validate = function (props, schema) {
             result[ key ] = target
           }
           else if (required) {
-            logger.warn(`Passing a "${key}" prop is not matched.`)
+            logger.warn(`"${key}" prop is not matched.`)
           }
         }
       }
       else if (required) {
-        logger.warn(`Passing a "${key}" prop is not found.`)
+        logger.warn(`"${key}" prop is not found.`)
       }
       else if (object.has(rule, 'value')) {
         result[ key ] = is.func(value) ? value(props) : value
@@ -992,6 +1022,26 @@ Yox.validate = function (props, schema) {
  */
 Yox.use = function (plugin) {
   plugin.install(Yox)
+}
+
+function magic(options) {
+
+  let { args, get, set } = options
+  args = array.toArray(args)
+
+  let key = args[ 0 ], value = args[ 1 ]
+  if (is.object(key)) {
+    execute(set, env.NULL, key)
+  }
+  else if (is.string(key)) {
+    let { length } = args
+    if (length === 2) {
+      execute(set, env.NULL, args)
+    }
+    else if (length === 1) {
+      return execute(get, env.NULL, key)
+    }
+  }
 }
 
 function updateDeps(instance, newDeps, oldDeps, watcher) {
