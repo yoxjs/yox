@@ -60,35 +60,37 @@ export default class Yox {
 
     object.extend(instance, extensions)
 
+    let source = props
+
     // 检查 props
-    if (is.object(props)) {
+    if (is.object(source)) {
       if (is.object(propTypes)) {
-        props = Yox.validate(props, propTypes)
+        source = Yox.validate(source, propTypes)
       }
       // 如果传了 props，则 data 应该是个 function
       if (data && !is.func(data)) {
         logger.warn('"data" option should be a function.')
       }
     }
-    else if (props) {
-      props = env.NULL
+    else {
+      source = { }
     }
 
     // 先放 props
     // 当 data 是函数时，可以通过 this.get() 获取到外部数据
-    instance.$data = props || { }
+    instance.$data = source
 
     // 后放 data
-    let extra = is.func(data) ? execute(data, instance) : data
-    if (is.object(extra)) {
+    let extend = is.func(data) ? execute(data, instance) : data
+    if (is.object(extend)) {
       object.each(
-        extra,
+        extend,
         function (value, key) {
-          if (object.has(instance.$data, key)) {
+          if (object.has(source, key)) {
             logger.warn(`"${key}" is already defined as a prop. Use prop default value instead.`)
           }
           else {
-            instance.$data[ key ] = value
+            source[ key ] = value
           }
         }
       )
@@ -831,7 +833,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.28.1'
+Yox.version = '0.28.2'
 
 /**
  * 工具，便于扩展、插件使用

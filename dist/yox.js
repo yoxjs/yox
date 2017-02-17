@@ -3641,11 +3641,11 @@ function find(selector, context) {
   return (context || doc).querySelector(selector);
 }
 
-function on(element, type, listener) {
+function on$1(element, type, listener) {
   element.addEventListener(type, listener, FALSE);
 }
 
-function off(element, type, listener) {
+function off$1(element, type, listener) {
   element.removeEventListener(type, listener, FALSE);
 }
 
@@ -3666,8 +3666,8 @@ var domApi = Object.freeze({
 	text: text,
 	html: html,
 	find: find,
-	on: on,
-	off: off
+	on: on$1,
+	off: off$1
 });
 
 var api = copy(domApi);
@@ -3678,8 +3678,8 @@ var api = copy(domApi);
 //   object.extend(api, oldApi)
 // }
 
-var domOn = api.on;
-var domOff = api.off;
+var on$$1 = api.on;
+var off$$1 = api.off;
 
 /**
  * 绑定事件
@@ -3689,6 +3689,7 @@ var domOff = api.off;
  * @param {Function} listener
  * @param {?*} context
  */
+
 api.on = function (element, type, listener, context) {
   var $emitter = element.$emitter || (element.$emitter = new Emitter());
   if (!$emitter.has(type)) {
@@ -3699,7 +3700,7 @@ api.on = function (element, type, listener, context) {
       $emitter.fire(e.type, e, context);
     };
     $emitter[type] = nativeListener;
-    domOn(element, type, nativeListener);
+    on$$1(element, type, nativeListener);
   }
   $emitter.on(type, listener);
 };
@@ -3720,7 +3721,7 @@ api.off = function (element, type, listener) {
   // 根据 emitter 的删除结果来操作这里的事件 listener
   each(types, function (type) {
     if ($emitter[type] && !$emitter.has(type)) {
-      domOff(element, type, $emitter[type]);
+      off$$1(element, type, $emitter[type]);
       delete $emitter[type];
     }
   });
@@ -4801,31 +4802,33 @@ var Yox = function () {
 
     extend(instance, extensions);
 
+    var source = props;
+
     // 检查 props
-    if (object(props)) {
+    if (object(source)) {
       if (object(propTypes)) {
-        props = Yox.validate(props, propTypes);
+        source = Yox.validate(source, propTypes);
       }
       // 如果传了 props，则 data 应该是个 function
       if (data && !func(data)) {
         warn('"data" option should be a function.');
       }
-    } else if (props) {
-      props = NULL;
+    } else {
+      source = {};
     }
 
     // 先放 props
     // 当 data 是函数时，可以通过 this.get() 获取到外部数据
-    instance.$data = props || {};
+    instance.$data = source;
 
     // 后放 data
-    var extra = func(data) ? execute(data, instance) : data;
-    if (object(extra)) {
-      each$1(extra, function (value, key) {
-        if (has$1(instance.$data, key)) {
+    var extend$$1 = func(data) ? execute(data, instance) : data;
+    if (object(extend$$1)) {
+      each$1(extend$$1, function (value, key) {
+        if (has$1(source, key)) {
           warn('"' + key + '" is already defined as a prop. Use prop default value instead.');
         } else {
-          instance.$data[key] = value;
+          source[key] = value;
         }
       });
     }
@@ -5554,7 +5557,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.28.1';
+Yox.version = '0.28.2';
 
 /**
  * 工具，便于扩展、插件使用

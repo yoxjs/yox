@@ -147,8 +147,7 @@ function removeChangeListener(element, listener) {
 
 function isBox(element) {
   return element.tagName === 'INPUT'
-    || element.type === 'radio'
-    || element.type === 'checkbox'
+    && (element.type === 'radio' || element.type === 'checkbox')
 }
 
 export function on(element, type, listener) {
