@@ -18,6 +18,24 @@ let api = object.copy(domApi)
 
 let { on, off } = api
 
+let specials = {
+  input(el, listener) {
+    let locked = env.FALSE
+    on(el, 'compositionstart', function () {
+      locked = env.TRUE
+    })
+    on(el, 'compositionend', function (e) {
+      locked = env.FALSE
+      listener(e, 'input')
+    })
+    on(el, 'input', function (e) {
+      if (!locked) {
+        listener(e)
+      }
+    })
+  }
+}
+
 /**
  * 绑定事件
  *
@@ -29,14 +47,22 @@ let { on, off } = api
 api.on =  function (element, type, listener, context) {
   let $emitter = element.$emitter || (element.$emitter = new Emitter())
   if (!$emitter.has(type)) {
-    let nativeListener = function (e) {
+    let nativeListener = function (e, type) {
       if (!(e instanceof Event)) {
         e = new Event(domApi.createEvent(e, element))
+      }
+      if (type) {
+        e.type = type
       }
       $emitter.fire(e.type, e, context)
     }
     $emitter[ type ] = nativeListener
-    on(element, type, nativeListener)
+    if (specials[ type ]) {
+      specials[ type ](element, nativeListener)
+    }
+    else {
+      on(element, type, nativeListener)
+    }
   }
   $emitter.on(type, listener)
 }
