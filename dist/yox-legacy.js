@@ -3843,6 +3843,25 @@ if (!doc.addEventListener) {
 var on$$1 = api.on;
 var off$$1 = api.off;
 
+
+var specials = {
+  input: function input(el, listener) {
+    var locked = FALSE;
+    on$$1(el, 'compositionstart', function () {
+      locked = TRUE;
+    });
+    on$$1(el, 'compositionend', function (e) {
+      locked = FALSE;
+      listener(e, 'input');
+    });
+    on$$1(el, 'input', function (e) {
+      if (!locked) {
+        listener(e);
+      }
+    });
+  }
+};
+
 /**
  * 绑定事件
  *
@@ -3851,18 +3870,24 @@ var off$$1 = api.off;
  * @param {Function} listener
  * @param {?*} context
  */
-
 api.on = function (element, type, listener, context) {
   var $emitter = element.$emitter || (element.$emitter = new Emitter());
   if (!$emitter.has(type)) {
-    var nativeListener = function nativeListener(e) {
+    var nativeListener = function nativeListener(e, type) {
       if (!(e instanceof Event)) {
         e = new Event(createEvent(e, element));
+      }
+      if (type) {
+        e.type = type;
       }
       $emitter.fire(e.type, e, context);
     };
     $emitter[type] = nativeListener;
-    on$$1(element, type, nativeListener);
+    if (specials[type]) {
+      specials[type](element, nativeListener);
+    } else {
+      on$$1(element, type, nativeListener);
+    }
   }
   $emitter.on(type, listener);
 };
@@ -5719,7 +5744,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.28.2';
+Yox.version = '0.28.3';
 
 /**
  * 工具，便于扩展、插件使用
