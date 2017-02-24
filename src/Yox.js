@@ -175,7 +175,7 @@ export default class Yox {
 
     // 监听各种事件
     instance.$eventEmitter = new Emitter()
-    instance.on(events)
+    events && instance.on(events)
 
     let $watchCache =
     instance.$watchCache = { }
@@ -184,8 +184,8 @@ export default class Yox {
         array.each(
           added,
           function (keypath) {
-            if (!string.has(keypath, char.CHAR_ASTERISK)
-              && !object.has($watchCache, keypath)
+            if (!object.has($watchCache, keypath)
+              && !string.has(keypath, char.CHAR_ASTERISK)
             ) {
               $watchCache[ keypath ] = instance.get(keypath)
             }
@@ -204,19 +204,7 @@ export default class Yox {
       }
     })
 
-    if (is.object(watchers)) {
-      object.each(
-        watchers,
-        function (value, keypath) {
-          if (is.func(value)) {
-            instance.watch(keypath, value)
-          }
-          else if (is.object(value)) {
-            instance.watch(keypath, value.watcher, value.immediate)
-          }
-        }
-      )
-    }
+    watchers && instance.watch(watchers)
 
     execute(options[ lifecycle.AFTER_CREATE ], instance)
 
@@ -269,10 +257,10 @@ export default class Yox {
       )
     }
 
-    instance.component(components)
-    instance.directive(directives)
-    instance.filter(filters)
-    instance.partial(partials)
+    components && instance.component(components)
+    directives && instance.directive(directives)
+    filters && instance.filter(filters)
+    partials && instance.partial(partials)
 
     if (template) {
       instance.$viewWatcher = function () {
@@ -449,17 +437,41 @@ export default class Yox {
    *
    * @param {string|Object} keypath
    * @param {?Function} watcher
-   * @param {?boolean} immediate
+   * @param {?boolean} sync
    */
-  watch(keypath, watcher, immediate) {
-    this.$watchEmitter.on(keypath, watcher)
-    if (immediate === env.TRUE) {
-      execute(
+  watch(keypath, watcher, sync) {
+
+    let watchers = keypath
+    if (is.string(keypath)) {
+      watchers = { }
+      watchers[ keypath ] = {
+        sync,
         watcher,
-        this,
-        [ this.get(keypath), env.UNDEFINED, keypath ]
-      )
+      }
     }
+
+    let instance = this
+    let { $watchEmitter } = instance
+
+    object.each(
+      watchers,
+      function (value, keypath) {
+        if (is.func(value)) {
+          $watchEmitter.on(keypath, value)
+        }
+        else if (is.object(value)) {
+          $watchEmitter.on(keypath, value.watcher)
+          if (value.sync === env.TRUE) {
+            execute(
+              value.watcher,
+              instance,
+              [ instance.get(keypath), env.UNDEFINED, keypath ]
+            )
+          }
+        }
+      }
+    )
+
   }
 
   /**
@@ -496,20 +508,16 @@ export default class Yox {
       $computedSetters,
     } = instance
 
+    let data = { }
     object.each(
       model,
       function (newValue, key) {
-        // 格式化 Keypath
-        let keypath = keypathUtil.normalize(key)
-        if (keypath !== key) {
-          delete model[ key ]
-          model[ keypath ] = newValue
-        }
+        data[ keypathUtil.normalize(key) ] = newValue
       }
     )
 
     object.each(
-      model,
+      data,
       function (value, keypath) {
         if ($computedSetters) {
           let setter = $computedSetters[ keypath ]
@@ -576,7 +584,7 @@ export default class Yox {
       // 全局过滤器
       filter && filter.data,
       // 本地过滤器
-      $filters.data
+      $filters && $filters.data
     )
 
     object.each(
@@ -630,8 +638,10 @@ export default class Yox {
     options = object.extend({ }, options, extra)
     options.parent = this
     let child = new Yox(options)
-    let children = this.$children || (this.$children = [ ])
-    array.push(children, child)
+    array.push(
+      this.$children || (this.$children = [ ]),
+      child
+    )
     return child
   }
 
@@ -833,7 +843,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.28.3'
+Yox.version = '0.28.4'
 
 /**
  * 工具，便于扩展、插件使用

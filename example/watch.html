@@ -42,6 +42,18 @@
                 },
                 '*': function () {
                     console.log('*', arguments);
+                },
+
+                'user.age': {
+                    watcher: function () {
+                        console.log('user.age', arguments)
+                    }
+                },
+                'user.gender': {
+                    sync: true,
+                    watcher: function () {
+                        console.log('user.gender', arguments)
+                    }
                 }
             }
         });
