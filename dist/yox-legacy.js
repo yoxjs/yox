@@ -544,7 +544,7 @@ function startsWith(str, part) {
   return indexOf$1(str, part) === 0;
 }
 function endsWith(str, part) {
-  return str === part || str.lastIndexOf(part) === part.length;
+  return str === part || str.lastIndexOf(part) === str.length - part.length;
 }
 
 var string$1 = Object.freeze({
@@ -1046,10 +1046,11 @@ var Emitter = function () {
       }
 
       var done = TRUE;
-      var handle = function handle(list, data) {
+
+      this.match(type, function (list, extra) {
         if (array(list)) {
           each(list, function (listener) {
-            var result = execute(listener, context, data);
+            var result = execute(listener, context, extra ? merge(data, extra) : data);
 
             var $once = listener.$once;
 
@@ -1072,29 +1073,7 @@ var Emitter = function () {
             }
           });
         }
-      };
-
-      var listeners = this.listeners;
-
-      handle(listeners[type], data);
-
-      // user.* 能响应 user.name
-      // *.* 能响应 user.name
-      // * 能响应 user.name
-      //
-      // ** 可以响应所有数据变化，是一个超级通配符的存在
-      if (done) {
-        each$1(listeners, function (list, key) {
-          if (key !== type || has$2(key, CHAR_ASTERISK)) {
-            key = ['^', key.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)'), endsWith(key, '' + CHAR_ASTERISK + CHAR_ASTERISK) ? CHAR_BLANK : '$'];
-            var match = type.match(new RegExp(key.join(CHAR_BLANK)));
-            if (match) {
-              handle(list, merge(data, toArray(match).slice(1)));
-            }
-            return done;
-          }
-        });
-      }
+      });
 
       return done;
     }
@@ -1106,6 +1085,23 @@ var Emitter = function () {
         return !falsy(list);
       }
       return array(list) ? has(list, listener) : FALSE;
+    }
+  }, {
+    key: 'match',
+    value: function match(type, handler) {
+      var listeners = this.listeners;
+
+      each$1(listeners, function (list, key) {
+        if (key === type) {
+          return handler(list);
+        } else if (has$2(key, CHAR_ASTERISK)) {
+          var terms = ['^', key.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)'), '$'];
+          var match = type.match(new RegExp(terms.join(CHAR_BLANK)));
+          if (match) {
+            return handler(list, toArray(match).slice(1));
+          }
+        }
+      });
     }
   }]);
   return Emitter;
@@ -5098,13 +5094,13 @@ var Yox = function () {
 
     // 监听各种事件
     instance.$eventEmitter = new Emitter();
-    instance.on(events);
+    events && instance.on(events);
 
     var $watchCache = instance.$watchCache = {};
     instance.$watchEmitter = new Emitter({
       afterAdd: function afterAdd(added) {
         each(added, function (keypath) {
-          if (!has$2(keypath, CHAR_ASTERISK) && !has$1($watchCache, keypath)) {
+          if (!has$1($watchCache, keypath) && !has$2(keypath, CHAR_ASTERISK)) {
             $watchCache[keypath] = instance.get(keypath);
           }
         });
@@ -5118,15 +5114,7 @@ var Yox = function () {
       }
     });
 
-    if (object(watchers)) {
-      each$1(watchers, function (value, keypath) {
-        if (func(value)) {
-          instance.watch(keypath, value);
-        } else if (object(value)) {
-          instance.watch(keypath, value.watcher, value.immediate);
-        }
-      });
-    }
+    watchers && instance.watch(watchers);
 
     execute(options[AFTER_CREATE], instance);
 
@@ -5172,10 +5160,10 @@ var Yox = function () {
       });
     }
 
-    instance.component(components);
-    instance.directive(directives);
-    instance.filter(filters);
-    instance.partial(partials);
+    components && instance.component(components);
+    directives && instance.directive(directives);
+    filters && instance.filter(filters);
+    partials && instance.partial(partials);
 
     if (template) {
       instance.$viewWatcher = function () {
@@ -5362,16 +5350,36 @@ var Yox = function () {
      *
      * @param {string|Object} keypath
      * @param {?Function} watcher
-     * @param {?boolean} immediate
+     * @param {?boolean} sync
      */
 
   }, {
     key: 'watch',
-    value: function watch(keypath, watcher, immediate) {
-      this.$watchEmitter.on(keypath, watcher);
-      if (immediate === TRUE) {
-        execute(watcher, this, [this.get(keypath), UNDEFINED, keypath]);
+    value: function watch(keypath, watcher, sync) {
+
+      var watchers = keypath;
+      if (string(keypath)) {
+        watchers = {};
+        watchers[keypath] = {
+          sync: sync,
+          watcher: watcher
+        };
       }
+
+      var instance = this;
+      var $watchEmitter = instance.$watchEmitter;
+
+
+      each$1(watchers, function (value, keypath) {
+        if (func(value)) {
+          $watchEmitter.on(keypath, value);
+        } else if (object(value)) {
+          $watchEmitter.on(keypath, value.watcher);
+          if (value.sync === TRUE) {
+            execute(value.watcher, instance, [instance.get(keypath), UNDEFINED, keypath]);
+          }
+        }
+      });
     }
 
     /**
@@ -5416,16 +5424,12 @@ var Yox = function () {
           $computedSetters = instance.$computedSetters;
 
 
+      var data = {};
       each$1(model$$1, function (newValue, key) {
-        // 格式化 Keypath
-        var keypath = normalize(key);
-        if (keypath !== key) {
-          delete model$$1[key];
-          model$$1[keypath] = newValue;
-        }
+        data[normalize(key)] = newValue;
       });
 
-      each$1(model$$1, function (value, keypath) {
+      each$1(data, function (value, keypath) {
         if ($computedSetters) {
           var setter = $computedSetters[keypath];
           if (setter) {
@@ -5487,7 +5491,7 @@ var Yox = function () {
       // 全局过滤器
       filter && filter.data,
       // 本地过滤器
-      $filters.data);
+      $filters && $filters.data);
 
       each$1(context, function (value, key) {
         if (func(value)) {
@@ -5535,8 +5539,7 @@ var Yox = function () {
       options = extend({}, options, extra);
       options.parent = this;
       var child = new Yox(options);
-      var children = this.$children || (this.$children = []);
-      push(children, child);
+      push(this.$children || (this.$children = []), child);
       return child;
     }
   }, {
@@ -5744,7 +5747,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.28.3';
+Yox.version = '0.28.4';
 
 /**
  * 工具，便于扩展、插件使用
