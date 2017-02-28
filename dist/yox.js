@@ -880,28 +880,21 @@ var Event = function () {
 }();
 
 var Emitter = function () {
-  function Emitter(options) {
+  function Emitter() {
     classCallCheck(this, Emitter);
 
-    extend(this, options);
     this.listeners = {};
   }
 
   createClass(Emitter, [{
     key: 'on',
     value: function on(type, listener) {
-      var listeners = this.listeners,
-          afterAdd = this.afterAdd;
+      var listeners = this.listeners;
 
-      var added = [];
 
       var addListener = function addListener(listener, type) {
         if (func(listener)) {
-          var list = listeners[type] || (listeners[type] = []);
-          if (!list.length) {
-            push(added, type);
-          }
-          push(list, listener);
+          push(listeners[type] || (listeners[type] = []), listener);
         }
       };
 
@@ -909,10 +902,6 @@ var Emitter = function () {
         each$1(type, addListener);
       } else if (string(type)) {
         addListener(listener, type);
-      }
-
-      if (added.length && func(afterAdd)) {
-        afterAdd(added);
       }
     }
   }, {
@@ -940,16 +929,13 @@ var Emitter = function () {
   }, {
     key: 'off',
     value: function off(type, listener) {
-      var listeners = this.listeners,
-          afterRemove = this.afterRemove;
+      var listeners = this.listeners;
 
-      var removed = [];
 
       if (type == NULL) {
         each$1(listeners, function (list, type) {
           if (array(listeners[type])) {
             listeners[type].length = 0;
-            push(removed, type);
           }
         });
       } else {
@@ -960,14 +946,7 @@ var Emitter = function () {
           } else {
             remove(list, listener);
           }
-          if (!list.length) {
-            push(removed, type);
-          }
         }
-      }
-
-      if (removed.length && func(afterRemove)) {
-        afterRemove(removed);
       }
     }
   }, {
@@ -1013,11 +992,18 @@ var Emitter = function () {
   }, {
     key: 'has',
     value: function has$$1(type, listener) {
-      var list = this.listeners[type];
-      if (listener == NULL) {
-        return !falsy(list);
-      }
-      return array(list) ? has(list, listener) : FALSE;
+      var result = FALSE;
+      this.match(type, function (list) {
+        if (listener == NULL) {
+          result = !falsy(list);
+        } else if (array(list)) {
+          result = has(list, listener);
+        }
+        if (result) {
+          return FALSE;
+        }
+      });
+      return result;
     }
   }, {
     key: 'match',
@@ -1028,8 +1014,8 @@ var Emitter = function () {
         if (key === type) {
           return handler(list);
         } else if (has$2(key, CHAR_ASTERISK)) {
-          var terms = ['^', key.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)'), '$'];
-          var match = type.match(new RegExp(terms.join(CHAR_BLANK)));
+          key = key.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)');
+          var match = type.match(new RegExp('^' + key + '$'));
           if (match) {
             return handler(list, toArray(match).slice(1));
           }
@@ -4895,9 +4881,10 @@ var Yox = function () {
             };
 
             var getter = function getter() {
+              var cacheValue = instance.$watchCache[keypath];
               if (!getter.$dirty) {
-                if (cache && has$1($watchCache, keypath)) {
-                  return $watchCache[keypath];
+                if (cache && cacheValue) {
+                  return cacheValue.newValue;
                 }
               } else {
                 delete getter.$dirty;
@@ -4915,7 +4902,10 @@ var Yox = function () {
               }
 
               instance.$computedDeps[keypath] = newDeps;
-              $watchCache[keypath] = result;
+              instance.$watchCache[keypath] = {
+                oldValue: cacheValue ? cacheValue.newValue : UNDEFINED,
+                newValue: result
+              };
 
               return result;
             };
@@ -4934,23 +4924,8 @@ var Yox = function () {
     instance.$eventEmitter = new Emitter();
     events && instance.on(events);
 
-    var $watchCache = instance.$watchCache = {};
-    instance.$watchEmitter = new Emitter({
-      afterAdd: function afterAdd(added) {
-        each(added, function (keypath) {
-          if (!has$1($watchCache, keypath) && !has$2(keypath, CHAR_ASTERISK)) {
-            $watchCache[keypath] = instance.get(keypath);
-          }
-        });
-      },
-      afterRemove: function afterRemove(removed) {
-        each(removed, function (keypath) {
-          if (has$1($watchCache, keypath)) {
-            delete $watchCache[keypath];
-          }
-        });
-      }
-    });
+    instance.$watchCache = {};
+    instance.$watchEmitter = new Emitter();
 
     watchers && instance.watch(watchers);
 
@@ -5259,7 +5234,9 @@ var Yox = function () {
       var instance = this;
 
       var $data = instance.$data,
-          $computedSetters = instance.$computedSetters;
+          $computedSetters = instance.$computedSetters,
+          $watchEmitter = instance.$watchEmitter,
+          $watchCache = instance.$watchCache;
 
 
       var data = {};
@@ -5268,6 +5245,15 @@ var Yox = function () {
       });
 
       each$1(data, function (value, keypath) {
+        if ($watchEmitter.has(keypath)) {
+          var cacheValue = $watchCache[keypath] || ($watchCache[keypath] = {});
+          if (!has$1(cacheValue, 'values')) {
+            cacheValue.values = [cacheValue.newValue];
+          }
+          cacheValue.oldValue = cacheValue.newValue;
+          cacheValue.newValue = value;
+          cacheValue.values.push(value);
+        }
         if ($computedSetters) {
           var setter = $computedSetters[keypath];
           if (setter) {
@@ -5585,7 +5571,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.28.4';
+Yox.version = '0.29.0';
 
 /**
  * 工具，便于扩展、插件使用
@@ -5837,10 +5823,20 @@ function diff(instance) {
   });
 
   each(keys$$1, function (key) {
-    var oldValue = $watchCache[key];
-    var newValue = instance.get(key);
+    var cacheValue = $watchCache[key];
+    var newValue = cacheValue.newValue,
+        oldValue = cacheValue.oldValue,
+        values = cacheValue.values;
+    // 如果有 values 表示多次设值，只需对比收尾即可
+
+    if (array(values)) {
+      newValue = last(values);
+      oldValue = values.length > 1 ? values[0] : UNDEFINED;
+      cacheValue.newValue = newValue;
+      cacheValue.oldValue = oldValue;
+      delete cacheValue.values;
+    }
     if (newValue !== oldValue) {
-      $watchCache[key] = newValue;
       $watchEmitter.fire(key, [newValue, oldValue, key], instance);
     }
   });

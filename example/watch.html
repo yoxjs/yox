@@ -28,8 +28,11 @@
             },
             template: '<div></div>',
             watchers: {
-                'user.name': function () {
-                    console.log('user.name', arguments);
+                'user.name': {
+                    sync: true,
+                    watcher: function () {
+                        console.log('user.name', arguments);
+                    }
                 },
                 'users.*.name': function () {
                     console.log('users.*.name', arguments);
@@ -57,6 +60,8 @@
                 }
             }
         });
+
+        // 监听 ** 待实现
     </script>
 </body>
 </html>
