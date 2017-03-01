@@ -2037,7 +2037,7 @@ var ELSE_IF = 'else if';
 var EACH = '#each';
 var PARTIAL = '#partial';
 var IMPORT = '>';
-var COMMENT = ':';
+var COMMENT = '! ';
 var SPREAD = '...';
 
 var SPECIAL_EVENT = '$event';
@@ -5571,7 +5571,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.29.0';
+Yox.version = '0.29.1';
 
 /**
  * 工具，便于扩展、插件使用
