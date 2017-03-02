@@ -4,7 +4,6 @@
 	(global.Yox = factory());
 }(this, (function () { 'use strict';
 
-
 if (!Object.keys) {
   Object.keys = function (obj) {
     var result = [];
@@ -5044,10 +5043,10 @@ var Yox = function () {
             };
 
             var getter = function getter() {
-              var cacheValue = instance.$watchCache[keypath];
+              var $watchCache = instance.$watchCache;
               if (!getter.$dirty) {
-                if (cache && cacheValue) {
-                  return cacheValue.newValue;
+                if (cache && has$1($watchCache, keypath)) {
+                  return $watchCache[keypath];
                 }
               } else {
                 delete getter.$dirty;
@@ -5065,10 +5064,7 @@ var Yox = function () {
               }
 
               instance.$computedDeps[keypath] = newDeps;
-              instance.$watchCache[keypath] = {
-                oldValue: cacheValue ? cacheValue.newValue : UNDEFINED,
-                newValue: result
-              };
+              $watchCache[keypath] = result;
 
               return result;
             };
@@ -5343,7 +5339,8 @@ var Yox = function () {
       }
 
       var instance = this;
-      var $watchEmitter = instance.$watchEmitter;
+      var $watchEmitter = instance.$watchEmitter,
+          $watchCache = instance.$watchCache;
 
 
       each$1(watchers, function (value, keypath) {
@@ -5352,7 +5349,12 @@ var Yox = function () {
         } else if (object(value)) {
           $watchEmitter.on(keypath, value.watcher);
           if (value.sync === TRUE) {
-            execute(value.watcher, instance, [instance.get(keypath), UNDEFINED, keypath]);
+            var newValue = instance.get(keypath);
+            var oldValue = $watchCache[keypath];
+            if (newValue !== oldValue) {
+              $watchCache[keypath] = newValue;
+              execute(value.watcher, instance, [newValue, oldValue, keypath]);
+            }
           }
         }
       });
@@ -5408,14 +5410,8 @@ var Yox = function () {
       });
 
       each$1(data, function (value, keypath) {
-        if ($watchEmitter.has(keypath)) {
-          var cacheValue = $watchCache[keypath] || ($watchCache[keypath] = {});
-          if (!has$1(cacheValue, 'values')) {
-            cacheValue.values = [cacheValue.newValue];
-          }
-          cacheValue.oldValue = cacheValue.newValue;
-          cacheValue.newValue = value;
-          cacheValue.values.push(value);
+        if ($watchEmitter.has(keypath) && !has$1($watchCache, keypath)) {
+          $watchCache[keypath] = instance.get(keypath);
         }
         if ($computedSetters) {
           var setter = $computedSetters[keypath];
@@ -5734,7 +5730,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.29.1';
+Yox.version = '0.29.2';
 
 /**
  * 工具，便于扩展、插件使用
@@ -5986,20 +5982,10 @@ function diff(instance) {
   });
 
   each(keys$$1, function (key) {
-    var cacheValue = $watchCache[key];
-    var newValue = cacheValue.newValue,
-        oldValue = cacheValue.oldValue,
-        values = cacheValue.values;
-    // 如果有 values 表示多次设值，只需对比收尾即可
-
-    if (array(values)) {
-      newValue = last(values);
-      oldValue = values.length > 1 ? values[0] : UNDEFINED;
-      cacheValue.newValue = newValue;
-      cacheValue.oldValue = oldValue;
-      delete cacheValue.values;
-    }
+    var newValue = instance.get(key);
+    var oldValue = $watchCache[key];
     if (newValue !== oldValue) {
+      $watchCache[key] = newValue;
       $watchEmitter.fire(key, [newValue, oldValue, key], instance);
     }
   });
