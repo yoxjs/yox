@@ -136,10 +136,10 @@ export default class Yox {
             }
 
             let getter = function () {
-              let cacheValue = instance.$watchCache[ keypath ]
+              let $watchCache = instance.$watchCache
               if (!getter.$dirty) {
-                if (cache && cacheValue) {
-                  return cacheValue.newValue
+                if (cache && object.has($watchCache, keypath)) {
+                  return $watchCache[ keypath ]
                 }
               }
               else {
@@ -158,10 +158,7 @@ export default class Yox {
               }
 
               instance.$computedDeps[ keypath ] = newDeps
-              instance.$watchCache[ keypath ] = {
-                oldValue: cacheValue ? cacheValue.newValue : env.UNDEFINED,
-                newValue: result,
-              }
+              $watchCache[ keypath ] = result
 
               return result
             }
@@ -431,7 +428,7 @@ export default class Yox {
     }
 
     let instance = this
-    let { $watchEmitter } = instance
+    let { $watchEmitter, $watchCache } = instance
 
     object.each(
       watchers,
@@ -442,11 +439,16 @@ export default class Yox {
         else if (is.object(value)) {
           $watchEmitter.on(keypath, value.watcher)
           if (value.sync === env.TRUE) {
-            execute(
-              value.watcher,
-              instance,
-              [ instance.get(keypath), env.UNDEFINED, keypath ]
-            )
+            let newValue = instance.get(keypath)
+            let oldValue = $watchCache[ keypath ]
+            if (newValue !== oldValue) {
+              $watchCache[ keypath ] = newValue
+              execute(
+                value.watcher,
+                instance,
+                [ newValue, oldValue, keypath ]
+              )
+            }
           }
         }
       }
@@ -501,16 +503,8 @@ export default class Yox {
     object.each(
       data,
       function (value, keypath) {
-        if ($watchEmitter.has(keypath)) {
-          let cacheValue = $watchCache[ keypath ] || ($watchCache[ keypath ] = { })
-          if (!object.has(cacheValue, 'values')) {
-            cacheValue.values = [
-              cacheValue.newValue
-            ]
-          }
-          cacheValue.oldValue = cacheValue.newValue
-          cacheValue.newValue = value
-          cacheValue.values.push(value)
+        if ($watchEmitter.has(keypath) && !object.has($watchCache, keypath)) {
+          $watchCache[ keypath ] = instance.get(keypath)
         }
         if ($computedSetters) {
           let setter = $computedSetters[ keypath ]
@@ -836,7 +830,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.29.1'
+Yox.version = '0.29.2'
 
 /**
  * 工具，便于扩展、插件使用
@@ -1118,17 +1112,10 @@ function diff(instance) {
   array.each(
     keys,
     function (key) {
-      let cacheValue = $watchCache[ key ]
-      let { newValue, oldValue, values } = cacheValue
-      // 如果有 values 表示多次设值，只需对比收尾即可
-      if (is.array(values)) {
-        newValue = array.last(values)
-        oldValue = values.length > 1 ? values[ 0 ] : env.UNDEFINED
-        cacheValue.newValue = newValue
-        cacheValue.oldValue = oldValue
-        delete cacheValue.values
-      }
+      let newValue = instance.get(key)
+      let oldValue = $watchCache[ key ]
       if (newValue !== oldValue) {
+        $watchCache[ key ] = newValue
         $watchEmitter.fire(key, [ newValue, oldValue, key ], instance)
       }
     }
