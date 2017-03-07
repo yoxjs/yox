@@ -2206,6 +2206,9 @@ var ATTRIBUTE = 11;
  */
 var TEXT = 12;
 
+// 如果函数改写了 toString，就调用 toString() 求值
+var toString$1 = Function.prototype.toString;
+
 /**
  * 如果取值/设值指定了 . 或 ..，表示无需 lookup，而是直接操作某个层级
  */
@@ -2334,9 +2337,13 @@ var Context = function () {
           }
         }
         if (has$1(cache, keypath)) {
+          var value = cache[keypath];
+          if (func(value) && value.toString !== toString$1) {
+            value = value.toString();
+          }
           return {
             keypath: keypath,
-            value: cache[keypath]
+            value: value
           };
         }
       }
@@ -2751,10 +2758,6 @@ var attributePattern = /([-:@a-z0-9]+)(?==["'])?/i;
 var componentNamePattern = /[-A-Z]/;
 var selfClosingTagNamePattern = /input|img|br/i;
 
-// 如果传入的函数改写了 toString，就调用 toString() 求值
-var toString$1 = Function.prototype.toString;
-
-
 var ifTypes = {};
 ifTypes[IF$1] = ifTypes[ELSE_IF$1] = TRUE;
 
@@ -2855,14 +2858,6 @@ function render(ast, createComment, createElement, importTemplate, data) {
     return result.value;
   };
 
-  var getExpressionContent = function getExpressionContent(expr) {
-    var content = executeExpression(expr);
-    if (func(content) && content.toString !== toString$1) {
-      content = content.toString();
-    }
-    return content;
-  };
-
   /**
    * 遍历节点树
    *
@@ -2885,7 +2880,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
           if (node.type === ELEMENT && children.length === 1) {
             var child = children[0];
             if (child.type === EXPRESSION && child.safe === FALSE) {
-              props.innerHTML = getExpressionContent(child.expr);
+              props.innerHTML = executeExpression(child.expr);
               children = NULL;
             }
           }
@@ -3051,7 +3046,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
 
           case EXPRESSION:
             return {
-              v: getExpressionContent(node.expr)
+              v: executeExpression(node.expr)
             };
 
           case ATTRIBUTE:
@@ -5351,6 +5346,9 @@ var Yox = function () {
           if (value.sync === TRUE) {
             var newValue = instance.get(keypath);
             var oldValue = $watchCache[keypath];
+            // 这里无需比较
+            // 既然传了 sync: true 就表示想要立即取值调函数
+            // 不然何必做多此一举的事
             $watchCache[keypath] = newValue;
             execute(value.watcher, instance, [newValue, oldValue, keypath]);
           }
@@ -5728,7 +5726,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.29.3';
+Yox.version = '0.29.4';
 
 /**
  * 工具，便于扩展、插件使用
@@ -5838,7 +5836,7 @@ Yox.nextTick = add$1;
  * @return {Object}
  */
 Yox.compile = function (template) {
-  return falsy$1(template) ? template : compile$$1(template)[0];
+  return compile$$1(template)[0];
 };
 
 /**
