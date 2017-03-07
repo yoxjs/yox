@@ -5189,10 +5189,8 @@ var Yox = function () {
           if (value.sync === TRUE) {
             var newValue = instance.get(keypath);
             var oldValue = $watchCache[keypath];
-            if (newValue !== oldValue) {
-              $watchCache[keypath] = newValue;
-              execute(value.watcher, instance, [newValue, oldValue, keypath]);
-            }
+            $watchCache[keypath] = newValue;
+            execute(value.watcher, instance, [newValue, oldValue, keypath]);
           }
         }
       });
@@ -5568,7 +5566,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.29.2';
+Yox.version = '0.29.3';
 
 /**
  * 工具，便于扩展、插件使用

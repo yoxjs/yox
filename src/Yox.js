@@ -441,14 +441,12 @@ export default class Yox {
           if (value.sync === env.TRUE) {
             let newValue = instance.get(keypath)
             let oldValue = $watchCache[ keypath ]
-            if (newValue !== oldValue) {
-              $watchCache[ keypath ] = newValue
-              execute(
-                value.watcher,
-                instance,
-                [ newValue, oldValue, keypath ]
-              )
-            }
+            $watchCache[ keypath ] = newValue
+            execute(
+              value.watcher,
+              instance,
+              [ newValue, oldValue, keypath ]
+            )
           }
         }
       }
@@ -830,7 +828,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.29.2'
+Yox.version = '0.29.3'
 
 /**
  * 工具，便于扩展、插件使用
