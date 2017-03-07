@@ -441,6 +441,9 @@ export default class Yox {
           if (value.sync === env.TRUE) {
             let newValue = instance.get(keypath)
             let oldValue = $watchCache[ keypath ]
+            // 这里无需比较
+            // 既然传了 sync: true 就表示想要立即取值调函数
+            // 不然何必做多此一举的事
             $watchCache[ keypath ] = newValue
             execute(
               value.watcher,
@@ -828,7 +831,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.29.3'
+Yox.version = '0.29.4'
 
 /**
  * 工具，便于扩展、插件使用
@@ -944,9 +947,7 @@ Yox.nextTick = nextTask.add
  * @return {Object}
  */
 Yox.compile = function (template) {
-  return string.falsy(template)
-    ? template
-    : viewEnginer.compile(template)[ 0 ]
+  return viewEnginer.compile(template)[ 0 ]
 }
 
 /**
