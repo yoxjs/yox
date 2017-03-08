@@ -4846,6 +4846,9 @@ var Yox = function () {
       instance.$computedStack = [];
       instance.$computedDeps = {};
 
+      // 计算属性的缓存
+      instance.$computedCache = {};
+
       each$1(computed, function (item, keypath) {
         var get$$1 = void 0,
             set$$1 = void 0,
@@ -4876,10 +4879,10 @@ var Yox = function () {
             };
 
             var getter = function getter() {
-              var $watchCache = instance.$watchCache;
+              var $computedCache = instance.$computedCache;
               if (!getter.$dirty) {
-                if (cache && has$1($watchCache, keypath)) {
-                  return $watchCache[keypath];
+                if (cache && has$1($computedCache, keypath)) {
+                  return $computedCache[keypath];
                 }
               } else {
                 delete getter.$dirty;
@@ -4897,7 +4900,9 @@ var Yox = function () {
               }
 
               instance.$computedDeps[keypath] = newDeps;
-              $watchCache[keypath] = result;
+              if (cache) {
+                $computedCache[keypath] = result;
+              }
 
               return result;
             };
@@ -4997,45 +5002,74 @@ var Yox = function () {
           $computedGetters = this.$computedGetters;
 
 
-      var result = void 0;
-
       var getValue = function getValue(keypath) {
-        if ($computedGetters) {
-          result = $computedGetters[keypath];
-          if (result) {
-            return {
-              value: result()
-            };
+
+        if ($computedStack) {
+          var list = last($computedStack);
+          if (list) {
+            push(list, keypath);
           }
         }
+
+        if ($computedGetters) {
+          var _ret2 = function () {
+
+            var value = void 0;
+
+            var keys$$1 = parse$1(keypath);
+            each(keys$$1, function (key, index) {
+              keypath = stringify(keys$$1.slice(0, index + 1));
+              value = $computedGetters[keypath];
+              if (value) {
+                keypath = stringify(keys$$1.slice(index + 1));
+                return FALSE;
+              }
+            });
+
+            if (value) {
+              value = value();
+              if (value && keypath) {
+                value = get(value, keypath);
+              }
+              return {
+                v: {
+                  value: value
+                }
+              };
+            }
+          }();
+
+          if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
+        }
+
         return get($data, keypath);
       };
 
-      keypath = normalize(keypath);
+      var result = void 0;
+      var suffixes = parse$1(keypath);
 
       if (string(context)) {
-        var keys$$1 = parse$1(context);
-        while (TRUE) {
-          push(keys$$1, keypath);
-          context = stringify(keys$$1);
-          result = getValue(context);
-          if (result || keys$$1.length <= 1) {
-            if (result) {
-              result.keypath = context;
+        var prefixes = parse$1(context);
+        if (suffixes.length > 1 && suffixes[0] === 'this') {
+          keypath = stringify(merge(prefixes, suffixes.slice(1)));
+          result = getValue(keypath);
+        } else {
+          while (TRUE) {
+            keypath = stringify(merge(prefixes, suffixes));
+            result = getValue(keypath);
+            if (result || !prefixes.length) {
+              break;
+            } else {
+              prefixes.pop();
             }
-            return result;
-          } else {
-            // IE8 必须指定长度
-            keys$$1.splice(-2, 2);
           }
+        }
+        if (result) {
+          result.keypath = keypath;
+          return result;
         }
       } else {
-        if ($computedStack) {
-          result = last($computedStack);
-          if (result) {
-            push(result, keypath);
-          }
-        }
+        keypath = stringify(suffixes);
         result = getValue(keypath);
         if (result) {
           return result.value;
@@ -5177,20 +5211,16 @@ var Yox = function () {
 
 
       each$1(watchers, function (value, keypath) {
+        var newValue = instance.get(keypath);
         if (func(value)) {
           $watchEmitter.on(keypath, value);
         } else if (object(value)) {
           $watchEmitter.on(keypath, value.watcher);
           if (value.sync === TRUE) {
-            var newValue = instance.get(keypath);
-            var oldValue = $watchCache[keypath];
-            // 这里无需比较
-            // 既然传了 sync: true 就表示想要立即取值调函数
-            // 不然何必做多此一举的事
-            $watchCache[keypath] = newValue;
-            execute(value.watcher, instance, [newValue, oldValue, keypath]);
+            execute(value.watcher, instance, [newValue, $watchCache[keypath], keypath]);
           }
         }
+        $watchCache[keypath] = newValue;
       });
     }
 
@@ -5369,7 +5399,7 @@ var Yox = function () {
 
       var instance = this;
       if (indexOf$1(value, CHAR_OPAREN) > 0) {
-        var _ret2 = function () {
+        var _ret3 = function () {
           var ast = compile$1(value);
           if (ast.type === CALL) {
             return {
@@ -5422,7 +5452,7 @@ var Yox = function () {
           }
         }();
 
-        if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
+        if ((typeof _ret3 === 'undefined' ? 'undefined' : _typeof(_ret3)) === "object") return _ret3.v;
       } else {
         return function (event$$1) {
           instance.fire(value, event$$1);
@@ -5564,7 +5594,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.29.4';
+Yox.version = '0.29.5';
 
 /**
  * 工具，便于扩展、插件使用

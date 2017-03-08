@@ -107,6 +107,9 @@ export default class Yox {
       instance.$computedStack = [ ]
       instance.$computedDeps = { }
 
+      // 计算属性的缓存
+      instance.$computedCache = { }
+
       object.each(
         computed,
         function (item, keypath) {
@@ -136,10 +139,10 @@ export default class Yox {
             }
 
             let getter = function () {
-              let $watchCache = instance.$watchCache
+              let $computedCache = instance.$computedCache
               if (!getter.$dirty) {
-                if (cache && object.has($watchCache, keypath)) {
-                  return $watchCache[ keypath ]
+                if (cache && object.has($computedCache, keypath)) {
+                  return $computedCache[ keypath ]
                 }
               }
               else {
@@ -158,7 +161,9 @@ export default class Yox {
               }
 
               instance.$computedDeps[ keypath ] = newDeps
-              $watchCache[ keypath ] = result
+              if (cache) {
+                $computedCache[ keypath ] = result
+              }
 
               return result
             }
@@ -265,47 +270,90 @@ export default class Yox {
       $computedGetters,
     } = this
 
-    let result
-
     let getValue = function (keypath) {
+
+      if ($computedStack) {
+        let list = array.last($computedStack)
+        if (list) {
+          array.push(list, keypath)
+        }
+      }
+
       if ($computedGetters) {
-        result = $computedGetters[ keypath ]
-        if (result) {
+
+        let value
+
+        let keys = keypathUtil.parse(keypath)
+        array.each(
+          keys,
+          function (key, index) {
+            keypath = keypathUtil.stringify(
+              keys.slice(0, index + 1)
+            )
+            value = $computedGetters[ keypath ]
+            if (value) {
+              keypath = keypathUtil.stringify(
+                keys.slice(index + 1)
+              )
+              return env.FALSE
+            }
+          }
+        )
+
+        if (value) {
+          value = value()
+          if (value && keypath) {
+            value = object.get(value, keypath)
+          }
           return {
-            value: result(),
+            value,
+          }
+        }
+
+      }
+
+      return object.get($data, keypath)
+
+    }
+
+    let result
+    let suffixes = keypathUtil.parse(keypath)
+
+    if (is.string(context)) {
+      let prefixes = keypathUtil.parse(context)
+      if (suffixes.length > 1 && suffixes[ 0 ] === 'this') {
+        keypath = keypathUtil.stringify(
+          array.merge(
+            prefixes,
+            suffixes.slice(1)
+          )
+        )
+        result = getValue(keypath)
+      }
+      else {
+        while (env.TRUE) {
+          keypath = keypathUtil.stringify(
+            array.merge(
+              prefixes,
+              suffixes
+            )
+          )
+          result = getValue(keypath)
+          if (result || !prefixes.length) {
+            break
+          }
+          else {
+            prefixes.pop()
           }
         }
       }
-      return object.get($data, keypath)
-    }
-
-    keypath = keypathUtil.normalize(keypath)
-
-    if (is.string(context)) {
-      let keys = keypathUtil.parse(context)
-      while (env.TRUE) {
-        array.push(keys, keypath)
-        context = keypathUtil.stringify(keys)
-        result = getValue(context)
-        if (result || keys.length <= 1) {
-          if (result) {
-            result.keypath = context
-          }
-          return result
-        }
-        else {
-          // IE8 必须指定长度
-          keys.splice(-2, 2)
-        }
+      if (result) {
+        result.keypath = keypath
+        return result
       }
     }
     else {
-      if ($computedStack) {
-        result = array.last($computedStack)
-        if (result) {
-          array.push(result, keypath)
-        }
-      }
+      keypath = keypathUtil.stringify(suffixes)
       result = getValue(keypath)
       if (result) {
         return result.value
@@ -433,25 +481,21 @@ export default class Yox {
     object.each(
       watchers,
       function (value, keypath) {
+        let newValue = instance.get(keypath)
         if (is.func(value)) {
           $watchEmitter.on(keypath, value)
         }
         else if (is.object(value)) {
           $watchEmitter.on(keypath, value.watcher)
           if (value.sync === env.TRUE) {
-            let newValue = instance.get(keypath)
-            let oldValue = $watchCache[ keypath ]
-            // 这里无需比较
-            // 既然传了 sync: true 就表示想要立即取值调函数
-            // 不然何必做多此一举的事
-            $watchCache[ keypath ] = newValue
             execute(
               value.watcher,
               instance,
-              [ newValue, oldValue, keypath ]
+              [ newValue, $watchCache[ keypath ], keypath ]
             )
           }
         }
+        $watchCache[ keypath ] = newValue
       }
     )
 
@@ -831,7 +875,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.29.4'
+Yox.version = '0.29.5'
 
 /**
  * 工具，便于扩展、插件使用
