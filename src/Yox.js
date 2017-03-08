@@ -328,7 +328,8 @@ export default class Yox {
             suffixes.slice(1)
           )
         )
-        result = getValue(keypath)
+        // 传了 this 就要确保有结果，即使是 undefined
+        result = getValue(keypath) || { }
       }
       else {
         while (env.TRUE) {
@@ -875,7 +876,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.29.5'
+Yox.version = '0.29.6'
 
 /**
  * 工具，便于扩展、插件使用

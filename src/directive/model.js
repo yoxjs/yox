@@ -93,7 +93,7 @@ export default function ({ el, node, instance, directives, attributes }) {
     keypath = result.keypath
   }
   else {
-    logger.error(`The ${keypath} being used for two-way binding is ambiguous.`)
+    logger.error(`The ${value} being used for two-way binding is ambiguous.`)
     return
   }
 
