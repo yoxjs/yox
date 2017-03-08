@@ -4,6 +4,7 @@
 	(global.Yox = factory());
 }(this, (function () { 'use strict';
 
+
 if (!Object.keys) {
   Object.keys = function (obj) {
     var result = [];
@@ -4889,7 +4890,7 @@ var model = function (_ref9) {
   if (result) {
     keypath = result.keypath;
   } else {
-    error$1('The ' + keypath + ' being used for two-way binding is ambiguous.');
+    error$1('The ' + value + ' being used for two-way binding is ambiguous.');
     return;
   }
 
@@ -5214,7 +5215,8 @@ var Yox = function () {
         var prefixes = parse$1(context);
         if (suffixes.length > 1 && suffixes[0] === 'this') {
           keypath = stringify(merge(prefixes, suffixes.slice(1)));
-          result = getValue(keypath);
+          // 传了 this 就要确保有结果，即使是 undefined
+          result = getValue(keypath) || {};
         } else {
           while (TRUE) {
             keypath = stringify(merge(prefixes, suffixes));
@@ -5756,7 +5758,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.29.5';
+Yox.version = '0.29.6';
 
 /**
  * 工具，便于扩展、插件使用
