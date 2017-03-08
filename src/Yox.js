@@ -281,29 +281,12 @@ export default class Yox {
 
       if ($computedGetters) {
 
-        let value
-
-        let keys = keypathUtil.parse(keypath)
-        array.each(
-          keys,
-          function (key, index) {
-            keypath = keypathUtil.stringify(
-              keys.slice(0, index + 1)
-            )
-            value = $computedGetters[ keypath ]
-            if (value) {
-              keypath = keypathUtil.stringify(
-                keys.slice(index + 1)
-              )
-              return env.FALSE
-            }
-          }
-        )
+        let { value, rest } = matchKeypath($computedGetters, keypath)
 
         if (value) {
           value = value()
-          if (value && keypath) {
-            value = object.get(value, keypath)
+          if (value && rest) {
+            value = object.get(value, rest)
           }
           return {
             value,
@@ -533,6 +516,7 @@ export default class Yox {
 
     let {
       $data,
+      $computedGetters,
       $computedSetters,
       $watchEmitter,
       $watchCache,
@@ -548,18 +532,28 @@ export default class Yox {
 
     object.each(
       data,
-      function (value, keypath) {
+      function (newValue, keypath) {
         if ($watchEmitter.has(keypath) && !object.has($watchCache, keypath)) {
           $watchCache[ keypath ] = instance.get(keypath)
         }
         if ($computedSetters) {
           let setter = $computedSetters[ keypath ]
           if (setter) {
-            setter.call(instance, value)
+            setter.call(instance, newValue)
             return
           }
+          else {
+            let { value, rest } = matchKeypath($computedGetters, keypath)
+            if (value && rest) {
+              value = value()
+              if (value) {
+                object.set(value, rest, newValue)
+              }
+              return
+            }
+          }
         }
-        object.set($data, keypath, value)
+        object.set($data, keypath, newValue)
       }
     )
 
@@ -876,7 +870,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.29.6'
+Yox.version = '0.29.7'
 
 /**
  * 工具，便于扩展、插件使用
@@ -1085,6 +1079,35 @@ function magic(options) {
       return execute(get, env.NULL, key)
     }
   }
+}
+
+function matchKeypath(data, keypath) {
+
+  let value, rest
+
+  let keys = keypathUtil.parse(keypath)
+
+  array.each(
+    keys,
+    function (key, index) {
+      keypath = keypathUtil.stringify(
+        keys.slice(0, index + 1)
+      )
+      if (object.has(data, keypath)) {
+        value = data[ keypath ]
+        rest = keypathUtil.stringify(
+          keys.slice(index + 1)
+        )
+        return env.FALSE
+      }
+    }
+  )
+
+  return {
+    value,
+    rest,
+  }
+
 }
 
 function updateDeps(instance, newDeps, oldDeps, watcher) {

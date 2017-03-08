@@ -5012,34 +5012,19 @@ var Yox = function () {
         }
 
         if ($computedGetters) {
-          var _ret2 = function () {
+          var _matchKeypath = matchKeypath($computedGetters, keypath),
+              value = _matchKeypath.value,
+              rest = _matchKeypath.rest;
 
-            var value = void 0;
-
-            var keys$$1 = parse$1(keypath);
-            each(keys$$1, function (key, index) {
-              keypath = stringify(keys$$1.slice(0, index + 1));
-              value = $computedGetters[keypath];
-              if (value) {
-                keypath = stringify(keys$$1.slice(index + 1));
-                return FALSE;
-              }
-            });
-
-            if (value) {
-              value = value();
-              if (value && keypath) {
-                value = get(value, keypath);
-              }
-              return {
-                v: {
-                  value: value
-                }
-              };
+          if (value) {
+            value = value();
+            if (value && rest) {
+              value = get(value, rest);
             }
-          }();
-
-          if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
+            return {
+              value: value
+            };
+          }
         }
 
         return get($data, keypath);
@@ -5264,6 +5249,7 @@ var Yox = function () {
       var instance = this;
 
       var $data = instance.$data,
+          $computedGetters = instance.$computedGetters,
           $computedSetters = instance.$computedSetters,
           $watchEmitter = instance.$watchEmitter,
           $watchCache = instance.$watchCache;
@@ -5274,18 +5260,30 @@ var Yox = function () {
         data[normalize(key)] = newValue;
       });
 
-      each$1(data, function (value, keypath) {
+      each$1(data, function (newValue, keypath) {
         if ($watchEmitter.has(keypath) && !has$1($watchCache, keypath)) {
           $watchCache[keypath] = instance.get(keypath);
         }
         if ($computedSetters) {
           var setter = $computedSetters[keypath];
           if (setter) {
-            setter.call(instance, value);
+            setter.call(instance, newValue);
             return;
+          } else {
+            var _matchKeypath2 = matchKeypath($computedGetters, keypath),
+                value = _matchKeypath2.value,
+                rest = _matchKeypath2.rest;
+
+            if (value && rest) {
+              value = value();
+              if (value) {
+                set(value, rest, newValue);
+              }
+              return;
+            }
           }
         }
-        set($data, keypath, value);
+        set($data, keypath, newValue);
       });
 
       var args = arguments,
@@ -5400,7 +5398,7 @@ var Yox = function () {
 
       var instance = this;
       if (indexOf$1(value, CHAR_OPAREN) > 0) {
-        var _ret3 = function () {
+        var _ret2 = function () {
           var ast = compile$1(value);
           if (ast.type === CALL) {
             return {
@@ -5453,7 +5451,7 @@ var Yox = function () {
           }
         }();
 
-        if ((typeof _ret3 === 'undefined' ? 'undefined' : _typeof(_ret3)) === "object") return _ret3.v;
+        if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
       } else {
         return function (event$$1) {
           instance.fire(value, event$$1);
@@ -5595,7 +5593,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.29.6';
+Yox.version = '0.29.7';
 
 /**
  * 工具，便于扩展、插件使用
@@ -5795,6 +5793,28 @@ function magic(options) {
       return execute(get$$1, NULL, key);
     }
   }
+}
+
+function matchKeypath(data, keypath) {
+
+  var value = void 0,
+      rest = void 0;
+
+  var keys$$1 = parse$1(keypath);
+
+  each(keys$$1, function (key, index) {
+    keypath = stringify(keys$$1.slice(0, index + 1));
+    if (has$1(data, keypath)) {
+      value = data[keypath];
+      rest = stringify(keys$$1.slice(index + 1));
+      return FALSE;
+    }
+  });
+
+  return {
+    value: value,
+    rest: rest
+  };
 }
 
 function updateDeps(instance, newDeps, oldDeps, watcher) {
