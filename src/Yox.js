@@ -285,12 +285,9 @@ export default class Yox {
 
         if (value) {
           value = value()
-          if (value && rest) {
-            value = object.get(value, rest)
-          }
-          return {
-            value,
-          }
+          return value && rest
+            ? object.get(value, rest)
+            : { value }
         }
 
       }
@@ -870,7 +867,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.29.7'
+Yox.version = '0.29.8'
 
 /**
  * 工具，便于扩展、插件使用

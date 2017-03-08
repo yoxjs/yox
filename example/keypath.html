@@ -10,7 +10,7 @@
     <script id="template" type="plain/text">
 
         <div>
-        {{#each users}}
+        {{#each users:index}}
 
             <p>
                 name: {{name}}
@@ -18,7 +18,7 @@
             <p>
                 {{$keypath}}
             </p>
-            <button on-click="select($keypath)">
+            <button on-click="select($keypath, {{this}}, {{index}})">
                 Select
             </button>
 
@@ -46,8 +46,8 @@
                 today: new Date()
             },
             methods: {
-                select: function (keypath) {
-                    console.log(keypath, this.get(keypath));
+                select: function (keypath, data, index) {
+                    console.log(keypath, this.get(keypath), this, index);
                 }
             }
         });

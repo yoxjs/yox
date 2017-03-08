@@ -5018,12 +5018,7 @@ var Yox = function () {
 
           if (value) {
             value = value();
-            if (value && rest) {
-              value = get(value, rest);
-            }
-            return {
-              value: value
-            };
+            return value && rest ? get(value, rest) : { value: value };
           }
         }
 
@@ -5593,7 +5588,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.29.7';
+Yox.version = '0.29.8';
 
 /**
  * 工具，便于扩展、插件使用
