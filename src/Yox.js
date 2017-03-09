@@ -476,7 +476,9 @@ export default class Yox {
             )
           }
         }
-        $watchCache[ keypath ] = newValue
+        if (!object.has($watchCache, keypath)) {
+          $watchCache[ keypath ] = newValue
+        }
       }
     )
 
@@ -593,6 +595,7 @@ export default class Yox {
       $filters,
       $template,
       $currentNode,
+      $computedDeps,
       $computedGetters,
     } = instance
 
@@ -626,14 +629,23 @@ export default class Yox {
     object.extend(context, $data, $computedGetters)
 
     let { node, deps } = vdom.create($template, context, instance)
+    let viewDeps = [ ]
 
-    instance.$viewDeps = object.keys(deps)
+    object.each(
+      deps,
+      function (value, key) {
+        pickDeps(viewDeps, key, $computedDeps)
+      }
+    )
+
     updateDeps(
       instance,
-      instance.$viewDeps,
+      viewDeps,
       $viewDeps,
       $viewWatcher
     )
+
+    instance.$viewDeps = viewDeps
 
     let afterHook
     if ($currentNode) {
@@ -867,7 +879,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.29.8'
+Yox.version = '0.29.9'
 
 /**
  * 工具，便于扩展、插件使用
@@ -1131,6 +1143,35 @@ function updateDeps(instance, newDeps, oldDeps, watcher) {
 
 }
 
+function pickDeps(collection, key, computedDeps) {
+
+  // 排序，把依赖最少的放前面
+  let addKey = function (key, push) {
+    if (!array.has(collection, key)) {
+      if (push) {
+        collection.push(key)
+      }
+      else {
+        collection.unshift(key)
+      }
+    }
+  }
+
+  if (computedDeps && !array.falsy(computedDeps[ key ])) {
+    array.each(
+      computedDeps[ key ],
+      function (key) {
+        pickDeps(collection, key, computedDeps)
+      }
+    )
+    addKey(key, env.TRUE)
+  }
+  else {
+    addKey(key)
+  }
+
+}
+
 function diff(instance) {
 
   let {
@@ -1142,34 +1183,11 @@ function diff(instance) {
 
   // 排序，把依赖最少的放前面
   let keys = [ ]
-  let addKey = function (key, push) {
-    if (!array.has(keys, key)) {
-      if (push) {
-        keys.push(key)
-      }
-      else {
-        keys.unshift(key)
-      }
-    }
-  }
-
-  let pickDeps = function (key) {
-    if ($computedDeps && !array.falsy($computedDeps[ key ])) {
-      array.each(
-        $computedDeps[ key ],
-        pickDeps
-      )
-      addKey(key, env.TRUE)
-    }
-    else {
-      addKey(key)
-    }
-  }
 
   object.each(
     $watchCache,
     function (value, key) {
-      pickDeps(key)
+      pickDeps(keys, key, $computedDeps)
     }
   )
 

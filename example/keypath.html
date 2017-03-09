@@ -18,7 +18,7 @@
             <p>
                 {{$keypath}}
             </p>
-            <button on-click="select($keypath, {{this}}, {{index}})">
+            <button on-click="select($keypath, '{{name}}', {{this}}, {{index}})">
                 Select
             </button>
 
@@ -46,8 +46,8 @@
                 today: new Date()
             },
             methods: {
-                select: function (keypath, data, index) {
-                    console.log(keypath, this.get(keypath), this, index);
+                select: function (keypath, name, data, index) {
+                    console.log(keypath, name, this.get(keypath), this, index);
                 }
             }
         });
