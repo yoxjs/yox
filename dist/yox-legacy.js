@@ -4,6 +4,7 @@
 	(global.Yox = factory());
 }(this, (function () { 'use strict';
 
+
 if (!Object.keys) {
   Object.keys = function (obj) {
     var result = [];
@@ -5363,7 +5364,9 @@ var Yox = function () {
             execute(value.watcher, instance, [newValue, $watchCache[keypath], keypath]);
           }
         }
-        $watchCache[keypath] = newValue;
+        if (!has$1($watchCache, keypath)) {
+          $watchCache[keypath] = newValue;
+        }
       });
     }
 
@@ -5479,6 +5482,7 @@ var Yox = function () {
           $filters = instance.$filters,
           $template = instance.$template,
           $currentNode = instance.$currentNode,
+          $computedDeps = instance.$computedDeps,
           $computedGetters = instance.$computedGetters;
 
 
@@ -5511,8 +5515,15 @@ var Yox = function () {
           node = _vdom$create.node,
           deps = _vdom$create.deps;
 
-      instance.$viewDeps = keys(deps);
-      updateDeps(instance, instance.$viewDeps, $viewDeps, $viewWatcher);
+      var viewDeps = [];
+
+      each$1(deps, function (value, key) {
+        pickDeps(viewDeps, key, $computedDeps);
+      });
+
+      updateDeps(instance, viewDeps, $viewDeps, $viewWatcher);
+
+      instance.$viewDeps = viewDeps;
 
       var afterHook = void 0;
       if ($currentNode) {
@@ -5750,7 +5761,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.29.8';
+Yox.version = '0.29.9';
 
 /**
  * 工具，便于扩展、插件使用
@@ -5991,6 +6002,29 @@ function updateDeps(instance, newDeps, oldDeps, watcher) {
   });
 }
 
+function pickDeps(collection, key, computedDeps) {
+
+  // 排序，把依赖最少的放前面
+  var addKey = function addKey(key, push$$1) {
+    if (!has(collection, key)) {
+      if (push$$1) {
+        collection.push(key);
+      } else {
+        collection.unshift(key);
+      }
+    }
+  };
+
+  if (computedDeps && !falsy(computedDeps[key])) {
+    each(computedDeps[key], function (key) {
+      pickDeps(collection, key, computedDeps);
+    });
+    addKey(key, TRUE);
+  } else {
+    addKey(key);
+  }
+}
+
 function diff(instance) {
   var $children = instance.$children,
       $watchCache = instance.$watchCache,
@@ -6000,27 +6034,9 @@ function diff(instance) {
   // 排序，把依赖最少的放前面
 
   var keys$$1 = [];
-  var addKey = function addKey(key, push$$1) {
-    if (!has(keys$$1, key)) {
-      if (push$$1) {
-        keys$$1.push(key);
-      } else {
-        keys$$1.unshift(key);
-      }
-    }
-  };
-
-  var pickDeps = function pickDeps(key) {
-    if ($computedDeps && !falsy($computedDeps[key])) {
-      each($computedDeps[key], pickDeps);
-      addKey(key, TRUE);
-    } else {
-      addKey(key);
-    }
-  };
 
   each$1($watchCache, function (value, key) {
-    pickDeps(key);
+    pickDeps(keys$$1, key, $computedDeps);
   });
 
   each(keys$$1, function (key) {
