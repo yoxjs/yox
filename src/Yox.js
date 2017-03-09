@@ -308,34 +308,47 @@ export default class Yox {
             suffixes.slice(1)
           )
         )
-        // 传了 this 就要确保有结果，即使是 undefined
-        result = getValue(keypath) || { }
+        result = getValue(keypath)
       }
       else {
+        keypath = env.NULL
+
+        let temp
         while (env.TRUE) {
-          keypath = keypathUtil.stringify(
+          temp = keypathUtil.stringify(
             array.merge(
               prefixes,
               suffixes
             )
           )
-          result = getValue(keypath)
-          if (result || !prefixes.length) {
+          result = getValue(temp)
+          if (result) {
+            keypath = temp
             break
           }
           else {
-            prefixes.pop()
+            if (keypath == env.NULL) {
+              keypath = temp
+            }
+            if (!prefixes.length) {
+              break
+            }
+            else {
+              prefixes.pop()
+            }
           }
         }
       }
-      if (result) {
-        result.keypath = keypath
-        return result
+      if (!result) {
+        result = { }
       }
+      result.keypath = keypath
+      return result
     }
     else {
-      keypath = keypathUtil.stringify(suffixes)
-      result = getValue(keypath)
+      result = getValue(
+        keypathUtil.stringify(suffixes)
+      )
       if (result) {
         return result.value
       }
@@ -724,7 +737,7 @@ export default class Yox {
                 }
 
                 let result = instance.get(name, keypath)
-                if (result) {
+                if (object.has(result, 'value')) {
                   return result.value
                 }
               }
@@ -734,7 +747,7 @@ export default class Yox {
           let fn = instance[ name ]
           if (!fn) {
             let result = instance.get(name, keypath)
-            if (result) {
+            if (object.has(result, 'value')) {
               fn = result.value
             }
           }
@@ -879,7 +892,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.29.9'
+Yox.version = '0.30.0'
 
 /**
  * 工具，便于扩展、插件使用

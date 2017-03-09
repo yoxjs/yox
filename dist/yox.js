@@ -477,7 +477,8 @@ function startsWith(str, part) {
   return indexOf$1(str, part) === 0;
 }
 function endsWith(str, part) {
-  return str === part || str.lastIndexOf(part) === str.length - part.length;
+  var offset = str.length - part.length;
+  return offset >= 0 && str.lastIndexOf(part) === offset;
 }
 
 var string$1 = Object.freeze({
@@ -2237,6 +2238,8 @@ var Context = function () {
           keypath = _format2.keypath,
           lookup = _format2.lookup;
 
+      var originalKeypath = keypath;
+
       if (instance) {
         var _instance = instance,
             data = _instance.data,
@@ -2284,7 +2287,7 @@ var Context = function () {
       warn('Failed to lookup "' + key + '".');
 
       return {
-        keypath: key
+        keypath: originalKeypath
       };
     }
   }]);
@@ -4719,17 +4722,9 @@ var model = function (_ref9) {
       instance = _ref9.instance,
       directives = _ref9.directives,
       attributes = _ref9.attributes;
-  var value = node.value,
-      keypath = node.keypath;
 
-
-  var result = instance.get(value, keypath);
-  if (result) {
-    keypath = result.keypath;
-  } else {
-    error$1('The ' + value + ' being used for two-way binding is ambiguous.');
-    return;
-  }
+  var _instance$get = instance.get(node.value, node.keypath),
+      keypath = _instance$get.keypath;
 
   var type = 'change',
       tagName = el.tagName,
@@ -5032,26 +5027,36 @@ var Yox = function () {
         var prefixes = parse$1(context);
         if (suffixes.length > 1 && suffixes[0] === 'this') {
           keypath = stringify(merge(prefixes, suffixes.slice(1)));
-          // 传了 this 就要确保有结果，即使是 undefined
-          result = getValue(keypath) || {};
+          result = getValue(keypath);
         } else {
+          keypath = NULL;
+
+          var temp = void 0;
           while (TRUE) {
-            keypath = stringify(merge(prefixes, suffixes));
-            result = getValue(keypath);
-            if (result || !prefixes.length) {
+            temp = stringify(merge(prefixes, suffixes));
+            result = getValue(temp);
+            if (result) {
+              keypath = temp;
               break;
             } else {
-              prefixes.pop();
+              if (keypath == NULL) {
+                keypath = temp;
+              }
+              if (!prefixes.length) {
+                break;
+              } else {
+                prefixes.pop();
+              }
             }
           }
         }
-        if (result) {
-          result.keypath = keypath;
-          return result;
+        if (!result) {
+          result = {};
         }
+        result.keypath = keypath;
+        return result;
       } else {
-        keypath = stringify(suffixes);
-        result = getValue(keypath);
+        result = getValue(stringify(suffixes));
         if (result) {
           return result.value;
         }
@@ -5437,7 +5442,7 @@ var Yox = function () {
                     }
 
                     var result = instance.get(name, keypath);
-                    if (result) {
+                    if (has$1(result, 'value')) {
                       return result.value;
                     }
                   });
@@ -5446,7 +5451,7 @@ var Yox = function () {
                 var fn = instance[name];
                 if (!fn) {
                   var result = instance.get(name, keypath);
-                  if (result) {
+                  if (has$1(result, 'value')) {
                     fn = result.value;
                   }
                 }
@@ -5598,7 +5603,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.29.9';
+Yox.version = '0.30.0';
 
 /**
  * 工具，便于扩展、插件使用

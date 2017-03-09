@@ -86,16 +86,10 @@ const specialControls = {
 
 export default function ({ el, node, instance, directives, attributes }) {
 
-  let { value, keypath } = node
-
-  let result = instance.get(value, keypath)
-  if (result) {
-    keypath = result.keypath
-  }
-  else {
-    logger.error(`The ${value} being used for two-way binding is ambiguous.`)
-    return
-  }
+  let { keypath } = instance.get(
+    node.value,
+    node.keypath
+  )
 
   let type = 'change', tagName = el.tagName, controlType = el.type
   let control = specialControls[ controlType ] || specialControls[ tagName ]

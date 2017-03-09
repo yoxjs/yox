@@ -16,7 +16,8 @@
             </label>
             {{#each list}}
                 <div>
-                  <input type="checkbox" model="checked">
+                    {{this.status}}
+                    <input type="checkbox" model="checked">
                 </div>
             {{/each}}
         </div>
