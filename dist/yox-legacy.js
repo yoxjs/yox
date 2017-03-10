@@ -4387,7 +4387,7 @@ var style = {
   update: updateStyle
 };
 
-function updateStyle$1(oldVnode, vnode) {
+function updateProps(oldVnode, vnode) {
 
   var oldProps = oldVnode.data.props;
   var newProps = vnode.data.props;
@@ -4416,8 +4416,8 @@ function updateStyle$1(oldVnode, vnode) {
 }
 
 var props = {
-  create: updateStyle$1,
-  update: updateStyle$1
+  create: updateProps,
+  update: updateProps
 };
 
 var booleanLiteral = 'allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare' + 'default,defaultchecked,defaultmuted,defaultselected,defer,disabled,draggable' + 'enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple' + 'muted,nohref,noresize,noshade,novalidate,nowrap,open,pauseonexit,readonly' + 'required,reversed,scoped,seamless,selected,sortable,spellcheck,translate' + 'truespeed,typemustmatch,visible';
@@ -5765,7 +5765,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.30.0';
+Yox.version = '0.30.1';
 
 /**
  * 工具，便于扩展、插件使用
