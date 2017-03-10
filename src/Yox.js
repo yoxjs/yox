@@ -416,35 +416,25 @@ export default class Yox {
     // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
     // 内部为了保持格式统一
     // 需要转成 Event，这样还能知道 target 是哪个组件
-    let event = data
-    if (!(event instanceof Event)) {
+    let event = type
+    if (is.string(type)) {
       event = new Event(type)
-      if (data) {
-        event.data = data
-      }
-    }
-
-    // 事件名称经过了转换
-    if (event.type !== type) {
-      data = event.data
-      event = new Event(event)
-      event.type = type
-      // data 不能换位置，否则事件处理函数获取数据很蛋疼
-      if (data) {
-        event.data = data
-      }
     }
 
     let instance = this
-    let { $parent, $eventEmitter } = instance
-
     if (!event.target) {
       event.target = instance
     }
 
-    let done = $eventEmitter.fire(type, event, instance)
+    let args = [ event ]
+    if (is.object(data)) {
+      array.push(args, data)
+    }
+
+    let { $parent, $eventEmitter } = instance
+    let done = $eventEmitter.fire(event.type, args, instance)
     if (done && $parent) {
-      done = $parent.fire(type, event)
+      done = $parent.fire(event, data)
     }
 
     return done
@@ -756,8 +746,12 @@ export default class Yox {
       }
     }
     else {
-      return function (event) {
-        instance.fire(value, event)
+      return function (event, data) {
+        if (event.type !== value) {
+          event = new Event(event)
+          event.type = value
+        }
+        instance.fire(event, data)
       }
     }
   }
@@ -892,7 +886,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.30.1'
+Yox.version = '0.30.2'
 
 /**
  * 工具，便于扩展、插件使用

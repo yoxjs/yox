@@ -5134,37 +5134,27 @@ var Yox = function () {
       // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
       // 内部为了保持格式统一
       // 需要转成 Event，这样还能知道 target 是哪个组件
-      var event$$1 = data;
-      if (!(event$$1 instanceof Event)) {
+      var event$$1 = type;
+      if (string(type)) {
         event$$1 = new Event(type);
-        if (data) {
-          event$$1.data = data;
-        }
-      }
-
-      // 事件名称经过了转换
-      if (event$$1.type !== type) {
-        data = event$$1.data;
-        event$$1 = new Event(event$$1);
-        event$$1.type = type;
-        // data 不能换位置，否则事件处理函数获取数据很蛋疼
-        if (data) {
-          event$$1.data = data;
-        }
       }
 
       var instance = this;
-      var $parent = instance.$parent,
-          $eventEmitter = instance.$eventEmitter;
-
-
       if (!event$$1.target) {
         event$$1.target = instance;
       }
 
-      var done = $eventEmitter.fire(type, event$$1, instance);
+      var args = [event$$1];
+      if (object(data)) {
+        push(args, data);
+      }
+
+      var $parent = instance.$parent,
+          $eventEmitter = instance.$eventEmitter;
+
+      var done = $eventEmitter.fire(event$$1.type, args, instance);
       if (done && $parent) {
-        done = $parent.fire(type, event$$1);
+        done = $parent.fire(event$$1, data);
       }
 
       return done;
@@ -5463,8 +5453,12 @@ var Yox = function () {
 
         if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
       } else {
-        return function (event$$1) {
-          instance.fire(value, event$$1);
+        return function (event$$1, data) {
+          if (event$$1.type !== value) {
+            event$$1 = new Event(event$$1);
+            event$$1.type = value;
+          }
+          instance.fire(event$$1, data);
         };
       }
     }
@@ -5603,7 +5597,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.30.1';
+Yox.version = '0.30.2';
 
 /**
  * 工具，便于扩展、插件使用
