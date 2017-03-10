@@ -14,10 +14,11 @@ import * as object from 'yox-common/util/object'
 import * as string from 'yox-common/util/string'
 import * as logger from 'yox-common/util/logger'
 import * as nextTask from 'yox-common/util/nextTask'
-import * as keypathUtil from 'yox-common/util/keypath'
 
 import * as viewEnginer from 'yox-template-compiler'
 import * as viewSyntax from 'yox-template-compiler/src/syntax'
+
+import Observer from 'yox-observer'
 
 import * as expressionEnginer from 'yox-expression-compiler'
 import * as expressionNodeType from 'yox-expression-compiler/src/nodeType'
@@ -78,7 +79,40 @@ export default class Yox {
 
     // 先放 props
     // 当 data 是函数时，可以通过 this.get() 获取到外部数据
-    instance.$data = source
+    instance.$observer = new Observer({
+      context: instance,
+      data: source,
+      computed,
+      afterDispatch() {
+
+        let {
+          $dirty,
+          $dirtyIgnore,
+          $children,
+        } = instance
+
+        if ($dirty) {
+          delete instance.$dirty
+        }
+        if ($dirtyIgnore) {
+          delete instance.$dirtyIgnore
+          return
+        }
+
+        if ($dirty) {
+          instance.updateView()
+        }
+        else if ($children) {
+          array.each(
+            $children,
+            function (child) {
+              child.$observer.dispatch()
+            }
+          )
+        }
+
+      }
+    })
 
     // 后放 data
     let extend = is.func(data) ? execute(data, instance) : data
@@ -96,97 +130,12 @@ export default class Yox {
       )
     }
 
-    // 计算属性也是数据
-    if (is.object(computed)) {
-
-      // 把计算属性拆为 getter 和 setter
-      instance.$computedGetters = { }
-      instance.$computedSetters = { }
-
-      // 辅助获取计算属性的依赖
-      instance.$computedStack = [ ]
-      instance.$computedDeps = { }
-
-      // 计算属性的缓存
-      instance.$computedCache = { }
-
-      object.each(
-        computed,
-        function (item, keypath) {
-          let get, set, deps, cache = env.TRUE
-          if (is.func(item)) {
-            get = item
-          }
-          else if (is.object(item)) {
-            if (is.boolean(item.cache)) {
-              cache = item.cache
-            }
-            if (is.array(item.deps)) {
-              deps = item.deps
-            }
-            if (is.func(item.get)) {
-              get = item.get
-            }
-            if (is.func(item.set)) {
-              set = item.set
-            }
-          }
-
-          if (get) {
-
-            let watcher = function () {
-              getter.$dirty = env.TRUE
-            }
-
-            let getter = function () {
-              let $computedCache = instance.$computedCache
-              if (!getter.$dirty) {
-                if (cache && object.has($computedCache, keypath)) {
-                  return $computedCache[ keypath ]
-                }
-              }
-              else {
-                delete getter.$dirty
-              }
-
-              if (!deps) {
-                instance.$computedStack.push([ ])
-              }
-              let result = execute(get, instance)
-
-              let newDeps = deps || instance.$computedStack.pop()
-              let oldDeps = instance.$computedDeps[ keypath ]
-              if (newDeps !== oldDeps) {
-                updateDeps(instance, newDeps, oldDeps, watcher)
-              }
-
-              instance.$computedDeps[ keypath ] = newDeps
-              if (cache) {
-                $computedCache[ keypath ] = result
-              }
-
-              return result
-            }
-            getter.toString = getter
-            instance.$computedGetters[ keypath ] = getter
-          }
-
-          if (set) {
-            instance.$computedSetters[ keypath ] = set
-          }
-
-        }
-      )
-    }
+    // 等数据准备好之后，再触发 watchers
+    watchers && instance.$observer.watch(watchers)
 
     // 监听各种事件
     instance.$eventEmitter = new Emitter()
     events && instance.on(events)
-
-    instance.$watchCache = { }
-    instance.$watchEmitter = new Emitter()
-
-    watchers && instance.watch(watchers)
 
     execute(options[ lifecycle.AFTER_CREATE ], instance)
 
@@ -260,118 +209,28 @@ export default class Yox {
    *
    * @param {string} keypath
    * @param {?string} context
-   * @return {*}
+   * @return {?*}
    */
   get(keypath, context) {
-
-    let {
-      $data,
-      $computedStack,
-      $computedGetters,
-    } = this
-
-    let getValue = function (keypath) {
-
-      if ($computedStack) {
-        let list = array.last($computedStack)
-        if (list) {
-          array.push(list, keypath)
-        }
-      }
-
-      if ($computedGetters) {
-
-        let { value, rest } = matchKeypath($computedGetters, keypath)
-
-        if (value) {
-          value = value()
-          return value && rest
-            ? object.get(value, rest)
-            : { value }
-        }
-
-      }
-
-      return object.get($data, keypath)
-
-    }
-
-    let result
-    let suffixes = keypathUtil.parse(keypath)
-
-    if (is.string(context)) {
-      let prefixes = keypathUtil.parse(context)
-      if (suffixes.length > 1 && suffixes[ 0 ] === 'this') {
-        keypath = keypathUtil.stringify(
-          array.merge(
-            prefixes,
-            suffixes.slice(1)
-          )
-        )
-        result = getValue(keypath)
-      }
-      else {
-        keypath = env.NULL
-
-        let temp
-        while (env.TRUE) {
-          temp = keypathUtil.stringify(
-            array.merge(
-              prefixes,
-              suffixes
-            )
-          )
-          result = getValue(temp)
-          if (result) {
-            keypath = temp
-            break
-          }
-          else {
-            if (keypath == env.NULL) {
-              keypath = temp
-            }
-            if (!prefixes.length) {
-              break
-            }
-            else {
-              prefixes.pop()
-            }
-          }
-        }
-      }
-      if (!result) {
-        result = { }
-      }
-      result.keypath = keypath
-      return result
-    }
-    else {
-      result = getValue(
-        keypathUtil.stringify(suffixes)
-      )
-      if (result) {
-        return result.value
-      }
-    }
-
+    return this.$observer.get(keypath, context)
   }
 
   set(keypath, value) {
 
-    let model, immediate
+    let model, sync
     if (is.string(keypath)) {
       model = { }
       model[ keypath ] = value
     }
     else if (is.object(keypath)) {
-      model = object.copy(keypath)
-      immediate = value === env.TRUE
+      model = keypath
+      sync = value === env.TRUE
     }
     else {
       return
     }
 
-    this.updateModel(model, immediate)
+    this.updateModel(model, sync)
 
   }
 
@@ -449,42 +308,7 @@ export default class Yox {
    * @param {?boolean} sync
    */
   watch(keypath, watcher, sync) {
-
-    let watchers = keypath
-    if (is.string(keypath)) {
-      watchers = { }
-      watchers[ keypath ] = {
-        sync,
-        watcher,
-      }
-    }
-
-    let instance = this
-    let { $watchEmitter, $watchCache } = instance
-
-    object.each(
-      watchers,
-      function (value, keypath) {
-        let newValue = instance.get(keypath)
-        if (is.func(value)) {
-          $watchEmitter.on(keypath, value)
-        }
-        else if (is.object(value)) {
-          $watchEmitter.on(keypath, value.watcher)
-          if (value.sync === env.TRUE) {
-            execute(
-              value.watcher,
-              instance,
-              [ newValue, $watchCache[ keypath ], keypath ]
-            )
-          }
-        }
-        if (!object.has($watchCache, keypath)) {
-          $watchCache[ keypath ] = newValue
-        }
-      }
-    )
-
+    this.$observer.watch(keypath, watcher, sync)
   }
 
   /**
@@ -492,9 +316,10 @@ export default class Yox {
    *
    * @param {string|Object} keypath
    * @param {?Function} watcher
+   * @param {?boolean} sync
    */
-  watchOnce(keypath, watcher) {
-    this.$watchEmitter.once(keypath, watcher)
+  watchOnce(keypath, watcher, sync) {
+    this.$observer.watchOnce(keypath, watcher, sync)
   }
 
   /**
@@ -504,7 +329,7 @@ export default class Yox {
    * @param {?Function} watcher
    */
   unwatch(keypath, watcher) {
-    this.$watchEmitter.off(keypath, watcher)
+    this.$observer.unwatch(keypath, watcher)
   }
 
   /**
@@ -513,74 +338,14 @@ export default class Yox {
    * @param {Object} model
    */
   updateModel(model) {
-
-    let instance = this
-
-    let {
-      $data,
-      $computedGetters,
-      $computedSetters,
-      $watchEmitter,
-      $watchCache,
-    } = instance
-
-    let data = { }
-    object.each(
-      model,
-      function (newValue, key) {
-        data[ keypathUtil.normalize(key) ] = newValue
-      }
-    )
-
-    object.each(
-      data,
-      function (newValue, keypath) {
-        if ($watchEmitter.has(keypath) && !object.has($watchCache, keypath)) {
-          $watchCache[ keypath ] = instance.get(keypath)
-        }
-        if ($computedSetters) {
-          let setter = $computedSetters[ keypath ]
-          if (setter) {
-            setter.call(instance, newValue)
-            return
-          }
-          else {
-            let { value, rest } = matchKeypath($computedGetters, keypath)
-            if (value && rest) {
-              value = value()
-              if (value) {
-                object.set(value, rest, newValue)
-              }
-              return
-            }
-          }
-        }
-        object.set($data, keypath, newValue)
-      }
-    )
-
-    let args = arguments, immediate
+    let args = arguments, sync
     if (args.length === 1) {
-      immediate =
-      instance.$dirtyIgnore = env.TRUE
+      sync = this.$dirtyIgnore = env.TRUE
     }
     else if (args.length === 2) {
-      immediate = args[ 1 ]
+      sync = args[ 1 ]
     }
-
-    if (immediate) {
-      diff(instance)
-    }
-    else if (!instance.$diffing) {
-      instance.$diffing = env.TRUE
-      nextTask.add(
-        function () {
-          delete instance.$diffing
-          diff(instance)
-        }
-      )
-    }
-
+    this.$observer.set(model, sync)
   }
 
   /**
@@ -593,13 +358,11 @@ export default class Yox {
     let {
       $viewDeps,
       $viewWatcher,
-      $data,
+      $observer,
       $options,
       $filters,
       $template,
       $currentNode,
-      $computedDeps,
-      $computedGetters,
     } = instance
 
     if ($currentNode) {
@@ -629,26 +392,10 @@ export default class Yox {
     // data 中的函数不需要强制绑定 this
     // 不是不想管，是没法管，因为每层级都可能出现函数，但不可能每层都绑定
     // 而且让 data 中的函数完全动态化说不定还是一个好设计呢
-    object.extend(context, $data, $computedGetters)
+    object.extend(context, $observer.data, $observer.computedGetters)
 
     let { node, deps } = vdom.create($template, context, instance)
-    let viewDeps = [ ]
-
-    object.each(
-      deps,
-      function (value, key) {
-        pickDeps(viewDeps, key, $computedDeps)
-      }
-    )
-
-    updateDeps(
-      instance,
-      viewDeps,
-      $viewDeps,
-      $viewWatcher
-    )
-
-    instance.$viewDeps = viewDeps
+    instance.$viewDeps = $observer.diff(object.keys(deps), $viewDeps, $viewWatcher)
 
     let afterHook
     if ($currentNode) {
@@ -662,6 +409,7 @@ export default class Yox {
     }
 
     instance.$currentNode = $currentNode
+
     execute($options[ afterHook ], instance)
 
   }
@@ -767,8 +515,8 @@ export default class Yox {
       $options,
       $parent,
       $children,
+      $observer,
       $currentNode,
-      $watchEmitter,
       $eventEmitter,
     } = instance
 
@@ -794,8 +542,9 @@ export default class Yox {
       }
     }
 
-    $watchEmitter.off()
     $eventEmitter.off()
+
+    $observer.destroy()
 
     object.each(
       instance,
@@ -886,7 +635,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.30.2'
+Yox.version = '0.30.3'
 
 /**
  * 工具，便于扩展、插件使用
@@ -1009,13 +758,13 @@ Yox.compile = function (template) {
  * 验证 props
  *
  * @param {Object} props 传递的数据
- * @param {Object} schema 数据格式
+ * @param {Object} propTypes 数据格式
  * @return {Object} 验证通过的数据
  */
-Yox.validate = function (props, schema) {
+Yox.validate = function (props, propTypes) {
   let result = { }
   object.each(
-    schema,
+    propTypes,
     function (rule, key) {
       let { type, value, required } = rule
 
@@ -1095,146 +844,6 @@ function magic(options) {
       return execute(get, env.NULL, key)
     }
   }
-}
-
-function matchKeypath(data, keypath) {
-
-  let value, rest
-
-  let keys = keypathUtil.parse(keypath)
-
-  array.each(
-    keys,
-    function (key, index) {
-      keypath = keypathUtil.stringify(
-        keys.slice(0, index + 1)
-      )
-      if (object.has(data, keypath)) {
-        value = data[ keypath ]
-        rest = keypathUtil.stringify(
-          keys.slice(index + 1)
-        )
-        return env.FALSE
-      }
-    }
-  )
-
-  return {
-    value,
-    rest,
-  }
-
-}
-
-function updateDeps(instance, newDeps, oldDeps, watcher) {
-
-  oldDeps = oldDeps || [ ]
-
-  array.each(
-    newDeps,
-    function (dep) {
-      if (!array.has(oldDeps, dep)) {
-        instance.watch(dep, watcher)
-      }
-    }
-  )
-
-  array.each(
-    oldDeps,
-    function (dep) {
-      if (!array.has(newDeps, dep)) {
-        instance.unwatch(dep, watcher)
-      }
-    }
-  )
-
-}
-
-function pickDeps(collection, key, computedDeps) {
-
-  // 排序，把依赖最少的放前面
-  let addKey = function (key, push) {
-    if (!array.has(collection, key)) {
-      if (push) {
-        collection.push(key)
-      }
-      else {
-        collection.unshift(key)
-      }
-    }
-  }
-
-  if (computedDeps && !array.falsy(computedDeps[ key ])) {
-    array.each(
-      computedDeps[ key ],
-      function (key) {
-        pickDeps(collection, key, computedDeps)
-      }
-    )
-    addKey(key, env.TRUE)
-  }
-  else {
-    addKey(key)
-  }
-
-}
-
-function diff(instance) {
-
-  let {
-    $children,
-    $watchCache,
-    $watchEmitter,
-    $computedDeps,
-  } = instance
-
-  // 排序，把依赖最少的放前面
-  let keys = [ ]
-
-  object.each(
-    $watchCache,
-    function (value, key) {
-      pickDeps(keys, key, $computedDeps)
-    }
-  )
-
-  array.each(
-    keys,
-    function (key) {
-      let newValue = instance.get(key)
-      let oldValue = $watchCache[ key ]
-      if (newValue !== oldValue) {
-        $watchCache[ key ] = newValue
-        $watchEmitter.fire(key, [ newValue, oldValue, key ], instance)
-      }
-    }
-  )
-
-  let {
-    $dirty,
-    $dirtyIgnore,
-  } = instance
-
-  if ($dirty) {
-    delete instance.$dirty
-  }
-  if ($dirtyIgnore) {
-    delete instance.$dirtyIgnore
-    return
-  }
-
-  if ($dirty) {
-    instance.updateView()
-  }
-  else if ($children) {
-    array.each(
-      $children,
-      function (child) {
-        diff(child)
-      }
-    )
-  }
-
 }
 
 import ref from './directive/ref'
