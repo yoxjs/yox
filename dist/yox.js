@@ -417,26 +417,24 @@ function falsy$1(str) {
 function parse(str, separator, pair) {
   var result = [];
   if (string$1(str)) {
-    (function () {
-      var terms = void 0,
-          key = void 0,
-          value = void 0,
-          item = void 0;
-      each(split(str, separator), function (term) {
-        terms = split(term, pair);
-        key = terms[0];
-        value = terms[1];
-        if (key) {
-          item = {
-            key: trim(key)
-          };
-          if (string$1(value)) {
-            item.value = trim(value);
-          }
-          push(result, item);
+    var terms = void 0,
+        key = void 0,
+        value = void 0,
+        item = void 0;
+    each(split(str, separator), function (term) {
+      terms = split(term, pair);
+      key = terms[0];
+      value = terms[1];
+      if (key) {
+        item = {
+          key: trim(key)
+        };
+        if (string$1(value)) {
+          item.value = trim(value);
         }
-      });
-    })();
+        push(result, item);
+      }
+    });
   }
   return result;
 }
@@ -708,22 +706,6 @@ var object$1 = Object.freeze({
 	set: set
 });
 
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
-  return typeof obj;
-} : function (obj) {
-  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
-};
-
-
-
-
-
-
-
-
-
-
-
 var classCallCheck = function (instance, Constructor) {
   if (!(instance instanceof Constructor)) {
     throw new TypeError("Cannot call a class as a function");
@@ -825,22 +807,20 @@ var Store = function () {
 
       var value = data[key];
       if (func(value)) {
-        (function () {
-          var $pending = value.$pending;
+        var $pending = value.$pending;
 
-          if (!$pending) {
-            $pending = value.$pending = [callback];
-            value(function (replacement) {
-              delete value.$pending;
-              data[key] = replacement;
-              each($pending, function (callback) {
-                callback(replacement);
-              });
+        if (!$pending) {
+          $pending = value.$pending = [callback];
+          value(function (replacement) {
+            delete value.$pending;
+            data[key] = replacement;
+            each($pending, function (callback) {
+              callback(replacement);
             });
-          } else {
-            push($pending, callback);
-          }
-        })();
+          });
+        } else {
+          push($pending, callback);
+        }
       } else {
         callback(value);
       }
@@ -1609,93 +1589,91 @@ function execute$1(node, context) {
       value = void 0,
       result = void 0;
 
-  (function () {
-    switch (node.type) {
-      case ARRAY:
-        value = [];
-        each(node.elements, function (node) {
-          result = execute$1(node, context);
-          push(value, result.value);
-          extend(deps, result.deps);
-        });
-        break;
+  switch (node.type) {
+    case ARRAY:
+      value = [];
+      each(node.elements, function (node) {
+        result = execute$1(node, context);
+        push(value, result.value);
+        extend(deps, result.deps);
+      });
+      break;
 
-      case BINARY:
-        var left = node.left,
-            right = node.right;
+    case BINARY:
+      var left = node.left,
+          right = node.right;
 
-        left = execute$1(left, context);
-        right = execute$1(right, context);
-        value = Binary[node.operator](left.value, right.value);
-        extend(deps, left.deps, right.deps);
-        break;
+      left = execute$1(left, context);
+      right = execute$1(right, context);
+      value = Binary[node.operator](left.value, right.value);
+      extend(deps, left.deps, right.deps);
+      break;
 
-      case CALL:
-        result = execute$1(node.callee, context);
-        deps = result.deps;
-        value = execute(result.value, NULL, node.args.map(function (node) {
-          var result = execute$1(node, context);
-          extend(deps, result.deps);
-          return result.value;
-        }));
-        break;
+    case CALL:
+      result = execute$1(node.callee, context);
+      deps = result.deps;
+      value = execute(result.value, NULL, node.args.map(function (node) {
+        var result = execute$1(node, context);
+        extend(deps, result.deps);
+        return result.value;
+      }));
+      break;
 
-      case TERNARY:
-        var test = node.test,
-            consequent = node.consequent,
-            alternate = node.alternate;
+    case TERNARY:
+      var test = node.test,
+          consequent = node.consequent,
+          alternate = node.alternate;
 
-        test = execute$1(test, context);
-        if (test.value) {
-          consequent = execute$1(consequent, context);
-          value = consequent.value;
-          extend(deps, test.deps, consequent.deps);
-        } else {
-          alternate = execute$1(alternate, context);
-          value = alternate.value;
-          extend(deps, test.deps, alternate.deps);
-        }
-        break;
+      test = execute$1(test, context);
+      if (test.value) {
+        consequent = execute$1(consequent, context);
+        value = consequent.value;
+        extend(deps, test.deps, consequent.deps);
+      } else {
+        alternate = execute$1(alternate, context);
+        value = alternate.value;
+        extend(deps, test.deps, alternate.deps);
+      }
+      break;
 
-      case IDENTIFIER:
-        result = context.get(node.name);
-        value = result.value;
-        deps[result.keypath] = value;
-        break;
+    case IDENTIFIER:
+      result = context.get(node.name);
+      value = result.value;
+      deps[result.keypath] = value;
+      break;
 
-      case LITERAL:
-        value = node.value;
-        break;
+    case LITERAL:
+      value = node.value;
+      break;
 
-      case MEMBER:
-        var keys$$1 = [];
-        each(flattenMember(node), function (node, index) {
-          var type = node.type;
+    case MEMBER:
+      var keys$$1 = [];
+      each(flattenMember(node), function (node, index) {
+        var type = node.type;
 
-          if (type !== LITERAL) {
-            if (index > 0) {
-              var _result = execute$1(node, context);
-              push(keys$$1, _result.value);
-              extend(deps, _result.deps);
-            } else if (type === IDENTIFIER) {
-              push(keys$$1, node.name);
-            }
-          } else {
-            push(keys$$1, node.value);
+        if (type !== LITERAL) {
+          if (index > 0) {
+            var _result = execute$1(node, context);
+            push(keys$$1, _result.value);
+            extend(deps, _result.deps);
+          } else if (type === IDENTIFIER) {
+            push(keys$$1, node.name);
           }
-        });
-        result = context.get(stringify(keys$$1));
-        value = result.value;
-        deps[result.keypath] = value;
-        break;
+        } else {
+          push(keys$$1, node.value);
+        }
+      });
+      result = context.get(stringify(keys$$1));
+      value = result.value;
+      deps[result.keypath] = value;
+      break;
 
-      case UNARY:
-        result = execute$1(node.arg, context);
-        value = Unary[node.operator](result.value);
-        deps = result.deps;
-        break;
-    }
-  })();
+    case UNARY:
+      result = execute$1(node.arg, context);
+      value = Unary[node.operator](result.value);
+      deps = result.deps;
+      break;
+  }
 
   return { value: value, deps: deps };
 }
@@ -2193,37 +2171,31 @@ var Context = function () {
           instance: instance
         };
       } else {
-        var _ret = function () {
-          var lookup = TRUE,
-              index = 0;
-          var levelMap = {};
-          levelMap[LEVEL_CURRENT] = FALSE;
-          levelMap[LEVEL_PARENT] = TRUE;
+        var lookup = TRUE,
+            index = 0;
+        var levelMap = {};
+        levelMap[LEVEL_CURRENT] = FALSE;
+        levelMap[LEVEL_PARENT] = TRUE;
 
-          each(keys$$1, function (key, i) {
-            if (has$1(levelMap, key)) {
-              lookup = FALSE;
-              if (levelMap[key]) {
-                instance = instance.parent;
-                if (!instance) {
-                  return FALSE;
-                }
+        each(keys$$1, function (key, i) {
+          if (has$1(levelMap, key)) {
+            lookup = FALSE;
+            if (levelMap[key]) {
+              instance = instance.parent;
+              if (!instance) {
+                return FALSE;
               }
-            } else {
-              index = i;
-              return FALSE;
             }
-          });
-          return {
-            v: {
-              keypath: stringify(keys$$1.slice(index)),
-              instance: instance,
-              lookup: lookup
-            }
-          };
-        }();
-
-        if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
+          } else {
+            index = i;
+            return FALSE;
+          }
+        });
+        return {
+          keypath: stringify(keys$$1.slice(index)),
+          instance: instance,
+          lookup: lookup
+        };
       }
     }
   }, {
@@ -2884,89 +2856,76 @@ function render(ast, createComment, createElement, importTemplate, data) {
           name = node.name,
           expr = node.expr;
 
-      var _ret = function () {
 
-        switch (type) {
+      switch (type) {
 
-          // 用时定义的子模块无需注册到组件实例
-          case PARTIAL$1:
-            partials[name] = node;
-            return {
-              v: FALSE
-            };
+        // 用时定义的子模块无需注册到组件实例
+        case PARTIAL$1:
+          partials[name] = node;
+          return FALSE;
 
-          case IMPORT$1:
-            var partial = partials[name] || importTemplate(name);
-            if (partial) {
-              if (string$1(partial)) {
-                partial = compile$$1(partial);
-              } else if (partial.type === PARTIAL$1) {
-                partial = partial.children;
-              }
-              return {
-                v: array(partial) ? traverseList(partial) : recursion(partial)
-              };
+        case IMPORT$1:
+          var partial = partials[name] || importTemplate(name);
+          if (partial) {
+            if (string$1(partial)) {
+              partial = compile$$1(partial);
+            } else if (partial.type === PARTIAL$1) {
+              partial = partial.children;
             }
-            error$1('Importing partial "' + name + '" is not found.');
-            break;
+            return array(partial) ? traverseList(partial) : recursion(partial);
+          }
+          error$1('Importing partial "' + name + '" is not found.');
+          break;
 
-          // 条件判断失败就没必要往下走了
-          case IF$1:
-          case ELSE_IF$1:
-            if (!executeExpression(expr)) {
-              return {
-                v: isAttrRendering || !nextNode || elseTypes[nextNode.type] ? FALSE : markNodes(createComment())
-              };
+        // 条件判断失败就没必要往下走了
+        case IF$1:
+        case ELSE_IF$1:
+          if (!executeExpression(expr)) {
+            return isAttrRendering || !nextNode || elseTypes[nextNode.type] ? FALSE : markNodes(createComment());
+          }
+          break;
+
+        case EACH$1:
+          var index = node.index,
+              children = node.children;
+
+          var value = executeExpression(expr);
+
+          var iterate = void 0;
+          if (array(value)) {
+            iterate = each;
+          } else if (object(value)) {
+            iterate = each$1;
+          } else {
+            return FALSE;
+          }
+
+          var list = [];
+
+          push(keys$$1, normalize(stringify$1(expr)));
+          context = context.push(value);
+
+          iterate(value, function (item, i) {
+            if (index) {
+              context.set(index, i);
             }
-            break;
 
-          case EACH$1:
-            var index = node.index,
-                children = node.children;
+            push(keys$$1, i);
+            context = context.push(item);
 
-            var value = executeExpression(expr);
-
-            var iterate = void 0;
-            if (array(value)) {
-              iterate = each;
-            } else if (object(value)) {
-              iterate = each$1;
-            } else {
-              return {
-                v: FALSE
-              };
-            }
-
-            var list = [];
-
-            push(keys$$1, normalize(stringify$1(expr)));
-            context = context.push(value);
-
-            iterate(value, function (item, i) {
-              if (index) {
-                context.set(index, i);
-              }
-
-              push(keys$$1, i);
-              context = context.push(item);
-
-              push(list, traverseList(children));
-
-              keys$$1.pop();
-              context = context.pop();
-            });
+            push(list, traverseList(children));
 
             keys$$1.pop();
             context = context.pop();
+          });
 
-            return {
-              v: markNodes(list)
-            };
+          keys$$1.pop();
+          context = context.pop();
 
-        }
-      }();
+          return markNodes(list);
 
-      if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
+      }
+
       if (attrTypes[type]) {
         isAttrRendering = TRUE;
       }
@@ -2983,95 +2942,71 @@ function render(ast, createComment, createElement, importTemplate, data) {
         isAttrRendering = FALSE;
       }
 
-      var _ret2 = function () {
-        switch (type) {
-          case TEXT:
-            return {
-              v: content
-            };
+      switch (type) {
+        case TEXT:
+          return content;
 
-          case EXPRESSION:
-            return {
-              v: executeExpression(node.expr)
-            };
+        case EXPRESSION:
+          return executeExpression(node.expr);
 
-          case ATTRIBUTE:
-            return {
-              v: {
+        case ATTRIBUTE:
+          return {
+            name: name,
+            keypath: keypath,
+            value: mergeNodes(children)
+          };
+
+        case DIRECTIVE:
+          return {
+            name: name,
+            modifier: modifier,
+            keypath: keypath,
+            value: mergeNodes(children)
+          };
+
+        case IF$1:
+        case ELSE_IF$1:
+        case ELSE$1:
+          return children;
+
+        case SPREAD$1:
+          content = executeExpression(node.expr);
+          if (object(content)) {
+            var list = [];
+            each$1(content, function (value, name) {
+              push(list, {
                 name: name,
-                keypath: keypath,
-                value: mergeNodes(children)
-              }
-            };
-
-          case DIRECTIVE:
-            return {
-              v: {
-                name: name,
-                modifier: modifier,
-                keypath: keypath,
-                value: mergeNodes(children)
-              }
-            };
-
-          case IF$1:
-          case ELSE_IF$1:
-          case ELSE$1:
-            return {
-              v: children
-            };
-
-          case SPREAD$1:
-            content = executeExpression(node.expr);
-            if (object(content)) {
-              var _ret3 = function () {
-                var list = [];
-                each$1(content, function (value, name) {
-                  push(list, {
-                    name: name,
-                    value: value,
-                    keypath: keypath
-                  });
-                });
-                return {
-                  v: {
-                    v: markNodes(list)
-                  }
-                };
-              }();
-
-              if ((typeof _ret3 === 'undefined' ? 'undefined' : _typeof(_ret3)) === "object") return _ret3.v;
-            }
-            break;
-
-          case ELEMENT:
-            var attributes = [],
-                directives = [];
-            if (attrs) {
-              each(attrs, function (node) {
-                if (has$1(node, 'modifier')) {
-                  if (node.name && node.modifier !== CHAR_BLANK) {
-                    push(directives, node);
-                  }
-                } else {
-                  push(attributes, node);
-                }
+                value: value,
+                keypath: keypath
               });
-            }
-            return {
-              v: createElement({
-                name: name,
-                keypath: keypath,
-                properties: properties,
-                attributes: attributes,
-                directives: directives,
-                children: children || []
-              }, component)
-            };
-        }
-      }();
+            });
+            return markNodes(list);
+          }
+          break;
 
-      if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
+        case ELEMENT:
+          var attributes = [],
+              directives = [];
+          if (attrs) {
+            each(attrs, function (node) {
+              if (has$1(node, 'modifier')) {
+                if (node.name && node.modifier !== CHAR_BLANK) {
+                  push(directives, node);
+                }
+              } else {
+                push(attributes, node);
+              }
+            });
+          }
+          return createElement({
+            name: name,
+            keypath: keypath,
+            properties: properties,
+            attributes: attributes,
+            directives: directives,
+            children: children || []
+          }, component);
+      }
     });
   };
 
@@ -3228,25 +3163,23 @@ function compile$$1(template) {
     if (pos == NULL) {
       msg += CHAR_DOT;
     } else {
-      (function () {
-        var line = 0,
-            col = 0,
-            index = 0;
-        each(template.split(CHAR_BREAKLINE), function (lineStr) {
-          line++;
-          col = 0;
+      var line = 0,
+          col = 0,
+          index = 0;
+      each(template.split(CHAR_BREAKLINE), function (lineStr) {
+        line++;
+        col = 0;
 
-          var length = lineStr.length;
+        var length = lineStr.length;
 
-          if (pos >= index && pos <= index + length) {
-            col = pos - index;
-            return FALSE;
-          }
+        if (pos >= index && pos <= index + length) {
+          col = pos - index;
+          return FALSE;
+        }
 
-          index += length;
-        });
-        msg += ', at line ' + line + ', col ' + col + '.';
-      })();
+        index += length;
+      });
+      msg += ', at line ' + line + ', col ' + col + '.';
     }
     error$1('' + msg + CHAR_BREAKLINE + template);
   };
@@ -3551,41 +3484,39 @@ var Observer = function () {
         }
 
         if (get$$1) {
-          (function () {
 
-            var watcher = function watcher() {
-              getter.$dirty = TRUE;
-            };
+          var watcher = function watcher() {
+            _getter.$dirty = TRUE;
+          };
 
-            var getter = function getter() {
-              var computedCache = instance.computedCache;
+          var _getter = function _getter() {
+            var computedCache = instance.computedCache;
 
-              if (!getter.$dirty) {
-                if (cache && has$1(computedCache, keypath)) {
-                  return computedCache[keypath];
-                }
-              } else {
-                delete getter.$dirty;
+            if (!_getter.$dirty) {
+              if (cache && has$1(computedCache, keypath)) {
+                return computedCache[keypath];
               }
+            } else {
+              delete _getter.$dirty;
+            }
 
-              if (!deps) {
-                instance.computedStack.push([]);
-              }
+            if (!deps) {
+              instance.computedStack.push([]);
+            }
 
-              var result = execute(get$$1, instance.context);
-              if (cache) {
-                computedCache[keypath] = result;
-              }
+            var result = execute(get$$1, instance.context);
+            if (cache) {
+              computedCache[keypath] = result;
+            }
 
-              var newDeps = deps || instance.computedStack.pop();
-              var oldDeps = instance.computedDeps[keypath];
-              instance.computedDeps[keypath] = instance.diff(newDeps, oldDeps, watcher);
+            var newDeps = deps || instance.computedStack.pop();
+            var oldDeps = instance.computedDeps[keypath];
+            instance.computedDeps[keypath] = instance.diff(newDeps, oldDeps, watcher);
 
-              return result;
-            };
+            return result;
+          };
 
-            getter.toString = instance.computedGetters[keypath] = getter;
-          })();
+          _getter.toString = instance.computedGetters[keypath] = _getter;
         }
 
         if (set$$1) {
@@ -3746,10 +3677,10 @@ var Observer = function () {
 
       if (sync) {
         instance.dispatch();
-      } else if (!instance.$waiting) {
-        instance.$waiting = TRUE;
+      } else if (!instance.waiting) {
+        instance.waiting = TRUE;
         add$1(function () {
-          delete instance.$waiting;
+          delete instance.waiting;
           instance.dispatch();
         });
       }
@@ -3770,34 +3701,31 @@ var Observer = function () {
   }, {
     key: 'diff',
     value: function diff(newKeypaths, oldKeypaths, watcher) {
-      var _this = this;
 
       if (newKeypaths !== oldKeypaths) {
-        (function () {
 
-          var instance = _this;
-          var computedDeps = instance.computedDeps;
+        var instance = this;
+        var computedDeps = instance.computedDeps;
 
 
-          var collection = [];
-          each(newKeypaths, function (keypath) {
-            collectDeps(collection, keypath, computedDeps);
-          });
+        var collection = [];
+        each(newKeypaths, function (keypath) {
+          collectDeps(collection, keypath, computedDeps);
+        });
 
-          oldKeypaths = oldKeypaths || [];
-          each(collection, function (keypath) {
-            if (!has(oldKeypaths, keypath)) {
-              instance.watch(keypath, watcher);
-            }
-          });
-          each(oldKeypaths, function (keypath) {
-            if (!has(collection, keypath)) {
-              instance.unwatch(keypath, watcher);
-            }
-          });
+        oldKeypaths = oldKeypaths || [];
+        each(collection, function (keypath) {
+          if (!has(oldKeypaths, keypath)) {
+            instance.watch(keypath, watcher);
+          }
+        });
+        each(oldKeypaths, function (keypath) {
+          if (!has(collection, keypath)) {
+            instance.unwatch(keypath, watcher);
+          }
+        });
 
-          newKeypaths = collection;
-        })();
+        newKeypaths = collection;
       }
 
       return newKeypaths;
@@ -5043,24 +4971,20 @@ var debounce = function (fn, delay, immediate) {
   var timer = void 0;
 
   return function () {
-    var _arguments = arguments;
-
 
     if (!timer) {
-      (function () {
 
-        var args = toArray(_arguments);
-        if (immediate) {
+      var args = toArray(arguments);
+      if (immediate) {
+        execute(fn, NULL, args);
+      }
+
+      timer = setTimeout(function () {
+        timer = NULL;
+        if (!immediate) {
           execute(fn, NULL, args);
         }
-
-        timer = setTimeout(function () {
-          timer = NULL;
-          if (!immediate) {
-            execute(fn, NULL, args);
-          }
-        }, delay);
-      })();
+      }, delay);
     }
   };
 };
@@ -5100,26 +5024,20 @@ var event = function (_ref) {
     }
 
     if (component) {
-      var _ret = function () {
-        var bind = function bind(component) {
-          component.on(type, listener);
-        };
+      var bind = function bind(component) {
+        component.on(type, listener);
+      };
+      if (array(component)) {
+        push(component, bind);
+      } else {
+        bind(component);
+      }
+      return function () {
+        component.off(type, listener);
         if (array(component)) {
-          push(component, bind);
-        } else {
-          bind(component);
+          remove(component, bind);
         }
-        return {
-          v: function v() {
-            component.off(type, listener);
-            if (array(component)) {
-              remove(component, bind);
-            }
-          }
-        };
-      }();
-
-      if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
+      };
     } else {
       api.on(el, type, listener);
       return function () {
@@ -5701,60 +5619,54 @@ var Yox = function () {
 
       var instance = this;
       if (indexOf$1(value, CHAR_OPAREN) > 0) {
-        var _ret = function () {
-          var ast = compile$1(value);
-          if (ast.type === CALL) {
-            return {
-              v: function v(event$$1) {
-                var isEvent = event$$1 instanceof Event;
-                var args = copy(ast.args);
-                if (!args.length) {
-                  if (isEvent) {
-                    push(args, event$$1);
-                  }
-                } else {
-                  args = args.map(function (node) {
-                    var name = node.name,
-                        type = node.type;
-
-                    if (type === LITERAL) {
-                      return node.value;
-                    }
-                    if (type === IDENTIFIER) {
-                      if (name === SPECIAL_EVENT) {
-                        if (isEvent) {
-                          return event$$1;
-                        }
-                      } else if (name === SPECIAL_KEYPATH) {
-                        return keypath;
-                      } else if (name === 'this') {
-                        return instance.get(keypath);
-                      }
-                    } else if (type === MEMBER) {
-                      name = stringify$1(node);
-                    }
-
-                    var result = instance.get(name, keypath);
-                    if (has$1(result, 'value')) {
-                      return result.value;
-                    }
-                  });
-                }
-                var name = stringify$1(ast.callee);
-                var fn = instance[name];
-                if (!fn) {
-                  var result = instance.get(name, keypath);
-                  if (has$1(result, 'value')) {
-                    fn = result.value;
-                  }
-                }
-                execute(fn, instance, args);
+        var ast = compile$1(value);
+        if (ast.type === CALL) {
+          return function (event$$1) {
+            var isEvent = event$$1 instanceof Event;
+            var args = copy(ast.args);
+            if (!args.length) {
+              if (isEvent) {
+                push(args, event$$1);
               }
-            };
-          }
-        }();
+            } else {
+              args = args.map(function (node) {
+                var name = node.name,
+                    type = node.type;
 
-        if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
+                if (type === LITERAL) {
+                  return node.value;
+                }
+                if (type === IDENTIFIER) {
+                  if (name === SPECIAL_EVENT) {
+                    if (isEvent) {
+                      return event$$1;
+                    }
+                  } else if (name === SPECIAL_KEYPATH) {
+                    return keypath;
+                  } else if (name === 'this') {
+                    return instance.get(keypath);
+                  }
+                } else if (type === MEMBER) {
+                  name = stringify$1(node);
+                }
+
+                var result = instance.get(name, keypath);
+                if (has$1(result, 'value')) {
+                  return result.value;
+                }
+              });
+            }
+            var name = stringify$1(ast.callee);
+            var fn = instance[name];
+            if (!fn) {
+              var result = instance.get(name, keypath);
+              if (has$1(result, 'value')) {
+                fn = result.value;
+              }
+            }
+            execute(fn, instance, args);
+          };
+        }
       } else {
         return function (event$$1, data) {
           if (event$$1.type !== value) {
@@ -5901,7 +5813,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.30.3';
+Yox.version = '0.30.4';
 
 /**
  * 工具，便于扩展、插件使用
@@ -6035,30 +5947,28 @@ Yox.validate = function (props, propTypes) {
       // 如果不写 type 或 type 不是 字符串 或 数组
       // 就当做此规则无效，和没写一样
       if (type) {
-        (function () {
-          var target = props[key],
-              matched = void 0;
-          // 比较类型
-          if (!falsy$1(type)) {
-            matched = is(target, type);
-          } else if (!falsy(type)) {
-            each(type, function (t) {
-              if (is(target, t)) {
-                matched = TRUE;
-                return FALSE;
-              }
-            });
-          } else if (func(type)) {
-            // 有时候做判断需要参考其他数据
-            // 比如当 a 有值时，b 可以为空之类的
-            matched = type(target, props);
-          }
-          if (matched === TRUE) {
-            result[key] = target;
-          } else if (required) {
-            warn('"' + key + '" prop is not matched.');
-          }
-        })();
+        var target = props[key],
+            matched = void 0;
+        // 比较类型
+        if (!falsy$1(type)) {
+          matched = is(target, type);
+        } else if (!falsy(type)) {
+          each(type, function (t) {
+            if (is(target, t)) {
+              matched = TRUE;
+              return FALSE;
+            }
+          });
+        } else if (func(type)) {
+          // 有时候做判断需要参考其他数据
+          // 比如当 a 有值时，b 可以为空之类的
+          matched = type(target, props);
+        }
+        if (matched === TRUE) {
+          result[key] = target;
+        } else if (required) {
+          warn('"' + key + '" prop is not matched.');
+        }
       }
     } else if (required) {
       warn('"' + key + '" prop is not found.');
