@@ -3486,18 +3486,18 @@ var Observer = function () {
         if (get$$1) {
 
           var watcher = function watcher() {
-            _getter.$dirty = TRUE;
+            _getter.dirty = TRUE;
           };
 
           var _getter = function _getter() {
             var computedCache = instance.computedCache;
 
-            if (!_getter.$dirty) {
+            if (!_getter.dirty) {
               if (cache && has$1(computedCache, keypath)) {
                 return computedCache[keypath];
               }
             } else {
-              delete _getter.$dirty;
+              delete _getter.dirty;
             }
 
             if (!deps) {
@@ -3786,7 +3786,7 @@ var Observer = function () {
 
       var instance = this;
 
-      instance.$watchEmitter.off();
+      instance.emitter.off();
 
       each$1(instance, function (value, key) {
         delete instance[key];
@@ -5813,7 +5813,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.30.4';
+Yox.version = '0.30.5';
 
 /**
  * 工具，便于扩展、插件使用

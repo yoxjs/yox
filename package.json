@@ -1,6 +1,6 @@
 {
   "name": "yox",
-  "version": "0.30.4",
+  "version": "0.30.5",
   "description": "A lightweight mvvm framework",
   "main": "dist/yox.min.js",
   "directories": {
@@ -42,5 +42,8 @@
   "bugs": {
     "url": "https://github.com/yoxjs/yox/issues"
   },
-  "homepage": "https://github.com/yoxjs/yox#readme"
+  "homepage": "https://github.com/yoxjs/yox#readme",
+  "dependencies": {
+    "yox-observer": "^0.4.3"
+  }
 }
