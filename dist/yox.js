@@ -55,7 +55,7 @@ function object(arg) {
   return arg && is(arg, 'object');
 }
 
-function string$1(arg) {
+function string(arg) {
   return is(arg, 'string');
 }
 
@@ -68,7 +68,7 @@ function boolean(arg) {
 }
 
 function primitive(arg) {
-  return string$1(arg) || number(arg) || boolean(arg) || arg == NULL;
+  return string(arg) || number(arg) || boolean(arg) || arg == NULL;
 }
 
 function numeric(arg) {
@@ -80,7 +80,7 @@ var is$1 = Object.freeze({
 	func: func,
 	array: array,
 	object: object,
-	string: string$1,
+	string: string,
 	number: number,
 	boolean: boolean,
 	primitive: primitive,
@@ -401,7 +401,7 @@ function capitalize(str) {
  * @return {boolean}
  */
 function falsy$1(str) {
-  return !string$1(str) || str === CHAR_BLANK;
+  return !string(str) || str === CHAR_BLANK;
 }
 
 /**
@@ -416,7 +416,7 @@ function falsy$1(str) {
  */
 function parse(str, separator, pair) {
   var result = [];
-  if (string$1(str)) {
+  if (string(str)) {
     var terms = void 0,
         key = void 0,
         value = void 0,
@@ -429,7 +429,7 @@ function parse(str, separator, pair) {
         item = {
           key: trim(key)
         };
-        if (string$1(value)) {
+        if (string(value)) {
           item.value = trim(value);
         }
         push(result, item);
@@ -479,7 +479,7 @@ function endsWith(str, part) {
   return offset >= 0 && str.lastIndexOf(part) === offset;
 }
 
-var string$2 = Object.freeze({
+var string$1 = Object.freeze({
 	camelCase: camelCase,
 	capitalize: capitalize,
 	falsy: falsy$1,
@@ -650,7 +650,7 @@ function get(object$$1, keypath) {
     };
   }
   // 不能以 . 开头
-  if (string$1(keypath) && indexOf$1(keypath, CHAR_DOT) > 0) {
+  if (string(keypath) && indexOf$1(keypath, CHAR_DOT) > 0) {
     var list = parse$1(keypath);
     for (var i = 0, len = list.length; i < len && object$$1; i++) {
       if (i < len - 1) {
@@ -673,7 +673,7 @@ function get(object$$1, keypath) {
  * @param {?boolean} autofill 是否自动填充不存在的对象，默认自动填充
  */
 function set(object$$1, keypath, value, autofill) {
-  if (string$1(keypath) && indexOf$1(keypath, CHAR_DOT) > 0) {
+  if (string(keypath) && indexOf$1(keypath, CHAR_DOT) > 0) {
     var originalObject = object$$1;
     var list = parse$1(keypath);
     var prop = list.pop();
@@ -834,7 +834,7 @@ var Store = function () {
         each$1(key, function (value, key) {
           data[key] = value;
         });
-      } else if (string$1(key)) {
+      } else if (string(key)) {
         data[key] = value;
       }
     }
@@ -903,7 +903,7 @@ var Emitter = function () {
 
       if (object(type)) {
         each$1(type, addListener);
-      } else if (string$1(type)) {
+      } else if (string(type)) {
         addListener(listener, type);
       }
     }
@@ -923,7 +923,7 @@ var Emitter = function () {
 
       if (object(type)) {
         each$1(type, addOnce);
-      } else if (string$1(type)) {
+      } else if (string(type)) {
         addOnce(listener, type);
       }
 
@@ -2867,7 +2867,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
         case IMPORT$1:
           var partial = partials[name] || importTemplate(name);
           if (partial) {
-            if (string$1(partial)) {
+            if (string(partial)) {
               partial = compile$$1(partial);
             } else if (partial.type === PARTIAL$1) {
               partial = partial.children;
@@ -3578,7 +3578,7 @@ var Observer = function () {
       var result = void 0;
       var suffixes = parse$1(keypath);
 
-      if (string$1(context)) {
+      if (string(context)) {
         var prefixes = parse$1(context);
         if (suffixes.length > 1 && suffixes[0] === 'this') {
           keypath = stringify(merge(prefixes, suffixes.slice(1)));
@@ -3827,7 +3827,7 @@ function createWatch(method) {
   return function (keypath, watcher, sync) {
 
     var watchers = keypath;
-    if (string$1(keypath)) {
+    if (string(keypath)) {
       watchers = {};
       watchers[keypath] = {
         sync: sync,
@@ -3873,16 +3873,16 @@ function matchKeypath(data, keypath) {
       rest = void 0;
 
   each(sort(data, TRUE), function (prefix, index) {
-    if (string.startsWith(keypath, prefix)) {
+    if (startsWith(keypath, prefix)) {
       value = data[prefix];
-      rest = string.slice(keypath, index);
+      rest = slice$1(keypath, index);
       return FALSE;
     }
   });
 
   return {
     value: value,
-    rest: rest && string.startsWith(rest, SEPARATOR_KEY) ? string.slice(rest, 1) : rest
+    rest: rest && startsWith(rest, SEPARATOR_KEY) ? slice$1(rest, 1) : rest
   };
 }
 
@@ -4331,7 +4331,7 @@ function init(modules) {
 
     if (array(children$$1)) {
       addVnodes(el, children$$1, 0, children$$1.length - 1, insertedQueue);
-    } else if (string$1(text$$1)) {
+    } else if (string(text$$1)) {
       api.append(el, api.createText(text$$1));
     }
 
@@ -4548,7 +4548,7 @@ function init(modules) {
     var oldText = oldVnode.text;
     var oldChildren = oldVnode.children;
 
-    if (string$1(newText)) {
+    if (string(newText)) {
       if (newText !== oldText) {
         api.text(el, newText);
       }
@@ -4561,7 +4561,7 @@ function init(modules) {
       }
       // 有新的没旧的 - 新增节点
       else if (newChildren) {
-          if (string$1(oldText)) {
+          if (string(oldText)) {
             api.text(el, CHAR_BLANK);
           }
           addVnodes(el, newChildren, 0, newChildren.length - 1, insertedQueue);
@@ -4571,7 +4571,7 @@ function init(modules) {
             removeVnodes(el, oldChildren, 0, oldChildren.length - 1);
           }
           // 有旧的 text 没有新的 text
-          else if (string$1(oldText)) {
+          else if (string(oldText)) {
               api.text(el, CHAR_BLANK);
             }
     }
@@ -4623,7 +4623,7 @@ var h = function (sel, data) {
         });
       }
     });
-  } else if (string$1(lastArg) && args.length > 1) {
+  } else if (string(lastArg) && args.length > 1) {
     text = lastArg;
   }
 
@@ -5299,7 +5299,7 @@ var Yox = function () {
     execute(options[AFTER_CREATE], instance);
 
     // 检查 template
-    if (string$1(template)) {
+    if (string(template)) {
       if (selector.test(template)) {
         template = api.html(api.find(template));
       }
@@ -5311,7 +5311,7 @@ var Yox = function () {
     }
 
     // 检查 el
-    if (string$1(el)) {
+    if (string(el)) {
       if (selector.test(el)) {
         el = api.find(el);
       }
@@ -5375,7 +5375,7 @@ var Yox = function () {
 
       var model$$1 = void 0,
           sync = void 0;
-      if (string$1(keypath)) {
+      if (string(keypath)) {
         model$$1 = {};
         model$$1[keypath] = value;
       } else if (object(keypath)) {
@@ -5442,7 +5442,7 @@ var Yox = function () {
       // 内部为了保持格式统一
       // 需要转成 Event，这样还能知道 target 是哪个组件
       var event$$1 = type;
-      if (string$1(type)) {
+      if (string(type)) {
         event$$1 = new Event(type);
       }
 
@@ -5813,7 +5813,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.30.5';
+Yox.version = '0.30.6';
 
 /**
  * 工具，便于扩展、插件使用
@@ -5822,7 +5822,7 @@ Yox.is = is$1;
 Yox.dom = api;
 Yox.array = array$1;
 Yox.object = object$1;
-Yox.string = string$2;
+Yox.string = string$1;
 Yox.logger = logger;
 Yox.Event = Event;
 Yox.Emitter = Emitter;
@@ -6001,7 +6001,7 @@ function magic(options) {
       value = args[1];
   if (object(key)) {
     execute(set$$1, NULL, key);
-  } else if (string$1(key)) {
+  } else if (string(key)) {
     var _args = args,
         length = _args.length;
 
