@@ -3635,7 +3635,7 @@ var Observer = function () {
 
           if (value) {
             value = value();
-            return rest && primitive(value) ? get(value, rest) : { value: value };
+            return rest && !primitive(value) ? get(value, rest) : { value: value };
           }
         }
 
@@ -5975,7 +5975,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.31.0';
+Yox.version = '0.31.1';
 
 /**
  * 工具，便于扩展、插件使用
