@@ -3942,7 +3942,7 @@ function matchKeypath(data, keypath) {
   each(sort(data, TRUE), function (prefix, index) {
     if (startsWith(keypath, prefix)) {
       value = data[prefix];
-      rest = slice$1(keypath, index);
+      rest = slice$1(keypath, prefix.length);
       return FALSE;
     }
   });
@@ -4412,7 +4412,7 @@ function init(modules) {
       push(list, '' + CHAR_HASH + id);
     }
     if (className) {
-      push(list, '' + CHAR_DOT + split(className, CHAR_BLANK).join(CHAR_DOT));
+      push(list, '' + CHAR_DOT + split(className, CHAR_WHITESPACE).join(CHAR_DOT));
     }
     return list.join(CHAR_BLANK);
   };
@@ -5975,7 +5975,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.30.6';
+Yox.version = '0.31.0';
 
 /**
  * 工具，便于扩展、插件使用
