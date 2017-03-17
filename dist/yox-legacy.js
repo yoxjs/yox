@@ -368,7 +368,6 @@ function codeAt(str) {
 }
 
 var CHAR_BLANK = '';
-var CHAR_ASTERISK = '*';
 
 var CHAR_DOT = '.';
 var CODE_DOT = codeAt(CHAR_DOT);
@@ -697,6 +696,17 @@ function copy(object$$1, deep) {
   return result;
 }
 
+// 如果函数改写了 toString，就调用 toString() 求值
+var toString$1 = Function.prototype.toString;
+
+
+function getValue(value) {
+  if (func(value) && value.toString !== toString$1) {
+    value = value.toString();
+  }
+  return value;
+}
+
 /**
  * 从对象中查找一个 keypath
  *
@@ -709,25 +719,25 @@ function copy(object$$1, deep) {
  */
 function get(object$$1, keypath) {
 
-  // object 的 key 可能是 'a.b.c' 这样的
-  // 如 data['a.b.c'] = 1 是一个合法赋值
-  if (has$1(object$$1, keypath)) {
-    return {
-      value: object$$1[keypath]
-    };
-  }
   // 不能以 . 开头
-  if (string(keypath) && indexOf$1(keypath, CHAR_DOT) > 0) {
+  if (!has$1(object$$1, keypath) && string(keypath) && indexOf$1(keypath, CHAR_DOT) > 0) {
     var list = parse$1(keypath);
-    for (var i = 0, len = list.length; i < len && object$$1; i++) {
+    for (var i = 0, len = list.length; i < len; i++) {
       if (i < len - 1) {
-        object$$1 = object$$1[list[i]];
-      } else if (has$1(object$$1, list[i])) {
-        return {
-          value: object$$1[list[i]]
-        };
+        object$$1 = getValue(object$$1[list[i]]);
+        if (primitive(object$$1)) {
+          return;
+        }
+      } else {
+        keypath = list[i];
       }
     }
+  }
+
+  if (has$1(object$$1, keypath)) {
+    return {
+      value: getValue(object$$1[keypath])
+    };
   }
 }
 
@@ -1083,7 +1093,7 @@ var Emitter = function () {
       each$1(listeners, function (list, key) {
         if (key === type) {
           return handler(list);
-        } else if (has$2(key, CHAR_ASTERISK)) {
+        } else if (has$2(key, '*')) {
           key = key.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)');
           var match = type.match(new RegExp('^' + key + '$'));
           if (match) {
@@ -2195,9 +2205,6 @@ var ATTRIBUTE = 11;
  */
 var TEXT = 12;
 
-// 如果函数改写了 toString，就调用 toString() 求值
-var toString$1 = Function.prototype.toString;
-
 /**
  * 如果取值/设值指定了 . 或 ..，表示无需 lookup，而是直接操作某个层级
  */
@@ -2322,13 +2329,9 @@ var Context = function () {
           }
         }
         if (has$1(cache, keypath)) {
-          var value = cache[keypath];
-          if (func(value) && value.toString !== toString$1) {
-            value = value.toString();
-          }
           return {
             keypath: keypath,
-            value: value
+            value: cache[keypath]
           };
         }
       }
@@ -5975,7 +5978,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.31.1';
+Yox.version = '0.31.2';
 
 /**
  * 工具，便于扩展、插件使用
