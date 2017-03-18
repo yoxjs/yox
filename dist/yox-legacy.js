@@ -3703,57 +3703,91 @@ var Observer = function () {
 
       var data = instance.data,
           cache = instance.cache,
+          buffer = instance.buffer,
           emitter = instance.emitter,
           computedGetters = instance.computedGetters,
           computedSetters = instance.computedSetters;
 
 
-      each$1(model, function (newValue, keypath) {
+      var updateModel = function updateModel(model) {
+        each$1(model, function (newValue, keypath) {
 
-        // 格式化成内部处理的格式
-        keypath = normalize(keypath);
+          // 格式化成内部处理的格式
+          keypath = normalize(keypath);
 
-        // 如果监听了这个 keypath
-        // 就要确保有一份可对比的数据
-        if (emitter.has(keypath) && !has$1(cache, keypath)) {
-          cache[keypath] = instance.get(keypath);
-        }
+          // 如果监听了这个 keypath
+          // 就要确保有一份可对比的数据
+          if (emitter.has(keypath) && !has$1(cache, keypath)) {
+            cache[keypath] = instance.get(keypath);
+          }
 
-        // 如果有计算属性，则优先处理它
-        if (computedSetters) {
-          var setter = computedSetters[keypath];
-          if (setter) {
-            setter.call(instance, newValue);
-            return;
-          } else {
-            var _matchKeypath2 = matchKeypath(computedGetters, keypath),
-                value = _matchKeypath2.value,
-                rest = _matchKeypath2.rest;
-
-            if (value && rest) {
-              value = value();
-              if (!primitive(value)) {
-                set(value, rest, newValue);
-              }
+          // 如果有计算属性，则优先处理它
+          if (computedSetters) {
+            var setter = computedSetters[keypath];
+            if (setter) {
+              setter.call(instance, newValue);
               return;
+            } else {
+              var _matchKeypath2 = matchKeypath(computedGetters, keypath),
+                  value = _matchKeypath2.value,
+                  rest = _matchKeypath2.rest;
+
+              if (value && rest) {
+                value = value();
+                if (!primitive(value)) {
+                  set(value, rest, newValue);
+                }
+                return;
+              }
             }
           }
-        }
 
-        // 普通数据
-        set(data, keypath, newValue);
-      });
-
-      instance.dispatched = FALSE;
-
-      if (sync) {
-        instance.dispatch();
-      } else if (!instance.waiting) {
-        instance.waiting = TRUE;
-        add$1(function () {
-          delete instance.waiting;
-          instance.dispatch();
+          // 普通数据
+          set(data, keypath, newValue);
         });
+      };
+
+      var dispatchSync = function dispatchSync() {
+        instance.dispatched = FALSE;
+        instance.dispatch();
+      };
+
+      var dispatchAsync = function dispatchAsync(callback) {
+        if (!instance.waiting) {
+          instance.waiting = TRUE;
+          add$1(function () {
+            delete instance.waiting;
+            callback && callback();
+            dispatchSync();
+          });
+        }
+      };
+
+      if (instance.dispatching) {
+        // dispatch 过程中的所有 set 操作都放入缓冲
+        // 在 nextTask 到来 或 当前 dispatch 结束之后清空 buffer
+        if (buffer) {
+          extend(buffer, model);
+        } else {
+          instance.buffer = model;
+        }
+        dispatchAsync(function () {
+          if (instance.buffer) {
+            updateModel(instance.buffer);
+            delete instance.buffer;
+          }
+        });
+      } else {
+        if (buffer) {
+          model = extend(buffer, model);
+          delete instance.buffer;
+        }
+        updateModel(model);
+        if (sync) {
+          dispatchSync();
+        } else {
+          dispatchAsync();
+        }
       }
     }
 
@@ -3815,17 +3849,20 @@ var Observer = function () {
       var cache = instance.cache,
           emitter = instance.emitter,
           context = instance.context,
+          dispatching = instance.dispatching,
           dispatched = instance.dispatched,
           computedDeps = instance.computedDeps,
           options = instance.options;
 
-      // 避免无谓的对比，提升性能
+      // 确保 dispatch 过程中不受干扰，能一次执行完
 
-      if (dispatched) {
+      if (dispatching || dispatched) {
         return;
       }
 
       execute(options.beforeDispatch, context);
+
+      instance.dispatching = TRUE;
 
       var collection = [];
 
@@ -3842,6 +3879,7 @@ var Observer = function () {
         }
       });
 
+      instance.dispatching = FALSE;
       instance.dispatched = TRUE;
 
       execute(options.afterDispatch, context);
@@ -5979,7 +6017,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.31.3';
+Yox.version = '0.31.4';
 
 /**
  * 工具，便于扩展、插件使用
