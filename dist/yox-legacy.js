@@ -1840,7 +1840,7 @@ function compile$1(content) {
     return codeAt(content, index);
   };
   var throwError = function throwError() {
-    error$1('Failed to compile expression: ' + CHAR_BREAKLINE + content);
+    throw new Error('Failed to compile expression: ' + CHAR_BREAKLINE + content);
   };
 
   var skipWhitespace = function skipWhitespace() {
@@ -2944,7 +2944,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
             }
             return array(partial) ? traverseList(partial) : recursion(partial);
           }
-          error$1('Importing partial "' + name + '" is not found.');
+          throw new Error('Importing partial "' + name + '" is not found.');
           break;
 
         // 条件判断失败就没必要往下走了
@@ -3252,7 +3252,7 @@ function compile$$1(template) {
       });
       msg += ', at line ' + line + ', col ' + col + '.';
     }
-    error$1('' + msg + CHAR_BREAKLINE + template);
+    throw new Error('' + msg + CHAR_BREAKLINE + template);
   };
 
   var pushStack = function pushStack(node) {
@@ -6017,7 +6017,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.31.4';
+Yox.version = '0.32.0';
 
 /**
  * 工具，便于扩展、插件使用
