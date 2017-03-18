@@ -362,10 +362,10 @@ export default class Yox {
       $options,
       $filters,
       $template,
-      $currentNode,
+      $node,
     } = instance
 
-    if ($currentNode) {
+    if ($node) {
       execute($options[ lifecycle.BEFORE_UPDATE ], instance)
     }
 
@@ -398,17 +398,17 @@ export default class Yox {
     instance.$viewDeps = $observer.diff(object.keys(deps), $viewDeps, $viewWatcher)
 
     let afterHook
-    if ($currentNode) {
+    if ($node) {
       afterHook = lifecycle.AFTER_UPDATE
-      $currentNode = vdom.patch($currentNode, node)
+      $node = vdom.patch($node, node)
     }
     else {
       afterHook = lifecycle.AFTER_MOUNT
-      $currentNode = vdom.patch(arguments[ 0 ], node)
-      instance.$el = $currentNode.el
+      $node = vdom.patch(arguments[ 0 ], node)
+      instance.$el = $node.el
     }
 
-    instance.$currentNode = $currentNode
+    instance.$node = $node
 
     execute($options[ afterHook ], instance)
 
@@ -516,7 +516,7 @@ export default class Yox {
       $parent,
       $children,
       $observer,
-      $currentNode,
+      $node,
       $eventEmitter,
     } = instance
 
@@ -536,9 +536,9 @@ export default class Yox {
       array.remove($parent.$children, instance)
     }
 
-    if ($currentNode) {
+    if ($node) {
       if (arguments[ 0 ] !== env.TRUE) {
-        vdom.patch($currentNode, { text: char.CHAR_BLANK })
+        vdom.patch($node, { text: char.CHAR_BLANK })
       }
     }
 
@@ -635,7 +635,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.31.2'
+Yox.version = '0.31.3'
 
 /**
  * 工具，便于扩展、插件使用

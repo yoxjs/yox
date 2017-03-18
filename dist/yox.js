@@ -2970,7 +2970,8 @@ function render(ast, createComment, createElement, importTemplate, data) {
         case IF$1:
         case ELSE_IF$1:
         case ELSE$1:
-          return children;
+          // 如果是空，也得是个空数组
+          return children !== UNDEFINED ? children : markNodes([]);
 
         case SPREAD$1:
           content = executeExpression(node.expr);
@@ -5546,10 +5547,10 @@ var Yox = function () {
           $options = instance.$options,
           $filters = instance.$filters,
           $template = instance.$template,
-          $currentNode = instance.$currentNode;
+          $node = instance.$node;
 
 
-      if ($currentNode) {
+      if ($node) {
         execute($options[BEFORE_UPDATE], instance);
       }
 
@@ -5581,16 +5582,16 @@ var Yox = function () {
       instance.$viewDeps = $observer.diff(keys(deps), $viewDeps, $viewWatcher);
 
       var afterHook = void 0;
-      if ($currentNode) {
+      if ($node) {
         afterHook = AFTER_UPDATE;
-        $currentNode = patch($currentNode, node);
+        $node = patch($node, node);
       } else {
         afterHook = AFTER_MOUNT;
-        $currentNode = patch(arguments[0], node);
-        instance.$el = $currentNode.el;
+        $node = patch(arguments[0], node);
+        instance.$el = $node.el;
       }
 
-      instance.$currentNode = $currentNode;
+      instance.$node = $node;
 
       execute($options[afterHook], instance);
     }
@@ -5695,7 +5696,7 @@ var Yox = function () {
           $parent = instance.$parent,
           $children = instance.$children,
           $observer = instance.$observer,
-          $currentNode = instance.$currentNode,
+          $node = instance.$node,
           $eventEmitter = instance.$eventEmitter;
 
 
@@ -5711,9 +5712,9 @@ var Yox = function () {
         remove($parent.$children, instance);
       }
 
-      if ($currentNode) {
+      if ($node) {
         if (arguments[0] !== TRUE) {
-          patch($currentNode, { text: CHAR_BLANK });
+          patch($node, { text: CHAR_BLANK });
         }
       }
 
@@ -5816,7 +5817,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.31.2';
+Yox.version = '0.31.3';
 
 /**
  * 工具，便于扩展、插件使用
