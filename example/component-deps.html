@@ -117,11 +117,27 @@
             components: {
                 Custom: Custom
             },
+            watchers: {
+                'user.age': function (value) {
+                    console.log('age changed');
+                    this.set('user.name', value - 1);
+                    this.set('user.title', value - 1);
+                },
+                'user.name': function (value) {
+                    console.log('name changed');
+                }
+            },
             events: {
                 increase: function (e) {
                     console.log(this === instance, e)
                     this.increase('user.age')
                 },
+            },
+            beforeUpdate: function () {
+                console.log('before update');
+            },
+            afterUpdate: function () {
+                console.log('after update');
             }
         });
 
