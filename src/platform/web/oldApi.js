@@ -4,6 +4,7 @@ import execute from 'yox-common/function/execute'
 import * as env from 'yox-common/util/env'
 import * as array from 'yox-common/util/array'
 import * as object from 'yox-common/util/object'
+import * as string from 'yox-common/util/string'
 
 import Event from 'yox-common/util/Event'
 
@@ -176,4 +177,11 @@ export function off(element, type, listener) {
 
 export function createEvent(event, element) {
   return new IEEvent(event, element)
+}
+
+export function find(selector, context) {
+  context = context || env.doc
+  return context.querySelector
+    ? context.querySelector(selector)
+    : context.getElementById(string.slice(selector, 1))
 }

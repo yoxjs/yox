@@ -11,7 +11,7 @@ import Emitter from 'yox-common/util/Emitter'
 let api = object.copy(domApi)
 
 // import * as oldApi from './oldApi'
-//
+
 // if (!env.doc.addEventListener) {
 //   object.extend(api, oldApi)
 // }

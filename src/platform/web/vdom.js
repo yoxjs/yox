@@ -1,7 +1,6 @@
 
 import * as snabbdom from 'yox-snabbdom'
 
-import h from 'yox-snabbdom/h'
 import Vnode from 'yox-snabbdom/Vnode'
 import style from 'yox-snabbdom/modules/style'
 import props from 'yox-snabbdom/modules/props'
@@ -34,7 +33,10 @@ export const patch = snabbdom.init([ attrs, props, style ], api)
 export function create(ast, context, instance) {
 
   let createComment = function (content) {
-    return h(Vnode.SEL_COMMENT, content)
+    return new Vnode({
+      sel: Vnode.SEL_COMMENT,
+      text: content,
+    })
   }
 
   let createElement = function (node, isComponent) {
@@ -44,6 +46,18 @@ export function create(ast, context, instance) {
     let data = {
       hook: hooks,
       props: node.properties,
+    }
+
+    let vnode = {
+      data,
+      sel: node.name,
+      children: node.children.map(
+        function (child) {
+          return child instanceof Vnode
+            ? child
+            : new Vnode({ text: toString(child) })
+        }
+      )
     }
 
     if (!isComponent) {
@@ -79,7 +93,7 @@ export function create(ast, context, instance) {
       function (node) {
         let { name, modifier } = node
         if (name === viewSyntax.KEYWORD_UNIQUE) {
-          data.key = node.value
+          vnode.key = node.value
         }
         else {
           name = modifier
@@ -95,7 +109,6 @@ export function create(ast, context, instance) {
     if (styles) {
       data.style = styles
     }
-
 
     setHook(
       hooks,
@@ -138,6 +151,7 @@ export function create(ast, context, instance) {
                     replace: env.TRUE,
                   }
                 )
+                nextVnode.el = component.$el;
                 array.each(
                   oldComponent,
                   function (callback) {
@@ -205,17 +219,7 @@ export function create(ast, context, instance) {
       }
     )
 
-    return h(
-      isComponent ? 'div' : node.name,
-      data,
-      node.children.map(
-        function (child) {
-          return child instanceof Vnode
-            ? child
-            : toString(child)
-        }
-      )
-    )
+    return new Vnode(vnode)
 
   }
 

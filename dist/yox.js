@@ -4138,7 +4138,7 @@ var domApi = Object.freeze({
 var api = copy(domApi);
 
 // import * as oldApi from './oldApi'
-//
+
 // if (!env.doc.addEventListener) {
 //   object.extend(api, oldApi)
 // }
@@ -4649,34 +4649,6 @@ function init(modules) {
   };
 }
 
-var h = function (sel, data) {
-
-  var children = void 0,
-      text = void 0;
-
-  var args = arguments;
-  var lastArg = last(args);
-  if (array(lastArg)) {
-    children = lastArg;
-    each(children, function (child, i) {
-      if (!(child instanceof Vnode)) {
-        children[i] = new Vnode({
-          text: child
-        });
-      }
-    });
-  } else if (string(lastArg) && args.length > 1) {
-    text = lastArg;
-  }
-
-  return new Vnode({
-    sel: sel,
-    text: text,
-    children: children,
-    data: object(data) ? data : {}
-  });
-};
-
 function updateStyle(oldVnode, vnode) {
 
   var oldStyle = oldVnode.data.style;
@@ -4803,7 +4775,10 @@ var patch = init([attrs, props, style], api);
 function create(ast, context, instance) {
 
   var createComment = function createComment(content) {
-    return h(Vnode.SEL_COMMENT, content);
+    return new Vnode({
+      sel: Vnode.SEL_COMMENT,
+      text: content
+    });
   };
 
   var createElement = function createElement(node, isComponent) {
@@ -4817,6 +4792,14 @@ function create(ast, context, instance) {
     var data = {
       hook: hooks,
       props: node.properties
+    };
+
+    var vnode = {
+      data: data,
+      sel: node.name,
+      children: node.children.map(function (child) {
+        return child instanceof Vnode ? child : new Vnode({ text: toString$2(child) });
+      })
     };
 
     if (!isComponent) {
@@ -4847,7 +4830,7 @@ function create(ast, context, instance) {
           modifier = node.modifier;
 
       if (name === KEYWORD_UNIQUE) {
-        data.key = node.value;
+        vnode.key = node.value;
       } else {
         name = modifier ? '' + name + CHAR_DOT + modifier : name;
         if (!directives[name]) {
@@ -4889,6 +4872,7 @@ function create(ast, context, instance) {
               props: toObject(node.attributes, 'name', 'value'),
               replace: TRUE
             });
+            nextVnode.el = component.$el;
             each(oldComponent, function (callback) {
               callback(component);
             });
@@ -4939,9 +4923,7 @@ function create(ast, context, instance) {
       setHook(hooks, noop);
     });
 
-    return h(isComponent ? 'div' : node.name, data, node.children.map(function (child) {
-      return child instanceof Vnode ? child : toString$2(child);
-    }));
+    return new Vnode(vnode);
   };
 
   var importTemplate = function importTemplate(name) {
@@ -5855,7 +5837,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.32.0';
+Yox.version = '0.32.1';
 
 /**
  * 工具，便于扩展、插件使用
