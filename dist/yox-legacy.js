@@ -3705,6 +3705,7 @@ var Observer = function () {
           cache = instance.cache,
           buffer = instance.buffer,
           emitter = instance.emitter,
+          context = instance.context,
           computedGetters = instance.computedGetters,
           computedSetters = instance.computedSetters;
 
@@ -3725,7 +3726,7 @@ var Observer = function () {
           if (computedSetters) {
             var setter = computedSetters[keypath];
             if (setter) {
-              setter.call(instance, newValue);
+              setter.call(context, newValue);
               return;
             } else {
               var _matchKeypath2 = matchKeypath(computedGetters, keypath),
@@ -6005,7 +6006,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.32.1';
+Yox.version = '0.32.2';
 
 /**
  * 工具，便于扩展、插件使用
