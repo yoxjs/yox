@@ -2,7 +2,7 @@
 
 Just like Vue, but it is more lightweight and easy than Vue.
 
-The key is that yox supports IE8.
+The key is that yox supports IE6.
 
 ```js
 {
