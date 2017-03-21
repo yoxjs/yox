@@ -18,6 +18,9 @@ const inputControl = {
   },
   sync({ el, keypath, instance }) {
     instance.set(keypath, el.value)
+  },
+  has({ attributes }) {
+    return object.has(attributes, 'value')
   }
 }
 
@@ -51,6 +54,9 @@ const radioControl = {
     if (el.checked) {
       instance.set(keypath, el.value)
     }
+  },
+  has({ attributes }) {
+    return object.has(attributes, 'checked')
   }
 }
 
@@ -75,6 +81,9 @@ const checkboxControl = {
     else {
       instance.set(keypath, el.checked)
     }
+  },
+  has({ attributes }) {
+    return object.has(attributes, 'checked')
   }
 }
 
@@ -82,6 +91,12 @@ const specialControls = {
   radio: radioControl,
   checkbox: checkboxControl,
   SELECT: selectControl,
+}
+
+function isValueBinding(tagName, controlType) {
+  return tagName === 'TEXTAREA'
+    || controlType === 'text'
+    || controlType === 'password'
 }
 
 export default function ({ el, node, instance, directives, attributes }) {
@@ -95,12 +110,7 @@ export default function ({ el, node, instance, directives, attributes }) {
   let control = specialControls[ controlType ] || specialControls[ tagName ]
   if (!control) {
     control = inputControl
-    if ('oninput' in el
-      // 为了兼容 IE8
-      || tagName === 'TEXTAREA'
-      || controlType === 'text'
-      || controlType === 'password'
-    ) {
+    if ('oninput' in el || isValueBinding(tagName, controlType)) {
       type = 'input'
     }
   }
@@ -109,19 +119,20 @@ export default function ({ el, node, instance, directives, attributes }) {
     el,
     keypath,
     instance,
+    attributes,
   }
 
   let set = function () {
     control.set(data)
   }
 
-  if (!object.has(attributes, 'value')) {
+  if (control.has && !control.has(data)) {
     set()
   }
 
   instance.watch(keypath, set)
 
-  return event({
+  let destroy = event({
     el,
     node,
     instance,
@@ -131,5 +142,10 @@ export default function ({ el, node, instance, directives, attributes }) {
       control.sync(data)
     }
   })
+
+  return function () {
+    instance.unwatch(keypath, set)
+    destroy && destroy()
+  }
 
 }

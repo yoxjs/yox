@@ -4858,6 +4858,9 @@ function create(ast, context, instance) {
       var oldComponent = payload.component;
       var oldDirectives = payload.directives;
 
+      var oldValue = payload.value;
+      var newValue = payload.value = instance.get(node.keypath);
+
       if (oldComponent) {
         component = oldComponent;
         if (object(component)) {
@@ -4894,23 +4897,32 @@ function create(ast, context, instance) {
       };
 
       each$1(directives, function (directive, key) {
-        if (vnode && oldDirectives) {
+        if (oldDirectives) {
           var oldDirective = oldDirectives[key];
-          if (oldDirective) {
-            if (oldDirective.value !== directive.value) {
-              if (destroies[key]) {
-                destroies[key]();
+          if (vnode) {
+            // 更新
+            if (oldDirective) {
+              if (oldDirective.value !== directive.value || oldValue !== newValue) {
+                if (destroies[key]) {
+                  destroies[key]();
+                }
+                destroies[key] = bind(key);
               }
-              destroies[key] = bind(key);
+              return;
             }
-            return;
           }
+          // 销毁就算了
+          else if (oldDirective) {
+              return;
+            }
         }
+        // 新增
         destroies[key] = bind(key);
       });
 
       if (oldDirectives) {
         each$1(oldDirectives, function (oldDirective, key) {
+          // 删掉元素或者删掉指令都要销毁指令
           if (destroies[key] && (!vnode || !directives[key])) {
             destroies[key]();
             delete destroies[key];
@@ -4920,8 +4932,6 @@ function create(ast, context, instance) {
 
       payload.attributes = attributes;
       payload.directives = directives;
-
-      setHook(hooks, noop);
     });
 
     return new Vnode(vnode);
@@ -5089,14 +5099,19 @@ var inputControl = {
         instance = _ref2.instance;
 
     instance.set(keypath, el.value);
+  },
+  has: function has$$1(_ref3) {
+    var attributes = _ref3.attributes;
+
+    return has$1(attributes, 'value');
   }
 };
 
 var selectControl = {
-  set: function set$$1(_ref3) {
-    var el = _ref3.el,
-        keypath = _ref3.keypath,
-        instance = _ref3.instance;
+  set: function set$$1(_ref4) {
+    var el = _ref4.el,
+        keypath = _ref4.keypath,
+        instance = _ref4.instance;
 
     var value = toString$2(instance.get(keypath));
     var options = el.options,
@@ -5111,10 +5126,10 @@ var selectControl = {
       });
     }
   },
-  sync: function sync(_ref4) {
-    var el = _ref4.el,
-        keypath = _ref4.keypath,
-        instance = _ref4.instance;
+  sync: function sync(_ref5) {
+    var el = _ref5.el,
+        keypath = _ref5.keypath,
+        instance = _ref5.instance;
     var value = el.options[el.selectedIndex].value;
 
     instance.set(keypath, value);
@@ -5122,37 +5137,42 @@ var selectControl = {
 };
 
 var radioControl = {
-  set: function set$$1(_ref5) {
-    var el = _ref5.el,
-        keypath = _ref5.keypath,
-        instance = _ref5.instance;
-
-    el.checked = el.value === toString$2(instance.get(keypath));
-  },
-  sync: function sync(_ref6) {
+  set: function set$$1(_ref6) {
     var el = _ref6.el,
         keypath = _ref6.keypath,
         instance = _ref6.instance;
 
-    if (el.checked) {
-      instance.set(keypath, el.value);
-    }
-  }
-};
-
-var checkboxControl = {
-  set: function set$$1(_ref7) {
+    el.checked = el.value === toString$2(instance.get(keypath));
+  },
+  sync: function sync(_ref7) {
     var el = _ref7.el,
         keypath = _ref7.keypath,
         instance = _ref7.instance;
 
+    if (el.checked) {
+      instance.set(keypath, el.value);
+    }
+  },
+  has: function has$$1(_ref8) {
+    var attributes = _ref8.attributes;
+
+    return has$1(attributes, 'checked');
+  }
+};
+
+var checkboxControl = {
+  set: function set$$1(_ref9) {
+    var el = _ref9.el,
+        keypath = _ref9.keypath,
+        instance = _ref9.instance;
+
     var value = instance.get(keypath);
     el.checked = array(value) ? has(value, el.value, FALSE) : boolean(value) ? value : !!value;
   },
-  sync: function sync(_ref8) {
-    var el = _ref8.el,
-        keypath = _ref8.keypath,
-        instance = _ref8.instance;
+  sync: function sync(_ref10) {
+    var el = _ref10.el,
+        keypath = _ref10.keypath,
+        instance = _ref10.instance;
 
     var value = instance.get(keypath);
     if (array(value)) {
@@ -5165,6 +5185,11 @@ var checkboxControl = {
     } else {
       instance.set(keypath, el.checked);
     }
+  },
+  has: function has$$1(_ref11) {
+    var attributes = _ref11.attributes;
+
+    return has$1(attributes, 'checked');
   }
 };
 
@@ -5174,12 +5199,16 @@ var specialControls = {
   SELECT: selectControl
 };
 
-var model = function (_ref9) {
-  var el = _ref9.el,
-      node = _ref9.node,
-      instance = _ref9.instance,
-      directives = _ref9.directives,
-      attributes = _ref9.attributes;
+function isValueBinding(tagName, controlType) {
+  return tagName === 'TEXTAREA' || controlType === 'text' || controlType === 'password';
+}
+
+var model = function (_ref12) {
+  var el = _ref12.el,
+      node = _ref12.node,
+      instance = _ref12.instance,
+      directives = _ref12.directives,
+      attributes = _ref12.attributes;
 
   var _instance$get = instance.get(node.value, node.keypath),
       keypath = _instance$get.keypath;
@@ -5190,9 +5219,7 @@ var model = function (_ref9) {
   var control = specialControls[controlType] || specialControls[tagName];
   if (!control) {
     control = inputControl;
-    if ('oninput' in el
-    // 为了兼容 IE8
-    || tagName === 'TEXTAREA' || controlType === 'text' || controlType === 'password') {
+    if ('oninput' in el || isValueBinding(tagName, controlType)) {
       type = 'input';
     }
   }
@@ -5200,20 +5227,21 @@ var model = function (_ref9) {
   var data = {
     el: el,
     keypath: keypath,
-    instance: instance
+    instance: instance,
+    attributes: attributes
   };
 
   var set$$1 = function set$$1() {
     control.set(data);
   };
 
-  if (!has$1(attributes, 'value')) {
+  if (control.has && !control.has(data)) {
     set$$1();
   }
 
   instance.watch(keypath, set$$1);
 
-  return event({
+  var destroy = event({
     el: el,
     node: node,
     instance: instance,
@@ -5223,6 +5251,11 @@ var model = function (_ref9) {
       control.sync(data);
     }
   });
+
+  return function () {
+    instance.unwatch(keypath, set$$1);
+    destroy && destroy();
+  };
 };
 
 var Yox = function () {
@@ -5838,7 +5871,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.32.2';
+Yox.version = '0.32.3';
 
 /**
  * 工具，便于扩展、插件使用

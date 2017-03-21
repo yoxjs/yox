@@ -126,6 +126,9 @@ export function create(ast, context, instance) {
         let oldComponent = payload.component
         let oldDirectives = payload.directives
 
+        let oldValue = payload.value
+        let newValue = payload.value = instance.get(node.keypath)
+
         if (oldComponent) {
           component = oldComponent
           if (is.object(component)) {
@@ -183,18 +186,28 @@ export function create(ast, context, instance) {
         object.each(
           directives,
           function (directive, key) {
-            if (vnode && oldDirectives) {
+            if (oldDirectives) {
               let oldDirective = oldDirectives[ key ]
-              if (oldDirective) {
-                if (oldDirective.value !== directive.value) {
-                  if (destroies[ key ]) {
-                    destroies[ key ]()
+              if (vnode) {
+                // 更新
+                if (oldDirective) {
+                  if (oldDirective.value !== directive.value
+                    || oldValue !== newValue
+                  ) {
+                    if (destroies[ key ]) {
+                      destroies[ key ]()
+                    }
+                    destroies[ key ] = bind(key)
                   }
-                  destroies[ key ] = bind(key)
+                  return
                 }
+              }
+              // 销毁就算了
+              else if (oldDirective) {
                 return
               }
             }
+            // 新增
             destroies[ key ] = bind(key)
           }
         )
@@ -203,6 +216,7 @@ export function create(ast, context, instance) {
           object.each(
             oldDirectives,
             function (oldDirective, key) {
+              // 删掉元素或者删掉指令都要销毁指令
               if (destroies[ key ] && (!vnode || !directives[ key ])) {
                 destroies[ key ]()
                 delete destroies[ key ]
@@ -213,8 +227,6 @@ export function create(ast, context, instance) {
 
         payload.attributes = attributes
         payload.directives = directives
-
-        setHook(hooks, env.noop)
 
       }
     )

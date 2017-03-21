@@ -16,10 +16,12 @@
                 },
                 users: [
                     {
-                        name: 'Jake'
+                        name: 'Jake',
+                        checked: true,
                     },
                     {
-                        name: 'John'
+                        name: 'John',
+                        checked: false,
                     },
                     {
                         name: 'Mike'
@@ -46,7 +48,16 @@
                 '*': function () {
                     console.log('*', arguments);
                 },
-
+                'users.*.checked': {
+                    watcher: function () {
+                        console.log('users.*.checked', arguments)
+                    }
+                },
+                'users.1.checked': {
+                    watcher: function () {
+                        console.log('users.1.checked', arguments)
+                    }
+                },
                 'user.age': {
                     watcher: function () {
                         console.log('user.age', arguments)
