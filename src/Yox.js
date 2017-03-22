@@ -48,13 +48,13 @@ export default class Yox {
       replace,
       computed,
       template,
-      watchers,
       components,
       directives,
-      events,
-      filters,
-      methods,
       partials,
+      filters,
+      watchers,
+      events,
+      methods,
       propTypes,
       extensions,
     } = options
@@ -87,14 +87,13 @@ export default class Yox {
 
         let {
           $dirty,
-          $dirtyIgnore,
           $children,
         } = instance
 
         if ($dirty) {
           delete instance.$dirty
         }
-        if ($dirtyIgnore) {
+        if (instance.$dirtyIgnore) {
           delete instance.$dirtyIgnore
           return
         }
@@ -190,8 +189,8 @@ export default class Yox {
 
     components && instance.component(components)
     directives && instance.directive(directives)
-    filters && instance.filter(filters)
     partials && instance.partial(partials)
+    filters && instance.filter(filters)
 
     if (template) {
       instance.$viewWatcher = function () {
@@ -356,12 +355,9 @@ export default class Yox {
     let instance = this
 
     let {
-      $viewDeps,
-      $viewWatcher,
       $observer,
       $options,
       $filters,
-      $template,
       $node,
     } = instance
 
@@ -394,8 +390,8 @@ export default class Yox {
     // 而且让 data 中的函数完全动态化说不定还是一个好设计呢
     object.extend(context, $observer.data, $observer.computedGetters)
 
-    let { node, deps } = vdom.create($template, context, instance)
-    instance.$viewDeps = $observer.diff(object.keys(deps), $viewDeps, $viewWatcher)
+    let { node, deps } = vdom.create(instance.$template, context, instance)
+    instance.$viewDeps = $observer.diff(object.keys(deps), instance.$viewDeps, instance.$viewWatcher)
 
     let afterHook
     if ($node) {
@@ -513,24 +509,13 @@ export default class Yox {
 
     let {
       $options,
-      $parent,
-      $children,
-      $observer,
       $node,
+      $parent,
+      $observer,
       $eventEmitter,
     } = instance
 
     execute($options[ lifecycle.BEFORE_DESTROY ], instance)
-
-    if ($children) {
-      array.each(
-        $children,
-        function (child) {
-          child.destroy()
-        },
-        env.TRUE
-      )
-    }
 
     if ($parent && $parent.$children) {
       array.remove($parent.$children, instance)
@@ -543,7 +528,6 @@ export default class Yox {
     }
 
     $eventEmitter.off()
-
     $observer.destroy()
 
     object.each(
@@ -635,7 +619,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.32.3'
+Yox.version = '0.33.0'
 
 /**
  * 工具，便于扩展、插件使用
@@ -683,7 +667,7 @@ function parseRegisterArguments(type, args) {
 array.each(
   array.merge(
     supportRegisterAsync,
-    [ 'directive', 'filter', 'partial' ]
+    [ 'directive', 'partial', 'filter' ]
   ),
   function (type) {
     prototype[ type ] = function () {

@@ -11,6 +11,7 @@ import * as string from 'yox-common/util/string'
 import * as logger from 'yox-common/util/logger'
 
 export default function ({ el, node, instance, component }) {
+
   let { value } = node
   if (string.falsy(value)) {
     return

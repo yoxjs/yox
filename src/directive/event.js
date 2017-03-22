@@ -2,7 +2,6 @@
 import debounce from 'yox-common/function/debounce'
 
 import * as is from 'yox-common/util/is'
-import * as env from 'yox-common/util/env'
 import * as array from 'yox-common/util/array'
 
 import api from '../platform/web/api'

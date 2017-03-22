@@ -19,9 +19,7 @@ const inputControl = {
   sync({ el, keypath, instance }) {
     instance.set(keypath, el.value)
   },
-  has({ attributes }) {
-    return object.has(attributes, 'value')
-  }
+  attr: 'value',
 }
 
 const selectControl = {
@@ -55,9 +53,7 @@ const radioControl = {
       instance.set(keypath, el.value)
     }
   },
-  has({ attributes }) {
-    return object.has(attributes, 'checked')
-  }
+  attr: 'checked'
 }
 
 const checkboxControl = {
@@ -82,21 +78,13 @@ const checkboxControl = {
       instance.set(keypath, el.checked)
     }
   },
-  has({ attributes }) {
-    return object.has(attributes, 'checked')
-  }
+  attr: 'checked'
 }
 
 const specialControls = {
   radio: radioControl,
   checkbox: checkboxControl,
   SELECT: selectControl,
-}
-
-function isValueBinding(tagName, controlType) {
-  return tagName === 'TEXTAREA'
-    || controlType === 'text'
-    || controlType === 'password'
 }
 
 export default function ({ el, node, instance, directives, attributes }) {
@@ -110,7 +98,11 @@ export default function ({ el, node, instance, directives, attributes }) {
   let control = specialControls[ controlType ] || specialControls[ tagName ]
   if (!control) {
     control = inputControl
-    if ('oninput' in el || isValueBinding(tagName, controlType)) {
+    if ('oninput' in el
+      || tagName === 'TEXTAREA'
+      || controlType === 'text'
+      || controlType === 'password'
+    ) {
       type = 'input'
     }
   }
@@ -119,14 +111,13 @@ export default function ({ el, node, instance, directives, attributes }) {
     el,
     keypath,
     instance,
-    attributes,
   }
 
   let set = function () {
     control.set(data)
   }
 
-  if (control.has && !control.has(data)) {
+  if (control.attr && !object.has(attributes, control.attr)) {
     set()
   }
 

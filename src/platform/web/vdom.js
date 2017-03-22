@@ -2,9 +2,9 @@
 import * as snabbdom from 'yox-snabbdom'
 
 import Vnode from 'yox-snabbdom/Vnode'
-import style from 'yox-snabbdom/modules/style'
-import props from 'yox-snabbdom/modules/props'
 import attrs from 'yox-snabbdom/modules/attrs'
+import props from 'yox-snabbdom/modules/props'
+import style from 'yox-snabbdom/modules/style'
 
 import execute from 'yox-common/function/execute'
 import toString from 'yox-common/function/toString'
@@ -132,10 +132,15 @@ export function create(ast, context, instance) {
         if (oldComponent) {
           component = oldComponent
           if (is.object(component)) {
-            component.set(
-              array.toObject(node.attributes, 'name', 'value'),
-              env.TRUE
-            )
+            if (vnode) {
+              component.set(
+                array.toObject(node.attributes, 'name', 'value'),
+                env.TRUE
+              )
+            }
+            else {
+              component.destroy()
+            }
           }
         }
         else if (isComponent) {
@@ -169,7 +174,7 @@ export function create(ast, context, instance) {
 
         let bind = function (key) {
           let node = directives[ key ]
-          return execute(
+          destroies[ key ] = execute(
             instance.directive(node.name),
             env.NULL,
             {
@@ -181,6 +186,13 @@ export function create(ast, context, instance) {
               component,
             }
           )
+        }
+
+        let unbind = function (key) {
+          if (destroies[ key ]) {
+            destroies[ key ]()
+            delete destroies[ key ]
+          }
         }
 
         object.each(
@@ -197,18 +209,19 @@ export function create(ast, context, instance) {
                     if (destroies[ key ]) {
                       destroies[ key ]()
                     }
-                    destroies[ key ] = bind(key)
+                    bind(key)
                   }
                   return
                 }
               }
-              // 销毁就算了
+              // 销毁
               else if (oldDirective) {
+                unbind(key)
                 return
               }
             }
             // 新增
-            destroies[ key ] = bind(key)
+            bind(key)
           }
         )
 
@@ -217,9 +230,8 @@ export function create(ast, context, instance) {
             oldDirectives,
             function (oldDirective, key) {
               // 删掉元素或者删掉指令都要销毁指令
-              if (destroies[ key ] && (!vnode || !directives[ key ])) {
-                destroies[ key ]()
-                delete destroies[ key ]
+              if (!vnode || !directives[ key ]) {
+                unbind(key)
               }
             }
           )
