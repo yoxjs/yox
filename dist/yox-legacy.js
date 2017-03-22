@@ -4,7 +4,6 @@
 	(global.Yox = factory());
 }(this, (function () { 'use strict';
 
-
 if (!Object.keys) {
   Object.keys = function (obj) {
     var result = [];
@@ -4819,72 +4818,6 @@ function init(modules) {
   };
 }
 
-function updateStyle(oldVnode, vnode) {
-
-  var oldStyle = oldVnode.data.style;
-  var newStyle = vnode.data.style;
-
-  if (!oldStyle && !newStyle) {
-    return;
-  }
-
-  oldStyle = oldStyle || {};
-  newStyle = newStyle || {};
-
-  var style = vnode.el.style;
-
-
-  each$1(newStyle, function (value, name) {
-    if (value !== oldStyle[name]) {
-      style[name] = value;
-    }
-  });
-
-  each$1(oldStyle, function (value, name) {
-    if (!has$1(newStyle, name)) {
-      style[name] = CHAR_BLANK;
-    }
-  });
-}
-
-var style = {
-  create: updateStyle,
-  update: updateStyle
-};
-
-function updateProps(oldVnode, vnode) {
-
-  var oldProps = oldVnode.data.props;
-  var newProps = vnode.data.props;
-
-  if (!oldProps && !newProps) {
-    return;
-  }
-
-  oldProps = oldProps || {};
-  newProps = newProps || {};
-
-  var el = vnode.el;
-
-
-  each$1(newProps, function (value, name) {
-    if (value !== oldProps[name]) {
-      el[name] = value;
-    }
-  });
-
-  each$1(oldProps, function (value, name) {
-    if (!has$1(newProps, name)) {
-      delete el[name];
-    }
-  });
-}
-
-var props = {
-  create: updateProps,
-  update: updateProps
-};
-
 var booleanLiteral = 'allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare' + 'default,defaultchecked,defaultmuted,defaultselected,defer,disabled,draggable' + 'enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple' + 'muted,nohref,noresize,noshade,novalidate,nowrap,open,pauseonexit,readonly' + 'required,reversed,scoped,seamless,selected,sortable,spellcheck,translate' + 'truespeed,typemustmatch,visible';
 
 var booleanMap = toObject(split(booleanLiteral, CHAR_COMMA));
@@ -4924,6 +4857,72 @@ function updateAttrs(oldVnode, vnode) {
 var attrs = {
   create: updateAttrs,
   update: updateAttrs
+};
+
+function updateProps(oldVnode, vnode) {
+
+  var oldProps = oldVnode.data.props;
+  var newProps = vnode.data.props;
+
+  if (!oldProps && !newProps) {
+    return;
+  }
+
+  oldProps = oldProps || {};
+  newProps = newProps || {};
+
+  var el = vnode.el;
+
+
+  each$1(newProps, function (value, name) {
+    if (value !== oldProps[name]) {
+      el[name] = value;
+    }
+  });
+
+  each$1(oldProps, function (value, name) {
+    if (!has$1(newProps, name)) {
+      delete el[name];
+    }
+  });
+}
+
+var props = {
+  create: updateProps,
+  update: updateProps
+};
+
+function updateStyle(oldVnode, vnode) {
+
+  var oldStyle = oldVnode.data.style;
+  var newStyle = vnode.data.style;
+
+  if (!oldStyle && !newStyle) {
+    return;
+  }
+
+  oldStyle = oldStyle || {};
+  newStyle = newStyle || {};
+
+  var style = vnode.el.style;
+
+
+  each$1(newStyle, function (value, name) {
+    if (value !== oldStyle[name]) {
+      style[name] = value;
+    }
+  });
+
+  each$1(oldStyle, function (value, name) {
+    if (!has$1(newStyle, name)) {
+      style[name] = CHAR_BLANK;
+    }
+  });
+}
+
+var style = {
+  create: updateStyle,
+  update: updateStyle
 };
 
 var toString$2 = function (str) {
@@ -5033,7 +5032,11 @@ function create(ast, context, instance) {
       if (oldComponent) {
         component = oldComponent;
         if (object(component)) {
-          component.set(toObject(node.attributes, 'name', 'value'), TRUE);
+          if (vnode) {
+            component.set(toObject(node.attributes, 'name', 'value'), TRUE);
+          } else {
+            component.destroy();
+          }
         }
       } else if (isComponent) {
         component = payload.component = [];
@@ -5055,7 +5058,7 @@ function create(ast, context, instance) {
 
       var bind = function bind(key) {
         var node = directives[key];
-        return execute(instance.directive(node.name), NULL, {
+        destroies[key] = execute(instance.directive(node.name), NULL, {
           el: nextVnode.el,
           node: node,
           instance: instance,
@@ -5063,6 +5066,13 @@ function create(ast, context, instance) {
           attributes: attributes,
           component: component
         });
+      };
+
+      var unbind = function unbind(key) {
+        if (destroies[key]) {
+          destroies[key]();
+          delete destroies[key];
+        }
       };
 
       each$1(directives, function (directive, key) {
@@ -5075,26 +5085,26 @@ function create(ast, context, instance) {
                 if (destroies[key]) {
                   destroies[key]();
                 }
-                destroies[key] = bind(key);
+                bind(key);
               }
               return;
             }
           }
-          // 销毁就算了
+          // 销毁
           else if (oldDirective) {
+              unbind(key);
               return;
             }
         }
         // 新增
-        destroies[key] = bind(key);
+        bind(key);
       });
 
       if (oldDirectives) {
         each$1(oldDirectives, function (oldDirective, key) {
           // 删掉元素或者删掉指令都要销毁指令
-          if (destroies[key] && (!vnode || !directives[key])) {
-            destroies[key]();
-            delete destroies[key];
+          if (!vnode || !directives[key]) {
+            unbind(key);
           }
         });
       }
@@ -5269,18 +5279,15 @@ var inputControl = {
 
     instance.set(keypath, el.value);
   },
-  has: function has$$1(_ref3) {
-    var attributes = _ref3.attributes;
 
-    return has$1(attributes, 'value');
-  }
+  attr: 'value'
 };
 
 var selectControl = {
-  set: function set$$1(_ref4) {
-    var el = _ref4.el,
-        keypath = _ref4.keypath,
-        instance = _ref4.instance;
+  set: function set$$1(_ref3) {
+    var el = _ref3.el,
+        keypath = _ref3.keypath,
+        instance = _ref3.instance;
 
     var value = toString$2(instance.get(keypath));
     var options = el.options,
@@ -5295,10 +5302,10 @@ var selectControl = {
       });
     }
   },
-  sync: function sync(_ref5) {
-    var el = _ref5.el,
-        keypath = _ref5.keypath,
-        instance = _ref5.instance;
+  sync: function sync(_ref4) {
+    var el = _ref4.el,
+        keypath = _ref4.keypath,
+        instance = _ref4.instance;
     var value = el.options[el.selectedIndex].value;
 
     instance.set(keypath, value);
@@ -5306,42 +5313,39 @@ var selectControl = {
 };
 
 var radioControl = {
-  set: function set$$1(_ref6) {
-    var el = _ref6.el,
-        keypath = _ref6.keypath,
-        instance = _ref6.instance;
+  set: function set$$1(_ref5) {
+    var el = _ref5.el,
+        keypath = _ref5.keypath,
+        instance = _ref5.instance;
 
     el.checked = el.value === toString$2(instance.get(keypath));
   },
-  sync: function sync(_ref7) {
-    var el = _ref7.el,
-        keypath = _ref7.keypath,
-        instance = _ref7.instance;
+  sync: function sync(_ref6) {
+    var el = _ref6.el,
+        keypath = _ref6.keypath,
+        instance = _ref6.instance;
 
     if (el.checked) {
       instance.set(keypath, el.value);
     }
   },
-  has: function has$$1(_ref8) {
-    var attributes = _ref8.attributes;
 
-    return has$1(attributes, 'checked');
-  }
+  attr: 'checked'
 };
 
 var checkboxControl = {
-  set: function set$$1(_ref9) {
-    var el = _ref9.el,
-        keypath = _ref9.keypath,
-        instance = _ref9.instance;
+  set: function set$$1(_ref7) {
+    var el = _ref7.el,
+        keypath = _ref7.keypath,
+        instance = _ref7.instance;
 
     var value = instance.get(keypath);
     el.checked = array(value) ? has(value, el.value, FALSE) : boolean(value) ? value : !!value;
   },
-  sync: function sync(_ref10) {
-    var el = _ref10.el,
-        keypath = _ref10.keypath,
-        instance = _ref10.instance;
+  sync: function sync(_ref8) {
+    var el = _ref8.el,
+        keypath = _ref8.keypath,
+        instance = _ref8.instance;
 
     var value = instance.get(keypath);
     if (array(value)) {
@@ -5355,11 +5359,8 @@ var checkboxControl = {
       instance.set(keypath, el.checked);
     }
   },
-  has: function has$$1(_ref11) {
-    var attributes = _ref11.attributes;
 
-    return has$1(attributes, 'checked');
-  }
+  attr: 'checked'
 };
 
 var specialControls = {
@@ -5368,16 +5369,12 @@ var specialControls = {
   SELECT: selectControl
 };
 
-function isValueBinding(tagName, controlType) {
-  return tagName === 'TEXTAREA' || controlType === 'text' || controlType === 'password';
-}
-
-var model = function (_ref12) {
-  var el = _ref12.el,
-      node = _ref12.node,
-      instance = _ref12.instance,
-      directives = _ref12.directives,
-      attributes = _ref12.attributes;
+var model = function (_ref9) {
+  var el = _ref9.el,
+      node = _ref9.node,
+      instance = _ref9.instance,
+      directives = _ref9.directives,
+      attributes = _ref9.attributes;
 
   var _instance$get = instance.get(node.value, node.keypath),
       keypath = _instance$get.keypath;
@@ -5388,7 +5385,7 @@ var model = function (_ref12) {
   var control = specialControls[controlType] || specialControls[tagName];
   if (!control) {
     control = inputControl;
-    if ('oninput' in el || isValueBinding(tagName, controlType)) {
+    if ('oninput' in el || tagName === 'TEXTAREA' || controlType === 'text' || controlType === 'password') {
       type = 'input';
     }
   }
@@ -5396,15 +5393,14 @@ var model = function (_ref12) {
   var data = {
     el: el,
     keypath: keypath,
-    instance: instance,
-    attributes: attributes
+    instance: instance
   };
 
   var set$$1 = function set$$1() {
     control.set(data);
   };
 
-  if (control.has && !control.has(data)) {
+  if (control.attr && !has$1(attributes, control.attr)) {
     set$$1();
   }
 
@@ -5446,13 +5442,13 @@ var Yox = function () {
         replace = options.replace,
         computed = options.computed,
         template = options.template,
-        watchers = options.watchers,
         components = options.components,
         directives = options.directives,
-        events = options.events,
-        filters = options.filters,
-        methods = options.methods,
         partials = options.partials,
+        filters = options.filters,
+        watchers = options.watchers,
+        events = options.events,
+        methods = options.methods,
         propTypes = options.propTypes,
         extensions = options.extensions;
 
@@ -5482,14 +5478,13 @@ var Yox = function () {
       computed: computed,
       afterDispatch: function afterDispatch() {
         var $dirty = instance.$dirty,
-            $dirtyIgnore = instance.$dirtyIgnore,
             $children = instance.$children;
 
 
         if ($dirty) {
           delete instance.$dirty;
         }
-        if ($dirtyIgnore) {
+        if (instance.$dirtyIgnore) {
           delete instance.$dirtyIgnore;
           return;
         }
@@ -5569,8 +5564,8 @@ var Yox = function () {
 
     components && instance.component(components);
     directives && instance.directive(directives);
-    filters && instance.filter(filters);
     partials && instance.partial(partials);
+    filters && instance.filter(filters);
 
     if (template) {
       instance.$viewWatcher = function () {
@@ -5764,12 +5759,9 @@ var Yox = function () {
 
       var instance = this;
 
-      var $viewDeps = instance.$viewDeps,
-          $viewWatcher = instance.$viewWatcher,
-          $observer = instance.$observer,
+      var $observer = instance.$observer,
           $options = instance.$options,
           $filters = instance.$filters,
-          $template = instance.$template,
           $node = instance.$node;
 
 
@@ -5798,11 +5790,11 @@ var Yox = function () {
       // 而且让 data 中的函数完全动态化说不定还是一个好设计呢
       extend(context, $observer.data, $observer.computedGetters);
 
-      var _vdom$create = create($template, context, instance),
+      var _vdom$create = create(instance.$template, context, instance),
           node = _vdom$create.node,
           deps = _vdom$create.deps;
 
-      instance.$viewDeps = $observer.diff(keys(deps), $viewDeps, $viewWatcher);
+      instance.$viewDeps = $observer.diff(keys(deps), instance.$viewDeps, instance.$viewWatcher);
 
       var afterHook = void 0;
       if ($node) {
@@ -5916,20 +5908,13 @@ var Yox = function () {
       var instance = this;
 
       var $options = instance.$options,
-          $parent = instance.$parent,
-          $children = instance.$children,
-          $observer = instance.$observer,
           $node = instance.$node,
+          $parent = instance.$parent,
+          $observer = instance.$observer,
           $eventEmitter = instance.$eventEmitter;
 
 
       execute($options[BEFORE_DESTROY], instance);
-
-      if ($children) {
-        each($children, function (child) {
-          child.destroy();
-        }, TRUE);
-      }
 
       if ($parent && $parent.$children) {
         remove($parent.$children, instance);
@@ -5942,7 +5927,6 @@ var Yox = function () {
       }
 
       $eventEmitter.off();
-
       $observer.destroy();
 
       each$1(instance, function (value, key) {
@@ -6040,7 +6024,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.32.3';
+Yox.version = '0.33.0';
 
 /**
  * 工具，便于扩展、插件使用
@@ -6084,7 +6068,7 @@ function parseRegisterArguments(type, args) {
  * @param {Object|string} id
  * @param {?Object} value
  */
-each(merge(supportRegisterAsync, ['directive', 'filter', 'partial']), function (type) {
+each(merge(supportRegisterAsync, ['directive', 'partial', 'filter']), function (type) {
   prototype[type] = function () {
     var prop = '$' + type + 's';
     var store = this[prop] || (this[prop] = new Store());
