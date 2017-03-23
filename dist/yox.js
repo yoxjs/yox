@@ -4867,7 +4867,7 @@ function create(ast, context, instance) {
           if (vnode) {
             component.set(toObject(node.attributes, 'name', 'value'), TRUE);
           } else {
-            component.destroy();
+            component.destroy(TRUE);
           }
         }
       } else if (isComponent) {
@@ -5856,7 +5856,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.33.0';
+Yox.version = '0.33.1';
 
 /**
  * 工具，便于扩展、插件使用

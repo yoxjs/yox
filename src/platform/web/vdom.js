@@ -139,7 +139,7 @@ export function create(ast, context, instance) {
               )
             }
             else {
-              component.destroy()
+              component.destroy(env.TRUE)
             }
           }
         }
