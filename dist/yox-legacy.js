@@ -725,7 +725,7 @@ function get(object$$1, keypath) {
     for (var i = 0, len = list.length; i < len; i++) {
       if (i < len - 1) {
         object$$1 = getValue(object$$1[list[i]]);
-        if (primitive(object$$1)) {
+        if (object$$1 == NULL) {
           return;
         }
       } else {
@@ -3461,6 +3461,8 @@ function compile$$1(template) {
 
         // 截取 <name 和 > 之间的内容
         // 用于提取 Attribute 和 Directive
+        // 如果这段内容包含 >，如表达式里有 "a > b"，会有问题
+        // 因此必须区分 "..." 或 {{...}} 里的 >
         content = mainScanner.nextBefore(closingTagPattern);
         if (content) {
           parseContent(content);
@@ -4837,9 +4839,24 @@ function updateAttrs(oldVnode, vnode) {
   var el = vnode.el;
 
 
+  var getValue = function getValue(attrs, name) {
+    // 类似 <input disabled>
+    // 没写 value 默认是 disabled="disabled"
+    // 考虑到有些人喜欢写 disabled="true"
+    // 这里一并兼容了，如果有 value，不管是啥都当做 name 处理
+    if (has$1(attrs, name)) {
+      var value = attrs[name];
+      if (booleanMap[name]) {
+        return value === UNDEFINED || value ? name : FALSE;
+      }
+      return value;
+    }
+  };
+
   each$1(newAttrs, function (value, name) {
-    if (value !== oldAttrs[name]) {
-      if (!value && booleanMap[name]) {
+    value = getValue(newAttrs, name);
+    if (value !== getValue(oldAttrs, name)) {
+      if (value === FALSE) {
         el.removeAttribute(name);
       } else {
         el.setAttribute(name, value);
@@ -6024,7 +6041,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.33.1';
+Yox.version = '0.33.2';
 
 /**
  * 工具，便于扩展、插件使用
