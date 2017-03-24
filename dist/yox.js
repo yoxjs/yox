@@ -4059,6 +4059,22 @@ function isElement(node) {
   return node.nodeType === 1;
 }
 
+function setProp(node, name, value) {
+  node[name] = value;
+}
+
+function removeProp(node, name) {
+  delete node[name];
+}
+
+function setAttr(node, name, value) {
+  node.setAttribute(name, value);
+}
+
+function removeAttr(node, name) {
+  node.removeAttribute(name);
+}
+
 function before(parentNode, newNode, referenceNode) {
   if (referenceNode) {
     parentNode.insertBefore(newNode, referenceNode);
@@ -4123,6 +4139,10 @@ var domApi = Object.freeze({
 	createComment: createComment,
 	createEvent: createEvent,
 	isElement: isElement,
+	setProp: setProp,
+	removeProp: removeProp,
+	setAttr: setAttr,
+	removeAttr: removeAttr,
 	before: before,
 	replace: replace,
 	remove: remove$1,
@@ -4181,7 +4201,7 @@ api.on = function (element, type, listener, context) {
   if (!$emitter.has(type)) {
     var nativeListener = function nativeListener(e, type) {
       if (!(e instanceof Event)) {
-        e = new Event(createEvent(e, element));
+        e = new Event(api.createEvent(e, element));
       }
       if (type) {
         e.type = type;
@@ -4382,7 +4402,7 @@ function init(modules) {
 
     if (data) {
       data = [emptyNode, vnode];
-      moduleEmitter.fire(HOOK_CREATE, data);
+      moduleEmitter.fire(HOOK_CREATE, data, api);
 
       execute(hook[HOOK_CREATE], NULL, data);
 
@@ -4422,7 +4442,7 @@ function init(modules) {
       api.remove(parentNode, el);
 
       if (data) {
-        moduleEmitter.fire(HOOK_REMOVE, vnode);
+        moduleEmitter.fire(HOOK_REMOVE, vnode, api);
         if (data.hook) {
           execute(data.hook[HOOK_REMOVE], NULL, vnode);
         }
@@ -4445,7 +4465,7 @@ function init(modules) {
         });
       }
 
-      moduleEmitter.fire(HOOK_DESTROY, vnode);
+      moduleEmitter.fire(HOOK_DESTROY, vnode, api);
 
       if (data.hook) {
         execute(data.hook[HOOK_DESTROY], NULL, vnode);
@@ -4583,7 +4603,7 @@ function init(modules) {
     }
 
     if (data) {
-      moduleEmitter.fire(HOOK_UPDATE, args);
+      moduleEmitter.fire(HOOK_UPDATE, args, api);
       execute(hook[HOOK_UPDATE], NULL, args);
     }
 
@@ -4626,7 +4646,7 @@ function init(modules) {
 
   return function (oldVnode, vnode) {
 
-    moduleEmitter.fire(HOOK_PRE);
+    moduleEmitter.fire(HOOK_PRE, NULL, api);
 
     if (api.isElement(oldVnode)) {
       oldVnode = createVnode(oldVnode);
@@ -4646,7 +4666,7 @@ function init(modules) {
       execute(vnode.data.hook[HOOK_INSERT], NULL, vnode);
     });
 
-    moduleEmitter.fire(HOOK_POST);
+    moduleEmitter.fire(HOOK_POST, NULL, api);
 
     return vnode;
   };
@@ -4670,6 +4690,7 @@ function updateAttrs(oldVnode, vnode) {
 
   var el = vnode.el;
 
+  var domApi = this;
 
   var getValue = function getValue(attrs, name) {
     // 类似 <input disabled>
@@ -4689,16 +4710,16 @@ function updateAttrs(oldVnode, vnode) {
     value = getValue(newAttrs, name);
     if (value !== getValue(oldAttrs, name)) {
       if (value === FALSE) {
-        el.removeAttribute(name);
+        domApi.removeAttr(el, name);
       } else {
-        el.setAttribute(name, value);
+        domApi.setAttr(el, name, value);
       }
     }
   });
 
   each$1(oldAttrs, function (value, name) {
     if (!has$1(newAttrs, name)) {
-      el.removeAttribute(name);
+      domApi.removeAttr(el, name);
     }
   });
 }
@@ -4722,16 +4743,17 @@ function updateProps(oldVnode, vnode) {
 
   var el = vnode.el;
 
+  var domApi = this;
 
   each$1(newProps, function (value, name) {
     if (value !== oldProps[name]) {
-      el[name] = value;
+      domApi.setProp(el, name, value);
     }
   });
 
   each$1(oldProps, function (value, name) {
     if (!has$1(newProps, name)) {
-      delete el[name];
+      domApi.removeProp(el, name);
     }
   });
 }
@@ -4783,10 +4805,6 @@ var toString$2 = function (str) {
     return defaultValue;
   }
 };
-
-function setHook(hooks, listener) {
-  hooks.insert = hooks.postpatch = hooks.destroy = listener;
-}
 
 var patch = init([attrs, props, style], api);
 
@@ -4861,7 +4879,7 @@ function create(ast, context, instance) {
       data.style = styles;
     }
 
-    setHook(hooks, function (oldVnode, vnode) {
+    hooks.insert = hooks.postpatch = hooks.destroy = function (oldVnode, vnode) {
 
       // 如果只有 oldVnode，且 oldVnode 没有 directives，表示插入
       // 如果只有 oldVnode，且 oldVnode 有 directives，表示销毁
@@ -4960,7 +4978,7 @@ function create(ast, context, instance) {
 
       payload.attributes = attributes;
       payload.directives = directives;
-    });
+    };
 
     return new Vnode(vnode);
   };
@@ -5873,7 +5891,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.33.2';
+Yox.version = '0.33.3';
 
 /**
  * 工具，便于扩展、插件使用

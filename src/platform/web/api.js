@@ -49,7 +49,7 @@ api.on =  function (element, type, listener, context) {
   if (!$emitter.has(type)) {
     let nativeListener = function (e, type) {
       if (!(e instanceof Event)) {
-        e = new Event(domApi.createEvent(e, element))
+        e = new Event(api.createEvent(e, element))
       }
       if (type) {
         e.type = type

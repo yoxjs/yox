@@ -185,3 +185,15 @@ export function find(selector, context) {
     ? context.querySelector(selector)
     : context.getElementById(string.slice(selector, 1))
 }
+
+export function setProp(element, name, value) {
+  try {
+    element[ name ] = value
+  }
+  catch (e) {
+    if (element.tagName === 'STYLE' && name === 'innerHTML') {
+      element.setAttribute('type', 'text/css')
+      element.styleSheet.cssText = value;
+    }
+  }
+}

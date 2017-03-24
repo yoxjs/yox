@@ -1,7 +1,7 @@
 (function (global, factory) {
-	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
-	typeof define === 'function' && define.amd ? define(factory) :
-	(global.Yox = factory());
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
+  typeof define === 'function' && define.amd ? define(factory) :
+  (global.Yox = factory());
 }(this, (function () { 'use strict';
 
 if (!Object.keys) {
@@ -143,15 +143,15 @@ function numeric(arg) {
 }
 
 var is$1 = Object.freeze({
-	is: is,
-	func: func,
-	array: array,
-	object: object,
-	string: string,
-	number: number,
-	boolean: boolean,
-	primitive: primitive,
-	numeric: numeric
+  is: is,
+  func: func,
+  array: array,
+  object: object,
+  string: string,
+  number: number,
+  boolean: boolean,
+  primitive: primitive,
+  numeric: numeric
 });
 
 var execute = function (fn, context, args) {
@@ -338,17 +338,17 @@ function falsy(array$$1) {
 }
 
 var array$1 = Object.freeze({
-	each: each,
-	merge: merge,
-	push: push,
-	unshift: unshift,
-	toArray: toArray,
-	toObject: toObject,
-	indexOf: indexOf,
-	has: has,
-	last: last,
-	remove: remove,
-	falsy: falsy
+  each: each,
+  merge: merge,
+  push: push,
+  unshift: unshift,
+  toArray: toArray,
+  toObject: toObject,
+  indexOf: indexOf,
+  has: has,
+  last: last,
+  remove: remove,
+  falsy: falsy
 });
 
 /**
@@ -546,17 +546,17 @@ function endsWith(str, part) {
 }
 
 var string$1 = Object.freeze({
-	camelCase: camelCase,
-	capitalize: capitalize,
-	falsy: falsy$1,
-	parse: parse,
-	trim: trim,
-	slice: slice$1,
-	split: split,
-	indexOf: indexOf$1,
-	has: has$2,
-	startsWith: startsWith,
-	endsWith: endsWith
+  camelCase: camelCase,
+  capitalize: capitalize,
+  falsy: falsy$1,
+  parse: parse,
+  trim: trim,
+  slice: slice$1,
+  split: split,
+  indexOf: indexOf$1,
+  has: has$2,
+  startsWith: startsWith,
+  endsWith: endsWith
 });
 
 var SEPARATOR_KEY = CHAR_DOT;
@@ -773,14 +773,14 @@ function set(object$$1, keypath, value, autofill) {
 }
 
 var object$1 = Object.freeze({
-	keys: keys,
-	sort: sort,
-	each: each$1,
-	has: has$1,
-	extend: extend,
-	copy: copy,
-	get: get,
-	set: set
+  keys: keys,
+  sort: sort,
+  each: each$1,
+  has: has$1,
+  extend: extend,
+  copy: copy,
+  get: get,
+  set: set
 });
 
 var classCallCheck = function (instance, Constructor) {
@@ -1163,9 +1163,9 @@ function error$1(msg) {
 }
 
 var logger = Object.freeze({
-	log: log,
-	warn: warn,
-	error: error$1
+  log: log,
+  warn: warn,
+  error: error$1
 });
 
 var nextTick = void 0;
@@ -4126,6 +4126,22 @@ function isElement(node) {
   return node.nodeType === 1;
 }
 
+function setProp(node, name, value) {
+  node[name] = value;
+}
+
+function removeProp(node, name) {
+  delete node[name];
+}
+
+function setAttr(node, name, value) {
+  node.setAttribute(name, value);
+}
+
+function removeAttr(node, name) {
+  node.removeAttribute(name);
+}
+
 function before(parentNode, newNode, referenceNode) {
   if (referenceNode) {
     parentNode.insertBefore(newNode, referenceNode);
@@ -4185,24 +4201,28 @@ function off$1(element, type, listener) {
 }
 
 var domApi = Object.freeze({
-	createElement: createElement,
-	createText: createText,
-	createComment: createComment,
-	createEvent: createEvent,
-	isElement: isElement,
-	before: before,
-	replace: replace,
-	remove: remove$1,
-	append: append,
-	parent: parent,
-	next: next,
-	tag: tag$1,
-	children: children,
-	text: text,
-	html: html,
-	find: find,
-	on: on$1,
-	off: off$1
+  createElement: createElement,
+  createText: createText,
+  createComment: createComment,
+  createEvent: createEvent,
+  isElement: isElement,
+  setProp: setProp,
+  removeProp: removeProp,
+  setAttr: setAttr,
+  removeAttr: removeAttr,
+  before: before,
+  replace: replace,
+  remove: remove$1,
+  append: append,
+  parent: parent,
+  next: next,
+  tag: tag$1,
+  children: children,
+  text: text,
+  html: html,
+  find: find,
+  on: on$1,
+  off: off$1
 });
 
 var clickType = 'click';
@@ -4299,13 +4319,25 @@ function find$1(selector, context) {
   return context.querySelector ? context.querySelector(selector) : context.getElementById(slice$1(selector, 1));
 }
 
+function setProp$1(element, name, value) {
+  try {
+    element[name] = value;
+  } catch (e) {
+    if (element.tagName === 'STYLE' && name === 'innerHTML') {
+      element.setAttribute('type', 'text/css');
+      element.styleSheet.cssText = value;
+    }
+  }
+}
+
 
 
 var oldApi = Object.freeze({
-	on: on$2,
-	off: off$2,
-	createEvent: createEvent$1,
-	find: find$1
+  on: on$2,
+  off: off$2,
+  createEvent: createEvent$1,
+  find: find$1,
+  setProp: setProp$1
 });
 
 var api = copy(domApi);
@@ -4349,7 +4381,7 @@ api.on = function (element, type, listener, context) {
   if (!$emitter.has(type)) {
     var nativeListener = function nativeListener(e, type) {
       if (!(e instanceof Event)) {
-        e = new Event(createEvent(e, element));
+        e = new Event(api.createEvent(e, element));
       }
       if (type) {
         e.type = type;
@@ -4550,7 +4582,7 @@ function init(modules) {
 
     if (data) {
       data = [emptyNode, vnode];
-      moduleEmitter.fire(HOOK_CREATE, data);
+      moduleEmitter.fire(HOOK_CREATE, data, api);
 
       execute(hook[HOOK_CREATE], NULL, data);
 
@@ -4590,7 +4622,7 @@ function init(modules) {
       api.remove(parentNode, el);
 
       if (data) {
-        moduleEmitter.fire(HOOK_REMOVE, vnode);
+        moduleEmitter.fire(HOOK_REMOVE, vnode, api);
         if (data.hook) {
           execute(data.hook[HOOK_REMOVE], NULL, vnode);
         }
@@ -4613,7 +4645,7 @@ function init(modules) {
         });
       }
 
-      moduleEmitter.fire(HOOK_DESTROY, vnode);
+      moduleEmitter.fire(HOOK_DESTROY, vnode, api);
 
       if (data.hook) {
         execute(data.hook[HOOK_DESTROY], NULL, vnode);
@@ -4751,7 +4783,7 @@ function init(modules) {
     }
 
     if (data) {
-      moduleEmitter.fire(HOOK_UPDATE, args);
+      moduleEmitter.fire(HOOK_UPDATE, args, api);
       execute(hook[HOOK_UPDATE], NULL, args);
     }
 
@@ -4794,7 +4826,7 @@ function init(modules) {
 
   return function (oldVnode, vnode) {
 
-    moduleEmitter.fire(HOOK_PRE);
+    moduleEmitter.fire(HOOK_PRE, NULL, api);
 
     if (api.isElement(oldVnode)) {
       oldVnode = createVnode(oldVnode);
@@ -4814,7 +4846,7 @@ function init(modules) {
       execute(vnode.data.hook[HOOK_INSERT], NULL, vnode);
     });
 
-    moduleEmitter.fire(HOOK_POST);
+    moduleEmitter.fire(HOOK_POST, NULL, api);
 
     return vnode;
   };
@@ -4838,6 +4870,7 @@ function updateAttrs(oldVnode, vnode) {
 
   var el = vnode.el;
 
+  var domApi = this;
 
   var getValue = function getValue(attrs, name) {
     // 类似 <input disabled>
@@ -4857,16 +4890,16 @@ function updateAttrs(oldVnode, vnode) {
     value = getValue(newAttrs, name);
     if (value !== getValue(oldAttrs, name)) {
       if (value === FALSE) {
-        el.removeAttribute(name);
+        domApi.removeAttr(el, name);
       } else {
-        el.setAttribute(name, value);
+        domApi.setAttr(el, name, value);
       }
     }
   });
 
   each$1(oldAttrs, function (value, name) {
     if (!has$1(newAttrs, name)) {
-      el.removeAttribute(name);
+      domApi.removeAttr(el, name);
     }
   });
 }
@@ -4890,16 +4923,17 @@ function updateProps(oldVnode, vnode) {
 
   var el = vnode.el;
 
+  var domApi = this;
 
   each$1(newProps, function (value, name) {
     if (value !== oldProps[name]) {
-      el[name] = value;
+      domApi.setProp(el, name, value);
     }
   });
 
   each$1(oldProps, function (value, name) {
     if (!has$1(newProps, name)) {
-      delete el[name];
+      domApi.removeProp(el, name);
     }
   });
 }
@@ -4951,10 +4985,6 @@ var toString$2 = function (str) {
     return defaultValue;
   }
 };
-
-function setHook(hooks, listener) {
-  hooks.insert = hooks.postpatch = hooks.destroy = listener;
-}
 
 var patch = init([attrs, props, style], api);
 
@@ -5029,7 +5059,7 @@ function create(ast, context, instance) {
       data.style = styles;
     }
 
-    setHook(hooks, function (oldVnode, vnode) {
+    hooks.insert = hooks.postpatch = hooks.destroy = function (oldVnode, vnode) {
 
       // 如果只有 oldVnode，且 oldVnode 没有 directives，表示插入
       // 如果只有 oldVnode，且 oldVnode 有 directives，表示销毁
@@ -5128,7 +5158,7 @@ function create(ast, context, instance) {
 
       payload.attributes = attributes;
       payload.directives = directives;
-    });
+    };
 
     return new Vnode(vnode);
   };
@@ -6041,7 +6071,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.33.2';
+Yox.version = '0.33.3';
 
 /**
  * 工具，便于扩展、插件使用
