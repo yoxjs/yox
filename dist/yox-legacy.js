@@ -1,7 +1,7 @@
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
-  typeof define === 'function' && define.amd ? define(factory) :
-  (global.Yox = factory());
+	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
+	typeof define === 'function' && define.amd ? define(factory) :
+	(global.Yox = factory());
 }(this, (function () { 'use strict';
 
 if (!Object.keys) {
@@ -143,15 +143,15 @@ function numeric(arg) {
 }
 
 var is$1 = Object.freeze({
-  is: is,
-  func: func,
-  array: array,
-  object: object,
-  string: string,
-  number: number,
-  boolean: boolean,
-  primitive: primitive,
-  numeric: numeric
+	is: is,
+	func: func,
+	array: array,
+	object: object,
+	string: string,
+	number: number,
+	boolean: boolean,
+	primitive: primitive,
+	numeric: numeric
 });
 
 var execute = function (fn, context, args) {
@@ -338,17 +338,17 @@ function falsy(array$$1) {
 }
 
 var array$1 = Object.freeze({
-  each: each,
-  merge: merge,
-  push: push,
-  unshift: unshift,
-  toArray: toArray,
-  toObject: toObject,
-  indexOf: indexOf,
-  has: has,
-  last: last,
-  remove: remove,
-  falsy: falsy
+	each: each,
+	merge: merge,
+	push: push,
+	unshift: unshift,
+	toArray: toArray,
+	toObject: toObject,
+	indexOf: indexOf,
+	has: has,
+	last: last,
+	remove: remove,
+	falsy: falsy
 });
 
 /**
@@ -546,17 +546,17 @@ function endsWith(str, part) {
 }
 
 var string$1 = Object.freeze({
-  camelCase: camelCase,
-  capitalize: capitalize,
-  falsy: falsy$1,
-  parse: parse,
-  trim: trim,
-  slice: slice$1,
-  split: split,
-  indexOf: indexOf$1,
-  has: has$2,
-  startsWith: startsWith,
-  endsWith: endsWith
+	camelCase: camelCase,
+	capitalize: capitalize,
+	falsy: falsy$1,
+	parse: parse,
+	trim: trim,
+	slice: slice$1,
+	split: split,
+	indexOf: indexOf$1,
+	has: has$2,
+	startsWith: startsWith,
+	endsWith: endsWith
 });
 
 var SEPARATOR_KEY = CHAR_DOT;
@@ -773,14 +773,14 @@ function set(object$$1, keypath, value, autofill) {
 }
 
 var object$1 = Object.freeze({
-  keys: keys,
-  sort: sort,
-  each: each$1,
-  has: has$1,
-  extend: extend,
-  copy: copy,
-  get: get,
-  set: set
+	keys: keys,
+	sort: sort,
+	each: each$1,
+	has: has$1,
+	extend: extend,
+	copy: copy,
+	get: get,
+	set: set
 });
 
 var classCallCheck = function (instance, Constructor) {
@@ -1163,9 +1163,9 @@ function error$1(msg) {
 }
 
 var logger = Object.freeze({
-  log: log,
-  warn: warn,
-  error: error$1
+	log: log,
+	warn: warn,
+	error: error$1
 });
 
 var nextTick = void 0;
@@ -4150,16 +4150,16 @@ function before(parentNode, newNode, referenceNode) {
   }
 }
 
+function append(parentNode, child) {
+  parentNode.appendChild(child);
+}
+
 function replace(parentNode, newNode, oldNode) {
   parentNode.replaceChild(newNode, oldNode);
 }
 
 function remove$1(parentNode, child) {
   parentNode.removeChild(child);
-}
-
-function append(parentNode, child) {
-  parentNode.appendChild(child);
 }
 
 function parent(node) {
@@ -4181,11 +4181,11 @@ function children(node) {
 }
 
 function text(node, content) {
-  return content == NULL ? node.nodeValue : node.nodeValue = content;
+  return arguments.length === 1 ? node.nodeValue : node.nodeValue = content;
 }
 
 function html(node, content) {
-  return content == NULL ? node.innerHTML : node.innerHTML = content;
+  return arguments.length === 1 ? node.innerHTML : node.innerHTML = content;
 }
 
 function find(selector, context) {
@@ -4201,28 +4201,28 @@ function off$1(element, type, listener) {
 }
 
 var domApi = Object.freeze({
-  createElement: createElement,
-  createText: createText,
-  createComment: createComment,
-  createEvent: createEvent,
-  isElement: isElement,
-  setProp: setProp,
-  removeProp: removeProp,
-  setAttr: setAttr,
-  removeAttr: removeAttr,
-  before: before,
-  replace: replace,
-  remove: remove$1,
-  append: append,
-  parent: parent,
-  next: next,
-  tag: tag$1,
-  children: children,
-  text: text,
-  html: html,
-  find: find,
-  on: on$1,
-  off: off$1
+	createElement: createElement,
+	createText: createText,
+	createComment: createComment,
+	createEvent: createEvent,
+	isElement: isElement,
+	setProp: setProp,
+	removeProp: removeProp,
+	setAttr: setAttr,
+	removeAttr: removeAttr,
+	before: before,
+	append: append,
+	replace: replace,
+	remove: remove$1,
+	parent: parent,
+	next: next,
+	tag: tag$1,
+	children: children,
+	text: text,
+	html: html,
+	find: find,
+	on: on$1,
+	off: off$1
 });
 
 var clickType = 'click';
@@ -4333,11 +4333,11 @@ function setProp$1(element, name, value) {
 
 
 var oldApi = Object.freeze({
-  on: on$2,
-  off: off$2,
-  createEvent: createEvent$1,
-  find: find$1,
-  setProp: setProp$1
+	on: on$2,
+	off: off$2,
+	createEvent: createEvent$1,
+	find: find$1,
+	setProp: setProp$1
 });
 
 var api = copy(domApi);
@@ -4421,12 +4421,11 @@ api.off = function (element, type, listener) {
 };
 
 /**
- * @param {?string} options.el
+ * @param {?HTMLElement} options.el
  * @param {?string} options.sel
- * @param {?string} options.data
+ * @param {?Object} options.data
  * @param {?string} options.text
- * @param {?string} options.html
- * @param {?string|Array} options.children
+ * @param {?Array} options.children
  */
 
 var Vnode = function (options) {
@@ -4530,15 +4529,6 @@ function init(modules) {
     }
 
     return { tagName: tagName, id: id, className: className };
-  };
-
-  var createVnode = function createVnode(el) {
-    return new Vnode({
-      sel: stringifySel(el),
-      data: {},
-      children: [],
-      el: el
-    });
   };
 
   var createElement$$1 = function createElement$$1(parentNode, vnode, insertedQueue) {
@@ -4654,10 +4644,8 @@ function init(modules) {
   };
 
   var replaceVnode = function replaceVnode(parentNode, oldVnode, vnode) {
-    if (parentNode) {
-      api.before(parentNode, vnode.el, oldVnode.el);
-      removeVnode(parentNode, oldVnode);
-    }
+    api.before(parentNode, vnode.el, oldVnode.el);
+    removeVnode(parentNode, oldVnode);
   };
 
   var updateChildren = function updateChildren(parentNode, oldChildren, newChildren, insertedQueue) {
@@ -4772,12 +4760,11 @@ function init(modules) {
     execute(hook[HOOK_PREPATCH], NULL, args);
 
     var el = vnode.el = oldVnode.el;
-    vnode.payload = oldVnode.payload;
 
-    var parentNode = api.parent(el);
     if (!needPatch(oldVnode, vnode)) {
+      var parentNode = api.parent(el);
       if (createElement$$1(parentNode, vnode, insertedQueue)) {
-        replaceVnode(parentNode, oldVnode, vnode);
+        parentNode && replaceVnode(parentNode, oldVnode, vnode);
       }
       return;
     }
@@ -4829,7 +4816,12 @@ function init(modules) {
     moduleEmitter.fire(HOOK_PRE, NULL, api);
 
     if (api.isElement(oldVnode)) {
-      oldVnode = createVnode(oldVnode);
+      oldVnode = new Vnode({
+        el: oldVnode,
+        sel: stringifySel(oldVnode),
+        data: {},
+        children: []
+      });
     }
 
     var insertedQueue = [];
@@ -4838,7 +4830,7 @@ function init(modules) {
     } else {
       var parentNode = api.parent(oldVnode.el);
       if (createElement$$1(parentNode, vnode, insertedQueue)) {
-        replaceVnode(parentNode, oldVnode, vnode);
+        parentNode && replaceVnode(parentNode, oldVnode, vnode);
       }
     }
 
@@ -4852,7 +4844,7 @@ function init(modules) {
   };
 }
 
-var booleanLiteral = 'allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare' + 'default,defaultchecked,defaultmuted,defaultselected,defer,disabled,draggable' + 'enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple' + 'muted,nohref,noresize,noshade,novalidate,nowrap,open,pauseonexit,readonly' + 'required,reversed,scoped,seamless,selected,sortable,spellcheck,translate' + 'truespeed,typemustmatch,visible';
+var booleanLiteral = 'allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare,default,defaultchecked,defaultmuted,defaultselected,defer,disabled,draggable,enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple,muted,nohref,noresize,noshade,novalidate,nowrap,open,pauseonexit,readonly,required,reversed,scoped,seamless,selected,sortable,spellcheck,translate,truespeed,typemustmatch,visible';
 
 var booleanMap = toObject(split(booleanLiteral, CHAR_COMMA));
 
@@ -4870,7 +4862,7 @@ function updateAttrs(oldVnode, vnode) {
 
   var el = vnode.el;
 
-  var domApi = this;
+  var api = this;
 
   var getValue = function getValue(attrs, name) {
     // 类似 <input disabled>
@@ -4890,16 +4882,16 @@ function updateAttrs(oldVnode, vnode) {
     value = getValue(newAttrs, name);
     if (value !== getValue(oldAttrs, name)) {
       if (value === FALSE) {
-        domApi.removeAttr(el, name);
+        api.removeAttr(el, name);
       } else {
-        domApi.setAttr(el, name, value);
+        api.setAttr(el, name, value);
       }
     }
   });
 
   each$1(oldAttrs, function (value, name) {
     if (!has$1(newAttrs, name)) {
-      domApi.removeAttr(el, name);
+      api.removeAttr(el, name);
     }
   });
 }
@@ -4923,17 +4915,17 @@ function updateProps(oldVnode, vnode) {
 
   var el = vnode.el;
 
-  var domApi = this;
+  var api = this;
 
   each$1(newProps, function (value, name) {
     if (value !== oldProps[name]) {
-      domApi.setProp(el, name, value);
+      api.setProp(el, name, value);
     }
   });
 
   each$1(oldProps, function (value, name) {
     if (!has$1(newProps, name)) {
-      domApi.removeProp(el, name);
+      api.removeProp(el, name);
     }
   });
 }
@@ -5065,9 +5057,15 @@ function create(ast, context, instance) {
       // 如果只有 oldVnode，且 oldVnode 有 directives，表示销毁
       // 如果有 oldVnode 和 vnode，表示更新
 
-      var nextVnode = vnode || oldVnode;
+      // 获取 el 直接用 oldVnode.el 即可
+      // 插入和销毁时，只有 oldVnode
+      // 更新时，vnode.el 是从 oldVnode.el 赋值过来的
 
       var payload = oldVnode.payload || (oldVnode.payload = {});
+      if (vnode) {
+        vnode.payload = payload;
+      }
+
       var destroies = payload.destroies || (payload.destroies = {});
 
       var oldComponent = payload.component;
@@ -5079,34 +5077,39 @@ function create(ast, context, instance) {
       if (oldComponent) {
         component = oldComponent;
         if (object(component)) {
+          // 更新
           if (vnode) {
             component.set(toObject(node.attributes, 'name', 'value'), TRUE);
-          } else {
-            component.destroy(TRUE);
           }
+          // 销毁
+          else {
+              component.destroy(TRUE);
+            }
         }
-      } else if (isComponent) {
-        component = payload.component = [];
-        instance.component(node.name, function (options) {
-          if (array(component)) {
-            oldComponent = component;
-            component = payload.component = instance.create(options, {
-              el: nextVnode.el,
-              props: toObject(node.attributes, 'name', 'value'),
-              replace: TRUE
-            });
-            nextVnode.el = component.$el;
-            each(oldComponent, function (callback) {
-              callback(component);
-            });
-          }
-        });
       }
+      // 创建
+      else if (isComponent) {
+          component = payload.component = [];
+          instance.component(node.name, function (options) {
+            if (array(component)) {
+              oldComponent = component;
+              component = payload.component = instance.create(options, {
+                el: oldVnode.el,
+                props: toObject(node.attributes, 'name', 'value'),
+                replace: TRUE
+              });
+              oldVnode.el = component.$el;
+              each(oldComponent, function (callback) {
+                callback(component);
+              });
+            }
+          });
+        }
 
       var bind = function bind(key) {
         var node = directives[key];
         destroies[key] = execute(instance.directive(node.name), NULL, {
-          el: nextVnode.el,
+          el: oldVnode.el,
           node: node,
           instance: instance,
           directives: directives,
@@ -5143,13 +5146,12 @@ function create(ast, context, instance) {
               return;
             }
         }
-        // 新增
+        // 创建
         bind(key);
       });
 
       if (oldDirectives) {
         each$1(oldDirectives, function (oldDirective, key) {
-          // 删掉元素或者删掉指令都要销毁指令
           if (!vnode || !directives[key]) {
             unbind(key);
           }
@@ -6071,7 +6073,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.33.3';
+Yox.version = '0.33.4';
 
 /**
  * 工具，便于扩展、插件使用
