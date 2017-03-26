@@ -112,9 +112,15 @@ export function create(ast, context, instance) {
       // 如果只有 oldVnode，且 oldVnode 有 directives，表示销毁
       // 如果有 oldVnode 和 vnode，表示更新
 
-      let nextVnode = vnode || oldVnode
+      // 获取 el 直接用 oldVnode.el 即可
+      // 插入和销毁时，只有 oldVnode
+      // 更新时，vnode.el 是从 oldVnode.el 赋值过来的
 
       let payload = oldVnode.payload || (oldVnode.payload = { })
+      if (vnode) {
+        vnode.payload = payload
+      }
+
       let destroies = payload.destroies || (payload.destroies = { })
 
       let oldComponent = payload.component
@@ -126,17 +132,20 @@ export function create(ast, context, instance) {
       if (oldComponent) {
         component = oldComponent
         if (is.object(component)) {
+          // 更新
           if (vnode) {
             component.set(
               array.toObject(node.attributes, 'name', 'value'),
               env.TRUE
             )
           }
+          // 销毁
           else {
             component.destroy(env.TRUE)
           }
         }
       }
+      // 创建
       else if (isComponent) {
         component = payload.component = [ ]
         instance.component(
@@ -148,12 +157,12 @@ export function create(ast, context, instance) {
               instance.create(
                 options,
                 {
-                  el: nextVnode.el,
+                  el: oldVnode.el,
                   props: array.toObject(node.attributes, 'name', 'value'),
                   replace: env.TRUE,
                 }
               )
-              nextVnode.el = component.$el;
+              oldVnode.el = component.$el;
               array.each(
                 oldComponent,
                 function (callback) {
@@ -172,7 +181,7 @@ export function create(ast, context, instance) {
           instance.directive(node.name),
           env.NULL,
           {
-            el: nextVnode.el,
+            el: oldVnode.el,
             node,
             instance,
             directives,
@@ -214,7 +223,7 @@ export function create(ast, context, instance) {
               return
             }
           }
-          // 新增
+          // 创建
           bind(key)
         }
       )
@@ -223,7 +232,6 @@ export function create(ast, context, instance) {
         object.each(
           oldDirectives,
           function (oldDirective, key) {
-            // 删掉元素或者删掉指令都要销毁指令
             if (!vnode || !directives[ key ]) {
               unbind(key)
             }
