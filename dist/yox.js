@@ -2677,25 +2677,20 @@ var closingTagPattern = /(?:\/)?>/;
 var attributePattern = /([-:@a-z0-9]+)(?==["'])?/i;
 
 var componentNamePattern = /[-A-Z]/;
-var selfClosingTagNamePattern = /input|img|br/i;
+var selfClosingTagNamePattern = /source|param|input|img|br/i;
 
+// if 带条件的
 var ifTypes = {};
-ifTypes[IF$1] = ifTypes[ELSE_IF$1] = TRUE;
-
+// if 分支的
 var elseTypes = {};
-elseTypes[ELSE_IF$1] = elseTypes[ELSE$1] = TRUE;
-
 // 属性层级的节点类型
 var attrTypes = {};
-attrTypes[ATTRIBUTE] = attrTypes[DIRECTIVE] = TRUE;
-
 // 叶子节点类型
 var leafTypes = {};
-leafTypes[EXPRESSION] = leafTypes[IMPORT$1] = leafTypes[SPREAD$1] = leafTypes[TEXT] = TRUE;
-
 // 内置指令，无需加前缀
-var buildInDirectives = {};
-buildInDirectives[DIRECTIVE_REF] = buildInDirectives[DIRECTIVE_LAZY] = buildInDirectives[DIRECTIVE_MODEL] = buildInDirectives[KEYWORD_UNIQUE] = TRUE;
+var builtInDirectives = {};
+
+ifTypes[IF$1] = ifTypes[ELSE_IF$1] = elseTypes[ELSE_IF$1] = elseTypes[ELSE$1] = attrTypes[ATTRIBUTE] = attrTypes[DIRECTIVE] = leafTypes[EXPRESSION] = leafTypes[IMPORT$1] = leafTypes[SPREAD$1] = leafTypes[TEXT] = builtInDirectives[DIRECTIVE_REF] = builtInDirectives[DIRECTIVE_LAZY] = builtInDirectives[DIRECTIVE_MODEL] = builtInDirectives[KEYWORD_UNIQUE] = TRUE;
 
 /**
  * 标记节点数组，用于区分普通数组
@@ -2703,7 +2698,7 @@ buildInDirectives[DIRECTIVE_REF] = buildInDirectives[DIRECTIVE_LAZY] = buildInDi
  * @param {*} nodes
  * @return {*}
  */
-function markNodes(nodes) {
+function makeNodes(nodes) {
   if (array(nodes)) {
     nodes[CHAR_DASH] = TRUE;
   }
@@ -2717,7 +2712,7 @@ function markNodes(nodes) {
  * @return {boolean}
  */
 function isNodes(nodes) {
-  return array(nodes) && nodes[CHAR_DASH] === TRUE;
+  return array(nodes) && nodes[CHAR_DASH];
 }
 
 /**
@@ -2850,7 +2845,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
       }
       i++;
     }
-    return markNodes(list);
+    return makeNodes(list);
   };
 
   var recursion = function recursion(node, nextNode) {
@@ -2884,7 +2879,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
         case IF$1:
         case ELSE_IF$1:
           if (!executeExpression(expr)) {
-            return isAttrRendering || !nextNode || elseTypes[nextNode.type] ? FALSE : markNodes(createComment());
+            return isAttrRendering || !nextNode || elseTypes[nextNode.type] ? FALSE : makeNodes(createComment());
           }
           break;
 
@@ -2925,7 +2920,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
           keys$$1.pop();
           context = context.pop();
 
-          return markNodes(list);
+          return makeNodes(list);
 
       }
 
@@ -2971,7 +2966,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
         case ELSE_IF$1:
         case ELSE$1:
           // 如果是空，也得是个空数组
-          return children !== UNDEFINED ? children : markNodes([]);
+          return children !== UNDEFINED ? children : makeNodes([]);
 
         case SPREAD$1:
           content = executeExpression(node.expr);
@@ -2984,7 +2979,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
                 keypath: keypath
               });
             });
-            return markNodes(list);
+            return makeNodes(list);
           }
           break;
 
@@ -3048,89 +3043,62 @@ function isBreakline(content) {
  * trim 文本开始和结束位置的换行符
  *
  * @param {string} content
- * @return {boolean}
+ * @return {string}
  */
 function trimBreakline(content) {
   return content.replace(/^[ \t]*\n|\n[ \t]*$/g, CHAR_BLANK);
 }
 
-var parsers = [{
-  test: function test(source) {
-    return startsWith(source, EACH);
-  },
-  create: function create(source, terms) {
+var STATUS_UNMATCHED = 1;
+var STATUS_FAILED = 2;
+
+var parsers = [function (source, terms) {
+  if (startsWith(source, EACH)) {
     terms = split(slicePrefix(source, EACH), CHAR_COLON);
-    if (terms[0]) {
-      return new Each(compile$1(terms[0]), terms[1]);
-    }
+    return terms[0] ? new Each(compile$1(trim(terms[0])), trim(terms[1])) : STATUS_FAILED;
   }
-}, {
-  test: function test(source) {
-    return startsWith(source, IMPORT);
-  },
-  create: function create(source) {
+  return STATUS_UNMATCHED;
+}, function (source) {
+  if (startsWith(source, IMPORT)) {
     source = slicePrefix(source, IMPORT);
-    if (source) {
-      return new Import(source);
-    }
+    return source ? new Import(source) : STATUS_FAILED;
   }
-}, {
-  test: function test(source) {
-    return startsWith(source, PARTIAL);
-  },
-  create: function create(source) {
+  return STATUS_UNMATCHED;
+}, function (source) {
+  if (startsWith(source, PARTIAL)) {
     source = slicePrefix(source, PARTIAL);
-    if (source) {
-      return new Partial(source);
-    }
+    return source ? new Partial(source) : STATUS_FAILED;
   }
-}, {
-  test: function test(source) {
-    return startsWith(source, IF);
-  },
-  create: function create(source) {
+  return STATUS_UNMATCHED;
+}, function (source) {
+  if (startsWith(source, IF)) {
     source = slicePrefix(source, IF);
-    if (source) {
-      return new If(compile$1(source));
-    }
+    return source ? new If(compile$1(source)) : STATUS_FAILED;
   }
-}, {
-  test: function test(source) {
-    return startsWith(source, ELSE_IF);
-  },
-  create: function create(source) {
+  return STATUS_UNMATCHED;
+}, function (source) {
+  if (startsWith(source, ELSE_IF)) {
     source = slicePrefix(source, ELSE_IF);
-    if (source) {
-      return new ElseIf(compile$1(source));
-    }
+    return source ? new ElseIf(compile$1(source)) : STATUS_FAILED;
   }
-}, {
-  test: function test(source) {
-    return startsWith(source, ELSE);
-  },
-  create: function create(source) {
+  return STATUS_UNMATCHED;
+}, function (source) {
+  if (startsWith(source, ELSE)) {
     return new Else();
   }
-}, {
-  test: function test(source) {
-    return startsWith(source, SPREAD);
-  },
-  create: function create(source) {
+  return STATUS_UNMATCHED;
+}, function (source) {
+  if (startsWith(source, SPREAD)) {
     source = slicePrefix(source, SPREAD);
-    if (source) {
-      return new Spread(compile$1(source));
-    }
+    return source ? new Spread(compile$1(source)) : STATUS_FAILED;
   }
-}, {
-  test: function test(source) {
-    return !startsWith(source, COMMENT);
-  },
-  create: function create(source, delimiter) {
+  return STATUS_UNMATCHED;
+}, function (source, delimiter) {
+  if (!startsWith(source, COMMENT)) {
     source = trim(source);
-    if (source) {
-      return new Expression(compile$1(source), !endsWith(delimiter, '}}}'));
-    }
+    return source ? new Expression(compile$1(source), !endsWith(delimiter, '}}}')) : STATUS_FAILED;
   }
+  return STATUS_UNMATCHED;
 }];
 
 /**
@@ -3301,7 +3269,7 @@ function compile$$1(template) {
             content = slice$1(content, result.index + result[0].length);
             name = result[1];
 
-            if (buildInDirectives[name]) {
+            if (builtInDirectives[name]) {
               addChild(new Directive(camelCase(name)));
             } else {
               if (startsWith(name, DIRECTIVE_EVENT_PREFIX)) {
@@ -3333,16 +3301,16 @@ function compile$$1(template) {
         if (codeAt(content) === CODE_SLASH) {
           popStack();
         } else {
-          each(parsers, function (parser, index) {
-            if (parser.test(content, name)) {
-              index = parser.create(content, name);
-              if (index) {
+          each(parsers, function (parse$$1, index) {
+            index = parse$$1(content, name);
+            if (index !== STATUS_UNMATCHED) {
+              if (index === STATUS_FAILED) {
+                throwError('Expected expression', mainScanner.pos + helperScanner.pos);
+              } else {
                 if (elseTypes[index.type]) {
                   popStack();
                 }
                 addChild(index);
-              } else {
-                throwError('Expected expression', mainScanner.pos + helperScanner.pos);
               }
               return FALSE;
             }
@@ -3393,6 +3361,7 @@ function compile$$1(template) {
         levelNode = addChild(new Element(name, componentNamePattern.test(name)));
 
         // 截取 <name 和 > 之间的内容
+        // [TODO]
         // 用于提取 Attribute 和 Directive
         // 如果这段内容包含 >，如表达式里有 "a > b"，会有问题
         // 因此必须区分 "..." 或 {{...}} 里的 >
@@ -5893,7 +5862,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.33.4';
+Yox.version = '0.33.5';
 
 /**
  * 工具，便于扩展、插件使用
