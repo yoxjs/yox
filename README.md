@@ -4,6 +4,8 @@ Just like Vue, but it is more lightweight and easy than Vue.
 
 The key is that yox supports IE6.
 
+> QQ 群 232021930
+
 ```js
 {
   // 通常只有根组件需要配置 el，支持元素节点和选择器
