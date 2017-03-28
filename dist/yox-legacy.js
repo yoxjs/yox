@@ -1240,32 +1240,32 @@ var BINARY = 2;
 var CALL = 3;
 
 /**
- * 三元表达式，如 a ? b : c
- *
- * @type {number}
- */
-var TERNARY = 4;
-
-/**
  * 标识符
  *
  * @type {number}
  */
-var IDENTIFIER = 5;
+var IDENTIFIER = 4;
 
 /**
  * 字面量
  *
  * @type {number}
  */
-var LITERAL = 6;
+var LITERAL = 5;
 
 /**
  * 对象属性或数组下标
  *
  * @type {number}
  */
-var MEMBER = 7;
+var MEMBER = 6;
+
+/**
+ * 三元表达式，如 a ? b : c
+ *
+ * @type {number}
+ */
+var TERNARY = 7;
 
 /**
  * 一元表达式，如 - a
@@ -1295,14 +1295,12 @@ var LTE = '<=';
 var GT = '>';
 var GTE = '>=';
 
-// 一元操作符
 var unaryMap = {};
 
 unaryMap[PLUS] = unaryMap[MINUS] = unaryMap[NOT] = unaryMap[WAVE] = unaryMap[BOOLEAN] = TRUE;
 
 var unaryList = sort(unaryMap, TRUE);
 
-// 二元操作符
 // 操作符和对应的优先级，数字越大优先级越高
 var binaryMap = {};
 
@@ -6040,7 +6038,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.33.7';
+Yox.version = '0.33.8';
 
 /**
  * 工具，便于扩展、插件使用

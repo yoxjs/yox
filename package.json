@@ -1,6 +1,6 @@
 {
   "name": "yox",
-  "version": "0.33.7",
+  "version": "0.33.8",
   "description": "A lightweight mvvm framework",
   "main": "dist/yox.min.js",
   "directories": {
@@ -16,7 +16,7 @@
     "rollup-plugin-node-resolve": "^2.0.0",
     "rollup-plugin-uglify": "^1.0.1",
     "yox-common": "^0.6.9",
-    "yox-expression-compiler": "^0.5.3",
+    "yox-expression-compiler": "^0.5.4",
     "yox-observer": "^0.4.8",
     "yox-snabbdom": "^0.5.0",
     "yox-template-compiler": "^0.6.11"
