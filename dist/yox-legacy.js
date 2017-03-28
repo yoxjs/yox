@@ -935,8 +935,12 @@ var Event = function () {
       if (!this.isPrevented) {
         var originalEvent = this.originalEvent;
 
-        if (originalEvent && func(originalEvent.preventDefault)) {
-          originalEvent.preventDefault();
+        if (originalEvent) {
+          if (func(originalEvent.prevent)) {
+            originalEvent.prevent();
+          } else if (func(originalEvent.preventDefault)) {
+            originalEvent.preventDefault();
+          }
         }
         this.isPrevented = TRUE;
       }
@@ -947,8 +951,12 @@ var Event = function () {
       if (!this.isStoped) {
         var originalEvent = this.originalEvent;
 
-        if (originalEvent && func(originalEvent.stopPropagation)) {
-          originalEvent.stopPropagation();
+        if (originalEvent) {
+          if (func(originalEvent.stop)) {
+            originalEvent.stop();
+          } else if (func(originalEvent.stopPropagation)) {
+            originalEvent.stopPropagation();
+          }
         }
         this.isStoped = TRUE;
       }
@@ -1035,11 +1043,18 @@ var Emitter = function () {
         context = NULL;
       }
 
+      var event = data;
+      if (array(data)) {
+        event = data[0];
+      }
+
+      var isEvent = event instanceof Event;
       var done = TRUE;
 
       this.match(type, function (list, extra) {
         if (array(list)) {
           each(list, function (listener) {
+
             var result = execute(listener, context, extra ? merge(data, extra) : data);
 
             var $once = listener.$once;
@@ -1049,11 +1064,11 @@ var Emitter = function () {
             }
 
             // 如果没有返回 false，而是调用了 event.stop 也算是返回 false
-            if (data instanceof Event) {
+            if (isEvent) {
               if (result === FALSE) {
-                data.prevent();
-                data.stop();
-              } else if (data.isStoped) {
+                event.prevent();
+                event.stop();
+              } else if (event.isStoped) {
                 result = FALSE;
               }
             }
@@ -5897,7 +5912,10 @@ var Yox = function () {
                 fn = result.value;
               }
             }
-            execute(fn, instance, args);
+            if (execute(fn, instance, args) === FALSE && isEvent) {
+              event$$1.prevent();
+              event$$1.stop();
+            }
           };
         }
       } else {
@@ -6038,7 +6056,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.33.8';
+Yox.version = '0.34.0';
 
 /**
  * 工具，便于扩展、插件使用

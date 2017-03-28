@@ -485,7 +485,10 @@ export default class Yox {
               fn = result.value
             }
           }
-          execute(fn, instance, args)
+          if (execute(fn, instance, args) === env.FALSE && isEvent) {
+            event.prevent()
+            event.stop()
+          }
         }
       }
     }
@@ -619,7 +622,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.33.8'
+Yox.version = '0.34.0'
 
 /**
  * 工具，便于扩展、插件使用
