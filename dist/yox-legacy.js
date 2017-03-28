@@ -4013,7 +4013,7 @@ var tag = /<[^>]+>/;
  *
  * @type {RegExp}
  */
-var selector = /^[#.]\w+$/;
+var selector = /^[#.][-\w+]+$/;
 
 /**
  * 进入 `new Yox(options)` 之后立即触发，钩子函数会传入 `options`
@@ -6042,7 +6042,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.33.5';
+Yox.version = '0.33.6';
 
 /**
  * 工具，便于扩展、插件使用
