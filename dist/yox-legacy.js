@@ -80,6 +80,7 @@ var TRUE = true;
 var FALSE = false;
 var NULL = null;
 var UNDEFINED = undefined;
+var THIS = 'this';
 
 /**
  * 浏览器环境下的 window 对象
@@ -173,8 +174,6 @@ var toNumber = function (str) {
   return defaultValue;
 };
 
-var slice = Array.prototype.slice;
-
 /**
  * 遍历数组
  *
@@ -182,7 +181,6 @@ var slice = Array.prototype.slice;
  * @param {Function} callback 返回 false 可停止遍历
  * @param {?boolean} reversed 是否逆序遍历
  */
-
 function each(array$$1, callback, reversed) {
   var length = array$$1.length;
 
@@ -250,7 +248,7 @@ var unshift = add('unshift');
  * @return {Array}
  */
 function toArray(array$$1) {
-  return array(array$$1) ? array$$1 : execute(slice, array$$1);
+  return array(array$$1) ? array$$1 : execute(Array.prototype.slice, array$$1);
 }
 
 /**
@@ -457,7 +455,7 @@ function camelCase(str) {
  * @return {string}
  */
 function capitalize(str) {
-  return charAt(str, 0).toUpperCase() + slice$1(str, 1);
+  return charAt(str, 0).toUpperCase() + slice(str, 1);
 }
 
 /**
@@ -525,7 +523,7 @@ function parse(str, separator, pair) {
 function trim(str) {
   return falsy$1(str) ? CHAR_BLANK : str.trim();
 }
-function slice$1(str, start, end) {
+function slice(str, start, end) {
   return number(end) ? str.slice(start, end) : str.slice(start);
 }
 function split(str, delimiter) {
@@ -551,7 +549,7 @@ var string$1 = Object.freeze({
 	falsy: falsy$1,
 	parse: parse,
 	trim: trim,
-	slice: slice$1,
+	slice: slice,
 	split: split,
 	indexOf: indexOf$1,
 	has: has$2,
@@ -559,10 +557,10 @@ var string$1 = Object.freeze({
 	endsWith: endsWith
 });
 
-var SEPARATOR_KEY = CHAR_DOT;
-var SEPARATOR_PATH = CHAR_SLASH;
-var LEVEL_CURRENT = CHAR_DOT;
-var LEVEL_PARENT = '' + CHAR_DOT + CHAR_DOT;
+var SEPARATOR_KEY = '.';
+var SEPARATOR_PATH = '/';
+var LEVEL_CURRENT = '.';
+var LEVEL_PARENT = '..';
 
 function normalize(str) {
   if (!falsy$1(str) && indexOf$1(str, CHAR_OBRACK) > 0 && indexOf$1(str, CHAR_CBRACK) > 0) {
@@ -571,7 +569,7 @@ function normalize(str) {
     return str.replace(/\[\s*?([\S]+)\s*?\]/g, function ($0, $1) {
       var code = codeAt($1);
       if (code === CODE_SQUOTE || code === CODE_DQUOTE) {
-        $1 = slice$1($1, 1, -1);
+        $1 = slice($1, 1, -1);
       }
       return '' + SEPARATOR_KEY + $1;
     });
@@ -585,7 +583,7 @@ function parse$1(str) {
 
 function stringify(keypaths) {
   return keypaths.filter(function (term) {
-    return term !== CHAR_BLANK && term !== LEVEL_CURRENT;
+    return term !== CHAR_BLANK && term !== LEVEL_CURRENT && term !== THIS;
   }).join(SEPARATOR_KEY);
 }
 
@@ -1937,7 +1935,7 @@ function compile$1(content) {
 
   var parseOperator = function parseOperator(sortedOperatorList) {
     skipWhitespace();
-    var literal = matchBestToken(slice$1(content, index), sortedOperatorList);
+    var literal = matchBestToken(slice(content, index), sortedOperatorList);
     if (literal) {
       index += literal.length;
       return literal;
@@ -1980,7 +1978,7 @@ function compile$1(content) {
     if (charCode === CODE_SQUOTE || charCode === CODE_DQUOTE) {
       // 截出的字符串包含引号
       var value = content.substring(index, (skipString(), index));
-      return new Literal(slice$1(value, 1, -1), value);
+      return new Literal(slice(value, 1, -1), value);
     }
     // 1.1 或 .1
     else if (isDigit(charCode) || charCode === CODE_DOT) {
@@ -2238,7 +2236,7 @@ var Context = function () {
     value: function format(keypath) {
       var instance = this,
           keys$$1 = parse$1(keypath);
-      if (keys$$1[0] === 'this') {
+      if (keys$$1[0] === THIS) {
         keys$$1.shift();
         return {
           keypath: stringify(keys$$1),
@@ -2431,7 +2429,7 @@ var Scanner = function () {
     key: 'forward',
     value: function forward(offset) {
       this.pos += offset;
-      this.tail = slice$1(this.tail, offset);
+      this.tail = slice(this.tail, offset);
     }
   }, {
     key: 'charAt',
@@ -3093,7 +3091,7 @@ var compileCache = {};
  * @return {string}
  */
 function slicePrefix(str, prefix) {
-  return trim(slice$1(str, prefix.length));
+  return trim(slice(str, prefix.length));
 }
 
 /**
@@ -3285,7 +3283,7 @@ function compile$$1(template) {
       if (content && codeAt(content) === CODE_EQUAL) {
         // 第一个是引号
         result = charAt(content, 1);
-        content = slice$1(content, 2);
+        content = slice(content, 2);
       } else {
         popStack();
         return content;
@@ -3305,8 +3303,8 @@ function compile$$1(template) {
     }
 
     if (i) {
-      addChild(new Text(slice$1(content, 0, i)));
-      content = slice$1(content, closed ? i + 1 : i);
+      addChild(new Text(slice(content, 0, i)));
+      content = slice(content, closed ? i + 1 : i);
     }
 
     if (closed) {
@@ -3333,7 +3331,7 @@ function compile$$1(template) {
 
         if (levelNode && levelNode.type === ELEMENT) {
           while (content && (result = attributePattern.exec(content))) {
-            content = slice$1(content, result.index + result[0].length);
+            content = slice(content, result.index + result[0].length);
             name = result[1];
 
             if (builtInDirectives[name]) {
@@ -3405,7 +3403,7 @@ function compile$$1(template) {
     if (mainScanner.codeAt(1) === CODE_SLASH) {
       // 取出 </tagName
       content = mainScanner.nextAfter(openingTagPattern);
-      name = slice$1(content, 2);
+      name = slice(content, 2);
 
       // 没有匹配到 >
       if (mainScanner.codeAt(0) !== CODE_RIGHT) {
@@ -3423,7 +3421,7 @@ function compile$$1(template) {
     else {
         // 取出 <tagName
         content = mainScanner.nextAfter(openingTagPattern);
-        name = slice$1(content, 1);
+        name = slice(content, 1);
 
         levelNode = addChild(new Element(name, componentNamePattern.test(name)));
 
@@ -3956,14 +3954,14 @@ function matchKeypath(data, keypath) {
   each(sort(data, TRUE), function (prefix, index) {
     if (startsWith(keypath, prefix)) {
       value = data[prefix];
-      rest = slice$1(keypath, prefix.length);
+      rest = slice(keypath, prefix.length);
       return FALSE;
     }
   });
 
   return {
     value: value,
-    rest: rest && startsWith(rest, SEPARATOR_KEY) ? slice$1(rest, 1) : rest
+    rest: rest && startsWith(rest, SEPARATOR_KEY) ? slice(rest, 1) : rest
   };
 }
 
@@ -4285,7 +4283,7 @@ function createEvent$1(event, element) {
 
 function find$1(selector, context) {
   context = context || doc;
-  return context.querySelector ? context.querySelector(selector) : context.getElementById(slice$1(selector, 1));
+  return context.querySelector ? context.querySelector(selector) : context.getElementById(slice(selector, 1));
 }
 
 function setProp$1(element, name, value) {
@@ -4476,19 +4474,19 @@ function init(modules) {
 
     var hashIndex = indexOf$1(sel, CHAR_HASH);
     if (hashIndex > 0) {
-      tagName = slice$1(sel, 0, hashIndex);
-      sel = slice$1(sel, hashIndex + 1);
+      tagName = slice(sel, 0, hashIndex);
+      sel = slice(sel, hashIndex + 1);
     }
 
     var dotIndex = indexOf$1(sel, CHAR_DOT);
     if (dotIndex > 0) {
-      var temp = slice$1(sel, 0, dotIndex);
+      var temp = slice(sel, 0, dotIndex);
       if (tagName) {
         id = temp;
       } else {
         tagName = temp;
       }
-      className = split(slice$1(sel, dotIndex + 1), CHAR_DOT).join(CHAR_WHITESPACE);
+      className = split(slice(sel, dotIndex + 1), CHAR_DOT).join(CHAR_WHITESPACE);
     } else {
       if (tagName) {
         id = sel;
@@ -5880,7 +5878,7 @@ var Yox = function () {
                     }
                   } else if (name === SPECIAL_KEYPATH) {
                     return keypath;
-                  } else if (name === 'this') {
+                  } else if (name === THIS) {
                     return instance.get(keypath);
                   }
                 } else if (type === MEMBER) {
@@ -6042,7 +6040,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.33.6';
+Yox.version = '0.33.7';
 
 /**
  * 工具，便于扩展、插件使用

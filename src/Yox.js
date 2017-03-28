@@ -462,7 +462,7 @@ export default class Yox {
                   else if (name === viewSyntax.SPECIAL_KEYPATH) {
                     return keypath
                   }
-                  else if (name === 'this') {
+                  else if (name === env.THIS) {
                     return instance.get(keypath)
                   }
                 }
@@ -619,7 +619,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.33.6'
+Yox.version = '0.33.7'
 
 /**
  * 工具，便于扩展、插件使用
