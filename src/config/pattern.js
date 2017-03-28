@@ -11,4 +11,4 @@ export const tag = /<[^>]+>/
  *
  * @type {RegExp}
  */
-export const selector = /^[#.]\w+$/
+export const selector = /^[#.][-\w+]+$/
