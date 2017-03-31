@@ -103,11 +103,8 @@ var doc = typeof document !== 'undefined' ? document : NULL;
  */
 var noop = function noop() {/** yox */};
 
-var toString = Object.prototype.toString;
-
-
 function is(arg, type) {
-  return type === 'numeric' ? numeric(arg) : toString.call(arg).toLowerCase() === '[object ' + type + ']';
+  return type === 'numeric' ? numeric(arg) : Object.prototype.toString.call(arg).toLowerCase() === '[object ' + type + ']';
 }
 
 function func(arg) {
@@ -120,7 +117,7 @@ function array(arg) {
 
 function object(arg) {
   // 低版本 IE 会把 null 和 undefined 当作 object
-  return arg && is(arg, 'object');
+  return arg && is(arg, 'object') ? TRUE : FALSE;
 }
 
 function string(arg) {
@@ -231,6 +228,7 @@ function add(action) {
  * push 数组
  *
  * @param {Array} original
+ * @param {...}
  */
 var push = add('push');
 
@@ -238,6 +236,7 @@ var push = add('push');
  * unshift 数组
  *
  * @param {Array} original
+ * @param {...}
  */
 var unshift = add('unshift');
 
@@ -254,14 +253,25 @@ function toArray(array$$1) {
 /**
  * 把数组转成对象
  *
+ * [ { key: 'key1', value: 'value1' }, { key: 'key2', value: 'value2' } ]
+ * 可转成
+ * { key1: value1, key2: value2 }
+ *
  * @param {Array} array 数组
  * @param {?string} key 数组项包含的字段名称，如果数组项是基本类型，可不传
+ * @param {?string} value 数组项包含的字段名称或值
  * @return {Object}
  */
 function toObject(array$$1, key, value) {
-  var result = {};
-  each(array$$1, function (item) {
-    result[key ? item[key] : item] = value ? item[value] : item;
+  var result = {},
+      hasValue = arguments.length === 3;
+  each(array$$1, function (item, index) {
+    if (string(value)) {
+      index = item[value];
+    } else {
+      index = hasValue ? value : item;
+    }
+    result[key ? item[key] : item] = index;
   });
   return result;
 }
@@ -278,14 +288,12 @@ function indexOf(array$$1, item, strict) {
   if (strict !== FALSE) {
     return array$$1.indexOf(item);
   } else {
-    var index = -1;
-    each(array$$1, function (value, i) {
-      if (item == value) {
-        index = i;
-        return FALSE;
+    for (var i = 0, len = array$$1.length; i < len; i++) {
+      if (array$$1[i] == item) {
+        return i;
       }
-    });
-    return index;
+    }
+    return -1;
   }
 }
 
@@ -317,12 +325,15 @@ function last(array$$1) {
  * @param {Array} array 数组
  * @param {*} item 待删除项
  * @param {?boolean} strict 是否全等判断，默认是全等
+ * @return {boolean} 是否删除成功
  */
 function remove(array$$1, item, strict) {
   var index = indexOf(array$$1, item, strict);
   if (index >= 0) {
     array$$1.splice(index, 1);
+    return TRUE;
   }
+  return FALSE;
 }
 
 /**
@@ -695,11 +706,11 @@ function copy(object$$1, deep) {
 }
 
 // 如果函数改写了 toString，就调用 toString() 求值
-var toString$1 = Function.prototype.toString;
+var toString = Function.prototype.toString;
 
 
 function getValue(value) {
-  if (func(value) && value.toString !== toString$1) {
+  if (func(value) && value.toString !== toString) {
     value = value.toString();
   }
   return value;
@@ -4084,6 +4095,10 @@ var BEFORE_DESTROY = 'beforeDestroy';
  */
 var AFTER_DESTROY = 'afterDestroy';
 
+var converter = {};
+converter['for'] = 'htmlFor';
+converter['class'] = 'className';
+
 function createElement(tagName, parentNode) {
   var SVGElement = win.SVGElement;
 
@@ -4107,19 +4122,27 @@ function isElement(node) {
 }
 
 function setProp(node, name, value) {
-  node[name] = value;
+  node[converter[name] || name] = value;
 }
 
 function removeProp(node, name) {
-  delete node[name];
+  delete node[converter[name] || name];
 }
 
 function setAttr(node, name, value) {
-  node.setAttribute(name, value);
+  if (converter[name]) {
+    node[converter[name]] = value;
+  } else {
+    node.setAttribute(name, value);
+  }
 }
 
 function removeAttr(node, name) {
-  node.removeAttribute(name);
+  if (converter[name]) {
+    delete node[converter[name]];
+  } else {
+    node.removeAttribute(name);
+  }
 }
 
 function before(parentNode, newNode, referenceNode) {
@@ -4948,7 +4971,7 @@ var style = {
   update: updateStyle
 };
 
-var toString$2 = function (str) {
+var toString$1 = function (str) {
   var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : CHAR_BLANK;
 
   try {
@@ -4986,7 +5009,7 @@ function create(ast, context, instance) {
       data: data,
       sel: node.name,
       children: node.children.map(function (child) {
-        return child instanceof Vnode ? child : new Vnode({ text: toString$2(child) });
+        return child instanceof Vnode ? child : new Vnode({ text: toString$1(child) });
       })
     };
 
@@ -5296,7 +5319,7 @@ var inputControl = {
         keypath = _ref.keypath,
         instance = _ref.instance;
 
-    var value = toString$2(instance.get(keypath));
+    var value = toString$1(instance.get(keypath));
     if (value !== el.value) {
       el.value = value;
     }
@@ -5318,7 +5341,7 @@ var selectControl = {
         keypath = _ref3.keypath,
         instance = _ref3.instance;
 
-    var value = toString$2(instance.get(keypath));
+    var value = toString$1(instance.get(keypath));
     var options = el.options,
         selectedIndex = el.selectedIndex;
 
@@ -5347,7 +5370,7 @@ var radioControl = {
         keypath = _ref5.keypath,
         instance = _ref5.instance;
 
-    el.checked = el.value === toString$2(instance.get(keypath));
+    el.checked = el.value === toString$1(instance.get(keypath));
   },
   sync: function sync(_ref6) {
     var el = _ref6.el,
@@ -6056,7 +6079,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.34.0';
+Yox.version = '0.34.1';
 
 /**
  * 工具，便于扩展、插件使用
