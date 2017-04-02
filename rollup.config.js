@@ -24,5 +24,5 @@ export default {
     commonjs(),
     (minify && uglify()),
   ],
-  dest: minify ? 'dist/yox-legacy.min.js' : 'dist/yox-legacy.js'
+  dest: minify ? 'dist/yox.min.js' : 'dist/yox.js'
 }
