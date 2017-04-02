@@ -514,41 +514,30 @@ function parse(str, separator, pair) {
   return result;
 }
 
-/**
- * 替换可正则可用的字符串
- *
- * @param {string} str
- * @param {string} pattern
- * @param {string} replacement
- * @return {string}
- */
-// export function replace(str, pattern, replacement) {
-//   pattern = pattern.replace(/[$.]/g, '\\$&')
-//   return str.replace(
-//     new RegExp(`(?:^|\\b)${pattern}(?:$|\\b)`, 'g'),
-//     replacement
-//   )
-// }
-
-
 function trim(str) {
   return falsy$1(str) ? CHAR_BLANK : str.trim();
 }
+
 function slice(str, start, end) {
   return number(end) ? str.slice(start, end) : str.slice(start);
 }
+
 function split(str, delimiter) {
   return falsy$1(str) ? [] : str.split(new RegExp('\\s*' + delimiter.replace(/[.*?]/g, '\\$&') + '\\s*'));
 }
+
 function indexOf$1(str, part) {
   return str.indexOf(part);
 }
+
 function has$2(str, part) {
   return indexOf$1(str, part) >= 0;
 }
+
 function startsWith(str, part) {
   return indexOf$1(str, part) === 0;
 }
+
 function endsWith(str, part) {
   var offset = str.length - part.length;
   return offset >= 0 && str.lastIndexOf(part) === offset;
@@ -574,10 +563,8 @@ var LEVEL_CURRENT = '.';
 var LEVEL_PARENT = '..';
 
 function normalize(str) {
-  if (!falsy$1(str) && indexOf$1(str, CHAR_OBRACK) > 0 && indexOf$1(str, CHAR_CBRACK) > 0) {
-    // array[0] => array.0
-    // object['key'] => array.key
-    return str.replace(/\[\s*?([\S]+)\s*?\]/g, function ($0, $1) {
+  if (!falsy$1(str) && indexOf$1(str, '[') > 0 && indexOf$1(str, ']') > 0) {
+    return str.replace(/\[\s*?([^\]]+)\s*?\]/g, function ($0, $1) {
       var code = codeAt($1);
       if (code === CODE_SQUOTE || code === CODE_DQUOTE) {
         $1 = slice($1, 1, -1);
@@ -588,14 +575,16 @@ function normalize(str) {
   return str;
 }
 
+function filter(term) {
+  return term !== CHAR_BLANK && term !== THIS && term !== LEVEL_CURRENT;
+}
+
 function parse$1(str) {
-  return split(normalize(str), SEPARATOR_KEY);
+  return split(normalize(str), SEPARATOR_KEY).filter(filter);
 }
 
 function stringify(keypaths) {
-  return keypaths.filter(function (term) {
-    return term !== CHAR_BLANK && term !== LEVEL_CURRENT && term !== THIS;
-  }).join(SEPARATOR_KEY);
+  return keypaths.filter(filter).join(SEPARATOR_KEY);
 }
 
 function resolve(base, path) {
@@ -604,7 +593,7 @@ function resolve(base, path) {
     if (term === LEVEL_PARENT) {
       list.pop();
     } else {
-      push(list, normalize(term));
+      push(list, parse$1(term));
     }
   });
   return stringify(list);
@@ -705,12 +694,9 @@ function copy(object$$1, deep) {
   return result;
 }
 
-// 如果函数改写了 toString，就调用 toString() 求值
-var toString = Function.prototype.toString;
-
-
 function getValue(value) {
-  if (func(value) && value.toString !== toString) {
+  // 如果函数改写了 toString，就调用 toString() 求值
+  if (func(value) && value.toString !== Function.prototype.toString) {
     value = value.toString();
   }
   return value;
@@ -728,8 +714,9 @@ function getValue(value) {
  */
 function get(object$$1, keypath) {
 
+  if (string(keypath) && !has$1(object$$1, keypath)
   // 不能以 . 开头
-  if (!has$1(object$$1, keypath) && string(keypath) && indexOf$1(keypath, CHAR_DOT) > 0) {
+  && indexOf$1(keypath, CHAR_DOT) > 0) {
     var list = parse$1(keypath);
     for (var i = 0, len = list.length; i < len; i++) {
       if (i < len - 1) {
@@ -759,26 +746,31 @@ function get(object$$1, keypath) {
  * @param {?boolean} autofill 是否自动填充不存在的对象，默认自动填充
  */
 function set(object$$1, keypath, value, autofill) {
-  if (string(keypath) && indexOf$1(keypath, CHAR_DOT) > 0) {
-    var originalObject = object$$1;
-    var list = parse$1(keypath);
-    var prop = list.pop();
-    each(list, function (item, index) {
-      if (object$$1[item]) {
-        object$$1 = object$$1[item];
-      } else if (autofill !== FALSE) {
-        object$$1 = object$$1[item] = {};
-      } else {
-        object$$1 = NULL;
-        return FALSE;
+  if (string(keypath)) {
+    if (has$1(object$$1, keypath)) {
+      object$$1[keypath] = value;
+    } else if (indexOf$1(keypath, CHAR_DOT) > 0) {
+      var originalObject = object$$1;
+      var list = parse$1(keypath);
+      var prop = list.pop();
+      each(list, function (item, index) {
+        if (object$$1[item]) {
+          object$$1 = object$$1[item];
+        } else if (autofill !== FALSE) {
+          object$$1 = object$$1[item] = {};
+        } else {
+          return object$$1 = FALSE;
+        }
+      });
+      if (object$$1 && object$$1 !== originalObject) {
+        object$$1[prop] = value;
       }
-    });
-    if (object$$1 && object$$1 !== originalObject) {
-      object$$1[prop] = value;
     }
-  } else {
-    object$$1[keypath] = value;
   }
+  // keypath 是数字
+  else {
+      object$$1[keypath] = value;
+    }
 }
 
 var object$1 = Object.freeze({
@@ -866,27 +858,14 @@ var Store = function () {
   }
 
   /**
-   * 同步取值
+   * 异步取值
    *
    * @param {string} key
-   * @return {*}
+   * @param {Function} callback
    */
 
 
   createClass(Store, [{
-    key: 'get',
-    value: function get$$1(key) {
-      return this.data[key];
-    }
-
-    /**
-     * 异步取值
-     *
-     * @param {string} key
-     * @param {Function} callback
-     */
-
-  }, {
     key: 'getAsync',
     value: function getAsync(key, callback) {
       var data = this.data;
@@ -910,6 +889,19 @@ var Store = function () {
       } else {
         callback(value);
       }
+    }
+
+    /**
+     * 同步取值
+     *
+     * @param {string} key
+     * @return {*}
+     */
+
+  }, {
+    key: 'get',
+    value: function get$$1(key) {
+      return this.data[key];
     }
   }, {
     key: 'set',
@@ -1060,7 +1052,7 @@ var Emitter = function () {
       }
 
       var isEvent = event instanceof Event;
-      var done = TRUE;
+      var isComplete = TRUE;
 
       this.match(type, function (list, extra) {
         if (array(list)) {
@@ -1085,13 +1077,13 @@ var Emitter = function () {
             }
 
             if (result === FALSE) {
-              return done = FALSE;
+              return isComplete = FALSE;
             }
           });
         }
       });
 
-      return done;
+      return isComplete;
     }
   }, {
     key: 'has',
@@ -1119,9 +1111,9 @@ var Emitter = function () {
           return handler(list);
         } else if (has$2(key, '*')) {
           key = key.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)');
-          var match = type.match(new RegExp('^' + key + '$'));
-          if (match) {
-            return handler(list, toArray(match).slice(1));
+          key = type.match(new RegExp('^' + key + '$'));
+          if (key) {
+            return handler(list, toArray(key).slice(1));
           }
         }
       });
@@ -4971,7 +4963,7 @@ var style = {
   update: updateStyle
 };
 
-var toString$1 = function (str) {
+var toString = function (str) {
   var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : CHAR_BLANK;
 
   try {
@@ -5009,7 +5001,7 @@ function create(ast, context, instance) {
       data: data,
       sel: node.name,
       children: node.children.map(function (child) {
-        return child instanceof Vnode ? child : new Vnode({ text: toString$1(child) });
+        return child instanceof Vnode ? child : new Vnode({ text: toString(child) });
       })
     };
 
@@ -5319,7 +5311,7 @@ var inputControl = {
         keypath = _ref.keypath,
         instance = _ref.instance;
 
-    var value = toString$1(instance.get(keypath));
+    var value = toString(instance.get(keypath));
     if (value !== el.value) {
       el.value = value;
     }
@@ -5341,7 +5333,7 @@ var selectControl = {
         keypath = _ref3.keypath,
         instance = _ref3.instance;
 
-    var value = toString$1(instance.get(keypath));
+    var value = toString(instance.get(keypath));
     var options = el.options,
         selectedIndex = el.selectedIndex;
 
@@ -5370,7 +5362,7 @@ var radioControl = {
         keypath = _ref5.keypath,
         instance = _ref5.instance;
 
-    el.checked = el.value === toString$1(instance.get(keypath));
+    el.checked = el.value === toString(instance.get(keypath));
   },
   sync: function sync(_ref6) {
     var el = _ref6.el,
@@ -6079,7 +6071,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.34.1';
+Yox.version = '0.34.2';
 
 /**
  * 工具，便于扩展、插件使用
