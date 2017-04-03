@@ -2,7 +2,6 @@
 import execute from 'yox-common/function/execute'
 import toNumber from 'yox-common/function/toNumber'
 
-import Store from 'yox-common/util/Store'
 import Event from 'yox-common/util/Event'
 import Emitter from 'yox-common/util/Emitter'
 
@@ -640,6 +639,72 @@ let { prototype } = Yox
 
 // 全局注册
 let registry = { }
+
+class Store {
+
+  constructor() {
+    this.data = { }
+  }
+
+  /**
+   * 异步取值
+   *
+   * @param {string} key
+   * @param {Function} callback
+   */
+  getAsync(key, callback) {
+    let { data } = this
+    let value = data[ key ]
+    if (is.func(value)) {
+      let { $pending } = value
+      if (!$pending) {
+        $pending = value.$pending = [ callback ]
+        value(function (replacement) {
+          delete value.$pending
+          data[ key ] = replacement
+          array.each(
+            $pending,
+            function (callback) {
+              callback(replacement)
+            }
+          )
+        })
+      }
+      else {
+        array.push($pending, callback)
+      }
+    }
+    else {
+      callback(value)
+    }
+  }
+
+  /**
+   * 同步取值
+   *
+   * @param {string} key
+   * @return {*}
+   */
+  get(key) {
+    return this.data[ key ]
+  }
+
+  set(key, value) {
+    let { data } = this
+    if (is.object(key)) {
+      object.each(
+        key,
+        function (value, key) {
+          data[ key ] = value
+        }
+      )
+    }
+    else if (is.string(key)) {
+      data[ key ] = value
+    }
+  }
+
+}
 
 // 支持异步注册
 const supportRegisterAsync = [ 'component' ]
