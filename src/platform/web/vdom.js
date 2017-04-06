@@ -17,7 +17,7 @@ import * as array from 'yox-common/util/array'
 import * as object from 'yox-common/util/object'
 import * as string from 'yox-common/util/string'
 
-import * as viewEnginer from 'yox-template-compiler'
+import renderTemplate from 'yox-template-compiler/render'
 import * as viewSyntax from 'yox-template-compiler/src/syntax'
 
 import api from './api'
@@ -252,6 +252,6 @@ export function create(ast, context, instance) {
     return instance.partial(name)
   }
 
-  return viewEnginer.render(ast, createComment, createElement, importTemplate, context)
+  return renderTemplate(ast, createComment, createElement, importTemplate, context)
 
 }

@@ -14,12 +14,13 @@ import * as string from 'yox-common/util/string'
 import * as logger from 'yox-common/util/logger'
 import * as nextTask from 'yox-common/util/nextTask'
 
-import * as viewEnginer from 'yox-template-compiler'
+import compileTemplate from 'yox-template-compiler/compile'
 import * as viewSyntax from 'yox-template-compiler/src/syntax'
 
 import Observer from 'yox-observer'
 
-import * as expressionEnginer from 'yox-expression-compiler'
+import compileExpression from 'yox-expression-compiler/compile'
+import stringifyExpression from 'yox-expression-compiler/stringify'
 import * as expressionNodeType from 'yox-expression-compiler/src/nodeType'
 
 import * as pattern from './config/pattern'
@@ -435,7 +436,7 @@ export default class Yox {
 
     let instance = this
     if (string.indexOf(value, char.CHAR_OPAREN) > 0) {
-      let ast = expressionEnginer.compile(value)
+      let ast = compileExpression(value)
       if (ast.type === expressionNodeType.CALL) {
         return function (event) {
           let isEvent = event instanceof Event
@@ -466,7 +467,7 @@ export default class Yox {
                   }
                 }
                 else if (type === expressionNodeType.MEMBER) {
-                  name = expressionEnginer.stringify(node)
+                  name = stringifyExpression(node)
                 }
 
                 let result = instance.get(name, keypath)
@@ -476,7 +477,7 @@ export default class Yox {
               }
             )
           }
-          let name = expressionEnginer.stringify(ast.callee)
+          let name = stringifyExpression(ast.callee)
           let fn = instance[ name ]
           if (!fn) {
             let result = instance.get(name, keypath)
@@ -803,7 +804,7 @@ Yox.nextTick = nextTask.add
  * @return {Object}
  */
 Yox.compile = function (template) {
-  return viewEnginer.compile(template)[ 0 ]
+  return compileTemplate(template)[ 0 ]
 }
 
 /**
