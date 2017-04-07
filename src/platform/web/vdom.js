@@ -38,7 +38,7 @@ export function create(ast, context, instance) {
     let hooks = { }, attributes = { }, directives = { }, styles, component
 
     let data = {
-      hook: hooks,
+      hooks,
       props: node.properties,
     }
 

@@ -2423,6 +2423,10 @@ function compile(content) {
       node.content = content;
     }
 
+    if (elseTypes[type]) {
+      popStack(pop(ifStack).type);
+    }
+
     var currentNode = last(nodeStack);
     if (currentNode) {
       if (htmlStack.length === 1 && currentNode.addAttr) {
@@ -2434,13 +2438,14 @@ function compile(content) {
       push(nodeList, node);
     }
 
+    if (ifTypes[type] || elseTypes[type]) {
+      push(ifStack, node);
+    } else if (htmlTypes[type]) {
+      push(htmlStack, node);
+    }
+
     if (!leafTypes[type]) {
       push(nodeStack, node);
-      if (htmlTypes[type]) {
-        push(htmlStack, node);
-      } else if (ifTypes[type]) {
-        push(ifStack, node);
-      }
     }
   };
 
@@ -2590,20 +2595,13 @@ function compile(content) {
       if (charAt(content) === '/') {
         var type = name2Type[slice(content, 1)];
         if (ifTypes[type]) {
-          if (ifStack.length) {
-            type = pop(ifStack).type;
-          } else {
-            type = ELSE$1;
-          }
+          type = pop(ifStack).type;
         }
         popStack(type);
       } else {
         each(delimiterParsers, function (parse$$1, node) {
           node = parse$$1(content, all);
           if (node) {
-            if (elseTypes[node.type]) {
-              popStack(pop(ifStack).type);
-            }
             addChild(node);
             return FALSE;
           }
@@ -2792,7 +2790,7 @@ var Observer = function () {
 
       if (string(context)) {
         var prefixes = parse$1(context);
-        if (suffixes.length > 1 && suffixes[0] === 'this') {
+        if (suffixes.length > 1 && suffixes[0] === THIS) {
           keypath = stringify(merge(prefixes, suffixes.slice(1)));
           result = getValue(keypath);
         } else {
@@ -2991,10 +2989,10 @@ var Observer = function () {
       var cache = instance.cache,
           emitter = instance.emitter,
           context = instance.context,
-          dispatching = instance.dispatching,
-          dispatched = instance.dispatched,
+          options = instance.options,
           computedDeps = instance.computedDeps,
-          options = instance.options;
+          dispatching = instance.dispatching,
+          dispatched = instance.dispatched;
 
       // 确保 dispatch 过程中不受干扰，能一次执行完
 
@@ -3346,11 +3344,15 @@ function append(parentNode, child) {
 }
 
 function replace(parentNode, newNode, oldNode) {
-  parentNode.replaceChild(newNode, oldNode);
+  if (parent(oldNode) === parentNode) {
+    parentNode.replaceChild(newNode, oldNode);
+  }
 }
 
 function remove$1(parentNode, child) {
-  parentNode.removeChild(child);
+  if (parent(child) === parentNode) {
+    parentNode.removeChild(child);
+  }
 }
 
 function parent(node) {
@@ -3756,8 +3758,8 @@ function init(modules) {
         text$$1 = vnode.text;
 
 
-    var hook = data && data.hook || {};
-    execute(hook[HOOK_INIT], NULL, vnode);
+    var hooks = data && data.hooks || {};
+    execute(hooks[HOOK_INIT], NULL, vnode);
 
     if (falsy$1(sel)) {
       return vnode.el = api.createText(text$$1);
@@ -3792,9 +3794,9 @@ function init(modules) {
       data = [emptyNode, vnode];
       moduleEmitter.fire(HOOK_CREATE, data, api);
 
-      execute(hook[HOOK_CREATE], NULL, data);
+      execute(hooks[HOOK_CREATE], NULL, data);
 
-      if (hook[HOOK_INSERT]) {
+      if (hooks[HOOK_INSERT]) {
         insertedQueue.push(vnode);
       }
     }
@@ -3831,8 +3833,8 @@ function init(modules) {
 
       if (data) {
         moduleEmitter.fire(HOOK_REMOVE, vnode, api);
-        if (data.hook) {
-          execute(data.hook[HOOK_REMOVE], NULL, vnode);
+        if (data.hooks) {
+          execute(data.hooks[HOOK_REMOVE], NULL, vnode);
         }
       }
     } else if (el) {
@@ -3855,8 +3857,8 @@ function init(modules) {
 
       moduleEmitter.fire(HOOK_DESTROY, vnode, api);
 
-      if (data.hook) {
-        execute(data.hook[HOOK_DESTROY], NULL, vnode);
+      if (data.hooks) {
+        execute(data.hooks[HOOK_DESTROY], NULL, vnode);
       }
     }
   };
@@ -3972,10 +3974,10 @@ function init(modules) {
 
     var data = vnode.data;
 
-    var hook = data && data.hook || {};
+    var hooks = data && data.hooks || {};
 
     var args = [oldVnode, vnode];
-    execute(hook[HOOK_PREPATCH], NULL, args);
+    execute(hooks[HOOK_PREPATCH], NULL, args);
 
     var el = vnode.el = oldVnode.el;
 
@@ -3989,7 +3991,7 @@ function init(modules) {
 
     if (data) {
       moduleEmitter.fire(HOOK_UPDATE, args, api);
-      execute(hook[HOOK_UPDATE], NULL, args);
+      execute(hooks[HOOK_UPDATE], NULL, args);
     }
 
     var newText = vnode.text;
@@ -4026,7 +4028,7 @@ function init(modules) {
             }
     }
 
-    execute(hook[HOOK_POSTPATCH], NULL, args);
+    execute(hooks[HOOK_POSTPATCH], NULL, args);
   };
 
   return function (oldVnode, vnode) {
@@ -4053,7 +4055,7 @@ function init(modules) {
     }
 
     each(insertedQueue, function (vnode) {
-      execute(vnode.data.hook[HOOK_INSERT], NULL, vnode);
+      execute(vnode.data.hooks[HOOK_INSERT], NULL, vnode);
     });
 
     moduleEmitter.fire(HOOK_POST, NULL, api);
@@ -4787,7 +4789,7 @@ function create(ast, context, instance) {
         component = void 0;
 
     var data = {
-      hook: hooks,
+      hooks: hooks,
       props: node.properties
     };
 
@@ -5865,7 +5867,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.35.0';
+Yox.version = '0.35.1';
 
 /**
  * 工具，便于扩展、插件使用
