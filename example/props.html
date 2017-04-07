@@ -32,7 +32,7 @@
             el: '#app',
             data: {
                 name: 1,
-                counter: '1',
+                counter: 1,
             },
             template: `
                 <div id="root">
@@ -42,6 +42,11 @@
                     <Custom name="{{name}}" counter="{{counter}}" />
                 </div>
             `,
+            watchers: {
+                counter: function (counter) {
+                    console.log(counter)
+                }
+            },
             components: {
                 Custom: Custom
             },

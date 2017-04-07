@@ -21,9 +21,13 @@
             {{#if isArray(list) && list.length > 0}}
                 {{#each list}}
                     {{name}}
+                    {{#if name == selected}}
+                        已选中
+                    {{/if}}
                     <br>
                 {{/each}}
             {{/if}}
+
         </div>
 
     </script>
@@ -36,6 +40,7 @@
                 name: 'yox',
                 date: Date.now(),
                 amount: 100000,
+                selected: 'Jake1',
                 list: [
                     {
                         name: 'Jake1'

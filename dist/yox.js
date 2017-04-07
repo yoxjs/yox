@@ -2247,7 +2247,7 @@ var Text = function (_Node) {
 var delimiterPattern = /\{?\{\{\s*([^\}]+?)\s*\}\}\}?/;
 var openingTagPattern = /<(\/)?([a-z][-a-z0-9]*)/i;
 var closingTagPattern = /^\s*(\/)?>/;
-var attributePattern = /^\s*([-\w]+)(?:=(['"]))?/;
+var attributePattern = /^\s*([-:\w]+)(?:=(['"]))?/;
 var componentNamePattern = /[-A-Z]/;
 var selfClosingTagNamePattern = /source|param|input|img|br/;
 
@@ -2302,7 +2302,6 @@ function compile(content) {
       nodeStack = [],
       ifStack = [],
       htmlStack = [],
-      currentNode = void 0,
       currentQuote = void 0;
 
   var throwError = function throwError(msg, showPosition) {
@@ -2333,20 +2332,16 @@ function compile(content) {
 
   var popStack = function popStack(type) {
 
-    if (currentNode.type === type) {
-      currentNode = pop(nodeStack);
-    } else {
-      var index = void 0,
-          target = void 0;
-      each(nodeStack, function (node, i) {
-        if (node.type === type) {
-          index = i;
-          target = nodeStack.splice(i, 1)[0];
-          return FALSE;
-        }
-      }, TRUE);
-      currentNode = index === nodeStack.length ? target : NULL;
-    }
+    var index = void 0,
+        target = void 0;
+
+    each(nodeStack, function (node, i) {
+      if (node.type === type) {
+        index = i;
+        target = nodeStack.splice(i, 1)[0];
+        return FALSE;
+      }
+    }, TRUE);
   };
 
   var addChild = function addChild(node) {
@@ -2361,6 +2356,7 @@ function compile(content) {
       node.content = content;
     }
 
+    var currentNode = last(nodeStack);
     if (currentNode) {
       if (htmlStack.length === 1 && currentNode.addAttr) {
         currentNode.addAttr(node);
@@ -2372,10 +2368,7 @@ function compile(content) {
     }
 
     if (!leafTypes[type]) {
-      if (currentNode) {
-        push(nodeStack, currentNode);
-      }
-      currentNode = node;
+      push(nodeStack, node);
       if (htmlTypes[type]) {
         push(htmlStack, node);
       } else if (ifTypes[type]) {
@@ -2413,8 +2406,7 @@ function compile(content) {
     if (htmlStack.length === 1) {
       var _match2 = content.match(attributePattern);
       if (_match2) {
-        var name = _match2[1],
-            node = void 0;
+        var name = _match2[1];
         if (builtInDirectives[name]) {
           addChild(new Directive(camelCase(name)));
         } else {
@@ -2429,6 +2421,9 @@ function compile(content) {
           }
         }
         currentQuote = _match2[2];
+        if (!currentQuote) {
+          popStack(pop(htmlStack).type);
+        }
         return _match2[0];
       }
     }
@@ -2527,10 +2522,14 @@ function compile(content) {
     if (content) {
       if (charAt(content) === '/') {
         var type = name2Type[slice(content, 1)];
-        popStack(type);
-        if (ifStack[type]) {
-          pop(ifStack);
+        if (ifTypes[type]) {
+          if (ifStack.length) {
+            type = pop(ifStack).type;
+          } else {
+            type = ELSE$1;
+          }
         }
+        popStack(type);
       } else {
         each(delimiterParsers, function (parse$$1, node) {
           node = parse$$1(content, all);
@@ -4309,14 +4308,11 @@ function render(ast, createComment, createElement, importTemplate, data) {
 
   var deps = {};
   var executeExpr = function executeExpr(expr) {
-    var _executeExpression = execute$1(expr, context),
-        value = _executeExpression.value,
-        deps = _executeExpression.deps;
-
-    each$1(deps, function (value, key) {
+    var result = execute$1(expr, context);
+    each$1(result.deps, function (value, key) {
       deps[resolve(getKeypath(), key)] = value;
     });
-    return value;
+    return result.value;
   };
 
   /**
@@ -4427,8 +4423,8 @@ function render(ast, createComment, createElement, importTemplate, data) {
         case IF$1:
         case ELSE_IF$1:
           if (!executeExpr(expr)) {
-            name = last(htmlStack);
-            return name === ATTRIBUTE || name === DIRECTIVE || !nextNode || elseTypes[nextNode.type] ? FALSE : makeNodes(createComment());
+            type = last(htmlStack);
+            return type === ATTRIBUTE || type === DIRECTIVE || !nextNode || elseTypes[nextNode.type] ? FALSE : makeNodes(createComment());
           }
           break;
 
@@ -5662,7 +5658,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.34.2';
+Yox.version = '0.35.0';
 
 /**
  * 工具，便于扩展、插件使用
