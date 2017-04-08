@@ -70,6 +70,72 @@ if (!Function.prototype.bind) {
     };
   };
 }
+if (!Object.keys) {
+  Object.keys = function (obj) {
+    var result = [];
+    for (var key in obj) {
+      push(result, key);
+    }
+    return result;
+  };
+  Object.freeze = function (obj) {
+    return obj;
+  };
+  Object.defineProperty = function (obj, key, descriptor) {
+    obj[key] = descriptor.value;
+  };
+  Object.create = function (proto, descriptor) {
+    function Class() {}
+    Class.prototype = proto;
+    proto = new Class();
+    var constructor = descriptor && descriptor.constructor;
+    if (constructor) {
+      proto.constructor = constructor.value;
+    }
+    return proto;
+  };
+}
+if (!String.prototype.trim) {
+  String.prototype.trim = function () {
+    return this.replace(/^\s*|\s*$/g, '');
+  };
+}
+if (!Array.prototype.map) {
+  Array.prototype.indexOf = function (target) {
+    var result = -1;
+    each(this, function (item, index) {
+      if (item === target) {
+        result = index;
+        return FALSE;
+      }
+    });
+    return result;
+  };
+  Array.prototype.map = function (fn) {
+    var result = [];
+    each(this, function (item, index) {
+      result.push(fn(item, index));
+    });
+    return result;
+  };
+  Array.prototype.filter = function (fn) {
+    var result = [];
+    each(this, function (item, index) {
+      if (fn(item, index)) {
+        result.push(item);
+      }
+    });
+    return result;
+  };
+}
+if (!Function.prototype.bind) {
+  Function.prototype.bind = function (context) {
+    var fn = this;
+    return function () {
+      return execute(fn, context, toArray$1(arguments));
+    };
+  };
+}
 
 /**
  * 为了压缩，定义的常量
@@ -2939,8 +3005,6 @@ var Observer = function () {
         // 普通数据
         set$1(data, keypath, newValue);
       });
-
-      instance.dispatch();
     }
 
     /**
@@ -5328,24 +5392,7 @@ var Yox = function () {
 
     if (template) {
       instance.$viewWatcher = function () {
-        if (instance.$dirtyIgnore) {
-          delete instance.$dirtyIgnore;
-          return;
-        }
-        if (instance.$dirtySync) {
-          delete instance.$dirtySync;
-          instance.updateView();
-        } else if (!instance.$dirtyWaiting) {
-          instance.$dirty = instance.$dirtyWaiting = TRUE;
-          add$1(function () {
-            if (instance.$dirtyWaiting) {
-              delete instance.$dirtyWaiting;
-            }
-            if (instance.$dirty) {
-              instance.updateView();
-            }
-          });
-        }
+        instance.$dirty = TRUE;
       };
       execute(options[BEFORE_MOUNT], instance);
       instance.$template = Yox.compile(template);
@@ -5524,13 +5571,44 @@ var Yox = function () {
   }, {
     key: 'updateModel',
     value: function updateModel(model$$1) {
-      var args = arguments;
+
+      var instance = this,
+          args = arguments;
+      var $observer = instance.$observer;
+
+
+      $observer.set(model$$1);
+
+      var dispatch = function dispatch() {
+
+        $observer.dispatch();
+
+        if (instance.$dirtyIgnore) {
+          delete instance.$dirtyIgnore;
+          return;
+        }
+        if (instance.$dirty) {
+          delete instance.$dirty;
+          instance.updateView();
+        }
+      };
+
       if (args.length === 1) {
-        this.$dirtyIgnore = TRUE;
-      } else if (args.length === 2) {
-        this.$dirtySync = args[1];
+        instance.$dirtyIgnore = TRUE;
+      } else if (args.length === 2 && args[1]) {
+        dispatch();
+        return;
       }
-      this.$observer.set(model$$1);
+
+      if (!instance.$waiting) {
+        instance.$waiting = TRUE;
+        instance.nextTick(function () {
+          if (instance.$waiting) {
+            delete instance.$waiting;
+            dispatch();
+          }
+        });
+      }
     }
 
     /**
@@ -5546,16 +5624,11 @@ var Yox = function () {
       var $observer = instance.$observer,
           $options = instance.$options,
           $filters = instance.$filters,
-          $dirty = instance.$dirty,
           $node = instance.$node;
 
 
       if ($node) {
         execute($options[BEFORE_UPDATE], instance);
-      }
-
-      if ($dirty) {
-        delete instance.$dirty;
       }
 
       var context = {};
@@ -5823,7 +5896,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.35.4';
+Yox.version = '0.35.5';
 
 /**
  * 工具，便于扩展、插件使用
