@@ -3732,6 +3732,10 @@ function init(modules) {
     var oldText = oldVnode.text;
     var oldChildren = oldVnode.children;
 
+    if (get$1(oldVnode, 'data.props.innerHTML')) {
+      api.html(el, CHAR_BLANK);
+    }
+
     if (string(newText)) {
       if (newText !== oldText) {
         api.text(el, newText);
@@ -5623,7 +5627,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.35.5';
+Yox.version = '0.35.6';
 
 /**
  * 工具，便于扩展、插件使用

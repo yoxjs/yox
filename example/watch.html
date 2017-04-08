@@ -36,8 +36,9 @@
                         console.log('user.name', arguments);
                     }
                 },
-                'users.*.name': function () {
+                'users.*.name': function (newValue, oldValue, keypath, index) {
                     console.log('users.*.name', arguments);
+                    this.toggle('users.' + index + '.checked');
                 },
                 'user.**': function () {
                     console.log('user.**', arguments);
@@ -69,6 +70,11 @@
                         console.log('user.gender', arguments)
                     }
                 }
+            },
+            afterUpdate: function () {
+                console.log('');
+                console.log('');
+                console.log('');
             }
         });
 
