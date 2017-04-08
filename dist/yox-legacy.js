@@ -2697,7 +2697,6 @@ var Observer = function () {
     instance.cache = {};
     instance.emitter = new Emitter();
     instance.context = context || instance;
-    instance.options = options;
 
     // 计算属性也是数据
     if (object(computed)) {
@@ -2740,18 +2739,16 @@ var Observer = function () {
         if (get$$1) {
 
           var watcher = function watcher() {
-            _getter.dirty = TRUE;
+            if (has$1(instance.computedCache, keypath)) {
+              delete instance.computedCache[keypath];
+            }
           };
 
-          var _getter = function _getter() {
+          var getter = function getter() {
             var computedCache = instance.computedCache;
 
-            if (!_getter.dirty) {
-              if (cache && has$1(computedCache, keypath)) {
-                return computedCache[keypath];
-              }
-            } else {
-              delete _getter.dirty;
+            if (cache && has$1(computedCache, keypath)) {
+              return computedCache[keypath];
             }
 
             if (!deps) {
@@ -2770,7 +2767,7 @@ var Observer = function () {
             return result;
           };
 
-          _getter.toString = instance.computedGetters[keypath] = _getter;
+          getter.toString = instance.computedGetters[keypath] = getter;
         }
 
         if (set$$1) {
@@ -2829,7 +2826,8 @@ var Observer = function () {
         return get$1(data, keypath);
       };
 
-      var result = void 0;
+      var result = void 0,
+          temp = void 0;
       var suffixes = parse$1(keypath);
 
       if (string(context)) {
@@ -2839,7 +2837,6 @@ var Observer = function () {
           result = getValue(keypath);
         } else {
           keypath = NULL;
-          var temp = void 0;
           while (TRUE) {
             temp = stringify(merge(prefixes, suffixes));
             result = getValue(temp);
@@ -2875,12 +2872,11 @@ var Observer = function () {
      * 更新数据
      *
      * @param {Object} model
-     * @param {?boolean} sync
      */
 
   }, {
     key: 'set',
-    value: function set$$1(model, sync) {
+    value: function set$$1(model) {
 
       var instance = this;
 
@@ -2893,86 +2889,43 @@ var Observer = function () {
           computedSetters = instance.computedSetters;
 
 
-      var updateModel = function updateModel(model) {
-        each$1(model, function (newValue, keypath) {
+      each$1(model, function (newValue, keypath) {
 
-          // 格式化成内部处理的格式
-          keypath = normalize(keypath);
+        // 格式化成内部处理的格式
+        keypath = normalize(keypath);
 
-          // 如果监听了这个 keypath
-          // 就要确保有一份可对比的数据
-          if (emitter.has(keypath) && !has$1(cache, keypath)) {
-            cache[keypath] = instance.get(keypath);
-          }
+        // 如果监听了这个 keypath
+        // 就要确保有一份可对比的数据
+        if (emitter.has(keypath) && !has$1(cache, keypath)) {
+          cache[keypath] = instance.get(keypath);
+        }
 
-          // 如果有计算属性，则优先处理它
-          if (computedSetters) {
-            var setter = computedSetters[keypath];
-            if (setter) {
-              setter.call(context, newValue);
-              return;
-            } else {
-              var _matchKeypath2 = matchKeypath(computedGetters, keypath),
-                  value = _matchKeypath2.value,
-                  rest = _matchKeypath2.rest;
+        // 如果有计算属性，则优先处理它
+        if (computedSetters) {
+          var setter = computedSetters[keypath];
+          if (setter) {
+            setter.call(context, newValue);
+            return;
+          } else {
+            var _matchKeypath2 = matchKeypath(computedGetters, keypath),
+                value = _matchKeypath2.value,
+                rest = _matchKeypath2.rest;
 
-              if (value && rest) {
-                value = value();
-                if (!primitive(value)) {
-                  set$1(value, rest, newValue);
-                }
-                return;
+            if (value && rest) {
+              value = value();
+              if (!primitive(value)) {
+                set$1(value, rest, newValue);
               }
+              return;
             }
           }
-
-          // 普通数据
-          set$1(data, keypath, newValue);
-        });
-      };
-
-      var dispatchSync = function dispatchSync() {
-        instance.dispatched = FALSE;
-        instance.dispatch();
-      };
-
-      var dispatchAsync = function dispatchAsync(callback) {
-        if (!instance.waiting) {
-          instance.waiting = TRUE;
-          add$1(function () {
-            delete instance.waiting;
-            callback && callback();
-            dispatchSync();
-          });
         }
-      };
 
-      if (instance.dispatching) {
-        // dispatch 过程中的所有 set 操作都放入缓冲
-        // 在 nextTask 到来 或 当前 dispatch 结束之后清空 buffer
-        if (buffer) {
-          extend(buffer, model);
-        } else {
-          instance.buffer = model;
-        }
-        dispatchAsync(function () {
-          if (instance.buffer) {
-            updateModel(instance.buffer);
-            delete instance.buffer;
-          }
-        });
-      } else {
-        if (buffer) {
-          model = extend(buffer, model);
-          delete instance.buffer;
-        }
-        updateModel(model);
-        if (sync) {
-          dispatchSync();
-        } else {
-          dispatchAsync();
-        }
-      }
+        // 普通数据
+        set$1(data, keypath, newValue);
+      });
+
+      instance.dispatch();
     }
 
     /**
@@ -3033,20 +2986,8 @@ var Observer = function () {
       var cache = instance.cache,
           emitter = instance.emitter,
           context = instance.context,
-          options = instance.options,
-          computedDeps = instance.computedDeps,
-          dispatching = instance.dispatching,
-          dispatched = instance.dispatched;
+          computedDeps = instance.computedDeps;
 
-      // 确保 dispatch 过程中不受干扰，能一次执行完
-
-      if (dispatching || dispatched) {
-        return;
-      }
-
-      execute(options.beforeDispatch, context);
-
-      instance.dispatching = TRUE;
 
       var collection = [];
 
@@ -3062,11 +3003,6 @@ var Observer = function () {
           emitter.fire(keypath, [newValue, oldValue, keypath], context);
         }
       });
-
-      instance.dispatching = FALSE;
-      instance.dispatched = TRUE;
-
-      execute(options.afterDispatch, context);
     }
 
     /**
@@ -5306,28 +5242,7 @@ var Yox = function () {
     instance.$observer = new Observer({
       context: instance,
       data: source,
-      computed: computed,
-      afterDispatch: function afterDispatch() {
-        var $dirty = instance.$dirty,
-            $children = instance.$children;
-
-
-        if ($dirty) {
-          delete instance.$dirty;
-        }
-        if (instance.$dirtyIgnore) {
-          delete instance.$dirtyIgnore;
-          return;
-        }
-
-        if ($dirty) {
-          instance.updateView();
-        } else if ($children) {
-          each($children, function (child) {
-            child.$observer.dispatch();
-          });
-        }
-      }
+      computed: computed
     });
 
     // 后放 data
@@ -5400,7 +5315,24 @@ var Yox = function () {
 
     if (template) {
       instance.$viewWatcher = function () {
-        instance.$dirty = TRUE;
+        if (instance.$dirtyIgnore) {
+          delete instance.$dirtyIgnore;
+          return;
+        }
+        if (instance.$dirtySync) {
+          delete instance.$dirtySync;
+          instance.updateView();
+        } else if (!instance.$dirtyWaiting) {
+          instance.$dirty = instance.$dirtyWaiting = TRUE;
+          add$1(function () {
+            if (instance.$dirtyWaiting) {
+              delete instance.$dirtyWaiting;
+            }
+            if (instance.$dirty) {
+              instance.updateView();
+            }
+          });
+        }
       };
       execute(options[BEFORE_MOUNT], instance);
       instance.$template = Yox.compile(template);
@@ -5579,14 +5511,13 @@ var Yox = function () {
   }, {
     key: 'updateModel',
     value: function updateModel(model$$1) {
-      var args = arguments,
-          sync = void 0;
+      var args = arguments;
       if (args.length === 1) {
-        sync = this.$dirtyIgnore = TRUE;
+        this.$dirtyIgnore = TRUE;
       } else if (args.length === 2) {
-        sync = args[1];
+        this.$dirtySync = args[1];
       }
-      this.$observer.set(model$$1, sync);
+      this.$observer.set(model$$1);
     }
 
     /**
@@ -5602,11 +5533,16 @@ var Yox = function () {
       var $observer = instance.$observer,
           $options = instance.$options,
           $filters = instance.$filters,
+          $dirty = instance.$dirty,
           $node = instance.$node;
 
 
       if ($node) {
         execute($options[BEFORE_UPDATE], instance);
+      }
+
+      if ($dirty) {
+        delete instance.$dirty;
       }
 
       var context = {};
@@ -5876,7 +5812,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.35.2';
+Yox.version = '0.35.3';
 
 /**
  * 工具，便于扩展、插件使用

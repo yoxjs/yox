@@ -82,35 +82,7 @@ export default class Yox {
     instance.$observer = new Observer({
       context: instance,
       data: source,
-      computed,
-      afterDispatch() {
-
-        let {
-          $dirty,
-          $children,
-        } = instance
-
-        if ($dirty) {
-          delete instance.$dirty
-        }
-        if (instance.$dirtyIgnore) {
-          delete instance.$dirtyIgnore
-          return
-        }
-
-        if ($dirty) {
-          instance.updateView()
-        }
-        else if ($children) {
-          array.each(
-            $children,
-            function (child) {
-              child.$observer.dispatch()
-            }
-          )
-        }
-
-      }
+      computed
     })
 
     // 后放 data
@@ -194,7 +166,28 @@ export default class Yox {
 
     if (template) {
       instance.$viewWatcher = function () {
-        instance.$dirty = env.TRUE
+        if (instance.$dirtyIgnore) {
+          delete instance.$dirtyIgnore
+          return
+        }
+        if (instance.$dirtySync) {
+          delete instance.$dirtySync
+          instance.updateView()
+        }
+        else if (!instance.$dirtyWaiting) {
+          instance.$dirty =
+          instance.$dirtyWaiting = env.TRUE
+          nextTask.add(
+            function () {
+              if (instance.$dirtyWaiting) {
+                delete instance.$dirtyWaiting
+              }
+              if (instance.$dirty) {
+                instance.updateView()
+              }
+            }
+          )
+        }
       }
       execute(options[ lifecycle.BEFORE_MOUNT ], instance)
       instance.$template = Yox.compile(template)
@@ -344,14 +337,14 @@ export default class Yox {
    * @param {Object} model
    */
   updateModel(model) {
-    let args = arguments, sync
+    let args = arguments
     if (args.length === 1) {
-      sync = this.$dirtyIgnore = env.TRUE
+      this.$dirtyIgnore = env.TRUE
     }
     else if (args.length === 2) {
-      sync = args[ 1 ]
+      this.$dirtySync = args[ 1 ]
     }
-    this.$observer.set(model, sync)
+    this.$observer.set(model)
   }
 
   /**
@@ -365,11 +358,16 @@ export default class Yox {
       $observer,
       $options,
       $filters,
+      $dirty,
       $node,
     } = instance
 
     if ($node) {
       execute($options[ lifecycle.BEFORE_UPDATE ], instance)
+    }
+
+    if ($dirty) {
+      delete instance.$dirty
     }
 
     let context = { }
@@ -636,7 +634,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.35.2'
+Yox.version = '0.35.3'
 
 /**
  * 工具，便于扩展、插件使用
