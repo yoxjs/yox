@@ -3939,10 +3939,6 @@ function init(modules) {
     var oldText = oldVnode.text;
     var oldChildren = oldVnode.children;
 
-    if (get$1(oldVnode, 'data.props.innerHTML')) {
-      api.html(el, CHAR_BLANK);
-    }
-
     if (string(newText)) {
       if (newText !== oldText) {
         api.text(el, newText);
@@ -4088,6 +4084,9 @@ function updateProps(oldVnode, vnode) {
 
   each$1(oldProps, function (value, name) {
     if (!has$1(newProps, name)) {
+      if (string(value)) {
+        el[name] = CHAR_BLANK;
+      }
       api.removeProp(el, name);
     }
   });
@@ -5834,7 +5833,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.35.6';
+Yox.version = '0.35.7';
 
 /**
  * 工具，便于扩展、插件使用
