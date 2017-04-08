@@ -2872,8 +2872,6 @@ var Observer = function () {
         // 普通数据
         set$1(data, keypath, newValue);
       });
-
-      instance.dispatch();
     }
 
     /**
@@ -5121,24 +5119,7 @@ var Yox = function () {
 
     if (template) {
       instance.$viewWatcher = function () {
-        if (instance.$dirtyIgnore) {
-          delete instance.$dirtyIgnore;
-          return;
-        }
-        if (instance.$dirtySync) {
-          delete instance.$dirtySync;
-          instance.updateView();
-        } else if (!instance.$dirtyWaiting) {
-          instance.$dirty = instance.$dirtyWaiting = TRUE;
-          add$1(function () {
-            if (instance.$dirtyWaiting) {
-              delete instance.$dirtyWaiting;
-            }
-            if (instance.$dirty) {
-              instance.updateView();
-            }
-          });
-        }
+        instance.$dirty = TRUE;
       };
       execute(options[BEFORE_MOUNT], instance);
       instance.$template = Yox.compile(template);
@@ -5317,13 +5298,44 @@ var Yox = function () {
   }, {
     key: 'updateModel',
     value: function updateModel(model$$1) {
-      var args = arguments;
+
+      var instance = this,
+          args = arguments;
+      var $observer = instance.$observer;
+
+
+      $observer.set(model$$1);
+
+      var dispatch = function dispatch() {
+
+        $observer.dispatch();
+
+        if (instance.$dirtyIgnore) {
+          delete instance.$dirtyIgnore;
+          return;
+        }
+        if (instance.$dirty) {
+          delete instance.$dirty;
+          instance.updateView();
+        }
+      };
+
       if (args.length === 1) {
-        this.$dirtyIgnore = TRUE;
-      } else if (args.length === 2) {
-        this.$dirtySync = args[1];
+        instance.$dirtyIgnore = TRUE;
+      } else if (args.length === 2 && args[1]) {
+        dispatch();
+        return;
       }
-      this.$observer.set(model$$1);
+
+      if (!instance.$waiting) {
+        instance.$waiting = TRUE;
+        instance.nextTick(function () {
+          if (instance.$waiting) {
+            delete instance.$waiting;
+            dispatch();
+          }
+        });
+      }
     }
 
     /**
@@ -5339,16 +5351,11 @@ var Yox = function () {
       var $observer = instance.$observer,
           $options = instance.$options,
           $filters = instance.$filters,
-          $dirty = instance.$dirty,
           $node = instance.$node;
 
 
       if ($node) {
         execute($options[BEFORE_UPDATE], instance);
-      }
-
-      if ($dirty) {
-        delete instance.$dirty;
       }
 
       var context = {};
@@ -5616,7 +5623,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.35.4';
+Yox.version = '0.35.5';
 
 /**
  * 工具，便于扩展、插件使用

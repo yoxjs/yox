@@ -166,28 +166,7 @@ export default class Yox {
 
     if (template) {
       instance.$viewWatcher = function () {
-        if (instance.$dirtyIgnore) {
-          delete instance.$dirtyIgnore
-          return
-        }
-        if (instance.$dirtySync) {
-          delete instance.$dirtySync
-          instance.updateView()
-        }
-        else if (!instance.$dirtyWaiting) {
-          instance.$dirty =
-          instance.$dirtyWaiting = env.TRUE
-          nextTask.add(
-            function () {
-              if (instance.$dirtyWaiting) {
-                delete instance.$dirtyWaiting
-              }
-              if (instance.$dirty) {
-                instance.updateView()
-              }
-            }
-          )
-        }
+        instance.$dirty = env.TRUE
       }
       execute(options[ lifecycle.BEFORE_MOUNT ], instance)
       instance.$template = Yox.compile(template)
@@ -337,14 +316,47 @@ export default class Yox {
    * @param {Object} model
    */
   updateModel(model) {
-    let args = arguments
+
+    let instance = this, args = arguments
+    let { $observer } = instance
+
+    $observer.set(model)
+
+    let dispatch = function () {
+
+      $observer.dispatch()
+
+      if (instance.$dirtyIgnore) {
+        delete instance.$dirtyIgnore
+        return
+      }
+      if (instance.$dirty) {
+        delete instance.$dirty
+        instance.updateView()
+      }
+
+    }
+
     if (args.length === 1) {
-      this.$dirtyIgnore = env.TRUE
+      instance.$dirtyIgnore = env.TRUE
     }
-    else if (args.length === 2) {
-      this.$dirtySync = args[ 1 ]
+    else if (args.length === 2 && args[ 1 ]) {
+      dispatch()
+      return
     }
-    this.$observer.set(model)
+
+    if (!instance.$waiting) {
+      instance.$waiting = env.TRUE
+      instance.nextTick(
+        function () {
+          if (instance.$waiting) {
+            delete instance.$waiting
+            dispatch()
+          }
+        }
+      )
+    }
+
   }
 
   /**
@@ -358,16 +370,11 @@ export default class Yox {
       $observer,
       $options,
       $filters,
-      $dirty,
       $node,
     } = instance
 
     if ($node) {
       execute($options[ lifecycle.BEFORE_UPDATE ], instance)
-    }
-
-    if ($dirty) {
-      delete instance.$dirty
     }
 
     let context = { }
@@ -629,7 +636,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.35.4'
+Yox.version = '0.35.5'
 
 /**
  * 工具，便于扩展、插件使用
