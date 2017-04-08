@@ -10,11 +10,11 @@ import Emitter from 'yox-common/util/Emitter'
 
 let api = object.copy(domApi)
 
-// import * as oldApi from './oldApi'
+import * as oldApi from './oldApi'
 
-// if (!env.doc.addEventListener) {
-//   object.extend(api, oldApi)
-// }
+if (!env.doc.addEventListener) {
+  object.extend(api, oldApi)
+}
 
 let { on, off } = api
 
@@ -48,7 +48,7 @@ api.on =  function (element, type, listener, context) {
   let $emitter = element.$emitter || (element.$emitter = new Emitter())
   if (!$emitter.has(type)) {
     let nativeListener = function (e, type) {
-      if (!(e instanceof Event)) {
+      if (!Event.is(e)) {
         e = new Event(api.createEvent(e, element))
       }
       if (type) {

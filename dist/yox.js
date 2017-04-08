@@ -218,6 +218,10 @@ var Event = function () {
   return Event;
 }();
 
+Event.is = function (target) {
+  return target instanceof Event;
+};
+
 /**
  * 为了压缩，定义的常用字符
  */
@@ -714,6 +718,17 @@ function has$1(object$$1, key) {
 }
 
 /**
+ * 清空对象所有的值
+ *
+ * @param {Object} object
+ */
+function clear(object$$1) {
+  each$1(object$$1, function (value, key) {
+    delete object$$1[key];
+  });
+}
+
+/**
  * 扩展对象
  *
  * @return {Object}
@@ -832,6 +847,7 @@ var object$1 = Object.freeze({
 	sort: sort,
 	each: each$1,
 	has: has$1,
+	clear: clear,
 	extend: extend,
 	copy: copy,
 	get: get$1,
@@ -921,8 +937,8 @@ var Emitter = function () {
         event = data[0];
       }
 
-      var isEvent = event instanceof Event;
-      var isComplete = TRUE;
+      var isEvent = Event.is(event),
+          isComplete = TRUE;
 
       this.match(type, function (list, extra) {
         if (array(list)) {
@@ -2815,7 +2831,6 @@ var Observer = function () {
 
       var data = instance.data,
           cache = instance.cache,
-          buffer = instance.buffer,
           emitter = instance.emitter,
           context = instance.context,
           computedGetters = instance.computedGetters,
@@ -2873,17 +2888,22 @@ var Observer = function () {
     value: function unwatch(keypath, watcher) {
       this.emitter.off(keypath, watcher);
     }
+
+    /**
+     * 为一批 keypath 注册一个 watcher
+     */
+
   }, {
     key: 'diff',
     value: function diff(newKeypaths, oldKeypaths, watcher) {
 
       if (newKeypaths !== oldKeypaths) {
 
-        var instance = this;
+        var instance = this,
+            collection = [];
         var computedDeps = instance.computedDeps;
 
 
-        var collection = [];
         each(newKeypaths, function (keypath) {
           collectDeps(collection, keypath, computedDeps);
         });
@@ -2914,15 +2934,14 @@ var Observer = function () {
     key: 'dispatch',
     value: function dispatch() {
 
-      var instance = this;
+      var instance = this,
+          collection = [];
 
       var cache = instance.cache,
-          emitter = instance.emitter,
           context = instance.context,
-          computedDeps = instance.computedDeps;
+          computedDeps = instance.computedDeps,
+          emitter = instance.emitter;
 
-
-      var collection = [];
 
       each$1(cache, function (value, keypath) {
         collectDeps(collection, keypath, computedDeps);
@@ -2945,14 +2964,8 @@ var Observer = function () {
   }, {
     key: 'destroy',
     value: function destroy() {
-
-      var instance = this;
-
-      instance.emitter.off();
-
-      each$1(instance, function (value, key) {
-        delete instance[key];
-      });
+      this.emitter.off();
+      clear(this);
     }
   }]);
   return Observer;
@@ -3321,7 +3334,7 @@ api.on = function (element, type, listener, context) {
   var $emitter = element.$emitter || (element.$emitter = new Emitter());
   if (!$emitter.has(type)) {
     var nativeListener = function nativeListener(e, type) {
-      if (!(e instanceof Event)) {
+      if (!Event.is(e)) {
         e = new Event(api.createEvent(e, element));
       }
       if (type) {
@@ -5419,7 +5432,7 @@ var Yox = function () {
         var ast = compile$1(value);
         if (ast.type === CALL) {
           return function (event$$1) {
-            var isEvent = event$$1 instanceof Event;
+            var isEvent = Event.is(event$$1);
             var args = copy(ast.args);
             if (!args.length) {
               if (isEvent) {
@@ -5510,9 +5523,7 @@ var Yox = function () {
       $eventEmitter.off();
       $observer.destroy();
 
-      each$1(instance, function (value, key) {
-        delete instance[key];
-      });
+      clear(instance);
 
       execute($options[AFTER_DESTROY], instance);
     }
@@ -5605,7 +5616,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.35.3';
+Yox.version = '0.35.4';
 
 /**
  * 工具，便于扩展、插件使用

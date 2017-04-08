@@ -451,7 +451,7 @@ export default class Yox {
       let ast = compileExpression(value)
       if (ast.type === expressionNodeType.CALL) {
         return function (event) {
-          let isEvent = event instanceof Event
+          let isEvent = Event.is(event)
           let args = object.copy(ast.args)
           if (!args.length) {
             if (isEvent) {
@@ -545,12 +545,7 @@ export default class Yox {
     $eventEmitter.off()
     $observer.destroy()
 
-    object.each(
-      instance,
-      function (value, key) {
-        delete instance[ key ]
-      }
-    )
+    object.clear(instance)
 
     execute($options[ lifecycle.AFTER_DESTROY ], instance)
 
@@ -634,7 +629,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.35.3'
+Yox.version = '0.35.4'
 
 /**
  * 工具，便于扩展、插件使用
