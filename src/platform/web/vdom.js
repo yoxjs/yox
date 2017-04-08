@@ -17,8 +17,9 @@ import * as array from 'yox-common/util/array'
 import * as object from 'yox-common/util/object'
 import * as string from 'yox-common/util/string'
 
+import compileTemplate from 'yox-template-compiler/compile'
 import renderTemplate from 'yox-template-compiler/render'
-import * as viewSyntax from 'yox-template-compiler/src/syntax'
+import * as templateSyntax from 'yox-template-compiler/src/syntax'
 
 import api from './api'
 
@@ -86,7 +87,7 @@ export function create(ast, context, instance) {
       node.directives,
       function (node) {
         let { name, modifier } = node
-        if (name === viewSyntax.KEYWORD_UNIQUE) {
+        if (name === templateSyntax.KEYWORD_UNIQUE) {
           vnode.key = node.value
         }
         else {
@@ -249,7 +250,10 @@ export function create(ast, context, instance) {
   }
 
   let importTemplate = function (name) {
-    return instance.partial(name)
+    let partial = instance.partial(name)
+    return is.string(partial)
+      ? compileTemplate(partial)
+      : partial
   }
 
   return renderTemplate(ast, createComment, createElement, importTemplate, context)

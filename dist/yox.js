@@ -1947,14 +1947,20 @@ var htmlTypes = {};
 var leafTypes = {};
 // 内置指令，无需加前缀
 var builtInDirectives = {};
-// 名称和类型的映射
+// 名称 -> 类型的映射
 var name2Type = {};
+// 类型 -> 名称的映射
+var type2Name = {};
 
 ifTypes[IF$1] = ifTypes[ELSE_IF$1] = elseTypes[ELSE_IF$1] = elseTypes[ELSE$1] = htmlTypes[ELEMENT] = htmlTypes[ATTRIBUTE] = htmlTypes[DIRECTIVE] = leafTypes[TEXT] = leafTypes[IMPORT$1] = leafTypes[SPREAD$1] = leafTypes[EXPRESSION] = builtInDirectives[DIRECTIVE_REF] = builtInDirectives[DIRECTIVE_LAZY] = builtInDirectives[DIRECTIVE_MODEL] = builtInDirectives[KEYWORD_UNIQUE] = TRUE;
 
 name2Type['if'] = IF$1;
 name2Type['each'] = EACH$1;
 name2Type['partial'] = PARTIAL$1;
+
+each$1(name2Type, function (type, name) {
+  type2Name[type] = name;
+});
 
 /**
  * 节点基类
@@ -2244,7 +2250,7 @@ var Text = function (_Node) {
   return Text;
 }(Node$2);
 
-var delimiterPattern = /\{?\{\{\s*([^\}]+?)\s*\}\}\}?/;
+var delimiterPattern = /(\{?\{\{)\s*([^\}]+?)\s*(\}\}\}?)/;
 var openingTagPattern = /<(\/)?([a-z][-a-z0-9]*)/i;
 var closingTagPattern = /^\s*(\/)?>/;
 var attributePattern = /^\s*([-:\w]+)(?:=(['"]))?/;
@@ -2304,44 +2310,28 @@ function compile(content) {
       htmlStack = [],
       currentQuote = void 0;
 
-  var throwError = function throwError(msg, showPosition) {
-    if (showPosition) {
-      var line = 0,
-          col = 0,
-          index = 0,
-          pos = str.length;
-      each(content.split(CHAR_BREAKLINE), function (lineStr) {
-        line++;
-        col = 0;
-
-        var length = lineStr.length;
-
-        if (pos >= index && pos <= index + length) {
-          col = pos - index;
-          return FALSE;
-        }
-
-        index += length;
-      });
-      msg += ', at line ' + line + ', col ' + col + '.';
-    } else {
-      msg += CHAR_DOT;
-    }
-    fatal('' + msg + CHAR_BREAKLINE + content);
+  var throwError = function throwError(msg) {
+    fatal('Error compiling template:' + CHAR_BREAKLINE + content + CHAR_BREAKLINE + '- ' + msg);
   };
 
-  var popStack = function popStack(type) {
+  var popStack = function popStack(type, name) {
 
-    var index = void 0,
-        target = void 0;
+    var target = void 0;
 
     each(nodeStack, function (node, i) {
       if (node.type === type) {
-        index = i;
         target = nodeStack.splice(i, 1)[0];
         return FALSE;
       }
     }, TRUE);
+
+    if (target) {
+      if (target.type === ELEMENT && name && target.name !== name) {
+        throwError('end tag expected </' + target.name + '> to be </' + name + '>.');
+      }
+    } else {
+      throwError('{{/' + type2Name[type] + '}} is not a pair.');
+    }
   };
 
   var addChild = function addChild(node) {
@@ -2388,8 +2378,8 @@ function compile(content) {
       // 必须以 <tag 开头才能继续
       if (_match && !_match.index) {
         var tagName = _match[2];
-        if (_match[1] === '/') {
-          popStack(ELEMENT);
+        if (_match[1] === CHAR_SLASH) {
+          popStack(ELEMENT, tagName);
         } else {
           addChild(new Element(tagName, componentNamePattern.test(tagName)));
         }
@@ -2400,7 +2390,7 @@ function compile(content) {
     var match = content.match(closingTagPattern);
     if (match) {
       if (htmlStack.length === 1) {
-        if (match[1] === '/' || selfClosingTagNamePattern.test(htmlStack[0].name)) {
+        if (match[1] === CHAR_SLASH || selfClosingTagNamePattern.test(htmlStack[0].name)) {
           popStack(ELEMENT);
         }
         pop(htmlStack);
@@ -2464,44 +2454,44 @@ function compile(content) {
     }
   }];
 
-  var delimiterParsers = [function (source, terms) {
+  var delimiterParsers = [function (source, all) {
     if (startsWith(source, EACH)) {
-      terms = split(slicePrefix(source, EACH), CHAR_COLON);
-      return terms[0] ? new Each(compile$1(trim(terms[0])), trim(terms[1])) : throwError('Expected each name', TRUE);
+      var terms = split(slicePrefix(source, EACH), CHAR_COLON);
+      return terms[0] ? new Each(compile$1(trim(terms[0])), trim(terms[1])) : throwError('invalid each: ' + all);
     }
-  }, function (source) {
+  }, function (source, all) {
     if (startsWith(source, IMPORT)) {
       source = slicePrefix(source, IMPORT);
-      return source ? new Import(source) : throwError('Expected import name', TRUE);
+      return source ? new Import(source) : throwError('invalid import: ' + all);
     }
-  }, function (source) {
+  }, function (source, all) {
     if (startsWith(source, PARTIAL)) {
       source = slicePrefix(source, PARTIAL);
-      return source ? new Partial(source) : throwError('Expected partial name', TRUE);
+      return source ? new Partial(source) : throwError('invalid partial: ' + all);
     }
-  }, function (source) {
+  }, function (source, all) {
     if (startsWith(source, IF)) {
       source = slicePrefix(source, IF);
-      return source ? new If(compile$1(source)) : throwError('Expected if expression', TRUE);
+      return source ? new If(compile$1(source)) : throwError('invalid if: ' + all);
     }
-  }, function (source) {
+  }, function (source, all) {
     if (startsWith(source, ELSE_IF)) {
       source = slicePrefix(source, ELSE_IF);
-      return source ? new ElseIf(compile$1(source)) : throwError('Expected else if expression', TRUE);
+      return source ? new ElseIf(compile$1(source)) : throwError('invalid else if: ' + all);
     }
   }, function (source) {
     if (startsWith(source, ELSE)) {
       return new Else();
     }
-  }, function (source) {
+  }, function (source, all) {
     if (startsWith(source, SPREAD)) {
       source = slicePrefix(source, SPREAD);
-      return source ? new Spread(compile$1(source)) : throwError('Expected spread name', TRUE);
+      return source ? new Spread(compile$1(source)) : throwError('invalid spread: ' + all);
     }
   }, function (source, all) {
     if (!startsWith(source, COMMENT)) {
       source = trim(source);
-      return source ? new Expression(compile$1(source), !endsWith(all, '}}}')) : throwError('Expected expression', TRUE);
+      return source ? new Expression(compile$1(source), !endsWith(all, '}}}')) : throwError('invalid expression: ' + all);
     }
   }];
 
@@ -2525,8 +2515,9 @@ function compile(content) {
 
   var parseDelimiter = function parseDelimiter(content, all) {
     if (content) {
-      if (charAt(content) === '/') {
-        var type = name2Type[slice(content, 1)];
+      if (charAt(content) === CHAR_SLASH) {
+        var name = slice(content, 1),
+            type = name2Type[name];
         if (ifTypes[type]) {
           type = pop(ifStack).type;
         }
@@ -2550,17 +2541,70 @@ function compile(content) {
     match = str.match(delimiterPattern);
     if (match) {
       parseHtml(slice(str, 0, match.index));
-      parseDelimiter(match[1], match[0]);
+      // 避免手误写成 {{{ name }}
+      if (match[1].length === match[3].length) {
+        parseDelimiter(match[2], match[0]);
+      } else {
+        throwError('invalid expression: ' + match[0]);
+      }
     } else {
       parseHtml(str);
     }
   }
 
-  if (nodeStack.length) {
-    throwError('Expected end tag (</' + nodeStack[0].name + '>)');
-  }
-
   return compileCache[content] = nodeList;
+}
+
+/**
+ * 序列化表达式
+ *
+ * @param {Node} node
+ * @return {string}
+ */
+function stringify$1(node) {
+
+  var recursion = function recursion(node) {
+    return stringify$1(node);
+  };
+
+  switch (node.type) {
+    case ARRAY:
+      return '[' + node.elements.map(recursion).join(CHAR_COMMA) + ']';
+
+    case BINARY:
+      return stringify$1(node.left) + ' ' + node.operator + ' ' + stringify$1(node.right);
+
+    case CALL:
+      return stringify$1(node.callee) + '(' + node.args.map(recursion).join(CHAR_COMMA) + ')';
+
+    case TERNARY:
+      return stringify$1(node.test) + ' ? ' + stringify$1(node.consequent) + ' : ' + stringify$1(node.alternate);
+
+    case IDENTIFIER:
+      return node.name;
+
+    case LITERAL:
+      return has$1(node, 'raw') ? node.raw : node.value;
+
+    case MEMBER:
+      return Member.flatten(node).map(function (node, index) {
+        if (node.type === LITERAL) {
+          var _node = node,
+              value = _node.value;
+
+          return numeric(value) ? '' + CHAR_OBRACK + value + CHAR_CBRACK : '' + CHAR_DOT + value;
+        } else {
+          node = stringify$1(node);
+          return index > 0 ? '' + CHAR_OBRACK + node + CHAR_CBRACK : node;
+        }
+      }).join(CHAR_BLANK);
+
+    case UNARY:
+      return '' + node.operator + stringify$1(node.arg);
+
+    default:
+      return CHAR_BLANK;
+  }
 }
 
 var Observer = function () {
@@ -3099,58 +3143,6 @@ function collectDeps(collection, keypath, deps) {
     addKey(keypath, TRUE);
   } else {
     addKey(keypath);
-  }
-}
-
-/**
- * 序列化表达式
- *
- * @param {Node} node
- * @return {string}
- */
-function stringify$1(node) {
-
-  var recursion = function recursion(node) {
-    return stringify$1(node);
-  };
-
-  switch (node.type) {
-    case ARRAY:
-      return '[' + node.elements.map(recursion).join(CHAR_COMMA) + ']';
-
-    case BINARY:
-      return stringify$1(node.left) + ' ' + node.operator + ' ' + stringify$1(node.right);
-
-    case CALL:
-      return stringify$1(node.callee) + '(' + node.args.map(recursion).join(CHAR_COMMA) + ')';
-
-    case TERNARY:
-      return stringify$1(node.test) + ' ? ' + stringify$1(node.consequent) + ' : ' + stringify$1(node.alternate);
-
-    case IDENTIFIER:
-      return node.name;
-
-    case LITERAL:
-      return has$1(node, 'raw') ? node.raw : node.value;
-
-    case MEMBER:
-      return Member.flatten(node).map(function (node, index) {
-        if (node.type === LITERAL) {
-          var _node = node,
-              value = _node.value;
-
-          return numeric(value) ? '' + CHAR_OBRACK + value + CHAR_CBRACK : '' + CHAR_DOT + value;
-        } else {
-          node = stringify$1(node);
-          return index > 0 ? '' + CHAR_OBRACK + node + CHAR_CBRACK : node;
-        }
-      }).join(CHAR_BLANK);
-
-    case UNARY:
-      return '' + node.operator + stringify$1(node.arg);
-
-    default:
-      return CHAR_BLANK;
   }
 }
 
@@ -4410,9 +4402,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
         case IMPORT$1:
           var partial = partials[name] || importTemplate(name);
           if (partial) {
-            if (string(partial)) {
-              partial = compile(partial);
-            } else if (partial.type === PARTIAL$1) {
+            if (partial.type === PARTIAL$1) {
               partial = partial.children;
             }
             return array(partial) ? traverseList(partial) : recursion(partial);
@@ -4750,7 +4740,8 @@ function create(ast, context, instance) {
   };
 
   var importTemplate = function importTemplate(name) {
-    return instance.partial(name);
+    var partial = instance.partial(name);
+    return string(partial) ? compile(partial) : partial;
   };
 
   return render(ast, createComment, createElement, importTemplate, context);
@@ -5224,6 +5215,14 @@ var Yox = function () {
     value: function get$$1(keypath, context) {
       return this.$observer.get(keypath, context);
     }
+
+    /**
+     * 设值
+     *
+     * @param {string|Object} keypath
+     * @param {?*} value
+     */
+
   }, {
     key: 'set',
     value: function set$$1(keypath, value) {
@@ -5287,6 +5286,7 @@ var Yox = function () {
      *
      * @param {string} type
      * @param {?*} data
+     * @return {boolean} 是否正常结束
      */
 
   }, {
@@ -5314,12 +5314,12 @@ var Yox = function () {
       var $parent = instance.$parent,
           $eventEmitter = instance.$eventEmitter;
 
-      var done = $eventEmitter.fire(event$$1.type, args, instance);
-      if (done && $parent) {
-        done = $parent.fire(event$$1, data);
+      var isComplete = $eventEmitter.fire(event$$1.type, args, instance);
+      if (isComplete && $parent) {
+        isComplete = $parent.fire(event$$1, data);
       }
 
-      return done;
+      return isComplete;
     }
 
     /**
@@ -5461,6 +5461,15 @@ var Yox = function () {
       push(this.$children || (this.$children = []), child);
       return child;
     }
+
+    /**
+     * 编译 on-click="value" 里面的表达式
+     *
+     * @param {string} keypath
+     * @param {string} value
+     * @return {Function}
+     */
+
   }, {
     key: 'compileValue',
     value: function compileValue(keypath, value) {
@@ -5660,7 +5669,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.35.1';
+Yox.version = '0.35.2';
 
 /**
  * 工具，便于扩展、插件使用

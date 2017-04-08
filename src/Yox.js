@@ -15,13 +15,13 @@ import * as logger from 'yox-common/util/logger'
 import * as nextTask from 'yox-common/util/nextTask'
 
 import compileTemplate from 'yox-template-compiler/compile'
-import * as viewSyntax from 'yox-template-compiler/src/syntax'
-
-import Observer from 'yox-observer'
+import * as templateSyntax from 'yox-template-compiler/src/syntax'
 
 import compileExpression from 'yox-expression-compiler/compile'
 import stringifyExpression from 'yox-expression-compiler/stringify'
 import * as expressionNodeType from 'yox-expression-compiler/src/nodeType'
+
+import Observer from 'yox-observer'
 
 import * as pattern from './config/pattern'
 import * as lifecycle from './config/lifecycle'
@@ -214,6 +214,12 @@ export default class Yox {
     return this.$observer.get(keypath, context)
   }
 
+  /**
+   * 设值
+   *
+   * @param {string|Object} keypath
+   * @param {?*} value
+   */
   set(keypath, value) {
 
     let model, sync
@@ -268,6 +274,7 @@ export default class Yox {
    *
    * @param {string} type
    * @param {?*} data
+   * @return {boolean} 是否正常结束
    */
   fire(type, data) {
 
@@ -290,12 +297,12 @@ export default class Yox {
     }
 
     let { $parent, $eventEmitter } = instance
-    let done = $eventEmitter.fire(event.type, args, instance)
-    if (done && $parent) {
-      done = $parent.fire(event, data)
+    let isComplete = $eventEmitter.fire(event.type, args, instance)
+    if (isComplete && $parent) {
+      isComplete = $parent.fire(event, data)
     }
 
-    return done
+    return isComplete
 
   }
 
@@ -428,6 +435,13 @@ export default class Yox {
     return child
   }
 
+  /**
+   * 编译 on-click="value" 里面的表达式
+   *
+   * @param {string} keypath
+   * @param {string} value
+   * @return {Function}
+   */
   compileValue(keypath, value) {
 
     if (string.falsy(value)) {
@@ -454,12 +468,12 @@ export default class Yox {
                   return node.value
                 }
                 if (type === expressionNodeType.IDENTIFIER) {
-                  if (name === viewSyntax.SPECIAL_EVENT) {
+                  if (name === templateSyntax.SPECIAL_EVENT) {
                     if (isEvent) {
                       return event
                     }
                   }
-                  else if (name === viewSyntax.SPECIAL_KEYPATH) {
+                  else if (name === templateSyntax.SPECIAL_KEYPATH) {
                     return keypath
                   }
                   else if (name === env.THIS) {
@@ -622,7 +636,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.35.1'
+Yox.version = '0.35.2'
 
 /**
  * 工具，便于扩展、插件使用
