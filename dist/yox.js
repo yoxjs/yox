@@ -2661,6 +2661,13 @@ var Observer = function () {
       // 计算属性的缓存
       instance.computedCache = {};
 
+      var computedCache = instance.computedCache,
+          computedStack = instance.computedStack,
+          computedDeps = instance.computedDeps,
+          computedGetters = instance.computedGetters,
+          computedSetters = instance.computedSetters;
+
+
       each$1(computed, function (item, keypath) {
 
         var get$$1 = void 0,
@@ -2688,20 +2695,18 @@ var Observer = function () {
         if (get$$1) {
 
           var watcher = function watcher() {
-            if (has$1(instance.computedCache, keypath)) {
-              delete instance.computedCache[keypath];
+            if (has$1(computedCache, keypath)) {
+              delete computedCache[keypath];
             }
           };
 
           var getter = function getter() {
-            var computedCache = instance.computedCache;
-
             if (cache && has$1(computedCache, keypath)) {
               return computedCache[keypath];
             }
 
             if (!deps) {
-              instance.computedStack.push([]);
+              computedStack.push([]);
             }
 
             var result = execute(get$$1, instance.context);
@@ -2709,18 +2714,18 @@ var Observer = function () {
               computedCache[keypath] = result;
             }
 
-            var newDeps = deps || instance.computedStack.pop();
-            var oldDeps = instance.computedDeps[keypath];
-            instance.computedDeps[keypath] = instance.diff(newDeps, oldDeps, watcher);
+            var newDeps = deps || pop(computedStack);
+            var oldDeps = computedDeps[keypath];
+            computedDeps[keypath] = instance.diff(newDeps, oldDeps, watcher);
 
             return result;
           };
 
-          getter.toString = instance.computedGetters[keypath] = getter;
+          getter.toString = computedGetters[keypath] = getter;
         }
 
         if (set$$1) {
-          instance.computedSetters[keypath] = set$$1;
+          computedSetters[keypath] = set$$1;
         }
       });
     }
@@ -2775,9 +2780,9 @@ var Observer = function () {
         return get$1(data, keypath);
       };
 
-      var result = void 0,
-          temp = void 0;
-      var suffixes = parse$1(keypath);
+      var suffixes = parse$1(keypath),
+          temp = void 0,
+          result = void 0;
 
       if (string(context)) {
         var prefixes = parse$1(context);
@@ -2799,7 +2804,7 @@ var Observer = function () {
               if (!prefixes.length) {
                 break;
               } else {
-                prefixes.pop();
+                pop(prefixes);
               }
             }
           }
@@ -2933,7 +2938,8 @@ var Observer = function () {
     value: function dispatch() {
 
       var instance = this,
-          collection = [];
+          collection = [],
+          tasks = [];
 
       var cache = instance.cache,
           context = instance.context,
@@ -2950,8 +2956,16 @@ var Observer = function () {
         var oldValue = cache[keypath];
         if (newValue !== oldValue) {
           cache[keypath] = newValue;
-          emitter.fire(keypath, [newValue, oldValue, keypath], context);
+          // 先快照一份完整的变化清单
+          // 省的 watcher 包含设值逻辑，影响了当前快照的值
+          push(tasks, function () {
+            emitter.fire(keypath, [newValue, oldValue, keypath], context);
+          });
         }
+      });
+
+      each(tasks, function (task) {
+        task();
       });
     }
 
@@ -5020,8 +5034,8 @@ var Yox = function () {
         directives = options.directives,
         partials = options.partials,
         filters = options.filters,
-        watchers = options.watchers,
         events = options.events,
+        watchers = options.watchers,
         methods = options.methods,
         propTypes = options.propTypes,
         extensions = options.extensions;
@@ -5626,7 +5640,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.35.7';
+Yox.version = '0.35.8';
 
 /**
  * 工具，便于扩展、插件使用

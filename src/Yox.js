@@ -52,8 +52,8 @@ export default class Yox {
       directives,
       partials,
       filters,
-      watchers,
       events,
+      watchers,
       methods,
       propTypes,
       extensions,
@@ -636,7 +636,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.35.7'
+Yox.version = '0.35.8'
 
 /**
  * 工具，便于扩展、插件使用
