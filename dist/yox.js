@@ -653,9 +653,12 @@ function stringify(keypaths) {
 
 function resolve(base, path) {
   var list = parse$1(base);
+  if (base.length) {
+    pop(list);
+  }
   each(split(path, SEPARATOR_PATH), function (term) {
     if (term === LEVEL_PARENT) {
-      list.pop();
+      pop(list);
     } else {
       push(list, parse$1(term));
     }
@@ -824,7 +827,7 @@ function set$1(object$$1, keypath, value, autofill) {
   if (string(keypath) && !has$1(object$$1, keypath) && indexOf$1(keypath, CHAR_DOT) > 0) {
     var originalObject = object$$1;
     var list = parse$1(keypath);
-    var prop = list.pop();
+    var prop = pop(list);
     each(list, function (item, index) {
       if (object$$1[item]) {
         object$$1 = object$$1[item];
@@ -5640,7 +5643,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.35.8';
+Yox.version = '0.35.9';
 
 /**
  * 工具，便于扩展、插件使用
