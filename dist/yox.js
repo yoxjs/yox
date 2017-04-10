@@ -1058,7 +1058,7 @@ function error$1(msg) {
  * @param {string} msg
  */
 function fatal(msg) {
-  throw new Error(msg);
+  throw new Error('[Yox fatal]: ' + msg);
 }
 
 var logger = Object.freeze({
