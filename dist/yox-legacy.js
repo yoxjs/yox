@@ -689,9 +689,9 @@ var string$1 = Object.freeze({
 });
 
 var SEPARATOR_KEY = '.';
-var SEPARATOR_PATH = '/';
+
 var LEVEL_CURRENT = '.';
-var LEVEL_PARENT = '..';
+
 
 function normalize(str) {
   if (!falsy$1(str) && indexOf$1(str, '[') > 0 && indexOf$1(str, ']') > 0) {
@@ -716,21 +716,6 @@ function parse$1(str) {
 
 function stringify(keypaths) {
   return keypaths.filter(filter).join(SEPARATOR_KEY);
-}
-
-function resolve(base, path) {
-  var list = parse$1(base);
-  if (base.length) {
-    pop(list);
-  }
-  each(split(path, SEPARATOR_PATH), function (term) {
-    if (term === LEVEL_PARENT) {
-      pop(list);
-    } else {
-      push(list, parse$1(term));
-    }
-  });
-  return stringify(list);
 }
 
 /**
@@ -4259,28 +4244,26 @@ function execute$1(node, context) {
   return { value: value, deps: deps };
 }
 
-/**
- * 如果取值/设值指定了 . 或 ..，表示无需 lookup，而是直接操作某个层级
- */
-
 var Context = function () {
 
   /**
    * @param {Object} data
+   * @param {string} keypath
    * @param {?Context} parent
    */
-  function Context(data, parent) {
+  function Context(data, keypath, parent) {
     classCallCheck(this, Context);
 
     this.data = copy(data);
+    this.keypath = keypath;
     this.parent = parent;
     this.cache = {};
   }
 
   createClass(Context, [{
     key: 'push',
-    value: function push$$1(data) {
-      return new Context(data, this);
+    value: function push$$1(data, keypath) {
+      return new Context(data, keypath, this);
     }
   }, {
     key: 'pop',
@@ -4288,50 +4271,12 @@ var Context = function () {
       return this.parent;
     }
   }, {
-    key: 'format',
-    value: function format(keypath) {
-      var instance = this,
-          keys$$1 = parse$1(keypath);
-      if (keys$$1[0] === THIS) {
-        keys$$1.shift();
-        return {
-          keypath: stringify(keys$$1),
-          instance: instance
-        };
-      } else {
-        var lookup = TRUE,
-            index = 0,
-            levelMap = {};
-        levelMap[LEVEL_CURRENT] = FALSE;
-        levelMap[LEVEL_PARENT] = TRUE;
-
-        each(keys$$1, function (key, i) {
-          if (has$1(levelMap, key)) {
-            lookup = FALSE;
-            if (levelMap[key]) {
-              instance = instance.parent;
-              if (!instance) {
-                return FALSE;
-              }
-            }
-          } else {
-            index = i;
-            return FALSE;
-          }
-        });
-        return {
-          keypath: stringify(keys$$1.slice(index)),
-          instance: instance,
-          lookup: lookup
-        };
-      }
-    }
-  }, {
     key: 'set',
     value: function set$$1(key, value) {
-      var _format = this.format(key),
-          instance = _format.instance,
-          keypath = _format.keypath;
+      var instance = this;
+
+      var _formatKeypath = formatKeypath(key),
+          keypath = _formatKeypath.keypath;
 
       if (instance && keypath) {
         if (has$1(instance.cache, keypath)) {
@@ -4343,62 +4288,87 @@ var Context = function () {
   }, {
     key: 'get',
     value: function get$$1(key) {
-      var _format2 = this.format(key),
-          instance = _format2.instance,
-          keypath = _format2.keypath,
-          lookup = _format2.lookup;
+      var _formatKeypath2 = formatKeypath(key),
+          keypath = _formatKeypath2.keypath,
+          lookup = _formatKeypath2.lookup;
 
-      var originalKeypath = keypath;
+      var instance = this,
+          contextKeypath = instance.keypath,
+          originalKeypath = keypath;
 
-      if (instance) {
-        var _instance = instance,
-            data = _instance.data,
-            cache = _instance.cache;
+      var _instance = instance,
+          data = _instance.data,
+          cache = _instance.cache;
 
-        if (!has$1(cache, keypath)) {
-          if (keypath) {
-            var result = void 0;
+      if (!has$1(cache, keypath)) {
+        if (keypath) {
+          var result = void 0;
 
-            if (lookup) {
-              var keys$$1 = [keypath];
-              while (instance) {
-                result = get$1(instance.data, keypath);
-                if (result) {
-                  break;
-                } else {
-                  instance = instance.parent;
-                  unshift(keys$$1, LEVEL_PARENT);
-                }
+          if (lookup) {
+            while (instance) {
+              result = get$1(instance.data, keypath);
+              if (result) {
+                break;
+              } else {
+                instance = instance.parent;
               }
-              keypath = keys$$1.join(SEPARATOR_PATH);
-            } else {
-              result = get$1(data, keypath);
-            }
-
-            if (result) {
-              cache[keypath] = result.value;
             }
           } else {
-            cache[keypath] = data;
+            result = get$1(data, keypath);
           }
-        }
-        if (has$1(cache, keypath)) {
-          return {
-            keypath: keypath,
-            value: cache[keypath]
+
+          if (result) {
+            cache[keypath] = {
+              keypath: joinKeypath(instance.keypath, keypath),
+              value: result.value
+            };
+          }
+        } else {
+          cache[keypath] = {
+            keypath: contextKeypath,
+            value: data
           };
         }
+      }
+      if (has$1(cache, keypath)) {
+        return cache[keypath];
       }
 
       warn('Failed to lookup "' + key + '".');
 
+      // 找不到就用当前的 keypath 吧
       return {
-        keypath: originalKeypath
+        keypath: joinKeypath(contextKeypath, originalKeypath)
       };
     }
   }]);
   return Context;
 }();
+
+function formatKeypath(keypath) {
+  var keys$$1 = parse$1(keypath);
+  if (keys$$1[0] === THIS) {
+    keys$$1.shift();
+    return {
+      keypath: stringify(keys$$1)
+    };
+  } else {
+    return {
+      keypath: stringify(keys$$1),
+      lookup: TRUE
+    };
+  }
+}
+
+function joinKeypath(keypath1, keypath2) {
+  if (keypath1 && keypath2) {
+    return keypath1 + SEPARATOR_KEY + keypath2;
+  } else if (keypath1) {
+    return keypath1;
+  } else if (keypath2) {
+    return keypath2;
+  }
+}
 
 /**
  * 标记节点数组，用于区分普通数组
@@ -4459,14 +4429,14 @@ function mergeNodes(nodes) {
  */
 function render(ast, createComment, createElement, importTemplate, data) {
 
-  var keypaths = [];
+  var keypathList = [];
   var getKeypath = function getKeypath() {
-    return stringify(keypaths);
+    return stringify(keypathList);
   };
   getKeypath.toString = getKeypath;
 
   data[SPECIAL_KEYPATH] = getKeypath;
-  var context = new Context(data);
+  var context = new Context(data, getKeypath());
 
   // 正在渲染的 html 层级
   var htmlStack = [];
@@ -4474,12 +4444,12 @@ function render(ast, createComment, createElement, importTemplate, data) {
   // 用时定义的模板片段
   var partials = {};
 
+  // 渲染模板收集的依赖
   var deps = {};
+
   var executeExpr = function executeExpr(expr) {
     var result = execute$1(expr, context);
-    each$1(result.deps, function (value, key) {
-      deps[resolve(getKeypath(), key)] = value;
-    });
+    extend(deps, result.deps);
     return result.value;
   };
 
@@ -4611,24 +4581,24 @@ function render(ast, createComment, createElement, importTemplate, data) {
 
           var list = [];
 
-          push(keypaths, normalize(stringify$1(expr)));
-          context = context.push(value);
+          push(keypathList, normalize(stringify$1(expr)));
+          context = context.push(value, getKeypath());
 
           iterate(value, function (item, i) {
             if (index) {
               context.set(index, i);
             }
 
-            push(keypaths, i);
-            context = context.push(item);
+            push(keypathList, i);
+            context = context.push(item, getKeypath());
 
             push(list, traverseList(children));
 
-            pop(keypaths);
+            pop(keypathList);
             context = pop(context);
           });
 
-          pop(keypaths);
+          pop(keypathList);
           context = pop(context);
 
           return makeNodes(list);
@@ -5850,7 +5820,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.35.9';
+Yox.version = '0.36.0';
 
 /**
  * 工具，便于扩展、插件使用
