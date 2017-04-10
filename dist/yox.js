@@ -3551,8 +3551,11 @@ function init(modules) {
   };
 
   var removeVnodes = function removeVnodes(parentNode, vnodes, startIndex, endIndex) {
-    for (var i = startIndex; i <= endIndex; i++) {
-      removeVnode(parentNode, vnodes[i]);
+    for (var i = startIndex, vnode; i <= endIndex; i++) {
+      vnode = vnodes[i];
+      if (vnode) {
+        removeVnode(parentNode, vnode);
+      }
     }
   };
 
@@ -5613,7 +5616,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.36.0';
+Yox.version = '0.36.1';
 
 /**
  * 工具，便于扩展、插件使用
