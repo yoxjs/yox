@@ -90,6 +90,9 @@ export function create(ast, context, instance) {
         if (name === templateSyntax.KEYWORD_UNIQUE) {
           vnode.key = node.value
         }
+        if (name === templateSyntax.KEYWORD_STATIC) {
+          vnode.static = env.TRUE
+        }
         else {
           name = modifier
             ? `${name}${char.CHAR_DOT}${modifier}`

@@ -1923,6 +1923,7 @@ var DIRECTIVE_LAZY = 'lazy';
 var DIRECTIVE_MODEL = 'model';
 
 var KEYWORD_UNIQUE = 'key';
+var KEYWORD_STATIC = 'static';
 
 /**
  * if 节点
@@ -2023,7 +2024,7 @@ var name2Type = {};
 // 类型 -> 名称的映射
 var type2Name = {};
 
-ifTypes[IF$1] = ifTypes[ELSE_IF$1] = elseTypes[ELSE_IF$1] = elseTypes[ELSE$1] = htmlTypes[ELEMENT] = htmlTypes[ATTRIBUTE] = htmlTypes[DIRECTIVE] = leafTypes[TEXT] = leafTypes[IMPORT$1] = leafTypes[SPREAD$1] = leafTypes[EXPRESSION] = builtInDirectives[DIRECTIVE_REF] = builtInDirectives[DIRECTIVE_LAZY] = builtInDirectives[DIRECTIVE_MODEL] = builtInDirectives[KEYWORD_UNIQUE] = TRUE;
+ifTypes[IF$1] = ifTypes[ELSE_IF$1] = elseTypes[ELSE_IF$1] = elseTypes[ELSE$1] = htmlTypes[ELEMENT] = htmlTypes[ATTRIBUTE] = htmlTypes[DIRECTIVE] = leafTypes[TEXT] = leafTypes[IMPORT$1] = leafTypes[SPREAD$1] = leafTypes[EXPRESSION] = builtInDirectives[DIRECTIVE_REF] = builtInDirectives[DIRECTIVE_LAZY] = builtInDirectives[DIRECTIVE_MODEL] = builtInDirectives[KEYWORD_UNIQUE] = builtInDirectives[KEYWORD_STATIC] = TRUE;
 
 name2Type['if'] = IF$1;
 name2Type['each'] = EACH$1;
@@ -3619,8 +3620,16 @@ var emptyNode = new Vnode({
   children: []
 });
 
-function needPatch(vnode1, vnode2) {
+function isPatchable(vnode1, vnode2) {
   return vnode1.key === vnode2.key && vnode1.sel === vnode2.sel;
+}
+
+function isSame(vnode1, vnode2) {
+  return vnode1 === vnode2
+  // 静态子树
+  || vnode1.static && vnode2.static && vnode1.key === vnode2.key
+  // 注释节点
+  || vnode1.sel === Vnode.SEL_COMMENT && vnode2.sel === Vnode.SEL_COMMENT && vnode1.text === vnode2.text;
 }
 
 function createKeyToIndex(vnodes, startIndex, endIndex) {
@@ -3838,14 +3847,14 @@ function init(modules) {
       }
 
       // 优先从头到尾比较，位置相同且值得 patch
-      else if (needPatch(oldStartVnode, newStartVnode)) {
+      else if (isPatchable(oldStartVnode, newStartVnode)) {
           patchVnode(oldStartVnode, newStartVnode, insertedQueue);
           oldStartVnode = oldChildren[++oldStartIndex];
           newStartVnode = newChildren[++newStartIndex];
         }
 
         // 再从尾到头比较，位置相同且值得 patch
-        else if (needPatch(oldEndVnode, newEndVnode)) {
+        else if (isPatchable(oldEndVnode, newEndVnode)) {
             patchVnode(oldEndVnode, newEndVnode, insertedQueue);
             oldEndVnode = oldChildren[--oldEndIndex];
             newEndVnode = newChildren[--newEndIndex];
@@ -3855,7 +3864,7 @@ function init(modules) {
 
           // 当 oldStartVnode 和 newEndVnode 值得 patch
           // 说明元素被移到右边了
-          else if (needPatch(oldStartVnode, newEndVnode)) {
+          else if (isPatchable(oldStartVnode, newEndVnode)) {
               patchVnode(oldStartVnode, newEndVnode, insertedQueue);
               api.before(parentNode, oldStartVnode.el, api.next(oldEndVnode.el));
               oldStartVnode = oldChildren[++oldStartIndex];
@@ -3864,7 +3873,7 @@ function init(modules) {
 
             // 当 oldEndVnode 和 newStartVnode 值得 patch
             // 说明元素被移到左边了
-            else if (needPatch(oldEndVnode, newStartVnode)) {
+            else if (isPatchable(oldEndVnode, newStartVnode)) {
                 patchVnode(oldEndVnode, newStartVnode, insertedQueue);
                 api.before(parentNode, oldEndVnode.el, oldStartVnode.el);
                 oldEndVnode = oldChildren[--oldEndIndex];
@@ -3912,7 +3921,7 @@ function init(modules) {
 
   var patchVnode = function patchVnode(oldVnode, vnode, insertedQueue) {
 
-    if (oldVnode === vnode) {
+    if (isSame(oldVnode, vnode)) {
       return;
     }
 
@@ -3925,7 +3934,7 @@ function init(modules) {
 
     var el = vnode.el = oldVnode.el;
 
-    if (!needPatch(oldVnode, vnode)) {
+    if (!isPatchable(oldVnode, vnode)) {
       var parentNode = api.parent(el);
       if (createElement$$1(parentNode, vnode, insertedQueue)) {
         parentNode && replaceVnode(parentNode, oldVnode, vnode);
@@ -3989,7 +3998,7 @@ function init(modules) {
     }
 
     var insertedQueue = [];
-    if (needPatch(oldVnode, vnode)) {
+    if (isPatchable(oldVnode, vnode)) {
       patchVnode(oldVnode, vnode, insertedQueue);
     } else {
       var parentNode = api.parent(oldVnode.el);
@@ -4760,6 +4769,9 @@ function create(ast, context, instance) {
 
       if (name === KEYWORD_UNIQUE) {
         vnode.key = node.value;
+      }
+      if (name === KEYWORD_STATIC) {
+        vnode.static = TRUE;
       } else {
         name = modifier ? '' + name + CHAR_DOT + modifier : name;
         if (!directives[name]) {
@@ -5823,7 +5835,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.36.1';
+Yox.version = '0.36.2';
 
 /**
  * 工具，便于扩展、插件使用
