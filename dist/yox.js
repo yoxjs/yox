@@ -1110,16 +1110,29 @@ var nextTick$1 = function (fn) {
 
 var nextTasks = [];
 
-/**
- * 添加异步任务
- *
- * @param {Function} task
- */
-function add$1(task) {
+function add$1(name, task) {
   if (!nextTasks.length) {
     nextTick$1(run);
   }
-  push(nextTasks, task);
+  array$1[name](nextTasks, task);
+}
+
+/**
+ * 在队尾添加异步任务
+ *
+ * @param {Function} task
+ */
+function append(task) {
+  add$1('push', task);
+}
+
+/**
+ * 在队首添加异步任务
+ *
+ * @param {Function} task
+ */
+function prepend(task) {
+  add$1('unshift', task);
 }
 
 /**
@@ -3227,11 +3240,11 @@ function before(parentNode, newNode, referenceNode) {
   if (referenceNode) {
     parentNode.insertBefore(newNode, referenceNode);
   } else {
-    append(parentNode, newNode);
+    append$1(parentNode, newNode);
   }
 }
 
-function append(parentNode, child) {
+function append$1(parentNode, child) {
   parentNode.appendChild(child);
 }
 
@@ -3296,7 +3309,7 @@ var domApi = Object.freeze({
 	setAttr: setAttr,
 	removeAttr: removeAttr,
 	before: before,
-	append: append,
+	append: append$1,
 	replace: replace,
 	remove: remove$1,
 	parent: parent,
@@ -5325,35 +5338,47 @@ var Yox = function () {
 
       var instance = this,
           args = arguments;
-      var $observer = instance.$observer;
+      var $dispatching = instance.$dispatching,
+          $observer = instance.$observer;
 
 
       $observer.set(model$$1);
 
       var dispatch = function dispatch() {
+        var $dispatching = instance.$dispatching;
 
-        $observer.dispatch();
 
-        if (instance.$dirtyIgnore) {
-          delete instance.$dirtyIgnore;
-          return;
+        if (!$dispatching) {
+          $dispatching = 0;
         }
-        if (instance.$dirty) {
-          delete instance.$dirty;
-          instance.updateView();
+
+        $dispatching++;
+        $observer.dispatch();
+        $dispatching--;
+
+        if (!$dispatching) {
+          delete instance.$dispatching;
+          if (instance.$dirtyIgnore) {
+            delete instance.$dirtyIgnore;
+            return;
+          }
+          if (instance.$dirty) {
+            delete instance.$dirty;
+            instance.updateView();
+          }
         }
       };
 
       if (args.length === 1) {
         instance.$dirtyIgnore = TRUE;
-      } else if (args.length === 2 && args[1]) {
+      } else if ($dispatching || args.length === 2 && args[1]) {
         dispatch();
         return;
       }
 
       if (!instance.$waiting) {
         instance.$waiting = TRUE;
-        instance.nextTick(function () {
+        append(function () {
           if (instance.$waiting) {
             delete instance.$waiting;
             dispatch();
@@ -5403,25 +5428,27 @@ var Yox = function () {
       // 而且让 data 中的函数完全动态化说不定还是一个好设计呢
       extend(context, $observer.data, $observer.computedGetters);
 
+      // 新的虚拟节点和依赖关系
+
       var _vdom$create = create(instance.$template, context, instance),
           node = _vdom$create.node,
           deps = _vdom$create.deps;
 
       instance.$viewDeps = $observer.diff(keys(deps), instance.$viewDeps, instance.$viewWatcher);
 
-      var afterHook = void 0;
       if ($node) {
-        afterHook = AFTER_UPDATE;
-        $node = patch($node, node);
+        prepend(function () {
+          if (instance.$options) {
+            instance.$node = patch($node, node);
+            execute($options[AFTER_UPDATE], instance);
+          }
+        });
       } else {
-        afterHook = AFTER_MOUNT;
         $node = patch(arguments[0], node);
         instance.$el = $node.el;
+        instance.$node = $node;
+        execute($options[AFTER_MOUNT], instance);
       }
-
-      instance.$node = $node;
-
-      execute($options[afterHook], instance);
     }
 
     /**
@@ -5568,7 +5595,7 @@ var Yox = function () {
   }, {
     key: 'nextTick',
     value: function nextTick(fn) {
-      add$1(fn);
+      append(fn);
     }
 
     /**
@@ -5647,7 +5674,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.36.3';
+Yox.version = '0.36.4';
 
 /**
  * 工具，便于扩展、插件使用
@@ -5820,7 +5847,7 @@ each(merge(supportRegisterAsync, ['directive', 'partial', 'filter']), function (
  *
  * @param {Function} fn
  */
-Yox.nextTick = add$1;
+Yox.nextTick = append;
 
 /**
  * 编译模板，暴露出来是为了打包阶段的模板预编译

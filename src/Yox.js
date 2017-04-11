@@ -318,21 +318,32 @@ export default class Yox {
   updateModel(model) {
 
     let instance = this, args = arguments
-    let { $observer } = instance
+    let { $dispatching, $observer } = instance
 
     $observer.set(model)
 
     let dispatch = function () {
 
-      $observer.dispatch()
+      let { $dispatching } = instance
 
-      if (instance.$dirtyIgnore) {
-        delete instance.$dirtyIgnore
-        return
+      if (!$dispatching) {
+        $dispatching = 0
       }
-      if (instance.$dirty) {
-        delete instance.$dirty
-        instance.updateView()
+
+      $dispatching++
+      $observer.dispatch()
+      $dispatching--
+
+      if (!$dispatching) {
+        delete instance.$dispatching
+        if (instance.$dirtyIgnore) {
+          delete instance.$dirtyIgnore
+          return
+        }
+        if (instance.$dirty) {
+          delete instance.$dirty
+          instance.updateView()
+        }
       }
 
     }
@@ -340,14 +351,14 @@ export default class Yox {
     if (args.length === 1) {
       instance.$dirtyIgnore = env.TRUE
     }
-    else if (args.length === 2 && args[ 1 ]) {
+    else if ($dispatching || args.length === 2 && args[ 1 ]) {
       dispatch()
       return
     }
 
     if (!instance.$waiting) {
       instance.$waiting = env.TRUE
-      instance.nextTick(
+      nextTask.append(
         function () {
           if (instance.$waiting) {
             delete instance.$waiting
@@ -402,23 +413,30 @@ export default class Yox {
     // 而且让 data 中的函数完全动态化说不定还是一个好设计呢
     object.extend(context, $observer.data, $observer.computedGetters)
 
+    // 新的虚拟节点和依赖关系
     let { node, deps } = vdom.create(instance.$template, context, instance)
-    instance.$viewDeps = $observer.diff(object.keys(deps), instance.$viewDeps, instance.$viewWatcher)
+    instance.$viewDeps = $observer.diff(
+      object.keys(deps),
+      instance.$viewDeps,
+      instance.$viewWatcher
+    )
 
-    let afterHook
     if ($node) {
-      afterHook = lifecycle.AFTER_UPDATE
-      $node = vdom.patch($node, node)
+      nextTask.prepend(
+        function () {
+          if (instance.$options) {
+            instance.$node = vdom.patch($node, node)
+            execute($options[ lifecycle.AFTER_UPDATE ], instance)
+          }
+        }
+      )
     }
     else {
-      afterHook = lifecycle.AFTER_MOUNT
       $node = vdom.patch(arguments[ 0 ], node)
       instance.$el = $node.el
+      instance.$node = $node
+      execute($options[ lifecycle.AFTER_MOUNT ], instance)
     }
-
-    instance.$node = $node
-
-    execute($options[ afterHook ], instance)
 
   }
 
@@ -564,7 +582,7 @@ export default class Yox {
    * @param {Function} fn
    */
   nextTick(fn) {
-    nextTask.add(fn)
+    nextTask.append(fn)
   }
 
   /**
@@ -636,7 +654,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.36.3'
+Yox.version = '0.36.4'
 
 /**
  * 工具，便于扩展、插件使用
@@ -809,7 +827,7 @@ array.each(
  *
  * @param {Function} fn
  */
-Yox.nextTick = nextTask.add
+Yox.nextTick = nextTask.append
 
 /**
  * 编译模板，暴露出来是为了打包阶段的模板预编译
