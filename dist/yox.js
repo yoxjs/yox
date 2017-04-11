@@ -1068,32 +1068,45 @@ var logger = Object.freeze({
 	fatal: fatal
 });
 
-var nextTick = void 0;
+function byObserver(fn) {
+  var observer = new MutationObserver(fn);
+  var textNode = doc.createTextNode(CHAR_BLANK);
+  observer.observe(textNode, {
+    characterData: TRUE
+  });
+  textNode.data = CHAR_WHITESPACE;
+}
 
+function byImmediate(fn) {
+  setImmediate(fn);
+}
+
+function byTimeout(fn) {
+  setTimeout(fn);
+}
+
+var nextTick = void 0;
 if (typeof MutationObserver === 'function') {
-  nextTick = function nextTick(fn) {
-    // 移动端的输入法唤起时，貌似会影响 MutationObserver 的 nextTick 触发
-    // 因此当输入框是激活状态时，改用 setTimeout
+  nextTick = byObserver;
+} else if (typeof setImmediate === 'function') {
+  nextTick = byImmediate;
+} else {
+  nextTick = byTimeout;
+}
+
+var nextTick$1 = function (fn) {
+  // 移动端的输入法唤起时，貌似会影响 MutationObserver 的 nextTick 触发
+  // 因此当输入框是激活状态时，改用 setTimeout
+  if (doc) {
     var activeElement = doc.activeElement;
 
     if (activeElement && 'oninput' in activeElement) {
-      setTimeout(fn);
-    } else {
-      var observer = new MutationObserver(fn);
-      var textNode = doc.createTextNode(CHAR_BLANK);
-      observer.observe(textNode, {
-        characterData: TRUE
-      });
-      textNode.data = CHAR_WHITESPACE;
+      byTimeout(fn);
+      return;
     }
-  };
-} else if (typeof setImmediate === 'function') {
-  nextTick = setImmediate;
-} else {
-  nextTick = setTimeout;
-}
-
-var nextTick$1 = nextTick;
+  }
+  nextTick(fn);
+};
 
 var nextTasks = [];
 
@@ -2928,7 +2941,7 @@ var Observer = function () {
 
       var instance = this,
           collection = [],
-          tasks = [];
+          differences = [];
 
       var cache = instance.cache,
           context = instance.context,
@@ -2944,18 +2957,20 @@ var Observer = function () {
         var newValue = instance.get(keypath);
         var oldValue = cache[keypath];
         if (newValue !== oldValue) {
-          cache[keypath] = newValue;
-          // 先快照一份完整的变化清单
-          // 省的 watcher 包含设值逻辑，影响了当前快照的值
-          push(tasks, function () {
-            emitter.fire(keypath, [newValue, oldValue, keypath], context);
+          saveToCache(cache, keypath, newValue);
+          push(differences, {
+            keypath: keypath,
+            oldValue: oldValue,
+            newValue: newValue
           });
         }
       });
 
-      each(tasks, function (task) {
-        task();
+      each(differences, function (difference) {
+        emitter.fire(difference.keypath, [difference.newValue, difference.oldValue, difference.keypath], context);
       });
+
+      return differences;
     }
 
     /**
@@ -3029,10 +3044,19 @@ function createWatch(method) {
         }
       }
       if (!has$1(cache, keypath)) {
-        cache[keypath] = currentValue;
+        saveToCache(cache, keypath, currentValue);
       }
     });
   };
+}
+
+/**
+ * 保存到 cache 中，方便下次对比
+ */
+function saveToCache(cache, keypath, value) {
+  if (!has$2(keypath, '*')) {
+    cache[keypath] = value;
+  }
 }
 
 /**
