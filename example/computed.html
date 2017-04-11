@@ -36,6 +36,7 @@
             },
             computed: {
                 allChecked: {
+                    deps: [ 'list.*.checked' ],
                     get: function () {
                         var list = this.get('list');
                         for (var i = 0, len = list.length; i < len; i++) {

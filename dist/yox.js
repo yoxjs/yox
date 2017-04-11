@@ -2940,8 +2940,7 @@ var Observer = function () {
     value: function dispatch() {
 
       var instance = this,
-          collection = [],
-          differences = [];
+          collection = [];
 
       var cache = instance.cache,
           context = instance.context,
@@ -2958,19 +2957,13 @@ var Observer = function () {
         var oldValue = cache[keypath];
         if (newValue !== oldValue) {
           saveToCache(cache, keypath, newValue);
-          push(differences, {
-            keypath: keypath,
-            oldValue: oldValue,
-            newValue: newValue
-          });
+          // 如果有 a 和 b 两个字段
+          // a 是计算属性，b 是 a 的依赖
+          // 当 b 变化了，a 需要及时被通知
+          // 否则上一步的 newValue 取不到正确的值
+          emitter.fire(keypath, [newValue, oldValue, keypath], context);
         }
       });
-
-      each(differences, function (difference) {
-        emitter.fire(difference.keypath, [difference.newValue, difference.oldValue, difference.keypath], context);
-      });
-
-      return differences;
     }
 
     /**
