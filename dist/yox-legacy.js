@@ -3920,8 +3920,10 @@ function init(modules) {
   };
 
   var patchVnode = function patchVnode(oldVnode, vnode, insertedQueue) {
+    var el = oldVnode.el;
 
     if (isSame(oldVnode, vnode)) {
+      vnode.el = el;
       return;
     }
 
@@ -3932,7 +3934,7 @@ function init(modules) {
     var args = [oldVnode, vnode];
     execute(hooks[HOOK_PREPATCH], NULL, args);
 
-    var el = vnode.el = oldVnode.el;
+    vnode.el = el;
 
     if (!isPatchable(oldVnode, vnode)) {
       var parentNode = api.parent(el);
@@ -5835,7 +5837,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.36.2';
+Yox.version = '0.36.3';
 
 /**
  * 工具，便于扩展、插件使用
