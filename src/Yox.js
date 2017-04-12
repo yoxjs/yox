@@ -414,7 +414,7 @@ export default class Yox {
     object.extend(context, $observer.data, $observer.computedGetters)
 
     // 新的虚拟节点和依赖关系
-    let { node, deps } = vdom.create(instance.$template, context, instance)
+    let { nodes, deps } = vdom.create(instance.$template, context, instance)
     instance.$viewDeps = $observer.diff(
       object.keys(deps),
       instance.$viewDeps,
@@ -422,17 +422,11 @@ export default class Yox {
     )
 
     if ($node) {
-      nextTask.prepend(
-        function () {
-          if (instance.$options) {
-            instance.$node = vdom.patch($node, node)
-            execute($options[ lifecycle.AFTER_UPDATE ], instance)
-          }
-        }
-      )
+      instance.$node = vdom.patch($node, nodes[ 0 ])
+      execute($options[ lifecycle.AFTER_UPDATE ], instance)
     }
     else {
-      $node = vdom.patch(arguments[ 0 ], node)
+      $node = vdom.patch(arguments[ 0 ], nodes[ 0 ])
       instance.$el = $node.el
       instance.$node = $node
       execute($options[ lifecycle.AFTER_MOUNT ], instance)
@@ -654,7 +648,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.36.4'
+Yox.version = '0.36.5'
 
 /**
  * 工具，便于扩展、插件使用
