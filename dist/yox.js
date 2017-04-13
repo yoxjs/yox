@@ -4274,7 +4274,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
 
   getKeypath.toString = getKeypath;
 
-  data[SPECIAL_KEYPATH] = keypath;
+  data[SPECIAL_KEYPATH] = getKeypath;
   var context = new Context(data, keypath);
 
   // 渲染模板收集的依赖
@@ -4286,7 +4286,10 @@ function render(ast, createComment, createElement, importTemplate, data) {
     return result.value;
   };
 
-  var getUnescapedProps = function getUnescapedProps(type, children) {
+  var getUnescapedProps = function getUnescapedProps(_ref) {
+    var type = _ref.type,
+        children = _ref.children;
+
     if (type === ELEMENT && children.length === 1) {
       var child = children[0];
       if (child.type === EXPRESSION && child.safe === FALSE) {
@@ -4308,15 +4311,17 @@ function render(ast, createComment, createElement, importTemplate, data) {
       }
       if (has$1(node, 'keypath')) {
         push(keypathList, node.keypath);
+        keypath = getKeypath();
       }
       if (has$1(node, 'data')) {
-        context = context.push(node.data, getKeypath());
+        context = context.push(node.data, keypath);
+      }
+      if (htmlTypes[node.type]) {
+        push(htmlStack, node.type);
       }
       push(nodeStack, {
         node: node,
         index: -1,
-        attributes: makeNodes([]),
-        directives: makeNodes([]),
         children: makeNodes([])
       });
     };
@@ -4328,11 +4333,18 @@ function render(ast, createComment, createElement, importTemplate, data) {
       if (has$1(node, 'data')) {
         context = context.pop();
       }
+      if (htmlTypes[node.type]) {
+        pop(htmlStack);
+      }
       if (has$1(node, 'keypath')) {
         pop(keypathList);
+        keypath = getKeypath();
       }
-      if (_filter) {
-        _filter = NULL;
+      if (filter) {
+        filter = NULL;
+      }
+      if (sibling) {
+        sibling = NULL;
       }
     };
 
@@ -4349,11 +4361,9 @@ function render(ast, createComment, createElement, importTemplate, data) {
     };
 
     var addValue = function addValue(value) {
-      var collection = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'children';
-
       if (value !== UNDEFINED) {
-        node = nodeStack[nodeStack.length - 2];
-        collection = node ? node[collection] : result;
+        var _node = nodeStack[nodeStack.length - 2];
+        var collection = _node ? _node.children : result;
         if (isNodes(value)) {
           push(collection, value);
         } else {
@@ -4362,13 +4372,183 @@ function render(ast, createComment, createElement, importTemplate, data) {
       }
     };
 
-    var value = void 0,
+    var filterElse = function filterElse(node) {
+      if (elseTypes[node.type]) {
+        return FALSE;
+      } else {
+        filter = NULL;
+        return TRUE;
+      }
+    };
+
+    var enter = {},
+        leave = {};
+
+    enter[PARTIAL$1] = function (node) {
+      partials[node.name] = node.children;
+      popStack();
+      return FALSE;
+    };
+
+    enter[IMPORT$1] = function (node) {
+      var name = node.name;
+
+      var partial = partials[name] || importTemplate(name);
+      if (partial) {
+        popStack();
+        pushNode(partial);
+        return FALSE;
+      }
+      fatal('Partial "' + name + '" is not found.');
+    };
+
+    // 条件判断失败就没必要往下走了
+    // 但如果失败的点原本是一个 DOM 元素
+    // 就需要用注释节点来占位，否则 virtual dom 无法正常工作
+    enter[IF$1] = enter[ELSE_IF$1] = function (node) {
+      if (!executeExpr(node.expr)) {
+        if (sibling && !elseTypes[sibling.type] && !attrTypes[last(htmlStack)]) {
+          addValue(makeNodes(createComment()));
+        }
+        popStack();
+        return FALSE;
+      }
+    };
+
+    enter[EACH$1] = function (node) {
+
+      popStack();
+
+      var value = executeExpr(node.expr),
+          list = [],
+          each$$1 = void 0;
+
+      if (array(value)) {
+        each$$1 = each;
+      } else if (object(value)) {
+        each$$1 = each$1;
+      }
+
+      if (each$$1) {
+        each$$1(value, function (data, i, item) {
+
+          item = {
+            data: data,
+            keypath: i,
+            children: node.children
+          };
+
+          if (node.index) {
+            item.context = [node.index, i];
+          }
+
+          push(list, item);
+        });
+
+        pushStack({
+          children: list,
+          keypath: normalize(stringify$1(node.expr)),
+          data: value
+        });
+      }
+
+      return FALSE;
+    };
+
+    leave[TEXT] = function (node) {
+      addValue(node.content);
+    };
+
+    leave[EXPRESSION] = function (node) {
+      addValue(executeExpr(node.expr));
+    };
+
+    leave[ATTRIBUTE] = function (node, current) {
+      addValue({
+        keypath: keypath,
+        name: node.name,
+        type: ATTRIBUTE,
+        value: mergeNodes(current.children)
+      });
+    };
+
+    leave[DIRECTIVE] = function (node, current) {
+      addValue({
+        keypath: keypath,
+        name: node.name,
+        type: DIRECTIVE,
+        modifier: node.modifier,
+        value: mergeNodes(current.children)
+      });
+    };
+
+    leave[IF$1] = leave[ELSE_IF$1] = leave[ELSE$1] = function (node, current) {
+      addValue(current.children);
+      filter = filterElse;
+    };
+
+    leave[SPREAD$1] = function (node) {
+      var value = executeExpr(node.expr);
+      if (object(value)) {
+        var children = [];
+        each$1(value, function (value, name) {
+          push(children, {
+            name: name,
+            value: value,
+            keypath: keypath
+          });
+        });
+        addValue(makeNodes(children));
+      }
+      fatal('Spread "' + stringify$1(expr) + '" must be an object.');
+    };
+
+    leave[ELEMENT] = function (node, current) {
+      var attributes = [],
+          directives = [],
+          children = [];
+      each(current.children, function (node) {
+        switch (node.type) {
+          case ATTRIBUTE:
+            push(attributes, node);
+            break;
+          case DIRECTIVE:
+            push(directives, node);
+            break;
+          default:
+            push(children, node);
+            break;
+        }
+      });
+      addValue(createElement({
+        keypath: keypath,
+        attributes: attributes,
+        directives: directives,
+        children: children,
+        name: node.name,
+        properties: current.properties
+      }, node.component));
+    };
+
+    leave[UNDEFINED] = function (node, current) {
+      addValue(current.children);
+    };
+
+    var traverseList = function traverseList(current, list, node) {
+      while (node = list[++current.index]) {
+        if (!filter || filter(node)) {
+          sibling = list[current.index + 1];
+          pushStack(node);
+          return FALSE;
+        }
+      }
+    };
 
     // 当前处理的栈节点
-    current = void 0,
+    var current = void 0,
 
     // 过滤某些节点的函数
-    _filter = void 0,
+    filter = void 0,
 
     // 相邻节点
     sibling = void 0,
@@ -4381,243 +4561,50 @@ function render(ast, createComment, createElement, importTemplate, data) {
 
     pushNode(node);
 
-    var _loop = function _loop() {
+    while (nodeStack.length) {
+
       current = last(nodeStack);
 
       var _current = current,
-          node = _current.node,
-          properties = _current.properties,
-          attributes = _current.attributes,
-          directives = _current.directives;
-      var _node = node,
-          type = _node.type,
-          name = _node.name,
-          expr = _node.expr,
-          index = _node.index,
-          modifier = _node.modifier,
-          component = _node.component,
-          content = _node.content,
-          attrs = _node.attrs,
-          children = _node.children;
+          _node2 = _current.node;
+      var type = _node2.type,
+          attrs = _node2.attrs,
+          children = _node2.children;
 
-      // 检查是否有必要处理这个节点
-      // 如果没有必要，需拦截后面的逻辑
-      // ================ enter start ==================
 
       if (!current.enter) {
         current.enter = TRUE;
-
-        switch (type) {
-
-          // 用时定义的子模板无需注册到组件实例
-          case PARTIAL$1:
-            // 注册即可，无需往下走了
-            partials[name] = children;
-            popStack();
-            return 'continue|main';
-
-          // 导入子模板
-          case IMPORT$1:
-            // 用时定义的子模板优先
-            content = partials[name] || importTemplate(name);
-            if (content) {
-              popStack();
-              pushNode(content);
-              return 'continue|main';
-            }
-            fatal('Partial "' + name + '" is not found.');
-
-          // 条件判断失败就没必要往下走了
-          // 但如果失败的点原本是一个 DOM 元素
-          // 就需要用注释节点来占位，否则 virtual dom 无法正常工作
-          case IF$1:
-          case ELSE_IF$1:
-            if (executeExpr(expr)) {
-              break;
-            }
-            if (sibling && !elseTypes[sibling.type] && !attrTypes[last(htmlStack)]) {
-              addValue(makeNodes(createComment()));
-            }
-            popStack();
-            return 'continue|main';
-
-          // 循环
-          case EACH$1:
-            popStack();
-
-            value = executeExpr(expr);
-            if (array(value)) {
-              name = each;
-            } else if (object(value)) {
-              name = each$1;
-            } else {
-              return 'continue|main';
-            }
-
-            content = children;
-            children = [];
-
-            name(value, function (data, i) {
-
-              value = {
-                children: content,
-                keypath: i,
-                data: data
-              };
-
-              if (index) {
-                value.context = [index, i];
-              }
-
-              push(children, value);
-            });
-
-            pushStack({
-              children: children,
-              keypath: normalize(stringify$1(expr)),
-              data: value
-            });
-
-            return 'continue|main';
-
-        }
-
-        // 记录 html 层级
-        // 方便判断当前处于元素层级还是属性层级
-        if (htmlTypes[type]) {
-          push(htmlStack, type);
+        if (execute(enter[type], NULL, [_node2, current]) === FALSE) {
+          continue;
         }
       }
-      // ================ enter end ==================
-
 
       if (attrs && !current.attrs) {
-        // 依次遍历 attrs
-        while (node = attrs[++current.index]) {
-          if (!_filter || _filter(node)) {
-            sibling = attrs[current.index + 1];
-            pushStack(node);
-            return 'continue|main';
-          }
+        if (traverseList(current, attrs) === FALSE) {
+          continue;
         }
         current.index = -1;
         current.attrs = TRUE;
       }
 
       if (children) {
-
-        properties = getUnescapedProps(type, children);
-        if (properties) {
-          children = NULL;
-        } else {
-          // 依次遍历 children
-          while (node = children[++current.index]) {
-            if (!_filter || _filter(node)) {
-              sibling = children[current.index + 1];
-              pushStack(node);
-              return 'continue|main';
-            }
-          }
+        if (current.properties = getUnescapedProps(_node2)) {
+          current.children = [];
+        } else if (traverseList(current, children) === FALSE) {
+          continue;
         }
       }
 
-      // ==================== leave start =====================
-      if (htmlTypes[type]) {
-        pop(htmlStack);
-      }
-
-      switch (type) {
-        case TEXT:
-          addValue(content);
-          break;
-
-        case EXPRESSION:
-          addValue(executeExpr(expr));
-          break;
-
-        case ATTRIBUTE:
-          addValue({
-            name: name,
-            keypath: getKeypath(),
-            value: mergeNodes(current.children)
-          }, 'attributes');
-          break;
-
-        case DIRECTIVE:
-          addValue({
-            name: name,
-            modifier: modifier,
-            keypath: getKeypath(),
-            value: mergeNodes(current.children)
-          }, 'directives');
-          break;
-
-        case IF$1:
-        case ELSE_IF$1:
-        case ELSE$1:
-          addValue(current.children);
-          // 跳过后面紧跟着的 else if / else
-          _filter = function filter(node) {
-            if (elseTypes[node.type]) {
-              return FALSE;
-            } else {
-              _filter = NULL;
-              return TRUE;
-            }
-          };
-          break;
-
-        case SPREAD$1:
-          value = executeExpr(expr);
-          if (object(value)) {
-            children = [];
-            keypath = getKeypath();
-            each$1(value, function (value, name) {
-              push(children, {
-                name: name,
-                value: value,
-                keypath: keypath
-              });
-            });
-            addValue(makeNodes(children));
-            break;
-          }
-          fatal('Spread "' + stringify$1(expr) + '" must be an object.');
-
-        case ELEMENT:
-          addValue(createElement({
-            name: name,
-            keypath: getKeypath(),
-            attributes: attributes,
-            directives: directives,
-            properties: properties,
-            children: current.children
-          }, component));
-          break;
-
-        default:
-          addValue(current.children);
-          break;
-
-      }
-      // ==================== leave end =====================
+      execute(leave[type], NULL, [_node2, current]);
 
       popStack();
-    };
-
-    main: while (nodeStack.length) {
-      var _ret = _loop();
-
-      if (_ret === 'continue|main') continue main;
     }
 
     return result;
   };
 
-  var nodes = traverseNode(ast);
-
   return {
-    nodes: nodes,
+    nodes: traverseNode(ast),
     deps: deps
   };
 }
@@ -5759,7 +5746,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.36.5';
+Yox.version = '0.36.6';
 
 /**
  * 工具，便于扩展、插件使用
