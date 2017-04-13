@@ -2547,7 +2547,11 @@ function compile(content) {
       if (_match3 && _match3.index) {
         content = slice(content, 0, _match3.index);
       }
-      addChild(new Text(content));
+      // 属性级别的空字符串是没有意义的
+      // 比如 <div      class="xx">
+      if (htmlStack.length !== 1 || trim(content)) {
+        addChild(new Text(content));
+      }
       return content;
     }
   }];
@@ -3628,6 +3632,10 @@ var Vnode = function (options) {
 
 Vnode.SEL_COMMENT = '!';
 
+Vnode.is = function (target) {
+  return target instanceof Vnode;
+};
+
 var HOOK_INIT = 'init';
 var HOOK_CREATE = 'create';
 var HOOK_INSERT = 'insert';
@@ -4473,15 +4481,20 @@ function mergeNodes(nodes) {
  */
 function render(ast, createComment, createElement, importTemplate, data) {
 
-  var keypathList = [],
-      getKeypath = function getKeypath() {
-    return stringify(keypathList);
+  var keypath = void 0,
+      keypathList = [],
+      updateKeypath = function updateKeypath() {
+    keypath = stringify(keypathList);
   },
-      keypath = getKeypath();
+      getKeypath = function getKeypath() {
+    return keypath;
+  };
+
+  updateKeypath();
 
   getKeypath.toString = getKeypath;
-
   data[SPECIAL_KEYPATH] = getKeypath;
+
   var context = new Context(data, keypath);
 
   // 渲染模板收集的依赖
@@ -4491,20 +4504,6 @@ function render(ast, createComment, createElement, importTemplate, data) {
     var result = execute$1(expr, context);
     extend(deps, result.deps);
     return result.value;
-  };
-
-  var getUnescapedProps = function getUnescapedProps(_ref) {
-    var type = _ref.type,
-        children = _ref.children;
-
-    if (type === ELEMENT && children.length === 1) {
-      var child = children[0];
-      if (child.type === EXPRESSION && child.safe === FALSE) {
-        return {
-          innerHTML: executeExpr(child.expr)
-        };
-      }
-    }
   };
 
   var traverseNode = function traverseNode(node) {
@@ -4518,7 +4517,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
       }
       if (has$1(node, 'keypath')) {
         push(keypathList, node.keypath);
-        keypath = getKeypath();
+        updateKeypath();
       }
       if (has$1(node, 'data')) {
         context = context.push(node.data, keypath);
@@ -4537,18 +4536,15 @@ function render(ast, createComment, createElement, importTemplate, data) {
       var _array$pop = pop(nodeStack),
           node = _array$pop.node;
 
-      if (has$1(node, 'data')) {
-        context = context.pop();
-      }
       if (htmlTypes[node.type]) {
         pop(htmlStack);
       }
+      if (has$1(node, 'data')) {
+        context = context.pop();
+      }
       if (has$1(node, 'keypath')) {
         pop(keypathList);
-        keypath = getKeypath();
-      }
-      if (filter) {
-        filter = NULL;
+        updateKeypath();
       }
       if (sibling) {
         sibling = NULL;
@@ -4673,8 +4669,8 @@ function render(ast, createComment, createElement, importTemplate, data) {
     leave[ATTRIBUTE] = function (node, current) {
       addValue({
         keypath: keypath,
-        name: node.name,
         type: ATTRIBUTE,
+        name: node.name,
         value: mergeNodes(current.children)
       });
     };
@@ -4697,43 +4693,55 @@ function render(ast, createComment, createElement, importTemplate, data) {
     leave[SPREAD$1] = function (node) {
       var value = executeExpr(node.expr);
       if (object(value)) {
-        var children = [];
         each$1(value, function (value, name) {
-          push(children, {
+          addValue({
             name: name,
             value: value,
-            keypath: keypath
+            keypath: keypath,
+            type: ATTRIBUTE
           });
         });
-        addValue(makeNodes(children));
+        return;
       }
-      fatal('Spread "' + stringify$1(expr) + '" must be an object.');
+      fatal('Spread "' + stringify$1(node.expr) + '" must be an object.');
     };
 
     leave[ELEMENT] = function (node, current) {
+
       var attributes = [],
           directives = [],
-          children = [];
+          children = [],
+          properties = void 0,
+          child = void 0;
+
       each(current.children, function (node) {
-        switch (node.type) {
-          case ATTRIBUTE:
-            push(attributes, node);
-            break;
-          case DIRECTIVE:
-            push(directives, node);
-            break;
-          default:
-            push(children, node);
-            break;
+        if (node.type === ATTRIBUTE) {
+          push(attributes, node);
+        } else if (node.type === DIRECTIVE) {
+          push(directives, node);
+        } else {
+          push(children, node);
         }
       });
+
+      var nodeChildren = node.children;
+      if (nodeChildren && nodeChildren.length === 1) {
+        child = nodeChildren[0];
+        if (child.type === EXPRESSION && child.safe === FALSE) {
+          properties = {
+            innerHTML: children[0]
+          };
+          children.length = 0;
+        }
+      }
+
       addValue(createElement({
+        name: node.name,
         keypath: keypath,
         attributes: attributes,
         directives: directives,
-        children: children,
-        name: node.name,
-        properties: current.properties
+        properties: properties,
+        children: children
       }, node.component));
     };
 
@@ -4741,11 +4749,11 @@ function render(ast, createComment, createElement, importTemplate, data) {
       addValue(current.children);
     };
 
-    var traverseList = function traverseList(current, list, node) {
-      while (node = list[++current.index]) {
-        if (!filter || filter(node)) {
+    var traverseList = function traverseList(current, list, item) {
+      while (item = list[++current.index]) {
+        if (!filter || filter(item)) {
           sibling = list[current.index + 1];
-          pushStack(node);
+          pushStack(item);
           return FALSE;
         }
       }
@@ -4794,12 +4802,8 @@ function render(ast, createComment, createElement, importTemplate, data) {
         current.attrs = TRUE;
       }
 
-      if (children) {
-        if (current.properties = getUnescapedProps(_node2)) {
-          current.children = [];
-        } else if (traverseList(current, children) === FALSE) {
-          continue;
-        }
+      if (children && traverseList(current, children) === FALSE) {
+        continue;
       }
 
       execute(leave[type], NULL, [_node2, current]);
@@ -4844,7 +4848,7 @@ function create(ast, context, instance) {
       data: data,
       sel: node.name,
       children: node.children.map(function (child) {
-        return child instanceof Vnode ? child : new Vnode({ text: toString(child) });
+        return Vnode.is(child) ? child : new Vnode({ text: toString(child) });
       })
     };
 
@@ -5620,10 +5624,8 @@ var Yox = function () {
     value: function updateModel(model$$1) {
 
       var instance = this,
+          $observer = instance.$observer,
           args = arguments;
-      var $dispatching = instance.$dispatching,
-          $observer = instance.$observer;
-
 
       $observer.set(model$$1);
 
@@ -5654,7 +5656,7 @@ var Yox = function () {
 
       if (args.length === 1) {
         instance.$dirtyIgnore = TRUE;
-      } else if ($dispatching || args.length === 2 && args[1]) {
+      } else if (instance.$dispatching || args.length === 2 && args[1]) {
         dispatch();
         return;
       }
@@ -5953,7 +5955,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.36.6';
+Yox.version = '0.36.7';
 
 /**
  * 工具，便于扩展、插件使用

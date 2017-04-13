@@ -48,7 +48,7 @@ export function create(ast, context, instance) {
       sel: node.name,
       children: node.children.map(
         function (child) {
-          return child instanceof Vnode
+          return Vnode.is(child)
             ? child
             : new Vnode({ text: toString(child) })
         }

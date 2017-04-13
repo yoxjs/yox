@@ -317,8 +317,7 @@ export default class Yox {
    */
   updateModel(model) {
 
-    let instance = this, args = arguments
-    let { $dispatching, $observer } = instance
+    let instance = this, $observer = instance.$observer, args = arguments
 
     $observer.set(model)
 
@@ -351,7 +350,7 @@ export default class Yox {
     if (args.length === 1) {
       instance.$dirtyIgnore = env.TRUE
     }
-    else if ($dispatching || args.length === 2 && args[ 1 ]) {
+    else if (instance.$dispatching || args.length === 2 && args[ 1 ]) {
       dispatch()
       return
     }
@@ -648,7 +647,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.36.6'
+Yox.version = '0.36.7'
 
 /**
  * 工具，便于扩展、插件使用
