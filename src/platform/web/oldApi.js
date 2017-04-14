@@ -8,6 +8,8 @@ import * as string from 'yox-common/util/string'
 
 import Event from 'yox-common/util/Event'
 
+import * as event from '../../config/event'
+
 if (!Object.keys) {
   Object.keys = function (obj) {
     let result = [ ]
@@ -88,12 +90,6 @@ if (!Function.prototype.bind) {
   }
 }
 
-
-const clickType = 'click'
-const inputType = 'input'
-const changeType = 'change'
-const propertychangeType = 'propertychange'
-
 class IEEvent {
 
   constructor(event, element) {
@@ -120,29 +116,29 @@ function addInputListener(element, listener) {
   listener.$listener = function (e) {
     if (e.propertyName === 'value') {
       e = new Event(e)
-      e.type = inputType
+      e.type = event.INPUT
       listener.call(this, e)
     }
   }
-  on(element, propertychangeType, listener.$listener)
+  on(element, event.PROPERTY_CHANGE, listener.$listener)
 }
 
 function removeInputListener(element, listener) {
-  off(element, propertychangeType, listener.$listener)
+  off(element, event.PROPERTY_CHANGE, listener.$listener)
   delete listener.$listener
 }
 
 function addChangeListener(element, listener) {
   listener.$listener = function (e) {
     e = new Event(e)
-    e.type = changeType
+    e.type = event.CHANGE
     listener.call(this, e)
   }
-  on(element, clickType, listener.$listener)
+  on(element, event.CLICK, listener.$listener)
 }
 
 function removeChangeListener(element, listener) {
-  off(element, clickType, listener.$listener)
+  off(element, event.CLICK, listener.$listener)
   delete listener.$listener
 }
 
@@ -152,10 +148,10 @@ function isBox(element) {
 }
 
 export function on(element, type, listener) {
-  if (type === inputType) {
+  if (type === event.INPUT) {
     addInputListener(element, listener)
   }
-  else if (type === changeType && isBox(element)) {
+  else if (type === event.CHANGE && isBox(element)) {
     addChangeListener(element, listener)
   }
   else {
@@ -164,10 +160,10 @@ export function on(element, type, listener) {
 }
 
 export function off(element, type, listener) {
-  if (type === inputType) {
+  if (type === event.INPUT) {
     removeInputListener(element, listener)
   }
-  else if (type === changeType && isBox(element)) {
+  else if (type === event.CHANGE && isBox(element)) {
     removeChangeListener(element, listener)
   }
   else {

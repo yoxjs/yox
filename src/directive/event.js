@@ -5,10 +5,11 @@ import * as is from 'yox-common/util/is'
 import * as array from 'yox-common/util/array'
 
 import api from '../platform/web/api'
+import * as event from '../config/event'
 
 // 避免连续多次点击，主要用于提交表单场景
 // 移动端的 tap 事件可自行在业务层打补丁实现
-const immediateTypes = [ 'click', 'tap' ]
+const immediateTypes = [ event.CLICK, event.TAP ]
 
 export default function ({ el, node, instance, component, directives, type, listener }) {
 
@@ -26,8 +27,8 @@ export default function ({ el, node, instance, component, directives, type, list
       if (is.numeric(value) && value >= 0) {
         listener = debounce(listener, value, array.has(immediateTypes, type))
       }
-      else if (type === 'input') {
-        type = 'change'
+      else if (type === event.INPUT) {
+        type = event.CHANGE
       }
     }
 

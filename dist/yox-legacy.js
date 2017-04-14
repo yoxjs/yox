@@ -3373,11 +3373,11 @@ function find(selector, context) {
   return (context || doc).querySelector(selector);
 }
 
-function on$1(element, type, listener) {
+function on(element, type, listener) {
   element.addEventListener(type, listener, FALSE);
 }
 
-function off$1(element, type, listener) {
+function off(element, type, listener) {
   element.removeEventListener(type, listener, FALSE);
 }
 
@@ -3402,14 +3402,23 @@ var domApi = Object.freeze({
 	text: text,
 	html: html,
 	find: find,
-	on: on$1,
-	off: off$1
+	on: on,
+	off: off
 });
 
-var clickType = 'click';
-var inputType = 'input';
-var changeType = 'change';
-var propertychangeType = 'propertychange';
+var TAP = 'tap';
+
+var CLICK = 'click';
+
+var INPUT = 'input';
+
+var CHANGE = 'change';
+
+var COMPOSITION_START = 'compositionstart';
+
+var COMPOSITION_END = 'compositionend';
+
+var PROPERTY_CHANGE = 'propertychange';
 
 var IEEvent = function () {
   function IEEvent(event, element) {
@@ -3441,29 +3450,29 @@ function addInputListener(element, listener) {
   listener.$listener = function (e) {
     if (e.propertyName === 'value') {
       e = new Event(e);
-      e.type = inputType;
+      e.type = INPUT;
       listener.call(this, e);
     }
   };
-  on$2(element, propertychangeType, listener.$listener);
+  on$1(element, PROPERTY_CHANGE, listener.$listener);
 }
 
 function removeInputListener(element, listener) {
-  off$2(element, propertychangeType, listener.$listener);
+  off$1(element, PROPERTY_CHANGE, listener.$listener);
   delete listener.$listener;
 }
 
 function addChangeListener(element, listener) {
   listener.$listener = function (e) {
     e = new Event(e);
-    e.type = changeType;
+    e.type = CHANGE;
     listener.call(this, e);
   };
-  on$2(element, clickType, listener.$listener);
+  on$1(element, CLICK, listener.$listener);
 }
 
 function removeChangeListener(element, listener) {
-  off$2(element, clickType, listener.$listener);
+  off$1(element, CLICK, listener.$listener);
   delete listener.$listener;
 }
 
@@ -3471,20 +3480,20 @@ function isBox(element) {
   return element.tagName === 'INPUT' && (element.type === 'radio' || element.type === 'checkbox');
 }
 
-function on$2(element, type, listener) {
-  if (type === inputType) {
+function on$1(element, type, listener) {
+  if (type === INPUT) {
     addInputListener(element, listener);
-  } else if (type === changeType && isBox(element)) {
+  } else if (type === CHANGE && isBox(element)) {
     addChangeListener(element, listener);
   } else {
     element.attachEvent('on' + type, listener);
   }
 }
 
-function off$2(element, type, listener) {
-  if (type === inputType) {
+function off$1(element, type, listener) {
+  if (type === INPUT) {
     removeInputListener(element, listener);
-  } else if (type === changeType && isBox(element)) {
+  } else if (type === CHANGE && isBox(element)) {
     removeChangeListener(element, listener);
   } else {
     element.detachEvent('on' + type, listener);
@@ -3538,8 +3547,8 @@ function removeAttr$1(element, name) {
 
 
 var oldApi = Object.freeze({
-	on: on$2,
-	off: off$2,
+	on: on$1,
+	off: off$1,
 	createEvent: createEvent$1,
 	find: find$1,
 	setProp: setProp$1,
@@ -3554,25 +3563,37 @@ if (!doc.addEventListener) {
   extend(api, oldApi);
 }
 
-var on$$1 = api.on;
-var off$$1 = api.off;
+var _on = api.on;
+var _off = api.off;
 
+/**
+ * 特殊事件，外部可扩展
+ *
+ * @type {Object}
+ */
 
-var specials = {
-  input: function input(el, listener) {
-    var locked = FALSE;
-    on$$1(el, 'compositionstart', function () {
-      locked = TRUE;
-    });
-    on$$1(el, 'compositionend', function (e) {
-      locked = FALSE;
-      listener(e, 'input');
-    });
-    on$$1(el, 'input', function (e) {
-      if (!locked) {
-        listener(e);
-      }
-    });
+api.specialEvents = {
+  input: {
+    on: function on$$1(el, listener) {
+      var locked = FALSE;
+      _on(el, COMPOSITION_START, listener[COMPOSITION_START] = function () {
+        locked = TRUE;
+      });
+      _on(el, COMPOSITION_END, listener[COMPOSITION_END] = function (e) {
+        locked = FALSE;
+        listener(e, INPUT);
+      });
+      _on(el, INPUT, listener[INPUT] = function (e) {
+        if (!locked) {
+          listener(e);
+        }
+      });
+    },
+    off: function off$$1(el, listener) {
+      _off(el, COMPOSITION_START, listener[COMPOSITION_START]);
+      _off(el, COMPOSITION_END, listener[COMPOSITION_END]);
+      _off(el, INPUT, listener[INPUT]);
+    }
   }
 };
 
@@ -3597,10 +3618,11 @@ api.on = function (element, type, listener, context) {
       $emitter.fire(e.type, e, context);
     };
     $emitter[type] = nativeListener;
-    if (specials[type]) {
-      specials[type](element, nativeListener);
+    var special = api.specialEvents[type];
+    if (special) {
+      special.on(element, nativeListener);
     } else {
-      on$$1(element, type, nativeListener);
+      _on(element, type, nativeListener);
     }
   }
   $emitter.on(type, listener);
@@ -3622,7 +3644,13 @@ api.off = function (element, type, listener) {
   // 根据 emitter 的删除结果来操作这里的事件 listener
   each(types, function (type) {
     if ($emitter[type] && !$emitter.has(type)) {
-      off$$1(element, type, $emitter[type]);
+      var nativeListener = $emitter[type];
+      var special = api.specialEvents[type];
+      if (special) {
+        special.off(element, nativeListener);
+      } else {
+        _off(element, type, nativeListener);
+      }
       delete $emitter[type];
     }
   });
@@ -5186,9 +5214,9 @@ var debounce = function (fn, delay, immediate) {
 
 // 避免连续多次点击，主要用于提交表单场景
 // 移动端的 tap 事件可自行在业务层打补丁实现
-var immediateTypes = ['click', 'tap'];
+var immediateTypes = [CLICK, TAP];
 
-var event = function (_ref) {
+var bindEvent = function (_ref) {
   var el = _ref.el,
       node = _ref.node,
       instance = _ref.instance,
@@ -5213,8 +5241,8 @@ var event = function (_ref) {
 
       if (numeric(value) && value >= 0) {
         listener = debounce(listener, value, has(immediateTypes, type));
-      } else if (type === 'input') {
-        type = 'change';
+      } else if (type === INPUT) {
+        type = CHANGE;
       }
     }
 
@@ -5367,7 +5395,7 @@ var model = function (_ref9) {
   if (!control) {
     control = inputControl;
     if ('oninput' in el || tagName === 'TEXTAREA' || controlType === 'text' || controlType === 'password') {
-      type = 'input';
+      type = INPUT;
     }
   }
 
@@ -5387,7 +5415,7 @@ var model = function (_ref9) {
 
   instance.watch(keypath, set$$1);
 
-  var destroy = event({
+  var destroy = bindEvent({
     el: el,
     node: node,
     instance: instance,
@@ -5632,17 +5660,17 @@ var Yox = function () {
       // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
       // 内部为了保持格式统一
       // 需要转成 Event，这样还能知道 target 是哪个组件
-      var event$$1 = type;
+      var event = type;
       if (string(type)) {
-        event$$1 = new Event(type);
+        event = new Event(type);
       }
 
       var instance = this;
-      if (!event$$1.target) {
-        event$$1.target = instance;
+      if (!event.target) {
+        event.target = instance;
       }
 
-      var args = [event$$1];
+      var args = [event];
       if (object(data)) {
         push(args, data);
       }
@@ -5650,9 +5678,9 @@ var Yox = function () {
       var $parent = instance.$parent,
           $eventEmitter = instance.$eventEmitter;
 
-      var isComplete = $eventEmitter.fire(event$$1.type, args, instance);
+      var isComplete = $eventEmitter.fire(event.type, args, instance);
       if (isComplete && $parent) {
-        isComplete = $parent.fire(event$$1, data);
+        isComplete = $parent.fire(event, data);
       }
 
       return isComplete;
@@ -5857,12 +5885,12 @@ var Yox = function () {
       if (indexOf$1(value, CHAR_OPAREN) > 0) {
         var ast = compile$1(value);
         if (ast.type === CALL) {
-          return function (event$$1) {
-            var isEvent = Event.is(event$$1);
+          return function (event) {
+            var isEvent = Event.is(event);
             var args = copy(ast.args);
             if (!args.length) {
               if (isEvent) {
-                push(args, event$$1);
+                push(args, event);
               }
             } else {
               args = args.map(function (node) {
@@ -5875,7 +5903,7 @@ var Yox = function () {
                 if (type === IDENTIFIER) {
                   if (name === SPECIAL_EVENT) {
                     if (isEvent) {
-                      return event$$1;
+                      return event;
                     }
                   } else if (name === SPECIAL_KEYPATH) {
                     return keypath;
@@ -5901,18 +5929,18 @@ var Yox = function () {
               }
             }
             if (execute(fn, instance, args) === FALSE && isEvent) {
-              event$$1.prevent();
-              event$$1.stop();
+              event.prevent();
+              event.stop();
             }
           };
         }
       } else {
-        return function (event$$1, data) {
-          if (event$$1.type !== value) {
-            event$$1 = new Event(event$$1);
-            event$$1.type = value;
+        return function (event, data) {
+          if (event.type !== value) {
+            event = new Event(event);
+            event.type = value;
           }
-          instance.fire(event$$1, data);
+          instance.fire(event, data);
         };
       }
     }
@@ -6042,7 +6070,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.36.8';
+Yox.version = '0.36.9';
 
 /**
  * 工具，便于扩展、插件使用
@@ -6315,7 +6343,7 @@ function magic(options) {
 }
 
 // 全局注册内置指令
-Yox.directive({ ref: ref, event: event, model: model });
+Yox.directive({ ref: ref, event: bindEvent, model: model });
 
 return Yox;
 

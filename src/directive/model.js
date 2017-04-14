@@ -7,7 +7,8 @@ import * as array from 'yox-common/util/array'
 import * as object from 'yox-common/util/object'
 import * as logger from 'yox-common/util/logger'
 
-import event from './event'
+import bindEvent from './event'
+import * as event from '../config/event'
 
 const inputControl = {
   set({ el, keypath, instance }) {
@@ -103,7 +104,7 @@ export default function ({ el, node, instance, directives, attributes }) {
       || controlType === 'text'
       || controlType === 'password'
     ) {
-      type = 'input'
+      type = event.INPUT
     }
   }
 
@@ -123,7 +124,7 @@ export default function ({ el, node, instance, directives, attributes }) {
 
   instance.watch(keypath, set)
 
-  let destroy = event({
+  let destroy = bindEvent({
     el,
     node,
     instance,

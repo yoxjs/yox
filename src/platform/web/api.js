@@ -8,6 +8,8 @@ import * as object from 'yox-common/util/object'
 import Event from 'yox-common/util/Event'
 import Emitter from 'yox-common/util/Emitter'
 
+import * as event from '../../config/event'
+
 let api = object.copy(domApi)
 
 // import * as oldApi from './oldApi'
@@ -18,21 +20,33 @@ let api = object.copy(domApi)
 
 let { on, off } = api
 
-let specials = {
-  input(el, listener) {
-    let locked = env.FALSE
-    on(el, 'compositionstart', function () {
-      locked = env.TRUE
-    })
-    on(el, 'compositionend', function (e) {
-      locked = env.FALSE
-      listener(e, 'input')
-    })
-    on(el, 'input', function (e) {
-      if (!locked) {
-        listener(e)
-      }
-    })
+/**
+ * 特殊事件，外部可扩展
+ *
+ * @type {Object}
+ */
+api.specialEvents = {
+  input: {
+    on(el, listener) {
+      let locked = env.FALSE
+      on(el, event.COMPOSITION_START, listener[ event.COMPOSITION_START ] = function () {
+        locked = env.TRUE
+      })
+      on(el, event.COMPOSITION_END, listener[ event.COMPOSITION_END ] = function (e) {
+        locked = env.FALSE
+        listener(e, event.INPUT)
+      })
+      on(el, event.INPUT, listener[ event.INPUT ] = function (e) {
+        if (!locked) {
+          listener(e)
+        }
+      })
+    },
+    off(el, listener) {
+      off(el, event.COMPOSITION_START, listener[ event.COMPOSITION_START ])
+      off(el, event.COMPOSITION_END, listener[ event.COMPOSITION_END ])
+      off(el, event.INPUT, listener[ event.INPUT ])
+    }
   }
 }
 
@@ -57,8 +71,9 @@ api.on =  function (element, type, listener, context) {
       $emitter.fire(e.type, e, context)
     }
     $emitter[ type ] = nativeListener
-    if (specials[ type ]) {
-      specials[ type ](element, nativeListener)
+    let special = api.specialEvents[ type ]
+    if (special) {
+      special.on(element, nativeListener)
     }
     else {
       on(element, type, nativeListener)
@@ -84,7 +99,14 @@ api.off =  function (element, type, listener) {
     types,
     function (type) {
       if ($emitter[ type ] && !$emitter.has(type)) {
-        off(element, type, $emitter[ type ])
+        let nativeListener = $emitter[ type ]
+        let special = api.specialEvents[ type ]
+        if (special) {
+          special.off(element, nativeListener)
+        }
+        else {
+          off(element, type, nativeListener)
+        }
         delete $emitter[ type ]
       }
     }
