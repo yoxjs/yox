@@ -36,11 +36,13 @@
             </p>
 
             <p>
-                {{#each users:index}}
-                    {{name}}
-                    {{#if index < users.length - 1}}
-                        -
-                    {{/if}}
+                {{#each users:index index}}
+                    <div class="wrapper">
+                        {{name}}
+                        {{#if index < users.length - 1}}
+                            -
+                        {{/if}}
+                    </div>
                 {{/each}}
             </p>
 

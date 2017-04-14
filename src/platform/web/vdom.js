@@ -19,11 +19,12 @@ import * as string from 'yox-common/util/string'
 
 import compileTemplate from 'yox-template-compiler/compile'
 import renderTemplate from 'yox-template-compiler/render'
-import * as templateSyntax from 'yox-template-compiler/src/syntax'
 
 import api from './api'
 
 export const patch = snabbdom.init([ attrs, props, style ], api)
+
+let styleCache = { }
 
 export function create(ast, context, instance) {
 
@@ -34,7 +35,7 @@ export function create(ast, context, instance) {
     })
   }
 
-  let createElement = function (node, isComponent) {
+  let createElement = function (node, isComponent, trackBy) {
 
     let hooks = { }, attributes = { }, directives = { }, styles, component
 
@@ -55,24 +56,31 @@ export function create(ast, context, instance) {
       )
     }
 
+    if (trackBy) {
+      vnode.key = trackBy
+    }
+
     if (!isComponent) {
       array.each(
         node.attributes,
         function (node) {
           let { name, value } = node
           if (name === 'style') {
-            let list = string.parse(value, char.CHAR_SEMCOL, char.CHAR_COLON)
-            if (list.length) {
-              styles = { }
-              array.each(
-                list,
-                function (item) {
-                  if (item.value) {
-                    styles[ string.camelCase(item.key) ] = item.value
+            if (!styleCache[ value ]) {
+              let cache = { }, list = string.parse(value, char.CHAR_SEMCOL, char.CHAR_COLON)
+              if (list.length) {
+                array.each(
+                  list,
+                  function (item) {
+                    if (item.value) {
+                      cache[ string.camelCase(item.key) ] = item.value
+                    }
                   }
-                }
-              )
+                )
+              }
+              styleCache[ value ] = cache
             }
+            styles = styleCache[ value ]
           }
           else {
             attributes[ name ] = node
@@ -87,19 +95,11 @@ export function create(ast, context, instance) {
       node.directives,
       function (node) {
         let { name, modifier } = node
-        if (name === templateSyntax.KEYWORD_UNIQUE) {
-          vnode.key = node.value
-        }
-        if (name === templateSyntax.KEYWORD_STATIC) {
-          vnode.static = env.TRUE
-        }
-        else {
-          name = modifier
-            ? `${name}${char.CHAR_DOT}${modifier}`
-            : name
-          if (!directives[ name ]) {
-            directives[ name ] = node
-          }
+        name = modifier
+          ? `${name}${char.CHAR_DOT}${modifier}`
+          : name
+        if (!directives[ name ]) {
+          directives[ name ] = node
         }
       }
     )

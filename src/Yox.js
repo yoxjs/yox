@@ -383,8 +383,11 @@ export default class Yox {
       $node,
     } = instance
 
-    if ($node) {
-      execute($options[ lifecycle.BEFORE_UPDATE ], instance)
+    // 对于静态组件，可在 beforeUpdate 钩子函数返回 false
+    if ($node
+      && execute($options[ lifecycle.BEFORE_UPDATE ], instance) === env.FALSE
+    ) {
+      return
     }
 
     let context = { }
@@ -647,7 +650,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.36.7'
+Yox.version = '0.36.8'
 
 /**
  * 工具，便于扩展、插件使用
@@ -877,8 +880,8 @@ Yox.validate = function (props, propTypes) {
           if (matched === env.TRUE) {
             result[ key ] = target
           }
-          else if (required) {
-            logger.warn(`"${key}" prop is not matched.`)
+          else {
+            logger.warn(`"${key}" prop's type is not matched.`)
           }
         }
       }

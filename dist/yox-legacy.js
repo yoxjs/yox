@@ -1947,7 +1947,6 @@ var DIRECTIVE_LAZY = 'lazy';
 var DIRECTIVE_MODEL = 'model';
 
 var KEYWORD_UNIQUE = 'key';
-var KEYWORD_STATIC = 'static';
 
 /**
  * if 节点
@@ -2050,7 +2049,7 @@ var name2Type = {};
 // 类型 -> 名称的映射
 var type2Name = {};
 
-ifTypes[IF$1] = ifTypes[ELSE_IF$1] = elseTypes[ELSE_IF$1] = elseTypes[ELSE$1] = htmlTypes[ELEMENT] = htmlTypes[ATTRIBUTE] = htmlTypes[DIRECTIVE] = attrTypes[ATTRIBUTE] = attrTypes[DIRECTIVE] = leafTypes[TEXT] = leafTypes[IMPORT$1] = leafTypes[SPREAD$1] = leafTypes[EXPRESSION] = builtInDirectives[DIRECTIVE_REF] = builtInDirectives[DIRECTIVE_LAZY] = builtInDirectives[DIRECTIVE_MODEL] = builtInDirectives[KEYWORD_UNIQUE] = builtInDirectives[KEYWORD_STATIC] = TRUE;
+ifTypes[IF$1] = ifTypes[ELSE_IF$1] = elseTypes[ELSE_IF$1] = elseTypes[ELSE$1] = htmlTypes[ELEMENT] = htmlTypes[ATTRIBUTE] = htmlTypes[DIRECTIVE] = attrTypes[ATTRIBUTE] = attrTypes[DIRECTIVE] = leafTypes[TEXT] = leafTypes[IMPORT$1] = leafTypes[SPREAD$1] = leafTypes[EXPRESSION] = builtInDirectives[DIRECTIVE_REF] = builtInDirectives[DIRECTIVE_LAZY] = builtInDirectives[DIRECTIVE_MODEL] = builtInDirectives[KEYWORD_UNIQUE] = TRUE;
 
 name2Type['if'] = IF$1;
 name2Type['each'] = EACH$1;
@@ -2132,13 +2131,14 @@ var Directive = function (_Node) {
  * each 节点
  *
  * @param {Expression} expr
- * @param {string} index
+ * @param {?string} index 遍历索引值，对于数组来说是 0,1,2,...，对于对象来说是 key
+ * @param {?string} trackBy 提升性能使用的 trackBy
  */
 
 var Each = function (_Node) {
   inherits(Each, _Node);
 
-  function Each(expr, index) {
+  function Each(expr, index, trackBy) {
     classCallCheck(this, Each);
 
     var _this = possibleConstructorReturn(this, (Each.__proto__ || Object.getPrototypeOf(Each)).call(this, EACH$1));
@@ -2146,6 +2146,9 @@ var Each = function (_Node) {
     _this.expr = expr;
     if (index) {
       _this.index = index;
+    }
+    if (trackBy) {
+      _this.trackBy = trackBy;
     }
     return _this;
   }
@@ -2353,7 +2356,7 @@ var openingTagPattern = /<(\/)?([a-z][-a-z0-9]*)/i;
 var closingTagPattern = /^\s*(\/)?>/;
 var attributePattern = /^\s*([-:\w]+)(?:=(['"]))?/;
 var componentNamePattern = /[-A-Z]/;
-var selfClosingTagNamePattern = /source|param|input|img|br/;
+var selfClosingTagNamePattern = /source|param|input|img|br|hr/;
 
 // 缓存编译结果
 var compileCache = {};
@@ -2558,8 +2561,17 @@ function compile(content) {
 
   var delimiterParsers = [function (source, all) {
     if (startsWith(source, EACH)) {
-      var terms = split(slicePrefix(source, EACH), CHAR_COLON);
-      return terms[0] ? new Each(compile$1(trim(terms[0])), trim(terms[1])) : throwError('invalid each: ' + all);
+      // {{#each list:index trackBy }}
+      var terms = split(slicePrefix(source, EACH), CHAR_WHITESPACE);
+      var pair = terms[0],
+          trackBy = terms[1];
+      if (pair) {
+        var _terms = split(pair, CHAR_COLON);
+        if (_terms[0]) {
+          return new Each(compile$1(trim(_terms[0])), trim(_terms[1]), trim(trackBy));
+        }
+      }
+      throwError('invalid each: ' + all);
     }
   }, function (source, all) {
     if (startsWith(source, IMPORT)) {
@@ -3664,8 +3676,6 @@ function isPatchable(vnode1, vnode2) {
 
 function isSame(vnode1, vnode2) {
   return vnode1 === vnode2
-  // 静态子树
-  || vnode1.static && vnode2.static && vnode1.key === vnode2.key
   // 注释节点
   || vnode1.sel === Vnode.SEL_COMMENT && vnode2.sel === Vnode.SEL_COMMENT && vnode1.text === vnode2.text;
 }
@@ -4497,330 +4507,405 @@ function render(ast, createComment, createElement, importTemplate, data) {
 
   var context = new Context(data, keypath);
 
-  // 渲染模板收集的依赖
-  var deps = {};
+  var nodeStack = [],
+      nodes = [],
+      deps = {};
+
+  var pushStack = function pushStack(node) {
+    if (has$1(node, 'context')) {
+      execute(context.set, context, node.context);
+    }
+    if (has$1(node, 'keypath')) {
+      push(keypathList, node.keypath);
+      updateKeypath();
+    }
+    if (has$1(node, 'data')) {
+      context = context.push(node.data, keypath);
+    }
+    if (htmlTypes[node.type]) {
+      push(htmlStack, node.type);
+    }
+    push(nodeStack, {
+      node: node,
+      index: -1,
+      deps: {},
+      parent: current,
+      children: makeNodes([])
+    });
+    current = last(nodeStack);
+  };
+
+  var popStack = function popStack() {
+    var _current = current,
+        node = _current.node;
+
+    if (htmlTypes[node.type]) {
+      pop(htmlStack);
+    }
+    if (has$1(node, 'data')) {
+      context = context.pop();
+    }
+    if (has$1(node, 'keypath')) {
+      pop(keypathList);
+      updateKeypath();
+    }
+    if (sibling) {
+      sibling = NULL;
+    }
+    extend(current.parent ? current.parent.deps : deps, current.deps);
+    current = current.parent;
+    pop(nodeStack);
+  };
+
+  var pushNode = function pushNode(node) {
+    if (array(node)) {
+      if (node.length) {
+        pushStack({
+          children: node
+        });
+      }
+    } else {
+      pushStack(node);
+    }
+  };
+
+  var addValue = function addValue(value) {
+    var collection = current.parent ? current.parent.children : nodes;
+    if (isNodes(value)) {
+      push(collection, value);
+    } else {
+      collection.push(value);
+    }
+  };
 
   var executeExpr = function executeExpr(expr) {
     var result = execute$1(expr, context);
-    extend(deps, result.deps);
+    extend(current.deps, result.deps);
     return result.value;
   };
 
-  var traverseNode = function traverseNode(node) {
-
-    var nodeStack = [],
-        result = [];
-
-    var pushStack = function pushStack(node) {
-      if (has$1(node, 'context')) {
-        execute(context.set, context, node.context);
-      }
-      if (has$1(node, 'keypath')) {
-        push(keypathList, node.keypath);
-        updateKeypath();
-      }
-      if (has$1(node, 'data')) {
-        context = context.push(node.data, keypath);
-      }
-      if (htmlTypes[node.type]) {
-        push(htmlStack, node.type);
-      }
-      push(nodeStack, {
-        node: node,
-        index: -1,
-        children: makeNodes([])
+  var readCache = function readCache() {
+    cacheMap = ast.cacheMap;
+    if (cacheMap) {
+      each(cacheMap, function (cache) {
+        cache.flag = TRUE;
       });
-    };
+    } else {
+      cacheMap = {};
+    }
+  };
 
-    var popStack = function popStack() {
-      var _array$pop = pop(nodeStack),
-          node = _array$pop.node;
-
-      if (htmlTypes[node.type]) {
-        pop(htmlStack);
-      }
-      if (has$1(node, 'data')) {
-        context = context.pop();
-      }
-      if (has$1(node, 'keypath')) {
-        pop(keypathList);
-        updateKeypath();
-      }
-      if (sibling) {
-        sibling = NULL;
-      }
-    };
-
-    var pushNode = function pushNode(node) {
-      if (array(node)) {
-        if (node.length) {
-          pushStack({
-            children: node
-          });
+  var updateCache = function updateCache() {
+    if (ast.cacheMap) {
+      each$1(cacheMap, function (cache, key) {
+        if (cache.flag) {
+          delete cacheMap[key];
         }
-      } else {
-        pushStack(node);
+      });
+    } else if (cacheMap) {
+      ast.cacheMap = cacheMap;
+    }
+  };
+
+  var hitCache = function hitCache(cache) {
+    cache.flag = NULL;
+    extend(deps, cache.deps);
+    addValue(cache.result);
+    popStack();
+  };
+
+  var filterElse = function filterElse(node) {
+    if (elseTypes[node.type]) {
+      return FALSE;
+    } else {
+      filter = NULL;
+      return TRUE;
+    }
+  };
+
+  var enter = {},
+      leave = {};
+
+  enter[PARTIAL$1] = function (node) {
+    partials[node.name] = node.children;
+    popStack();
+    return FALSE;
+  };
+
+  enter[IMPORT$1] = function (node) {
+    var name = node.name;
+
+    var partial = partials[name] || importTemplate(name);
+    if (partial) {
+      popStack();
+      pushNode(partial);
+      return FALSE;
+    }
+    fatal('Partial "' + name + '" is not found.');
+  };
+
+  // 条件判断失败就没必要往下走了
+  // 但如果失败的点原本是一个 DOM 元素
+  // 就需要用注释节点来占位，否则 virtual dom 无法正常工作
+  enter[IF$1] = enter[ELSE_IF$1] = function (node) {
+    if (!executeExpr(node.expr)) {
+      if (sibling && !elseTypes[sibling.type] && !attrTypes[last(htmlStack)]) {
+        addValue(makeNodes(createComment()));
       }
-    };
-
-    var addValue = function addValue(value) {
-      if (value !== UNDEFINED) {
-        var _node = nodeStack[nodeStack.length - 2];
-        var collection = _node ? _node.children : result;
-        if (isNodes(value)) {
-          push(collection, value);
-        } else {
-          collection.push(value);
-        }
-      }
-    };
-
-    var filterElse = function filterElse(node) {
-      if (elseTypes[node.type]) {
-        return FALSE;
-      } else {
-        filter = NULL;
-        return TRUE;
-      }
-    };
-
-    var enter = {},
-        leave = {};
-
-    enter[PARTIAL$1] = function (node) {
-      partials[node.name] = node.children;
       popStack();
       return FALSE;
-    };
+    }
+  };
 
-    enter[IMPORT$1] = function (node) {
-      var name = node.name;
+  enter[EACH$1] = function (node) {
 
-      var partial = partials[name] || importTemplate(name);
-      if (partial) {
-        popStack();
-        pushNode(partial);
-        return FALSE;
-      }
-      fatal('Partial "' + name + '" is not found.');
-    };
+    popStack();
 
-    // 条件判断失败就没必要往下走了
-    // 但如果失败的点原本是一个 DOM 元素
-    // 就需要用注释节点来占位，否则 virtual dom 无法正常工作
-    enter[IF$1] = enter[ELSE_IF$1] = function (node) {
-      if (!executeExpr(node.expr)) {
-        if (sibling && !elseTypes[sibling.type] && !attrTypes[last(htmlStack)]) {
-          addValue(makeNodes(createComment()));
-        }
-        popStack();
-        return FALSE;
-      }
-    };
-
-    enter[EACH$1] = function (node) {
-
-      popStack();
-
-      var value = executeExpr(node.expr),
-          list = [],
-          each$$1 = void 0;
-
-      if (array(value)) {
-        each$$1 = each;
-      } else if (object(value)) {
-        each$$1 = each$1;
-      }
-
-      if (each$$1) {
-        each$$1(value, function (data, i, item) {
-
-          item = {
-            data: data,
-            keypath: i,
-            children: node.children
-          };
-
-          if (node.index) {
-            item.context = [node.index, i];
-          }
-
-          push(list, item);
-        });
-
-        pushStack({
-          children: list,
-          keypath: normalize(stringify$1(node.expr)),
-          data: value
-        });
-      }
-
-      return FALSE;
-    };
-
-    leave[TEXT] = function (node) {
-      addValue(node.content);
-    };
-
-    leave[EXPRESSION] = function (node) {
-      addValue(executeExpr(node.expr));
-    };
-
-    leave[ATTRIBUTE] = function (node, current) {
-      addValue({
-        keypath: keypath,
-        type: ATTRIBUTE,
-        name: node.name,
-        value: mergeNodes(current.children)
-      });
-    };
-
-    leave[DIRECTIVE] = function (node, current) {
-      addValue({
-        keypath: keypath,
-        name: node.name,
-        type: DIRECTIVE,
-        modifier: node.modifier,
-        value: mergeNodes(current.children)
-      });
-    };
-
-    leave[IF$1] = leave[ELSE_IF$1] = leave[ELSE$1] = function (node, current) {
-      addValue(current.children);
-      filter = filterElse;
-    };
-
-    leave[SPREAD$1] = function (node) {
-      var value = executeExpr(node.expr);
-      if (object(value)) {
-        each$1(value, function (value, name) {
-          addValue({
-            name: name,
-            value: value,
-            keypath: keypath,
-            type: ATTRIBUTE
-          });
-        });
-        return;
-      }
-      fatal('Spread "' + stringify$1(node.expr) + '" must be an object.');
-    };
-
-    leave[ELEMENT] = function (node, current) {
-
-      var attributes = [],
-          directives = [],
-          children = [],
-          properties = void 0,
-          child = void 0;
-
-      each(current.children, function (node) {
-        if (node.type === ATTRIBUTE) {
-          push(attributes, node);
-        } else if (node.type === DIRECTIVE) {
-          push(directives, node);
-        } else {
-          push(children, node);
-        }
-      });
-
-      var nodeChildren = node.children;
-      if (nodeChildren && nodeChildren.length === 1) {
-        child = nodeChildren[0];
-        if (child.type === EXPRESSION && child.safe === FALSE) {
-          properties = {
-            innerHTML: children[0]
-          };
-          children.length = 0;
-        }
-      }
-
-      addValue(createElement({
-        name: node.name,
-        keypath: keypath,
-        attributes: attributes,
-        directives: directives,
-        properties: properties,
-        children: children
-      }, node.component));
-    };
-
-    leave[UNDEFINED] = function (node, current) {
-      addValue(current.children);
-    };
-
-    var traverseList = function traverseList(current, list, item) {
-      while (item = list[++current.index]) {
-        if (!filter || filter(item)) {
-          sibling = list[current.index + 1];
-          pushStack(item);
-          return FALSE;
-        }
-      }
-    };
-
-    // 当前处理的栈节点
-    var current = void 0,
-
-    // 过滤某些节点的函数
-    filter = void 0,
-
-    // 相邻节点
-    sibling = void 0,
-
-    // 正在渲染的 html 层级
-    htmlStack = [],
-
-    // 用时定义的模板片段
-    partials = {};
-
-    pushNode(node);
-
-    while (nodeStack.length) {
-
-      current = last(nodeStack);
-
-      var _current = current,
-          _node2 = _current.node;
-      var type = _node2.type,
-          attrs = _node2.attrs,
-          children = _node2.children;
+    var expr = node.expr,
+        index = node.index,
+        trackBy = node.trackBy,
+        children = node.children;
 
 
-      if (!current.enter) {
-        current.enter = TRUE;
-        if (execute(enter[type], NULL, [_node2, current]) === FALSE) {
-          continue;
-        }
-      }
+    var value = executeExpr(expr),
+        each$$1 = void 0;
 
-      if (attrs && !current.attrs) {
-        if (traverseList(current, attrs) === FALSE) {
-          continue;
-        }
-        current.index = -1;
-        current.attrs = TRUE;
-      }
-
-      if (children && traverseList(current, children) === FALSE) {
-        continue;
-      }
-
-      execute(leave[type], NULL, [_node2, current]);
-
-      popStack();
+    if (array(value)) {
+      each$$1 = each;
+    } else if (object(value)) {
+      each$$1 = each$1;
     }
 
-    return result;
+    if (each$$1) {
+      var list = [];
+      each$$1(value, function (data, i, item) {
+
+        item = {
+          data: data,
+          children: children,
+          keypath: i
+        };
+
+        if (index) {
+          item.context = [index, i];
+        }
+
+        if (trackBy) {
+          item.trackBy = trackBy;
+        }
+
+        push(list, item);
+      });
+      pushStack({
+        data: value,
+        children: list,
+        keypath: normalize(stringify$1(expr))
+      });
+    }
+
+    return FALSE;
   };
 
-  return {
-    nodes: traverseNode(ast),
-    deps: deps
+  leave[TEXT] = function (node) {
+    return node.content;
   };
+
+  leave[EXPRESSION] = function (node) {
+    return executeExpr(node.expr);
+  };
+
+  leave[ATTRIBUTE] = function (node, current) {
+    return {
+      keypath: keypath,
+      name: node.name,
+      type: ATTRIBUTE,
+      value: mergeNodes(current.children)
+    };
+  };
+
+  leave[DIRECTIVE] = function (node, current) {
+    return {
+      keypath: keypath,
+      name: node.name,
+      type: DIRECTIVE,
+      modifier: node.modifier,
+      value: mergeNodes(current.children)
+    };
+  };
+
+  leave[IF$1] = leave[ELSE_IF$1] = leave[ELSE$1] = function (node, current) {
+    filter = filterElse;
+    return current.children;
+  };
+
+  leave[SPREAD$1] = function (node) {
+    var value = executeExpr(node.expr);
+    if (object(value)) {
+      var list = makeNodes([]);
+      each$1(value, function (value, name) {
+        push(list, {
+          name: name,
+          value: value,
+          keypath: keypath,
+          type: ATTRIBUTE
+        });
+      });
+      return list;
+    }
+    fatal('Spread "' + stringify$1(node.expr) + '" must be an object.');
+  };
+
+  leave[ELEMENT] = function (node, current) {
+
+    var attributes = [],
+        directives = [],
+        children = [],
+        properties = void 0,
+        child = void 0;
+
+    each(current.children, function (node) {
+      if (node.type === ATTRIBUTE) {
+        push(attributes, node);
+      } else if (node.type === DIRECTIVE) {
+        push(directives, node);
+      } else {
+        push(children, node);
+      }
+    });
+
+    var nodeChildren = node.children;
+    if (nodeChildren && nodeChildren.length === 1) {
+      child = nodeChildren[0];
+      if (child.type === EXPRESSION && child.safe === FALSE) {
+        properties = {
+          innerHTML: children[0]
+        };
+        children.length = 0;
+      }
+    }
+
+    var cache = current.parent && current.parent.cache;
+
+    return createElement({
+      name: node.name,
+      keypath: keypath,
+      attributes: attributes,
+      directives: directives,
+      properties: properties,
+      children: children
+    }, node.component, cache ? cache.key : UNDEFINED);
+  };
+
+  leave[UNDEFINED] = function (node, current) {
+    return current.children;
+  };
+
+  var traverseList = function traverseList(current, list, item) {
+    while (item = list[++current.index]) {
+      if (!filter || filter(item)) {
+        sibling = list[current.index + 1];
+        pushStack(item);
+        return FALSE;
+      }
+    }
+  };
+
+  // 当前处理的栈节点
+  var current = void 0,
+
+  // 相邻节点
+  sibling = void 0,
+
+  // 过滤某些节点的函数
+  filter = void 0,
+
+  // 缓存
+  cacheMap = void 0,
+      cacheKey = void 0,
+      cacheValue = void 0,
+
+  // 正在渲染的 html 层级
+  htmlStack = [],
+
+  // 用时定义的模板片段
+  partials = {};
+
+  pushNode(ast);
+
+  while (nodeStack.length) {
+    var _current2 = current,
+        node = _current2.node;
+    var type = node.type,
+        attrs = node.attrs,
+        children = node.children,
+        trackBy = node.trackBy,
+        cache = node.cache;
+
+
+    if (!current.enter) {
+      current.enter = TRUE;
+
+      if (trackBy) {
+        if (!cacheMap) {
+          readCache();
+        }
+        trackBy = context.get(trackBy).value;
+        if (trackBy != NULL) {
+          cacheKey = keypath + '-' + trackBy;
+          cacheValue = context.get(keypath).value;
+          cache = cacheMap[cacheKey];
+          if (cache && cache.value === cacheValue) {
+            hitCache(cache);
+            continue;
+          } else {
+            current.cache = {
+              key: cacheKey,
+              value: cacheValue
+            };
+          }
+        }
+      }
+
+      if (execute(enter[type], NULL, [node, current]) === FALSE) {
+        continue;
+      }
+    }
+
+    if (attrs && !current.attrs) {
+      if (traverseList(current, attrs) === FALSE) {
+        continue;
+      }
+      current.index = -1;
+      current.attrs = TRUE;
+    }
+
+    if (children && traverseList(current, children) === FALSE) {
+      continue;
+    }
+
+    cache = execute(leave[type], NULL, [node, current]);
+
+    if (cache !== UNDEFINED) {
+      addValue(cache);
+      cacheValue = current.cache;
+      if (cacheValue) {
+        cacheValue.result = cache;
+        cacheValue.deps = current.deps;
+        cacheMap[cacheValue.key] = cacheValue;
+      }
+    }
+
+    popStack();
+  }
+
+  updateCache();
+
+  return { nodes: nodes, deps: deps };
 }
 
 var patch = init([attrs, props, style], api);
+
+var styleCache = {};
 
 function create(ast, context, instance) {
 
@@ -4831,7 +4916,7 @@ function create(ast, context, instance) {
     });
   };
 
-  var createElement = function createElement(node, isComponent) {
+  var createElement = function createElement(node, isComponent, trackBy) {
 
     var hooks = {},
         attributes = {},
@@ -4852,21 +4937,29 @@ function create(ast, context, instance) {
       })
     };
 
+    if (trackBy) {
+      vnode.key = trackBy;
+    }
+
     if (!isComponent) {
       each(node.attributes, function (node) {
         var name = node.name,
             value = node.value;
 
         if (name === 'style') {
-          var list = parse(value, CHAR_SEMCOL, CHAR_COLON);
-          if (list.length) {
-            styles = {};
-            each(list, function (item) {
-              if (item.value) {
-                styles[camelCase(item.key)] = item.value;
-              }
-            });
+          if (!styleCache[value]) {
+            var cache = {},
+                list = parse(value, CHAR_SEMCOL, CHAR_COLON);
+            if (list.length) {
+              each(list, function (item) {
+                if (item.value) {
+                  cache[camelCase(item.key)] = item.value;
+                }
+              });
+            }
+            styleCache[value] = cache;
           }
+          styles = styleCache[value];
         } else {
           attributes[name] = node;
           var _attrs = data.attrs || (data.attrs = {});
@@ -4879,16 +4972,9 @@ function create(ast, context, instance) {
       var name = node.name,
           modifier = node.modifier;
 
-      if (name === KEYWORD_UNIQUE) {
-        vnode.key = node.value;
-      }
-      if (name === KEYWORD_STATIC) {
-        vnode.static = TRUE;
-      } else {
-        name = modifier ? '' + name + CHAR_DOT + modifier : name;
-        if (!directives[name]) {
-          directives[name] = node;
-        }
+      name = modifier ? '' + name + CHAR_DOT + modifier : name;
+      if (!directives[name]) {
+        directives[name] = node;
       }
     });
 
@@ -5687,9 +5773,10 @@ var Yox = function () {
           $filters = instance.$filters,
           $node = instance.$node;
 
+      // 对于静态组件，可在 beforeUpdate 钩子函数返回 false
 
-      if ($node) {
-        execute($options[BEFORE_UPDATE], instance);
+      if ($node && execute($options[BEFORE_UPDATE], instance) === FALSE) {
+        return;
       }
 
       var context = {};
@@ -5955,7 +6042,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.36.7';
+Yox.version = '0.36.8';
 
 /**
  * 工具，便于扩展、插件使用
@@ -6180,8 +6267,8 @@ Yox.validate = function (props, propTypes) {
         }
         if (matched === TRUE) {
           result[key] = target;
-        } else if (required) {
-          warn('"' + key + '" prop is not matched.');
+        } else {
+          warn('"' + key + '" prop\'s type is not matched.');
         }
       }
     } else if (required) {
