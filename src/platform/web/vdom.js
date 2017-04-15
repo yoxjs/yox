@@ -4,27 +4,24 @@ import * as snabbdom from 'yox-snabbdom'
 import Vnode from 'yox-snabbdom/Vnode'
 import attrs from 'yox-snabbdom/modules/attrs'
 import props from 'yox-snabbdom/modules/props'
-import style from 'yox-snabbdom/modules/style'
 
 import execute from 'yox-common/function/execute'
 import toString from 'yox-common/function/toString'
 
-import * as char from 'yox-common/util/char'
-
 import * as is from 'yox-common/util/is'
 import * as env from 'yox-common/util/env'
+import * as char from 'yox-common/util/char'
 import * as array from 'yox-common/util/array'
 import * as object from 'yox-common/util/object'
 import * as string from 'yox-common/util/string'
 
+import * as templateSyntax from 'yox-template-compiler/src/syntax'
 import compileTemplate from 'yox-template-compiler/compile'
 import renderTemplate from 'yox-template-compiler/render'
 
 import api from './api'
 
-export const patch = snabbdom.init([ attrs, props, style ], api)
-
-let styleCache = { }
+export const patch = snabbdom.init([ attrs, props ], api)
 
 export function create(ast, context, instance) {
 
@@ -37,7 +34,7 @@ export function create(ast, context, instance) {
 
   let createElement = function (node, isComponent, trackBy) {
 
-    let hooks = { }, attributes = { }, directives = { }, styles, component
+    let hooks = { }, attributes = { }, directives = { }, component
 
     let data = {
       hooks,
@@ -47,6 +44,7 @@ export function create(ast, context, instance) {
     let vnode = {
       data,
       sel: node.name,
+      key: trackBy,
       children: node.children.map(
         function (child) {
           return Vnode.is(child)
@@ -56,31 +54,29 @@ export function create(ast, context, instance) {
       )
     }
 
-    if (trackBy) {
-      vnode.key = trackBy
+    let addDirective = function (directive) {
+      let { name, modifier } = directive
+      if (modifier) {
+        name += char.CHAR_DOT + modifier
+      }
+      directives[ name ] = directive
     }
 
     if (!isComponent) {
       array.each(
         node.attributes,
         function (node) {
-          let { name, value } = node
-          if (name === 'style') {
-            if (!styleCache[ value ]) {
-              let cache = { }, list = string.parse(value, char.CHAR_SEMCOL, char.CHAR_COLON)
-              if (list.length) {
-                array.each(
-                  list,
-                  function (item) {
-                    if (item.value) {
-                      cache[ string.camelCase(item.key) ] = item.value
-                    }
-                  }
-                )
+          let { name, value, keypath, bindTo } = node
+          if (is.string(bindTo)) {
+            addDirective(
+              {
+                keypath,
+                name: templateSyntax.DIRECTIVE_MODEL,
+                modifier: name,
+                value: bindTo,
+                oneway: env.TRUE,
               }
-              styleCache[ value ] = cache
-            }
-            styles = styleCache[ value ]
+            )
           }
           else {
             attributes[ name ] = node
@@ -94,19 +90,9 @@ export function create(ast, context, instance) {
     array.each(
       node.directives,
       function (node) {
-        let { name, modifier } = node
-        name = modifier
-          ? `${name}${char.CHAR_DOT}${modifier}`
-          : name
-        if (!directives[ name ]) {
-          directives[ name ] = node
-        }
+        addDirective(node)
       }
     )
-
-    if (styles) {
-      data.style = styles
-    }
 
     hooks.insert =
     hooks.postpatch =
@@ -177,7 +163,6 @@ export function create(ast, context, instance) {
           }
         )
       }
-
 
       let bind = function (key) {
         let node = directives[ key ]

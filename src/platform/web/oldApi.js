@@ -182,40 +182,14 @@ export function find(selector, context) {
     : context.getElementById(string.slice(selector, 1))
 }
 
-let converter = { }
-converter[ 'for' ] = 'htmlFor'
-converter[ 'class' ] = 'className'
-
 export function setProp(element, name, value) {
   try {
-    element[ converter[ name ] || name ] = value
+    object.set(element, name, value)
   }
   catch (e) {
     if (element.tagName === 'STYLE' && name === 'innerHTML') {
       element.setAttribute('type', 'text/css')
       element.styleSheet.cssText = value;
     }
-  }
-}
-
-export function removeProp(element, name) {
-  delete element[ converter[ name ] || name ]
-}
-
-export function setAttr(element, name, value) {
-  if (converter[ name ]) {
-    element[ converter[ name ]] = value
-  }
-  else {
-    element.setAttribute(name, value)
-  }
-}
-
-export function removeAttr(element, name) {
-  if (converter[ name ]) {
-    delete element[ converter[ name ]]
-  }
-  else {
-    element.removeAttribute(name)
   }
 }

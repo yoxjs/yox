@@ -651,6 +651,16 @@ function stringify(keypaths) {
   return keypaths.filter(filter).join(SEPARATOR_KEY);
 }
 
+function join(keypath1, keypath2) {
+  if (keypath1 && keypath2) {
+    return keypath1 + SEPARATOR_KEY + keypath2;
+  } else if (keypath1) {
+    return keypath1;
+  } else {
+    return keypath2 || CHAR_BLANK;
+  }
+}
+
 /**
  * 获取对象的 key 的数组
  *
@@ -3214,6 +3224,15 @@ var BEFORE_DESTROY = 'beforeDestroy';
  */
 var AFTER_DESTROY = 'afterDestroy';
 
+var booleanAttrLiteral = 'allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare,default,defaultchecked,defaultmuted,defaultselected,defer,disabled,draggable,enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple,muted,nohref,noresize,noshade,novalidate,nowrap,open,pauseonexit,readonly,required,reversed,scoped,seamless,selected,sortable,spellcheck,translate,truespeed,typemustmatch,visible';
+var booleanAttrMap = toObject(split(booleanAttrLiteral, CHAR_COMMA));
+
+var attr2Prop = {};
+attr2Prop['for'] = 'htmlFor';
+attr2Prop['value'] = 'value';
+attr2Prop['class'] = 'className';
+attr2Prop['style'] = 'style.cssText';
+
 function createElement(tagName, parentNode) {
   var SVGElement = win.SVGElement;
 
@@ -3237,19 +3256,31 @@ function isElement(node) {
 }
 
 function setProp(node, name, value) {
-  node[name] = value;
+  set$1(node, name, value, FALSE);
 }
 
 function removeProp(node, name) {
-  delete node[name];
+  setProp(node, name, NULL);
 }
 
 function setAttr(node, name, value) {
-  node.setAttribute(name, value);
+  if (attr2Prop[name]) {
+    setProp(node, attr2Prop[name], value);
+  } else if (booleanAttrMap[name]) {
+    setProp(node, name, value === UNDEFINED || value ? TRUE : FALSE);
+  } else {
+    node.setAttribute(name, value);
+  }
 }
 
 function removeAttr(node, name) {
-  node.removeAttribute(name);
+  if (attr2Prop[name]) {
+    removeProp(node, attr2Prop[name]);
+  } else if (booleanAttrMap[name]) {
+    removeProp(node, name);
+  } else {
+    node.removeAttribute(name);
+  }
 }
 
 function before(parentNode, newNode, referenceNode) {
@@ -3265,15 +3296,11 @@ function append$1(parentNode, child) {
 }
 
 function replace(parentNode, newNode, oldNode) {
-  if (parent(oldNode) === parentNode) {
-    parentNode.replaceChild(newNode, oldNode);
-  }
+  parentNode.replaceChild(newNode, oldNode);
 }
 
 function remove$1(parentNode, child) {
-  if (parent(child) === parentNode) {
-    parentNode.removeChild(child);
-  }
+  parentNode.removeChild(child);
 }
 
 function parent(node) {
@@ -3372,10 +3399,10 @@ api.specialEvents = {
   input: {
     on: function on$$1(el, listener) {
       var locked = FALSE;
-      _on(el, COMPOSITION_START, listener[COMPOSITION_START] = function () {
+      api.on(el, COMPOSITION_START, listener[COMPOSITION_START] = function () {
         locked = TRUE;
       });
-      _on(el, COMPOSITION_END, listener[COMPOSITION_END] = function (e) {
+      api.on(el, COMPOSITION_END, listener[COMPOSITION_END] = function (e) {
         locked = FALSE;
         listener(e, INPUT);
       });
@@ -3386,9 +3413,10 @@ api.specialEvents = {
       });
     },
     off: function off$$1(el, listener) {
-      _off(el, COMPOSITION_START, listener[COMPOSITION_START]);
-      _off(el, COMPOSITION_END, listener[COMPOSITION_END]);
+      api.off(el, COMPOSITION_START, listener[COMPOSITION_START]);
+      api.off(el, COMPOSITION_END, listener[COMPOSITION_END]);
       _off(el, INPUT, listener[INPUT]);
+      listener[COMPOSITION_START] = listener[COMPOSITION_END] = listener[INPUT] = NULL;
     }
   }
 };
@@ -3891,10 +3919,6 @@ function init(modules) {
   };
 }
 
-var booleanLiteral = 'allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare,default,defaultchecked,defaultmuted,defaultselected,defer,disabled,draggable,enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple,muted,nohref,noresize,noshade,novalidate,nowrap,open,pauseonexit,readonly,required,reversed,scoped,seamless,selected,sortable,spellcheck,translate,truespeed,typemustmatch,visible';
-
-var booleanMap = toObject(split(booleanLiteral, CHAR_COMMA));
-
 function updateAttrs(oldVnode, vnode) {
 
   var oldAttrs = oldVnode.data.attrs;
@@ -3912,33 +3936,20 @@ function updateAttrs(oldVnode, vnode) {
   var api = this;
 
   var getValue = function getValue(attrs, name) {
-    // 类似 <input disabled>
-    // 没写 value 默认是 disabled="disabled"
-    // 考虑到有些人喜欢写 disabled="true"
-    // 这里一并兼容了，如果有 value，不管是啥都当做 name 处理
     if (has$1(attrs, name)) {
-      var value = attrs[name];
-      if (booleanMap[name]) {
-        return value === UNDEFINED || value ? name : FALSE;
-      }
-      return value;
+      return attrs[name] !== UNDEFINED ? attrs[name] : name;
     }
   };
 
   each$1(newAttrs, function (value, name) {
-    value = getValue(newAttrs, name);
-    if (value !== getValue(oldAttrs, name)) {
-      if (value === FALSE) {
-        api.removeAttr(el, name);
-      } else {
-        api.setAttr(el, name, value);
-      }
+    if (getValue(newAttrs, name) !== getValue(oldAttrs, name)) {
+      api.setAttr(el, name, value);
     }
   });
 
   each$1(oldAttrs, function (value, name) {
     if (!has$1(newAttrs, name)) {
-      api.removeAttr(el, name);
+      api.removeProp(el, name);
     }
   });
 }
@@ -3972,9 +3983,6 @@ function updateProps(oldVnode, vnode) {
 
   each$1(oldProps, function (value, name) {
     if (!has$1(newProps, name)) {
-      if (string(value)) {
-        el[name] = CHAR_BLANK;
-      }
       api.removeProp(el, name);
     }
   });
@@ -3983,39 +3991,6 @@ function updateProps(oldVnode, vnode) {
 var props = {
   create: updateProps,
   update: updateProps
-};
-
-function updateStyle(oldVnode, vnode) {
-
-  var oldStyle = oldVnode.data.style;
-  var newStyle = vnode.data.style;
-
-  if (!oldStyle && !newStyle) {
-    return;
-  }
-
-  oldStyle = oldStyle || {};
-  newStyle = newStyle || {};
-
-  var style = vnode.el.style;
-
-
-  each$1(newStyle, function (value, name) {
-    if (value !== oldStyle[name]) {
-      style[name] = value;
-    }
-  });
-
-  each$1(oldStyle, function (value, name) {
-    if (!has$1(newStyle, name)) {
-      style[name] = CHAR_BLANK;
-    }
-  });
-}
-
-var style = {
-  create: updateStyle,
-  update: updateStyle
 };
 
 var toString = function (str) {
@@ -4039,6 +4014,7 @@ function execute$1(node, context) {
 
   var deps = {},
       value = void 0,
+      keypath = void 0,
       result = void 0;
 
   switch (node.type) {
@@ -4089,7 +4065,8 @@ function execute$1(node, context) {
       break;
 
     case IDENTIFIER:
-      result = context.get(node.name);
+      keypath = node.name;
+      result = context.get(keypath);
       value = result.value;
       deps[result.keypath] = value;
       break;
@@ -4115,7 +4092,8 @@ function execute$1(node, context) {
           push(keys$$1, node.value);
         }
       });
-      result = context.get(stringify(keys$$1));
+      keypath = stringify(keys$$1);
+      result = context.get(keypath);
       value = result.value;
       deps[result.keypath] = value;
       break;
@@ -4127,7 +4105,7 @@ function execute$1(node, context) {
       break;
   }
 
-  return { value: value, deps: deps };
+  return { value: value, deps: deps, keypath: keypath };
 }
 
 var Context = function () {
@@ -4174,12 +4152,14 @@ var Context = function () {
   }, {
     key: 'get',
     value: function get$$1(key) {
+
+      var instance = this;
+
       var _formatKeypath2 = formatKeypath(key),
           keypath = _formatKeypath2.keypath,
           lookup = _formatKeypath2.lookup;
 
-      var instance = this,
-          contextKeypath = instance.keypath,
+      var contextKeypath = instance.keypath,
           originalKeypath = keypath;
 
       var _instance = instance,
@@ -4205,7 +4185,7 @@ var Context = function () {
 
           if (result) {
             cache[keypath] = {
-              keypath: joinKeypath(instance.keypath, keypath),
+              keypath: join(instance.keypath, keypath),
               value: result.value
             };
           }
@@ -4224,7 +4204,7 @@ var Context = function () {
 
       // 找不到就用当前的 keypath 吧
       return {
-        keypath: joinKeypath(contextKeypath, originalKeypath)
+        keypath: join(contextKeypath, originalKeypath)
       };
     }
   }]);
@@ -4243,16 +4223,6 @@ function formatKeypath(keypath) {
       keypath: stringify(keys$$1),
       lookup: TRUE
     };
-  }
-}
-
-function joinKeypath(keypath1, keypath2) {
-  if (keypath1 && keypath2) {
-    return keypath1 + SEPARATOR_KEY + keypath2;
-  } else if (keypath1) {
-    return keypath1;
-  } else if (keypath2) {
-    return keypath2;
   }
 }
 
@@ -4284,22 +4254,25 @@ function isNodes(nodes) {
  *
  * 用于处理属性值和指令值
  *
- * @param {?Array} nodes
+ * @param {?Array} outputNodes
+ * @param {?Array} sourceNodes
  * @return {*}
  */
-function mergeNodes(nodes) {
-  if (array(nodes)) {
-    switch (nodes.length) {
+function mergeNodes(outputNodes, sourceNodes) {
+  if (array(outputNodes)) {
+    switch (outputNodes.length) {
       // name=""
       case 0:
         return CHAR_BLANK;
       // name="{{value}}"
       case 1:
-        return nodes[0];
+        return outputNodes[0];
       // name="{{value1}}{{value2}}"
       default:
-        return nodes.join(CHAR_BLANK);
+        return outputNodes.join(CHAR_BLANK);
     }
+  } else if (!falsy(sourceNodes)) {
+    return CHAR_BLANK;
   }
 }
 
@@ -4343,8 +4316,8 @@ function render(ast, createComment, createElement, importTemplate, data) {
       push(keypathList, node.keypath);
       updateKeypath();
     }
-    if (has$1(node, 'data')) {
-      context = context.push(node.data, keypath);
+    if (has$1(node, 'value')) {
+      context = context.push(node.value, keypath);
     }
     if (htmlTypes[node.type]) {
       push(htmlStack, node.type);
@@ -4353,8 +4326,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
       node: node,
       index: -1,
       deps: {},
-      parent: current,
-      children: makeNodes([])
+      parent: current
     });
     current = last(nodeStack);
   };
@@ -4366,7 +4338,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
     if (htmlTypes[node.type]) {
       pop(htmlStack);
     }
-    if (has$1(node, 'data')) {
+    if (has$1(node, 'value')) {
       context = context.pop();
     }
     if (has$1(node, 'keypath')) {
@@ -4394,7 +4366,13 @@ function render(ast, createComment, createElement, importTemplate, data) {
   };
 
   var addValue = function addValue(value) {
-    var collection = current.parent ? current.parent.children : nodes;
+    var parent = current.parent,
+        collection = void 0;
+    if (parent) {
+      collection = parent.children || (parent.children = makeNodes([]));
+    } else {
+      collection = nodes;
+    }
     if (isNodes(value)) {
       push(collection, value);
     } else {
@@ -4404,6 +4382,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
 
   var executeExpr = function executeExpr(expr) {
     var result = execute$1(expr, context);
+    expr.keypath = result.keypath;
     extend(current.deps, result.deps);
     return result.value;
   };
@@ -4502,10 +4481,10 @@ function render(ast, createComment, createElement, importTemplate, data) {
 
     if (each$$1) {
       var list = [];
-      each$$1(value, function (data, i, item) {
+      each$$1(value, function (value, i, item) {
 
         item = {
-          data: data,
+          value: value,
           children: children,
           keypath: i
         };
@@ -4521,13 +4500,26 @@ function render(ast, createComment, createElement, importTemplate, data) {
         push(list, item);
       });
       pushStack({
-        data: value,
+        value: value,
         children: list,
-        keypath: normalize(stringify$1(expr))
+        keypath: expr.keypath
       });
     }
 
     return FALSE;
+  };
+
+  var createAttribute = function createAttribute(name, value, bindTo) {
+    var attribute = {
+      name: name,
+      value: value,
+      keypath: keypath,
+      type: ATTRIBUTE
+    };
+    if (string(bindTo)) {
+      attribute.bindTo = bindTo;
+    }
+    return attribute;
   };
 
   leave[TEXT] = function (node) {
@@ -4539,12 +4531,19 @@ function render(ast, createComment, createElement, importTemplate, data) {
   };
 
   leave[ATTRIBUTE] = function (node, current) {
-    return {
-      keypath: keypath,
-      name: node.name,
-      type: ATTRIBUTE,
-      value: mergeNodes(current.children)
-    };
+    var children = node.children,
+        bindTo = void 0;
+    if (children && children.length === 1) {
+      var _children$ = children[0],
+          type = _children$.type,
+          expr = _children$.expr,
+          safe = _children$.safe;
+
+      if (safe && type === EXPRESSION && (expr.type === MEMBER || expr.type === IDENTIFIER)) {
+        bindTo = expr.keypath;
+      }
+    }
+    return createAttribute(node.name, mergeNodes(current.children, children), bindTo);
   };
 
   leave[DIRECTIVE] = function (node, current) {
@@ -4553,7 +4552,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
       name: node.name,
       type: DIRECTIVE,
       modifier: node.modifier,
-      value: mergeNodes(current.children)
+      value: mergeNodes(current.children, node.children)
     };
   };
 
@@ -4563,20 +4562,17 @@ function render(ast, createComment, createElement, importTemplate, data) {
   };
 
   leave[SPREAD$1] = function (node) {
-    var value = executeExpr(node.expr);
+    var expr = node.expr,
+        value = executeExpr(expr),
+        keypath = expr.keypath;
     if (object(value)) {
       var list = makeNodes([]);
       each$1(value, function (value, name) {
-        push(list, {
-          name: name,
-          value: value,
-          keypath: keypath,
-          type: ATTRIBUTE
-        });
+        push(list, createAttribute(name, value, join(keypath, name)));
       });
       return list;
     }
-    fatal('Spread "' + stringify$1(node.expr) + '" must be an object.');
+    fatal('Spread "' + keypath + '" must be an object.');
   };
 
   leave[ELEMENT] = function (node, current) {
@@ -4587,15 +4583,17 @@ function render(ast, createComment, createElement, importTemplate, data) {
         properties = void 0,
         child = void 0;
 
-    each(current.children, function (node) {
-      if (node.type === ATTRIBUTE) {
-        push(attributes, node);
-      } else if (node.type === DIRECTIVE) {
-        push(directives, node);
-      } else {
-        push(children, node);
-      }
-    });
+    if (current.children) {
+      each(current.children, function (node) {
+        if (node.type === ATTRIBUTE) {
+          push(attributes, node);
+        } else if (node.type === DIRECTIVE) {
+          push(directives, node);
+        } else {
+          push(children, node);
+        }
+      });
+    }
 
     var nodeChildren = node.children;
     if (nodeChildren && nodeChildren.length === 1) {
@@ -4646,7 +4644,6 @@ function render(ast, createComment, createElement, importTemplate, data) {
   // 缓存
   cacheMap = void 0,
       cacheKey = void 0,
-      cacheValue = void 0,
 
   // 正在渲染的 html 层级
   htmlStack = [],
@@ -4663,28 +4660,28 @@ function render(ast, createComment, createElement, importTemplate, data) {
         attrs = node.attrs,
         children = node.children,
         trackBy = node.trackBy,
+        value = node.value,
         cache = node.cache;
 
 
     if (!current.enter) {
       current.enter = TRUE;
 
-      if (trackBy) {
+      if (trackBy && value) {
         if (!cacheMap) {
           readCache();
         }
         trackBy = context.get(trackBy).value;
         if (trackBy != NULL) {
           cacheKey = keypath + '-' + trackBy;
-          cacheValue = context.get(keypath).value;
           cache = cacheMap[cacheKey];
-          if (cache && cache.value === cacheValue) {
+          if (cache && cache.value === value) {
             hitCache(cache);
             continue;
           } else {
             current.cache = {
               key: cacheKey,
-              value: cacheValue
+              value: value
             };
           }
         }
@@ -4711,11 +4708,11 @@ function render(ast, createComment, createElement, importTemplate, data) {
 
     if (cache !== UNDEFINED) {
       addValue(cache);
-      cacheValue = current.cache;
-      if (cacheValue) {
-        cacheValue.result = cache;
-        cacheValue.deps = current.deps;
-        cacheMap[cacheValue.key] = cacheValue;
+      cacheKey = current.cache;
+      if (cacheKey) {
+        cacheKey.result = cache;
+        cacheKey.deps = current.deps;
+        cacheMap[cacheKey.key] = cacheKey;
       }
     }
 
@@ -4727,9 +4724,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
   return { nodes: nodes, deps: deps };
 }
 
-var patch = init([attrs, props, style], api);
-
-var styleCache = {};
+var patch = init([attrs, props], api);
 
 function create(ast, context, instance) {
 
@@ -4745,7 +4740,6 @@ function create(ast, context, instance) {
     var hooks = {},
         attributes = {},
         directives = {},
-        styles = void 0,
         component = void 0;
 
     var data = {
@@ -4756,34 +4750,37 @@ function create(ast, context, instance) {
     var vnode = {
       data: data,
       sel: node.name,
+      key: trackBy,
       children: node.children.map(function (child) {
         return Vnode.is(child) ? child : new Vnode({ text: toString(child) });
       })
     };
 
-    if (trackBy) {
-      vnode.key = trackBy;
-    }
+    var addDirective = function addDirective(directive) {
+      var name = directive.name,
+          modifier = directive.modifier;
+
+      if (modifier) {
+        name += CHAR_DOT + modifier;
+      }
+      directives[name] = directive;
+    };
 
     if (!isComponent) {
       each(node.attributes, function (node) {
         var name = node.name,
-            value = node.value;
+            value = node.value,
+            keypath = node.keypath,
+            bindTo = node.bindTo;
 
-        if (name === 'style') {
-          if (!styleCache[value]) {
-            var cache = {},
-                list = parse(value, CHAR_SEMCOL, CHAR_COLON);
-            if (list.length) {
-              each(list, function (item) {
-                if (item.value) {
-                  cache[camelCase(item.key)] = item.value;
-                }
-              });
-            }
-            styleCache[value] = cache;
-          }
-          styles = styleCache[value];
+        if (string(bindTo)) {
+          addDirective({
+            keypath: keypath,
+            name: DIRECTIVE_MODEL,
+            modifier: name,
+            value: bindTo,
+            oneway: TRUE
+          });
         } else {
           attributes[name] = node;
           var _attrs = data.attrs || (data.attrs = {});
@@ -4793,18 +4790,8 @@ function create(ast, context, instance) {
     }
 
     each(node.directives, function (node) {
-      var name = node.name,
-          modifier = node.modifier;
-
-      name = modifier ? '' + name + CHAR_DOT + modifier : name;
-      if (!directives[name]) {
-        directives[name] = node;
-      }
+      addDirective(node);
     });
-
-    if (styles) {
-      data.style = styles;
-    }
 
     hooks.insert = hooks.postpatch = hooks.destroy = function (oldVnode, vnode) {
 
@@ -5171,26 +5158,24 @@ var checkboxControl = {
 var specialControls = {
   radio: radioControl,
   checkbox: checkboxControl,
-  SELECT: selectControl
+  select: selectControl
 };
 
-var model = function (_ref9) {
+function twoway(keypath, _ref9) {
   var el = _ref9.el,
       node = _ref9.node,
       instance = _ref9.instance,
       directives = _ref9.directives,
       attributes = _ref9.attributes;
 
-  var _instance$get = instance.get(node.value, node.keypath),
-      keypath = _instance$get.keypath;
 
-  var type = 'change',
-      tagName = el.tagName,
+  var type = CHANGE,
+      tagName = api.tag(el),
       controlType = el.type;
   var control = specialControls[controlType] || specialControls[tagName];
   if (!control) {
     control = inputControl;
-    if ('oninput' in el || tagName === 'TEXTAREA' || controlType === 'text' || controlType === 'password') {
+    if ('oninput' in el || tagName === 'textarea' || controlType === 'text' || controlType === 'password') {
       type = INPUT;
     }
   }
@@ -5205,11 +5190,7 @@ var model = function (_ref9) {
     control.set(data);
   };
 
-  if (control.attr && !has$1(attributes, control.attr)) {
-    set$$1();
-  }
-
-  instance.watch(keypath, set$$1);
+  instance.watch(keypath, set$$1, control.attr && !has$1(attributes, control.attr));
 
   var destroy = bindEvent({
     el: el,
@@ -5226,6 +5207,45 @@ var model = function (_ref9) {
     instance.unwatch(keypath, set$$1);
     destroy && destroy();
   };
+}
+
+function oneway(keypath, _ref10) {
+  var el = _ref10.el,
+      node = _ref10.node,
+      instance = _ref10.instance,
+      component = _ref10.component;
+
+
+  var set$$1 = function set$$1(value) {
+    var name = node.modifier;
+    if (component) {
+      if (!array(component)) {
+        component.set(name, value);
+      }
+    } else {
+      api.setAttr(el, name, value !== UNDEFINED ? value : CHAR_BLANK);
+    }
+  };
+
+  instance.watch(keypath, set$$1, TRUE);
+
+  return function () {
+    instance.unwatch(keypath, set$$1);
+    set$$1(NULL);
+  };
+}
+
+// 双向 model="xx"
+// 单向 name="{{value}}"
+
+var model = function (options) {
+  var node = options.node,
+      instance = options.instance;
+
+  var _instance$get = instance.get(node.value, node.keypath),
+      keypath = _instance$get.keypath;
+
+  return node.oneway ? oneway(keypath, options) : twoway(keypath, options);
 };
 
 var Yox = function () {
@@ -5866,7 +5886,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.36.9';
+Yox.version = '0.37.0';
 
 /**
  * 工具，便于扩展、插件使用

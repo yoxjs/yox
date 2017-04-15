@@ -3,11 +3,13 @@ import toString from 'yox-common/function/toString'
 
 import * as is from 'yox-common/util/is'
 import * as env from 'yox-common/util/env'
+import * as char from 'yox-common/util/char'
 import * as array from 'yox-common/util/array'
 import * as object from 'yox-common/util/object'
 import * as logger from 'yox-common/util/logger'
 
 import bindEvent from './event'
+import api from '../platform/web/api'
 import * as event from '../config/event'
 
 const inputControl = {
@@ -85,22 +87,17 @@ const checkboxControl = {
 const specialControls = {
   radio: radioControl,
   checkbox: checkboxControl,
-  SELECT: selectControl,
+  select: selectControl,
 }
 
-export default function ({ el, node, instance, directives, attributes }) {
+function twoway(keypath, { el, node, instance, directives, attributes }) {
 
-  let { keypath } = instance.get(
-    node.value,
-    node.keypath
-  )
-
-  let type = 'change', tagName = el.tagName, controlType = el.type
+  let type = event.CHANGE, tagName = api.tag(el), controlType = el.type
   let control = specialControls[ controlType ] || specialControls[ tagName ]
   if (!control) {
     control = inputControl
     if ('oninput' in el
-      || tagName === 'TEXTAREA'
+      || tagName === 'textarea'
       || controlType === 'text'
       || controlType === 'password'
     ) {
@@ -118,11 +115,11 @@ export default function ({ el, node, instance, directives, attributes }) {
     control.set(data)
   }
 
-  if (control.attr && !object.has(attributes, control.attr)) {
-    set()
-  }
-
-  instance.watch(keypath, set)
+  instance.watch(
+    keypath,
+    set,
+    control.attr && !object.has(attributes, control.attr)
+  )
 
   let destroy = bindEvent({
     el,
@@ -139,5 +136,47 @@ export default function ({ el, node, instance, directives, attributes }) {
     instance.unwatch(keypath, set)
     destroy && destroy()
   }
+
+}
+
+function oneway(keypath, { el, node, instance, component }) {
+
+  let set = function (value) {
+    let name = node.modifier
+    if (component) {
+      if (!is.array(component)) {
+        component.set(name, value)
+      }
+    }
+    else {
+      api.setAttr(el, name, value !== env.UNDEFINED ? value : char.CHAR_BLANK)
+    }
+  }
+
+  instance.watch(keypath, set, env.TRUE)
+
+  return function () {
+    instance.unwatch(keypath, set)
+    set(env.NULL)
+  }
+
+}
+
+
+// 双向 model="xx"
+// 单向 name="{{value}}"
+
+export default function (options) {
+
+  let { node, instance } = options
+
+  let { keypath } = instance.get(
+    node.value,
+    node.keypath
+  )
+
+  return node.oneway
+    ? oneway(keypath, options)
+    : twoway(keypath, options)
 
 }

@@ -29,10 +29,10 @@ api.specialEvents = {
   input: {
     on(el, listener) {
       let locked = env.FALSE
-      on(el, event.COMPOSITION_START, listener[ event.COMPOSITION_START ] = function () {
+      api.on(el, event.COMPOSITION_START, listener[ event.COMPOSITION_START ] = function () {
         locked = env.TRUE
       })
-      on(el, event.COMPOSITION_END, listener[ event.COMPOSITION_END ] = function (e) {
+      api.on(el, event.COMPOSITION_END, listener[ event.COMPOSITION_END ] = function (e) {
         locked = env.FALSE
         listener(e, event.INPUT)
       })
@@ -43,9 +43,12 @@ api.specialEvents = {
       })
     },
     off(el, listener) {
-      off(el, event.COMPOSITION_START, listener[ event.COMPOSITION_START ])
-      off(el, event.COMPOSITION_END, listener[ event.COMPOSITION_END ])
+      api.off(el, event.COMPOSITION_START, listener[ event.COMPOSITION_START ])
+      api.off(el, event.COMPOSITION_END, listener[ event.COMPOSITION_END ])
       off(el, event.INPUT, listener[ event.INPUT ])
+      listener[ event.COMPOSITION_START ] =
+      listener[ event.COMPOSITION_END ] =
+      listener[ event.INPUT ] = env.NULL
     }
   }
 }
