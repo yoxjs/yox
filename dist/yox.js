@@ -4302,9 +4302,8 @@ function render(ast, createComment, createElement, importTemplate, data) {
   getKeypath.toString = getKeypath;
   data[SPECIAL_KEYPATH] = getKeypath;
 
-  var context = new Context(data, keypath);
-
-  var nodeStack = [],
+  var context = new Context(data, keypath),
+      nodeStack = [],
       nodes = [],
       deps = {};
 
@@ -4566,17 +4565,18 @@ function render(ast, createComment, createElement, importTemplate, data) {
 
   leave[SPREAD$1] = function (node, current) {
     var expr = node.expr,
-        value = executeExpr(expr),
-        keypath = expr.keypath;
+        value = executeExpr(expr);
     if (object(value)) {
-      var list = makeNodes([]);
+      var _keypath = expr.keypath,
+          hasKeypath = string(_keypath),
+          list = makeNodes([]);
       each$1(value, function (value, name) {
-        push(list, createAttribute(name, value, join(keypath, name)));
+        push(list, createAttribute(name, value, hasKeypath ? join(_keypath, name) : UNDEFINED));
       });
-      current.binding = TRUE;
+      current.binding = hasKeypath;
       return list;
     }
-    fatal('Spread "' + keypath + '" must be an object.');
+    fatal('Spread "' + stringify$1(expr) + '" must be an object.');
   };
 
   leave[ELEMENT] = function (node, current) {
@@ -5877,7 +5877,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.37.2';
+Yox.version = '0.37.3';
 
 /**
  * 工具，便于扩展、插件使用
