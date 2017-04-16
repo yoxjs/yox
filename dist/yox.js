@@ -4348,7 +4348,9 @@ function render(ast, createComment, createElement, importTemplate, data) {
     if (sibling) {
       sibling = NULL;
     }
-    extend(current.parent ? current.parent.deps : deps, current.deps);
+    if (!current.binding) {
+      extend(current.parent ? current.parent.deps : deps, current.deps);
+    }
     current = current.parent;
     pop(nodeStack);
   };
@@ -4541,6 +4543,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
 
       if (safe && type === EXPRESSION && (expr.type === MEMBER || expr.type === IDENTIFIER)) {
         bindTo = expr.keypath;
+        current.binding = TRUE;
       }
     }
     return createAttribute(node.name, mergeNodes(current.children, children), bindTo);
@@ -4561,7 +4564,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
     return current.children;
   };
 
-  leave[SPREAD$1] = function (node) {
+  leave[SPREAD$1] = function (node, current) {
     var expr = node.expr,
         value = executeExpr(expr),
         keypath = expr.keypath;
@@ -4570,6 +4573,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
       each$1(value, function (value, name) {
         push(list, createAttribute(name, value, join(keypath, name)));
       });
+      current.binding = TRUE;
       return list;
     }
     fatal('Spread "' + keypath + '" must be an object.');
@@ -5886,7 +5890,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.37.0';
+Yox.version = '0.37.1';
 
 /**
  * 工具，便于扩展、插件使用
