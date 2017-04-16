@@ -14,8 +14,10 @@ import * as char from 'yox-common/util/char'
 import * as array from 'yox-common/util/array'
 import * as object from 'yox-common/util/object'
 import * as string from 'yox-common/util/string'
+import * as keypathUtil from 'yox-common/util/keypath'
 
 import * as templateSyntax from 'yox-template-compiler/src/syntax'
+import * as templateNodeType from 'yox-template-compiler/src/nodeType'
 import compileTemplate from 'yox-template-compiler/compile'
 import renderTemplate from 'yox-template-compiler/render'
 
@@ -32,20 +34,34 @@ export function create(ast, context, instance) {
     })
   }
 
-  let createElement = function (node, isComponent, trackBy) {
+  let createElement = function (output, source, trackBy) {
 
-    let hooks = { }, attributes = { }, directives = { }, component
+    let hooks = { },
+      attributes = { },
+      directives = { },
+      data = { hooks },
+      isComponent = source.component,
+      sourceChildren = source.children,
+      outputChildren = output.children,
+      outputAttributes = output.attributes
 
-    let data = {
-      hooks,
-      props: node.properties,
+    if (sourceChildren && sourceChildren.length === 1) {
+      let child = sourceChildren[ 0 ]
+      if (child.type === templateNodeType.EXPRESSION
+        && child.safe === env.FALSE
+      ) {
+        data.props = {
+          innerHTML: outputChildren[ 0 ],
+        }
+        outputChildren.length = 0
+      }
     }
 
     let vnode = {
       data,
-      sel: node.name,
+      sel: output.name,
       key: trackBy,
-      children: node.children.map(
+      children: outputChildren.map(
         function (child) {
           return Vnode.is(child)
             ? child
@@ -55,43 +71,37 @@ export function create(ast, context, instance) {
     }
 
     let addDirective = function (directive) {
-      let { name, modifier } = directive
-      if (modifier) {
-        name += char.CHAR_DOT + modifier
-      }
-      directives[ name ] = directive
-    }
-
-    if (!isComponent) {
-      array.each(
-        node.attributes,
-        function (node) {
-          let { name, value, keypath, bindTo } = node
-          if (is.string(bindTo)) {
-            addDirective(
-              {
-                keypath,
-                name: templateSyntax.DIRECTIVE_MODEL,
-                modifier: name,
-                value: bindTo,
-                oneway: env.TRUE,
-              }
-            )
-          }
-          else {
-            attributes[ name ] = node
-            let attrs = data.attrs || (data.attrs = { })
-            attrs[ name ] = value
-          }
-        }
-      )
+      directives[
+        keypathUtil.join(directive.name, directive.modifier)
+      ] = directive
     }
 
     array.each(
-      node.directives,
+      outputAttributes,
       function (node) {
-        addDirective(node)
+        let { name, value, keypath, bindTo } = node
+        if (is.string(bindTo)) {
+          addDirective(
+            {
+              keypath,
+              name: templateSyntax.DIRECTIVE_MODEL,
+              modifier: name,
+              value: bindTo,
+              oneway: env.TRUE,
+            }
+          )
+        }
+        else if (!isComponent) {
+          attributes[ name ] = node
+          let attrs = data.attrs || (data.attrs = { })
+          attrs[ name ] = value
+        }
       }
+    )
+
+    array.each(
+      output.directives,
+      addDirective
     )
 
     hooks.insert =
@@ -117,15 +127,16 @@ export function create(ast, context, instance) {
       let oldDirectives = payload.directives
 
       let oldValue = payload.value
-      let newValue = payload.value = instance.get(node.keypath)
+      let newValue = payload.value = instance.get(output.keypath)
 
+      let component
       if (oldComponent) {
         component = oldComponent
         if (is.object(component)) {
           // 更新
           if (vnode) {
             component.set(
-              array.toObject(node.attributes, 'name', 'value'),
+              array.toObject(outputAttributes, 'name', 'value'),
               env.TRUE
             )
           }
@@ -139,7 +150,7 @@ export function create(ast, context, instance) {
       else if (isComponent) {
         component = payload.component = [ ]
         instance.component(
-          node.name,
+          output.name,
           function (options) {
             if (is.array(component)) {
               oldComponent = component
@@ -148,7 +159,7 @@ export function create(ast, context, instance) {
                 options,
                 {
                   el: oldVnode.el,
-                  props: array.toObject(node.attributes, 'name', 'value'),
+                  props: array.toObject(outputAttributes, 'name', 'value'),
                   replace: env.TRUE,
                 }
               )

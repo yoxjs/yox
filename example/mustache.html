@@ -36,6 +36,14 @@
             </p>
 
             <p>
+                {{#each [1,2,3,4]:index}}
+                    <div class="wrapper">
+                        {{index}} -> {{this}}
+                    </div>
+                {{/each}}
+            </p>
+
+            <p>
                 {{#each users:index index}}
                     <div class="wrapper">
                         {{name}}

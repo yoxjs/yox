@@ -4486,14 +4486,14 @@ function render(ast, createComment, createElement, importTemplate, data) {
       deps = {};
 
   var pushStack = function pushStack(node) {
-    if (has$1(node, 'context')) {
+    if (array(node.context)) {
       execute(context.set, context, node.context);
     }
-    if (has$1(node, 'keypath')) {
+    if (node.keypath !== UNDEFINED) {
       push(keypathList, node.keypath);
       updateKeypath();
     }
-    if (has$1(node, 'value')) {
+    if (node.value !== UNDEFINED) {
       context = context.push(node.value, keypath);
     }
     if (htmlTypes[node.type]) {
@@ -4515,10 +4515,10 @@ function render(ast, createComment, createElement, importTemplate, data) {
     if (htmlTypes[node.type]) {
       pop(htmlStack);
     }
-    if (has$1(node, 'value')) {
+    if (node.value !== UNDEFINED) {
       context = context.pop();
     }
-    if (has$1(node, 'keypath')) {
+    if (node.keypath !== UNDEFINED) {
       pop(keypathList);
       updateKeypath();
     }
@@ -4718,7 +4718,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
           expr = _children$.expr,
           safe = _children$.safe;
 
-      if (safe && type === EXPRESSION && (expr.type === MEMBER || expr.type === IDENTIFIER)) {
+      if (safe && type === EXPRESSION && string(expr.keypath)) {
         bindTo = expr.keypath;
         current.binding = TRUE;
       }
@@ -4760,9 +4760,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
 
     var attributes = [],
         directives = [],
-        children = [],
-        properties = void 0,
-        child = void 0;
+        children = [];
 
     if (current.children) {
       each(current.children, function (node) {
@@ -4776,17 +4774,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
       });
     }
 
-    var nodeChildren = node.children;
-    if (nodeChildren && nodeChildren.length === 1) {
-      child = nodeChildren[0];
-      if (child.type === EXPRESSION && child.safe === FALSE) {
-        properties = {
-          innerHTML: children[0]
-        };
-        children.length = 0;
-      }
-    }
-
+    // 父节点是一个虚拟节点
     var cache = current.parent && current.parent.cache;
 
     return createElement({
@@ -4794,9 +4782,8 @@ function render(ast, createComment, createElement, importTemplate, data) {
       keypath: keypath,
       attributes: attributes,
       directives: directives,
-      properties: properties,
       children: children
-    }, node.component, cache ? cache.key : UNDEFINED);
+    }, node, cache ? cache.key : UNDEFINED);
   };
 
   leave[UNDEFINED] = function (node, current) {
@@ -4848,7 +4835,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
     if (!current.enter) {
       current.enter = TRUE;
 
-      if (trackBy && value) {
+      if (trackBy && value !== UNDEFINED) {
         if (!cacheMap) {
           readCache();
         }
@@ -4916,63 +4903,62 @@ function create(ast, context, instance) {
     });
   };
 
-  var createElement = function createElement(node, isComponent, trackBy) {
+  var createElement = function createElement(output, source, trackBy) {
 
     var hooks = {},
         attributes = {},
         directives = {},
-        component = void 0;
+        data = { hooks: hooks },
+        isComponent = source.component,
+        sourceChildren = source.children,
+        outputChildren = output.children,
+        outputAttributes = output.attributes;
 
-    var data = {
-      hooks: hooks,
-      props: node.properties
-    };
+    if (sourceChildren && sourceChildren.length === 1) {
+      var child = sourceChildren[0];
+      if (child.type === EXPRESSION && child.safe === FALSE) {
+        data.props = {
+          innerHTML: outputChildren[0]
+        };
+        outputChildren.length = 0;
+      }
+    }
 
     var vnode = {
       data: data,
-      sel: node.name,
+      sel: output.name,
       key: trackBy,
-      children: node.children.map(function (child) {
+      children: outputChildren.map(function (child) {
         return Vnode.is(child) ? child : new Vnode({ text: toString(child) });
       })
     };
 
     var addDirective = function addDirective(directive) {
-      var name = directive.name,
-          modifier = directive.modifier;
-
-      if (modifier) {
-        name += CHAR_DOT + modifier;
-      }
-      directives[name] = directive;
+      directives[join(directive.name, directive.modifier)] = directive;
     };
 
-    if (!isComponent) {
-      each(node.attributes, function (node) {
-        var name = node.name,
-            value = node.value,
-            keypath = node.keypath,
-            bindTo = node.bindTo;
+    each(outputAttributes, function (node) {
+      var name = node.name,
+          value = node.value,
+          keypath = node.keypath,
+          bindTo = node.bindTo;
 
-        if (string(bindTo)) {
-          addDirective({
-            keypath: keypath,
-            name: DIRECTIVE_MODEL,
-            modifier: name,
-            value: bindTo,
-            oneway: TRUE
-          });
-        } else {
-          attributes[name] = node;
-          var _attrs = data.attrs || (data.attrs = {});
-          _attrs[name] = value;
-        }
-      });
-    }
-
-    each(node.directives, function (node) {
-      addDirective(node);
+      if (string(bindTo)) {
+        addDirective({
+          keypath: keypath,
+          name: DIRECTIVE_MODEL,
+          modifier: name,
+          value: bindTo,
+          oneway: TRUE
+        });
+      } else if (!isComponent) {
+        attributes[name] = node;
+        var _attrs = data.attrs || (data.attrs = {});
+        _attrs[name] = value;
+      }
     });
+
+    each(output.directives, addDirective);
 
     hooks.insert = hooks.postpatch = hooks.destroy = function (oldVnode, vnode) {
 
@@ -4995,14 +4981,15 @@ function create(ast, context, instance) {
       var oldDirectives = payload.directives;
 
       var oldValue = payload.value;
-      var newValue = payload.value = instance.get(node.keypath);
+      var newValue = payload.value = instance.get(output.keypath);
 
+      var component = void 0;
       if (oldComponent) {
         component = oldComponent;
         if (object(component)) {
           // 更新
           if (vnode) {
-            component.set(toObject(node.attributes, 'name', 'value'), TRUE);
+            component.set(toObject(outputAttributes, 'name', 'value'), TRUE);
           }
           // 销毁
           else {
@@ -5013,12 +5000,12 @@ function create(ast, context, instance) {
       // 创建
       else if (isComponent) {
           component = payload.component = [];
-          instance.component(node.name, function (options) {
+          instance.component(output.name, function (options) {
             if (array(component)) {
               oldComponent = component;
               component = payload.component = instance.create(options, {
                 el: oldVnode.el,
-                props: toObject(node.attributes, 'name', 'value'),
+                props: toObject(outputAttributes, 'name', 'value'),
                 replace: TRUE
               });
               oldVnode.el = component.$el;
@@ -6067,7 +6054,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.37.1';
+Yox.version = '0.37.2';
 
 /**
  * 工具，便于扩展、插件使用
