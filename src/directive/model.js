@@ -144,8 +144,14 @@ function oneway(keypath, { el, node, instance, component }) {
   let set = function (value) {
     let name = node.modifier
     if (component) {
-      if (!is.array(component)) {
+      let set = function (component) {
         component.set(name, value)
+      }
+      if (is.array(component)) {
+        array.push(component, set)
+      }
+      else {
+        set(component)
       }
     }
     else {
@@ -157,7 +163,6 @@ function oneway(keypath, { el, node, instance, component }) {
 
   return function () {
     instance.unwatch(keypath, set)
-    set(env.NULL)
   }
 
 }

@@ -321,28 +321,16 @@ export default class Yox {
 
     $observer.set(model)
 
-    let dispatch = function () {
+    let flush = function () {
 
-      let { $dispatching } = instance
-
-      if (!$dispatching) {
-        $dispatching = 0
+      if (instance.$dirtyIgnore) {
+        delete instance.$dirtyIgnore
+        return
       }
 
-      $dispatching++
-      $observer.dispatch()
-      $dispatching--
-
-      if (!$dispatching) {
-        delete instance.$dispatching
-        if (instance.$dirtyIgnore) {
-          delete instance.$dirtyIgnore
-          return
-        }
-        if (instance.$dirty) {
-          delete instance.$dirty
-          instance.updateView()
-        }
+      if (instance.$dirty) {
+        delete instance.$dirty
+        instance.updateView()
       }
 
     }
@@ -350,18 +338,18 @@ export default class Yox {
     if (args.length === 1) {
       instance.$dirtyIgnore = env.TRUE
     }
-    else if (instance.$dispatching || args.length === 2 && args[ 1 ]) {
-      dispatch()
+    else if (instance.$flushing || args.length === 2 && args[ 1 ]) {
+      flush()
       return
     }
 
-    if (!instance.$waiting) {
-      instance.$waiting = env.TRUE
+    if (!instance.$pending) {
+      instance.$pending = env.TRUE
       nextTask.append(
         function () {
-          if (instance.$waiting) {
-            delete instance.$waiting
-            dispatch()
+          if (instance.$pending) {
+            delete instance.$pending
+            flush()
           }
         }
       )
@@ -650,7 +638,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.37.4'
+Yox.version = '0.37.5'
 
 /**
  * 工具，便于扩展、插件使用
