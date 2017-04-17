@@ -3293,11 +3293,13 @@ var AFTER_DESTROY = 'afterDestroy';
 
 var booleanAttrLiteral = 'allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare,default,defaultchecked,defaultmuted,defaultselected,defer,disabled,draggable,enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple,muted,nohref,noresize,noshade,novalidate,nowrap,open,pauseonexit,readonly,required,reversed,scoped,seamless,selected,sortable,spellcheck,translate,truespeed,typemustmatch,visible';
 var booleanAttrMap = toObject(split(booleanAttrLiteral, CHAR_COMMA));
+booleanAttrLiteral = NULL;
 
 var attr2Prop = {};
 attr2Prop['for'] = 'htmlFor';
 attr2Prop['value'] = 'value';
 attr2Prop['class'] = 'className';
+attr2Prop['readonly'] = 'readOnly';
 attr2Prop['style'] = 'style.cssText';
 
 function createElement(tagName, parentNode) {
@@ -3331,10 +3333,13 @@ function removeProp(node, name) {
 }
 
 function setAttr(node, name, value) {
+  if (booleanAttrMap[name]) {
+    value = value === UNDEFINED || value ? TRUE : FALSE;
+  }
   if (attr2Prop[name]) {
     setProp(node, attr2Prop[name], value);
   } else if (booleanAttrMap[name]) {
-    setProp(node, name, value === UNDEFINED || value ? TRUE : FALSE);
+    setProp(node, name, value);
   } else {
     node.setAttribute(name, value);
   }
@@ -4126,7 +4131,7 @@ function updateAttrs(oldVnode, vnode) {
 
   each$1(oldAttrs, function (value, name) {
     if (!has$1(newAttrs, name)) {
-      api.removeProp(el, name);
+      api.removeAttr(el, name);
     }
   });
 }
@@ -4658,7 +4663,16 @@ function render(ast, createComment, createElement, importTemplate, data) {
     }
 
     if (each$$1) {
+
       var list = [];
+      // push 之后 keypath 会更新
+      // 这样 each 的 children 才能取到正确的 keypath
+      pushStack({
+        value: value,
+        children: list,
+        keypath: expr.keypath
+      });
+
       each$$1(value, function (value, i, item) {
 
         item = {
@@ -4673,14 +4687,10 @@ function render(ast, createComment, createElement, importTemplate, data) {
 
         if (trackBy) {
           item.trackBy = trackBy;
+          item.trackBase = keypath;
         }
 
         push(list, item);
-      });
-      pushStack({
-        value: value,
-        children: list,
-        keypath: expr.keypath
       });
     }
 
@@ -4828,6 +4838,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
         attrs = node.attrs,
         children = node.children,
         trackBy = node.trackBy,
+        trackBase = node.trackBase,
         value = node.value,
         cache = node.cache;
 
@@ -4841,7 +4852,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
         }
         trackBy = context.get(trackBy).value;
         if (trackBy != NULL) {
-          cacheKey = keypath + '-' + trackBy;
+          cacheKey = trackBase + '-' + trackBy;
           cache = cacheMap[cacheKey];
           if (cache && cache.value === value) {
             hitCache(cache);
@@ -6054,7 +6065,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.37.3';
+Yox.version = '0.37.4';
 
 /**
  * 工具，便于扩展、插件使用
