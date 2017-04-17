@@ -36,7 +36,7 @@ export function create(ast, context, instance) {
     })
   }
 
-  let createElement = function (output, source, trackBy) {
+  let createElement = function (output, source) {
 
     let hooks = { },
       data = { instance, hooks, component: output.component },
@@ -59,7 +59,7 @@ export function create(ast, context, instance) {
     let vnode = {
       data,
       sel: output.name,
-      key: trackBy,
+      key: output.key,
       children: outputChildren.map(
         function (child) {
           return Vnode.is(child)

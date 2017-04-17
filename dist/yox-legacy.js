@@ -2144,13 +2144,12 @@ var Directive = function (_Node) {
  *
  * @param {Expression} expr
  * @param {?string} index 遍历索引值，对于数组来说是 0,1,2,...，对于对象来说是 key
- * @param {?string} trackBy 提升性能使用的 trackBy
  */
 
 var Each = function (_Node) {
   inherits(Each, _Node);
 
-  function Each(expr, index, trackBy) {
+  function Each(expr, index) {
     classCallCheck(this, Each);
 
     var _this = possibleConstructorReturn(this, (Each.__proto__ || Object.getPrototypeOf(Each)).call(this, EACH$1));
@@ -2158,9 +2157,6 @@ var Each = function (_Node) {
     _this.expr = expr;
     if (index) {
       _this.index = index;
-    }
-    if (trackBy) {
-      _this.trackBy = trackBy;
     }
     return _this;
   }
@@ -2517,16 +2513,14 @@ function compile(content) {
         var name = _match2[1];
         if (builtInDirectives[name]) {
           addChild(new Directive(camelCase(name)));
+        } else if (startsWith(name, DIRECTIVE_EVENT_PREFIX)) {
+          name = slice(name, DIRECTIVE_EVENT_PREFIX.length);
+          addChild(new Directive('event', camelCase(name)));
+        } else if (startsWith(name, DIRECTIVE_CUSTOM_PREFIX)) {
+          name = slice(name, DIRECTIVE_CUSTOM_PREFIX.length);
+          addChild(new Directive(camelCase(name)));
         } else {
-          if (startsWith(name, DIRECTIVE_EVENT_PREFIX)) {
-            name = slice(name, DIRECTIVE_EVENT_PREFIX.length);
-            addChild(new Directive('event', camelCase(name)));
-          } else if (startsWith(name, DIRECTIVE_CUSTOM_PREFIX)) {
-            name = slice(name, DIRECTIVE_CUSTOM_PREFIX.length);
-            addChild(new Directive(camelCase(name)));
-          } else {
-            addChild(new Attribute(htmlStack[0].component ? camelCase(name) : name));
-          }
+          addChild(new Attribute(htmlStack[0].component ? camelCase(name) : name));
         }
         currentQuote = _match2[2];
         if (!currentQuote) {
@@ -2573,15 +2567,9 @@ function compile(content) {
 
   var delimiterParsers = [function (source, all) {
     if (startsWith(source, EACH)) {
-      // {{#each list:index trackBy }}
-      var terms = split(slicePrefix(source, EACH), CHAR_WHITESPACE);
-      var pair = terms[0],
-          trackBy = terms[1];
-      if (pair) {
-        var _terms = split(pair, CHAR_COLON);
-        if (_terms[0]) {
-          return new Each(compile$1(trim(_terms[0])), trim(_terms[1]), trim(trackBy));
-        }
+      var terms = split(slicePrefix(source, EACH), CHAR_COLON);
+      if (terms[0]) {
+        return new Each(compile$1(trim(terms[0])), trim(terms[1]));
       }
       throwError('invalid each: ' + all);
     }
@@ -4555,7 +4543,6 @@ var Context = function () {
                 addDep(instance, keypath, result.value);
                 break;
               } else {
-                addDep(instance, keypath, UNDEFINED);
                 instance = instance.parent;
               }
             }
@@ -4774,7 +4761,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
   var readCache = function readCache() {
     cacheMap = ast.cacheMap;
     if (cacheMap) {
-      each(cacheMap, function (cache) {
+      each$1(cacheMap, function (cache) {
         cache.flag = TRUE;
       });
     } else {
@@ -4792,13 +4779,6 @@ function render(ast, createComment, createElement, importTemplate, data) {
     } else if (cacheMap) {
       ast.cacheMap = cacheMap;
     }
-  };
-
-  var hitCache = function hitCache(cache) {
-    cache.flag = NULL;
-    extend(deps, cache.deps);
-    addValue(cache.result);
-    popStack();
   };
 
   var filterElse = function filterElse(node) {
@@ -4850,7 +4830,6 @@ function render(ast, createComment, createElement, importTemplate, data) {
 
     var expr = node.expr,
         index = node.index,
-        trackBy = node.trackBy,
         children = node.children;
 
 
@@ -4886,11 +4865,6 @@ function render(ast, createComment, createElement, importTemplate, data) {
           item.context = [index, i];
         }
 
-        if (trackBy) {
-          item.trackBy = trackBy;
-          item.trackBase = keypath;
-        }
-
         push(list, item);
       });
     }
@@ -4919,8 +4893,11 @@ function render(ast, createComment, createElement, importTemplate, data) {
     return executeExpr(node.expr);
   };
 
-  leave[ATTRIBUTE] = function (node, current) {
-    var children = node.children,
+  leave[ATTRIBUTE] = function (node) {
+    var name = node.name,
+        children = node.children;
+
+    var value = mergeNodes(current.children, children),
         bindTo = void 0;
     if (children && children.length === 1) {
       var _children$ = children[0],
@@ -4933,25 +4910,61 @@ function render(ast, createComment, createElement, importTemplate, data) {
         current.binding = TRUE;
       }
     }
-    return createAttribute(node.name, mergeNodes(current.children, children), bindTo);
+    return createAttribute(name, value, bindTo);
   };
 
-  leave[DIRECTIVE] = function (node, current) {
+  leave[DIRECTIVE] = function (node) {
+    var name = node.name,
+        modifier = node.modifier,
+        children = node.children;
+
+    var value = mergeNodes(current.children, children);
+
+    if (name === KEYWORD_UNIQUE) {
+      if (value != NULL) {
+        if (!cacheMap) {
+          readCache();
+        }
+        cache = cacheMap[value];
+        if (cache) {
+          // 回退到元素层级
+          while (current.node.type !== ELEMENT) {
+            popStack();
+          }
+          cache.flag = NULL;
+          extend(current.deps, cache.deps);
+          return cache.result;
+        } else {
+          // 缓存挂在元素上
+          var parent = void 0;
+          while (parent = current.parent) {
+            if (parent.node.type === ELEMENT) {
+              parent.cache = {
+                key: value
+              };
+              break;
+            }
+          }
+        }
+      }
+      return;
+    }
+
     return {
       keypath: keypath,
-      name: node.name,
-      type: DIRECTIVE,
-      modifier: node.modifier,
-      value: mergeNodes(current.children, node.children)
+      name: name,
+      value: value,
+      modifier: modifier,
+      type: DIRECTIVE
     };
   };
 
-  leave[IF$1] = leave[ELSE_IF$1] = leave[ELSE$1] = function (node, current) {
+  leave[IF$1] = leave[ELSE_IF$1] = leave[ELSE$1] = function (node) {
     filter = filterElse;
     return current.children;
   };
 
-  leave[SPREAD$1] = function (node, current) {
+  leave[SPREAD$1] = function (node) {
     var expr = node.expr,
         value = executeExpr(expr);
     if (object(value)) {
@@ -4967,7 +4980,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
     fatal('Spread "' + stringify$1(expr) + '" must be an object.');
   };
 
-  leave[ELEMENT] = function (node, current) {
+  leave[ELEMENT] = function (node) {
 
     var attributes = [],
         directives = [],
@@ -4985,17 +4998,15 @@ function render(ast, createComment, createElement, importTemplate, data) {
       });
     }
 
-    // 父节点是一个虚拟节点
-    var cache = current.parent && current.parent.cache;
-
     return createElement({
       name: node.name,
+      key: current.cache ? current.cache.key : UNDEFINED,
       component: node.component,
       keypath: keypath,
       attributes: attributes,
       directives: directives,
       children: children
-    }, node, cache ? cache.key : UNDEFINED);
+    }, node);
   };
 
   leave[UNDEFINED] = function (node, current) {
@@ -5021,9 +5032,12 @@ function render(ast, createComment, createElement, importTemplate, data) {
   // 过滤某些节点的函数
   filter = void 0,
 
+  // 节点的值
+  value = void 0,
+
   // 缓存
-  cacheMap = void 0,
-      cacheKey = void 0,
+  cache = void 0,
+      cacheMap = void 0,
 
   // 正在渲染的 html 层级
   htmlStack = [],
@@ -5038,35 +5052,11 @@ function render(ast, createComment, createElement, importTemplate, data) {
         node = _current2.node;
     var type = node.type,
         attrs = node.attrs,
-        children = node.children,
-        trackBy = node.trackBy,
-        trackBase = node.trackBase,
-        value = node.value,
-        cache = node.cache;
+        children = node.children;
 
 
     if (!current.enter) {
       current.enter = TRUE;
-
-      if (trackBy && value !== UNDEFINED) {
-        if (!cacheMap) {
-          readCache();
-        }
-        trackBy = context.get(trackBy).value;
-        if (trackBy != NULL) {
-          cacheKey = trackBase + '-' + trackBy;
-          cache = cacheMap[cacheKey];
-          if (cache && cache.value === value) {
-            hitCache(cache);
-            continue;
-          } else {
-            current.cache = {
-              key: cacheKey,
-              value: value
-            };
-          }
-        }
-      }
 
       if (execute(enter[type], NULL, [node, current]) === FALSE) {
         continue;
@@ -5085,15 +5075,15 @@ function render(ast, createComment, createElement, importTemplate, data) {
       continue;
     }
 
-    cache = execute(leave[type], NULL, [node, current]);
+    value = execute(leave[type], NULL, [node, current]);
 
-    if (cache !== UNDEFINED) {
-      addValue(cache);
-      cacheKey = current.cache;
-      if (cacheKey) {
-        cacheKey.result = cache;
-        cacheKey.deps = current.deps;
-        cacheMap[cacheKey.key] = cacheKey;
+    if (value !== UNDEFINED) {
+      addValue(value);
+      cache = current.cache;
+      if (cache) {
+        cache.result = value;
+        cache.deps = current.deps;
+        cacheMap[cache.key] = cache;
       }
     }
 
@@ -5116,7 +5106,7 @@ function create(ast, context, instance) {
     });
   };
 
-  var createElement = function createElement(output, source, trackBy) {
+  var createElement = function createElement(output, source) {
 
     var hooks = {},
         data = { instance: instance, hooks: hooks, component: output.component },
@@ -5137,7 +5127,7 @@ function create(ast, context, instance) {
     var vnode = {
       data: data,
       sel: output.name,
-      key: trackBy,
+      key: output.key,
       children: outputChildren.map(function (child) {
         return Vnode.is(child) ? child : new Vnode({ text: toString(child) });
       })
@@ -6144,7 +6134,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.37.5';
+Yox.version = '0.37.6';
 
 /**
  * 工具，便于扩展、插件使用

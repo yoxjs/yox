@@ -36,7 +36,7 @@
             </p>
 
             <p>
-                {{#each [1,2,3,4]:index}}
+                {{#each [1, 2, 3, 4]:index}}
                     <div class="wrapper">
                         {{index}} -> {{this}}
                     </div>
@@ -44,8 +44,8 @@
             </p>
 
             <p>
-                {{#each users:index index}}
-                    <div class="wrapper">
+                {{#each users:index}}
+                    <div key="{{index}}" class="wrapper">
                         {{name}}
                         {{#if index < users.length - 1}}
                             -
