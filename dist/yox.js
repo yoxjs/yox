@@ -913,7 +913,7 @@ var Emitter = function () {
       if (type == NULL) {
         each$1(listeners, function (list, type) {
           if (array(listeners[type])) {
-            listeners[type].length = 0;
+            delete listeners[type];
           }
         });
       } else {
@@ -923,6 +923,9 @@ var Emitter = function () {
             list.length = 0;
           } else {
             remove(list, listener);
+          }
+          if (!list.length) {
+            delete listeners[type];
           }
         }
       }
@@ -2948,7 +2951,9 @@ var Observer = function () {
 
 
       if (deps !== computedDeps[keypath]) {
+
         computedDeps[keypath] = deps;
+        updateWatchKeypaths(this);
 
         // 全量更新
         computedDepsReversed = this.computedDepsReversed = {};
@@ -3008,14 +3013,13 @@ extend(Observer.prototype, {
    */
   unwatch: function unwatch(keypath, watcher) {
     this.emitter.off(keypath, watcher);
-    flattenWatchKeypaths(instance);
+    updateWatchKeypaths(this);
   }
 
 });
 
-function flattenWatchKeypaths(instance) {
+function updateWatchKeypaths(instance) {
   var emitter = instance.emitter,
-      computed = instance.computed,
       computedDeps = instance.computedDeps;
 
 
@@ -3029,9 +3033,7 @@ function flattenWatchKeypaths(instance) {
 
   // 1. 直接通过 watch 注册的
   each$1(emitter.listeners, function (list, key) {
-    if (list.length) {
-      addKeypath(key);
-    }
+    addKeypath(key);
   });
 
   // 2. 计算属性的依赖属于间接 watch
@@ -3075,7 +3077,7 @@ function createWatch(action) {
       }
 
       emitter[action](keypath, watcher);
-      flattenWatchKeypaths(instance);
+      updateWatchKeypaths(instance);
 
       if (sync) {
         execute(watcher, context, [instance.get(keypath), UNDEFINED, keypath]);
@@ -5928,7 +5930,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.38.0';
+Yox.version = '0.38.1';
 
 /**
  * 工具，便于扩展、插件使用
