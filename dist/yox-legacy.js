@@ -1959,6 +1959,7 @@ var DIRECTIVE_EVENT_PREFIX = 'on-';
 var DIRECTIVE_REF = 'ref';
 var DIRECTIVE_LAZY = 'lazy';
 var DIRECTIVE_MODEL = 'model';
+var DIRECTIVE_EVENT = 'event';
 
 var KEYWORD_UNIQUE = 'key';
 
@@ -2410,13 +2411,13 @@ function trimBreakline(content) {
  */
 function compile(content) {
 
-  var result = compileCache[content];
-  if (result) {
-    return result;
+  var nodeList = compileCache[content];
+  if (nodeList) {
+    return nodeList;
   }
+  nodeList = [];
 
-  var nodeList = [],
-      nodeStack = [],
+  var nodeStack = [],
       ifStack = [],
       htmlStack = [],
       currentQuote = void 0;
@@ -2517,7 +2518,7 @@ function compile(content) {
           addChild(new Directive(camelCase(name)));
         } else if (startsWith(name, DIRECTIVE_EVENT_PREFIX)) {
           name = slice(name, DIRECTIVE_EVENT_PREFIX.length);
-          addChild(new Directive('event', camelCase(name)));
+          addChild(new Directive(DIRECTIVE_EVENT, camelCase(name)));
         } else if (startsWith(name, DIRECTIVE_CUSTOM_PREFIX)) {
           name = slice(name, DIRECTIVE_CUSTOM_PREFIX.length);
           addChild(new Directive(camelCase(name)));
@@ -2868,12 +2869,12 @@ var Observer = function () {
 
         if (computedGetters) {
           var _matchKeypath = matchKeypath(computedGetters, keypath),
-              matched = _matchKeypath.matched,
+              value = _matchKeypath.value,
               rest = _matchKeypath.rest;
 
-          if (matched) {
-            matched = matched();
-            return rest && !primitive(matched) ? get$1(matched, rest) : { value: matched };
+          if (value) {
+            value = value();
+            return rest && !primitive(value) ? get$1(value, rest) : { value: value };
           }
         }
 
@@ -2964,13 +2965,13 @@ var Observer = function () {
             return;
           } else {
             var _matchKeypath2 = matchKeypath(computedGetters, keypath),
-                matched = _matchKeypath2.matched,
+                value = _matchKeypath2.value,
                 rest = _matchKeypath2.rest;
 
-            if (matched && rest) {
-              matched = matched();
-              if (!primitive(matched)) {
-                set$1(matched, rest, newValue);
+            if (value && rest) {
+              value = value();
+              if (!primitive(value)) {
+                set$1(value, rest, newValue);
               }
               return;
             }
@@ -3202,11 +3203,19 @@ function matchKeypath(data, keypath) {
   var result = matchFirst(sort(data, TRUE), keypath);
 
   var matched = result[0],
-      rest = result[1];
+      rest = result[1],
+      value = void 0;
+  if (matched) {
+    value = data[matched];
+  }
+
+  if (rest && startsWith(rest, SEPARATOR_KEY)) {
+    rest = slice(rest, 1);
+  }
 
   return {
-    matched: matched,
-    rest: rest && startsWith(rest, SEPARATOR_KEY) ? slice(rest, 1) : rest
+    value: value,
+    rest: rest
   };
 }
 
@@ -5793,7 +5802,7 @@ var Yox = function () {
 
       $observer.set(model$$1);
 
-      var flush = function flush() {
+      var update = function update() {
 
         if (instance.$dirtyIgnore) {
           delete instance.$dirtyIgnore;
@@ -5808,8 +5817,8 @@ var Yox = function () {
 
       if (args.length === 1) {
         instance.$dirtyIgnore = TRUE;
-      } else if (instance.$flushing || args.length === 2 && args[1]) {
-        flush();
+      } else if (args.length === 2 && args[1]) {
+        update();
         return;
       }
 
@@ -5818,7 +5827,7 @@ var Yox = function () {
         append(function () {
           if (instance.$pending) {
             delete instance.$pending;
-            flush();
+            update();
           }
         });
       }
@@ -6110,7 +6119,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.37.8';
+Yox.version = '0.37.9';
 
 /**
  * 工具，便于扩展、插件使用

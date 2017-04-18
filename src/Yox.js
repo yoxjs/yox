@@ -321,7 +321,7 @@ export default class Yox {
 
     $observer.set(model)
 
-    let flush = function () {
+    let update = function () {
 
       if (instance.$dirtyIgnore) {
         delete instance.$dirtyIgnore
@@ -338,8 +338,8 @@ export default class Yox {
     if (args.length === 1) {
       instance.$dirtyIgnore = env.TRUE
     }
-    else if (instance.$flushing || args.length === 2 && args[ 1 ]) {
-      flush()
+    else if (args.length === 2 && args[ 1 ]) {
+      update()
       return
     }
 
@@ -349,7 +349,7 @@ export default class Yox {
         function () {
           if (instance.$pending) {
             delete instance.$pending
-            flush()
+            update()
           }
         }
       )
@@ -642,7 +642,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.37.8'
+Yox.version = '0.37.9'
 
 /**
  * 工具，便于扩展、插件使用
