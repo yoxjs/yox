@@ -1210,7 +1210,9 @@ function append(task) {
  *
  * @param {Function} task
  */
-
+function prepend(task) {
+  add$1('unshift', task);
+}
 
 /**
  * 立即执行已添加的任务
@@ -4427,7 +4429,7 @@ function execute$1(node, context) {
       keypath = node.name;
       result = context.get(keypath);
       value = result.value;
-      extend(deps, result.deps);
+      deps[result.keypath] = value;
       break;
 
     case LITERAL:
@@ -4454,7 +4456,7 @@ function execute$1(node, context) {
       keypath = stringify(keys$$1);
       result = context.get(keypath);
       value = result.value;
-      extend(deps, result.deps);
+      deps[result.keypath] = value;
       break;
 
     case UNARY:
@@ -4528,14 +4530,6 @@ var Context = function () {
       var joinKeypath = function joinKeypath(context, keypath) {
         return join(context.keypath, keypath);
       };
-      var addDep = function addDep(context, keypath, value) {
-        var list = [];
-        each(parse$1(keypath), function (item, subpath) {
-          push(list, item);
-          subpath = stringify(list);
-          deps[joinKeypath(context, subpath)] = subpath === keypath ? value : context.get(subpath).value;
-        });
-      };
 
       if (!has$1(cache, keypath)) {
 
@@ -4556,19 +4550,15 @@ var Context = function () {
           }
 
           if (result) {
-            addDep(instance, keypath, result.value);
             cache[keypath] = {
               keypath: joinKeypath(instance, keypath),
-              value: result.value,
-              deps: deps
+              value: result.value
             };
           }
         } else {
-          addDep(instance, keypath, data);
           cache[keypath] = {
             keypath: instance.keypath,
-            value: data,
-            deps: deps
+            value: data
           };
         }
       }
@@ -4577,14 +4567,11 @@ var Context = function () {
         return cache;
       }
 
-      addDep(this, keypath, UNDEFINED);
-
       warn('Failed to lookup "' + key + '".');
 
       // 找不到就用当前的 keypath 吧
       return {
-        keypath: joinKeypath(this, keypath),
-        deps: deps
+        keypath: joinKeypath(this, keypath)
       };
     }
   }]);
@@ -4768,29 +4755,6 @@ function render(ast, createComment, createElement, importTemplate, data) {
     return result.value;
   };
 
-  var readCache = function readCache() {
-    cacheMap = ast.cacheMap;
-    if (cacheMap) {
-      each$1(cacheMap, function (cache) {
-        cache.flag = TRUE;
-      });
-    } else {
-      cacheMap = {};
-    }
-  };
-
-  var updateCache = function updateCache() {
-    if (ast.cacheMap) {
-      each$1(cacheMap, function (cache, key) {
-        if (cache.flag) {
-          delete cacheMap[key];
-        }
-      });
-    } else if (cacheMap) {
-      ast.cacheMap = cacheMap;
-    }
-  };
-
   var filterElse = function filterElse(node) {
     if (elseTypes[node.type]) {
       return FALSE;
@@ -4932,16 +4896,17 @@ function render(ast, createComment, createElement, importTemplate, data) {
 
     if (name === KEYWORD_UNIQUE) {
       if (value != NULL) {
-        if (!cacheMap) {
-          readCache();
+        if (!currentCache) {
+          prevCache = ast.cache;
+          currentCache = ast.cache = {};
         }
-        cache = cacheMap[value];
+        cache = prevCache && prevCache[value];
         if (cache) {
+          currentCache[value] = cache;
           // 回退到元素层级
           while (current.node.type !== ELEMENT) {
             popStack();
           }
-          cache.flag = NULL;
           extend(current.deps, cache.deps);
           return cache.result;
         } else {
@@ -5047,7 +5012,8 @@ function render(ast, createComment, createElement, importTemplate, data) {
 
   // 缓存
   cache = void 0,
-      cacheMap = void 0,
+      prevCache = void 0,
+      currentCache = void 0,
 
   // 正在渲染的 html 层级
   htmlStack = [],
@@ -5093,14 +5059,12 @@ function render(ast, createComment, createElement, importTemplate, data) {
       if (cache) {
         cache.result = value;
         cache.deps = current.deps;
-        cacheMap[cache.key] = cache;
+        currentCache[cache.key] = cache;
       }
     }
 
     popStack();
   }
-
-  updateCache();
 
   return { nodes: nodes, deps: deps };
 }
@@ -5121,8 +5085,7 @@ function create(ast, context, instance) {
     var hooks = {},
         data = { instance: instance, hooks: hooks, component: output.component },
         sourceChildren = source.children,
-        outputChildren = output.children,
-        outputAttributes = output.attributes;
+        outputChildren = output.children;
 
     if (sourceChildren && sourceChildren.length === 1) {
       var child = sourceChildren[0];
@@ -5148,11 +5111,15 @@ function create(ast, context, instance) {
       directives$$1[join(directive.name, directive.modifier)] = directive;
     };
 
-    each(outputAttributes, function (node) {
+    each(output.attributes, function (node) {
       var name = node.name,
           value = node.value,
           keypath = node.keypath,
           bindTo = node.bindTo;
+
+
+      var attrs$$1 = data.attrs || (data.attrs = {});
+      attrs$$1[name] = node;
 
       if (string(bindTo)) {
         addDirective({
@@ -5162,9 +5129,6 @@ function create(ast, context, instance) {
           value: bindTo,
           oneway: TRUE
         });
-      } else {
-        var _attrs = data.attrs || (data.attrs = {});
-        _attrs[name] = node;
       }
     });
 
@@ -5498,7 +5462,7 @@ function oneway(keypath, _ref10) {
     }
   };
 
-  instance.watch(keypath, set$$1, TRUE);
+  instance.watch(keypath, set$$1);
 
   return function () {
     instance.unwatch(keypath, set$$1);
@@ -5908,7 +5872,9 @@ var Yox = function () {
           nodes = _vdom$create.nodes,
           deps = _vdom$create.deps;
 
-      instance.$viewDeps = $observer.diff(keys(deps), instance.$viewDeps, instance.$viewWatcher);
+      prepend(function () {
+        instance.$viewDeps = $observer.diff(keys(deps), instance.$viewDeps, instance.$viewWatcher);
+      });
 
       if ($node) {
         instance.$node = patch($node, nodes[0]);
@@ -6144,7 +6110,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.37.7';
+Yox.version = '0.37.8';
 
 /**
  * 工具，便于扩展、插件使用

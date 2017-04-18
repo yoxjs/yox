@@ -159,7 +159,7 @@ function oneway(keypath, { el, node, instance, component }) {
     }
   }
 
-  instance.watch(keypath, set, env.TRUE)
+  instance.watch(keypath, set)
 
   return function () {
     instance.unwatch(keypath, set)

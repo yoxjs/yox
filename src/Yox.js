@@ -405,10 +405,14 @@ export default class Yox {
 
     // 新的虚拟节点和依赖关系
     let { nodes, deps } = vdom.create(instance.$template, context, instance)
-    instance.$viewDeps = $observer.diff(
-      object.keys(deps),
-      instance.$viewDeps,
-      instance.$viewWatcher
+    nextTask.prepend(
+      function () {
+        instance.$viewDeps = $observer.diff(
+          object.keys(deps),
+          instance.$viewDeps,
+          instance.$viewWatcher
+        )
+      }
     )
 
     if ($node) {
@@ -638,7 +642,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.37.7'
+Yox.version = '0.37.8'
 
 /**
  * 工具，便于扩展、插件使用

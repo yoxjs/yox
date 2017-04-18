@@ -41,8 +41,7 @@ export function create(ast, context, instance) {
     let hooks = { },
       data = { instance, hooks, component: output.component },
       sourceChildren = source.children,
-      outputChildren = output.children,
-      outputAttributes = output.attributes
+      outputChildren = output.children
 
     if (sourceChildren && sourceChildren.length === 1) {
       let child = sourceChildren[ 0 ]
@@ -77,9 +76,13 @@ export function create(ast, context, instance) {
     }
 
     array.each(
-      outputAttributes,
+      output.attributes,
       function (node) {
         let { name, value, keypath, bindTo } = node
+
+        let attrs = data.attrs || (data.attrs = { })
+        attrs[ name ] = node
+
         if (is.string(bindTo)) {
           addDirective(
             {
@@ -90,10 +93,6 @@ export function create(ast, context, instance) {
               oneway: env.TRUE,
             }
           )
-        }
-        else {
-          let attrs = data.attrs || (data.attrs = { })
-          attrs[ name ] = node
         }
       }
     )
