@@ -2934,22 +2934,25 @@ var Observer = function () {
           differences = [];
 
       var data = instance.data,
+          families = instance.families,
           emitter = instance.emitter,
           context = instance.context,
           computedGetters = instance.computedGetters,
           computedSetters = instance.computedSetters;
 
 
+      var allKeys = keys(families);
+
       each$1(model, function (newValue, keypath, oldValue) {
 
         // 格式化成内部处理的格式
         keypath = normalize(keypath);
 
-        // 旧值，便于对比
-        oldValue = instance.get(keypath);
-        if (newValue !== oldValue) {
-          differences[keypath] = [newValue, oldValue, keypath];
-        }
+        each(allKeys, function (key) {
+          if (startsWith(key, keypath)) {
+            differences[key] = [instance.get(key), key];
+          }
+        });
 
         // 如果有计算属性，则优先处理它
         if (computedSetters) {
@@ -2977,7 +2980,11 @@ var Observer = function () {
       });
 
       each$1(differences, function (difference, keypath) {
-        emitter.fire(keypath, difference, context);
+        var newValue = instance.get(keypath);
+        if (newValue !== difference[0]) {
+          difference.unshift(newValue);
+          emitter.fire(keypath, difference, context);
+        }
       });
     }
 
@@ -4531,7 +4538,6 @@ var Context = function () {
       };
 
       if (!has$1(cache, keypath)) {
-        addDep(instance, keypath, data);
 
         if (keypath) {
           var result = void 0;
@@ -4540,7 +4546,6 @@ var Context = function () {
             while (instance) {
               result = get$1(instance.data, keypath);
               if (result) {
-                addDep(instance, keypath, result.value);
                 break;
               } else {
                 instance = instance.parent;
@@ -4551,6 +4556,7 @@ var Context = function () {
           }
 
           if (result) {
+            addDep(instance, keypath, result.value);
             cache[keypath] = {
               keypath: joinKeypath(instance, keypath),
               value: result.value,
@@ -4558,6 +4564,7 @@ var Context = function () {
             };
           }
         } else {
+          addDep(instance, keypath, data);
           cache[keypath] = {
             keypath: instance.keypath,
             value: data,
@@ -4565,9 +4572,12 @@ var Context = function () {
           };
         }
       }
-      if (has$1(cache, keypath)) {
-        return cache[keypath];
+      cache = cache[keypath];
+      if (cache) {
+        return cache;
       }
+
+      addDep(this, keypath, UNDEFINED);
 
       warn('Failed to lookup "' + key + '".');
 
@@ -6134,7 +6144,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.37.6';
+Yox.version = '0.37.7';
 
 /**
  * 工具，便于扩展、插件使用
