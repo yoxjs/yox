@@ -29,6 +29,8 @@ import * as lifecycle from './config/lifecycle'
 import api from './platform/web/api'
 import * as vdom from './platform/web/vdom'
 
+const TEMPLATE_WATCHER_KEY = '$template$'
+
 export default class Yox {
 
   constructor(options) {
@@ -165,9 +167,12 @@ export default class Yox {
     filters && instance.filter(filters)
 
     if (template) {
-      instance.$viewWatcher = function () {
-        instance.$dirty = env.TRUE
-      }
+      instance.watch(
+        TEMPLATE_WATCHER_KEY,
+        function () {
+          instance.$dirty = env.TRUE
+        }
+      )
       execute(options[ lifecycle.BEFORE_MOUNT ], instance)
       instance.$template = Yox.compile(template)
       instance.updateView(el || api.createElement('div'))
@@ -371,8 +376,10 @@ export default class Yox {
       $node,
     } = instance
 
+    let isUpdate = $node
+
     // 对于静态组件，可在 beforeUpdate 钩子函数返回 false
-    if ($node
+    if (isUpdate
       && execute($options[ lifecycle.BEFORE_UPDATE ], instance) === env.FALSE
     ) {
       return
@@ -405,26 +412,29 @@ export default class Yox {
 
     // 新的虚拟节点和依赖关系
     let { nodes, deps } = vdom.create(instance.$template, context, instance)
-    nextTask.prepend(
-      function () {
-        instance.$viewDeps = $observer.diff(
-          object.keys(deps),
-          instance.$viewDeps,
-          instance.$viewWatcher
-        )
-      }
-    )
 
-    if ($node) {
-      instance.$node = vdom.patch($node, nodes[ 0 ])
-      execute($options[ lifecycle.AFTER_UPDATE ], instance)
+    if (isUpdate) {
+      nextTask.prepend(
+        function () {
+          instance.$node = vdom.patch($node, nodes[ 0 ])
+        }
+      )
     }
     else {
       $node = vdom.patch(arguments[ 0 ], nodes[ 0 ])
       instance.$el = $node.el
       instance.$node = $node
-      execute($options[ lifecycle.AFTER_MOUNT ], instance)
     }
+
+    nextTask.prepend(
+      function () {
+        $observer.setComputedDeps(
+          TEMPLATE_WATCHER_KEY,
+          object.keys(deps)
+        )
+        execute($options[ isUpdate ? lifecycle.AFTER_UPDATE : lifecycle.AFTER_MOUNT ], instance)
+      }
+    )
 
   }
 
@@ -570,7 +580,7 @@ export default class Yox {
    * @param {Function} fn
    */
   nextTick(fn) {
-    nextTask.append(fn)
+    Yox.nextTick(fn)
   }
 
   /**
@@ -642,7 +652,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.37.9'
+Yox.version = '0.38.0'
 
 /**
  * 工具，便于扩展、插件使用
@@ -815,7 +825,10 @@ array.each(
  *
  * @param {Function} fn
  */
-Yox.nextTick = nextTask.append
+Yox.nextTick = function (fn) {
+  fn.i = 2
+  nextTask.append(fn)
+}
 
 /**
  * 编译模板，暴露出来是为了打包阶段的模板预编译

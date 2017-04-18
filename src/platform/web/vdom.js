@@ -7,9 +7,6 @@ import props from 'yox-snabbdom/modules/props'
 import directives from 'yox-snabbdom/modules/directives'
 import component from 'yox-snabbdom/modules/component'
 
-import execute from 'yox-common/function/execute'
-import toString from 'yox-common/function/toString'
-
 import * as is from 'yox-common/util/is'
 import * as env from 'yox-common/util/env'
 import * as char from 'yox-common/util/char'
@@ -29,14 +26,7 @@ export const patch = snabbdom.init([ component, attrs, props, directives ], api)
 
 export function create(ast, context, instance) {
 
-  let createComment = function (content) {
-    return new Vnode({
-      sel: Vnode.SEL_COMMENT,
-      text: content,
-    })
-  }
-
-  let createElement = function (output, source) {
+  let createElementVnode = function (output, source) {
 
     let hooks = { },
       data = { instance, hooks, component: output.component },
@@ -53,19 +43,6 @@ export function create(ast, context, instance) {
         }
         outputChildren.length = 0
       }
-    }
-
-    let vnode = {
-      data,
-      sel: output.name,
-      key: output.key,
-      children: outputChildren.map(
-        function (child) {
-          return Vnode.is(child)
-            ? child
-            : new Vnode({ text: toString(child) })
-        }
-      )
     }
 
     let addDirective = function (directive) {
@@ -102,7 +79,18 @@ export function create(ast, context, instance) {
       addDirective
     )
 
-    return new Vnode(vnode)
+    return snabbdom.createElementVnode(
+      output.name,
+      data,
+      outputChildren.map(
+        function (child) {
+          return Vnode.is(child)
+            ? child
+            : snabbdom.createTextVnode(child)
+        }
+      ),
+      output.key
+    )
 
   }
 
@@ -113,6 +101,6 @@ export function create(ast, context, instance) {
       : partial
   }
 
-  return renderTemplate(ast, createComment, createElement, importTemplate, context)
+  return renderTemplate(ast, snabbdom.createCommentVnode, createElementVnode, importTemplate, context)
 
 }
