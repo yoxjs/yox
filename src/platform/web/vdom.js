@@ -89,8 +89,8 @@ export function create(ast, context, instance) {
             : snabbdom.createTextVnode(child)
         }
       ),
-      output.component,
-      output.key
+      output.key,
+      output.component
     )
 
   }

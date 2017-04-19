@@ -528,16 +528,6 @@ function camelCase(str) {
 }
 
 /**
- * 首字母大写
- *
- * @param {string} str
- * @return {string}
- */
-function capitalize(str) {
-  return charAt(str, 0).toUpperCase() + slice(str, 1);
-}
-
-/**
  * 判断长度大于 0 的字符串
  *
  * @param {*} str
@@ -584,7 +574,6 @@ function endsWith(str, part) {
 
 var string$1 = Object.freeze({
 	camelCase: camelCase,
-	capitalize: capitalize,
 	falsy: falsy$1,
 	trim: trim,
 	slice: slice,
@@ -770,7 +759,7 @@ function getValue(value) {
  */
 function get$1(object$$1, keypath) {
 
-  if (string(keypath) && !has$1(object$$1, keypath)
+  if (!falsy$1(keypath) && !has$1(object$$1, keypath)
   // 不能以 . 开头
   && indexOf$1(keypath, CHAR_DOT) > 0) {
     var list = parse(keypath);
@@ -802,7 +791,7 @@ function get$1(object$$1, keypath) {
  * @param {?boolean} autofill 是否自动填充不存在的对象，默认自动填充
  */
 function set$1(object$$1, keypath, value, autofill) {
-  if (string(keypath) && !has$1(object$$1, keypath) && indexOf$1(keypath, CHAR_DOT) > 0) {
+  if (!falsy$1(keypath) && !has$1(object$$1, keypath) && indexOf$1(keypath, CHAR_DOT) > 0) {
     var originalObject = object$$1;
     var list = parse(keypath);
     var prop = pop(list);
@@ -3493,22 +3482,19 @@ var toString = function (str) {
   }
 };
 
-/**
- * @param {?HTMLElement} options.el
- * @param {?string} options.sel
- * @param {?Object} options.data
- * @param {?string} options.text
- * @param {?Array} options.children
- */
-
-var Vnode = function Vnode(options) {
-  classCallCheck(this, Vnode);
-
-  extend(this, options);
-};
+function Vnode(sel, text, data, children, key, component) {
+  return {
+    sel: sel,
+    text: text,
+    data: data,
+    children: children,
+    key: key,
+    component: component
+  };
+}
 
 Vnode.is = function (target) {
-  return target instanceof Vnode;
+  return has$1(target, 'sel');
 };
 
 var SEL_COMMENT = '!';
@@ -3529,11 +3515,7 @@ var HOOK_POSTPATCH = 'postpatch';
 
 var moduleHooks = [HOOK_CREATE, HOOK_UPDATE, HOOK_REMOVE, HOOK_DESTROY, HOOK_PRE, HOOK_POST];
 
-var emptyNode = new Vnode({
-  sel: CHAR_BLANK,
-  data: {},
-  children: []
-});
+var emptyNode = Vnode(CHAR_BLANK, UNDEFINED, {}, []);
 
 function isPatchable(vnode1, vnode2) {
   return vnode1.key === vnode2.key && vnode1.sel === vnode2.sel;
@@ -3551,25 +3533,15 @@ function createKeyToIndex(vnodes, startIndex, endIndex) {
 }
 
 function createTextVnode(text$$1) {
-  return new Vnode({
-    text: toString(text$$1)
-  });
+  return Vnode(UNDEFINED, toString(text$$1));
 }
 
-function createElementVnode(sel, data, children$$1, key) {
-  return new Vnode({
-    sel: sel,
-    key: key,
-    data: data,
-    children: children$$1
-  });
+function createElementVnode(sel, data, children$$1, key, component) {
+  return Vnode(sel, UNDEFINED, data, children$$1, key, component);
 }
 
 function createCommentVnode(text$$1) {
-  return new Vnode({
-    sel: SEL_COMMENT,
-    text: text$$1
-  });
+  return Vnode(SEL_COMMENT, text$$1);
 }
 
 function init(modules) {
@@ -3921,12 +3893,9 @@ function init(modules) {
     moduleEmitter.fire(HOOK_PRE, NULL, api);
 
     if (api.isElement(oldVnode)) {
-      oldVnode = new Vnode({
-        el: oldVnode,
-        sel: stringifySel(oldVnode),
-        data: {},
-        children: []
-      });
+      var el = oldVnode;
+      oldVnode = Vnode(stringifySel(el), UNDEFINED, {}, []);
+      oldVnode.el = el;
     }
 
     var insertedQueue = [];
@@ -4947,7 +4916,7 @@ function create(ast, context, instance) {
 
     return createElementVnode(output.name, data, outputChildren.map(function (child) {
       return Vnode.is(child) ? child : createTextVnode(child);
-    }), output.component, output.key);
+    }), output.key, output.component);
   };
 
   var importTemplate = function importTemplate(name) {
@@ -5928,7 +5897,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.38.3';
+Yox.version = '0.38.4';
 
 /**
  * 工具，便于扩展、插件使用
