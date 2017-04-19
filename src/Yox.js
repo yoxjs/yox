@@ -652,7 +652,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.38.1'
+Yox.version = '0.38.2'
 
 /**
  * 工具，便于扩展、插件使用
@@ -826,7 +826,7 @@ array.each(
  * @param {Function} fn
  */
 Yox.nextTick = function (fn) {
-  fn.i = 2
+  fn.i = 1
   nextTask.append(fn)
 }
 

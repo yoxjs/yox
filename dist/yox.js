@@ -1148,9 +1148,12 @@ function run() {
       task();
     } else {
       task.i--;
-      push(task);
+      push(nextTasks, task);
     }
   });
+  if (nextTasks.length) {
+    nextTick$1(run);
+  }
 }
 
 /**
@@ -2797,9 +2800,9 @@ var Observer = function () {
         }
 
         if (computedGetters) {
-          var _matchKeypath = matchKeypath(computedGetters, keypath),
-              value = _matchKeypath.value,
-              rest = _matchKeypath.rest;
+          var _matchBestGetter = matchBestGetter(computedGetters, keypath),
+              value = _matchBestGetter.value,
+              rest = _matchBestGetter.rest;
 
           if (value) {
             value = value();
@@ -2890,12 +2893,18 @@ var Observer = function () {
         // 格式化成内部处理的格式
         keypath = normalize(keypath);
 
+        //
+        // 如果 set 了 user
+        // 但是 watch 了 user.name
+        //
+        // 如果 set 了 user.name
+        // 但是 watch 了 *.name
+        //
         each(watchKeypaths, function (key) {
           if (has$2(key, '*')) {
-            var pattern = getKeypathPattern(key);
-            var match = keypath.match(pattern);
+            var match = matchKeypath(keypath, key);
             if (match) {
-              addDifference(keypath, [instance.get(keypath), keypath], toArray$1(match).slice(1));
+              addDifference(keypath, [instance.get(keypath), keypath], match);
             }
           } else if (startsWith(key, keypath)) {
             addDifference(key, [instance.get(key), key]);
@@ -2909,9 +2918,9 @@ var Observer = function () {
             setter.call(context, newValue);
             return;
           } else {
-            var _matchKeypath2 = matchKeypath(computedGetters, keypath),
-                value = _matchKeypath2.value,
-                rest = _matchKeypath2.rest;
+            var _matchBestGetter2 = matchBestGetter(computedGetters, keypath),
+                value = _matchBestGetter2.value,
+                rest = _matchBestGetter2.rest;
 
             if (value && rest) {
               value = value();
@@ -2927,19 +2936,38 @@ var Observer = function () {
         set$1(data, keypath, newValue);
       });
 
+      var fired = {},
+          reversedKeys = keys(computedDepsReversed);
+      var fireChange = function fireChange(keypath, args) {
+        if (!fired[keypath]) {
+          fired[keypath] = TRUE;
+          emitter.fire(keypath, args, context);
+
+          each(reversedKeys, function (key) {
+            var list = void 0,
+                match = void 0;
+            if (key === keypath) {
+              list = computedDepsReversed[key];
+            } else if (has$2(key, '*')) {
+              match = matchKeypath(keypath, key);
+              if (match) {
+                list = computedDepsReversed[key];
+              }
+            }
+            if (list) {
+              each(list, function (key) {
+                fireChange(key);
+              });
+            }
+          });
+        }
+      };
+
       each$1(differences, function (difference, keypath) {
         var newValue = instance.get(keypath);
         if (newValue !== difference[0]) {
           difference.unshift(newValue);
-          emitter.fire(keypath, difference, context);
-
-          var list = computedDepsReversed[keypath];
-          if (list) {
-            each(list, function (keypath) {
-              newValue = instance.get(keypath);
-              emitter.fire(keypath, [newValue, newValue, keypath], context);
-            });
-          }
+          fireChange(keypath, difference);
         }
       });
     }
@@ -3090,31 +3118,38 @@ var patternCache = {};
 
 /**
  * 模糊匹配 Keypath
+ *
+ * @param {string} keypath
+ * @param {string} pattern
  */
-function getKeypathPattern(keypath) {
-  if (!patternCache[keypath]) {
-    var literal = keypath.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)');
-    patternCache[keypath] = new RegExp('^' + literal + '$');
+function matchKeypath(keypath, pattern) {
+  var cache = patternCache[pattern];
+  if (!cache) {
+    cache = pattern.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)');
+    cache = patternCache[pattern] = new RegExp('^' + cache + '$');
   }
-  return patternCache[keypath];
+  var match = keypath.match(cache);
+  if (match) {
+    return toArray$1(match).slice(1);
+  }
 }
 
 /**
- * 从 data 对象的所有 key 中，选择和 keypath 最匹配的那一个
+ * 从 getter 对象的所有 key 中，选择和 keypath 最匹配的那一个
  *
- * @param {Object} data
- * @param {Object} keypath
+ * @param {Object} getter
+ * @param {string} keypath
  * @return {Object}
  */
-function matchKeypath(data, keypath) {
+function matchBestGetter(getter, keypath) {
 
-  var result = matchFirst(sort(data, TRUE), keypath);
+  var result = matchFirst(sort(getter, TRUE), keypath);
 
   var matched = result[0],
       rest = result[1],
       value = void 0;
   if (matched) {
-    value = data[matched];
+    value = getter[matched];
   }
 
   if (rest && startsWith(rest, SEPARATOR_KEY)) {
@@ -3367,7 +3402,7 @@ var COMPOSITION_END = 'compositionend';
 var api = copy(domApi);
 
 // import * as oldApi from './oldApi'
-//
+
 // if (!env.doc.addEventListener) {
 //   object.extend(api, oldApi)
 // }
@@ -3490,11 +3525,11 @@ var Vnode = function Vnode(options) {
   extend(this, options);
 };
 
-Vnode.SEL_COMMENT = '!';
-
 Vnode.is = function (target) {
   return target instanceof Vnode;
 };
+
+var SEL_COMMENT = '!';
 
 var HOOK_INIT = 'init';
 var HOOK_CREATE = 'create';
@@ -3520,12 +3555,6 @@ var emptyNode = new Vnode({
 
 function isPatchable(vnode1, vnode2) {
   return vnode1.key === vnode2.key && vnode1.sel === vnode2.sel;
-}
-
-function isSame(vnode1, vnode2) {
-  return vnode1 === vnode2
-  // 注释节点
-  || vnode1.sel === Vnode.SEL_COMMENT && vnode2.sel === Vnode.SEL_COMMENT && vnode1.text === vnode2.text;
 }
 
 function createKeyToIndex(vnodes, startIndex, endIndex) {
@@ -3556,7 +3585,7 @@ function createElementVnode(sel, data, children$$1, key) {
 
 function createCommentVnode(text$$1) {
   return new Vnode({
-    sel: Vnode.SEL_COMMENT,
+    sel: SEL_COMMENT,
     text: text$$1
   });
 }
@@ -3633,7 +3662,7 @@ function init(modules) {
       return vnode.el = api.createText(text$$1);
     }
 
-    if (sel === Vnode.SEL_COMMENT) {
+    if (sel === SEL_COMMENT) {
       return vnode.el = api.createComment(text$$1);
     }
 
@@ -3839,10 +3868,8 @@ function init(modules) {
   };
 
   var patchVnode = function patchVnode(oldVnode, vnode, insertedQueue) {
-    var el = oldVnode.el;
 
-    if (isSame(oldVnode, vnode)) {
-      vnode.el = el;
+    if (oldVnode === vnode) {
       return;
     }
 
@@ -3852,6 +3879,8 @@ function init(modules) {
 
     var args = [oldVnode, vnode];
     execute(hooks[HOOK_PREPATCH], NULL, args);
+
+    var el = oldVnode.el;
 
     vnode.el = el;
 
@@ -5930,7 +5959,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.38.1';
+Yox.version = '0.38.2';
 
 /**
  * 工具，便于扩展、插件使用
@@ -6104,7 +6133,7 @@ each(merge(supportRegisterAsync, ['directive', 'partial', 'filter']), function (
  * @param {Function} fn
  */
 Yox.nextTick = function (fn) {
-  fn.i = 2;
+  fn.i = 1;
   append(fn);
 };
 
