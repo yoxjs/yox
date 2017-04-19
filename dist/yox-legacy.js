@@ -119,7 +119,7 @@ function array(arg) {
 
 function object(arg) {
   // 低版本 IE 会把 null 和 undefined 当作 object
-  return arg && is(arg, 'object') ? TRUE : FALSE;
+  return arg && is(arg, 'object');
 }
 
 function string(arg) {
@@ -385,16 +385,18 @@ var CODE_WHITESPACE = codeAt(CHAR_WHITESPACE);
 function each(array$$1, callback, reversed) {
   var length = array$$1.length;
 
-  if (reversed) {
-    for (var i = length - 1; i >= 0; i--) {
-      if (callback(array$$1[i], i) === FALSE) {
-        break;
+  if (length) {
+    if (reversed) {
+      for (var i = length - 1; i >= 0; i--) {
+        if (callback(array$$1[i], i) === FALSE) {
+          break;
+        }
       }
-    }
-  } else {
-    for (var _i = 0; _i < length; _i++) {
-      if (callback(array$$1[_i], _i) === FALSE) {
-        break;
+    } else {
+      for (var _i = 0; _i < length; _i++) {
+        if (callback(array$$1[_i], _i) === FALSE) {
+          break;
+        }
       }
     }
   }
@@ -613,40 +615,11 @@ function falsy$1(str) {
 }
 
 /**
- * 把字符串解析成对象形式
+ * 删除两侧空白符
  *
- * 为了给外部去重的机会，返回的是数组而不是对象
- *
- * @param {string} str
- * @param {string} separator 分隔符，如 & ;
- * @param {string} pair 键值对分隔符，如 = :
- * @return {Array}
+ * @param {*} str
+ * @return {boolean}
  */
-function parse(str, separator, pair) {
-  var result = [];
-  if (string(str)) {
-    var terms = void 0,
-        key = void 0,
-        value = void 0,
-        item = void 0;
-    each(split(str, separator), function (term) {
-      terms = split(term, pair);
-      key = terms[0];
-      value = terms[1];
-      if (key) {
-        item = {
-          key: trim(key)
-        };
-        if (string(value)) {
-          item.value = trim(value);
-        }
-        push(result, item);
-      }
-    });
-  }
-  return result;
-}
-
 function trim(str) {
   return falsy$1(str) ? CHAR_BLANK : str.trim();
 }
@@ -680,7 +653,6 @@ var string$1 = Object.freeze({
 	camelCase: camelCase,
 	capitalize: capitalize,
 	falsy: falsy$1,
-	parse: parse,
 	trim: trim,
 	slice: slice,
 	split: split,
@@ -695,15 +667,20 @@ var SEPARATOR_KEY = '.';
 var LEVEL_CURRENT = '.';
 
 
+var normalizeCache = {};
+
 function normalize(str) {
   if (!falsy$1(str) && indexOf$1(str, '[') > 0 && indexOf$1(str, ']') > 0) {
-    return str.replace(/\[\s*?([^\]]+)\s*?\]/g, function ($0, $1) {
-      var code = codeAt($1);
-      if (code === CODE_SQUOTE || code === CODE_DQUOTE) {
-        $1 = slice($1, 1, -1);
-      }
-      return '' + SEPARATOR_KEY + $1;
-    });
+    if (!has$1(normalizeCache, str)) {
+      normalizeCache[str] = str.replace(/\[\s*?([^\]]+)\s*?\]/g, function ($0, $1) {
+        var code = codeAt($1);
+        if (code === CODE_SQUOTE || code === CODE_DQUOTE) {
+          $1 = slice($1, 1, -1);
+        }
+        return '' + SEPARATOR_KEY + $1;
+      });
+    }
+    return normalizeCache[str];
   }
   return str;
 }
@@ -712,7 +689,7 @@ function filter(term) {
   return term !== CHAR_BLANK && term !== THIS && term !== LEVEL_CURRENT;
 }
 
-function parse$1(str) {
+function parse(str) {
   return split(normalize(str), SEPARATOR_KEY).filter(filter);
 }
 
@@ -863,7 +840,7 @@ function get$1(object$$1, keypath) {
   if (string(keypath) && !has$1(object$$1, keypath)
   // 不能以 . 开头
   && indexOf$1(keypath, CHAR_DOT) > 0) {
-    var list = parse$1(keypath);
+    var list = parse(keypath);
     for (var i = 0, len = list.length; i < len; i++) {
       if (i < len - 1) {
         object$$1 = getValue(object$$1[list[i]]);
@@ -894,7 +871,7 @@ function get$1(object$$1, keypath) {
 function set$1(object$$1, keypath, value, autofill) {
   if (string(keypath) && !has$1(object$$1, keypath) && indexOf$1(keypath, CHAR_DOT) > 0) {
     var originalObject = object$$1;
-    var list = parse$1(keypath);
+    var list = parse(keypath);
     var prop = pop(list);
     each(list, function (item, index) {
       if (object$$1[item]) {
@@ -957,7 +934,7 @@ var Emitter = function () {
       var instance = this;
       var addOnce = function addOnce(listener, type) {
         if (func(listener)) {
-          listener.$magic = function () {
+          listener.$once = function () {
             instance.off(type, listener);
           };
         }
@@ -974,18 +951,14 @@ var Emitter = function () {
   }, {
     key: 'off',
     value: function off(type, listener) {
-      var listeners = this.listeners;
-
 
       if (type == NULL) {
-        each$1(listeners, function (list, type) {
-          if (array(listeners[type])) {
-            delete listeners[type];
-          }
-        });
+        this.listeners = {};
       } else {
+        var listeners = this.listeners;
+
         var list = listeners[type];
-        if (array(list)) {
+        if (list) {
           if (listener == NULL) {
             list.length = 0;
           } else {
@@ -1016,16 +989,16 @@ var Emitter = function () {
       var listeners = this.listeners;
 
       var list = listeners[type];
-      if (array(list)) {
+      if (list) {
         each(list, function (listener) {
 
           var result = execute(listener, context, data);
 
-          var $magic = listener.$magic;
+          var $once = listener.$once;
 
-          if (func($magic)) {
-            $magic();
-            delete listener.$magic;
+          if (func($once)) {
+            $once();
+            delete listener.$once;
           }
 
           // 如果没有返回 false，而是调用了 event.stop 也算是返回 false
@@ -1055,7 +1028,7 @@ var Emitter = function () {
 
       if (listener == NULL) {
         return !falsy(list);
-      } else if (array(list)) {
+      } else if (list) {
         return has(list, listener);
       }
     }
@@ -2615,8 +2588,8 @@ function compile(content) {
       (function () {
         var tpl = content;
         while (tpl) {
-          each(htmlParsers, function (parse$$1, match) {
-            match = parse$$1(tpl);
+          each(htmlParsers, function (parse, match) {
+            match = parse(tpl);
             if (match) {
               tpl = slice(tpl, match.length);
               return FALSE;
@@ -2638,8 +2611,8 @@ function compile(content) {
         }
         popStack(type);
       } else {
-        each(delimiterParsers, function (parse$$1, node) {
-          node = parse$$1(content, all);
+        each(delimiterParsers, function (parse, node) {
+          node = parse(content, all);
           if (node) {
             addChild(node);
             return FALSE;
@@ -2880,12 +2853,12 @@ var Observer = function () {
         return get$1(data, keypath);
       };
 
-      var suffixes = parse$1(keypath),
+      var suffixes = parse(keypath),
           temp = void 0,
           result = void 0;
 
       if (string(context)) {
-        var prefixes = parse$1(context);
+        var prefixes = parse(context);
         if (suffixes.length > 1 && suffixes[0] === THIS) {
           keypath = stringify(merge(prefixes, suffixes.slice(1)));
           result = getValue(keypath);
@@ -2943,7 +2916,8 @@ var Observer = function () {
           computedDepsReversed = instance.computedDepsReversed,
           computedGetters = instance.computedGetters,
           computedSetters = instance.computedSetters,
-          watchKeypaths = instance.watchKeypaths;
+          watchKeypaths = instance.watchKeypaths,
+          reversedKeypaths = instance.reversedKeypaths;
 
 
       var addDifference = function addDifference(key, data, extra) {
@@ -2967,16 +2941,18 @@ var Observer = function () {
         // 如果 set 了 user.name
         // 但是 watch 了 *.name
         //
-        each(watchKeypaths, function (key) {
-          if (has$2(key, '*')) {
-            var match = matchKeypath(keypath, key);
-            if (match) {
-              addDifference(keypath, [instance.get(keypath), keypath], match);
+        if (watchKeypaths) {
+          each(watchKeypaths, function (key) {
+            if (has$2(key, '*')) {
+              var match = matchKeypath(keypath, key);
+              if (match) {
+                addDifference(keypath, [instance.get(keypath), keypath], match);
+              }
+            } else if (startsWith(key, keypath)) {
+              addDifference(key, [instance.get(key), key]);
             }
-          } else if (startsWith(key, keypath)) {
-            addDifference(key, [instance.get(key), key]);
-          }
-        });
+          });
+        }
 
         // 如果有计算属性，则优先处理它
         if (computedSetters) {
@@ -3003,30 +2979,31 @@ var Observer = function () {
         set$1(data, keypath, newValue);
       });
 
-      var fired = {},
-          reversedKeys = keys(computedDepsReversed);
+      var changed = {};
       var fireChange = function fireChange(keypath, args) {
-        if (!fired[keypath]) {
-          fired[keypath] = TRUE;
+        if (!changed[keypath]) {
+          changed[keypath] = TRUE;
           emitter.fire(keypath, args, context);
 
-          each(reversedKeys, function (key) {
-            var list = void 0,
-                match = void 0;
-            if (key === keypath) {
-              list = computedDepsReversed[key];
-            } else if (has$2(key, '*')) {
-              match = matchKeypath(keypath, key);
-              if (match) {
+          if (reversedKeypaths) {
+            each(reversedKeypaths, function (key) {
+              var list = void 0,
+                  match = void 0;
+              if (key === keypath) {
                 list = computedDepsReversed[key];
+              } else if (has$2(key, '*')) {
+                match = matchKeypath(keypath, key);
+                if (match) {
+                  list = computedDepsReversed[key];
+                }
               }
-            }
-            if (list) {
-              each(list, function (key) {
-                fireChange(key);
-              });
-            }
-          });
+              if (list) {
+                each(list, function (key) {
+                  fireChange(key, [instance.get(key), UNDEFINED, key]);
+                });
+              }
+            });
+          }
         }
       };
 
@@ -3041,17 +3018,20 @@ var Observer = function () {
   }, {
     key: 'setComputedDeps',
     value: function setComputedDeps(keypath, deps) {
-      var computedDeps = this.computedDeps,
-          computedDepsReversed = this.computedDepsReversed;
+
+      var instance = this;
+
+      var computedDeps = instance.computedDeps,
+          computedDepsReversed = instance.computedDepsReversed;
 
 
       if (deps !== computedDeps[keypath]) {
 
         computedDeps[keypath] = deps;
-        updateWatchKeypaths(this);
+        updateWatchKeypaths(instance);
 
         // 全量更新
-        computedDepsReversed = this.computedDepsReversed = {};
+        computedDepsReversed = instance.computedDepsReversed = {};
 
         var addDep = function addDep(dep, keypath) {
           var list = computedDepsReversed[dep] || (computedDepsReversed[dep] = []);
@@ -3063,6 +3043,8 @@ var Observer = function () {
             addDep(dep, key);
           });
         });
+
+        instance.reversedKeypaths = keys(computedDepsReversed);
       }
     }
 
@@ -4149,7 +4131,7 @@ function updateAttrs(oldVnode, vnode) {
   var oldAttrs = oldVnode.data.attrs;
   var newAttrs = vnode.data.attrs;
 
-  if (vnode.data.component || !oldAttrs && !newAttrs) {
+  if (vnode.component || !oldAttrs && !newAttrs) {
     return;
   }
 
@@ -4162,19 +4144,18 @@ function updateAttrs(oldVnode, vnode) {
 
   var getValue = function getValue(attrs, name) {
     if (has$1(attrs, name)) {
-      var value = attrs[name].value;
-
+      var value = attrs[name];
       return value !== UNDEFINED ? value : name;
     }
   };
 
-  each$1(newAttrs, function (node, name) {
+  each$1(newAttrs, function (value, name) {
     if (getValue(newAttrs, name) !== getValue(oldAttrs, name)) {
-      api.setAttr(el, name, node.value);
+      api.setAttr(el, name, value);
     }
   });
 
-  each$1(oldAttrs, function (node, name) {
+  each$1(oldAttrs, function (value, name) {
     if (!has$1(newAttrs, name)) {
       api.removeAttr(el, name);
     }
@@ -4191,7 +4172,7 @@ function updateProps(oldVnode, vnode) {
   var oldProps = oldVnode.data.props;
   var newProps = vnode.data.props;
 
-  if (!oldProps && !newProps) {
+  if (vnode.component || !oldProps && !newProps) {
     return;
   }
 
@@ -4316,28 +4297,17 @@ var directives = {
   destroy: destroyDirectives
 };
 
-function toProps(attrs) {
-  var props = {};
-  if (attrs) {
-    each$1(attrs, function (item) {
-      props[item.name] = item.value;
-    });
-  }
-  return props;
-}
-
 function createComponent(oldVnode, vnode) {
-  var _vnode$data = vnode.data,
-      component = _vnode$data.component,
-      instance = _vnode$data.instance,
-      attrs = _vnode$data.attrs;
+  var el = vnode.el,
+      component = vnode.component;
 
   if (!component) {
     return;
   }
 
-  var el = vnode.el;
-
+  var _vnode$data = vnode.data,
+      instance = _vnode$data.instance,
+      attrs = _vnode$data.attrs;
 
   el.$component = {
     queue: [],
@@ -4350,18 +4320,17 @@ function createComponent(oldVnode, vnode) {
 
     if ($component && array($component.queue)) {
 
-      var _component = instance.create(options, {
+      component = instance.create(options, {
         el: el,
-        props: toProps($component.attrs),
+        props: $component.attrs,
         replace: TRUE
       });
 
-      el = _component.$el;
-      el.$component = _component;
-      vnode.el = el;
+      el = vnode.el = component.$el;
+      el.$component = component;
 
       each($component.queue, function (callback) {
-        callback(_component);
+        callback(component);
       });
     }
   });
@@ -4374,7 +4343,7 @@ function updateComponent(oldVnode, vnode) {
     var attrs = vnode.data.attrs;
 
     if ($component.set) {
-      $component.set(toProps(attrs), TRUE);
+      $component.set(attrs, TRUE);
     } else {
       $component.attrs = attrs;
     }
@@ -4614,7 +4583,7 @@ var Context = function () {
 }();
 
 function formatKeypath(keypath) {
-  var keys$$1 = parse$1(keypath);
+  var keys$$1 = parse(keypath);
   if (keys$$1[0] === THIS) {
     keys$$1.shift();
     return {
@@ -5111,7 +5080,7 @@ function create(ast, context, instance) {
   var createElementVnode$$1 = function createElementVnode$$1(output, source) {
 
     var hooks = {},
-        data = { instance: instance, hooks: hooks, component: output.component },
+        data = { instance: instance, hooks: hooks },
         sourceChildren = source.children,
         outputChildren = output.children;
 
@@ -5138,7 +5107,7 @@ function create(ast, context, instance) {
 
 
       var attrs$$1 = data.attrs || (data.attrs = {});
-      attrs$$1[name] = node;
+      attrs$$1[name] = value;
 
       if (string(bindTo)) {
         addDirective({
@@ -5155,7 +5124,7 @@ function create(ast, context, instance) {
 
     return createElementVnode(output.name, data, outputChildren.map(function (child) {
       return Vnode.is(child) ? child : createTextVnode(child);
-    }), output.key);
+    }), output.component, output.key);
   };
 
   var importTemplate = function importTemplate(name) {
@@ -6136,7 +6105,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.38.2';
+Yox.version = '0.38.3';
 
 /**
  * 工具，便于扩展、插件使用
