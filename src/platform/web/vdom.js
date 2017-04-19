@@ -29,7 +29,7 @@ export function create(ast, context, instance) {
   let createElementVnode = function (output, source) {
 
     let hooks = { },
-      data = { instance, hooks, component: output.component },
+      data = { instance, hooks },
       sourceChildren = source.children,
       outputChildren = output.children
 
@@ -58,7 +58,7 @@ export function create(ast, context, instance) {
         let { name, value, keypath, bindTo } = node
 
         let attrs = data.attrs || (data.attrs = { })
-        attrs[ name ] = node
+        attrs[ name ] = value
 
         if (is.string(bindTo)) {
           addDirective(
@@ -89,6 +89,7 @@ export function create(ast, context, instance) {
             : snabbdom.createTextVnode(child)
         }
       ),
+      output.component,
       output.key
     )
 
