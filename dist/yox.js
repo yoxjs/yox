@@ -2926,20 +2926,6 @@ var Observer = function () {
           }
           emitter.fire(keypath, args, context);
 
-          if (watchKeypaths && !watchedMap[realpath]) {
-            watchedMap[realpath] = TRUE;
-            each(watchKeypaths, function (key) {
-              if (has$2(key, '*')) {
-                var _match = matchKeypath(realpath, key);
-                if (_match) {
-                  addDifference(key, realpath, getOldValue(realpath), _match);
-                }
-              } else if (startsWith(key, realpath)) {
-                addDifference(key, realpath, getOldValue(realpath));
-              }
-            });
-          }
-
           if (reversedKeypaths && !reversedMap[keypath]) {
             reversedMap[keypath] = TRUE;
             each(reversedKeypaths, function (key) {
@@ -2957,6 +2943,20 @@ var Observer = function () {
                 each(list, function (key) {
                   addDifference(key, key, getOldValue(key), UNDEFINED, TRUE);
                 });
+              }
+            });
+          }
+
+          if (watchKeypaths && !watchedMap[realpath]) {
+            watchedMap[realpath] = TRUE;
+            each(watchKeypaths, function (key) {
+              if (has$2(key, '*')) {
+                var _match = matchKeypath(realpath, key);
+                if (_match) {
+                  addDifference(key, realpath, getOldValue(realpath), _match);
+                }
+              } else if (startsWith(key, realpath)) {
+                addDifference(key, key, getOldValue(key));
               }
             });
           }
@@ -5919,7 +5919,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.38.5';
+Yox.version = '0.38.6';
 
 /**
  * 工具，便于扩展、插件使用

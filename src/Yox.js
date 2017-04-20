@@ -652,7 +652,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.38.5'
+Yox.version = '0.38.6'
 
 /**
  * 工具，便于扩展、插件使用
