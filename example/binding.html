@@ -237,6 +237,11 @@
                     }
                 ]
             },
+            watchers: {
+                '**': function () {
+                    console.log(arguments);
+                }
+            },
             filters: {
                 formatSelectedNames: function (selectedNames) {
                     return '[' + selectedNames.toString() + ']';

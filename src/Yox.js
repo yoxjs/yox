@@ -428,9 +428,9 @@ export default class Yox {
 
     nextTask.prepend(
       function () {
-        $observer.setComputedDeps(
+        $observer.setDeps(
           TEMPLATE_WATCHER_KEY,
-          object.keys(deps)
+          deps
         )
         execute($options[ isUpdate ? lifecycle.AFTER_UPDATE : lifecycle.AFTER_MOUNT ], instance)
       }
@@ -652,7 +652,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.38.4'
+Yox.version = '0.38.5'
 
 /**
  * 工具，便于扩展、插件使用

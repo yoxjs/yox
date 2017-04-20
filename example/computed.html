@@ -57,6 +57,9 @@
                 }
             },
             watchers: {
+              '**': function () {
+                  console.log('anything change', arguments);
+              },
               'list.*.checked': function () {
                   console.log('item checked change', arguments);
               },

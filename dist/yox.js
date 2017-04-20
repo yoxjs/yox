@@ -2637,14 +2637,15 @@ var Observer = function () {
     var instance = this;
 
     instance.data = data;
-    instance.cache = {};
     instance.emitter = new Emitter();
     instance.context = context || instance;
 
     // 谁依赖了谁
-    instance.computedDeps = {};
+    instance.deps = {};
     // 谁被谁依赖
-    instance.computedDepsReversed = {};
+    instance.reversedDeps = {};
+    // 缓存上一次访问的值
+    instance.valueCache = {};
 
     // 计算属性也是数据
     if (object(computed)) {
@@ -2656,13 +2657,8 @@ var Observer = function () {
       // 辅助获取计算属性的依赖
       instance.computedStack = [];
 
-      // 计算属性的缓存
-      instance.computedCache = {};
-
-      var computedCache = instance.computedCache,
-          computedStack = instance.computedStack,
-          computedGetters = instance.computedGetters,
-          computedSetters = instance.computedSetters;
+      var valueCache = instance.valueCache,
+          computedStack = instance.computedStack;
 
 
       each$1(computed, function (item, keypath) {
@@ -2692,14 +2688,14 @@ var Observer = function () {
         if (get$$1) {
 
           instance.watch(keypath, function () {
-            if (has$1(computedCache, keypath)) {
-              delete computedCache[keypath];
+            if (has$1(valueCache, keypath)) {
+              delete valueCache[keypath];
             }
           });
 
           var getter = function getter() {
-            if (cache && has$1(computedCache, keypath)) {
-              return computedCache[keypath];
+            if (cache && has$1(valueCache, keypath)) {
+              return valueCache[keypath];
             }
 
             if (!deps) {
@@ -2707,20 +2703,18 @@ var Observer = function () {
             }
 
             var result = execute(get$$1, instance.context);
-            if (cache) {
-              computedCache[keypath] = result;
-            }
+            valueCache[keypath] = result;
 
-            instance.setComputedDeps(keypath, deps || pop(computedStack));
+            instance.setDeps(keypath, deps || pop(computedStack));
 
             return result;
           };
 
-          getter.toString = computedGetters[keypath] = getter;
+          getter.toString = instance.computedGetters[keypath] = getter;
         }
 
         if (set$$1) {
-          computedSetters[keypath] = set$$1;
+          instance.computedSetters[keypath] = set$$1;
         }
       });
     }
@@ -2736,7 +2730,7 @@ var Observer = function () {
    * 当传了 context，会尝试向上寻找
    *
    * @param {string} keypath
-   * @param {string} context
+   * @param {?string} context
    * @return {?*}
    */
 
@@ -2748,6 +2742,7 @@ var Observer = function () {
       var instance = this;
 
       var data = instance.data,
+          valueCache = instance.valueCache,
           computedStack = instance.computedStack,
           computedGetters = instance.computedGetters;
 
@@ -2761,18 +2756,27 @@ var Observer = function () {
           }
         }
 
+        var result = void 0;
         if (computedGetters) {
           var _matchBestGetter = matchBestGetter(computedGetters, keypath),
-              value = _matchBestGetter.value,
+              getter = _matchBestGetter.getter,
               rest = _matchBestGetter.rest;
 
-          if (value) {
-            value = value();
-            return rest && !primitive(value) ? get$1(value, rest) : { value: value };
+          if (getter) {
+            getter = getter();
+            result = rest && !primitive(getter) ? get$1(getter, rest) : { value: getter };
           }
         }
 
-        return get$1(data, keypath);
+        if (!result) {
+          result = get$1(data, keypath);
+        }
+
+        if (result) {
+          valueCache[keypath] = result.value;
+        }
+
+        return result;
       };
 
       var suffixes = parse(keypath),
@@ -2827,27 +2831,49 @@ var Observer = function () {
     key: 'set',
     value: function set$$1(model) {
 
-      var instance = this,
-          differences = {};
+      var instance = this;
 
       var data = instance.data,
           cache = instance.cache,
           emitter = instance.emitter,
           context = instance.context,
-          computedDeps = instance.computedDeps,
-          computedDepsReversed = instance.computedDepsReversed,
+          deps = instance.deps,
+          reversedDeps = instance.reversedDeps,
+          valueCache = instance.valueCache,
           computedGetters = instance.computedGetters,
           computedSetters = instance.computedSetters,
           watchKeypaths = instance.watchKeypaths,
           reversedKeypaths = instance.reversedKeypaths;
 
 
-      var addDifference = function addDifference(key, data, extra) {
-        if (!differences[key]) {
-          if (extra) {
-            push(data, extra);
-          }
-          differences[key] = data;
+      var oldCache = {},
+          newCache = {};
+      var getOldValue = function getOldValue(keypath) {
+        if (!has$1(oldCache, keypath)) {
+          oldCache[keypath] = valueCache[keypath];
+        }
+        return oldCache[keypath];
+      };
+      var getNewValue = function getNewValue(keypath) {
+        if (!has$1(newCache, keypath)) {
+          newCache[keypath] = instance.get(keypath);
+        }
+        return newCache[keypath];
+      };
+
+      var differences = [],
+          differenceMap = {};
+      var addDifference = function addDifference(keypath, realpath, oldValue, match, force) {
+        var fullpath = keypath + CHAR_DASH + realpath;
+        if (!differenceMap[fullpath]) {
+          differenceMap[fullpath] = TRUE;
+          push(differences, {
+            keypath: keypath,
+            realpath: realpath,
+            oldValue: oldValue,
+            match: match,
+            force: force
+          });
         }
       };
 
@@ -2856,25 +2882,7 @@ var Observer = function () {
         // 格式化成内部处理的格式
         keypath = normalize(keypath);
 
-        //
-        // 如果 set 了 user
-        // 但是 watch 了 user.name
-        //
-        // 如果 set 了 user.name
-        // 但是 watch 了 *.name
-        //
-        if (watchKeypaths) {
-          each(watchKeypaths, function (key) {
-            if (has$2(key, '*')) {
-              var match = matchKeypath(keypath, key);
-              if (match) {
-                addDifference(keypath, [instance.get(keypath), keypath], match);
-              }
-            } else if (startsWith(key, keypath)) {
-              addDifference(key, [instance.get(key), key]);
-            }
-          });
-        }
+        addDifference(keypath, keypath, getOldValue(keypath));
 
         // 如果有计算属性，则优先处理它
         if (computedSetters) {
@@ -2884,13 +2892,13 @@ var Observer = function () {
             return;
           } else {
             var _matchBestGetter2 = matchBestGetter(computedGetters, keypath),
-                value = _matchBestGetter2.value,
+                getter = _matchBestGetter2.getter,
                 rest = _matchBestGetter2.rest;
 
-            if (value && rest) {
-              value = value();
-              if (!primitive(value)) {
-                set$1(value, rest, newValue);
+            if (getter && rest) {
+              getter = getter();
+              if (!primitive(getter)) {
+                set$1(getter, rest, newValue);
               }
               return;
             }
@@ -2901,27 +2909,53 @@ var Observer = function () {
         set$1(data, keypath, newValue);
       });
 
-      var changed = {};
-      var fireChange = function fireChange(keypath, args) {
-        if (!changed[keypath]) {
-          changed[keypath] = TRUE;
+      var watchedMap = {},
+          reversedMap = {};
+      var fireChange = function fireChange(_ref) {
+        var keypath = _ref.keypath,
+            realpath = _ref.realpath,
+            oldValue = _ref.oldValue,
+            match = _ref.match,
+            force = _ref.force;
+
+        var newValue = getNewValue(realpath);
+        if (force || oldValue !== newValue) {
+          var args = [newValue, oldValue, keypath];
+          if (match) {
+            push(args, match);
+          }
           emitter.fire(keypath, args, context);
 
-          if (reversedKeypaths) {
+          if (watchKeypaths && !watchedMap[realpath]) {
+            watchedMap[realpath] = TRUE;
+            each(watchKeypaths, function (key) {
+              if (has$2(key, '*')) {
+                var _match = matchKeypath(realpath, key);
+                if (_match) {
+                  addDifference(key, realpath, getOldValue(realpath), _match);
+                }
+              } else if (startsWith(key, realpath)) {
+                addDifference(key, realpath, getOldValue(realpath));
+              }
+            });
+          }
+
+          if (reversedKeypaths && !reversedMap[keypath]) {
+            reversedMap[keypath] = TRUE;
             each(reversedKeypaths, function (key) {
               var list = void 0,
                   match = void 0;
               if (key === keypath) {
-                list = computedDepsReversed[key];
+                list = reversedDeps[key];
               } else if (has$2(key, '*')) {
                 match = matchKeypath(keypath, key);
                 if (match) {
-                  list = computedDepsReversed[key];
+                  list = reversedDeps[key];
                 }
               }
               if (list) {
                 each(list, function (key) {
-                  fireChange(key, [instance.get(key), UNDEFINED, key]);
+                  addDifference(key, key, getOldValue(key), UNDEFINED, TRUE);
                 });
               }
             });
@@ -2929,44 +2963,42 @@ var Observer = function () {
         }
       };
 
-      each$1(differences, function (difference, keypath) {
-        var newValue = instance.get(keypath);
-        if (newValue !== difference[0]) {
-          difference.unshift(newValue);
-          fireChange(keypath, difference);
-        }
-      });
+      for (var i = 0; i < differences.length; i++) {
+        fireChange(differences[i]);
+      }
     }
   }, {
-    key: 'setComputedDeps',
-    value: function setComputedDeps(keypath, deps) {
+    key: 'setDeps',
+    value: function setDeps(keypath, newDeps) {
 
       var instance = this;
 
-      var computedDeps = instance.computedDeps,
-          computedDepsReversed = instance.computedDepsReversed;
+      var deps = instance.deps,
+          reversedDeps = instance.reversedDeps,
+          valueCache = instance.valueCache;
 
 
-      if (deps !== computedDeps[keypath]) {
+      if (newDeps !== deps[keypath]) {
 
-        computedDeps[keypath] = deps;
+        if (object(newDeps)) {
+          extend(valueCache, newDeps);
+          newDeps = keys(newDeps);
+        }
+
+        deps[keypath] = newDeps;
         updateWatchKeypaths(instance);
 
         // 全量更新
-        computedDepsReversed = instance.computedDepsReversed = {};
+        reversedDeps = {};
 
-        var addDep = function addDep(dep, keypath) {
-          var list = computedDepsReversed[dep] || (computedDepsReversed[dep] = []);
-          push(list, keypath);
-        };
-
-        each$1(computedDeps, function (deps, key) {
+        each$1(deps, function (deps, key) {
           each(deps, function (dep) {
-            addDep(dep, key);
+            push(reversedDeps[dep] || (reversedDeps[dep] = []), key);
           });
         });
 
-        instance.reversedKeypaths = keys(computedDepsReversed);
+        instance.reversedDeps = reversedDeps;
+        instance.reversedKeypaths = keys(reversedDeps);
       }
     }
 
@@ -3018,16 +3050,14 @@ extend(Observer.prototype, {
 });
 
 function updateWatchKeypaths(instance) {
-  var emitter = instance.emitter,
-      computedDeps = instance.computedDeps;
+  var deps = instance.deps,
+      emitter = instance.emitter;
 
 
   var watchKeypaths = {};
 
   var addKeypath = function addKeypath(keypath) {
-    if (!watchKeypaths[keypath]) {
-      watchKeypaths[keypath] = TRUE;
-    }
+    watchKeypaths[keypath] = TRUE;
   };
 
   // 1. 直接通过 watch 注册的
@@ -3036,7 +3066,7 @@ function updateWatchKeypaths(instance) {
   });
 
   // 2. 计算属性的依赖属于间接 watch
-  each$1(computedDeps, function (deps) {
+  each$1(deps, function (deps) {
     each(deps, addKeypath);
   });
 
@@ -3108,28 +3138,20 @@ function matchKeypath(keypath, pattern) {
 /**
  * 从 getter 对象的所有 key 中，选择和 keypath 最匹配的那一个
  *
- * @param {Object} getter
+ * @param {Object} getters
  * @param {string} keypath
  * @return {Object}
  */
-function matchBestGetter(getter, keypath) {
+function matchBestGetter(getters, keypath) {
 
-  var result = matchFirst(sort(getter, TRUE), keypath);
+  var result = matchFirst(sort(getters, TRUE), keypath);
 
   var matched = result[0],
-      rest = result[1],
-      value = void 0;
-  if (matched) {
-    value = getter[matched];
-  }
-
-  if (rest && startsWith(rest, SEPARATOR_KEY)) {
-    rest = slice(rest, 1);
-  }
+      rest = result[1];
 
   return {
-    value: value,
-    rest: rest
+    getter: matched ? getters[matched] : NULL,
+    rest: rest && startsWith(rest, SEPARATOR_KEY) ? slice(rest, 1) : rest
   };
 }
 
@@ -5669,7 +5691,7 @@ var Yox = function () {
       }
 
       prepend(function () {
-        $observer.setComputedDeps(TEMPLATE_WATCHER_KEY, keys(deps));
+        $observer.setDeps(TEMPLATE_WATCHER_KEY, deps);
         execute($options[isUpdate ? AFTER_UPDATE : AFTER_MOUNT], instance);
       });
     }
@@ -5897,7 +5919,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.38.4';
+Yox.version = '0.38.5';
 
 /**
  * 工具，便于扩展、插件使用
