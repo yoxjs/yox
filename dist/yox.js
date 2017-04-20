@@ -1857,88 +1857,88 @@ var DIRECTIVE_EVENT = 'event';
 var KEYWORD_UNIQUE = 'key';
 
 /**
- * if 节点
- *
- * @type {number}
- */
-var IF$1 = 1;
-
-/**
- * else if 节点
- *
- * @type {number}
- */
-var ELSE_IF$1 = 2;
-
-/**
- * else 节点
- *
- * @type {number}
- */
-var ELSE$1 = 3;
-
-/**
- * each 节点
- *
- * @type {number}
- */
-var EACH$1 = 4;
-
-/**
- * partial 节点
- *
- * @type {number}
- */
-var PARTIAL$1 = 5;
-
-/**
- * import 节点
- *
- * @type {number}
- */
-var IMPORT$1 = 6;
-
-/**
- * 表达式 节点
- *
- * @type {number}
- */
-var EXPRESSION = 7;
-
-/**
- * 延展操作 节点
- *
- * @type {number}
- */
-var SPREAD$1 = 8;
-
-/**
- * 指令 节点
- *
- * @type {number}
- */
-var DIRECTIVE = 9;
-
-/**
  * 元素 节点
  *
  * @type {number}
  */
-var ELEMENT = 10;
+var ELEMENT = 1;
 
 /**
  * 属性 节点
  *
  * @type {number}
  */
-var ATTRIBUTE = 11;
+var ATTRIBUTE = 2;
 
 /**
  * 文本 节点
  *
  * @type {number}
  */
-var TEXT = 12;
+var TEXT = 3;
+
+/**
+ * 指令 节点
+ *
+ * @type {number}
+ */
+var DIRECTIVE = 4;
+
+/**
+ * if 节点
+ *
+ * @type {number}
+ */
+var IF$1 = 5;
+
+/**
+ * else if 节点
+ *
+ * @type {number}
+ */
+var ELSE_IF$1 = 6;
+
+/**
+ * else 节点
+ *
+ * @type {number}
+ */
+var ELSE$1 = 7;
+
+/**
+ * each 节点
+ *
+ * @type {number}
+ */
+var EACH$1 = 8;
+
+/**
+ * partial 节点
+ *
+ * @type {number}
+ */
+var PARTIAL$1 = 9;
+
+/**
+ * import 节点
+ *
+ * @type {number}
+ */
+var IMPORT$1 = 10;
+
+/**
+ * 表达式 节点
+ *
+ * @type {number}
+ */
+var EXPRESSION = 11;
+
+/**
+ * 延展操作 节点
+ *
+ * @type {number}
+ */
+var SPREAD$1 = 12;
 
 // if 带条件的
 var ifTypes = {};
@@ -1950,6 +1950,8 @@ var htmlTypes = {};
 var attrTypes = {};
 // 叶子节点类型
 var leafTypes = {};
+// 支持绑定的表达式
+var bindableTypes = {};
 // 内置指令，无需加前缀
 var builtInDirectives = {};
 // 名称 -> 类型的映射
@@ -1957,7 +1959,7 @@ var name2Type = {};
 // 类型 -> 名称的映射
 var type2Name = {};
 
-ifTypes[IF$1] = ifTypes[ELSE_IF$1] = elseTypes[ELSE_IF$1] = elseTypes[ELSE$1] = htmlTypes[ELEMENT] = htmlTypes[ATTRIBUTE] = htmlTypes[DIRECTIVE] = attrTypes[ATTRIBUTE] = attrTypes[DIRECTIVE] = leafTypes[TEXT] = leafTypes[IMPORT$1] = leafTypes[SPREAD$1] = leafTypes[EXPRESSION] = builtInDirectives[DIRECTIVE_REF] = builtInDirectives[DIRECTIVE_LAZY] = builtInDirectives[DIRECTIVE_MODEL] = builtInDirectives[KEYWORD_UNIQUE] = TRUE;
+ifTypes[IF$1] = ifTypes[ELSE_IF$1] = elseTypes[ELSE_IF$1] = elseTypes[ELSE$1] = htmlTypes[ELEMENT] = htmlTypes[ATTRIBUTE] = htmlTypes[DIRECTIVE] = attrTypes[ATTRIBUTE] = attrTypes[DIRECTIVE] = leafTypes[TEXT] = leafTypes[IMPORT$1] = leafTypes[SPREAD$1] = leafTypes[EXPRESSION] = bindableTypes[MEMBER] = bindableTypes[IDENTIFIER] = builtInDirectives[DIRECTIVE_REF] = builtInDirectives[DIRECTIVE_LAZY] = builtInDirectives[DIRECTIVE_MODEL] = builtInDirectives[KEYWORD_UNIQUE] = TRUE;
 
 name2Type['if'] = IF$1;
 name2Type['each'] = EACH$1;
@@ -2144,6 +2146,9 @@ var Expression = function (_Node) {
 
     _this.expr = expr;
     _this.safe = safe;
+    if (safe && bindableTypes[expr.type]) {
+      _this.bindable = TRUE;
+    }
     return _this;
   }
 
@@ -2637,6 +2642,7 @@ var Observer = function () {
     var instance = this;
 
     instance.data = data;
+    instance.cache = {};
     instance.emitter = new Emitter();
     instance.context = context || instance;
 
@@ -2644,8 +2650,6 @@ var Observer = function () {
     instance.deps = {};
     // 谁被谁依赖
     instance.reversedDeps = {};
-    // 缓存上一次访问的值
-    instance.valueCache = {};
 
     // 计算属性也是数据
     if (object(computed)) {
@@ -2657,7 +2661,7 @@ var Observer = function () {
       // 辅助获取计算属性的依赖
       instance.computedStack = [];
 
-      var valueCache = instance.valueCache,
+      var cache = instance.cache,
           computedStack = instance.computedStack;
 
 
@@ -2666,13 +2670,13 @@ var Observer = function () {
         var get$$1 = void 0,
             set$$1 = void 0,
             deps = void 0,
-            cache = TRUE;
+            cacheable = TRUE;
 
         if (func(item)) {
           get$$1 = item;
         } else if (object(item)) {
           if (boolean(item.cache)) {
-            cache = item.cache;
+            cacheable = item.cache;
           }
           if (array(item.deps)) {
             deps = item.deps;
@@ -2688,14 +2692,14 @@ var Observer = function () {
         if (get$$1) {
 
           instance.watch(keypath, function () {
-            if (has$1(valueCache, keypath)) {
-              delete valueCache[keypath];
+            if (has$1(cache, keypath)) {
+              delete cache[keypath];
             }
           });
 
           var getter = function getter() {
-            if (cache && has$1(valueCache, keypath)) {
-              return valueCache[keypath];
+            if (cacheable && has$1(cache, keypath)) {
+              return cache[keypath];
             }
 
             if (!deps) {
@@ -2703,7 +2707,7 @@ var Observer = function () {
             }
 
             var result = execute(get$$1, instance.context);
-            valueCache[keypath] = result;
+            cache[keypath] = result;
 
             instance.setDeps(keypath, deps || pop(computedStack));
 
@@ -2742,7 +2746,7 @@ var Observer = function () {
       var instance = this;
 
       var data = instance.data,
-          valueCache = instance.valueCache,
+          cache = instance.cache,
           computedStack = instance.computedStack,
           computedGetters = instance.computedGetters;
 
@@ -2773,7 +2777,7 @@ var Observer = function () {
         }
 
         if (result) {
-          valueCache[keypath] = result.value;
+          cache[keypath] = result.value;
         }
 
         return result;
@@ -2839,7 +2843,6 @@ var Observer = function () {
           context = instance.context,
           deps = instance.deps,
           reversedDeps = instance.reversedDeps,
-          valueCache = instance.valueCache,
           computedGetters = instance.computedGetters,
           computedSetters = instance.computedSetters,
           watchKeypaths = instance.watchKeypaths,
@@ -2850,7 +2853,7 @@ var Observer = function () {
           newCache = {};
       var getOldValue = function getOldValue(keypath) {
         if (!has$1(oldCache, keypath)) {
-          oldCache[keypath] = valueCache[keypath];
+          oldCache[keypath] = cache[keypath];
         }
         return oldCache[keypath];
       };
@@ -2877,12 +2880,60 @@ var Observer = function () {
         }
       };
 
+      var watchedMap = {};
+      var addWatchKeypath = function addWatchKeypath(keypath) {
+        // 最后触发主动监听的 keypath，相当于捡漏
+        // 比如修改了 user 但是 watch 了 user.name
+        // 这时需要确保 user.name 也能触发变化
+        if (watchKeypaths && !watchedMap[keypath]) {
+          watchedMap[keypath] = TRUE;
+          each(watchKeypaths, function (key) {
+            if (isFuzzyKeypath(key)) {
+              var match = matchKeypath(keypath, key);
+              if (match) {
+                addDifference(key, keypath, getOldValue(keypath), match);
+              }
+            } else if (startsWith(key, keypath)) {
+              addDifference(key, key, getOldValue(key));
+            }
+            // 为子组件传递数据，比如 user="{{user}}"
+            // 修改了 user.name 并不会引起子组件更新
+            else if (startsWith(keypath, key)) {
+                addDifference(key, key, getOldValue(key), UNDEFINED, TRUE);
+              }
+          });
+        }
+      };
+
+      var reversedMap = {};
+      var addReversedKeypath = function addReversedKeypath(keypath) {
+        if (reversedKeypaths && !reversedMap[keypath]) {
+          reversedMap[keypath] = TRUE;
+          each(reversedKeypaths, function (key) {
+            var list = void 0,
+                match = void 0;
+            if (key === keypath) {
+              list = reversedDeps[key];
+            } else if (isFuzzyKeypath(key)) {
+              match = matchKeypath(keypath, key);
+              if (match) {
+                list = reversedDeps[key];
+              }
+            }
+            if (list) {
+              each(list, function (key) {
+                addDifference(key, key, getOldValue(key), UNDEFINED, TRUE);
+              });
+            }
+          });
+        }
+      };
+
       each$1(model, function (newValue, keypath) {
 
-        // 格式化成内部处理的格式
         keypath = normalize(keypath);
 
-        addDifference(keypath, keypath, getOldValue(keypath));
+        addWatchKeypath(keypath);
 
         // 如果有计算属性，则优先处理它
         if (computedSetters) {
@@ -2909,8 +2960,6 @@ var Observer = function () {
         set$1(data, keypath, newValue);
       });
 
-      var watchedMap = {},
-          reversedMap = {};
       var fireChange = function fireChange(_ref) {
         var keypath = _ref.keypath,
             realpath = _ref.realpath,
@@ -2925,41 +2974,8 @@ var Observer = function () {
             push(args, match);
           }
           emitter.fire(keypath, args, context);
-
-          if (reversedKeypaths && !reversedMap[keypath]) {
-            reversedMap[keypath] = TRUE;
-            each(reversedKeypaths, function (key) {
-              var list = void 0,
-                  match = void 0;
-              if (key === keypath) {
-                list = reversedDeps[key];
-              } else if (has$2(key, '*')) {
-                match = matchKeypath(keypath, key);
-                if (match) {
-                  list = reversedDeps[key];
-                }
-              }
-              if (list) {
-                each(list, function (key) {
-                  addDifference(key, key, getOldValue(key), UNDEFINED, TRUE);
-                });
-              }
-            });
-          }
-
-          if (watchKeypaths && !watchedMap[realpath]) {
-            watchedMap[realpath] = TRUE;
-            each(watchKeypaths, function (key) {
-              if (has$2(key, '*')) {
-                var _match = matchKeypath(realpath, key);
-                if (_match) {
-                  addDifference(key, realpath, getOldValue(realpath), _match);
-                }
-              } else if (startsWith(key, realpath)) {
-                addDifference(key, key, getOldValue(key));
-              }
-            });
-          }
+          addReversedKeypath(keypath);
+          addWatchKeypath(realpath);
         }
       };
 
@@ -2974,16 +2990,10 @@ var Observer = function () {
       var instance = this;
 
       var deps = instance.deps,
-          reversedDeps = instance.reversedDeps,
-          valueCache = instance.valueCache;
+          reversedDeps = instance.reversedDeps;
 
 
       if (newDeps !== deps[keypath]) {
-
-        if (object(newDeps)) {
-          extend(valueCache, newDeps);
-          newDeps = keys(newDeps);
-        }
 
         deps[keypath] = newDeps;
         updateWatchKeypaths(instance);
@@ -3000,6 +3010,11 @@ var Observer = function () {
         instance.reversedDeps = reversedDeps;
         instance.reversedKeypaths = keys(reversedDeps);
       }
+    }
+  }, {
+    key: 'setCache',
+    value: function setCache(keypath, value) {
+      this.cache[keypath] = value;
     }
 
     /**
@@ -3093,7 +3108,8 @@ function createWatch(action) {
     var instance = this;
 
     var emitter = instance.emitter,
-        context = instance.context;
+        context = instance.context,
+        cache = instance.cache;
 
 
     each$1(watchers, function (value, keypath) {
@@ -3108,8 +3124,12 @@ function createWatch(action) {
       emitter[action](keypath, watcher);
       updateWatchKeypaths(instance);
 
-      if (sync) {
-        execute(watcher, context, [instance.get(keypath), UNDEFINED, keypath]);
+      if (!isFuzzyKeypath(keypath)) {
+        // get 会缓存一下当前值，便于下次对比
+        value = instance.get(keypath);
+        if (sync) {
+          execute(watcher, context, [value, UNDEFINED, keypath]);
+        }
       }
     });
   };
@@ -3133,6 +3153,16 @@ function matchKeypath(keypath, pattern) {
   if (match) {
     return toArray$1(match).slice(1);
   }
+}
+
+/**
+ * 是否模糊匹配
+ *
+ * @param {string} keypath
+ * @return {boolean}
+ */
+function isFuzzyKeypath(keypath) {
+  return has$2(keypath, '*');
 }
 
 /**
@@ -4077,7 +4107,7 @@ function updateDirectives(oldVnode, vnode) {
   each$1(newDirectives, function (directive, key) {
     if (has$1(oldDirectives, key)) {
       var oldDirective = oldDirectives[key];
-      if (oldDirective.value !== directive.value) {
+      if (oldDirective.value !== directive.value || oldDirective.context !== directive.context) {
         unbindDirective(oldVnode, key);
         bindDirective(vnode, key);
       }
@@ -4187,104 +4217,92 @@ var component = {
  *
  * @param {Node} node
  * @param {Context} context
+ * @param {Function} setKeypath
+ * @param {Function} addDep
  * @return {*}
  */
-function execute$1(node, context) {
+function execute$1(node, context, setKeypath, addDep) {
 
-  var deps = {},
-      value = void 0,
-      keypath = void 0,
-      result = void 0;
+  var executor = {};
 
-  switch (node.type) {
-    case ARRAY:
-      value = [];
-      each(node.elements, function (node) {
-        result = execute$1(node, context);
-        push(value, result.value);
-        extend(deps, result.deps);
-      });
-      break;
+  executor[ARRAY] = function (node) {
+    setKeypath(UNDEFINED);
+    var value = [];
+    each(node.elements, function (node) {
+      push(value, executor[node.type](node));
+    });
+    return value;
+  };
 
-    case BINARY:
-      var left = node.left,
-          right = node.right;
+  executor[UNARY] = function (node) {
+    setKeypath(UNDEFINED);
+    return Unary[node.operator](executor[node.arg.type](node.arg));
+  };
 
-      left = execute$1(left, context);
-      right = execute$1(right, context);
-      value = Binary[node.operator](left.value, right.value);
-      extend(deps, left.deps, right.deps);
-      break;
+  executor[BINARY] = function (node) {
+    setKeypath(UNDEFINED);
+    var left = node.left,
+        right = node.right;
 
-    case CALL:
-      result = execute$1(node.callee, context);
-      deps = result.deps;
-      value = execute(result.value, NULL, node.args.map(function (node) {
-        var result = execute$1(node, context);
-        extend(deps, result.deps);
-        return result.value;
-      }));
-      break;
+    return Binary[node.operator](executor[left.type](left), executor[right.type](right));
+  };
 
-    case TERNARY:
-      var test = node.test,
-          consequent = node.consequent,
-          alternate = node.alternate;
+  executor[TERNARY] = function (node) {
+    setKeypath(UNDEFINED);
+    var test = node.test,
+        consequent = node.consequent,
+        alternate = node.alternate;
 
-      test = execute$1(test, context);
-      if (test.value) {
-        consequent = execute$1(consequent, context);
-        value = consequent.value;
-        extend(deps, test.deps, consequent.deps);
-      } else {
-        alternate = execute$1(alternate, context);
-        value = alternate.value;
-        extend(deps, test.deps, alternate.deps);
-      }
-      break;
+    if (executor[test.type](test)) {
+      return executor[consequent.type](consequent);
+    } else {
+      return executor[alternate.type](alternate);
+    }
+  };
 
-    case IDENTIFIER:
-      keypath = node.name;
-      result = context.get(keypath);
-      value = result.value;
-      deps[result.keypath] = value;
-      break;
+  executor[CALL] = function (node) {
+    setKeypath(UNDEFINED);
+    return execute(executor[node.callee.type](node.callee), NULL, node.args.map(function (node) {
+      return executor[node.type](node);
+    }));
+  };
 
-    case LITERAL:
-      value = node.value;
-      break;
+  executor[LITERAL] = function (node) {
+    setKeypath(UNDEFINED);
+    return node.value;
+  };
 
-    case MEMBER:
-      var keys$$1 = [];
-      each(Member.flatten(node), function (node, index) {
-        var type = node.type;
+  executor[IDENTIFIER] = function (node) {
+    var keypath = node.name;
+    setKeypath(keypath);
+    var result = context.get(keypath);
+    addDep(result.keypath, result.value);
+    return result.value;
+  };
 
-        if (type !== LITERAL) {
-          if (index > 0) {
-            var _result = execute$1(node, context);
-            push(keys$$1, _result.value);
-            extend(deps, _result.deps);
-          } else if (type === IDENTIFIER) {
-            push(keys$$1, node.name);
-          }
-        } else {
-          push(keys$$1, node.value);
+  executor[MEMBER] = function (node) {
+    var keypaths = [];
+    each(Member.flatten(node), function (node, index) {
+      var type = node.type;
+
+      if (type !== LITERAL) {
+        if (index > 0) {
+          push(keypaths, executor[type](node));
+        } else if (type === IDENTIFIER) {
+          push(keypaths, node.name);
         }
-      });
-      keypath = stringify(keys$$1);
-      result = context.get(keypath);
-      value = result.value;
-      deps[result.keypath] = value;
-      break;
+      } else {
+        push(keypaths, node.value);
+      }
+    });
+    var keypath = stringify(keypaths);
+    setKeypath(keypath);
+    var result = context.get(keypath);
+    addDep(result.keypath, result.value);
+    return result.value;
+  };
 
-    case UNARY:
-      result = execute$1(node.arg, context);
-      value = Unary[node.operator](result.value);
-      deps = result.deps;
-      break;
-  }
-
-  return { value: value, deps: deps, keypath: keypath };
+  return executor[node.type](node);
 }
 
 var Context = function () {
@@ -4325,7 +4343,7 @@ var Context = function () {
         if (has$1(instance.cache, keypath)) {
           delete instance.cache[keypath];
         }
-        set$1(instance.data, keypath, value);
+        instance.data[keypath] = value;
       }
     }
   }, {
@@ -4467,11 +4485,12 @@ function mergeNodes(outputNodes, sourceNodes) {
  * @param {Object} ast 编译出来的抽象语法树
  * @param {Function} createComment 创建注释节点
  * @param {Function} createElement 创建元素节点
- * @param {Function} importTemplate 导入子模板，如果是纯模板，可不传
+ * @param {?Function} importTemplate 导入子模板，如果是纯模板，可不传
+ * @param {?Function} addDep 渲染模板过程中使用的数据依赖，如果是纯模板，可不传
  * @param {Object} data 渲染模板的数据，如果渲染纯模板，可不传
- * @return {Object} { nodes: x, deps: { } }
+ * @return {Array}
  */
-function render(ast, createComment, createElement, importTemplate, data) {
+function render(ast, createComment, createElement, importTemplate, addDep, data) {
 
   var keypath = void 0,
       keypathList = [],
@@ -4489,8 +4508,8 @@ function render(ast, createComment, createElement, importTemplate, data) {
 
   var context = new Context(data, keypath),
       nodeStack = [],
-      nodes = [],
-      deps = {};
+      nodeList = [],
+      binding = FALSE;
 
   var pushStack = function pushStack(node) {
     if (array(node.context)) {
@@ -4509,7 +4528,6 @@ function render(ast, createComment, createElement, importTemplate, data) {
     push(nodeStack, {
       node: node,
       index: -1,
-      deps: {},
       parent: current
     });
     current = last(nodeStack);
@@ -4531,9 +4549,6 @@ function render(ast, createComment, createElement, importTemplate, data) {
     }
     if (sibling) {
       sibling = NULL;
-    }
-    if (!current.binding) {
-      extend(current.parent ? current.parent.deps : deps, current.deps);
     }
     current = current.parent;
     pop(nodeStack);
@@ -4557,7 +4572,7 @@ function render(ast, createComment, createElement, importTemplate, data) {
     if (parent) {
       collection = parent.children || (parent.children = makeNodes([]));
     } else {
-      collection = nodes;
+      collection = nodeList;
     }
     if (isNodes(value)) {
       push(collection, value);
@@ -4567,10 +4582,15 @@ function render(ast, createComment, createElement, importTemplate, data) {
   };
 
   var executeExpr = function executeExpr(expr) {
-    var result = execute$1(expr, context);
-    expr.keypath = result.keypath;
-    extend(current.deps, result.deps);
-    return result.value;
+    return execute$1(expr, context, function (keypath) {
+      if (binding === TRUE) {
+        binding = keypath;
+      }
+    }, function (key, value) {
+      if (binding === FALSE) {
+        addDep(key, value);
+      }
+    });
   };
 
   var filterElse = function filterElse(node) {
@@ -4664,15 +4684,23 @@ function render(ast, createComment, createElement, importTemplate, data) {
     return FALSE;
   };
 
-  var createAttribute = function createAttribute(name, value, bindTo) {
+  enter[ATTRIBUTE] = function (node) {
+    var children = node.children;
+
+    if (children && children.length === 1) {
+      binding = children[0].bindable || FALSE;
+    }
+  };
+
+  var createAttribute = function createAttribute(name, value, binding) {
     var attribute = {
       name: name,
       value: value,
       keypath: keypath,
       type: ATTRIBUTE
     };
-    if (string(bindTo)) {
-      attribute.bindTo = bindTo;
+    if (string(binding)) {
+      attribute.binding = binding;
     }
     return attribute;
   };
@@ -4686,31 +4714,17 @@ function render(ast, createComment, createElement, importTemplate, data) {
   };
 
   leave[ATTRIBUTE] = function (node) {
-    var name = node.name,
-        children = node.children;
-
-    var value = mergeNodes(current.children, children),
-        bindTo = void 0;
-    if (children && children.length === 1) {
-      var _children$ = children[0],
-          type = _children$.type,
-          expr = _children$.expr,
-          safe = _children$.safe;
-
-      if (safe && type === EXPRESSION && string(expr.keypath)) {
-        bindTo = expr.keypath;
-        current.binding = TRUE;
-      }
-    }
-    return createAttribute(name, value, bindTo);
+    node = createAttribute(node.name, mergeNodes(current.children, node.children), binding);
+    binding = FALSE;
+    return node;
   };
 
   leave[DIRECTIVE] = function (node) {
-    var name = node.name,
-        modifier = node.modifier,
-        children = node.children;
+    var _node = node,
+        name = _node.name;
 
-    var value = mergeNodes(current.children, children);
+    var value = mergeNodes(current.children, node.children);
+    var result = context.get(keypath);
 
     if (name === KEYWORD_UNIQUE) {
       if (value != NULL) {
@@ -4719,21 +4733,21 @@ function render(ast, createComment, createElement, importTemplate, data) {
           currentCache = ast.cache = {};
         }
         cache = prevCache && prevCache[value];
-        if (cache) {
+        if (cache && cache.value === result.value) {
           currentCache[value] = cache;
           // 回退到元素层级
           while (current.node.type !== ELEMENT) {
             popStack();
           }
-          extend(current.deps, cache.deps);
+          addDep(result.keypath, result.value);
           return cache.result;
         } else {
           // 缓存挂在元素上
-          var parent = void 0;
-          while (parent = current.parent) {
-            if (parent.node.type === ELEMENT) {
-              parent.cache = {
-                key: value
+          while (node = current.parent) {
+            if (node.node.type === ELEMENT) {
+              node.cache = {
+                key: value,
+                value: result.value
               };
               break;
             }
@@ -4744,10 +4758,11 @@ function render(ast, createComment, createElement, importTemplate, data) {
     }
 
     return {
-      keypath: keypath,
       name: name,
       value: value,
-      modifier: modifier,
+      keypath: keypath,
+      modifier: node.modifier,
+      context: result.value,
       type: DIRECTIVE
     };
   };
@@ -4758,19 +4773,19 @@ function render(ast, createComment, createElement, importTemplate, data) {
   };
 
   leave[SPREAD$1] = function (node) {
-    var expr = node.expr,
-        value = executeExpr(expr);
+    binding = TRUE;
+    var value = executeExpr(node.expr),
+        list = makeNodes([]);
     if (object(value)) {
-      var _keypath = expr.keypath,
-          hasKeypath = string(_keypath),
-          list = makeNodes([]);
+      var hasBinding = string(binding);
       each$1(value, function (value, name) {
-        push(list, createAttribute(name, value, hasKeypath ? join(_keypath, name) : UNDEFINED));
+        push(list, createAttribute(name, value, hasBinding ? join(binding, name) : UNDEFINED));
       });
-      current.binding = hasKeypath;
-      return list;
+    } else {
+      fatal('Spread "' + stringify$1(node.expr) + '" must be an object.');
     }
-    fatal('Spread "' + stringify$1(expr) + '" must be an object.');
+    binding = FALSE;
+    return list;
   };
 
   leave[ELEMENT] = function (node) {
@@ -4876,7 +4891,6 @@ function render(ast, createComment, createElement, importTemplate, data) {
       cache = current.cache;
       if (cache) {
         cache.result = value;
-        cache.deps = current.deps;
         currentCache[cache.key] = cache;
       }
     }
@@ -4884,12 +4898,12 @@ function render(ast, createComment, createElement, importTemplate, data) {
     popStack();
   }
 
-  return { nodes: nodes, deps: deps };
+  return nodeList;
 }
 
 var patch = init([component, attrs, props, directives], api);
 
-function create(ast, context, instance) {
+function create(ast, context, instance, addDep) {
 
   var createElementVnode$$1 = function createElementVnode$$1(output, source) {
 
@@ -4917,18 +4931,18 @@ function create(ast, context, instance) {
       var name = node.name,
           value = node.value,
           keypath = node.keypath,
-          bindTo = node.bindTo;
+          binding = node.binding;
 
 
       var attrs$$1 = data.attrs || (data.attrs = {});
       attrs$$1[name] = value;
 
-      if (string(bindTo)) {
+      if (string(binding)) {
         addDirective({
           keypath: keypath,
           name: DIRECTIVE_MODEL,
           modifier: name,
-          value: bindTo,
+          value: binding,
           oneway: TRUE
         });
       }
@@ -4946,7 +4960,7 @@ function create(ast, context, instance) {
     return string(partial) ? compile(partial) : partial;
   };
 
-  return render(ast, createCommentVnode, createElementVnode$$1, importTemplate, context);
+  return render(ast, createCommentVnode, createElementVnode$$1, importTemplate, addDep, context);
 }
 
 /**
@@ -5675,10 +5689,17 @@ var Yox = function () {
       extend(context, $observer.data, $observer.computedGetters);
 
       // 新的虚拟节点和依赖关系
+      var deps = [],
+          nodes = create(instance.$template, context, instance, function (key, value) {
+        push(deps, key);
+        $observer.setCache(key, value);
+      });
 
-      var _vdom$create = create(instance.$template, context, instance),
-          nodes = _vdom$create.nodes,
-          deps = _vdom$create.deps;
+      $observer.setDeps(TEMPLATE_WATCHER_KEY, deps);
+
+      prepend(function () {
+        execute($options[isUpdate ? AFTER_UPDATE : AFTER_MOUNT], instance);
+      });
 
       if (isUpdate) {
         prepend(function () {
@@ -5689,11 +5710,6 @@ var Yox = function () {
         instance.$el = $node.el;
         instance.$node = $node;
       }
-
-      prepend(function () {
-        $observer.setDeps(TEMPLATE_WATCHER_KEY, deps);
-        execute($options[isUpdate ? AFTER_UPDATE : AFTER_MOUNT], instance);
-      });
     }
 
     /**
@@ -5919,7 +5935,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.38.6';
+Yox.version = '0.38.7';
 
 /**
  * 工具，便于扩展、插件使用

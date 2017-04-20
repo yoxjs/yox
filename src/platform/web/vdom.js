@@ -24,7 +24,7 @@ import api from './api'
 
 export const patch = snabbdom.init([ component, attrs, props, directives ], api)
 
-export function create(ast, context, instance) {
+export function create(ast, context, instance, addDep) {
 
   let createElementVnode = function (output, source) {
 
@@ -55,18 +55,18 @@ export function create(ast, context, instance) {
     array.each(
       output.attributes,
       function (node) {
-        let { name, value, keypath, bindTo } = node
+        let { name, value, keypath, binding } = node
 
         let attrs = data.attrs || (data.attrs = { })
         attrs[ name ] = value
 
-        if (is.string(bindTo)) {
+        if (is.string(binding)) {
           addDirective(
             {
               keypath,
               name: templateSyntax.DIRECTIVE_MODEL,
               modifier: name,
-              value: bindTo,
+              value: binding,
               oneway: env.TRUE,
             }
           )
@@ -102,6 +102,6 @@ export function create(ast, context, instance) {
       : partial
   }
 
-  return renderTemplate(ast, snabbdom.createCommentVnode, createElementVnode, importTemplate, context)
+  return renderTemplate(ast, snabbdom.createCommentVnode, createElementVnode, importTemplate, addDep, context)
 
 }
