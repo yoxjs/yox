@@ -3125,11 +3125,13 @@ function createWatch(action) {
       updateWatchKeypaths(instance);
 
       if (!isFuzzyKeypath(keypath)) {
-        // get 会缓存一下当前值，便于下次对比
-        value = instance.get(keypath);
-        if (sync) {
-          execute(watcher, context, [value, UNDEFINED, keypath]);
-        }
+        append(function () {
+          // get 会缓存一下当前值，便于下次对比
+          value = instance.get(keypath);
+          if (sync) {
+            execute(watcher, context, [value, UNDEFINED, keypath]);
+          }
+        });
       }
     });
   };
@@ -4508,8 +4510,7 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
 
   var context = new Context(data, keypath),
       nodeStack = [],
-      nodeList = [],
-      binding = FALSE;
+      nodeList = [];
 
   var pushStack = function pushStack(node) {
     if (array(node.context)) {
@@ -4581,13 +4582,16 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
     }
   };
 
+  var expressionKeypath = void 0,
+      needExpressionKeypath = TRUE,
+      needDep = TRUE;
   var executeExpr = function executeExpr(expr) {
     return execute$1(expr, context, function (keypath) {
-      if (binding === TRUE) {
-        binding = keypath;
+      if (needExpressionKeypath) {
+        expressionKeypath = keypath;
       }
     }, function (key, value) {
-      if (binding === FALSE) {
+      if (needDep) {
         addDep(key, value);
       }
     });
@@ -4638,6 +4642,8 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
 
   enter[EACH$1] = function (node) {
 
+    needExpressionKeypath = TRUE;
+
     popStack();
 
     var expr = node.expr,
@@ -4662,7 +4668,7 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
       pushStack({
         value: value,
         children: list,
-        keypath: expr.keypath
+        keypath: expressionKeypath
       });
 
       each$$1(value, function (value, i, item) {
@@ -4681,14 +4687,17 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
       });
     }
 
+    expressionKeypath = needExpressionKeypath = FALSE;
+
     return FALSE;
   };
 
   enter[ATTRIBUTE] = function (node) {
     var children = node.children;
 
-    if (children && children.length === 1) {
-      binding = children[0].bindable || FALSE;
+    if (children && children.length === 1 && children[0].bindable) {
+      needExpressionKeypath = TRUE;
+      needDep = FALSE;
     }
   };
 
@@ -4714,8 +4723,9 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
   };
 
   leave[ATTRIBUTE] = function (node) {
-    node = createAttribute(node.name, mergeNodes(current.children, node.children), binding);
-    binding = FALSE;
+    node = createAttribute(node.name, mergeNodes(current.children, node.children), expressionKeypath);
+    expressionKeypath = needExpressionKeypath = FALSE;
+    needDep = TRUE;
     return node;
   };
 
@@ -4773,18 +4783,24 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
   };
 
   leave[SPREAD$1] = function (node) {
-    binding = TRUE;
+
+    needExpressionKeypath = TRUE;
+    needDep = FALSE;
+
     var value = executeExpr(node.expr),
         list = makeNodes([]);
     if (object(value)) {
-      var hasBinding = string(binding);
+      var hasBinding = string(expressionKeypath);
       each$1(value, function (value, name) {
-        push(list, createAttribute(name, value, hasBinding ? join(binding, name) : UNDEFINED));
+        push(list, createAttribute(name, value, hasBinding ? join(expressionKeypath, name) : UNDEFINED));
       });
     } else {
       fatal('Spread "' + stringify$1(node.expr) + '" must be an object.');
     }
-    binding = FALSE;
+
+    expressionKeypath = needExpressionKeypath = FALSE;
+    needDep = TRUE;
+
     return list;
   };
 
@@ -5689,9 +5705,13 @@ var Yox = function () {
       extend(context, $observer.data, $observer.computedGetters);
 
       // 新的虚拟节点和依赖关系
-      var deps = [],
+      var map = {},
+          deps = [],
           nodes = create(instance.$template, context, instance, function (key, value) {
-        push(deps, key);
+        if (!map[key]) {
+          map[key] = TRUE;
+          push(deps, key);
+        }
         $observer.setCache(key, value);
       });
 
@@ -5935,7 +5955,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.38.7';
+Yox.version = '0.38.8';
 
 /**
  * 工具，便于扩展、插件使用

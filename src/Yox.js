@@ -411,13 +411,17 @@ export default class Yox {
     object.extend(context, $observer.data, $observer.computedGetters)
 
     // 新的虚拟节点和依赖关系
-    let deps = [ ],
+    let map = { },
+    deps = [ ],
     nodes = vdom.create(
       instance.$template,
       context,
       instance,
       function (key, value) {
-        array.push(deps, key)
+        if (!map[ key ]) {
+          map[ key ] = env.TRUE
+          array.push(deps, key)
+        }
         $observer.setCache(key, value)
       }
     )
@@ -662,7 +666,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.38.7'
+Yox.version = '0.38.8'
 
 /**
  * 工具，便于扩展、插件使用
