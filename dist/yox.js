@@ -2933,6 +2933,7 @@ var Observer = function () {
 
         keypath = normalize(keypath);
 
+        addDifference(keypath, keypath, getOldValue(keypath));
         addWatchKeypath(keypath);
 
         // 如果有计算属性，则优先处理它
@@ -3170,7 +3171,7 @@ function isFuzzyKeypath(keypath) {
 /**
  * 是否以什么开始
  *
- * startsWith('user.name', 'user') 是 true
+ * startsWith('user.name', 'user') 为 true
  * startsWith('username', 'user') 为 false
  *
  * @param {string} keypath
@@ -5968,7 +5969,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.39.0';
+Yox.version = '0.39.1';
 
 /**
  * 工具，便于扩展、插件使用
