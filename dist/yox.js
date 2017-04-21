@@ -3437,7 +3437,7 @@ var COMPOSITION_END = 'compositionend';
 var api = copy(domApi);
 
 // import * as oldApi from './oldApi'
-
+//
 // if (!env.doc.addEventListener) {
 //   object.extend(api, oldApi)
 // }
@@ -4058,7 +4058,8 @@ var props = {
 };
 
 function bindDirective(vnode, key) {
-  var el = vnode.el;
+  var el = vnode.el,
+      component = vnode.component;
   var _vnode$data = vnode.data,
       instance = _vnode$data.instance,
       attrs = _vnode$data.attrs,
@@ -4078,7 +4079,7 @@ function bindDirective(vnode, key) {
 
   var $component = el.$component;
 
-  if (object($component)) {
+  if (component && object($component)) {
     if (has$1($component, 'queue') && !has$1($component, 'set')) {
       $component = $component.queue;
     }
@@ -5969,7 +5970,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.39.2';
+Yox.version = '0.39.3';
 
 /**
  * 工具，便于扩展、插件使用
