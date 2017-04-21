@@ -107,7 +107,7 @@ export default class Yox {
     watchers && instance.$observer.watch(watchers)
 
     // 监听各种事件
-    instance.$eventEmitter = new Emitter()
+    instance.$emitter = new Emitter()
     events && instance.on(events)
 
     execute(options[ lifecycle.AFTER_CREATE ], instance)
@@ -223,7 +223,7 @@ export default class Yox {
    * @param {?Function} listener
    */
   on(type, listener) {
-    this.$eventEmitter.on(type, listener)
+    this.$emitter.on(type, listener)
   }
 
   /**
@@ -233,7 +233,7 @@ export default class Yox {
    * @param {?Function} listener
    */
   once(type, listener) {
-    this.$eventEmitter.once(type, listener)
+    this.$emitter.once(type, listener)
   }
 
   /**
@@ -243,7 +243,7 @@ export default class Yox {
    * @param {?Function} listener
    */
   off(type, listener) {
-    this.$eventEmitter.off(type, listener)
+    this.$emitter.off(type, listener)
   }
 
   /**
@@ -273,8 +273,8 @@ export default class Yox {
       array.push(args, data)
     }
 
-    let { $parent, $eventEmitter } = instance
-    let isComplete = $eventEmitter.fire(event.type, args, instance)
+    let { $parent, $emitter } = instance
+    let isComplete = $emitter.fire(event.type, args, instance)
     if (isComplete && $parent) {
       isComplete = $parent.fire(event, data)
     }
@@ -563,8 +563,8 @@ export default class Yox {
       $options,
       $node,
       $parent,
+      $emitter,
       $observer,
-      $eventEmitter,
     } = instance
 
     execute($options[ lifecycle.BEFORE_DESTROY ], instance)
@@ -579,7 +579,7 @@ export default class Yox {
       }
     }
 
-    $eventEmitter.off()
+    $emitter.off()
     $observer.destroy()
 
     object.clear(instance)
@@ -666,7 +666,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.38.9'
+Yox.version = '0.39.0'
 
 /**
  * 工具，便于扩展、插件使用

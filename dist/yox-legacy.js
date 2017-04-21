@@ -2916,21 +2916,6 @@ var Observer = function () {
           reversedKeypaths = instance.reversedKeypaths;
 
 
-      var oldCache = {},
-          newCache = {};
-      var getOldValue = function getOldValue(keypath) {
-        if (!has$1(oldCache, keypath)) {
-          oldCache[keypath] = cache[keypath];
-        }
-        return oldCache[keypath];
-      };
-      var getNewValue = function getNewValue(keypath) {
-        if (!has$1(newCache, keypath)) {
-          newCache[keypath] = instance.get(keypath);
-        }
-        return newCache[keypath];
-      };
-
       var differences = [],
           differenceMap = {};
       var addDifference = function addDifference(keypath, realpath, oldValue, match, force) {
@@ -2947,6 +2932,21 @@ var Observer = function () {
         }
       };
 
+      var oldCache = {},
+          newCache = {};
+      var getOldValue = function getOldValue(keypath) {
+        if (!has$1(oldCache, keypath)) {
+          oldCache[keypath] = cache[keypath];
+        }
+        return oldCache[keypath];
+      };
+      var getNewValue = function getNewValue(keypath) {
+        if (!has$1(newCache, keypath)) {
+          newCache[keypath] = instance.get(keypath);
+        }
+        return newCache[keypath];
+      };
+
       var watchedMap = {};
       var addWatchKeypath = function addWatchKeypath(keypath) {
         // 最后触发主动监听的 keypath，相当于捡漏
@@ -2960,12 +2960,12 @@ var Observer = function () {
               if (match) {
                 addDifference(key, keypath, getOldValue(keypath), match);
               }
-            } else if (startsWith(key, keypath)) {
+            } else if (startsWith$1(key, keypath)) {
               addDifference(key, key, getOldValue(key));
             }
             // 为子组件传递数据，比如 user="{{user}}"
             // 修改了 user.name 并不会引起子组件更新
-            else if (startsWith(keypath, key)) {
+            else if (startsWith$1(keypath, key)) {
                 addDifference(key, key, getOldValue(key), UNDEFINED, TRUE);
               }
           });
@@ -3232,6 +3232,20 @@ function matchKeypath(keypath, pattern) {
  */
 function isFuzzyKeypath(keypath) {
   return has$2(keypath, '*');
+}
+
+/**
+ * 是否以什么开始
+ *
+ * startsWith('user.name', 'user') 是 true
+ * startsWith('username', 'user') 为 false
+ *
+ * @param {string} keypath
+ * @param {string} prefix
+ * @return {boolean}
+ */
+function startsWith$1(keypath, prefix) {
+  return startsWith(keypath, prefix + SEPARATOR_KEY);
 }
 
 /**
@@ -5565,7 +5579,7 @@ var Yox = function () {
     watchers && instance.$observer.watch(watchers);
 
     // 监听各种事件
-    instance.$eventEmitter = new Emitter();
+    instance.$emitter = new Emitter();
     events && instance.on(events);
 
     execute(options[AFTER_CREATE], instance);
@@ -5678,7 +5692,7 @@ var Yox = function () {
   }, {
     key: 'on',
     value: function on(type, listener) {
-      this.$eventEmitter.on(type, listener);
+      this.$emitter.on(type, listener);
     }
 
     /**
@@ -5691,7 +5705,7 @@ var Yox = function () {
   }, {
     key: 'once',
     value: function once(type, listener) {
-      this.$eventEmitter.once(type, listener);
+      this.$emitter.once(type, listener);
     }
 
     /**
@@ -5704,7 +5718,7 @@ var Yox = function () {
   }, {
     key: 'off',
     value: function off(type, listener) {
-      this.$eventEmitter.off(type, listener);
+      this.$emitter.off(type, listener);
     }
 
     /**
@@ -5738,9 +5752,9 @@ var Yox = function () {
       }
 
       var $parent = instance.$parent,
-          $eventEmitter = instance.$eventEmitter;
+          $emitter = instance.$emitter;
 
-      var isComplete = $eventEmitter.fire(event.type, args, instance);
+      var isComplete = $emitter.fire(event.type, args, instance);
       if (isComplete && $parent) {
         isComplete = $parent.fire(event, data);
       }
@@ -6019,8 +6033,8 @@ var Yox = function () {
       var $options = instance.$options,
           $node = instance.$node,
           $parent = instance.$parent,
-          $observer = instance.$observer,
-          $eventEmitter = instance.$eventEmitter;
+          $emitter = instance.$emitter,
+          $observer = instance.$observer;
 
 
       execute($options[BEFORE_DESTROY], instance);
@@ -6035,7 +6049,7 @@ var Yox = function () {
         }
       }
 
-      $eventEmitter.off();
+      $emitter.off();
       $observer.destroy();
 
       clear(instance);
@@ -6131,7 +6145,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.38.9';
+Yox.version = '0.39.0';
 
 /**
  * 工具，便于扩展、插件使用
