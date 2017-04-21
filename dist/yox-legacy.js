@@ -4362,7 +4362,7 @@ function createComponent(oldVnode, vnode) {
 function updateComponent(oldVnode, vnode) {
   var $component = vnode.el.$component;
 
-  if (object($component)) {
+  if (vnode.component && object($component)) {
     var attrs = vnode.data.attrs;
 
     if ($component.set) {
@@ -4374,10 +4374,11 @@ function updateComponent(oldVnode, vnode) {
 }
 
 function destroyComponent(oldVnode, vnode) {
-  var el = oldVnode.el;
+  var component = oldVnode.component,
+      el = oldVnode.el;
   var $component = el.$component;
 
-  if (object($component)) {
+  if (component && object($component)) {
     if ($component.destroy) {
       $component.destroy(TRUE);
     }
@@ -4700,9 +4701,6 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
     if (node.value !== UNDEFINED) {
       context = context.push(node.value, keypath);
     }
-    if (htmlTypes[node.type]) {
-      push(htmlStack, node.type);
-    }
     push(nodeStack, {
       node: node,
       index: -1,
@@ -4715,9 +4713,6 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
     var _current = current,
         node = _current.node;
 
-    if (htmlTypes[node.type]) {
-      pop(htmlStack);
-    }
     if (node.value !== UNDEFINED) {
       context = context.pop();
     }
@@ -4759,13 +4754,13 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
     }
   };
 
-  var expressionKeypath = void 0,
-      needExpressionKeypath = TRUE,
+  var exprKeypath = void 0,
+      needExprKeypath = FALSE,
       needDep = TRUE;
   var executeExpr = function executeExpr(expr) {
     return execute$1(expr, context, function (keypath) {
-      if (needExpressionKeypath) {
-        expressionKeypath = keypath;
+      if (needExprKeypath) {
+        exprKeypath = keypath;
       }
     }, function (key, value) {
       if (needDep) {
@@ -4809,7 +4804,7 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
   // 就需要用注释节点来占位，否则 virtual dom 无法正常工作
   enter[IF$1] = enter[ELSE_IF$1] = function (node) {
     if (!executeExpr(node.expr)) {
-      if (sibling && !elseTypes[sibling.type] && !attrTypes[last(htmlStack)]) {
+      if (sibling && !elseTypes[sibling.type] && !attributeRending) {
         addValue(makeNodes(createComment()));
       }
       popStack();
@@ -4819,7 +4814,7 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
 
   enter[EACH$1] = function (node) {
 
-    needExpressionKeypath = TRUE;
+    needExprKeypath = TRUE;
 
     popStack();
 
@@ -4845,7 +4840,7 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
       pushStack({
         value: value,
         children: list,
-        keypath: expressionKeypath
+        keypath: exprKeypath
       });
 
       each$$1(value, function (value, i, item) {
@@ -4864,7 +4859,7 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
       });
     }
 
-    expressionKeypath = needExpressionKeypath = FALSE;
+    exprKeypath = needExprKeypath = FALSE;
 
     return FALSE;
   };
@@ -4873,7 +4868,7 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
     var children = node.children;
 
     if (children && children.length === 1 && children[0].bindable) {
-      needExpressionKeypath = TRUE;
+      needExprKeypath = TRUE;
       needDep = FALSE;
     }
   };
@@ -4900,8 +4895,8 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
   };
 
   leave[ATTRIBUTE] = function (node) {
-    node = createAttribute(node.name, mergeNodes(current.children, node.children), expressionKeypath);
-    expressionKeypath = needExpressionKeypath = FALSE;
+    node = createAttribute(node.name, mergeNodes(current.children, node.children), exprKeypath);
+    exprKeypath = needExprKeypath = FALSE;
     needDep = TRUE;
     return node;
   };
@@ -4961,21 +4956,21 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
 
   leave[SPREAD$1] = function (node) {
 
-    needExpressionKeypath = TRUE;
+    needExprKeypath = TRUE;
     needDep = FALSE;
 
     var value = executeExpr(node.expr),
         list = makeNodes([]);
     if (object(value)) {
-      var hasBinding = string(expressionKeypath);
+      var hasBinding = string(exprKeypath);
       each$1(value, function (value, name) {
-        push(list, createAttribute(name, value, hasBinding ? join(expressionKeypath, name) : UNDEFINED));
+        push(list, createAttribute(name, value, hasBinding ? join(exprKeypath, name) : UNDEFINED));
       });
     } else {
       fatal('Spread "' + stringify$1(node.expr) + '" must be an object.');
     }
 
-    expressionKeypath = needExpressionKeypath = FALSE;
+    exprKeypath = needExprKeypath = FALSE;
     needDep = TRUE;
 
     return list;
@@ -5041,8 +5036,8 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
       prevCache = void 0,
       currentCache = void 0,
 
-  // 正在渲染的 html 层级
-  htmlStack = [],
+  // 是否正在渲染 attribute
+  attributeRending = void 0,
 
   // 用时定义的模板片段
   partials = {};
@@ -5057,20 +5052,24 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
         children = node.children;
 
 
-    if (!current.enter) {
-      current.enter = TRUE;
+    if (!current.enterNode) {
+      current.enterNode = TRUE;
 
       if (execute(enter[type], NULL, [node, current]) === FALSE) {
         continue;
       }
     }
 
-    if (attrs && !current.attrs) {
+    if (attrs && !current.leaveAttrs) {
+      if (!current.enterAttrs) {
+        attributeRending = current.enterAttrs = TRUE;
+      }
       if (traverseList(current, attrs) === FALSE) {
         continue;
       }
+      attributeRending = FALSE;
+      current.leaveAttrs = TRUE;
       current.index = -1;
-      current.attrs = TRUE;
     }
 
     if (children && traverseList(current, children) === FALSE) {
@@ -6132,7 +6131,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.38.8';
+Yox.version = '0.38.9';
 
 /**
  * 工具，便于扩展、插件使用
