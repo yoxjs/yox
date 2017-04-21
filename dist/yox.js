@@ -336,48 +336,50 @@ function each(array$$1, callback, reversed) {
 }
 
 /**
- * 合并多个数组，不去重
+ * 合并多个数组
  *
+ * @param {Array} array1
+ * @param {Array} array2
  * @return {Array}
  */
-function merge() {
-  var args = toArray$1(arguments);
+function merge(array1, array2) {
   var result = [];
-  args.unshift(result);
-  execute(push, NULL, args);
+  push(result, array1);
+  push(result, array2);
   return result;
 }
 
-function add(action) {
-  return function (original) {
-    var args = arguments;
-    for (var i = 1, len = args.length; i < len; i++) {
-      if (array(args[i])) {
-        each(args[i], function (item) {
-          original[action](item);
-        });
-      } else {
-        original[action](args[i]);
-      }
-    }
-  };
+/**
+ * 往后加
+ *
+ * @param {Array} original
+ * @param {*} value
+ */
+function push(original, value) {
+  if (array(value)) {
+    each(value, function (item) {
+      original.push(item);
+    });
+  } else {
+    original.push(value);
+  }
 }
 
 /**
- * push 数组
+ * 往前加
  *
  * @param {Array} original
- * @param {...}
+ * @param {*} value
  */
-var push = add('push');
-
-/**
- * unshift 数组
- *
- * @param {Array} original
- * @param {...}
- */
-var unshift = add('unshift');
+function unshift(original, value) {
+  if (array(value)) {
+    each(value, function (item) {
+      original.unshift(item);
+    });
+  } else {
+    original.unshift(value);
+  }
+}
 
 /**
  * 把类数组转成数组
@@ -386,31 +388,21 @@ var unshift = add('unshift');
  * @return {Array}
  */
 function toArray$1(array$$1) {
-  return array(array$$1) ? array$$1 : execute(Array.prototype.slice, array$$1);
+  return array(array$$1) ? array$$1 : execute([].slice, array$$1);
 }
 
 /**
  * 把数组转成对象
  *
- * [ { key: 'key1', value: 'value1' }, { key: 'key2', value: 'value2' } ]
- * 可转成
- * { key1: value1, key2: value2 }
- *
  * @param {Array} array 数组
  * @param {?string} key 数组项包含的字段名称，如果数组项是基本类型，可不传
- * @param {?string} value 数组项包含的字段名称或值
+ * @param {?*} value
  * @return {Object}
  */
 function toObject(array$$1, key, value) {
-  var result = {},
-      hasValue = arguments.length === 3;
+  var result = {};
   each(array$$1, function (item, index) {
-    if (string(value)) {
-      index = item[value];
-    } else {
-      index = hasValue ? value : item;
-    }
-    result[key ? item[key] : item] = index;
+    result[key ? item[key] : item] = value;
   });
   return result;
 }
@@ -461,7 +453,7 @@ function last(array$$1) {
 /**
  * 弹出数组最后一项
  *
- * 项目里用的太多，节省点字符...
+ * 项目里用的太多，仅用于节省字符...
  *
  * @param {Array} array 数组
  * @return {*}
@@ -680,11 +672,18 @@ function each$1(object$$1, callback) {
  * @return {boolean}
  */
 function has$1(object$$1, key) {
-  try {
-    return object$$1.hasOwnProperty(key);
-  } catch (e) {
-    return key in object$$1;
-  }
+  return object$$1.hasOwnProperty(key);
+}
+
+/**
+ * 本来想用 in，无奈关键字...
+ *
+ * @param {Object} object
+ * @param {string} key
+ * @return {boolean}
+ */
+function exists(object$$1, key) {
+  return key in object$$1;
 }
 
 /**
@@ -703,17 +702,15 @@ function clear(object$$1) {
  *
  * @return {Object}
  */
-function extend() {
-  var args = arguments,
-      result = args[0];
-  for (var i = 1, len = args.length; i < len; i++) {
-    if (object(args[i])) {
-      each$1(args[i], function (value, key) {
-        result[key] = value;
+function extend(original, object1, object2) {
+  each([object1, object2], function (object$$1) {
+    if (object(object$$1)) {
+      each$1(object$$1, function (value, key) {
+        original[key] = value;
       });
     }
-  }
-  return result;
+  });
+  return original;
 }
 
 /**
@@ -759,7 +756,7 @@ function getValue(value) {
  */
 function get$1(object$$1, keypath) {
 
-  if (!falsy$1(keypath) && !has$1(object$$1, keypath)
+  if (!falsy$1(keypath) && !exists(object$$1, keypath)
   // 不能以 . 开头
   && indexOf$1(keypath, CHAR_DOT) > 0) {
     var list = parse(keypath);
@@ -775,7 +772,7 @@ function get$1(object$$1, keypath) {
     }
   }
 
-  if (has$1(object$$1, keypath)) {
+  if (exists(object$$1, keypath)) {
     return {
       value: getValue(object$$1[keypath])
     };
@@ -791,7 +788,7 @@ function get$1(object$$1, keypath) {
  * @param {?boolean} autofill 是否自动填充不存在的对象，默认自动填充
  */
 function set$1(object$$1, keypath, value, autofill) {
-  if (!falsy$1(keypath) && !has$1(object$$1, keypath) && indexOf$1(keypath, CHAR_DOT) > 0) {
+  if (!falsy$1(keypath) && !exists(object$$1, keypath) && indexOf$1(keypath, CHAR_DOT) > 0) {
     var originalObject = object$$1;
     var list = parse(keypath);
     var prop = pop(list);
@@ -817,6 +814,7 @@ var object$1 = Object.freeze({
 	sort: sort,
 	each: each$1,
 	has: has$1,
+	exists: exists,
 	clear: clear,
 	extend: extend,
 	copy: copy,
@@ -896,22 +894,18 @@ var Emitter = function () {
     key: 'fire',
     value: function fire(type, data, context) {
 
-      if (arguments.length === 2) {
-        context = NULL;
-      }
+      var isComplete = TRUE;
 
-      var event = data;
-      if (array(data)) {
-        event = data[0];
-      }
-
-      var isEvent = Event.is(event),
-          isComplete = TRUE;
-
-      var listeners = this.listeners;
-
-      var list = listeners[type];
+      var list = this.listeners[type];
       if (list) {
+
+        var event = data;
+        if (array(data)) {
+          event = data[0];
+        }
+
+        var isEvent = Event.is(event);
+
         each(list, function (listener) {
 
           var result = execute(listener, context, data);
@@ -944,10 +938,8 @@ var Emitter = function () {
   }, {
     key: 'has',
     value: function has$$1(type, listener) {
-      var listeners = this.listeners;
 
-      var list = listeners[type];
-
+      var list = this.listeners[type];
       if (listener == NULL) {
         return !falsy(list);
       } else if (list) {
@@ -1072,7 +1064,7 @@ var nextTick$1 = function (fn) {
 
 var nextTasks = [];
 
-function add$1(name, task) {
+function add(name, task) {
   if (!nextTasks.length) {
     nextTick$1(run);
   }
@@ -1085,7 +1077,7 @@ function add$1(name, task) {
  * @param {Function} task
  */
 function append(task) {
-  add$1('push', task);
+  add('push', task);
 }
 
 /**
@@ -1094,7 +1086,7 @@ function append(task) {
  * @param {Function} task
  */
 function prepend(task) {
-  add$1('unshift', task);
+  add('unshift', task);
 }
 
 /**
@@ -1129,7 +1121,8 @@ var matchFirst = function (list, value) {
   var result = [];
   each(list, function (prefix) {
     if (startsWith(value, prefix)) {
-      push(result, prefix, slice(value, prefix.length));
+      push(result, prefix);
+      push(result, slice(value, prefix.length));
       return FALSE;
     }
   });
@@ -1190,60 +1183,60 @@ var Node = function Node(type) {
 };
 
 /**
- * 数组表达式，如 [ 1, 2, 3 ]
+ * 字面量
  *
  * @type {number}
  */
-var ARRAY = 1;
-
-/**
- * 二元表达式，如 a + b
- *
- * @type {number}
- */
-var BINARY = 2;
-
-/**
- * 函数调用表达式，如 a()
- *
- * @type {number}
- */
-var CALL = 3;
+var LITERAL = 1;
 
 /**
  * 标识符
  *
  * @type {number}
  */
-var IDENTIFIER = 4;
-
-/**
- * 字面量
- *
- * @type {number}
- */
-var LITERAL = 5;
+var IDENTIFIER = 2;
 
 /**
  * 对象属性或数组下标
  *
  * @type {number}
  */
-var MEMBER = 6;
-
-/**
- * 三元表达式，如 a ? b : c
- *
- * @type {number}
- */
-var TERNARY = 7;
+var MEMBER = 3;
 
 /**
  * 一元表达式，如 - a
  *
  * @type {number}
  */
-var UNARY = 8;
+var UNARY = 4;
+
+/**
+ * 二元表达式，如 a + b
+ *
+ * @type {number}
+ */
+var BINARY = 5;
+
+/**
+ * 三元表达式，如 a ? b : c
+ *
+ * @type {number}
+ */
+var TERNARY = 6;
+
+/**
+ * 数组表达式，如 [ 1, 2, 3 ]
+ *
+ * @type {number}
+ */
+var ARRAY = 7;
+
+/**
+ * 函数调用表达式，如 a()
+ *
+ * @type {number}
+ */
+var CALL = 8;
 
 /**
  * Array 节点
@@ -1768,7 +1761,9 @@ function compile$1(content) {
         push(stack, new Binary(left, action, right));
       }
 
-      push(stack, next, binaryMap[next], parseToken());
+      push(stack, next);
+      push(stack, binaryMap[next]);
+      push(stack, parseToken());
     }
 
     // 处理右边
@@ -3275,7 +3270,7 @@ var BEFORE_DESTROY = 'beforeDestroy';
 var AFTER_DESTROY = 'afterDestroy';
 
 var booleanAttrLiteral = 'allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare,default,defaultchecked,defaultmuted,defaultselected,defer,disabled,draggable,enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple,muted,nohref,noshade,noresize,novalidate,nowrap,open,pauseonexit,readonly,required,reversed,scoped,seamless,selected,sortable,spellcheck,translate,truespeed,typemustmatch,visible';
-var booleanAttrMap = toObject(split(booleanAttrLiteral, CHAR_COMMA));
+var booleanAttrMap = toObject(split(booleanAttrLiteral, CHAR_COMMA), FALSE, TRUE);
 booleanAttrLiteral = NULL;
 
 var attr2Prop = {};
@@ -3383,11 +3378,11 @@ function children(node) {
 }
 
 function text(node, content) {
-  return arguments.length === 1 ? node.nodeValue : node.nodeValue = content;
+  return content == NULL ? node.nodeValue : node.nodeValue = content;
 }
 
 function html(node, content) {
-  return arguments.length === 1 ? node.innerHTML : node.innerHTML = content;
+  return content == NULL ? node.innerHTML : node.innerHTML = content;
 }
 
 function find(selector, context) {
@@ -4384,6 +4379,11 @@ var Context = function () {
       var joinKeypath = function joinKeypath(context, keypath) {
         return join(context.keypath, keypath);
       };
+      var getValue = function getValue(data, keypath) {
+        if (!primitive(data)) {
+          return get$1(data, keypath);
+        }
+      };
 
       if (!has$1(cache, keypath)) {
 
@@ -4392,7 +4392,7 @@ var Context = function () {
 
           if (lookup) {
             while (instance) {
-              result = get$1(instance.data, keypath);
+              result = getValue(instance.data, keypath);
               if (result) {
                 break;
               } else {
@@ -4400,7 +4400,7 @@ var Context = function () {
               }
             }
           } else {
-            result = get$1(data, keypath);
+            result = getValue(data, keypath);
           }
 
           if (result) {
@@ -5969,7 +5969,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.39.1';
+Yox.version = '0.39.2';
 
 /**
  * 工具，便于扩展、插件使用
