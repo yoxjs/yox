@@ -8,6 +8,8 @@ import * as array from 'yox-common/util/array'
 import * as object from 'yox-common/util/object'
 import * as logger from 'yox-common/util/logger'
 
+import executeExpression from 'yox-expression-compiler/execute'
+
 import bindEvent from './event'
 import api from '../platform/web/api'
 import * as event from '../config/event'
@@ -90,7 +92,7 @@ const specialControls = {
   select: selectControl,
 }
 
-function twoway(keypath, { el, node, instance, directives, attributes }) {
+function twoway(keypath, { el, node, instance, directives, attrs }) {
 
   let type = event.CHANGE, tagName = api.tag(el), controlType = el.type
   let control = specialControls[ controlType ] || specialControls[ tagName ]
@@ -118,7 +120,7 @@ function twoway(keypath, { el, node, instance, directives, attributes }) {
   instance.watch(
     keypath,
     set,
-    control.attr && !object.has(attributes, control.attr)
+    control.attr && !object.has(attrs, control.attr)
   )
 
   let destroy = bindEvent({
@@ -173,15 +175,19 @@ function oneway(keypath, { el, node, instance, component }) {
 
 export default function (options) {
 
-  let { node, instance } = options
+  let { modifier, value, expr, context } = options.node, keypath
+  if (value) {
+    keypath = context.get(value).keypath
+  }
+  else if (expr) {
+    executeExpression(expr, context)
+    keypath = expr.keypath
+  }
 
-  let { keypath } = instance.get(
-    node.value,
-    node.keypath
-  )
-
-  return node.oneway
-    ? oneway(keypath, options)
-    : twoway(keypath, options)
+  if (is.string(keypath)) {
+    return modifier
+      ? oneway(keypath, options)
+      : twoway(keypath, options)
+  }
 
 }

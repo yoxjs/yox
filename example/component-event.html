@@ -15,11 +15,20 @@
           <button on-click="click2()">
               click2
           </button>
+          <button on-click="click3(user.name, user.age)">
+              click3
+          </button>
+          <button on-click="click4($event, $keypath)">
+              click4
+          </button>
+          <button on-click="click5(this)">
+              click5
+          </button>
       </div>
     </script>
     <script id="template2" type="plain/text">
       <div id="root">
-          <Custom on-click1="click1" on-click2="click3" />
+          <Custom user="{{user}}" on-click1="click1" on-click2="click3" />
           {{#if open}}
             open
           {{/if}}
@@ -33,6 +42,15 @@
             methods: {
                 click2: function (e) {
                     this.fire('click2', { name: 'component' });
+                },
+                click3: function (e) {
+                    console.log(arguments);
+                },
+                click4: function (e) {
+                    console.log(arguments);
+                },
+                click5: function (e) {
+                    console.log(arguments);
                 }
             }
         };
@@ -40,7 +58,11 @@
         var instance = new Yox({
             el: '#app',
             data: {
-              open: false
+                open: false,
+                user: {
+                    name: 'yox',
+                    age: 1
+                }
             },
             template: '#template2',
             components: {

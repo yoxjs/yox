@@ -17,7 +17,7 @@ export default function ({ el, node, instance, component, directives, type, list
     type = node.modifier
   }
   if (!listener) {
-    listener = instance.compileValue(node.keypath, node.value)
+    listener = instance.compileDirective(node)
   }
 
   if (type && listener) {

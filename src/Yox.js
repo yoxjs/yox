@@ -17,8 +17,7 @@ import * as nextTask from 'yox-common/util/nextTask'
 import compileTemplate from 'yox-template-compiler/compile'
 import * as templateSyntax from 'yox-template-compiler/src/syntax'
 
-import compileExpression from 'yox-expression-compiler/compile'
-import stringifyExpression from 'yox-expression-compiler/stringify'
+import executeExpression from 'yox-expression-compiler/execute'
 import * as expressionNodeType from 'yox-expression-compiler/src/nodeType'
 
 import Observer from 'yox-observer'
@@ -471,83 +470,48 @@ export default class Yox {
   }
 
   /**
-   * 编译 on-click="value" 里面的表达式
+   * 把指令中的表达式编译成函数
    *
-   * @param {string} keypath
-   * @param {string} value
+   * @param {Directive} directive
    * @return {Function}
    */
-  compileValue(keypath, value) {
-
-    if (string.falsy(value)) {
-      return
-    }
+  compileDirective(directive) {
 
     let instance = this
-    if (string.indexOf(value, char.CHAR_OPAREN) > 0) {
-      let ast = compileExpression(value)
-      if (ast.type === expressionNodeType.CALL) {
-        return function (event) {
-          let isEvent = Event.is(event)
-          let args = object.copy(ast.args)
-          if (!args.length) {
-            if (isEvent) {
-              array.push(args, event)
-            }
-          }
-          else {
-            args = args.map(
-              function (node) {
-                let { name, type } = node
-                if (type === expressionNodeType.LITERAL) {
-                  return node.value
-                }
-                if (type === expressionNodeType.IDENTIFIER) {
-                  if (name === templateSyntax.SPECIAL_EVENT) {
-                    if (isEvent) {
-                      return event
-                    }
-                  }
-                  else if (name === templateSyntax.SPECIAL_KEYPATH) {
-                    return keypath
-                  }
-                  else if (name === env.THIS) {
-                    return instance.get(keypath)
-                  }
-                }
-                else if (type === expressionNodeType.MEMBER) {
-                  name = stringifyExpression(node)
-                }
+    let { value, expr, keypath, context } = directive
 
-                let result = instance.get(name, keypath)
-                if (object.has(result, 'value')) {
-                  return result.value
-                }
-              }
-            )
-          }
-          let name = stringifyExpression(ast.callee)
-          let fn = instance[ name ]
-          if (!fn) {
-            let result = instance.get(name, keypath)
-            if (object.has(result, 'value')) {
-              fn = result.value
-            }
-          }
-          if (execute(fn, instance, args) === env.FALSE && isEvent) {
-            event.prevent()
-            event.stop()
-          }
-        }
-      }
-    }
-    else {
+    if (value) {
       return function (event, data) {
         if (event.type !== value) {
           event = new Event(event)
           event.type = value
         }
         instance.fire(event, data)
+      }
+    }
+    else if (expr && expr.type === expressionNodeType.CALL) {
+      return function (event) {
+        let isEvent = Event.is(event)
+        let { callee, args } = expr
+        if (!args.length) {
+          if (isEvent) {
+            args = [ event ]
+          }
+        }
+        else {
+          context.set(templateSyntax.SPECIAL_KEYPATH, keypath)
+          context.set(templateSyntax.SPECIAL_EVENT, event)
+          args = args.map(
+            function (node) {
+              return executeExpression(node, context)
+            }
+          )
+        }
+        let method = instance[ callee.source ] || context.get(callee.source).value
+        if (execute(method, instance, args) === env.FALSE && isEvent) {
+          event.prevent()
+          event.stop()
+        }
       }
     }
   }
