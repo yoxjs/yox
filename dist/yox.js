@@ -611,6 +611,14 @@ function stringify(keypaths) {
   return keypaths.filter(filter).join(SEPARATOR_KEY);
 }
 
+function startsWith$1(keypath, prefix, split$$1) {
+  if (keypath === prefix || startsWith(keypath, prefix += SEPARATOR_KEY)) {
+    return split$$1 ? [prefix, slice(keypath, prefix.length)] : TRUE;
+  } else {
+    return FALSE;
+  }
+}
+
 function join(keypath1, keypath2) {
   if (keypath1 && keypath2) {
     return keypath1 + SEPARATOR_KEY + keypath2;
@@ -1449,9 +1457,9 @@ var Member = function (_Node) {
 
     _this.props = props;
 
-    var success = env.TRUE;
+    var success = TRUE;
     var keypath = Member.stringify(_this, function () {
-      success = env.FALSE;
+      success = FALSE;
     });
     if (success) {
       _this.keypath = keypath;
@@ -2639,7 +2647,7 @@ executor[LITERAL] = function (node, context) {
 
 executor[IDENTIFIER] = function (node, context, addDep) {
   var result = context.get(node.name);
-  addDep(result.keypath, result.value);
+  addDep && addDep(result.keypath, result.value);
   return result.value;
 };
 
@@ -2652,7 +2660,7 @@ executor[MEMBER] = function (node, context, addDep) {
     });
   }
   var result = context.get(keypath);
-  addDep(result.keypath, result.value);
+  addDep && addDep(result.keypath, result.value);
   return result.value;
 };
 
@@ -2696,7 +2704,7 @@ executor[CALL] = function (node, context, addDep) {
  * @return {*}
  */
 function execute$1(node, context, addDep) {
-  return executor[node.type](node, context, addDep || noop);
+  return executor[node.type](node, context, addDep);
 }
 
 var Observer = function () {
@@ -2930,11 +2938,6 @@ var Observer = function () {
             } else if (startsWith$1(key, keypath)) {
               addDifference(key, key, getOldValue(key));
             }
-            // 为子组件传递数据，比如 user="{{user}}"
-            // 修改了 user.name 并不会引起子组件更新
-            else if (startsWith$1(keypath, key)) {
-                addDifference(key, key, getOldValue(key), UNDEFINED, TRUE);
-              }
           });
         }
       };
@@ -3203,20 +3206,6 @@ function isFuzzyKeypath(keypath) {
 }
 
 /**
- * 是否以什么开始
- *
- * startsWith('user.name', 'user') 为 true
- * startsWith('username', 'user') 为 false
- *
- * @param {string} keypath
- * @param {string} prefix
- * @return {boolean}
- */
-function startsWith$1(keypath, prefix) {
-  return startsWith(keypath, prefix + SEPARATOR_KEY);
-}
-
-/**
  * 从 getter 对象的所有 key 中，选择和 keypath 最匹配的那一个
  *
  * @param {Object} getters
@@ -3225,15 +3214,18 @@ function startsWith$1(keypath, prefix) {
  */
 function matchBestGetter(getters, keypath) {
 
-  var result = matchFirst(sort(getters, TRUE), keypath);
+  var getter = void 0,
+      rest = void 0;
 
-  var matched = result[0],
-      rest = result[1];
+  each(sort(getters, TRUE), function (key) {
+    if (key = startsWith$1(keypath, key, TRUE)) {
+      getter = getters[key[0]];
+      rest = key[1];
+      return FALSE;
+    }
+  });
 
-  return {
-    getter: matched ? getters[matched] : NULL,
-    rest: rest && startsWith(rest, SEPARATOR_KEY) ? slice(rest, 1) : rest
-  };
+  return { getter: getter, rest: rest };
 }
 
 /**
@@ -4317,7 +4309,8 @@ var Context = function () {
   function Context(data, keypath, parent) {
     classCallCheck(this, Context);
 
-    this.data = copy(data);
+    this.data = {};
+    this.data[THIS] = data;
     this.keypath = keypath;
     this.parent = parent;
     this.cache = {};
@@ -4336,42 +4329,35 @@ var Context = function () {
   }, {
     key: 'set',
     value: function set$$1(key, value) {
-      var instance = this;
+      var data = this.data,
+          cache = this.cache;
 
       var _formatKeypath = formatKeypath(key),
           keypath = _formatKeypath.keypath;
 
-      if (instance && keypath) {
-        if (has$1(instance.cache, keypath)) {
-          delete instance.cache[keypath];
-        }
-        instance.data[keypath] = value;
+      if (has$1(cache, keypath)) {
+        delete cache[keypath];
       }
+      data[keypath || THIS] = value;
     }
   }, {
     key: 'get',
     value: function get$$1(key) {
 
       var instance = this;
+      var _instance = instance,
+          data = _instance.data,
+          cache = _instance.cache;
 
       var _formatKeypath2 = formatKeypath(key),
           keypath = _formatKeypath2.keypath,
           lookup = _formatKeypath2.lookup;
 
-      var originalKeypath = keypath,
-          deps = {};
-
-      var _instance = instance,
-          data = _instance.data,
-          cache = _instance.cache;
-
       var joinKeypath = function joinKeypath(context, keypath) {
         return join(context.keypath, keypath);
       };
       var getValue = function getValue(data, keypath) {
-        if (!primitive(data)) {
-          return get$1(data, keypath);
-        }
+        return exists(data, keypath) ? { value: data[keypath] } : get$1(data[THIS], keypath);
       };
 
       if (!has$1(cache, keypath)) {
@@ -4401,7 +4387,7 @@ var Context = function () {
         } else {
           cache[keypath] = {
             keypath: instance.keypath,
-            value: data
+            value: data[THIS]
           };
         }
       }
@@ -4422,18 +4408,14 @@ var Context = function () {
 }();
 
 function formatKeypath(keypath) {
-  var keys$$1 = parse(keypath);
-  if (keys$$1[0] === THIS) {
-    keys$$1.shift();
-    return {
-      keypath: stringify(keys$$1)
-    };
-  } else {
-    return {
-      keypath: stringify(keys$$1),
-      lookup: TRUE
-    };
+  keypath = normalize(keypath);
+  var lookup = TRUE,
+      items = startsWith$1(keypath, THIS, TRUE);
+  if (items) {
+    keypath = items[1];
+    lookup = FALSE;
   }
+  return { keypath: keypath, lookup: lookup };
 }
 
 /**
@@ -4566,21 +4548,21 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
     var value = execute(enter[type], NULL, [source, output]);
 
     if (isDefined(value)) {
-      if (value !== FALSE) {
+      if (!silent && value !== FALSE) {
         addValue(value, parent);
       }
-      return;
+      return value;
     }
 
-    if (array(source.context)) {
-      execute(context.set, context, source.context);
-    }
     if (isDefined(source.keypath)) {
       push(keypathList, source.keypath);
       updateKeypath();
     }
     if (isDefined(source.value)) {
       context = context.push(source.value, keypath);
+    }
+    if (array(source.context)) {
+      execute(context.set, context, source.context);
     }
 
     push(nodeStack, output);
@@ -5696,16 +5678,13 @@ var Yox = function () {
         $observer.setCache(key, value);
       });
 
-      $observer.setDeps(TEMPLATE_WATCHER_KEY, deps);
-
       prepend(function () {
+        $observer.setDeps(TEMPLATE_WATCHER_KEY, deps);
         execute($options[isUpdate ? AFTER_UPDATE : AFTER_MOUNT], instance);
       });
 
       if (isUpdate) {
-        prepend(function () {
-          instance.$node = patch($node, nodes[0]);
-        });
+        instance.$node = patch($node, nodes[0]);
       } else {
         $node = patch(arguments[0], nodes[0]);
         instance.$el = $node.el;
@@ -5908,7 +5887,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.39.3';
+Yox.version = '0.40.0';
 
 /**
  * 工具，便于扩展、插件使用

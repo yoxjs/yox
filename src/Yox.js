@@ -425,23 +425,18 @@ export default class Yox {
       }
     )
 
-    $observer.setDeps(
-      TEMPLATE_WATCHER_KEY,
-      deps
-    )
-
     nextTask.prepend(
       function () {
+        $observer.setDeps(
+          TEMPLATE_WATCHER_KEY,
+          deps
+        )
         execute($options[ isUpdate ? lifecycle.AFTER_UPDATE : lifecycle.AFTER_MOUNT ], instance)
       }
     )
 
     if (isUpdate) {
-      nextTask.prepend(
-        function () {
-          instance.$node = vdom.patch($node, nodes[ 0 ])
-        }
-      )
+      instance.$node = vdom.patch($node, nodes[ 0 ])
     }
     else {
       $node = vdom.patch(arguments[ 0 ], nodes[ 0 ])
@@ -630,7 +625,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.39.3'
+Yox.version = '0.40.0'
 
 /**
  * 工具，便于扩展、插件使用
