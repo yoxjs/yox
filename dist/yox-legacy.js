@@ -2826,11 +2826,11 @@ var Observer = function () {
         if (func(item)) {
           get$$1 = item;
         } else if (object(item)) {
+          if (item.deps) {
+            deps = item.deps;
+          }
           if (boolean(item.cache)) {
             cacheable = item.cache;
-          }
-          if (array(item.deps)) {
-            deps = item.deps;
           }
           if (func(item.get)) {
             get$$1 = item.get;
@@ -2843,16 +2843,19 @@ var Observer = function () {
         if (get$$1) {
 
           if (cacheable) {
-            instance.watch(keypath, function () {
-              if (has$1(cache, keypath)) {
-                delete cache[keypath];
-              }
+            instance.watch(keypath + FORCE, function () {
+              _getter[DIRTY] = TRUE;
             });
           }
 
-          var getter = function getter() {
-            if (cacheable && has$1(cache, keypath)) {
-              return cache[keypath];
+          var _getter = function _getter() {
+
+            if (cacheable) {
+              if (_getter[DIRTY]) {
+                delete _getter[DIRTY];
+              } else if (has$1(cache, keypath)) {
+                return cache[keypath];
+              }
             }
 
             if (!deps) {
@@ -2862,12 +2865,15 @@ var Observer = function () {
             var result = execute(get$$1, instance.context);
             cache[keypath] = result;
 
-            instance.setDeps(keypath, deps || pop(computedStack));
+            var newDeps = deps || pop(computedStack);
+            if (array(newDeps)) {
+              instance.setDeps(keypath, newDeps);
+            }
 
             return result;
           };
 
-          getter.toString = instance.computedGetters[keypath] = getter;
+          _getter.toString = instance.computedGetters[keypath] = _getter;
         }
 
         if (set$$1) {
@@ -2917,12 +2923,12 @@ var Observer = function () {
       var result = void 0;
       if (computedGetters) {
         var _matchBestGetter = matchBestGetter(computedGetters, keypath),
-            getter = _matchBestGetter.getter,
+            value = _matchBestGetter.value,
             rest = _matchBestGetter.rest;
 
-        if (getter) {
-          getter = getter();
-          result = rest && !primitive(getter) ? get$1(getter, rest) : { value: getter };
+        if (value) {
+          value = value();
+          result = rest && !primitive(value) ? get$1(value, rest) : { value: value };
         }
       }
 
@@ -3040,14 +3046,13 @@ var Observer = function () {
             return;
           } else {
             var _matchBestGetter2 = matchBestGetter(computedGetters, keypath),
-                prefix = _matchBestGetter2.prefix,
-                getter = _matchBestGetter2.getter,
+                value = _matchBestGetter2.value,
                 rest = _matchBestGetter2.rest;
 
-            if (getter && rest) {
-              getter = getter();
-              if (!primitive(getter)) {
-                set$1(getter, rest, newValue);
+            if (value && rest) {
+              value = value();
+              if (!primitive(value)) {
+                set$1(value, rest, newValue);
               }
               return;
             }
@@ -3072,9 +3077,14 @@ var Observer = function () {
           if (match) {
             push(args, match);
           }
-          emitter.fire(keypath, args, context);
+          emitter.fire(keypath + (force ? FORCE : CHAR_BLANK), args, context);
 
-          if (getNewValue(realpath) !== oldValue) {
+          newValue = getNewValue(realpath);
+          if (newValue !== oldValue) {
+            if (force) {
+              args[0] = newValue;
+              emitter.fire(keypath, args, context);
+            }
             each(watchKeypaths, function (key) {
               if (key !== realpath) {
                 if (isFuzzyKeypath(key)) {
@@ -3176,6 +3186,9 @@ extend(Observer.prototype, {
   }
 
 });
+
+var FORCE = '._force_';
+var DIRTY = '_dirty_';
 
 function updateWatchKeypaths(instance) {
   var deps = instance.deps,
@@ -3288,20 +3301,20 @@ function isFuzzyKeypath(keypath) {
  */
 function matchBestGetter(getters, keypath) {
 
-  var prefix = void 0,
-      getter = void 0,
+  var key = void 0,
+      value = void 0,
       rest = void 0;
 
-  each(sort(getters, TRUE), function (key) {
-    if (key = startsWith$1(keypath, key, TRUE)) {
-      prefix = key[0];
-      getter = getters[prefix];
-      rest = key[1];
+  each(sort(getters, TRUE), function (prefix) {
+    if (prefix = startsWith$1(keypath, prefix, TRUE)) {
+      key = prefix[0];
+      value = getters[key];
+      rest = prefix[1];
       return FALSE;
     }
   });
 
-  return { prefix: prefix, getter: getter, rest: rest };
+  return { key: key, value: value, rest: rest };
 }
 
 /**
@@ -4360,7 +4373,7 @@ function updateDirectives(oldVnode, vnode) {
   each$1(newDirectives, function (directive, key) {
     if (has$1(oldDirectives, key)) {
       var oldDirective = oldDirectives[key];
-      if (oldDirective.value !== directive.value) {
+      if (oldDirective.value !== directive.value || oldDirective.context.get(THIS) !== directive.context.get(THIS)) {
         unbindDirective(oldVnode, key);
         bindDirective(vnode, key);
       }
@@ -5426,7 +5439,7 @@ var model = function (options) {
   }
 };
 
-var TEMPLATE_WATCHER_KEY = '$template$';
+var TEMPLATE_KEY = '_template_';
 
 var Yox = function () {
   function Yox(options) {
@@ -5474,6 +5487,16 @@ var Yox = function () {
     } else {
       source = {};
     }
+
+    computed = computed ? copy(computed) : {};
+
+    var counter = 0;
+    computed[TEMPLATE_KEY] = {
+      deps: TRUE,
+      get: function get$$1() {
+        return counter++;
+      }
+    };
 
     // 先放 props
     // 当 data 是函数时，可以通过 this.get() 获取到外部数据
@@ -5552,9 +5575,6 @@ var Yox = function () {
     filters && instance.filter(filters);
 
     if (template) {
-      instance.watch(TEMPLATE_WATCHER_KEY, function () {
-        instance.$dirty = TRUE;
-      });
       execute(options[BEFORE_MOUNT], instance);
       instance.$template = Yox.compile(template);
       instance.updateView(el || api.createElement('div'));
@@ -5737,34 +5757,22 @@ var Yox = function () {
           $observer = instance.$observer,
           args = arguments;
 
+      var oldValue = instance.get(TEMPLATE_KEY);
+
       $observer.set(model$$1);
 
-      var update = function update() {
-
-        if (instance.$dirtyIgnore) {
-          delete instance.$dirtyIgnore;
-          return;
-        }
-
-        if (instance.$dirty) {
-          delete instance.$dirty;
-          instance.updateView();
-        }
-      };
-
-      if (args.length === 1) {
-        instance.$dirtyIgnore = TRUE;
-      } else if (args.length === 2 && args[1]) {
-        update();
+      if (oldValue === instance.get(TEMPLATE_KEY) || args.length === 1) {
         return;
       }
 
-      if (!instance.$pending) {
+      if (args.length === 2 && args[1]) {
+        instance.updateView();
+      } else if (!instance.$pending) {
         instance.$pending = TRUE;
         append(function () {
           if (instance.$pending) {
             delete instance.$pending;
-            update();
+            instance.updateView();
           }
         });
       }
@@ -5827,7 +5835,7 @@ var Yox = function () {
 
       prepend(function () {
         if (instance.$emitter) {
-          $observer.setDeps(TEMPLATE_WATCHER_KEY, deps);
+          $observer.setDeps(TEMPLATE_KEY, deps);
           execute($options[isUpdate ? AFTER_UPDATE : AFTER_MOUNT], instance);
         }
       });
@@ -6036,7 +6044,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.40.4';
+Yox.version = '0.40.5';
 
 /**
  * 工具，便于扩展、插件使用
