@@ -28,7 +28,7 @@ import * as lifecycle from './config/lifecycle'
 import api from './platform/web/api'
 import * as vdom from './platform/web/vdom'
 
-const TEMPLATE_WATCHER_KEY = '$template$'
+const TEMPLATE_KEY = '_template_'
 
 export default class Yox {
 
@@ -76,6 +76,16 @@ export default class Yox {
     }
     else {
       source = { }
+    }
+
+    computed = computed ? object.copy(computed) : { }
+
+    let counter = 0
+    computed[ TEMPLATE_KEY ] = {
+      deps: env.TRUE,
+      get: function () {
+        return counter++
+      }
     }
 
     // 先放 props
@@ -166,12 +176,6 @@ export default class Yox {
     filters && instance.filter(filters)
 
     if (template) {
-      instance.watch(
-        TEMPLATE_WATCHER_KEY,
-        function () {
-          instance.$dirty = env.TRUE
-        }
-      )
       execute(options[ lifecycle.BEFORE_MOUNT ], instance)
       instance.$template = Yox.compile(template)
       instance.updateView(el || api.createElement('div'))
@@ -323,37 +327,26 @@ export default class Yox {
 
     let instance = this, $observer = instance.$observer, args = arguments
 
+    let oldValue = instance.get(TEMPLATE_KEY)
+
     $observer.set(model)
 
-    let update = function () {
-
-      if (instance.$dirtyIgnore) {
-        delete instance.$dirtyIgnore
-        return
-      }
-
-      if (instance.$dirty) {
-        delete instance.$dirty
-        instance.updateView()
-      }
-
-    }
-
-    if (args.length === 1) {
-      instance.$dirtyIgnore = env.TRUE
-    }
-    else if (args.length === 2 && args[ 1 ]) {
-      update()
+    if (oldValue === instance.get(TEMPLATE_KEY)
+      || args.length === 1
+    ) {
       return
     }
 
-    if (!instance.$pending) {
+    if (args.length === 2 && args[ 1 ]) {
+      instance.updateView()
+    }
+    else if (!instance.$pending) {
       instance.$pending = env.TRUE
       nextTask.append(
         function () {
           if (instance.$pending) {
             delete instance.$pending
-            update()
+            instance.updateView()
           }
         }
       )
@@ -429,7 +422,7 @@ export default class Yox {
       function () {
         if (instance.$emitter) {
           $observer.setDeps(
-            TEMPLATE_WATCHER_KEY,
+            TEMPLATE_KEY,
             deps
           )
           execute($options[ isUpdate ? lifecycle.AFTER_UPDATE : lifecycle.AFTER_MOUNT ], instance)
@@ -627,7 +620,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.40.4'
+Yox.version = '0.40.5'
 
 /**
  * 工具，便于扩展、插件使用
