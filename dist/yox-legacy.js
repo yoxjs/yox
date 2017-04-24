@@ -679,8 +679,11 @@ function stringify(keypaths) {
 }
 
 function startsWith$1(keypath, prefix, split$$1) {
-  if (keypath === prefix || startsWith(keypath, prefix += SEPARATOR_KEY)) {
-    return split$$1 ? [prefix, slice(keypath, prefix.length)] : TRUE;
+  var temp = void 0;
+  if (keypath === prefix) {
+    return split$$1 ? [keypath, CHAR_BLANK] : TRUE;
+  } else if (startsWith(keypath, temp = prefix + SEPARATOR_KEY)) {
+    return split$$1 ? [prefix, slice(keypath, temp.length)] : TRUE;
   } else {
     return FALSE;
   }
@@ -811,8 +814,9 @@ function copy(object$$1, deep) {
   return result;
 }
 
-function getValue(value) {
+function getValue(object$$1, key) {
   // 如果函数改写了 toString，就调用 toString() 求值
+  var value = object$$1[key];
   if (func(value) && value.toString !== Function.prototype.toString) {
     value = value.toString();
   }
@@ -837,7 +841,7 @@ function get$1(object$$1, keypath) {
     var list = parse(keypath);
     for (var i = 0, len = list.length; i < len; i++) {
       if (i < len - 1) {
-        object$$1 = getValue(object$$1[list[i]]);
+        object$$1 = getValue(object$$1, list[i]);
         if (object$$1 == NULL) {
           return;
         }
@@ -849,7 +853,7 @@ function get$1(object$$1, keypath) {
 
   if (exists(object$$1, keypath)) {
     return {
-      value: getValue(object$$1[keypath])
+      value: getValue(object$$1, keypath)
     };
   }
 }
@@ -1240,25 +1244,6 @@ var ARRAY = 7;
  * @type {number}
  */
 var CALL = 8;
-
-/**
- * 用前缀匹配数组中的第一个字符串
- *
- * @param {Array.<string>} list
- * @param {string} value
- * @return {Array}
- */
-var matchFirst = function (list, value) {
-  var result = [];
-  each(list, function (prefix) {
-    if (startsWith(value, prefix)) {
-      push(result, prefix);
-      push(result, slice(value, prefix.length));
-      return FALSE;
-    }
-  });
-  return result;
-};
 
 var PLUS = '+';
 var MINUS = '-';
@@ -1766,10 +1751,19 @@ function compile$1(content) {
 
   var parseOperator = function parseOperator(sortedOperatorList) {
     skipWhitespace();
-    var literal = matchFirst(sortedOperatorList, slice(content, index))[0];
-    if (literal) {
-      index += literal.length;
-      return literal;
+
+    var value = slice(content, index),
+        match = void 0;
+    each(sortedOperatorList, function (prefix) {
+      if (startsWith(value, prefix)) {
+        match = prefix;
+        return FALSE;
+      }
+    });
+
+    if (match) {
+      index += match.length;
+      return match;
     }
   };
 
@@ -2335,6 +2329,16 @@ var Spread = function (_Node) {
   return Spread;
 }(Node$2);
 
+var toString = function (str) {
+  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : CHAR_BLANK;
+
+  try {
+    return str.toString();
+  } catch (e) {
+    return defaultValue;
+  }
+};
+
 /**
  * 文本节点
  *
@@ -2349,7 +2353,7 @@ var Text = function (_Node) {
 
     var _this = possibleConstructorReturn(this, (Text.__proto__ || Object.getPrototypeOf(Text)).call(this, TEXT));
 
-    _this.text = text;
+    _this.text = toString(text);
     return _this;
   }
 
@@ -2460,13 +2464,8 @@ function compile(content) {
           // 预编译表达式，提升性能
           if (type === DIRECTIVE && _child.type === TEXT) {
             var expr = compile$1(_child.text);
-            if (expr.type === LITERAL) {
-              target.value = expr.value;
-            } else if (expr.type === IDENTIFIER) {
-              target.value = expr.name;
-            } else {
-              target.expr = expr;
-            }
+            target.expr = expr;
+            target.value = expr.source;
             delete target.children;
           }
           // 属性绑定，把 Attribute 转成 单向绑定 指令
@@ -2843,11 +2842,13 @@ var Observer = function () {
 
         if (get$$1) {
 
-          instance.watch(keypath, function () {
-            if (has$1(cache, keypath)) {
-              delete cache[keypath];
-            }
-          });
+          if (cacheable) {
+            instance.watch(keypath, function () {
+              if (has$1(cache, keypath)) {
+                delete cache[keypath];
+              }
+            });
+          }
 
           var getter = function getter() {
             if (cacheable && has$1(cache, keypath)) {
@@ -2957,6 +2958,19 @@ var Observer = function () {
           watchKeypaths = instance.watchKeypaths,
           reversedKeypaths = instance.reversedKeypaths;
 
+      /**
+       * a -> b -> c
+       *
+       * a 依赖 b，b 依赖 c
+       *
+       * 当修改 c 时，要通知 a 和 b 更新
+       * 当修改 b 时，要通知 a 更新，不通知 c 更新
+       * 当修改 a 时，仅自己更新
+       *
+       * 当监听 user.* 时，如果修改了 user.name，不仅要触发 user.name 的 watcher，也要触发 user.* 的 watcher
+       *
+       * 这里遵循的一个原则是，只有当修改数据确实产生了数据变化，才会分析它的依赖
+       */
 
       var differences = [],
           differenceMap = {};
@@ -2989,30 +3003,10 @@ var Observer = function () {
         return newCache[keypath];
       };
 
-      var watchedMap = {};
-      var addWatchKeypath = function addWatchKeypath(keypath) {
-        // 最后触发主动监听的 keypath，相当于捡漏
-        // 比如修改了 user 但是 watch 了 user.name
-        // 这时需要确保 user.name 也能触发变化
-        if (watchKeypaths && !watchedMap[keypath]) {
-          watchedMap[keypath] = TRUE;
-          each(watchKeypaths, function (key) {
-            if (isFuzzyKeypath(key)) {
-              var match = matchKeypath(keypath, key);
-              if (match) {
-                addDifference(key, keypath, getOldValue(keypath), match);
-              }
-            } else if (startsWith$1(key, keypath)) {
-              addDifference(key, key, getOldValue(key));
-            }
-          });
-        }
-      };
-
-      var reversedMap = {};
-      var addReversedKeypath = function addReversedKeypath(keypath) {
-        if (reversedKeypaths && !reversedMap[keypath]) {
-          reversedMap[keypath] = TRUE;
+      var reversedDepMap = {};
+      var addReversedDepKeypath = function addReversedDepKeypath(keypath) {
+        if (reversedKeypaths && !reversedDepMap[keypath]) {
+          reversedDepMap[keypath] = TRUE;
           each(reversedKeypaths, function (key) {
             var list = void 0,
                 match = void 0;
@@ -3038,9 +3032,7 @@ var Observer = function () {
         keypath = normalize(keypath);
 
         addDifference(keypath, keypath, getOldValue(keypath));
-        addWatchKeypath(keypath);
 
-        // 如果有计算属性，则优先处理它
         if (computedSetters) {
           var setter = computedSetters[keypath];
           if (setter) {
@@ -3048,6 +3040,7 @@ var Observer = function () {
             return;
           } else {
             var _matchBestGetter2 = matchBestGetter(computedGetters, keypath),
+                prefix = _matchBestGetter2.prefix,
                 getter = _matchBestGetter2.getter,
                 rest = _matchBestGetter2.rest;
 
@@ -3061,31 +3054,46 @@ var Observer = function () {
           }
         }
 
-        // 普通数据
         set$1(data, keypath, newValue);
       });
 
-      var fireChange = function fireChange(_ref) {
+      var fireDifference = function fireDifference(_ref) {
         var keypath = _ref.keypath,
             realpath = _ref.realpath,
             oldValue = _ref.oldValue,
             match = _ref.match,
             force = _ref.force;
 
-        var newValue = getNewValue(realpath);
-        if (force || oldValue !== newValue) {
+
+        var newValue = force ? oldValue : getNewValue(realpath);
+        if (force || newValue !== oldValue) {
+
           var args = [newValue, oldValue, keypath];
           if (match) {
             push(args, match);
           }
           emitter.fire(keypath, args, context);
-          addReversedKeypath(keypath);
-          addWatchKeypath(realpath);
+
+          if (getNewValue(realpath) !== oldValue) {
+            each(watchKeypaths, function (key) {
+              if (key !== realpath) {
+                if (isFuzzyKeypath(key)) {
+                  var _match = matchKeypath(realpath, key);
+                  if (_match) {
+                    addDifference(key, realpath, getOldValue(realpath), _match);
+                  }
+                } else if (startsWith$1(key, realpath)) {
+                  addDifference(key, key, getOldValue(key));
+                }
+              }
+            });
+            addReversedDepKeypath(realpath);
+          }
         }
       };
 
       for (var i = 0; i < differences.length; i++) {
-        fireChange(differences[i]);
+        fireDifference(differences[i]);
       }
     }
   }, {
@@ -3113,7 +3121,7 @@ var Observer = function () {
         });
 
         instance.reversedDeps = reversedDeps;
-        instance.reversedKeypaths = keys(reversedDeps);
+        instance.reversedKeypaths = sort(reversedDeps, TRUE);
       }
     }
   }, {
@@ -3190,7 +3198,7 @@ function updateWatchKeypaths(instance) {
     each(deps, addKeypath);
   });
 
-  instance.watchKeypaths = keys(watchKeypaths);
+  instance.watchKeypaths = sort(watchKeypaths, TRUE);
 }
 
 /**
@@ -3213,8 +3221,7 @@ function createWatch(action) {
     var instance = this;
 
     var emitter = instance.emitter,
-        context = instance.context,
-        cache = instance.cache;
+        context = instance.context;
 
 
     each$1(watchers, function (value, keypath) {
@@ -3281,18 +3288,20 @@ function isFuzzyKeypath(keypath) {
  */
 function matchBestGetter(getters, keypath) {
 
-  var getter = void 0,
+  var prefix = void 0,
+      getter = void 0,
       rest = void 0;
 
   each(sort(getters, TRUE), function (key) {
     if (key = startsWith$1(keypath, key, TRUE)) {
-      getter = getters[key[0]];
+      prefix = key[0];
+      getter = getters[prefix];
       rest = key[1];
       return FALSE;
     }
   });
 
-  return { getter: getter, rest: rest };
+  return { prefix: prefix, getter: getter, rest: rest };
 }
 
 /**
@@ -3785,16 +3794,6 @@ api.off = function (element, type, listener) {
   });
 };
 
-var toString = function (str) {
-  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : CHAR_BLANK;
-
-  try {
-    return str.toString();
-  } catch (e) {
-    return defaultValue;
-  }
-};
-
 function Vnode(sel, text, data, children, key, component) {
   return {
     sel: sel,
@@ -3840,8 +3839,6 @@ function createKeyToIndex(vnodes, startIndex, endIndex) {
   }
   return result;
 }
-
-
 
 function createElementVnode(sel, data, children$$1, key, component) {
   return Vnode(sel, UNDEFINED, data, children$$1, key, component);
@@ -5880,15 +5877,7 @@ var Yox = function () {
           context = directive.context;
 
 
-      if (value) {
-        return function (event, data) {
-          if (event.type !== value) {
-            event = new Event(event);
-            event.type = value;
-          }
-          instance.fire(event, data);
-        };
-      } else if (expr && expr.type === CALL) {
+      if (expr && expr.type === CALL) {
         return function (event) {
           var isEvent = Event.is(event);
           var callee = expr.callee,
@@ -5910,6 +5899,14 @@ var Yox = function () {
             event.prevent();
             event.stop();
           }
+        };
+      } else if (value) {
+        return function (event, data) {
+          if (event.type !== value) {
+            event = new Event(event);
+            event.type = value;
+          }
+          instance.fire(event, data);
         };
       }
     }
@@ -6039,7 +6036,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.40.2';
+Yox.version = '0.40.3';
 
 /**
  * 工具，便于扩展、插件使用
