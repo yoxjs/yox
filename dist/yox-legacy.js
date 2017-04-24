@@ -4733,8 +4733,8 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
       push(keypathList, source.keypath);
       updateKeypath();
     }
-    if (isDefined(source.value)) {
-      context = context.push(source.value, keypath);
+    if (isDefined(source.forward)) {
+      context = context.push(source.forward, keypath);
     }
     if (array(source.context)) {
       execute(context.set, context, source.context);
@@ -4768,7 +4768,7 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
       pop(htmlStack);
     }
 
-    if (isDefined(source.value)) {
+    if (isDefined(source.forward)) {
       context = context.pop();
     }
     if (isDefined(source.keypath)) {
@@ -4855,12 +4855,12 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
         index = source.index,
         children = source.children;
 
-    var value = executeExpr(expr),
+    var forward = executeExpr(expr),
         each$$1 = void 0;
 
-    if (array(value)) {
+    if (array(forward)) {
       each$$1 = each;
-    } else if (object(value)) {
+    } else if (object(forward)) {
       each$$1 = each$1;
     }
 
@@ -4868,10 +4868,10 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
 
       var list = [];
 
-      each$$1(value, function (value, i) {
+      each$$1(forward, function (forward, i) {
 
         var child = {
-          value: value,
+          forward: forward,
           children: children,
           keypath: i
         };
@@ -4884,7 +4884,7 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
       });
 
       pushStack({
-        value: value,
+        forward: forward,
         children: list,
         keypath: expr.keypath
       });
@@ -6036,7 +6036,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.40.3';
+Yox.version = '0.40.4';
 
 /**
  * 工具，便于扩展、插件使用
