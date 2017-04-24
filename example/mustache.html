@@ -44,9 +44,10 @@
             </p>
 
             <p>
+
                 {{#each users:index}}
-                    <div key="{{index}}" class="wrapper">
-                        {{name}}
+                    <div key="{{index}}" class="wrapper" data-id="{{id}}">
+                        {{name}}-{{age}}
                         {{#if index < users.length - 1}}
                             -
                         {{/if}}
@@ -101,13 +102,19 @@
                 },
                 users: [
                     {
-                        name: 'Jake'
+                        id: 0,
+                        name: 'Jake',
+                        age: 10
                     },
                     {
-                        name: 'John'
+                        id: 1,
+                        name: 'John',
+                        age: 20
                     },
                     {
-                        name: 'Mike'
+                        id: 2,
+                        name: 'Mike',
+                        age: 30
                     }
                 ],
                 today: new Date()

@@ -477,16 +477,7 @@ export default class Yox {
     let instance = this
     let { value, expr, keypath, context } = directive
 
-    if (value) {
-      return function (event, data) {
-        if (event.type !== value) {
-          event = new Event(event)
-          event.type = value
-        }
-        instance.fire(event, data)
-      }
-    }
-    else if (expr && expr.type === expressionNodeType.CALL) {
+    if (expr && expr.type === expressionNodeType.CALL) {
       return function (event) {
         let isEvent = Event.is(event)
         let { callee, args } = expr
@@ -509,6 +500,15 @@ export default class Yox {
           event.prevent()
           event.stop()
         }
+      }
+    }
+    else if (value) {
+      return function (event, data) {
+        if (event.type !== value) {
+          event = new Event(event)
+          event.type = value
+        }
+        instance.fire(event, data)
       }
     }
   }
@@ -627,7 +627,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.40.2'
+Yox.version = '0.40.3'
 
 /**
  * 工具，便于扩展、插件使用
