@@ -4728,7 +4728,9 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
       if (string(key)) {
         trackBy = key;
       } else if (array(key)) {
+        attributeRendering = TRUE;
         trackBy = mergeNodes(pushNode(key, TRUE), key);
+        attributeRendering = NULL;
       }
       if (trackBy) {
 
@@ -5861,7 +5863,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.40.1';
+Yox.version = '0.40.2';
 
 /**
  * 工具，便于扩展、插件使用
