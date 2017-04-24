@@ -9,8 +9,6 @@ import component from 'yox-snabbdom/modules/component'
 
 import * as is from 'yox-common/util/is'
 import * as env from 'yox-common/util/env'
-import * as array from 'yox-common/util/array'
-import * as keypathUtil from 'yox-common/util/keypath'
 
 import * as templateNodeType from 'yox-template-compiler/src/nodeType'
 import compileTemplate from 'yox-template-compiler/compile'
@@ -25,7 +23,7 @@ export function create(ast, context, instance, addDep) {
   let createElementVnode = function (source, output) {
 
     let hooks = { },
-      data = { instance, hooks },
+      data = { instance, hooks, attrs: output.attrs, directives: output.directives },
       sourceChildren = source.children,
       outputChildren = output.children
 
@@ -35,42 +33,10 @@ export function create(ast, context, instance, addDep) {
         && child.safe === env.FALSE
       ) {
         data.props = {
-          innerHTML: outputChildren[ 0 ],
+          innerHTML: outputChildren[ 0 ].text,
         }
         outputChildren = env.NULL
       }
-    }
-
-    if (output.attrs) {
-      array.each(
-        output.attrs,
-        function (node) {
-          let attrs = data.attrs || (data.attrs = { })
-          attrs[ node.name ] = node.value
-        }
-      )
-    }
-
-    if (output.directives) {
-      array.each(
-        output.directives,
-        function (directive) {
-          let directives = data.directives || (data.directives = { })
-          directives[
-            keypathUtil.join(directive.name, directive.modifier)
-          ] = directive
-        }
-      )
-    }
-
-    if (outputChildren) {
-      outputChildren = outputChildren.map(
-        function (child) {
-          return Vnode.is(child)
-            ? child
-            : snabbdom.createTextVnode(child)
-        }
-      )
     }
 
     return snabbdom.createElementVnode(

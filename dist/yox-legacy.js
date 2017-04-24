@@ -2344,12 +2344,12 @@ var Spread = function (_Node) {
 var Text = function (_Node) {
   inherits(Text, _Node);
 
-  function Text(content) {
+  function Text(text) {
     classCallCheck(this, Text);
 
     var _this = possibleConstructorReturn(this, (Text.__proto__ || Object.getPrototypeOf(Text)).call(this, TEXT));
 
-    _this.content = content;
+    _this.text = text;
     return _this;
   }
 
@@ -2452,14 +2452,14 @@ function compile(content) {
         }
         if (!falsy(children)) {
           var child = getSingleChild(children);
-          element.key = child.type === TEXT ? child.content : children;
+          element.key = child.type === TEXT ? child.text : children;
         }
       } else {
         var _child = getSingleChild(children);
         if (_child) {
           // 预编译表达式，提升性能
           if (type === DIRECTIVE && _child.type === TEXT) {
-            var expr = compile$1(_child.content);
+            var expr = compile$1(_child.text);
             if (expr.type === LITERAL) {
               target.value = expr.value;
             } else if (expr.type === IDENTIFIER) {
@@ -2482,14 +2482,14 @@ function compile(content) {
 
   var addChild = function addChild(node) {
     var type = node.type,
-        content = node.content;
+        text = node.text;
 
 
     if (type === TEXT) {
-      if (isBreakline(content) || !(content = trimBreakline(content))) {
+      if (isBreakline(text) || !(text = trimBreakline(text))) {
         return;
       }
-      node.content = content;
+      node.text = text;
     }
 
     if (elseTypes[type]) {
@@ -3806,10 +3806,6 @@ function Vnode(sel, text, data, children, key, component) {
   };
 }
 
-Vnode.is = function (target) {
-  return has$1(target, 'sel');
-};
-
 var SEL_COMMENT = '!';
 
 var HOOK_INIT = 'init';
@@ -3845,9 +3841,7 @@ function createKeyToIndex(vnodes, startIndex, endIndex) {
   return result;
 }
 
-function createTextVnode(text$$1) {
-  return Vnode(UNDEFINED, toString(text$$1));
-}
+
 
 function createElementVnode(sel, data, children$$1, key, component) {
   return Vnode(sel, UNDEFINED, data, children$$1, key, component);
@@ -4695,12 +4689,10 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
     });
   };
 
-  var addValue = function addValue(value, parent) {
-    var name = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 'children';
-
+  var addChild = function addChild(value, parent) {
     var collection = void 0;
     if (parent) {
-      collection = parent[name] || (parent[name] = makeNodes([]));
+      collection = parent.children || (parent.children = makeNodes([]));
     } else {
       collection = nodeList;
     }
@@ -4709,6 +4701,16 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
     } else {
       collection.push(value);
     }
+  };
+
+  var addAttr = function addAttr(key, value, parent) {
+    var attrs = parent.attrs || (parent.attrs = {});
+    attrs[key] = value;
+  };
+
+  var addDirective = function addDirective(directive, parent) {
+    var directives = parent.directives || (parent.directives = {});
+    directives[join(directive.name, directive.modifier)] = directive;
   };
 
   var attributeRendering = void 0;
@@ -4725,7 +4727,7 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
 
     if (isDefined(value)) {
       if (!silent && value !== FALSE) {
-        addValue(value, parent);
+        addChild(value, parent);
       }
       return value;
     }
@@ -4760,7 +4762,7 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
     value = execute(leave[type], NULL, [source, output]);
 
     if (!silent && isDefined(value)) {
-      addValue(value, parent);
+      addChild(value, parent);
     }
 
     pop(nodeStack);
@@ -4920,32 +4922,25 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
           addDep(result.keypath, result.value);
           return _cache.result;
         } else {
-          output.cache = {
-            key: trackBy,
+          output.key = trackBy;
+          currentCache[trackBy] = {
             value: result.value
           };
         }
       }
     }
+    output.name = source.name;
+    output.component = source.component;
   };
 
   leave[ELEMENT] = function (source, output) {
-    var cache = output.cache;
 
+    var value = createElement(source, output);
 
-    var value = createElement(source, {
-      name: source.name,
-      component: source.component,
-      key: cache ? cache.key : UNDEFINED,
-      attrs: output.attrs,
-      directives: output.directives,
-      children: output.children,
-      keypath: keypath
-    });
+    var key = output.key;
 
-    if (cache) {
-      cache.result = value;
-      currentCache[cache.key] = cache;
+    if (key) {
+      currentCache[key].result = value;
     }
 
     return value;
@@ -4967,22 +4962,22 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
         children = source.children,
         bindTo = source.bindTo;
 
-    addValue({
-      name: name,
-      value: mergeNodes(output.children, children)
-    }, element, 'attrs');
+    addAttr(name, mergeNodes(output.children, children), element);
     if (string(bindTo)) {
-      addValue(createDirective(DIRECTIVE_MODEL, name, bindTo), element, 'directives');
+      addDirective(createDirective(DIRECTIVE_MODEL, name, bindTo), element);
       addExpressionDep = addDep;
     }
   };
 
   leave[TEXT] = function (source) {
-    return source.content;
+    // 如果是元素的文本，而不是属性的文本
+    // 直接保持原样，因为 snabbdom 文本节点的结构和模板文本节点结构是一致的
+    return attributeRendering ? source.text : source;
   };
 
   leave[EXPRESSION] = function (source) {
-    return executeExpr(source.expr);
+    var text = executeExpr(source.expr);
+    return attributeRendering ? text : new Text(text);
   };
 
   leave[DIRECTIVE] = function (source, output) {
@@ -5006,7 +5001,7 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
       value = mergeNodes(output.children, source.children);
     }
 
-    addValue(createDirective(name, modifier, value, expr), htmlStack[htmlStack.length - 2], 'directives');
+    addDirective(createDirective(name, modifier, value, expr), htmlStack[htmlStack.length - 2]);
   };
 
   leave[SPREAD$1] = function (source, output) {
@@ -5034,12 +5029,9 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
       each$1(value, function (value, name) {
 
         if (hasKeypath) {
-          addValue(createDirective(DIRECTIVE_MODEL, name, join(expr.keypath, name)), element, 'directives');
+          addDirective(createDirective(DIRECTIVE_MODEL, name, join(expr.keypath, name)), element);
         } else {
-          addValue({
-            name: name,
-            value: value
-          }, element, 'attrs');
+          addAttr(name, value, element);
         }
       });
     } else {
@@ -5063,7 +5055,7 @@ function create(ast, context, instance, addDep) {
   var createElementVnode$$1 = function createElementVnode$$1(source, output) {
 
     var hooks = {},
-        data = { instance: instance, hooks: hooks },
+        data = { instance: instance, hooks: hooks, attrs: output.attrs, directives: output.directives },
         sourceChildren = source.children,
         outputChildren = output.children;
 
@@ -5071,30 +5063,10 @@ function create(ast, context, instance, addDep) {
       var child = sourceChildren[0];
       if (child.type === EXPRESSION && child.safe === FALSE) {
         data.props = {
-          innerHTML: outputChildren[0]
+          innerHTML: outputChildren[0].text
         };
         outputChildren = NULL;
       }
-    }
-
-    if (output.attrs) {
-      each(output.attrs, function (node) {
-        var attrs$$1 = data.attrs || (data.attrs = {});
-        attrs$$1[node.name] = node.value;
-      });
-    }
-
-    if (output.directives) {
-      each(output.directives, function (directive) {
-        var directives$$1 = data.directives || (data.directives = {});
-        directives$$1[join(directive.name, directive.modifier)] = directive;
-      });
-    }
-
-    if (outputChildren) {
-      outputChildren = outputChildren.map(function (child) {
-        return Vnode.is(child) ? child : createTextVnode(child);
-      });
     }
 
     return createElementVnode(output.name, data, outputChildren, output.key, output.component);
@@ -5855,8 +5827,10 @@ var Yox = function () {
       });
 
       prepend(function () {
-        $observer.setDeps(TEMPLATE_WATCHER_KEY, deps);
-        execute($options[isUpdate ? AFTER_UPDATE : AFTER_MOUNT], instance);
+        if (instance.$emitter) {
+          $observer.setDeps(TEMPLATE_WATCHER_KEY, deps);
+          execute($options[isUpdate ? AFTER_UPDATE : AFTER_MOUNT], instance);
+        }
       });
 
       if (isUpdate) {
@@ -6063,7 +6037,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.40.0';
+Yox.version = '0.40.1';
 
 /**
  * 工具，便于扩展、插件使用
