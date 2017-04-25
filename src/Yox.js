@@ -14,8 +14,17 @@ import * as string from 'yox-common/util/string'
 import * as logger from 'yox-common/util/logger'
 import * as nextTask from 'yox-common/util/nextTask'
 
+import * as snabbdom from 'yox-snabbdom'
+
+import snabbdomAttrs from 'yox-snabbdom/modules/attrs'
+import snabbdomProps from 'yox-snabbdom/modules/props'
+import snabbdomDirectives from 'yox-snabbdom/modules/directives'
+import snabbdomComponent from 'yox-snabbdom/modules/component'
+
 import compileTemplate from 'yox-template-compiler/compile'
+import renderTemplate from 'yox-template-compiler/render'
 import * as templateSyntax from 'yox-template-compiler/src/syntax'
+import * as templateNodeType from 'yox-template-compiler/src/nodeType'
 
 import executeExpression from 'yox-expression-compiler/execute'
 import * as expressionNodeType from 'yox-expression-compiler/src/nodeType'
@@ -26,9 +35,10 @@ import * as pattern from './config/pattern'
 import * as lifecycle from './config/lifecycle'
 
 import api from './platform/web/api'
-import * as vdom from './platform/web/vdom'
 
 const TEMPLATE_KEY = '_template_'
+
+const patch = snabbdom.init([ snabbdomComponent, snabbdomAttrs, snabbdomProps, snabbdomDirectives ], api)
 
 export default class Yox {
 
@@ -90,11 +100,12 @@ export default class Yox {
 
     // 先放 props
     // 当 data 是函数时，可以通过 this.get() 获取到外部数据
-    instance.$observer = new Observer({
+    let observer = new Observer({
       context: instance,
       data: source,
       computed
     })
+    instance.$observer = observer
 
     // 后放 data
     let extend = is.func(data) ? execute(data, instance) : data
@@ -113,7 +124,7 @@ export default class Yox {
     }
 
     // 等数据准备好之后，再触发 watchers
-    watchers && instance.$observer.watch(watchers)
+    watchers && observer.watch(watchers)
 
     // 监听各种事件
     instance.$emitter = new Emitter()
@@ -176,9 +187,29 @@ export default class Yox {
     filters && instance.filter(filters)
 
     if (template) {
-      execute(options[ lifecycle.BEFORE_MOUNT ], instance)
-      instance.$template = Yox.compile(template)
-      instance.updateView(el || api.createElement('div'))
+      // 过滤器和计算属性是预定义好的
+      // 在组件创建之后就不会改变，因此在此固化不变的 context
+      // 避免每次更新都要全量 extend
+      let { filter } = registry
+      let context = object.extend(
+        { },
+        // 全局过滤器
+        filter && filter.data,
+        // 本地过滤器
+        filters,
+        // 计算属性
+        observer.computedGetters
+      )
+      // 指定函数的执行上下文是组件实例
+      context.$context = instance
+      instance.$context = context
+      // 确保组件根元素有且只有一个
+      instance.$template = Yox.compile(template)[ 0 ]
+      // 首次渲染
+      instance.updateView(
+        el || api.createElement('div'),
+        instance.render()
+      )
     }
 
   }
@@ -325,7 +356,8 @@ export default class Yox {
    */
   updateModel(model) {
 
-    let instance = this, $observer = instance.$observer, args = arguments
+    let instance = this, args = arguments
+    let { $observer, $node } = instance
 
     let oldValue = instance.get(TEMPLATE_KEY)
 
@@ -338,7 +370,10 @@ export default class Yox {
     }
 
     if (args.length === 2 && args[ 1 ]) {
-      instance.updateView()
+      instance.updateView(
+        $node,
+        instance.render()
+      )
     }
     else if (!instance.$pending) {
       instance.$pending = env.TRUE
@@ -346,7 +381,10 @@ export default class Yox {
         function () {
           if (instance.$pending) {
             delete instance.$pending
-            instance.updateView()
+            instance.updateView(
+              $node,
+              instance.render()
+            )
           }
         }
       )
@@ -354,61 +392,50 @@ export default class Yox {
 
   }
 
-  /**
-   * 更新视图
-   */
-  updateView() {
+  render() {
 
-    let instance = this
+    let instance = this, map = { }, deps = [ ]
+    let { $template, $observer, $context } = instance
 
-    let {
-      $observer,
-      $options,
-      $filters,
-      $node,
-    } = instance
+    object.extend($context, $observer.data)
 
-    let isUpdate = $node
+    let nodes = renderTemplate(
+      $template,
+      $context,
+      snabbdom.createCommentVnode,
+      function (source, output) {
 
-    // 对于静态组件，可在 beforeUpdate 钩子函数返回 false
-    if (isUpdate
-      && execute($options[ lifecycle.BEFORE_UPDATE ], instance) === env.FALSE
-    ) {
-      return
-    }
+        let hooks = { },
+          data = { instance, hooks, attrs: output.attrs, directives: output.directives },
+          sourceChildren = source.children,
+          outputChildren = output.children
 
-    let context = { }
-    let { filter } = registry
-
-    object.extend(
-      context,
-      // 全局过滤器
-      filter && filter.data,
-      // 本地过滤器
-      $filters && $filters.data
-    )
-
-    object.each(
-      context,
-      function (value, key) {
-        if (is.func(value)) {
-          context[ key ] = value.bind(instance)
+        if (sourceChildren && sourceChildren.length === 1) {
+          let child = sourceChildren[ 0 ]
+          if (child.type === templateNodeType.EXPRESSION
+            && child.safe === env.FALSE
+          ) {
+            data.props = {
+              innerHTML: outputChildren[ 0 ].text,
+            }
+            outputChildren = env.NULL
+          }
         }
-      }
-    )
 
-    // data 中的函数不需要强制绑定 this
-    // 不是不想管，是没法管，因为每层级都可能出现函数，但不可能每层都绑定
-    // 而且让 data 中的函数完全动态化说不定还是一个好设计呢
-    object.extend(context, $observer.data, $observer.computedGetters)
+        return snabbdom.createElementVnode(
+          output.name,
+          data,
+          outputChildren,
+          output.key,
+          output.component
+        )
 
-    // 新的虚拟节点和依赖关系
-    let map = { },
-    deps = [ ],
-    nodes = vdom.create(
-      instance.$template,
-      context,
-      instance,
+      },
+      function (name) {
+        return Yox.compile(
+          instance.partial(name)
+        )
+      },
       function (key, value) {
         if (!map[ key ]) {
           map[ key ] = env.TRUE
@@ -418,25 +445,38 @@ export default class Yox {
       }
     )
 
-    nextTask.prepend(
-      function () {
-        if (instance.$emitter) {
-          $observer.setDeps(
-            TEMPLATE_KEY,
-            deps
-          )
-          execute($options[ isUpdate ? lifecycle.AFTER_UPDATE : lifecycle.AFTER_MOUNT ], instance)
-        }
-      }
-    )
+    $observer.setDeps(TEMPLATE_KEY, deps)
 
-    if (isUpdate) {
-      instance.$node = vdom.patch($node, nodes[ 0 ])
+    return nodes[ 0 ]
+
+  }
+
+  /**
+   * 更新视图
+   *
+   * @param {HTMLElement|Vnode} oldNode
+   * @param {Vnode} newNode
+   */
+  updateView(oldNode, newNode) {
+
+    let instance = this
+
+    let {
+      $node,
+      $options,
+    } = instance
+
+    if ($node) {
+      execute($options[ lifecycle.BEFORE_UPDATE ], instance)
+      instance.$node = patch(oldNode, newNode)
+      execute($options[ lifecycle.AFTER_UPDATE ], instance)
     }
     else {
-      $node = vdom.patch(arguments[ 0 ], nodes[ 0 ])
+      execute($options[ lifecycle.BEFORE_MOUNT ], instance)
+      $node = patch(oldNode, newNode)
       instance.$el = $node.el
       instance.$node = $node
+      execute($options[ lifecycle.AFTER_MOUNT ], instance)
     }
 
   }
@@ -548,7 +588,7 @@ export default class Yox {
    * @param {Function} fn
    */
   nextTick(fn) {
-    Yox.nextTick(fn)
+    nextTask.append(fn)
   }
 
   /**
@@ -620,7 +660,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.40.5'
+Yox.version = '0.40.6'
 
 /**
  * 工具，便于扩展、插件使用
@@ -793,10 +833,7 @@ array.each(
  *
  * @param {Function} fn
  */
-Yox.nextTick = function (fn) {
-  fn.i = 1
-  nextTask.append(fn)
-}
+Yox.nextTick = nextTask.append
 
 /**
  * 编译模板，暴露出来是为了打包阶段的模板预编译
@@ -805,7 +842,9 @@ Yox.nextTick = function (fn) {
  * @return {Object}
  */
 Yox.compile = function (template) {
-  return compileTemplate(template)[ 0 ]
+  return is.string(template)
+    ? compileTemplate(template)
+    : template
 }
 
 /**
