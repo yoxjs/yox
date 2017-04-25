@@ -1396,6 +1396,10 @@ function createCommentVnode(text$$1) {
   return Vnode(SEL_COMMENT, text$$1);
 }
 
+function createTextVnode(text$$1) {
+  return Vnode(UNDEFINED, toString(text$$1));
+}
+
 function init(modules) {
   var api = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : domApi;
 
@@ -3168,7 +3172,7 @@ var Text = function (_Node) {
 
     var _this = possibleConstructorReturn(this, (Text.__proto__ || Object.getPrototypeOf(Text)).call(this, TEXT));
 
-    _this.text = toString(text);
+    _this.text = text;
     return _this;
   }
 
@@ -3762,13 +3766,12 @@ function mergeNodes(outputNodes, sourceNodes) {
  *
  * @param {Object} ast 编译出来的抽象语法树
  * @param {Object} data 渲染模板的数据
- * @param {Function} createComment 创建注释节点
  * @param {Function} createElement 创建元素节点
  * @param {?Function} importTemplate 导入子模板，如果是纯模板，可不传
  * @param {?Function} addDep 渲染模板过程中使用的数据依赖，如果是纯模板，可不传
  * @return {Array}
  */
-function render(ast, data, createComment, createElement, importTemplate, addDep) {
+function render(ast, data, createElement, importTemplate, addDep) {
 
   var keypath = void 0,
       keypathList = [],
@@ -3808,17 +3811,31 @@ function render(ast, data, createComment, createElement, importTemplate, addDep)
     });
   };
 
-  var addChild = function addChild(value, parent) {
+  var addChildNative = function addChildNative(children, child) {
+    var prevChild = last(children);
+    if (object(prevChild) && object(child)) {
+      var prop = 'text';
+      if (string(prevChild[prop]) && string(child[prop])) {
+        prevChild[prop] += child[prop];
+        return;
+      }
+    }
+    children.push(child);
+  };
+
+  var addChild = function addChild(child, parent) {
     var collection = void 0;
     if (parent) {
       collection = parent.children || (parent.children = makeNodes([]));
     } else {
       collection = nodeList;
     }
-    if (isNodes(value)) {
-      push(collection, value);
+    if (isNodes(child)) {
+      each(child, function (child) {
+        addChildNative(collection, child);
+      });
     } else {
-      collection.push(value);
+      addChildNative(collection, child);
     }
   };
 
@@ -3961,7 +3978,7 @@ function render(ast, data, createComment, createElement, importTemplate, addDep)
   enter[IF$1] = enter[ELSE_IF$1] = function (source) {
     if (!executeExpr(source.expr)) {
       if (sibling && !elseTypes[sibling.type] && !attributeRendering) {
-        return makeNodes(createComment());
+        return createCommentVnode();
       }
       return FALSE;
     }
@@ -4091,14 +4108,16 @@ function render(ast, data, createComment, createElement, importTemplate, addDep)
   };
 
   leave[TEXT] = function (source) {
+    var text = source.text;
     // 如果是元素的文本，而不是属性的文本
     // 直接保持原样，因为 snabbdom 文本节点的结构和模板文本节点结构是一致的
-    return attributeRendering ? source.text : source;
+
+    return attributeRendering ? text : createTextVnode(text);
   };
 
   leave[EXPRESSION] = function (source) {
     var text = executeExpr(source.expr);
-    return attributeRendering ? text : new Text(text);
+    return attributeRendering ? text : createTextVnode(text);
   };
 
   leave[DIRECTIVE] = function (source, output) {
@@ -5783,7 +5802,7 @@ var Yox = function () {
 
       extend($context, $observer.data);
 
-      var nodes = render($template, $context, createCommentVnode, function (source, output) {
+      var nodes = render($template, $context, function (source, output) {
 
         var hooks = {},
             data = { instance: instance, hooks: hooks, attrs: output.attrs, directives: output.directives },
