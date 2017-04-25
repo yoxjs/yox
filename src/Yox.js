@@ -414,7 +414,6 @@ export default class Yox {
     let nodes = renderTemplate(
       $template,
       $context,
-      snabbdom.createCommentVnode,
       function (source, output) {
 
         let hooks = { },

@@ -18,8 +18,8 @@
     "yox-common": "^0.10.3",
     "yox-expression-compiler": "^0.10.9",
     "yox-observer": "^0.8.1",
-    "yox-snabbdom": "^0.8.7",
-    "yox-template-compiler": "^0.12.6"
+    "yox-snabbdom": "^0.8.8",
+    "yox-template-compiler": "^0.12.7"
   },
   "scripts": {
     "source": "rollup -c",
