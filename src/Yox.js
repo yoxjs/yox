@@ -191,7 +191,7 @@ export default class Yox {
       // 在组件创建之后就不会改变，因此在此固化不变的 context
       // 避免每次更新都要全量 extend
       let { filter } = registry
-      let context = object.extend(
+      instance.$context = object.extend(
         { },
         // 全局过滤器
         filter && filter.data,
@@ -200,9 +200,6 @@ export default class Yox {
         // 计算属性
         observer.computedGetters
       )
-      // 指定函数的执行上下文是组件实例
-      context.$context = instance
-      instance.$context = context
       // 确保组件根元素有且只有一个
       instance.$template = Yox.compile(template)[ 0 ]
       // 首次渲染
@@ -218,11 +215,11 @@ export default class Yox {
    * 取值
    *
    * @param {string} keypath
-   * @param {?string} context
+   * @param {*} defaultValue
    * @return {?*}
    */
-  get(keypath, context) {
-    return this.$observer.get(keypath, context)
+  get(keypath, defaultValue) {
+    return this.$observer.get(keypath, defaultValue)
   }
 
   /**
@@ -414,11 +411,7 @@ export default class Yox {
     let nodes = renderTemplate(
       $template,
       $context,
-      function (name) {
-        return Yox.compile(
-          instance.partial(name)
-        )
-      },
+      instance,
       function (key, value) {
         if (!map[ key ]) {
           map[ key ] = env.TRUE
@@ -462,6 +455,18 @@ export default class Yox {
       execute($options[ lifecycle.AFTER_MOUNT ], instance)
     }
 
+  }
+
+  /**
+   * 导入编译后的子模板
+   *
+   * @param {string} name
+   * @return {Array}
+   */
+  importPartial(name) {
+    return Yox.compile(
+      this.partial(name)
+    )
   }
 
   /**
@@ -643,7 +648,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.40.9'
+Yox.version = '0.41.0'
 
 /**
  * 工具，便于扩展、插件使用

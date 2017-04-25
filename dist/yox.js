@@ -3469,18 +3469,18 @@ executor[LITERAL] = function (node, context) {
   return node.value;
 };
 
-executor[IDENTIFIER] = function (node, context, addDep) {
+executor[IDENTIFIER] = function (node, context, instance, addDep) {
   var result = context.get(node.name);
   addDep && addDep(result.keypath, result.value);
   return result.value;
 };
 
-executor[MEMBER] = function (node, context, addDep) {
+executor[MEMBER] = function (node, context, instance, addDep) {
   var keypath = node.keypath;
 
   if (!keypath) {
     keypath = Member.stringify(node, function (node) {
-      return execute$1(node, context, addDep);
+      return execute$1(node, context, instance, addDep);
     });
   }
   var result = context.get(keypath);
@@ -3488,18 +3488,18 @@ executor[MEMBER] = function (node, context, addDep) {
   return result.value;
 };
 
-executor[UNARY] = function (node, context, addDep) {
+executor[UNARY] = function (node, context, instance, addDep) {
   return Unary[node.operator](execute$1(node.arg, context, addDep));
 };
 
-executor[BINARY] = function (node, context, addDep) {
+executor[BINARY] = function (node, context, instance, addDep) {
   var left = node.left,
       right = node.right;
 
   return Binary[node.operator](execute$1(left, context, addDep), execute$1(right, context, addDep));
 };
 
-executor[TERNARY] = function (node, context, addDep) {
+executor[TERNARY] = function (node, context, instance, addDep) {
   var test = node.test,
       consequent = node.consequent,
       alternate = node.alternate;
@@ -3507,28 +3507,29 @@ executor[TERNARY] = function (node, context, addDep) {
   return execute$1(test, context, addDep) ? execute$1(consequent, context, addDep) : execute$1(alternate, context, addDep);
 };
 
-executor[ARRAY] = function (node, context, addDep) {
+executor[ARRAY] = function (node, context, instance, addDep) {
   return node.elements.map(function (node) {
-    return execute$1(node, context, addDep);
+    return execute$1(node, context, instance, addDep);
   });
 };
 
-executor[CALL] = function (node, context, addDep) {
-  return execute(execute$1(node.callee, context, addDep), context.get('$context').value, node.args.map(function (node) {
-    return execute$1(node, context, addDep);
+executor[CALL] = function (node, context, instance, addDep) {
+  return execute(execute$1(node.callee, context, addDep), instance, node.args.map(function (node) {
+    return execute$1(node, context, instance, addDep);
   }));
 };
 
 /**
  * 表达式求值
  *
- * @param {Node} node
- * @param {Context} context
- * @param {?Function} addDep
+ * @param {Node} node 表达式抽象节点
+ * @param {Context} context 读取数据的容器
+ * @param {Yox} instance 表达式函数调用的执行上下文
+ * @param {?Function} addDep 添加执行表达式过程中的依赖
  * @return {*}
  */
-function execute$1(node, context, addDep) {
-  return executor[node.type](node, context, addDep);
+function execute$1(node, context, instance, addDep) {
+  return executor[node.type](node, context, instance, addDep);
 }
 
 var Context = function () {
@@ -3705,11 +3706,11 @@ function mergeNodes(outputNodes, sourceNodes) {
  *
  * @param {Object} ast 编译出来的抽象语法树
  * @param {Object} data 渲染模板的数据
- * @param {?Function} importTemplate 导入子模板，如果是纯模板，可不传
+ * @param {Yox} instance 组件实例
  * @param {?Function} addDep 渲染模板过程中使用的数据依赖，如果是纯模板，可不传
  * @return {Array}
  */
-function render(ast, data, importTemplate, addDep) {
+function render(ast, data, instance, addDep) {
 
   var keypath = void 0,
       keypathList = [],
@@ -3722,8 +3723,7 @@ function render(ast, data, importTemplate, addDep) {
 
   updateKeypath();
 
-  getKeypath.toString = getKeypath;
-  data[SPECIAL_KEYPATH] = getKeypath;
+  getKeypath.toString = data[SPECIAL_KEYPATH] = getKeypath;
 
   var context = new Context(data, keypath),
       nodeStack = [],
@@ -3888,7 +3888,7 @@ function render(ast, data, importTemplate, addDep) {
 
   var addExpressionDep = addDep;
   var executeExpr = function executeExpr(expr) {
-    return execute$1(expr, context, addExpressionDep);
+    return execute$1(expr, context, instance, addExpressionDep);
   };
 
   var enter = {},
@@ -3902,7 +3902,7 @@ function render(ast, data, importTemplate, addDep) {
   enter[IMPORT$1] = function (source) {
     var name = source.name;
 
-    var partial = partials[name] || importTemplate(name);
+    var partial = partials[name] || instance.importPartial(name);
     if (partial) {
       pushNode(partial);
       return FALSE;
@@ -4020,7 +4020,7 @@ function render(ast, data, importTemplate, addDep) {
     }
 
     var vnode = createElementVnode(source.name, {
-      instance: data.$context,
+      instance: instance,
       props: props,
       attrs: output.attrs,
       directives: output.directives
@@ -4255,13 +4255,14 @@ var Observer = function () {
    * 获取数据
    *
    * @param {string} keypath
+   * @param {*} defaultValue
    * @return {?*}
    */
 
 
   createClass(Observer, [{
     key: 'get',
-    value: function get$$1(keypath) {
+    value: function get$$1(keypath, defaultValue) {
 
       var instance = this;
 
@@ -4300,9 +4301,7 @@ var Observer = function () {
         result = get$1(data, keypath);
       }
 
-      if (result) {
-        return cache[keypath] = result.value;
-      }
+      return result ? cache[keypath] = result.value : defaultValue;
     }
 
     /**
@@ -5401,16 +5400,13 @@ var Yox = function () {
       // 避免每次更新都要全量 extend
       var filter = registry.filter;
 
-      var context = extend({},
+      instance.$context = extend({},
       // 全局过滤器
       filter && filter.data,
       // 本地过滤器
       filters,
       // 计算属性
       observer.computedGetters);
-      // 指定函数的执行上下文是组件实例
-      context.$context = instance;
-      instance.$context = context;
       // 确保组件根元素有且只有一个
       instance.$template = Yox.compile(template)[0];
       // 首次渲染
@@ -5422,15 +5418,15 @@ var Yox = function () {
    * 取值
    *
    * @param {string} keypath
-   * @param {?string} context
+   * @param {*} defaultValue
    * @return {?*}
    */
 
 
   createClass(Yox, [{
     key: 'get',
-    value: function get$$1(keypath, context) {
-      return this.$observer.get(keypath, context);
+    value: function get$$1(keypath, defaultValue) {
+      return this.$observer.get(keypath, defaultValue);
     }
 
     /**
@@ -5642,9 +5638,7 @@ var Yox = function () {
 
       extend($context, $observer.data);
 
-      var nodes = render($template, $context, function (name) {
-        return Yox.compile(instance.partial(name));
-      }, function (key, value) {
+      var nodes = render($template, $context, instance, function (key, value) {
         if (!map[key]) {
           map[key] = TRUE;
           push(deps, key);
@@ -5685,6 +5679,19 @@ var Yox = function () {
         instance.$node = $node;
         execute($options[AFTER_MOUNT], instance);
       }
+    }
+
+    /**
+     * 导入编译后的子模板
+     *
+     * @param {string} name
+     * @return {Array}
+     */
+
+  }, {
+    key: 'importPartial',
+    value: function importPartial(name) {
+      return Yox.compile(this.partial(name));
     }
 
     /**
@@ -5882,7 +5889,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.40.9';
+Yox.version = '0.41.0';
 
 /**
  * 工具，便于扩展、插件使用
