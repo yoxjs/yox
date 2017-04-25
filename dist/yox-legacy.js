@@ -5603,12 +5603,14 @@ var Yox = function () {
      *
      * @param {string|Object} type
      * @param {?Function} listener
+     * @return {Yox} 支持链式
      */
 
   }, {
     key: 'on',
     value: function on(type, listener) {
       this.$emitter.on(type, listener);
+      return this;
     }
 
     /**
@@ -5616,12 +5618,14 @@ var Yox = function () {
      *
      * @param {string|Object} type
      * @param {?Function} listener
+     * @return {Yox} 支持链式
      */
 
   }, {
     key: 'once',
     value: function once(type, listener) {
       this.$emitter.once(type, listener);
+      return this;
     }
 
     /**
@@ -5629,12 +5633,14 @@ var Yox = function () {
      *
      * @param {string|Object} type
      * @param {?Function} listener
+     * @return {Yox} 支持链式
      */
 
   }, {
     key: 'off',
     value: function off(type, listener) {
       this.$emitter.off(type, listener);
+      return this;
     }
 
     /**
@@ -5684,12 +5690,14 @@ var Yox = function () {
      * @param {string|Object} keypath
      * @param {?Function} watcher
      * @param {?boolean} sync
+     * @return {Yox} 支持链式
      */
 
   }, {
     key: 'watch',
     value: function watch(keypath, watcher, sync) {
       this.$observer.watch(keypath, watcher, sync);
+      return this;
     }
 
     /**
@@ -5698,12 +5706,14 @@ var Yox = function () {
      * @param {string|Object} keypath
      * @param {?Function} watcher
      * @param {?boolean} sync
+     * @return {Yox} 支持链式
      */
 
   }, {
     key: 'watchOnce',
     value: function watchOnce(keypath, watcher, sync) {
       this.$observer.watchOnce(keypath, watcher, sync);
+      return this;
     }
 
     /**
@@ -5711,12 +5721,14 @@ var Yox = function () {
      *
      * @param {string|Object} keypath
      * @param {?Function} watcher
+     * @return {Yox} 支持链式
      */
 
   }, {
     key: 'unwatch',
     value: function unwatch(keypath, watcher) {
       this.$observer.unwatch(keypath, watcher);
+      return this;
     }
 
     /**
@@ -6027,7 +6039,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.40.6';
+Yox.version = '0.40.7';
 
 /**
  * 工具，便于扩展、插件使用
@@ -6206,7 +6218,7 @@ Yox.nextTick = append;
  * 编译模板，暴露出来是为了打包阶段的模板预编译
  *
  * @param {string} template
- * @return {Object}
+ * @return {Array}
  */
 Yox.compile = function (template) {
   return string(template) ? compile(template) : template;
