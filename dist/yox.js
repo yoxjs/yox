@@ -5851,7 +5851,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.40.5';
+Yox.version = '0.40.6';
 
 /**
  * 工具，便于扩展、插件使用

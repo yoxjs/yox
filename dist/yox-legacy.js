@@ -780,8 +780,8 @@ function clear(object$$1) {
  *
  * @return {Object}
  */
-function extend(original, object1, object2) {
-  each([object1, object2], function (object$$1) {
+function extend(original, object1, object2, object3) {
+  each([object1, object2, object3], function (object$$1) {
     if (object(object$$1)) {
       each$1(object$$1, function (value, key) {
         original[key] = value;
@@ -1164,9 +1164,7 @@ function append(task) {
  *
  * @param {Function} task
  */
-function prepend(task) {
-  add('unshift', task);
-}
+
 
 /**
  * 立即执行已添加的任务
@@ -1175,19 +1173,844 @@ function run() {
   var tasks = nextTasks;
   nextTasks = [];
   each(tasks, function (task) {
-    // 不设置 i 默认直接执行
-    // 设置 i 会进行倒计时，当 i 变成 0 时执行
-    if (!task.i) {
-      task();
-    } else {
-      task.i--;
-      push(nextTasks, task);
-    }
+    task();
   });
-  if (nextTasks.length) {
-    nextTick$1(run);
+}
+
+var toString = function (str) {
+  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : CHAR_BLANK;
+
+  try {
+    return str.toString();
+  } catch (e) {
+    return defaultValue;
+  }
+};
+
+function Vnode(sel, text, data, children, key, component) {
+  return {
+    sel: sel,
+    text: text,
+    data: data,
+    children: children,
+    key: key,
+    component: component
+  };
+}
+
+var booleanAttrLiteral = 'allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare,default,defaultchecked,defaultmuted,defaultselected,defer,disabled,draggable,enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple,muted,nohref,noshade,noresize,novalidate,nowrap,open,pauseonexit,readonly,required,reversed,scoped,seamless,selected,sortable,spellcheck,translate,truespeed,typemustmatch,visible';
+var booleanAttrMap = toObject(split(booleanAttrLiteral, CHAR_COMMA), FALSE, TRUE);
+booleanAttrLiteral = NULL;
+
+var attr2Prop = {};
+attr2Prop['for'] = 'htmlFor';
+attr2Prop['value'] = 'value';
+attr2Prop['class'] = 'className';
+attr2Prop['style'] = 'style.cssText';
+attr2Prop['nohref'] = 'noHref';
+attr2Prop['noshade'] = 'noShade';
+attr2Prop['noresize'] = 'noResize';
+attr2Prop['readonly'] = 'readOnly';
+attr2Prop['defaultchecked'] = 'defaultChecked';
+attr2Prop['defaultmuted'] = 'defaultMuted';
+attr2Prop['defaultselected'] = 'defaultSelected';
+
+function createElement(tagName, parentNode) {
+  var SVGElement = win.SVGElement;
+
+  return tagName === 'svg' || parentNode && SVGElement && parentNode instanceof SVGElement ? doc.createElementNS('http://www.w3.org/2000/svg', tagName) : doc.createElement(tagName);
+}
+
+function createText(text) {
+  return doc.createTextNode(text || CHAR_BLANK);
+}
+
+function createComment(text) {
+  return doc.createComment(text || CHAR_BLANK);
+}
+
+function createEvent(event) {
+  return event;
+}
+
+function isElement(node) {
+  return node.nodeType === 1;
+}
+
+function setProp(node, name, value) {
+  set$1(node, name, value, FALSE);
+}
+
+function removeProp(node, name) {
+  setProp(node, name, NULL);
+}
+
+function setAttr(node, name, value) {
+  if (booleanAttrMap[name]) {
+    value = value === UNDEFINED || value ? TRUE : FALSE;
+  }
+  if (attr2Prop[name]) {
+    setProp(node, attr2Prop[name], value);
+  } else if (booleanAttrMap[name]) {
+    setProp(node, name, value);
+  } else {
+    node.setAttribute(name, value);
   }
 }
+
+function removeAttr(node, name) {
+  if (attr2Prop[name]) {
+    removeProp(node, attr2Prop[name]);
+  } else if (booleanAttrMap[name]) {
+    removeProp(node, name);
+  } else {
+    node.removeAttribute(name);
+  }
+}
+
+function before(parentNode, newNode, referenceNode) {
+  if (referenceNode) {
+    parentNode.insertBefore(newNode, referenceNode);
+  } else {
+    append$1(parentNode, newNode);
+  }
+}
+
+function append$1(parentNode, child) {
+  parentNode.appendChild(child);
+}
+
+function replace(parentNode, newNode, oldNode) {
+  parentNode.replaceChild(newNode, oldNode);
+}
+
+function remove$1(parentNode, child) {
+  parentNode.removeChild(child);
+}
+
+function parent(node) {
+  return node.parentNode;
+}
+
+function next(node) {
+  return node.nextSibling;
+}
+
+function tag(node) {
+  var tagName = node.tagName;
+
+  return falsy$1(tagName) ? CHAR_BLANK : tagName.toLowerCase();
+}
+
+function children(node) {
+  return node.childNodes;
+}
+
+function text(node, content) {
+  return content == NULL ? node.nodeValue : node.nodeValue = content;
+}
+
+function html(node, content) {
+  return content == NULL ? node.innerHTML : node.innerHTML = content;
+}
+
+function find(selector, context) {
+  return (context || doc).querySelector(selector);
+}
+
+function on(element, type, listener) {
+  element.addEventListener(type, listener, FALSE);
+}
+
+function off(element, type, listener) {
+  element.removeEventListener(type, listener, FALSE);
+}
+
+var domApi = Object.freeze({
+	createElement: createElement,
+	createText: createText,
+	createComment: createComment,
+	createEvent: createEvent,
+	isElement: isElement,
+	setProp: setProp,
+	removeProp: removeProp,
+	setAttr: setAttr,
+	removeAttr: removeAttr,
+	before: before,
+	append: append$1,
+	replace: replace,
+	remove: remove$1,
+	parent: parent,
+	next: next,
+	tag: tag,
+	children: children,
+	text: text,
+	html: html,
+	find: find,
+	on: on,
+	off: off
+});
+
+var SEL_COMMENT = '!';
+
+var HOOK_INIT = 'init';
+var HOOK_CREATE = 'create';
+var HOOK_INSERT = 'insert';
+
+var HOOK_REMOVE = 'remove';
+var HOOK_DESTROY = 'destroy';
+
+var HOOK_PRE = 'pre';
+var HOOK_POST = 'post';
+
+var HOOK_PREPATCH = 'prepatch';
+var HOOK_UPDATE = 'update';
+var HOOK_POSTPATCH = 'postpatch';
+
+var moduleHooks = [HOOK_CREATE, HOOK_UPDATE, HOOK_REMOVE, HOOK_DESTROY, HOOK_PRE, HOOK_POST];
+
+var emptyNode = Vnode(CHAR_BLANK, UNDEFINED, {}, []);
+
+function isPatchable(vnode1, vnode2) {
+  return vnode1.key === vnode2.key && vnode1.sel === vnode2.sel;
+}
+
+function createKeyToIndex(vnodes, startIndex, endIndex) {
+  var result = {};
+  for (var i = startIndex, key; i <= endIndex; i++) {
+    key = vnodes[i].key;
+    if (key != NULL) {
+      result[key] = i;
+    }
+  }
+  return result;
+}
+
+function createElementVnode(sel, data, children$$1, key, component) {
+  return Vnode(sel, UNDEFINED, data, children$$1, key, component);
+}
+
+function createCommentVnode(text$$1) {
+  return Vnode(SEL_COMMENT, text$$1);
+}
+
+function init(modules) {
+  var api = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : domApi;
+
+
+  var moduleEmitter = new Emitter();
+
+  each(moduleHooks, function (hook) {
+    each(modules, function (item) {
+      moduleEmitter.on(hook, item[hook]);
+    });
+  });
+
+  var stringifySel = function stringifySel(el) {
+    var list = [api.tag(el)];
+    var id = el.id,
+        className = el.className;
+
+    if (id) {
+      push(list, '' + CHAR_HASH + id);
+    }
+    if (className) {
+      push(list, '' + CHAR_DOT + split(className, CHAR_WHITESPACE).join(CHAR_DOT));
+    }
+    return list.join(CHAR_BLANK);
+  };
+
+  var parseSel = function parseSel(sel) {
+
+    var tagName = void 0,
+        id = void 0,
+        className = void 0;
+
+    var hashIndex = indexOf$1(sel, CHAR_HASH);
+    if (hashIndex > 0) {
+      tagName = slice(sel, 0, hashIndex);
+      sel = slice(sel, hashIndex + 1);
+    }
+
+    var dotIndex = indexOf$1(sel, CHAR_DOT);
+    if (dotIndex > 0) {
+      var temp = slice(sel, 0, dotIndex);
+      if (tagName) {
+        id = temp;
+      } else {
+        tagName = temp;
+      }
+      className = split(slice(sel, dotIndex + 1), CHAR_DOT).join(CHAR_WHITESPACE);
+    } else {
+      if (tagName) {
+        id = sel;
+      } else {
+        tagName = sel;
+      }
+    }
+
+    return { tagName: tagName, id: id, className: className };
+  };
+
+  var createElement$$1 = function createElement$$1(parentNode, vnode, insertedQueue) {
+    var sel = vnode.sel,
+        data = vnode.data,
+        children$$1 = vnode.children,
+        text$$1 = vnode.text;
+
+
+    var hooks = data && data.hooks || {};
+    execute(hooks[HOOK_INIT], NULL, vnode);
+
+    if (falsy$1(sel)) {
+      return vnode.el = api.createText(text$$1);
+    }
+
+    if (sel === SEL_COMMENT) {
+      return vnode.el = api.createComment(text$$1);
+    }
+
+    var _parseSel = parseSel(sel),
+        tagName = _parseSel.tagName,
+        id = _parseSel.id,
+        className = _parseSel.className;
+
+    var el = api.createElement(tagName, parentNode);
+    if (id) {
+      el.id = id;
+    }
+    if (className) {
+      el.className = className;
+    }
+
+    vnode.el = el;
+
+    if (array(children$$1)) {
+      addVnodes(el, children$$1, 0, children$$1.length - 1, insertedQueue);
+    } else if (string(text$$1)) {
+      api.append(el, api.createText(text$$1));
+    }
+
+    if (data) {
+      data = [emptyNode, vnode];
+      moduleEmitter.fire(HOOK_CREATE, data, api);
+
+      execute(hooks[HOOK_CREATE], NULL, data);
+
+      if (hooks[HOOK_INSERT]) {
+        insertedQueue.push(vnode);
+      }
+    }
+    // 钩子函数可能会替换元素
+    return vnode.el;
+  };
+
+  var addVnodes = function addVnodes(parentNode, vnodes, startIndex, endIndex, insertedQueue, before$$1) {
+    for (var i = startIndex; i <= endIndex; i++) {
+      addVnode(parentNode, vnodes[i], insertedQueue, before$$1);
+    }
+  };
+
+  var addVnode = function addVnode(parentNode, vnode, insertedQueue, before$$1) {
+    var el = createElement$$1(parentNode, vnode, insertedQueue);
+    if (el) {
+      api.before(parentNode, el, before$$1);
+    }
+  };
+
+  var removeVnodes = function removeVnodes(parentNode, vnodes, startIndex, endIndex) {
+    for (var i = startIndex, vnode; i <= endIndex; i++) {
+      vnode = vnodes[i];
+      if (vnode) {
+        removeVnode(parentNode, vnode);
+      }
+    }
+  };
+
+  var removeVnode = function removeVnode(parentNode, vnode) {
+    var sel = vnode.sel,
+        el = vnode.el,
+        data = vnode.data;
+
+    if (sel) {
+      destroyVnode(vnode);
+      api.remove(parentNode, el);
+
+      if (data) {
+        moduleEmitter.fire(HOOK_REMOVE, vnode, api);
+        if (data.hooks) {
+          execute(data.hooks[HOOK_REMOVE], NULL, vnode);
+        }
+      }
+    } else if (el) {
+      api.remove(parentNode, el);
+    }
+  };
+
+  var destroyVnode = function destroyVnode(vnode) {
+    var data = vnode.data,
+        children$$1 = vnode.children;
+
+    if (data) {
+
+      // 先销毁 children
+      if (children$$1) {
+        each(children$$1, function (child) {
+          destroyVnode(child);
+        });
+      }
+
+      moduleEmitter.fire(HOOK_DESTROY, vnode, api);
+
+      if (data.hooks) {
+        execute(data.hooks[HOOK_DESTROY], NULL, vnode);
+      }
+    }
+  };
+
+  var replaceVnode = function replaceVnode(parentNode, oldVnode, vnode) {
+    api.before(parentNode, vnode.el, oldVnode.el);
+    removeVnode(parentNode, oldVnode);
+  };
+
+  var updateChildren = function updateChildren(parentNode, oldChildren, newChildren, insertedQueue) {
+
+    var oldStartIndex = 0;
+    var oldEndIndex = oldChildren.length - 1;
+    var oldStartVnode = oldChildren[oldStartIndex];
+    var oldEndVnode = oldChildren[oldEndIndex];
+
+    var newStartIndex = 0;
+    var newEndIndex = newChildren.length - 1;
+    var newStartVnode = newChildren[newStartIndex];
+    var newEndVnode = newChildren[newEndIndex];
+
+    var oldKeyToIndex = void 0,
+        oldIndex = void 0,
+        activeVnode = void 0;
+
+    while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
+
+      // 下面有设为 NULL 的逻辑
+      if (!oldStartVnode) {
+        oldStartVnode = oldChildren[++oldStartIndex]; // Vnode has been moved left
+      } else if (!oldEndVnode) {
+        oldEndVnode = oldChildren[--oldEndIndex];
+      }
+
+      // 优先从头到尾比较，位置相同且值得 patch
+      else if (isPatchable(oldStartVnode, newStartVnode)) {
+          patchVnode(oldStartVnode, newStartVnode, insertedQueue);
+          oldStartVnode = oldChildren[++oldStartIndex];
+          newStartVnode = newChildren[++newStartIndex];
+        }
+
+        // 再从尾到头比较，位置相同且值得 patch
+        else if (isPatchable(oldEndVnode, newEndVnode)) {
+            patchVnode(oldEndVnode, newEndVnode, insertedQueue);
+            oldEndVnode = oldChildren[--oldEndIndex];
+            newEndVnode = newChildren[--newEndIndex];
+          }
+
+          // 比较完两侧的节点，剩下就是 位置发生改变的节点 和 全新的节点
+
+          // 当 oldStartVnode 和 newEndVnode 值得 patch
+          // 说明元素被移到右边了
+          else if (isPatchable(oldStartVnode, newEndVnode)) {
+              patchVnode(oldStartVnode, newEndVnode, insertedQueue);
+              api.before(parentNode, oldStartVnode.el, api.next(oldEndVnode.el));
+              oldStartVnode = oldChildren[++oldStartIndex];
+              newEndVnode = newChildren[--newEndIndex];
+            }
+
+            // 当 oldEndVnode 和 newStartVnode 值得 patch
+            // 说明元素被移到左边了
+            else if (isPatchable(oldEndVnode, newStartVnode)) {
+                patchVnode(oldEndVnode, newStartVnode, insertedQueue);
+                api.before(parentNode, oldEndVnode.el, oldStartVnode.el);
+                oldEndVnode = oldChildren[--oldEndIndex];
+                newStartVnode = newChildren[++newStartIndex];
+              }
+
+              // 尝试同级元素的 key
+              else {
+
+                  if (!oldKeyToIndex) {
+                    oldKeyToIndex = createKeyToIndex(oldChildren, oldStartIndex, oldEndIndex);
+                  }
+
+                  oldIndex = oldKeyToIndex[newStartVnode.key];
+
+                  // 移动元素
+                  if (number(oldIndex)) {
+                    activeVnode = oldChildren[oldIndex];
+                    patchVnode(activeVnode, newStartVnode, insertedQueue);
+                    oldChildren[oldIndex] = NULL;
+                  }
+                  // 新元素
+                  else {
+                      activeVnode = createElement$$1(parentNode, newStartVnode, insertedQueue);
+                      if (activeVnode) {
+                        activeVnode = newStartVnode;
+                      }
+                    }
+
+                  if (activeVnode) {
+                    api.before(parentNode, activeVnode.el, oldStartVnode.el);
+                  }
+
+                  newStartVnode = newChildren[++newStartIndex];
+                }
+    }
+
+    if (oldStartIndex > oldEndIndex) {
+      activeVnode = newChildren[newEndIndex + 1];
+      addVnodes(parentNode, newChildren, newStartIndex, newEndIndex, insertedQueue, activeVnode ? activeVnode.el : NULL);
+    } else if (newStartIndex > newEndIndex) {
+      removeVnodes(parentNode, oldChildren, oldStartIndex, oldEndIndex);
+    }
+  };
+
+  var patchVnode = function patchVnode(oldVnode, vnode, insertedQueue) {
+
+    if (oldVnode === vnode) {
+      return;
+    }
+
+    var data = vnode.data;
+
+    var hooks = data && data.hooks || {};
+
+    var args = [oldVnode, vnode];
+    execute(hooks[HOOK_PREPATCH], NULL, args);
+
+    var el = oldVnode.el;
+
+    vnode.el = el;
+
+    if (!isPatchable(oldVnode, vnode)) {
+      var parentNode = api.parent(el);
+      if (createElement$$1(parentNode, vnode, insertedQueue)) {
+        parentNode && replaceVnode(parentNode, oldVnode, vnode);
+      }
+      return;
+    }
+
+    if (data) {
+      moduleEmitter.fire(HOOK_UPDATE, args, api);
+      execute(hooks[HOOK_UPDATE], NULL, args);
+    }
+
+    var newText = vnode.text;
+    var newChildren = vnode.children;
+
+    var oldText = oldVnode.text;
+    var oldChildren = oldVnode.children;
+
+    if (string(newText)) {
+      if (newText !== oldText) {
+        api.text(el, newText);
+      }
+    } else {
+      // 两个都有需要 diff
+      if (newChildren && oldChildren) {
+        if (newChildren !== oldChildren) {
+          updateChildren(el, oldChildren, newChildren, insertedQueue);
+        }
+      }
+      // 有新的没旧的 - 新增节点
+      else if (newChildren) {
+          if (string(oldText)) {
+            api.text(el, CHAR_BLANK);
+          }
+          addVnodes(el, newChildren, 0, newChildren.length - 1, insertedQueue);
+        }
+        // 有旧的没新的 - 删除节点
+        else if (oldChildren) {
+            removeVnodes(el, oldChildren, 0, oldChildren.length - 1);
+          }
+          // 有旧的 text 没有新的 text
+          else if (string(oldText)) {
+              api.text(el, CHAR_BLANK);
+            }
+    }
+
+    execute(hooks[HOOK_POSTPATCH], NULL, args);
+  };
+
+  return function (oldVnode, vnode) {
+
+    moduleEmitter.fire(HOOK_PRE, NULL, api);
+
+    if (api.isElement(oldVnode)) {
+      var el = oldVnode;
+      oldVnode = Vnode(stringifySel(el), UNDEFINED, {}, []);
+      oldVnode.el = el;
+    }
+
+    var insertedQueue = [];
+    if (isPatchable(oldVnode, vnode)) {
+      patchVnode(oldVnode, vnode, insertedQueue);
+    } else {
+      var parentNode = api.parent(oldVnode.el);
+      if (createElement$$1(parentNode, vnode, insertedQueue)) {
+        parentNode && replaceVnode(parentNode, oldVnode, vnode);
+      }
+    }
+
+    each(insertedQueue, function (vnode) {
+      execute(vnode.data.hooks[HOOK_INSERT], NULL, vnode);
+    });
+
+    moduleEmitter.fire(HOOK_POST, NULL, api);
+
+    return vnode;
+  };
+}
+
+function updateAttrs(oldVnode, vnode) {
+
+  var oldAttrs = oldVnode.data.attrs;
+  var newAttrs = vnode.data.attrs;
+
+  if (vnode.component || !oldAttrs && !newAttrs) {
+    return;
+  }
+
+  oldAttrs = oldAttrs || {};
+  newAttrs = newAttrs || {};
+
+  var el = vnode.el;
+
+  var api = this;
+
+  var getValue = function getValue(attrs, name) {
+    if (has$1(attrs, name)) {
+      var value = attrs[name];
+      return value !== UNDEFINED ? value : name;
+    }
+  };
+
+  each$1(newAttrs, function (value, name) {
+    if (getValue(newAttrs, name) !== getValue(oldAttrs, name)) {
+      api.setAttr(el, name, value);
+    }
+  });
+
+  each$1(oldAttrs, function (value, name) {
+    if (!has$1(newAttrs, name)) {
+      api.removeAttr(el, name);
+    }
+  });
+}
+
+var snabbdomAttrs = {
+  create: updateAttrs,
+  update: updateAttrs
+};
+
+function updateProps(oldVnode, vnode) {
+
+  var oldProps = oldVnode.data.props;
+  var newProps = vnode.data.props;
+
+  if (vnode.component || !oldProps && !newProps) {
+    return;
+  }
+
+  oldProps = oldProps || {};
+  newProps = newProps || {};
+
+  var el = vnode.el;
+
+  var api = this;
+
+  each$1(newProps, function (value, name) {
+    if (value !== oldProps[name]) {
+      api.setProp(el, name, value);
+    }
+  });
+
+  each$1(oldProps, function (value, name) {
+    if (!has$1(newProps, name)) {
+      api.removeProp(el, name);
+    }
+  });
+}
+
+var snabbdomProps = {
+  create: updateProps,
+  update: updateProps
+};
+
+function bindDirective(vnode, key) {
+  var el = vnode.el,
+      component = vnode.component;
+  var _vnode$data = vnode.data,
+      instance = _vnode$data.instance,
+      attrs = _vnode$data.attrs,
+      directives = _vnode$data.directives,
+      destroies = _vnode$data.destroies;
+
+
+  var node = directives[key];
+
+  var args = {
+    el: el,
+    node: node,
+    instance: instance,
+    directives: directives,
+    attrs: attrs || {}
+  };
+
+  var $component = el.$component;
+
+  if (component && object($component)) {
+    if (has$1($component, 'queue') && !has$1($component, 'set')) {
+      $component = $component.queue;
+    }
+    args.component = $component;
+  }
+
+  var destroy = execute(instance.directive(node.name), NULL, args);
+
+  if (func(destroy)) {
+    if (!destroies) {
+      destroies = vnode.data.destroies = {};
+    }
+    destroies[key] = destroy;
+  }
+}
+
+function unbindDirective(vnode, key) {
+  var destroies = vnode.data.destroies;
+
+  if (destroies && destroies[key]) {
+    destroies[key]();
+    delete destroies[key];
+  }
+}
+
+function updateDirectives(oldVnode, vnode) {
+
+  var oldDirectives = oldVnode.data.directives;
+  var newDirectives = vnode.data.directives;
+
+  if (!oldDirectives && !newDirectives) {
+    return;
+  }
+
+  oldDirectives = oldDirectives || {};
+  newDirectives = newDirectives || {};
+
+  each$1(newDirectives, function (directive, key) {
+    if (has$1(oldDirectives, key)) {
+      var oldDirective = oldDirectives[key];
+      if (oldDirective.value !== directive.value || oldDirective.context.get(THIS) !== directive.context.get(THIS)) {
+        unbindDirective(oldVnode, key);
+        bindDirective(vnode, key);
+      }
+    } else {
+      bindDirective(vnode, key);
+    }
+  });
+
+  each$1(oldDirectives, function (directive, key) {
+    if (!has$1(newDirectives, key)) {
+      unbindDirective(oldVnode, key);
+    }
+  });
+
+  vnode.data.destroies = extend({}, oldVnode.data.destroies, vnode.data.destroies);
+}
+
+function destroyDirectives(vnode) {
+  var destroies = vnode.data.destroies;
+
+  if (destroies) {
+    each$1(destroies, function (destroy) {
+      destroy();
+    });
+  }
+}
+
+var snabbdomDirectives = {
+  create: updateDirectives,
+  update: updateDirectives,
+  destroy: destroyDirectives
+};
+
+function createComponent(oldVnode, vnode) {
+  var el = vnode.el,
+      component = vnode.component;
+
+  if (!component) {
+    return;
+  }
+
+  var _vnode$data = vnode.data,
+      instance = _vnode$data.instance,
+      attrs = _vnode$data.attrs;
+
+  el.$component = {
+    queue: [],
+    attrs: attrs
+  };
+
+  instance.component(vnode.sel, function (options) {
+    var _el = el,
+        $component = _el.$component;
+
+    if ($component && array($component.queue)) {
+
+      component = instance.create(options, {
+        el: el,
+        props: $component.attrs,
+        replace: TRUE
+      });
+
+      el = vnode.el = component.$el;
+      el.$component = component;
+
+      each($component.queue, function (callback) {
+        callback(component);
+      });
+    }
+  });
+}
+
+function updateComponent(oldVnode, vnode) {
+  var $component = vnode.el.$component;
+
+  if (vnode.component && object($component)) {
+    var attrs = vnode.data.attrs;
+
+    if ($component.set) {
+      $component.set(attrs, TRUE);
+    } else {
+      $component.attrs = attrs;
+    }
+  }
+}
+
+function destroyComponent(oldVnode, vnode) {
+  var component = oldVnode.component,
+      el = oldVnode.el;
+  var $component = el.$component;
+
+  if (component && object($component)) {
+    if ($component.destroy) {
+      $component.destroy(TRUE);
+    }
+    el.$component = NULL;
+  }
+}
+
+var snabbdomComponent = {
+  create: createComponent,
+  update: updateComponent,
+  destroy: destroyComponent
+};
 
 /**
  * 字面量
@@ -2329,16 +3152,6 @@ var Spread = function (_Node) {
   return Spread;
 }(Node$2);
 
-var toString = function (str) {
-  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : CHAR_BLANK;
-
-  try {
-    return str.toString();
-  } catch (e) {
-    return defaultValue;
-  }
-};
-
 /**
  * 文本节点
  *
@@ -2756,7 +3569,7 @@ executor[ARRAY] = function (node, context, addDep) {
 };
 
 executor[CALL] = function (node, context, addDep) {
-  return execute(execute$1(node.callee, context, addDep), NULL, node.args.map(function (node) {
+  return execute(execute$1(node.callee, context, addDep), context.get('$context').value, node.args.map(function (node) {
     return execute$1(node, context, addDep);
   }));
 };
@@ -2772,1712 +3585,6 @@ executor[CALL] = function (node, context, addDep) {
 function execute$1(node, context, addDep) {
   return executor[node.type](node, context, addDep);
 }
-
-var Observer = function () {
-
-  /**
-   * @param {Object} options
-   * @property {Object} options.data
-   * @property {?Object} options.computed
-   * @property {?Object} options.watchers
-   * @property {?*} options.context 执行 watcher 函数的 this 指向
-   */
-  function Observer(options) {
-    classCallCheck(this, Observer);
-    var data = options.data,
-        context = options.context,
-        computed = options.computed,
-        watchers = options.watchers;
-
-
-    var instance = this;
-
-    instance.data = data;
-    instance.cache = {};
-    instance.emitter = new Emitter();
-    instance.context = context || instance;
-
-    // 谁依赖了谁
-    instance.deps = {};
-    // 谁被谁依赖
-    instance.reversedDeps = {};
-
-    // 计算属性也是数据
-    if (object(computed)) {
-
-      // 把计算属性拆为 getter 和 setter
-      instance.computedGetters = {};
-      instance.computedSetters = {};
-
-      // 辅助获取计算属性的依赖
-      instance.computedStack = [];
-
-      var cache = instance.cache,
-          computedStack = instance.computedStack;
-
-
-      each$1(computed, function (item, keypath) {
-
-        var get$$1 = void 0,
-            set$$1 = void 0,
-            deps = void 0,
-            cacheable = TRUE;
-
-        if (func(item)) {
-          get$$1 = item;
-        } else if (object(item)) {
-          if (item.deps) {
-            deps = item.deps;
-          }
-          if (boolean(item.cache)) {
-            cacheable = item.cache;
-          }
-          if (func(item.get)) {
-            get$$1 = item.get;
-          }
-          if (func(item.set)) {
-            set$$1 = item.set;
-          }
-        }
-
-        if (get$$1) {
-
-          if (cacheable) {
-            instance.watch(keypath + FORCE, function () {
-              _getter[DIRTY] = TRUE;
-            });
-          }
-
-          var _getter = function _getter() {
-
-            if (cacheable) {
-              if (_getter[DIRTY]) {
-                delete _getter[DIRTY];
-              } else if (has$1(cache, keypath)) {
-                return cache[keypath];
-              }
-            }
-
-            if (!deps) {
-              computedStack.push([]);
-            }
-
-            var result = execute(get$$1, instance.context);
-            cache[keypath] = result;
-
-            var newDeps = deps || pop(computedStack);
-            if (array(newDeps)) {
-              instance.setDeps(keypath, newDeps);
-            }
-
-            return result;
-          };
-
-          _getter.toString = instance.computedGetters[keypath] = _getter;
-        }
-
-        if (set$$1) {
-          instance.computedSetters[keypath] = set$$1;
-        }
-      });
-    }
-
-    if (object(watchers)) {
-      instance.watch(watchers);
-    }
-  }
-
-  /**
-   * 获取数据
-   *
-   * @param {string} keypath
-   * @return {?*}
-   */
-
-
-  createClass(Observer, [{
-    key: 'get',
-    value: function get$$1(keypath) {
-
-      var instance = this;
-
-      var data = instance.data,
-          cache = instance.cache,
-          computedStack = instance.computedStack,
-          computedGetters = instance.computedGetters;
-
-
-      if (!keypath) {
-        return data;
-      }
-
-      keypath = normalize(keypath);
-
-      if (computedStack) {
-        var list = last(computedStack);
-        if (list) {
-          push(list, keypath);
-        }
-      }
-
-      var result = void 0;
-      if (computedGetters) {
-        var _matchBestGetter = matchBestGetter(computedGetters, keypath),
-            value = _matchBestGetter.value,
-            rest = _matchBestGetter.rest;
-
-        if (value) {
-          value = value();
-          result = rest && !primitive(value) ? get$1(value, rest) : { value: value };
-        }
-      }
-
-      if (!result) {
-        result = get$1(data, keypath);
-      }
-
-      if (result) {
-        return cache[keypath] = result.value;
-      }
-    }
-
-    /**
-     * 更新数据
-     *
-     * @param {Object} model
-     */
-
-  }, {
-    key: 'set',
-    value: function set$$1(model) {
-
-      var instance = this;
-
-      var data = instance.data,
-          cache = instance.cache,
-          emitter = instance.emitter,
-          context = instance.context,
-          deps = instance.deps,
-          reversedDeps = instance.reversedDeps,
-          computedGetters = instance.computedGetters,
-          computedSetters = instance.computedSetters,
-          watchKeypaths = instance.watchKeypaths,
-          reversedKeypaths = instance.reversedKeypaths;
-
-      /**
-       * a -> b -> c
-       *
-       * a 依赖 b，b 依赖 c
-       *
-       * 当修改 c 时，要通知 a 和 b 更新
-       * 当修改 b 时，要通知 a 更新，不通知 c 更新
-       * 当修改 a 时，仅自己更新
-       *
-       * 当监听 user.* 时，如果修改了 user.name，不仅要触发 user.name 的 watcher，也要触发 user.* 的 watcher
-       *
-       * 这里遵循的一个原则是，只有当修改数据确实产生了数据变化，才会分析它的依赖
-       */
-
-      var differences = [],
-          differenceMap = {};
-      var addDifference = function addDifference(keypath, realpath, oldValue, match, force) {
-        var fullpath = keypath + CHAR_DASH + realpath;
-        if (!differenceMap[fullpath]) {
-          differenceMap[fullpath] = TRUE;
-          push(differences, {
-            keypath: keypath,
-            realpath: realpath,
-            oldValue: oldValue,
-            match: match,
-            force: force
-          });
-        }
-      };
-
-      var oldCache = {},
-          newCache = {};
-      var getOldValue = function getOldValue(keypath) {
-        if (!has$1(oldCache, keypath)) {
-          oldCache[keypath] = cache[keypath];
-        }
-        return oldCache[keypath];
-      };
-      var getNewValue = function getNewValue(keypath) {
-        if (!has$1(newCache, keypath)) {
-          newCache[keypath] = instance.get(keypath);
-        }
-        return newCache[keypath];
-      };
-
-      var reversedDepMap = {};
-      var addReversedDepKeypath = function addReversedDepKeypath(keypath) {
-        if (reversedKeypaths && !reversedDepMap[keypath]) {
-          reversedDepMap[keypath] = TRUE;
-          each(reversedKeypaths, function (key) {
-            var list = void 0,
-                match = void 0;
-            if (key === keypath) {
-              list = reversedDeps[key];
-            } else if (isFuzzyKeypath(key)) {
-              match = matchKeypath(keypath, key);
-              if (match) {
-                list = reversedDeps[key];
-              }
-            }
-            if (list) {
-              each(list, function (key) {
-                addDifference(key, key, getOldValue(key), UNDEFINED, TRUE);
-              });
-            }
-          });
-        }
-      };
-
-      each$1(model, function (newValue, keypath) {
-
-        keypath = normalize(keypath);
-
-        addDifference(keypath, keypath, getOldValue(keypath));
-
-        if (computedSetters) {
-          var setter = computedSetters[keypath];
-          if (setter) {
-            setter.call(context, newValue);
-            return;
-          } else {
-            var _matchBestGetter2 = matchBestGetter(computedGetters, keypath),
-                value = _matchBestGetter2.value,
-                rest = _matchBestGetter2.rest;
-
-            if (value && rest) {
-              value = value();
-              if (!primitive(value)) {
-                set$1(value, rest, newValue);
-              }
-              return;
-            }
-          }
-        }
-
-        set$1(data, keypath, newValue);
-      });
-
-      var fireDifference = function fireDifference(_ref) {
-        var keypath = _ref.keypath,
-            realpath = _ref.realpath,
-            oldValue = _ref.oldValue,
-            match = _ref.match,
-            force = _ref.force;
-
-
-        var newValue = force ? oldValue : getNewValue(realpath);
-        if (force || newValue !== oldValue) {
-
-          var args = [newValue, oldValue, keypath];
-          if (match) {
-            push(args, match);
-          }
-          emitter.fire(keypath + (force ? FORCE : CHAR_BLANK), args, context);
-
-          newValue = getNewValue(realpath);
-          if (newValue !== oldValue) {
-            if (force) {
-              args[0] = newValue;
-              emitter.fire(keypath, args, context);
-            }
-            each(watchKeypaths, function (key) {
-              if (key !== realpath) {
-                if (isFuzzyKeypath(key)) {
-                  var _match = matchKeypath(realpath, key);
-                  if (_match) {
-                    addDifference(key, realpath, getOldValue(realpath), _match);
-                  }
-                } else if (startsWith$1(key, realpath)) {
-                  addDifference(key, key, getOldValue(key));
-                }
-              }
-            });
-            addReversedDepKeypath(realpath);
-          }
-        }
-      };
-
-      for (var i = 0; i < differences.length; i++) {
-        fireDifference(differences[i]);
-      }
-    }
-  }, {
-    key: 'setDeps',
-    value: function setDeps(keypath, newDeps) {
-
-      var instance = this;
-
-      var deps = instance.deps,
-          reversedDeps = instance.reversedDeps;
-
-
-      if (newDeps !== deps[keypath]) {
-
-        deps[keypath] = newDeps;
-        updateWatchKeypaths(instance);
-
-        // 全量更新
-        reversedDeps = {};
-
-        each$1(deps, function (deps, key) {
-          each(deps, function (dep) {
-            push(reversedDeps[dep] || (reversedDeps[dep] = []), key);
-          });
-        });
-
-        instance.reversedDeps = reversedDeps;
-        instance.reversedKeypaths = sort(reversedDeps, TRUE);
-      }
-    }
-  }, {
-    key: 'setCache',
-    value: function setCache(keypath, value) {
-      this.cache[keypath] = value;
-    }
-
-    /**
-     * 销毁
-     */
-
-  }, {
-    key: 'destroy',
-    value: function destroy() {
-      this.emitter.off();
-      clear(this);
-    }
-  }]);
-  return Observer;
-}();
-
-extend(Observer.prototype, {
-
-  /**
-   * 监听数据变化
-   *
-   * @param {string|Object} keypath
-   * @param {?Function} watcher
-   * @param {?boolean} sync
-   */
-  watch: createWatch('on'),
-
-  /**
-   * 监听一次数据变化
-   *
-   * @param {string|Object} keypath
-   * @param {?Function} watcher
-   * @param {?boolean} sync
-   */
-  watchOnce: createWatch('once'),
-
-  /**
-   * 取消监听数据变化
-   *
-   * @param {string|Object} keypath
-   * @param {?Function} watcher
-   */
-  unwatch: function unwatch(keypath, watcher) {
-    this.emitter.off(keypath, watcher);
-    updateWatchKeypaths(this);
-  }
-
-});
-
-var FORCE = '._force_';
-var DIRTY = '_dirty_';
-
-function updateWatchKeypaths(instance) {
-  var deps = instance.deps,
-      emitter = instance.emitter;
-
-
-  var watchKeypaths = {};
-
-  var addKeypath = function addKeypath(keypath) {
-    watchKeypaths[keypath] = TRUE;
-  };
-
-  // 1. 直接通过 watch 注册的
-  each$1(emitter.listeners, function (list, key) {
-    addKeypath(key);
-  });
-
-  // 2. 计算属性的依赖属于间接 watch
-  each$1(deps, function (deps) {
-    each(deps, addKeypath);
-  });
-
-  instance.watchKeypaths = sort(watchKeypaths, TRUE);
-}
-
-/**
- * watch 和 watchOnce 逻辑相同
- * 提出一个工厂方法
- */
-function createWatch(action) {
-
-  return function (keypath, watcher, sync) {
-
-    var watchers = keypath;
-    if (string(keypath)) {
-      watchers = {};
-      watchers[keypath] = {
-        sync: sync,
-        watcher: watcher
-      };
-    }
-
-    var instance = this;
-
-    var emitter = instance.emitter,
-        context = instance.context;
-
-
-    each$1(watchers, function (value, keypath) {
-
-      var watcher = value,
-          sync = void 0;
-      if (object(value)) {
-        watcher = value.watcher;
-        sync = value.sync;
-      }
-
-      emitter[action](keypath, watcher);
-      updateWatchKeypaths(instance);
-
-      if (!isFuzzyKeypath(keypath)) {
-        append(function () {
-          // get 会缓存一下当前值，便于下次对比
-          value = instance.get(keypath);
-          if (sync) {
-            execute(watcher, context, [value, UNDEFINED, keypath]);
-          }
-        });
-      }
-    });
-  };
-}
-
-var patternCache = {};
-
-/**
- * 模糊匹配 Keypath
- *
- * @param {string} keypath
- * @param {string} pattern
- */
-function matchKeypath(keypath, pattern) {
-  var cache = patternCache[pattern];
-  if (!cache) {
-    cache = pattern.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)');
-    cache = patternCache[pattern] = new RegExp('^' + cache + '$');
-  }
-  var match = keypath.match(cache);
-  if (match) {
-    return toArray$1(match).slice(1);
-  }
-}
-
-/**
- * 是否模糊匹配
- *
- * @param {string} keypath
- * @return {boolean}
- */
-function isFuzzyKeypath(keypath) {
-  return has$2(keypath, '*');
-}
-
-/**
- * 从 getter 对象的所有 key 中，选择和 keypath 最匹配的那一个
- *
- * @param {Object} getters
- * @param {string} keypath
- * @return {Object}
- */
-function matchBestGetter(getters, keypath) {
-
-  var key = void 0,
-      value = void 0,
-      rest = void 0;
-
-  each(sort(getters, TRUE), function (prefix) {
-    if (prefix = startsWith$1(keypath, prefix, TRUE)) {
-      key = prefix[0];
-      value = getters[key];
-      rest = prefix[1];
-      return FALSE;
-    }
-  });
-
-  return { key: key, value: value, rest: rest };
-}
-
-/**
- * html 标签
- *
- * @type {RegExp}
- */
-var tag = /<[^>]+>/;
-
-/**
- * 选择器
- *
- * @type {RegExp}
- */
-var selector = /^[#.][-\w+]+$/;
-
-/**
- * 进入 `new Yox(options)` 之后立即触发，钩子函数会传入 `options`
- *
- * @type {string}
- */
-var BEFORE_CREATE = 'beforeCreate';
-
-/**
- * 绑定事件和数据监听之后触发
- *
- * @type {string}
- */
-var AFTER_CREATE = 'afterCreate';
-
-/**
- * 模板编译，加入 DOM 树之前触发
- *
- * @type {string}
- */
-var BEFORE_MOUNT = 'beforeMount';
-
-/**
- * 加入 DOM 树之后触发
- *
- * 这时可通过 `$el` 获取组件根元素
- *
- * @type {string}
- */
-var AFTER_MOUNT = 'afterMount';
-
-/**
- * 视图更新之前触发
- *
- * @type {string}
- */
-var BEFORE_UPDATE = 'beforeUpdate';
-
-/**
- * 视图更新之后触发
- *
- * @type {string}
- */
-var AFTER_UPDATE = 'afterUpdate';
-
-/**
- * 销毁之前触发
- *
- * @type {string}
- */
-var BEFORE_DESTROY = 'beforeDestroy';
-
-/**
- * 销毁之后触发
- *
- * @type {string}
- */
-var AFTER_DESTROY = 'afterDestroy';
-
-var booleanAttrLiteral = 'allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare,default,defaultchecked,defaultmuted,defaultselected,defer,disabled,draggable,enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple,muted,nohref,noshade,noresize,novalidate,nowrap,open,pauseonexit,readonly,required,reversed,scoped,seamless,selected,sortable,spellcheck,translate,truespeed,typemustmatch,visible';
-var booleanAttrMap = toObject(split(booleanAttrLiteral, CHAR_COMMA), FALSE, TRUE);
-booleanAttrLiteral = NULL;
-
-var attr2Prop = {};
-attr2Prop['for'] = 'htmlFor';
-attr2Prop['value'] = 'value';
-attr2Prop['class'] = 'className';
-attr2Prop['style'] = 'style.cssText';
-attr2Prop['nohref'] = 'noHref';
-attr2Prop['noshade'] = 'noShade';
-attr2Prop['noresize'] = 'noResize';
-attr2Prop['readonly'] = 'readOnly';
-attr2Prop['defaultchecked'] = 'defaultChecked';
-attr2Prop['defaultmuted'] = 'defaultMuted';
-attr2Prop['defaultselected'] = 'defaultSelected';
-
-function createElement(tagName, parentNode) {
-  var SVGElement = win.SVGElement;
-
-  return tagName === 'svg' || parentNode && SVGElement && parentNode instanceof SVGElement ? doc.createElementNS('http://www.w3.org/2000/svg', tagName) : doc.createElement(tagName);
-}
-
-function createText(text) {
-  return doc.createTextNode(text || CHAR_BLANK);
-}
-
-function createComment(text) {
-  return doc.createComment(text || CHAR_BLANK);
-}
-
-function createEvent(event) {
-  return event;
-}
-
-function isElement(node) {
-  return node.nodeType === 1;
-}
-
-function setProp(node, name, value) {
-  set$1(node, name, value, FALSE);
-}
-
-function removeProp(node, name) {
-  setProp(node, name, NULL);
-}
-
-function setAttr(node, name, value) {
-  if (booleanAttrMap[name]) {
-    value = value === UNDEFINED || value ? TRUE : FALSE;
-  }
-  if (attr2Prop[name]) {
-    setProp(node, attr2Prop[name], value);
-  } else if (booleanAttrMap[name]) {
-    setProp(node, name, value);
-  } else {
-    node.setAttribute(name, value);
-  }
-}
-
-function removeAttr(node, name) {
-  if (attr2Prop[name]) {
-    removeProp(node, attr2Prop[name]);
-  } else if (booleanAttrMap[name]) {
-    removeProp(node, name);
-  } else {
-    node.removeAttribute(name);
-  }
-}
-
-function before(parentNode, newNode, referenceNode) {
-  if (referenceNode) {
-    parentNode.insertBefore(newNode, referenceNode);
-  } else {
-    append$1(parentNode, newNode);
-  }
-}
-
-function append$1(parentNode, child) {
-  parentNode.appendChild(child);
-}
-
-function replace(parentNode, newNode, oldNode) {
-  parentNode.replaceChild(newNode, oldNode);
-}
-
-function remove$1(parentNode, child) {
-  parentNode.removeChild(child);
-}
-
-function parent(node) {
-  return node.parentNode;
-}
-
-function next(node) {
-  return node.nextSibling;
-}
-
-function tag$1(node) {
-  var tagName = node.tagName;
-
-  return falsy$1(tagName) ? CHAR_BLANK : tagName.toLowerCase();
-}
-
-function children(node) {
-  return node.childNodes;
-}
-
-function text(node, content) {
-  return content == NULL ? node.nodeValue : node.nodeValue = content;
-}
-
-function html(node, content) {
-  return content == NULL ? node.innerHTML : node.innerHTML = content;
-}
-
-function find(selector, context) {
-  return (context || doc).querySelector(selector);
-}
-
-function on(element, type, listener) {
-  element.addEventListener(type, listener, FALSE);
-}
-
-function off(element, type, listener) {
-  element.removeEventListener(type, listener, FALSE);
-}
-
-var domApi = Object.freeze({
-	createElement: createElement,
-	createText: createText,
-	createComment: createComment,
-	createEvent: createEvent,
-	isElement: isElement,
-	setProp: setProp,
-	removeProp: removeProp,
-	setAttr: setAttr,
-	removeAttr: removeAttr,
-	before: before,
-	append: append$1,
-	replace: replace,
-	remove: remove$1,
-	parent: parent,
-	next: next,
-	tag: tag$1,
-	children: children,
-	text: text,
-	html: html,
-	find: find,
-	on: on,
-	off: off
-});
-
-/**
- * tap 事件
- *
- * 非常有用的抽象事件，比如 pc 端是 click 事件，移动端是 touchend 事件
- *
- * 这样只需 on-tap="handler" 就可以完美兼容各端
- *
- * 框架未实现此事件，通过 Yox.dom.specialEvents 提供给外部扩展
- *
- * @type {string}
- */
-var TAP = 'tap';
-
-/**
- * 点击事件
- *
- * @type {string}
- */
-var CLICK = 'click';
-
-/**
- * 输入事件
- *
- * @type {string}
- */
-var INPUT = 'input';
-
-/**
- * 表单控件的修改事件
- *
- * @type {string}
- */
-var CHANGE = 'change';
-
-/**
- * 跟输入事件配套使用的事件
- *
- * @type {string}
- */
-var COMPOSITION_START = 'compositionstart';
-
-/**
- * 跟输入事件配套使用的事件
- *
- * @type {string}
- */
-var COMPOSITION_END = 'compositionend';
-
-/**
- * IE 模拟输入事件的特殊事件
- *
- * @type {string}
- */
-var PROPERTY_CHANGE = 'propertychange';
-
-var IEEvent = function () {
-  function IEEvent(event, element) {
-    classCallCheck(this, IEEvent);
-
-
-    extend(this, event);
-
-    this.currentTarget = element;
-    this.target = event.srcElement || element;
-    this.originalEvent = event;
-  }
-
-  createClass(IEEvent, [{
-    key: 'preventDefault',
-    value: function preventDefault() {
-      this.originalEvent.returnValue = FALSE;
-    }
-  }, {
-    key: 'stopPropagation',
-    value: function stopPropagation() {
-      this.originalEvent.cancelBubble = TRUE;
-    }
-  }]);
-  return IEEvent;
-}();
-
-function addInputListener(element, listener) {
-  listener.$listener = function (e) {
-    if (e.propertyName === 'value') {
-      e = new Event(e);
-      e.type = INPUT;
-      listener.call(this, e);
-    }
-  };
-  on$1(element, PROPERTY_CHANGE, listener.$listener);
-}
-
-function removeInputListener(element, listener) {
-  off$1(element, PROPERTY_CHANGE, listener.$listener);
-  delete listener.$listener;
-}
-
-function addChangeListener(element, listener) {
-  listener.$listener = function (e) {
-    e = new Event(e);
-    e.type = CHANGE;
-    listener.call(this, e);
-  };
-  on$1(element, CLICK, listener.$listener);
-}
-
-function removeChangeListener(element, listener) {
-  off$1(element, CLICK, listener.$listener);
-  delete listener.$listener;
-}
-
-function isBox(element) {
-  return element.tagName === 'INPUT' && (element.type === 'radio' || element.type === 'checkbox');
-}
-
-function on$1(element, type, listener) {
-  if (type === INPUT) {
-    addInputListener(element, listener);
-  } else if (type === CHANGE && isBox(element)) {
-    addChangeListener(element, listener);
-  } else {
-    element.attachEvent('on' + type, listener);
-  }
-}
-
-function off$1(element, type, listener) {
-  if (type === INPUT) {
-    removeInputListener(element, listener);
-  } else if (type === CHANGE && isBox(element)) {
-    removeChangeListener(element, listener);
-  } else {
-    element.detachEvent('on' + type, listener);
-  }
-}
-
-function createEvent$1(event, element) {
-  return new IEEvent(event, element);
-}
-
-function find$1(selector, context) {
-  context = context || doc;
-  return context.querySelector ? context.querySelector(selector) : context.getElementById(slice(selector, 1));
-}
-
-function setProp$1(element, name, value) {
-  try {
-    set$1(element, name, value);
-  } catch (e) {
-    if (element.tagName === 'STYLE' && name === 'innerHTML') {
-      element.setAttribute('type', 'text/css');
-      element.styleSheet.cssText = value;
-    }
-  }
-}
-
-
-
-var oldApi = Object.freeze({
-	on: on$1,
-	off: off$1,
-	createEvent: createEvent$1,
-	find: find$1,
-	setProp: setProp$1
-});
-
-var api = copy(domApi);
-
-if (!doc.addEventListener) {
-  extend(api, oldApi);
-}
-
-var _on = api.on;
-var _off = api.off;
-
-/**
- * 特殊事件，外部可扩展
- *
- * @type {Object}
- */
-
-api.specialEvents = {
-  input: {
-    on: function on$$1(el, listener) {
-      var locked = FALSE;
-      api.on(el, COMPOSITION_START, listener[COMPOSITION_START] = function () {
-        locked = TRUE;
-      });
-      api.on(el, COMPOSITION_END, listener[COMPOSITION_END] = function (e) {
-        locked = FALSE;
-        listener(e, INPUT);
-      });
-      _on(el, INPUT, listener[INPUT] = function (e) {
-        if (!locked) {
-          listener(e);
-        }
-      });
-    },
-    off: function off$$1(el, listener) {
-      api.off(el, COMPOSITION_START, listener[COMPOSITION_START]);
-      api.off(el, COMPOSITION_END, listener[COMPOSITION_END]);
-      _off(el, INPUT, listener[INPUT]);
-      listener[COMPOSITION_START] = listener[COMPOSITION_END] = listener[INPUT] = NULL;
-    }
-  }
-};
-
-/**
- * 绑定事件
- *
- * @param {HTMLElement} element
- * @param {string} type
- * @param {Function} listener
- * @param {?*} context
- */
-api.on = function (element, type, listener, context) {
-  var $emitter = element.$emitter || (element.$emitter = new Emitter());
-  if (!$emitter.has(type)) {
-    var nativeListener = function nativeListener(e, type) {
-      if (!Event.is(e)) {
-        e = new Event(api.createEvent(e, element));
-      }
-      if (type) {
-        e.type = type;
-      }
-      $emitter.fire(e.type, e, context);
-    };
-    $emitter[type] = nativeListener;
-    var special = api.specialEvents[type];
-    if (special) {
-      special.on(element, nativeListener);
-    } else {
-      _on(element, type, nativeListener);
-    }
-  }
-  $emitter.on(type, listener);
-};
-
-/**
- * 解绑事件
- *
- * @param {HTMLElement} element
- * @param {string} type
- * @param {Function} listener
- */
-api.off = function (element, type, listener) {
-  var $emitter = element.$emitter;
-
-  var types = keys($emitter.listeners);
-  // emitter 会根据 type 和 listener 参数进行适当的删除
-  $emitter.off(type, listener);
-  // 根据 emitter 的删除结果来操作这里的事件 listener
-  each(types, function (type) {
-    if ($emitter[type] && !$emitter.has(type)) {
-      var nativeListener = $emitter[type];
-      var special = api.specialEvents[type];
-      if (special) {
-        special.off(element, nativeListener);
-      } else {
-        _off(element, type, nativeListener);
-      }
-      delete $emitter[type];
-    }
-  });
-};
-
-function Vnode(sel, text, data, children, key, component) {
-  return {
-    sel: sel,
-    text: text,
-    data: data,
-    children: children,
-    key: key,
-    component: component
-  };
-}
-
-var SEL_COMMENT = '!';
-
-var HOOK_INIT = 'init';
-var HOOK_CREATE = 'create';
-var HOOK_INSERT = 'insert';
-
-var HOOK_REMOVE = 'remove';
-var HOOK_DESTROY = 'destroy';
-
-var HOOK_PRE = 'pre';
-var HOOK_POST = 'post';
-
-var HOOK_PREPATCH = 'prepatch';
-var HOOK_UPDATE = 'update';
-var HOOK_POSTPATCH = 'postpatch';
-
-var moduleHooks = [HOOK_CREATE, HOOK_UPDATE, HOOK_REMOVE, HOOK_DESTROY, HOOK_PRE, HOOK_POST];
-
-var emptyNode = Vnode(CHAR_BLANK, UNDEFINED, {}, []);
-
-function isPatchable(vnode1, vnode2) {
-  return vnode1.key === vnode2.key && vnode1.sel === vnode2.sel;
-}
-
-function createKeyToIndex(vnodes, startIndex, endIndex) {
-  var result = {};
-  for (var i = startIndex, key; i <= endIndex; i++) {
-    key = vnodes[i].key;
-    if (key != NULL) {
-      result[key] = i;
-    }
-  }
-  return result;
-}
-
-function createElementVnode(sel, data, children$$1, key, component) {
-  return Vnode(sel, UNDEFINED, data, children$$1, key, component);
-}
-
-function createCommentVnode(text$$1) {
-  return Vnode(SEL_COMMENT, text$$1);
-}
-
-function init(modules) {
-  var api = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : domApi;
-
-
-  var moduleEmitter = new Emitter();
-
-  each(moduleHooks, function (hook) {
-    each(modules, function (item) {
-      moduleEmitter.on(hook, item[hook]);
-    });
-  });
-
-  var stringifySel = function stringifySel(el) {
-    var list = [api.tag(el)];
-    var id = el.id,
-        className = el.className;
-
-    if (id) {
-      push(list, '' + CHAR_HASH + id);
-    }
-    if (className) {
-      push(list, '' + CHAR_DOT + split(className, CHAR_WHITESPACE).join(CHAR_DOT));
-    }
-    return list.join(CHAR_BLANK);
-  };
-
-  var parseSel = function parseSel(sel) {
-
-    var tagName = void 0,
-        id = void 0,
-        className = void 0;
-
-    var hashIndex = indexOf$1(sel, CHAR_HASH);
-    if (hashIndex > 0) {
-      tagName = slice(sel, 0, hashIndex);
-      sel = slice(sel, hashIndex + 1);
-    }
-
-    var dotIndex = indexOf$1(sel, CHAR_DOT);
-    if (dotIndex > 0) {
-      var temp = slice(sel, 0, dotIndex);
-      if (tagName) {
-        id = temp;
-      } else {
-        tagName = temp;
-      }
-      className = split(slice(sel, dotIndex + 1), CHAR_DOT).join(CHAR_WHITESPACE);
-    } else {
-      if (tagName) {
-        id = sel;
-      } else {
-        tagName = sel;
-      }
-    }
-
-    return { tagName: tagName, id: id, className: className };
-  };
-
-  var createElement$$1 = function createElement$$1(parentNode, vnode, insertedQueue) {
-    var sel = vnode.sel,
-        data = vnode.data,
-        children$$1 = vnode.children,
-        text$$1 = vnode.text;
-
-
-    var hooks = data && data.hooks || {};
-    execute(hooks[HOOK_INIT], NULL, vnode);
-
-    if (falsy$1(sel)) {
-      return vnode.el = api.createText(text$$1);
-    }
-
-    if (sel === SEL_COMMENT) {
-      return vnode.el = api.createComment(text$$1);
-    }
-
-    var _parseSel = parseSel(sel),
-        tagName = _parseSel.tagName,
-        id = _parseSel.id,
-        className = _parseSel.className;
-
-    var el = api.createElement(tagName, parentNode);
-    if (id) {
-      el.id = id;
-    }
-    if (className) {
-      el.className = className;
-    }
-
-    vnode.el = el;
-
-    if (array(children$$1)) {
-      addVnodes(el, children$$1, 0, children$$1.length - 1, insertedQueue);
-    } else if (string(text$$1)) {
-      api.append(el, api.createText(text$$1));
-    }
-
-    if (data) {
-      data = [emptyNode, vnode];
-      moduleEmitter.fire(HOOK_CREATE, data, api);
-
-      execute(hooks[HOOK_CREATE], NULL, data);
-
-      if (hooks[HOOK_INSERT]) {
-        insertedQueue.push(vnode);
-      }
-    }
-    // 钩子函数可能会替换元素
-    return vnode.el;
-  };
-
-  var addVnodes = function addVnodes(parentNode, vnodes, startIndex, endIndex, insertedQueue, before$$1) {
-    for (var i = startIndex; i <= endIndex; i++) {
-      addVnode(parentNode, vnodes[i], insertedQueue, before$$1);
-    }
-  };
-
-  var addVnode = function addVnode(parentNode, vnode, insertedQueue, before$$1) {
-    var el = createElement$$1(parentNode, vnode, insertedQueue);
-    if (el) {
-      api.before(parentNode, el, before$$1);
-    }
-  };
-
-  var removeVnodes = function removeVnodes(parentNode, vnodes, startIndex, endIndex) {
-    for (var i = startIndex, vnode; i <= endIndex; i++) {
-      vnode = vnodes[i];
-      if (vnode) {
-        removeVnode(parentNode, vnode);
-      }
-    }
-  };
-
-  var removeVnode = function removeVnode(parentNode, vnode) {
-    var sel = vnode.sel,
-        el = vnode.el,
-        data = vnode.data;
-
-    if (sel) {
-      destroyVnode(vnode);
-      api.remove(parentNode, el);
-
-      if (data) {
-        moduleEmitter.fire(HOOK_REMOVE, vnode, api);
-        if (data.hooks) {
-          execute(data.hooks[HOOK_REMOVE], NULL, vnode);
-        }
-      }
-    } else if (el) {
-      api.remove(parentNode, el);
-    }
-  };
-
-  var destroyVnode = function destroyVnode(vnode) {
-    var data = vnode.data,
-        children$$1 = vnode.children;
-
-    if (data) {
-
-      // 先销毁 children
-      if (children$$1) {
-        each(children$$1, function (child) {
-          destroyVnode(child);
-        });
-      }
-
-      moduleEmitter.fire(HOOK_DESTROY, vnode, api);
-
-      if (data.hooks) {
-        execute(data.hooks[HOOK_DESTROY], NULL, vnode);
-      }
-    }
-  };
-
-  var replaceVnode = function replaceVnode(parentNode, oldVnode, vnode) {
-    api.before(parentNode, vnode.el, oldVnode.el);
-    removeVnode(parentNode, oldVnode);
-  };
-
-  var updateChildren = function updateChildren(parentNode, oldChildren, newChildren, insertedQueue) {
-
-    var oldStartIndex = 0;
-    var oldEndIndex = oldChildren.length - 1;
-    var oldStartVnode = oldChildren[oldStartIndex];
-    var oldEndVnode = oldChildren[oldEndIndex];
-
-    var newStartIndex = 0;
-    var newEndIndex = newChildren.length - 1;
-    var newStartVnode = newChildren[newStartIndex];
-    var newEndVnode = newChildren[newEndIndex];
-
-    var oldKeyToIndex = void 0,
-        oldIndex = void 0,
-        activeVnode = void 0;
-
-    while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
-
-      // 下面有设为 NULL 的逻辑
-      if (!oldStartVnode) {
-        oldStartVnode = oldChildren[++oldStartIndex]; // Vnode has been moved left
-      } else if (!oldEndVnode) {
-        oldEndVnode = oldChildren[--oldEndIndex];
-      }
-
-      // 优先从头到尾比较，位置相同且值得 patch
-      else if (isPatchable(oldStartVnode, newStartVnode)) {
-          patchVnode(oldStartVnode, newStartVnode, insertedQueue);
-          oldStartVnode = oldChildren[++oldStartIndex];
-          newStartVnode = newChildren[++newStartIndex];
-        }
-
-        // 再从尾到头比较，位置相同且值得 patch
-        else if (isPatchable(oldEndVnode, newEndVnode)) {
-            patchVnode(oldEndVnode, newEndVnode, insertedQueue);
-            oldEndVnode = oldChildren[--oldEndIndex];
-            newEndVnode = newChildren[--newEndIndex];
-          }
-
-          // 比较完两侧的节点，剩下就是 位置发生改变的节点 和 全新的节点
-
-          // 当 oldStartVnode 和 newEndVnode 值得 patch
-          // 说明元素被移到右边了
-          else if (isPatchable(oldStartVnode, newEndVnode)) {
-              patchVnode(oldStartVnode, newEndVnode, insertedQueue);
-              api.before(parentNode, oldStartVnode.el, api.next(oldEndVnode.el));
-              oldStartVnode = oldChildren[++oldStartIndex];
-              newEndVnode = newChildren[--newEndIndex];
-            }
-
-            // 当 oldEndVnode 和 newStartVnode 值得 patch
-            // 说明元素被移到左边了
-            else if (isPatchable(oldEndVnode, newStartVnode)) {
-                patchVnode(oldEndVnode, newStartVnode, insertedQueue);
-                api.before(parentNode, oldEndVnode.el, oldStartVnode.el);
-                oldEndVnode = oldChildren[--oldEndIndex];
-                newStartVnode = newChildren[++newStartIndex];
-              }
-
-              // 尝试同级元素的 key
-              else {
-
-                  if (!oldKeyToIndex) {
-                    oldKeyToIndex = createKeyToIndex(oldChildren, oldStartIndex, oldEndIndex);
-                  }
-
-                  oldIndex = oldKeyToIndex[newStartVnode.key];
-
-                  // 移动元素
-                  if (number(oldIndex)) {
-                    activeVnode = oldChildren[oldIndex];
-                    patchVnode(activeVnode, newStartVnode, insertedQueue);
-                    oldChildren[oldIndex] = NULL;
-                  }
-                  // 新元素
-                  else {
-                      activeVnode = createElement$$1(parentNode, newStartVnode, insertedQueue);
-                      if (activeVnode) {
-                        activeVnode = newStartVnode;
-                      }
-                    }
-
-                  if (activeVnode) {
-                    api.before(parentNode, activeVnode.el, oldStartVnode.el);
-                  }
-
-                  newStartVnode = newChildren[++newStartIndex];
-                }
-    }
-
-    if (oldStartIndex > oldEndIndex) {
-      activeVnode = newChildren[newEndIndex + 1];
-      addVnodes(parentNode, newChildren, newStartIndex, newEndIndex, insertedQueue, activeVnode ? activeVnode.el : NULL);
-    } else if (newStartIndex > newEndIndex) {
-      removeVnodes(parentNode, oldChildren, oldStartIndex, oldEndIndex);
-    }
-  };
-
-  var patchVnode = function patchVnode(oldVnode, vnode, insertedQueue) {
-
-    if (oldVnode === vnode) {
-      return;
-    }
-
-    var data = vnode.data;
-
-    var hooks = data && data.hooks || {};
-
-    var args = [oldVnode, vnode];
-    execute(hooks[HOOK_PREPATCH], NULL, args);
-
-    var el = oldVnode.el;
-
-    vnode.el = el;
-
-    if (!isPatchable(oldVnode, vnode)) {
-      var parentNode = api.parent(el);
-      if (createElement$$1(parentNode, vnode, insertedQueue)) {
-        parentNode && replaceVnode(parentNode, oldVnode, vnode);
-      }
-      return;
-    }
-
-    if (data) {
-      moduleEmitter.fire(HOOK_UPDATE, args, api);
-      execute(hooks[HOOK_UPDATE], NULL, args);
-    }
-
-    var newText = vnode.text;
-    var newChildren = vnode.children;
-
-    var oldText = oldVnode.text;
-    var oldChildren = oldVnode.children;
-
-    if (string(newText)) {
-      if (newText !== oldText) {
-        api.text(el, newText);
-      }
-    } else {
-      // 两个都有需要 diff
-      if (newChildren && oldChildren) {
-        if (newChildren !== oldChildren) {
-          updateChildren(el, oldChildren, newChildren, insertedQueue);
-        }
-      }
-      // 有新的没旧的 - 新增节点
-      else if (newChildren) {
-          if (string(oldText)) {
-            api.text(el, CHAR_BLANK);
-          }
-          addVnodes(el, newChildren, 0, newChildren.length - 1, insertedQueue);
-        }
-        // 有旧的没新的 - 删除节点
-        else if (oldChildren) {
-            removeVnodes(el, oldChildren, 0, oldChildren.length - 1);
-          }
-          // 有旧的 text 没有新的 text
-          else if (string(oldText)) {
-              api.text(el, CHAR_BLANK);
-            }
-    }
-
-    execute(hooks[HOOK_POSTPATCH], NULL, args);
-  };
-
-  return function (oldVnode, vnode) {
-
-    moduleEmitter.fire(HOOK_PRE, NULL, api);
-
-    if (api.isElement(oldVnode)) {
-      var el = oldVnode;
-      oldVnode = Vnode(stringifySel(el), UNDEFINED, {}, []);
-      oldVnode.el = el;
-    }
-
-    var insertedQueue = [];
-    if (isPatchable(oldVnode, vnode)) {
-      patchVnode(oldVnode, vnode, insertedQueue);
-    } else {
-      var parentNode = api.parent(oldVnode.el);
-      if (createElement$$1(parentNode, vnode, insertedQueue)) {
-        parentNode && replaceVnode(parentNode, oldVnode, vnode);
-      }
-    }
-
-    each(insertedQueue, function (vnode) {
-      execute(vnode.data.hooks[HOOK_INSERT], NULL, vnode);
-    });
-
-    moduleEmitter.fire(HOOK_POST, NULL, api);
-
-    return vnode;
-  };
-}
-
-function updateAttrs(oldVnode, vnode) {
-
-  var oldAttrs = oldVnode.data.attrs;
-  var newAttrs = vnode.data.attrs;
-
-  if (vnode.component || !oldAttrs && !newAttrs) {
-    return;
-  }
-
-  oldAttrs = oldAttrs || {};
-  newAttrs = newAttrs || {};
-
-  var el = vnode.el;
-
-  var api = this;
-
-  var getValue = function getValue(attrs, name) {
-    if (has$1(attrs, name)) {
-      var value = attrs[name];
-      return value !== UNDEFINED ? value : name;
-    }
-  };
-
-  each$1(newAttrs, function (value, name) {
-    if (getValue(newAttrs, name) !== getValue(oldAttrs, name)) {
-      api.setAttr(el, name, value);
-    }
-  });
-
-  each$1(oldAttrs, function (value, name) {
-    if (!has$1(newAttrs, name)) {
-      api.removeAttr(el, name);
-    }
-  });
-}
-
-var attrs = {
-  create: updateAttrs,
-  update: updateAttrs
-};
-
-function updateProps(oldVnode, vnode) {
-
-  var oldProps = oldVnode.data.props;
-  var newProps = vnode.data.props;
-
-  if (vnode.component || !oldProps && !newProps) {
-    return;
-  }
-
-  oldProps = oldProps || {};
-  newProps = newProps || {};
-
-  var el = vnode.el;
-
-  var api = this;
-
-  each$1(newProps, function (value, name) {
-    if (value !== oldProps[name]) {
-      api.setProp(el, name, value);
-    }
-  });
-
-  each$1(oldProps, function (value, name) {
-    if (!has$1(newProps, name)) {
-      api.removeProp(el, name);
-    }
-  });
-}
-
-var props = {
-  create: updateProps,
-  update: updateProps
-};
-
-function bindDirective(vnode, key) {
-  var el = vnode.el,
-      component = vnode.component;
-  var _vnode$data = vnode.data,
-      instance = _vnode$data.instance,
-      attrs = _vnode$data.attrs,
-      directives = _vnode$data.directives,
-      destroies = _vnode$data.destroies;
-
-
-  var node = directives[key];
-
-  var args = {
-    el: el,
-    node: node,
-    instance: instance,
-    directives: directives,
-    attrs: attrs || {}
-  };
-
-  var $component = el.$component;
-
-  if (component && object($component)) {
-    if (has$1($component, 'queue') && !has$1($component, 'set')) {
-      $component = $component.queue;
-    }
-    args.component = $component;
-  }
-
-  var destroy = execute(instance.directive(node.name), NULL, args);
-
-  if (func(destroy)) {
-    if (!destroies) {
-      destroies = vnode.data.destroies = {};
-    }
-    destroies[key] = destroy;
-  }
-}
-
-function unbindDirective(vnode, key) {
-  var destroies = vnode.data.destroies;
-
-  if (destroies && destroies[key]) {
-    destroies[key]();
-    delete destroies[key];
-  }
-}
-
-function updateDirectives(oldVnode, vnode) {
-
-  var oldDirectives = oldVnode.data.directives;
-  var newDirectives = vnode.data.directives;
-
-  if (!oldDirectives && !newDirectives) {
-    return;
-  }
-
-  oldDirectives = oldDirectives || {};
-  newDirectives = newDirectives || {};
-
-  each$1(newDirectives, function (directive, key) {
-    if (has$1(oldDirectives, key)) {
-      var oldDirective = oldDirectives[key];
-      if (oldDirective.value !== directive.value || oldDirective.context.get(THIS) !== directive.context.get(THIS)) {
-        unbindDirective(oldVnode, key);
-        bindDirective(vnode, key);
-      }
-    } else {
-      bindDirective(vnode, key);
-    }
-  });
-
-  each$1(oldDirectives, function (directive, key) {
-    if (!has$1(newDirectives, key)) {
-      unbindDirective(oldVnode, key);
-    }
-  });
-
-  vnode.data.destroies = extend({}, oldVnode.data.destroies, vnode.data.destroies);
-}
-
-function destroyDirectives(vnode) {
-  var destroies = vnode.data.destroies;
-
-  if (destroies) {
-    each$1(destroies, function (destroy) {
-      destroy();
-    });
-  }
-}
-
-var directives = {
-  create: updateDirectives,
-  update: updateDirectives,
-  destroy: destroyDirectives
-};
-
-function createComponent(oldVnode, vnode) {
-  var el = vnode.el,
-      component = vnode.component;
-
-  if (!component) {
-    return;
-  }
-
-  var _vnode$data = vnode.data,
-      instance = _vnode$data.instance,
-      attrs = _vnode$data.attrs;
-
-  el.$component = {
-    queue: [],
-    attrs: attrs
-  };
-
-  instance.component(vnode.sel, function (options) {
-    var _el = el,
-        $component = _el.$component;
-
-    if ($component && array($component.queue)) {
-
-      component = instance.create(options, {
-        el: el,
-        props: $component.attrs,
-        replace: TRUE
-      });
-
-      el = vnode.el = component.$el;
-      el.$component = component;
-
-      each($component.queue, function (callback) {
-        callback(component);
-      });
-    }
-  });
-}
-
-function updateComponent(oldVnode, vnode) {
-  var $component = vnode.el.$component;
-
-  if (vnode.component && object($component)) {
-    var attrs = vnode.data.attrs;
-
-    if ($component.set) {
-      $component.set(attrs, TRUE);
-    } else {
-      $component.attrs = attrs;
-    }
-  }
-}
-
-function destroyComponent(oldVnode, vnode) {
-  var component = oldVnode.component,
-      el = oldVnode.el;
-  var $component = el.$component;
-
-  if (component && object($component)) {
-    if ($component.destroy) {
-      $component.destroy(TRUE);
-    }
-    el.$component = NULL;
-  }
-}
-
-var component = {
-  create: createComponent,
-  update: updateComponent,
-  destroy: destroyComponent
-};
 
 var Context = function () {
 
@@ -4652,14 +3759,14 @@ function mergeNodes(outputNodes, sourceNodes) {
  * 渲染抽象语法树
  *
  * @param {Object} ast 编译出来的抽象语法树
+ * @param {Object} data 渲染模板的数据
  * @param {Function} createComment 创建注释节点
  * @param {Function} createElement 创建元素节点
  * @param {?Function} importTemplate 导入子模板，如果是纯模板，可不传
  * @param {?Function} addDep 渲染模板过程中使用的数据依赖，如果是纯模板，可不传
- * @param {Object} data 渲染模板的数据，如果渲染纯模板，可不传
  * @return {Array}
  */
-function render(ast, createComment, createElement, importTemplate, addDep, data) {
+function render(ast, data, createComment, createElement, importTemplate, addDep) {
 
   var keypath = void 0,
       keypathList = [],
@@ -5060,37 +4167,887 @@ function render(ast, createComment, createElement, importTemplate, addDep, data)
   return nodeList;
 }
 
-var patch = init([component, attrs, props, directives], api);
+var Observer = function () {
 
-function create(ast, context, instance, addDep) {
+  /**
+   * @param {Object} options
+   * @property {Object} options.data
+   * @property {?Object} options.computed
+   * @property {?Object} options.watchers
+   * @property {?*} options.context 执行 watcher 函数的 this 指向
+   */
+  function Observer(options) {
+    classCallCheck(this, Observer);
+    var data = options.data,
+        context = options.context,
+        computed = options.computed,
+        watchers = options.watchers;
 
-  var createElementVnode$$1 = function createElementVnode$$1(source, output) {
 
-    var hooks = {},
-        data = { instance: instance, hooks: hooks, attrs: output.attrs, directives: output.directives },
-        sourceChildren = source.children,
-        outputChildren = output.children;
+    var instance = this;
 
-    if (sourceChildren && sourceChildren.length === 1) {
-      var child = sourceChildren[0];
-      if (child.type === EXPRESSION && child.safe === FALSE) {
-        data.props = {
-          innerHTML: outputChildren[0].text
-        };
-        outputChildren = NULL;
+    instance.data = data;
+    instance.cache = {};
+    instance.emitter = new Emitter();
+    instance.context = context || instance;
+
+    // 谁依赖了谁
+    instance.deps = {};
+    // 谁被谁依赖
+    instance.reversedDeps = {};
+
+    // 计算属性也是数据
+    if (object(computed)) {
+
+      // 把计算属性拆为 getter 和 setter
+      instance.computedGetters = {};
+      instance.computedSetters = {};
+
+      // 辅助获取计算属性的依赖
+      instance.computedStack = [];
+
+      var cache = instance.cache,
+          computedStack = instance.computedStack;
+
+
+      each$1(computed, function (item, keypath) {
+
+        var get$$1 = void 0,
+            set$$1 = void 0,
+            deps = void 0,
+            cacheable = TRUE;
+
+        if (func(item)) {
+          get$$1 = item;
+        } else if (object(item)) {
+          if (item.deps) {
+            deps = item.deps;
+          }
+          if (boolean(item.cache)) {
+            cacheable = item.cache;
+          }
+          if (func(item.get)) {
+            get$$1 = item.get;
+          }
+          if (func(item.set)) {
+            set$$1 = item.set;
+          }
+        }
+
+        if (get$$1) {
+
+          if (cacheable) {
+            instance.watch(keypath + FORCE, function () {
+              _getter[DIRTY] = TRUE;
+            });
+          }
+
+          var _getter = function _getter() {
+
+            if (cacheable) {
+              if (_getter[DIRTY]) {
+                delete _getter[DIRTY];
+              } else if (has$1(cache, keypath)) {
+                return cache[keypath];
+              }
+            }
+
+            if (!deps) {
+              computedStack.push([]);
+            }
+
+            var result = execute(get$$1, instance.context);
+            cache[keypath] = result;
+
+            var newDeps = deps || pop(computedStack);
+            if (array(newDeps)) {
+              instance.setDeps(keypath, newDeps);
+            }
+
+            return result;
+          };
+
+          _getter.toString = instance.computedGetters[keypath] = _getter;
+        }
+
+        if (set$$1) {
+          instance.computedSetters[keypath] = set$$1;
+        }
+      });
+    }
+
+    if (object(watchers)) {
+      instance.watch(watchers);
+    }
+  }
+
+  /**
+   * 获取数据
+   *
+   * @param {string} keypath
+   * @return {?*}
+   */
+
+
+  createClass(Observer, [{
+    key: 'get',
+    value: function get$$1(keypath) {
+
+      var instance = this;
+
+      var data = instance.data,
+          cache = instance.cache,
+          computedStack = instance.computedStack,
+          computedGetters = instance.computedGetters;
+
+
+      if (!keypath) {
+        return data;
+      }
+
+      keypath = normalize(keypath);
+
+      if (computedStack) {
+        var list = last(computedStack);
+        if (list) {
+          push(list, keypath);
+        }
+      }
+
+      var result = void 0;
+      if (computedGetters) {
+        var _matchBestGetter = matchBestGetter(computedGetters, keypath),
+            value = _matchBestGetter.value,
+            rest = _matchBestGetter.rest;
+
+        if (value) {
+          value = value();
+          result = rest && !primitive(value) ? get$1(value, rest) : { value: value };
+        }
+      }
+
+      if (!result) {
+        result = get$1(data, keypath);
+      }
+
+      if (result) {
+        return cache[keypath] = result.value;
       }
     }
 
-    return createElementVnode(output.name, data, outputChildren, output.key, output.component);
+    /**
+     * 更新数据
+     *
+     * @param {Object} model
+     */
+
+  }, {
+    key: 'set',
+    value: function set$$1(model) {
+
+      var instance = this;
+
+      var data = instance.data,
+          cache = instance.cache,
+          emitter = instance.emitter,
+          context = instance.context,
+          reversedDeps = instance.reversedDeps,
+          computedGetters = instance.computedGetters,
+          computedSetters = instance.computedSetters,
+          watchKeypaths = instance.watchKeypaths,
+          reversedKeypaths = instance.reversedKeypaths;
+
+      /**
+       * a -> b -> c
+       *
+       * a 依赖 b，b 依赖 c
+       *
+       * 当修改 c 时，要通知 a 和 b 更新
+       * 当修改 b 时，要通知 a 更新，不通知 c 更新
+       * 当修改 a 时，仅自己更新
+       *
+       * 当监听 user.* 时，如果修改了 user.name，不仅要触发 user.name 的 watcher，也要触发 user.* 的 watcher
+       *
+       * 这里遵循的一个原则是，只有当修改数据确实产生了数据变化，才会分析它的依赖
+       */
+
+      var differences = [],
+          differenceMap = {};
+      var addDifference = function addDifference(keypath, realpath, oldValue, match, force) {
+        var fullpath = keypath + CHAR_DASH + realpath;
+        if (!differenceMap[fullpath]) {
+          differenceMap[fullpath] = TRUE;
+          push(differences, {
+            keypath: keypath,
+            realpath: realpath,
+            oldValue: oldValue,
+            match: match,
+            force: force
+          });
+        }
+      };
+
+      var oldCache = {},
+          newCache = {};
+      var getOldValue = function getOldValue(keypath) {
+        if (!has$1(oldCache, keypath)) {
+          oldCache[keypath] = cache[keypath];
+        }
+        return oldCache[keypath];
+      };
+      var getNewValue = function getNewValue(keypath) {
+        if (!has$1(newCache, keypath)) {
+          newCache[keypath] = instance.get(keypath);
+        }
+        return newCache[keypath];
+      };
+
+      var reversedDepMap = {};
+      var addReversedDepKeypath = function addReversedDepKeypath(keypath) {
+        if (reversedKeypaths && !reversedDepMap[keypath]) {
+          reversedDepMap[keypath] = TRUE;
+          each(reversedKeypaths, function (key) {
+            var list = void 0,
+                match = void 0;
+            if (key === keypath) {
+              list = reversedDeps[key];
+            } else if (isFuzzyKeypath(key)) {
+              match = matchKeypath(keypath, key);
+              if (match) {
+                list = reversedDeps[key];
+              }
+            }
+            if (list) {
+              each(list, function (key) {
+                addDifference(key, key, getOldValue(key), UNDEFINED, TRUE);
+              });
+            }
+          });
+        }
+      };
+
+      each$1(model, function (newValue, keypath) {
+
+        keypath = normalize(keypath);
+
+        addDifference(keypath, keypath, getOldValue(keypath));
+
+        if (computedSetters) {
+          var setter = computedSetters[keypath];
+          if (setter) {
+            setter.call(context, newValue);
+            return;
+          } else {
+            var _matchBestGetter2 = matchBestGetter(computedGetters, keypath),
+                value = _matchBestGetter2.value,
+                rest = _matchBestGetter2.rest;
+
+            if (value && rest) {
+              value = value();
+              if (!primitive(value)) {
+                set$1(value, rest, newValue);
+              }
+              return;
+            }
+          }
+        }
+
+        set$1(data, keypath, newValue);
+      });
+
+      var fireDifference = function fireDifference(_ref) {
+        var keypath = _ref.keypath,
+            realpath = _ref.realpath,
+            oldValue = _ref.oldValue,
+            match = _ref.match,
+            force = _ref.force;
+
+
+        var newValue = force ? oldValue : getNewValue(realpath);
+        if (force || newValue !== oldValue) {
+
+          var args = [newValue, oldValue, keypath];
+          if (match) {
+            push(args, match);
+          }
+          emitter.fire(keypath + (force ? FORCE : CHAR_BLANK), args, context);
+
+          newValue = getNewValue(realpath);
+          if (newValue !== oldValue) {
+            if (force) {
+              args[0] = newValue;
+              emitter.fire(keypath, args, context);
+            }
+            each(watchKeypaths, function (key) {
+              if (key !== realpath) {
+                if (isFuzzyKeypath(key)) {
+                  if (!has$2(realpath, FORCE)) {
+                    var _match = matchKeypath(realpath, key);
+                    if (_match) {
+                      addDifference(key, realpath, getOldValue(realpath), _match);
+                    }
+                  }
+                } else if (startsWith$1(key, realpath)) {
+                  addDifference(key, key, getOldValue(key));
+                }
+              }
+            });
+            addReversedDepKeypath(realpath);
+          }
+        }
+      };
+
+      for (var i = 0; i < differences.length; i++) {
+        fireDifference(differences[i]);
+      }
+    }
+  }, {
+    key: 'setDeps',
+    value: function setDeps(keypath, newDeps) {
+
+      var instance = this;
+
+      var deps = instance.deps,
+          reversedDeps = instance.reversedDeps;
+
+
+      if (newDeps !== deps[keypath]) {
+
+        deps[keypath] = newDeps;
+        updateWatchKeypaths(instance);
+
+        // 全量更新
+        reversedDeps = {};
+
+        each$1(deps, function (deps, key) {
+          each(deps, function (dep) {
+            push(reversedDeps[dep] || (reversedDeps[dep] = []), key);
+          });
+        });
+
+        instance.reversedDeps = reversedDeps;
+        instance.reversedKeypaths = sort(reversedDeps, TRUE);
+      }
+    }
+  }, {
+    key: 'setCache',
+    value: function setCache(keypath, value) {
+      this.cache[keypath] = value;
+    }
+
+    /**
+     * 销毁
+     */
+
+  }, {
+    key: 'destroy',
+    value: function destroy() {
+      this.emitter.off();
+      clear(this);
+    }
+  }]);
+  return Observer;
+}();
+
+extend(Observer.prototype, {
+
+  /**
+   * 监听数据变化
+   *
+   * @param {string|Object} keypath
+   * @param {?Function} watcher
+   * @param {?boolean} sync
+   */
+  watch: createWatch('on'),
+
+  /**
+   * 监听一次数据变化
+   *
+   * @param {string|Object} keypath
+   * @param {?Function} watcher
+   * @param {?boolean} sync
+   */
+  watchOnce: createWatch('once'),
+
+  /**
+   * 取消监听数据变化
+   *
+   * @param {string|Object} keypath
+   * @param {?Function} watcher
+   */
+  unwatch: function unwatch(keypath, watcher) {
+    this.emitter.off(keypath, watcher);
+    updateWatchKeypaths(this);
+  }
+
+});
+
+var FORCE = '._force_';
+var DIRTY = '_dirty_';
+
+function updateWatchKeypaths(instance) {
+  var deps = instance.deps,
+      emitter = instance.emitter;
+
+
+  var watchKeypaths = {};
+
+  var addKeypath = function addKeypath(keypath) {
+    watchKeypaths[keypath] = TRUE;
   };
 
-  var importTemplate = function importTemplate(name) {
-    var partial = instance.partial(name);
-    return string(partial) ? compile(partial) : partial;
-  };
+  // 1. 直接通过 watch 注册的
+  each$1(emitter.listeners, function (list, key) {
+    addKeypath(key);
+  });
 
-  return render(ast, createCommentVnode, createElementVnode$$1, importTemplate, addDep, context);
+  // 2. 计算属性的依赖属于间接 watch
+  each$1(deps, function (deps) {
+    each(deps, addKeypath);
+  });
+
+  instance.watchKeypaths = sort(watchKeypaths, TRUE);
 }
+
+/**
+ * watch 和 watchOnce 逻辑相同
+ * 提出一个工厂方法
+ */
+function createWatch(action) {
+
+  return function (keypath, watcher, sync) {
+
+    var watchers = keypath;
+    if (string(keypath)) {
+      watchers = {};
+      watchers[keypath] = {
+        sync: sync,
+        watcher: watcher
+      };
+    }
+
+    var instance = this;
+
+    var emitter = instance.emitter,
+        context = instance.context;
+
+
+    each$1(watchers, function (value, keypath) {
+
+      var watcher = value,
+          sync = void 0;
+      if (object(value)) {
+        watcher = value.watcher;
+        sync = value.sync;
+      }
+
+      emitter[action](keypath, watcher);
+      updateWatchKeypaths(instance);
+
+      if (!isFuzzyKeypath(keypath)) {
+        append(function () {
+          // get 会缓存一下当前值，便于下次对比
+          value = instance.get(keypath);
+          if (sync) {
+            execute(watcher, context, [value, UNDEFINED, keypath]);
+          }
+        });
+      }
+    });
+  };
+}
+
+var patternCache = {};
+
+/**
+ * 模糊匹配 Keypath
+ *
+ * @param {string} keypath
+ * @param {string} pattern
+ */
+function matchKeypath(keypath, pattern) {
+  var cache = patternCache[pattern];
+  if (!cache) {
+    cache = pattern.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)');
+    cache = patternCache[pattern] = new RegExp('^' + cache + '$');
+  }
+  var match = keypath.match(cache);
+  if (match) {
+    return toArray$1(match).slice(1);
+  }
+}
+
+/**
+ * 是否模糊匹配
+ *
+ * @param {string} keypath
+ * @return {boolean}
+ */
+function isFuzzyKeypath(keypath) {
+  return has$2(keypath, '*');
+}
+
+/**
+ * 从 getter 对象的所有 key 中，选择和 keypath 最匹配的那一个
+ *
+ * @param {Object} getters
+ * @param {string} keypath
+ * @return {Object}
+ */
+function matchBestGetter(getters, keypath) {
+
+  var key = void 0,
+      value = void 0,
+      rest = void 0;
+
+  each(sort(getters, TRUE), function (prefix) {
+    if (prefix = startsWith$1(keypath, prefix, TRUE)) {
+      key = prefix[0];
+      value = getters[key];
+      rest = prefix[1];
+      return FALSE;
+    }
+  });
+
+  return { key: key, value: value, rest: rest };
+}
+
+/**
+ * html 标签
+ *
+ * @type {RegExp}
+ */
+var tag$1 = /<[^>]+>/;
+
+/**
+ * 选择器
+ *
+ * @type {RegExp}
+ */
+var selector = /^[#.][-\w+]+$/;
+
+/**
+ * 进入 `new Yox(options)` 之后立即触发，钩子函数会传入 `options`
+ *
+ * @type {string}
+ */
+var BEFORE_CREATE = 'beforeCreate';
+
+/**
+ * 绑定事件和数据监听之后触发
+ *
+ * @type {string}
+ */
+var AFTER_CREATE = 'afterCreate';
+
+/**
+ * 模板编译，加入 DOM 树之前触发
+ *
+ * @type {string}
+ */
+var BEFORE_MOUNT = 'beforeMount';
+
+/**
+ * 加入 DOM 树之后触发
+ *
+ * 这时可通过 `$el` 获取组件根元素
+ *
+ * @type {string}
+ */
+var AFTER_MOUNT = 'afterMount';
+
+/**
+ * 视图更新之前触发
+ *
+ * @type {string}
+ */
+var BEFORE_UPDATE = 'beforeUpdate';
+
+/**
+ * 视图更新之后触发
+ *
+ * @type {string}
+ */
+var AFTER_UPDATE = 'afterUpdate';
+
+/**
+ * 销毁之前触发
+ *
+ * @type {string}
+ */
+var BEFORE_DESTROY = 'beforeDestroy';
+
+/**
+ * 销毁之后触发
+ *
+ * @type {string}
+ */
+var AFTER_DESTROY = 'afterDestroy';
+
+/**
+ * tap 事件
+ *
+ * 非常有用的抽象事件，比如 pc 端是 click 事件，移动端是 touchend 事件
+ *
+ * 这样只需 on-tap="handler" 就可以完美兼容各端
+ *
+ * 框架未实现此事件，通过 Yox.dom.specialEvents 提供给外部扩展
+ *
+ * @type {string}
+ */
+var TAP = 'tap';
+
+/**
+ * 点击事件
+ *
+ * @type {string}
+ */
+var CLICK = 'click';
+
+/**
+ * 输入事件
+ *
+ * @type {string}
+ */
+var INPUT = 'input';
+
+/**
+ * 表单控件的修改事件
+ *
+ * @type {string}
+ */
+var CHANGE = 'change';
+
+/**
+ * 跟输入事件配套使用的事件
+ *
+ * @type {string}
+ */
+var COMPOSITION_START = 'compositionstart';
+
+/**
+ * 跟输入事件配套使用的事件
+ *
+ * @type {string}
+ */
+var COMPOSITION_END = 'compositionend';
+
+/**
+ * IE 模拟输入事件的特殊事件
+ *
+ * @type {string}
+ */
+var PROPERTY_CHANGE = 'propertychange';
+
+var IEEvent = function () {
+  function IEEvent(event, element) {
+    classCallCheck(this, IEEvent);
+
+
+    extend(this, event);
+
+    this.currentTarget = element;
+    this.target = event.srcElement || element;
+    this.originalEvent = event;
+  }
+
+  createClass(IEEvent, [{
+    key: 'preventDefault',
+    value: function preventDefault() {
+      this.originalEvent.returnValue = FALSE;
+    }
+  }, {
+    key: 'stopPropagation',
+    value: function stopPropagation() {
+      this.originalEvent.cancelBubble = TRUE;
+    }
+  }]);
+  return IEEvent;
+}();
+
+function addInputListener(element, listener) {
+  listener.$listener = function (e) {
+    if (e.propertyName === 'value') {
+      e = new Event(e);
+      e.type = INPUT;
+      listener.call(this, e);
+    }
+  };
+  on$1(element, PROPERTY_CHANGE, listener.$listener);
+}
+
+function removeInputListener(element, listener) {
+  off$1(element, PROPERTY_CHANGE, listener.$listener);
+  delete listener.$listener;
+}
+
+function addChangeListener(element, listener) {
+  listener.$listener = function (e) {
+    e = new Event(e);
+    e.type = CHANGE;
+    listener.call(this, e);
+  };
+  on$1(element, CLICK, listener.$listener);
+}
+
+function removeChangeListener(element, listener) {
+  off$1(element, CLICK, listener.$listener);
+  delete listener.$listener;
+}
+
+function isBox(element) {
+  return element.tagName === 'INPUT' && (element.type === 'radio' || element.type === 'checkbox');
+}
+
+function on$1(element, type, listener) {
+  if (type === INPUT) {
+    addInputListener(element, listener);
+  } else if (type === CHANGE && isBox(element)) {
+    addChangeListener(element, listener);
+  } else {
+    element.attachEvent('on' + type, listener);
+  }
+}
+
+function off$1(element, type, listener) {
+  if (type === INPUT) {
+    removeInputListener(element, listener);
+  } else if (type === CHANGE && isBox(element)) {
+    removeChangeListener(element, listener);
+  } else {
+    element.detachEvent('on' + type, listener);
+  }
+}
+
+function createEvent$1(event, element) {
+  return new IEEvent(event, element);
+}
+
+function find$1(selector, context) {
+  context = context || doc;
+  return context.querySelector ? context.querySelector(selector) : context.getElementById(slice(selector, 1));
+}
+
+function setProp$1(element, name, value) {
+  try {
+    set$1(element, name, value);
+  } catch (e) {
+    if (element.tagName === 'STYLE' && name === 'innerHTML') {
+      element.setAttribute('type', 'text/css');
+      element.styleSheet.cssText = value;
+    }
+  }
+}
+
+
+
+var oldApi = Object.freeze({
+	on: on$1,
+	off: off$1,
+	createEvent: createEvent$1,
+	find: find$1,
+	setProp: setProp$1
+});
+
+var api = copy(domApi);
+
+if (!doc.addEventListener) {
+  extend(api, oldApi);
+}
+
+var _on = api.on;
+var _off = api.off;
+
+/**
+ * 特殊事件，外部可扩展
+ *
+ * @type {Object}
+ */
+
+api.specialEvents = {
+  input: {
+    on: function on$$1(el, listener) {
+      var locked = FALSE;
+      api.on(el, COMPOSITION_START, listener[COMPOSITION_START] = function () {
+        locked = TRUE;
+      });
+      api.on(el, COMPOSITION_END, listener[COMPOSITION_END] = function (e) {
+        locked = FALSE;
+        listener(e, INPUT);
+      });
+      _on(el, INPUT, listener[INPUT] = function (e) {
+        if (!locked) {
+          listener(e);
+        }
+      });
+    },
+    off: function off$$1(el, listener) {
+      api.off(el, COMPOSITION_START, listener[COMPOSITION_START]);
+      api.off(el, COMPOSITION_END, listener[COMPOSITION_END]);
+      _off(el, INPUT, listener[INPUT]);
+      listener[COMPOSITION_START] = listener[COMPOSITION_END] = listener[INPUT] = NULL;
+    }
+  }
+};
+
+/**
+ * 绑定事件
+ *
+ * @param {HTMLElement} element
+ * @param {string} type
+ * @param {Function} listener
+ * @param {?*} context
+ */
+api.on = function (element, type, listener, context) {
+  var $emitter = element.$emitter || (element.$emitter = new Emitter());
+  if (!$emitter.has(type)) {
+    var nativeListener = function nativeListener(e, type) {
+      if (!Event.is(e)) {
+        e = new Event(api.createEvent(e, element));
+      }
+      if (type) {
+        e.type = type;
+      }
+      $emitter.fire(e.type, e, context);
+    };
+    $emitter[type] = nativeListener;
+    var special = api.specialEvents[type];
+    if (special) {
+      special.on(element, nativeListener);
+    } else {
+      _on(element, type, nativeListener);
+    }
+  }
+  $emitter.on(type, listener);
+};
+
+/**
+ * 解绑事件
+ *
+ * @param {HTMLElement} element
+ * @param {string} type
+ * @param {Function} listener
+ */
+api.off = function (element, type, listener) {
+  var $emitter = element.$emitter;
+
+  var types = keys($emitter.listeners);
+  // emitter 会根据 type 和 listener 参数进行适当的删除
+  $emitter.off(type, listener);
+  // 根据 emitter 的删除结果来操作这里的事件 listener
+  each(types, function (type) {
+    if ($emitter[type] && !$emitter.has(type)) {
+      var nativeListener = $emitter[type];
+      var special = api.specialEvents[type];
+      if (special) {
+        special.off(element, nativeListener);
+      } else {
+        _off(element, type, nativeListener);
+      }
+      delete $emitter[type];
+    }
+  });
+};
 
 /**
  * <Component ref="component" />
@@ -5441,6 +5398,8 @@ var model = function (options) {
 
 var TEMPLATE_KEY = '_template_';
 
+var patch = init([snabbdomComponent, snabbdomAttrs, snabbdomProps, snabbdomDirectives], api);
+
 var Yox = function () {
   function Yox(options) {
     classCallCheck(this, Yox);
@@ -5500,11 +5459,12 @@ var Yox = function () {
 
     // 先放 props
     // 当 data 是函数时，可以通过 this.get() 获取到外部数据
-    instance.$observer = new Observer({
+    var observer = new Observer({
       context: instance,
       data: source,
       computed: computed
     });
+    instance.$observer = observer;
 
     // 后放 data
     var extend$$1 = func(data) ? execute(data, instance) : data;
@@ -5519,7 +5479,7 @@ var Yox = function () {
     }
 
     // 等数据准备好之后，再触发 watchers
-    watchers && instance.$observer.watch(watchers);
+    watchers && observer.watch(watchers);
 
     // 监听各种事件
     instance.$emitter = new Emitter();
@@ -5532,7 +5492,7 @@ var Yox = function () {
       if (selector.test(template)) {
         template = api.html(api.find(template));
       }
-      if (!tag.test(template)) {
+      if (!tag$1.test(template)) {
         error$1('"template" option must have a root element.');
       }
     } else {
@@ -5575,9 +5535,25 @@ var Yox = function () {
     filters && instance.filter(filters);
 
     if (template) {
-      execute(options[BEFORE_MOUNT], instance);
-      instance.$template = Yox.compile(template);
-      instance.updateView(el || api.createElement('div'));
+      // 过滤器和计算属性是预定义好的
+      // 在组件创建之后就不会改变，因此在此固化不变的 context
+      // 避免每次更新都要全量 extend
+      var filter = registry.filter;
+
+      var context = extend({},
+      // 全局过滤器
+      filter && filter.data,
+      // 本地过滤器
+      filters,
+      // 计算属性
+      observer.computedGetters);
+      // 指定函数的执行上下文是组件实例
+      context.$context = instance;
+      instance.$context = context;
+      // 确保组件根元素有且只有一个
+      instance.$template = Yox.compile(template)[0];
+      // 首次渲染
+      instance.updateView(el || api.createElement('div'), instance.render());
     }
   }
 
@@ -5754,8 +5730,10 @@ var Yox = function () {
     value: function updateModel(model$$1) {
 
       var instance = this,
-          $observer = instance.$observer,
           args = arguments;
+      var $observer = instance.$observer,
+          $node = instance.$node;
+
 
       var oldValue = instance.get(TEMPLATE_KEY);
 
@@ -5766,66 +5744,52 @@ var Yox = function () {
       }
 
       if (args.length === 2 && args[1]) {
-        instance.updateView();
+        instance.updateView($node, instance.render());
       } else if (!instance.$pending) {
         instance.$pending = TRUE;
         append(function () {
           if (instance.$pending) {
             delete instance.$pending;
-            instance.updateView();
+            instance.updateView($node, instance.render());
           }
         });
       }
     }
-
-    /**
-     * 更新视图
-     */
-
   }, {
-    key: 'updateView',
-    value: function updateView() {
+    key: 'render',
+    value: function render$$1() {
 
-      var instance = this;
-
-      var $observer = instance.$observer,
-          $options = instance.$options,
-          $filters = instance.$filters,
-          $node = instance.$node;
-
-
-      var isUpdate = $node;
-
-      // 对于静态组件，可在 beforeUpdate 钩子函数返回 false
-      if (isUpdate && execute($options[BEFORE_UPDATE], instance) === FALSE) {
-        return;
-      }
-
-      var context = {};
-      var filter = registry.filter;
+      var instance = this,
+          map = {},
+          deps = [];
+      var $template = instance.$template,
+          $observer = instance.$observer,
+          $context = instance.$context;
 
 
-      extend(context,
-      // 全局过滤器
-      filter && filter.data,
-      // 本地过滤器
-      $filters && $filters.data);
+      extend($context, $observer.data);
 
-      each$1(context, function (value, key) {
-        if (func(value)) {
-          context[key] = value.bind(instance);
+      var nodes = render($template, $context, createCommentVnode, function (source, output) {
+
+        var hooks = {},
+            data = { instance: instance, hooks: hooks, attrs: output.attrs, directives: output.directives },
+            sourceChildren = source.children,
+            outputChildren = output.children;
+
+        if (sourceChildren && sourceChildren.length === 1) {
+          var child = sourceChildren[0];
+          if (child.type === EXPRESSION && child.safe === FALSE) {
+            data.props = {
+              innerHTML: outputChildren[0].text
+            };
+            outputChildren = NULL;
+          }
         }
-      });
 
-      // data 中的函数不需要强制绑定 this
-      // 不是不想管，是没法管，因为每层级都可能出现函数，但不可能每层都绑定
-      // 而且让 data 中的函数完全动态化说不定还是一个好设计呢
-      extend(context, $observer.data, $observer.computedGetters);
-
-      // 新的虚拟节点和依赖关系
-      var map = {},
-          deps = [],
-          nodes = create(instance.$template, context, instance, function (key, value) {
+        return createElementVnode(output.name, data, outputChildren, output.key, output.component);
+      }, function (name) {
+        return Yox.compile(instance.partial(name));
+      }, function (key, value) {
         if (!map[key]) {
           map[key] = TRUE;
           push(deps, key);
@@ -5833,19 +5797,38 @@ var Yox = function () {
         $observer.setCache(key, value);
       });
 
-      prepend(function () {
-        if (instance.$emitter) {
-          $observer.setDeps(TEMPLATE_KEY, deps);
-          execute($options[isUpdate ? AFTER_UPDATE : AFTER_MOUNT], instance);
-        }
-      });
+      $observer.setDeps(TEMPLATE_KEY, deps);
 
-      if (isUpdate) {
-        instance.$node = patch($node, nodes[0]);
+      return nodes[0];
+    }
+
+    /**
+     * 更新视图
+     *
+     * @param {HTMLElement|Vnode} oldNode
+     * @param {Vnode} newNode
+     */
+
+  }, {
+    key: 'updateView',
+    value: function updateView(oldNode, newNode) {
+
+      var instance = this;
+
+      var $node = instance.$node,
+          $options = instance.$options;
+
+
+      if ($node) {
+        execute($options[BEFORE_UPDATE], instance);
+        instance.$node = patch(oldNode, newNode);
+        execute($options[AFTER_UPDATE], instance);
       } else {
-        $node = patch(arguments[0], nodes[0]);
+        execute($options[BEFORE_MOUNT], instance);
+        $node = patch(oldNode, newNode);
         instance.$el = $node.el;
         instance.$node = $node;
+        execute($options[AFTER_MOUNT], instance);
       }
     }
 
@@ -5859,7 +5842,7 @@ var Yox = function () {
 
   }, {
     key: 'create',
-    value: function create$$1(options, extra) {
+    value: function create(options, extra) {
       options = extend({}, options, extra);
       options.parent = this;
       var child = new Yox(options);
@@ -5944,7 +5927,7 @@ var Yox = function () {
 
       if ($node) {
         if (arguments[0] !== TRUE) {
-          patch($node, { text: CHAR_BLANK });
+          vdom.patch($node, { text: CHAR_BLANK });
         }
       }
 
@@ -5965,7 +5948,7 @@ var Yox = function () {
   }, {
     key: 'nextTick',
     value: function nextTick(fn) {
-      Yox.nextTick(fn);
+      append(fn);
     }
 
     /**
@@ -6044,7 +6027,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.40.5';
+Yox.version = '0.40.6';
 
 /**
  * 工具，便于扩展、插件使用
@@ -6217,10 +6200,7 @@ each(merge(supportRegisterAsync, ['directive', 'partial', 'filter']), function (
  *
  * @param {Function} fn
  */
-Yox.nextTick = function (fn) {
-  fn.i = 1;
-  append(fn);
-};
+Yox.nextTick = append;
 
 /**
  * 编译模板，暴露出来是为了打包阶段的模板预编译
@@ -6229,7 +6209,7 @@ Yox.nextTick = function (fn) {
  * @return {Object}
  */
 Yox.compile = function (template) {
-  return compile(template)[0];
+  return string(template) ? compile(template) : template;
 };
 
 /**
