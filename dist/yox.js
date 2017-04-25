@@ -1845,7 +1845,7 @@ function updateDirectives(oldVnode, vnode) {
   each$1(newDirectives, function (directive, key) {
     if (has$1(oldDirectives, key)) {
       var oldDirective = oldDirectives[key];
-      if (oldDirective.value !== directive.value || oldDirective.context.get(THIS) !== directive.context.get(THIS)) {
+      if (oldDirective.value !== directive.value || oldDirective.context.get(THIS).value !== directive.context.get(THIS).value) {
         unbindDirective(oldVnode, key);
         bindDirective(vnode, key);
       }
@@ -3196,8 +3196,18 @@ function compile(content) {
           name = _target.name,
           children = _target.children;
 
-      if (type === ELEMENT && expectedName && name !== expectedName) {
-        throwError('end tag expected </' + name + '> to be </' + expectedName + '>.');
+      var child = getSingleChild(children);
+
+      if (type === ELEMENT) {
+        if (expectedName && name !== expectedName) {
+          throwError('end tag expected </' + name + '> to be </' + expectedName + '>.');
+        }
+        if (child && child.type === EXPRESSION && child.safe === FALSE) {
+          target.props = {
+            innerHTML: child.expr
+          };
+          delete target.children;
+        }
       } else if (type === ATTRIBUTE && name === KEYWORD_UNIQUE) {
         var element = last(htmlStack);
         var attrs = element.attrs;
@@ -3207,24 +3217,20 @@ function compile(content) {
           delete element.attrs;
         }
         if (!falsy(children)) {
-          var child = getSingleChild(children);
           element.key = child.type === TEXT ? child.text : children;
         }
-      } else {
-        var _child = getSingleChild(children);
-        if (_child) {
-          // 预编译表达式，提升性能
-          if (type === DIRECTIVE && _child.type === TEXT) {
-            var expr = compile$1(_child.text);
-            target.expr = expr;
-            target.value = expr.source;
-            delete target.children;
-          }
-          // 属性绑定，把 Attribute 转成 单向绑定 指令
-          else if (type === ATTRIBUTE && _child.type === EXPRESSION && _child.safe && string(_child.expr.keypath)) {
-              target.bindTo = _child.expr.keypath;
-            }
+      } else if (child) {
+        // 预编译表达式，提升性能
+        if (type === DIRECTIVE && child.type === TEXT) {
+          var expr = compile$1(child.text);
+          target.expr = expr;
+          target.value = expr.source;
+          delete target.children;
         }
+        // 属性绑定，把 Attribute 转成 单向绑定 指令
+        else if (type === ATTRIBUTE && child.type === EXPRESSION && child.safe && string(child.expr.keypath)) {
+            target.bindTo = child.expr.keypath;
+          }
       }
     } else {
       throwError('{{/' + type2Name[type] + '}} is not a pair.');
@@ -3699,12 +3705,11 @@ function mergeNodes(outputNodes, sourceNodes) {
  *
  * @param {Object} ast 编译出来的抽象语法树
  * @param {Object} data 渲染模板的数据
- * @param {Function} createElement 创建元素节点
  * @param {?Function} importTemplate 导入子模板，如果是纯模板，可不传
  * @param {?Function} addDep 渲染模板过程中使用的数据依赖，如果是纯模板，可不传
  * @return {Array}
  */
-function render(ast, data, createElement, importTemplate, addDep) {
+function render(ast, data, importTemplate, addDep) {
 
   var keypath = void 0,
       keypathList = [],
@@ -4000,21 +4005,32 @@ function render(ast, data, createElement, importTemplate, addDep) {
         }
       }
     }
-    output.name = source.name;
-    output.component = source.component;
   };
 
   leave[ELEMENT] = function (source, output) {
-
-    var value = createElement(source, output);
-
     var key = output.key;
 
-    if (key) {
-      currentCache[key].result = value;
+    var props = void 0;
+
+    if (source.props) {
+      props = {};
+      each$1(source.props, function (expr, key) {
+        props[key] = executeExpr(expr);
+      });
     }
 
-    return value;
+    var vnode = createElementVnode(source.name, {
+      instance: data.$context,
+      props: props,
+      attrs: output.attrs,
+      directives: output.directives
+    }, output.children, key, source.component);
+
+    if (key) {
+      currentCache[key].result = vnode;
+    }
+
+    return vnode;
   };
 
   enter[ATTRIBUTE] = function (source) {
@@ -5626,25 +5642,7 @@ var Yox = function () {
 
       extend($context, $observer.data);
 
-      var nodes = render($template, $context, function (source, output) {
-
-        var hooks = {},
-            data = { instance: instance, hooks: hooks, attrs: output.attrs, directives: output.directives },
-            sourceChildren = source.children,
-            outputChildren = output.children;
-
-        if (sourceChildren && sourceChildren.length === 1) {
-          var child = sourceChildren[0];
-          if (child.type === EXPRESSION && child.safe === FALSE) {
-            data.props = {
-              innerHTML: outputChildren[0].text
-            };
-            outputChildren = NULL;
-          }
-        }
-
-        return createElementVnode(output.name, data, outputChildren, output.key, output.component);
-      }, function (name) {
+      var nodes = render($template, $context, function (name) {
         return Yox.compile(instance.partial(name));
       }, function (key, value) {
         if (!map[key]) {

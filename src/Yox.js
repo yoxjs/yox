@@ -414,34 +414,6 @@ export default class Yox {
     let nodes = renderTemplate(
       $template,
       $context,
-      function (source, output) {
-
-        let hooks = { },
-          data = { instance, hooks, attrs: output.attrs, directives: output.directives },
-          sourceChildren = source.children,
-          outputChildren = output.children
-
-        if (sourceChildren && sourceChildren.length === 1) {
-          let child = sourceChildren[ 0 ]
-          if (child.type === templateNodeType.EXPRESSION
-            && child.safe === env.FALSE
-          ) {
-            data.props = {
-              innerHTML: outputChildren[ 0 ].text,
-            }
-            outputChildren = env.NULL
-          }
-        }
-
-        return snabbdom.createElementVnode(
-          output.name,
-          data,
-          outputChildren,
-          output.key,
-          output.component
-        )
-
-      },
       function (name) {
         return Yox.compile(
           instance.partial(name)
