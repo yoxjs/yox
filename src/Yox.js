@@ -389,7 +389,7 @@ export default class Yox {
     }
     else if (!instance.$pending) {
       instance.$pending = env.TRUE
-      nextTask.append(
+      nextTask.prepend(
         function () {
           if (instance.$pending) {
             delete instance.$pending
@@ -672,7 +672,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.40.7'
+Yox.version = '0.40.8'
 
 /**
  * 工具，便于扩展、插件使用

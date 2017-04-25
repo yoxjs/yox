@@ -1097,7 +1097,9 @@ function append(task) {
  *
  * @param {Function} task
  */
-
+function prepend(task) {
+  add('unshift', task);
+}
 
 /**
  * 立即执行已添加的任务
@@ -5583,7 +5585,7 @@ var Yox = function () {
         instance.updateView($node, instance.render());
       } else if (!instance.$pending) {
         instance.$pending = TRUE;
-        append(function () {
+        prepend(function () {
           if (instance.$pending) {
             delete instance.$pending;
             instance.updateView($node, instance.render());
@@ -5863,7 +5865,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.40.7';
+Yox.version = '0.40.8';
 
 /**
  * 工具，便于扩展、插件使用
