@@ -255,9 +255,11 @@ export default class Yox {
    *
    * @param {string|Object} type
    * @param {?Function} listener
+   * @return {Yox} 支持链式
    */
   on(type, listener) {
     this.$emitter.on(type, listener)
+    return this
   }
 
   /**
@@ -265,9 +267,11 @@ export default class Yox {
    *
    * @param {string|Object} type
    * @param {?Function} listener
+   * @return {Yox} 支持链式
    */
   once(type, listener) {
     this.$emitter.once(type, listener)
+    return this
   }
 
   /**
@@ -275,9 +279,11 @@ export default class Yox {
    *
    * @param {string|Object} type
    * @param {?Function} listener
+   * @return {Yox} 支持链式
    */
   off(type, listener) {
     this.$emitter.off(type, listener)
+    return this
   }
 
   /**
@@ -323,9 +329,11 @@ export default class Yox {
    * @param {string|Object} keypath
    * @param {?Function} watcher
    * @param {?boolean} sync
+   * @return {Yox} 支持链式
    */
   watch(keypath, watcher, sync) {
     this.$observer.watch(keypath, watcher, sync)
+    return this
   }
 
   /**
@@ -334,9 +342,11 @@ export default class Yox {
    * @param {string|Object} keypath
    * @param {?Function} watcher
    * @param {?boolean} sync
+   * @return {Yox} 支持链式
    */
   watchOnce(keypath, watcher, sync) {
     this.$observer.watchOnce(keypath, watcher, sync)
+    return this
   }
 
   /**
@@ -344,9 +354,11 @@ export default class Yox {
    *
    * @param {string|Object} keypath
    * @param {?Function} watcher
+   * @return {Yox} 支持链式
    */
   unwatch(keypath, watcher) {
     this.$observer.unwatch(keypath, watcher)
+    return this
   }
 
   /**
@@ -660,7 +672,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.40.6'
+Yox.version = '0.40.7'
 
 /**
  * 工具，便于扩展、插件使用
@@ -839,7 +851,7 @@ Yox.nextTick = nextTask.append
  * 编译模板，暴露出来是为了打包阶段的模板预编译
  *
  * @param {string} template
- * @return {Object}
+ * @return {Array}
  */
 Yox.compile = function (template) {
   return is.string(template)
