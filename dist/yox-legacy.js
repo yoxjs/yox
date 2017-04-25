@@ -6060,7 +6060,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.40.8';
+Yox.version = '0.40.9';
 
 /**
  * 工具，便于扩展、插件使用
