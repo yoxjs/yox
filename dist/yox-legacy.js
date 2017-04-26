@@ -3296,7 +3296,7 @@ function compile(content) {
         }
         // 属性绑定，把 Attribute 转成 单向绑定 指令
         else if (type === ATTRIBUTE && child.type === EXPRESSION && child.safe && string(child.expr.keypath)) {
-            target.bindTo = child.expr.keypath;
+            target.binding = child.expr.keypath;
           }
       }
     } else {
@@ -3532,57 +3532,53 @@ function compile(content) {
 
 var executor = {};
 
-executor[LITERAL] = function (node, context) {
+executor[LITERAL] = function (node) {
   return node.value;
 };
 
-executor[IDENTIFIER] = function (node, context, instance, addDep) {
-  var result = context.get(node.name);
-  addDep && addDep(result.keypath, result.value);
-  return result.value;
+executor[IDENTIFIER] = function (node, getter, context) {
+  return getter(node.name);
 };
 
-executor[MEMBER] = function (node, context, instance, addDep) {
+executor[MEMBER] = function (node, getter, context) {
   var keypath = node.keypath;
 
   if (!keypath) {
     keypath = Member.stringify(node, function (node) {
-      return execute$1(node, context, instance, addDep);
+      return execute$1(node, getter, context);
     });
   }
-  var result = context.get(keypath);
-  addDep && addDep(result.keypath, result.value);
-  return result.value;
+  return getter(keypath);
 };
 
-executor[UNARY] = function (node, context, instance, addDep) {
-  return Unary[node.operator](execute$1(node.arg, context, instance, addDep));
+executor[UNARY] = function (node, getter, context) {
+  return Unary[node.operator](execute$1(node.arg, getter, context));
 };
 
-executor[BINARY] = function (node, context, instance, addDep) {
+executor[BINARY] = function (node, getter, context) {
   var left = node.left,
       right = node.right;
 
-  return Binary[node.operator](execute$1(left, context, instance, addDep), execute$1(right, context, instance, addDep));
+  return Binary[node.operator](execute$1(left, getter, context), execute$1(right, getter, context));
 };
 
-executor[TERNARY] = function (node, context, instance, addDep) {
+executor[TERNARY] = function (node, getter, context) {
   var test = node.test,
       consequent = node.consequent,
       alternate = node.alternate;
 
-  return execute$1(test, context, instance, addDep) ? execute$1(consequent, context, instance, addDep) : execute$1(alternate, context, instance, addDep);
+  return execute$1(test, getter, context) ? execute$1(consequent, getter, context) : execute$1(alternate, getter, context);
 };
 
-executor[ARRAY] = function (node, context, instance, addDep) {
+executor[ARRAY] = function (node, getter, context) {
   return node.elements.map(function (node) {
-    return execute$1(node, context, instance, addDep);
+    return execute$1(node, getter, context);
   });
 };
 
-executor[CALL] = function (node, context, instance, addDep) {
-  return execute(execute$1(node.callee, context, instance, addDep), instance, node.args.map(function (node) {
-    return execute$1(node, context, instance, addDep);
+executor[CALL] = function (node, getter, context) {
+  return execute(execute$1(node.callee, getter, context), context, node.args.map(function (node) {
+    return execute$1(node, getter, context);
   }));
 };
 
@@ -3590,13 +3586,12 @@ executor[CALL] = function (node, context, instance, addDep) {
  * 表达式求值
  *
  * @param {Node} node 表达式抽象节点
- * @param {Context} context 读取数据的容器
- * @param {Yox} instance 表达式函数调用的执行上下文
- * @param {?Function} addDep 添加执行表达式过程中的依赖
+ * @param {Function} getter 读取数据的方法
+ * @param {*} context 表达式函数调用的执行上下文
  * @return {*}
  */
-function execute$1(node, context, instance, addDep) {
-  return executor[node.type](node, context, instance, addDep);
+function execute$1(node, getter, context) {
+  return executor[node.type](node, getter, context);
 }
 
 var Context = function () {
@@ -3774,10 +3769,9 @@ function mergeNodes(outputNodes, sourceNodes) {
  * @param {Object} ast 编译出来的抽象语法树
  * @param {Object} data 渲染模板的数据
  * @param {Yox} instance 组件实例
- * @param {?Function} addDep 渲染模板过程中使用的数据依赖，如果是纯模板，可不传
  * @return {Array}
  */
-function render(ast, data, instance, addDep) {
+function render(ast, data, instance) {
 
   var keypath = void 0,
       keypathList = [],
@@ -3794,9 +3788,10 @@ function render(ast, data, instance, addDep) {
 
   var context = new Context(data, keypath),
       nodeStack = [],
-      nodeList = [],
       htmlStack = [],
-      partials = {};
+      partials = {},
+      nodes = [],
+      deps = {};
 
   var sibling = void 0,
       cache = void 0,
@@ -3829,12 +3824,9 @@ function render(ast, data, instance, addDep) {
   };
 
   var addChild = function addChild(child, parent) {
-    var collection = void 0;
-    if (parent) {
-      collection = parent.children || (parent.children = makeNodes([]));
-    } else {
-      collection = nodeList;
-    }
+
+    var collection = parent ? parent.children || (parent.children = makeNodes([])) : nodes;
+
     if (isNodes(child)) {
       each(child, function (child) {
         addChildNative(collection, child);
@@ -3953,9 +3945,14 @@ function render(ast, data, instance, addDep) {
     }
   };
 
-  var addExpressionDep = addDep;
-  var executeExpr = function executeExpr(expr) {
-    return execute$1(expr, context, instance, addExpressionDep);
+  var executeExpr = function executeExpr(expr, needDep) {
+    return execute$1(expr, function (keypath) {
+      var result = context.get(keypath);
+      if (needDep !== FALSE) {
+        deps[result.keypath] = result.value;
+      }
+      return result.value;
+    }, instance);
   };
 
   var enter = {},
@@ -4062,7 +4059,7 @@ function render(ast, data, instance, addDep) {
         // 有缓存，且数据没有变化才算命中
         if (_cache && _cache.value === result.value) {
           currentCache[trackBy] = _cache;
-          addDep(result.keypath, result.value);
+          deps[result.keypath] = result.value;
           return _cache.result;
         } else {
           output.key = trackBy;
@@ -4100,29 +4097,6 @@ function render(ast, data, instance, addDep) {
     return vnode;
   };
 
-  enter[ATTRIBUTE] = function (source) {
-    var name = source.name,
-        children = source.children,
-        bindTo = source.bindTo;
-
-    if (string(bindTo)) {
-      addExpressionDep = noop;
-    }
-  };
-
-  leave[ATTRIBUTE] = function (source, output) {
-    var element = htmlStack[htmlStack.length - 2];
-    var name = source.name,
-        children = source.children,
-        bindTo = source.bindTo;
-
-    addAttr(name, mergeNodes(output.children, children), element);
-    if (string(bindTo)) {
-      addDirective(createDirective(DIRECTIVE_MODEL, name, bindTo), element);
-      addExpressionDep = addDep;
-    }
-  };
-
   leave[TEXT] = function (source) {
     var text = source.text;
     // 如果是元素的文本，而不是属性的文本
@@ -4132,8 +4106,21 @@ function render(ast, data, instance, addDep) {
   };
 
   leave[EXPRESSION] = function (source) {
-    var text = executeExpr(source.expr);
+    var htmlNode = last(htmlStack);
+    var text = executeExpr(source.expr, htmlNode && htmlNode.binding ? FALSE : TRUE);
     return attributeRendering ? text : createTextVnode(text);
+  };
+
+  leave[ATTRIBUTE] = function (source, output) {
+    var element = htmlStack[htmlStack.length - 2];
+    var name = source.name,
+        children = source.children,
+        binding = source.binding;
+
+    addAttr(name, mergeNodes(output.children, children), element);
+    if (string(binding)) {
+      addDirective(createDirective(DIRECTIVE_MODEL, name, binding), element);
+    }
   };
 
   leave[DIRECTIVE] = function (source, output) {
@@ -4173,9 +4160,7 @@ function render(ast, data, instance, addDep) {
         hasKeypath = string(expr.keypath),
         value = void 0;
     if (hasKeypath) {
-      addExpressionDep = noop;
-      value = executeExpr(expr);
-      addExpressionDep = addDep;
+      value = executeExpr(expr, FALSE);
     } else {
       value = executeExpr(expr);
     }
@@ -4201,7 +4186,7 @@ function render(ast, data, instance, addDep) {
 
   pushNode(ast);
 
-  return nodeList;
+  return { nodes: nodes, deps: deps };
 }
 
 var Observer = function () {
@@ -5812,9 +5797,7 @@ var Yox = function () {
     key: 'render',
     value: function render$$1() {
 
-      var instance = this,
-          map = {},
-          deps = [];
+      var instance = this;
       var $template = instance.$template,
           $observer = instance.$observer,
           $context = instance.$context;
@@ -5822,15 +5805,15 @@ var Yox = function () {
 
       extend($context, $observer.data);
 
-      var nodes = render($template, $context, instance, function (key, value) {
-        if (!map[key]) {
-          map[key] = TRUE;
-          push(deps, key);
-        }
-        $observer.setCache(key, value);
-      });
+      var _renderTemplate = render($template, $context, instance),
+          nodes = _renderTemplate.nodes,
+          deps = _renderTemplate.deps;
 
-      $observer.setDeps(TEMPLATE_KEY, deps);
+      var keys$$1 = keys(deps);
+      each$1(keys$$1, function (key) {
+        $observer.setCache(key, deps[key]);
+      });
+      $observer.setDeps(TEMPLATE_KEY, keys$$1);
 
       return nodes[0];
     }
@@ -6073,7 +6056,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.41.1';
+Yox.version = '0.41.2';
 
 /**
  * 工具，便于扩展、插件使用
