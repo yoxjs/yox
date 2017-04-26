@@ -384,21 +384,28 @@ export default class Yox {
         instance.render()
       )
     }
-    else if (!instance.$pending) {
+    else {
+      instance.forceUpdate()
+    }
+
+  }
+
+  forceUpdate() {
+    let instance = this
+    if (!instance.$pending) {
       instance.$pending = env.TRUE
       nextTask.prepend(
         function () {
           if (instance.$pending) {
             delete instance.$pending
             instance.updateView(
-              $node,
+              instance.$node,
               instance.render()
             )
           }
         }
       )
     }
-
   }
 
   render() {
@@ -648,7 +655,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.41.0'
+Yox.version = '0.41.1'
 
 /**
  * 工具，便于扩展、插件使用

@@ -3489,14 +3489,14 @@ executor[MEMBER] = function (node, context, instance, addDep) {
 };
 
 executor[UNARY] = function (node, context, instance, addDep) {
-  return Unary[node.operator](execute$1(node.arg, context, addDep));
+  return Unary[node.operator](execute$1(node.arg, context, instance, addDep));
 };
 
 executor[BINARY] = function (node, context, instance, addDep) {
   var left = node.left,
       right = node.right;
 
-  return Binary[node.operator](execute$1(left, context, addDep), execute$1(right, context, addDep));
+  return Binary[node.operator](execute$1(left, context, instance, addDep), execute$1(right, context, instance, addDep));
 };
 
 executor[TERNARY] = function (node, context, instance, addDep) {
@@ -3504,7 +3504,7 @@ executor[TERNARY] = function (node, context, instance, addDep) {
       consequent = node.consequent,
       alternate = node.alternate;
 
-  return execute$1(test, context, addDep) ? execute$1(consequent, context, addDep) : execute$1(alternate, context, addDep);
+  return execute$1(test, context, instance, addDep) ? execute$1(consequent, context, instance, addDep) : execute$1(alternate, context, instance, addDep);
 };
 
 executor[ARRAY] = function (node, context, instance, addDep) {
@@ -3514,7 +3514,7 @@ executor[ARRAY] = function (node, context, instance, addDep) {
 };
 
 executor[CALL] = function (node, context, instance, addDep) {
-  return execute(execute$1(node.callee, context, addDep), instance, node.args.map(function (node) {
+  return execute(execute$1(node.callee, context, instance, addDep), instance, node.args.map(function (node) {
     return execute$1(node, context, instance, addDep);
   }));
 };
@@ -5614,12 +5614,20 @@ var Yox = function () {
 
       if (args.length === 2 && args[1]) {
         instance.updateView($node, instance.render());
-      } else if (!instance.$pending) {
+      } else {
+        instance.forceUpdate();
+      }
+    }
+  }, {
+    key: 'forceUpdate',
+    value: function forceUpdate() {
+      var instance = this;
+      if (!instance.$pending) {
         instance.$pending = TRUE;
         prepend(function () {
           if (instance.$pending) {
             delete instance.$pending;
-            instance.updateView($node, instance.render());
+            instance.updateView(instance.$node, instance.render());
           }
         });
       }
@@ -5889,7 +5897,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.41.0';
+Yox.version = '0.41.1';
 
 /**
  * 工具，便于扩展、插件使用
