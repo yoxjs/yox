@@ -5225,18 +5225,12 @@ var model = function (options) {
   var _options$node = options.node,
       modifier = _options$node.modifier,
       value = _options$node.value,
-      expr = _options$node.expr,
-      context = _options$node.context,
-      keypath = void 0;
+      context = _options$node.context;
 
   if (value) {
-    keypath = context.get(value).keypath;
-  } else if (expr) {
-    execute$1(expr, context);
-    keypath = expr.keypath;
-  }
+    var _context$get = context.get(value),
+        keypath = _context$get.keypath;
 
-  if (string(keypath)) {
     return modifier ? oneway(keypath, options) : twoway(keypath, options);
   }
 };
@@ -5722,6 +5716,11 @@ var Yox = function () {
 
 
       if (expr && expr.type === CALL) {
+
+        var getValue = function getValue(keypath) {
+          return context.get(keypath).value;
+        };
+
         return function (event) {
           var isEvent = Event.is(event);
           var callee = expr.callee,
@@ -5735,10 +5734,10 @@ var Yox = function () {
             context.set(SPECIAL_KEYPATH, keypath);
             context.set(SPECIAL_EVENT, event);
             args = args.map(function (node) {
-              return execute$1(node, context);
+              return execute$1(node, getValue, instance);
             });
           }
-          var method = instance[callee.source] || context.get(callee.source).value;
+          var method = instance[callee.source] || getValue(callee.source);
           if (execute(method, instance, args) === FALSE && isEvent) {
             event.prevent();
             event.stop();

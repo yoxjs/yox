@@ -506,6 +506,11 @@ export default class Yox {
     let { value, expr, keypath, context } = directive
 
     if (expr && expr.type === expressionNodeType.CALL) {
+
+      let getValue = function (keypath) {
+        return context.get(keypath).value
+      }
+
       return function (event) {
         let isEvent = Event.is(event)
         let { callee, args } = expr
@@ -519,11 +524,11 @@ export default class Yox {
           context.set(templateSyntax.SPECIAL_EVENT, event)
           args = args.map(
             function (node) {
-              return executeExpression(node, context)
+              return executeExpression(node, getValue, instance)
             }
           )
         }
-        let method = instance[ callee.source ] || context.get(callee.source).value
+        let method = instance[ callee.source ] || getValue(callee.source)
         if (execute(method, instance, args) === env.FALSE && isEvent) {
           event.prevent()
           event.stop()

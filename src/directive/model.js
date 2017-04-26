@@ -8,8 +8,6 @@ import * as array from 'yox-common/util/array'
 import * as object from 'yox-common/util/object'
 import * as logger from 'yox-common/util/logger'
 
-import executeExpression from 'yox-expression-compiler/execute'
-
 import bindEvent from './event'
 import api from '../platform/web/api'
 import * as event from '../config/event'
@@ -175,16 +173,9 @@ function oneway(keypath, { el, node, instance, component }) {
 
 export default function (options) {
 
-  let { modifier, value, expr, context } = options.node, keypath
+  let { modifier, value, context } = options.node
   if (value) {
-    keypath = context.get(value).keypath
-  }
-  else if (expr) {
-    executeExpression(expr, context)
-    keypath = expr.keypath
-  }
-
-  if (is.string(keypath)) {
+    let { keypath } = context.get(value)
     return modifier
       ? oneway(keypath, options)
       : twoway(keypath, options)
