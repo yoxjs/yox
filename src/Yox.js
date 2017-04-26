@@ -410,25 +410,25 @@ export default class Yox {
 
   render() {
 
-    let instance = this, map = { }, deps = [ ]
+    let instance = this
     let { $template, $observer, $context } = instance
 
     object.extend($context, $observer.data)
 
-    let nodes = renderTemplate(
+    let { nodes, deps } = renderTemplate(
       $template,
       $context,
-      instance,
-      function (key, value) {
-        if (!map[ key ]) {
-          map[ key ] = env.TRUE
-          array.push(deps, key)
-        }
-        $observer.setCache(key, value)
-      }
+      instance
     )
 
-    $observer.setDeps(TEMPLATE_KEY, deps)
+    let keys = object.keys(deps)
+    object.each(
+      keys,
+      function (key) {
+        $observer.setCache(key, deps[ key ])
+      }
+    )
+    $observer.setDeps(TEMPLATE_KEY, keys)
 
     return nodes[ 0 ]
 
@@ -655,7 +655,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.41.1'
+Yox.version = '0.41.2'
 
 /**
  * 工具，便于扩展、插件使用
