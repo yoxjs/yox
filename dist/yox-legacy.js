@@ -1578,7 +1578,7 @@ function updateAttrs(oldVnode, vnode) {
 
   var getValue = function getValue(attrs, name) {
     if (has$1(attrs, name)) {
-      return attrs[name] || CHAR_BLANK;
+      return attrs[name] != NULL ? attrs[name] : CHAR_BLANK;
     }
   };
 
@@ -1908,7 +1908,7 @@ var binaryList = sort(binaryMap, TRUE);
  * 节点基类
  */
 
-var Node = function (type, source) {
+var Node = function Node(type, source) {
   classCallCheck(this, Node);
 
   this.type = type;
@@ -3086,8 +3086,14 @@ function compile(content) {
           }
         }
         // 属性绑定，把 Attribute 转成 单向绑定 指令
-        else if (type === ATTRIBUTE && child.type === EXPRESSION && child.safe && string(child.expr.keypath)) {
-            target.binding = child.expr.keypath;
+        else if (type === ATTRIBUTE && child.type === EXPRESSION && child.safe) {
+            var _expr = child.expr;
+
+            if (string(_expr.keypath)) {
+              target.expr = _expr;
+              target.binding = _expr.keypath;
+              delete target.children;
+            }
           }
       }
     } else {
@@ -3574,7 +3580,7 @@ function render(ast, data, instance) {
             prop = 'text';
 
         if (primitive(child) || !has$1(child, prop)) {
-          if (object(prevChild) && has$1(child, prop)) {
+          if (object(prevChild) && string(prevChild[prop])) {
             prevChild[prop] += child;
             return;
           } else {
@@ -3610,6 +3616,9 @@ function render(ast, data, instance) {
     }
     if (has$1(source, 'value')) {
       return source.value;
+    }
+    if (has$1(source, 'expr')) {
+      return executeExpr(source.expr, source.binding);
     }
     if (source.children) {
       return CHAR_BLANK;
@@ -3860,19 +3869,21 @@ function render(ast, data, instance) {
   };
 
   leave[EXPRESSION] = function (source) {
-    var htmlNode = last(htmlStack);
-    addChild(htmlNode, executeExpr(source.expr, htmlNode && htmlNode.source.binding));
+    addChild(last(htmlStack), executeExpr(source.expr));
   };
 
   leave[ATTRIBUTE] = function (source, output) {
     var element = htmlStack[htmlStack.length - 2];
     var name = source.name,
-        children = source.children,
         binding = source.binding;
+    // key="xx" 是作为一个虚拟属性来求值的
+    // 它并没有 name
 
-    addAttr(element, name, getValue(source, output));
-    if (binding) {
-      addDirective(element, DIRECTIVE_MODEL, name, binding);
+    if (name) {
+      addAttr(element, name, getValue(source, output));
+      if (binding) {
+        addDirective(element, DIRECTIVE_MODEL, name, binding);
+      }
     }
   };
 
@@ -5946,7 +5957,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.41.3';
+Yox.version = '0.41.4';
 
 /**
  * 工具，便于扩展、插件使用
