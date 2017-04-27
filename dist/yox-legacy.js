@@ -3487,11 +3487,12 @@ var Context = function () {
         return cache;
       }
 
-      warn('Failed to lookup "' + key + '".');
+      keypath = joinKeypath(this, keypath);
 
-      // 找不到就用当前的 keypath 吧
+      warn('Failed to lookup "' + keypath + '".');
+
       return {
-        keypath: joinKeypath(this, keypath)
+        keypath: keypath
       };
     }
   }]);
@@ -3823,7 +3824,7 @@ function render(ast, data, instance) {
         if (_cache && _cache.value === _result.value) {
           currentCache[trackBy] = _cache;
           deps[_result.keypath] = _result.value;
-          addChild(htmlStack[htmlStack.length - 2], _cache.result);
+          addChild(last(htmlStack), _cache.result);
           return FALSE;
         } else {
           output.key = trackBy;
@@ -4755,7 +4756,7 @@ var COMPOSITION_END = 'compositionend';
  *
  * @type {string}
  */
-var PROPERTY_CHANGE = 'propertychange'
+var PROPERTY_CHANGE = 'propertychange';
 
 var IEEvent = function () {
   function IEEvent(event, element) {
@@ -5952,7 +5953,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.41.5';
+Yox.version = '0.41.6';
 
 /**
  * 工具，便于扩展、插件使用
