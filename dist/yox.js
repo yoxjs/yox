@@ -1122,9 +1122,9 @@ var toString = function (str) {
   }
 };
 
-function Vnode(sel, text, data, children, key, component) {
+function Vnode(tag, text, data, children, key, component) {
   return {
-    sel: sel,
+    tag: tag,
     text: text,
     data: data,
     children: children,
@@ -1132,159 +1132,6 @@ function Vnode(sel, text, data, children, key, component) {
     component: component
   };
 }
-
-var booleanAttrLiteral = 'allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare,default,defaultchecked,defaultmuted,defaultselected,defer,disabled,draggable,enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple,muted,nohref,noshade,noresize,novalidate,nowrap,open,pauseonexit,readonly,required,reversed,scoped,seamless,selected,sortable,spellcheck,translate,truespeed,typemustmatch,visible';
-var booleanAttrMap = toObject(split(booleanAttrLiteral, CHAR_COMMA), FALSE, TRUE);
-booleanAttrLiteral = NULL;
-
-var attr2Prop = {};
-attr2Prop['for'] = 'htmlFor';
-attr2Prop['value'] = 'value';
-attr2Prop['class'] = 'className';
-attr2Prop['style'] = 'style.cssText';
-attr2Prop['nohref'] = 'noHref';
-attr2Prop['noshade'] = 'noShade';
-attr2Prop['noresize'] = 'noResize';
-attr2Prop['readonly'] = 'readOnly';
-attr2Prop['defaultchecked'] = 'defaultChecked';
-attr2Prop['defaultmuted'] = 'defaultMuted';
-attr2Prop['defaultselected'] = 'defaultSelected';
-
-function createElement(tagName, parentNode) {
-  var SVGElement = win.SVGElement;
-
-  return tagName === 'svg' || parentNode && SVGElement && parentNode instanceof SVGElement ? doc.createElementNS('http://www.w3.org/2000/svg', tagName) : doc.createElement(tagName);
-}
-
-function createText(text) {
-  return doc.createTextNode(text || CHAR_BLANK);
-}
-
-function createComment(text) {
-  return doc.createComment(text || CHAR_BLANK);
-}
-
-function createEvent(event) {
-  return event;
-}
-
-function isElement(node) {
-  return node.nodeType === 1;
-}
-
-function setProp(node, name, value) {
-  set$1(node, name, value, FALSE);
-}
-
-function removeProp(node, name) {
-  setProp(node, name, NULL);
-}
-
-function setAttr(node, name, value) {
-  if (booleanAttrMap[name]) {
-    value = value === UNDEFINED || value ? TRUE : FALSE;
-  }
-  if (attr2Prop[name]) {
-    setProp(node, attr2Prop[name], value);
-  } else if (booleanAttrMap[name]) {
-    setProp(node, name, value);
-  } else {
-    node.setAttribute(name, value);
-  }
-}
-
-function removeAttr(node, name) {
-  if (attr2Prop[name]) {
-    removeProp(node, attr2Prop[name]);
-  } else if (booleanAttrMap[name]) {
-    removeProp(node, name);
-  } else {
-    node.removeAttribute(name);
-  }
-}
-
-function before(parentNode, newNode, referenceNode) {
-  if (referenceNode) {
-    parentNode.insertBefore(newNode, referenceNode);
-  } else {
-    append$1(parentNode, newNode);
-  }
-}
-
-function append$1(parentNode, child) {
-  parentNode.appendChild(child);
-}
-
-function replace(parentNode, newNode, oldNode) {
-  parentNode.replaceChild(newNode, oldNode);
-}
-
-function remove$1(parentNode, child) {
-  parentNode.removeChild(child);
-}
-
-function parent(node) {
-  return node.parentNode;
-}
-
-function next(node) {
-  return node.nextSibling;
-}
-
-function tag(node) {
-  var tagName = node.tagName;
-
-  return falsy$1(tagName) ? CHAR_BLANK : tagName.toLowerCase();
-}
-
-function children(node) {
-  return node.childNodes;
-}
-
-function text(node, content) {
-  return content == NULL ? node.nodeValue : node.nodeValue = content;
-}
-
-function html(node, content) {
-  return content == NULL ? node.innerHTML : node.innerHTML = content;
-}
-
-function find(selector, context) {
-  return (context || doc).querySelector(selector);
-}
-
-function on(element, type, listener) {
-  element.addEventListener(type, listener, FALSE);
-}
-
-function off(element, type, listener) {
-  element.removeEventListener(type, listener, FALSE);
-}
-
-var domApi = Object.freeze({
-	createElement: createElement,
-	createText: createText,
-	createComment: createComment,
-	createEvent: createEvent,
-	isElement: isElement,
-	setProp: setProp,
-	removeProp: removeProp,
-	setAttr: setAttr,
-	removeAttr: removeAttr,
-	before: before,
-	append: append$1,
-	replace: replace,
-	remove: remove$1,
-	parent: parent,
-	next: next,
-	tag: tag,
-	children: children,
-	text: text,
-	html: html,
-	find: find,
-	on: on,
-	off: off
-});
 
 var SEL_COMMENT = '!';
 
@@ -1307,7 +1154,7 @@ var moduleHooks = [HOOK_CREATE, HOOK_UPDATE, HOOK_REMOVE, HOOK_DESTROY, HOOK_PRE
 var emptyNode = Vnode(CHAR_BLANK, UNDEFINED, {}, []);
 
 function isPatchable(vnode1, vnode2) {
-  return vnode1.key === vnode2.key && vnode1.sel === vnode2.sel;
+  return vnode1.key === vnode2.key && vnode1.tag === vnode2.tag;
 }
 
 function createKeyToIndex(vnodes, startIndex, endIndex) {
@@ -1321,21 +1168,19 @@ function createKeyToIndex(vnodes, startIndex, endIndex) {
   return result;
 }
 
-function createElementVnode(sel, data, children$$1, key, component) {
-  return Vnode(sel, UNDEFINED, data, children$$1, key, component);
+function createElementVnode(tag, data, children, key, component) {
+  return Vnode(tag, UNDEFINED, data, children, key, component);
 }
 
-function createCommentVnode(text$$1) {
-  return Vnode(SEL_COMMENT, text$$1);
+function createCommentVnode(text) {
+  return Vnode(SEL_COMMENT, text);
 }
 
-function createTextVnode(text$$1) {
-  return Vnode(UNDEFINED, toString(text$$1));
+function createTextVnode(text) {
+  return Vnode(UNDEFINED, toString(text));
 }
 
-function init(modules) {
-  var api = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : domApi;
-
+function init(modules, api) {
 
   var moduleEmitter = new Emitter();
 
@@ -1345,89 +1190,30 @@ function init(modules) {
     });
   });
 
-  var stringifySel = function stringifySel(el) {
-    var list = [api.tag(el)];
-    var id = el.id,
-        className = el.className;
-
-    if (id) {
-      push(list, '' + CHAR_HASH + id);
-    }
-    if (className) {
-      push(list, '' + CHAR_DOT + split(className, CHAR_WHITESPACE).join(CHAR_DOT));
-    }
-    return list.join(CHAR_BLANK);
-  };
-
-  var parseSel = function parseSel(sel) {
-
-    var tagName = void 0,
-        id = void 0,
-        className = void 0;
-
-    var hashIndex = indexOf$1(sel, CHAR_HASH);
-    if (hashIndex > 0) {
-      tagName = slice(sel, 0, hashIndex);
-      sel = slice(sel, hashIndex + 1);
-    }
-
-    var dotIndex = indexOf$1(sel, CHAR_DOT);
-    if (dotIndex > 0) {
-      var temp = slice(sel, 0, dotIndex);
-      if (tagName) {
-        id = temp;
-      } else {
-        tagName = temp;
-      }
-      className = split(slice(sel, dotIndex + 1), CHAR_DOT).join(CHAR_WHITESPACE);
-    } else {
-      if (tagName) {
-        id = sel;
-      } else {
-        tagName = sel;
-      }
-    }
-
-    return { tagName: tagName, id: id, className: className };
-  };
-
-  var createElement$$1 = function createElement$$1(parentNode, vnode, insertedQueue) {
-    var sel = vnode.sel,
+  var createElement = function createElement(parentNode, vnode, insertedQueue) {
+    var tag = vnode.tag,
         data = vnode.data,
-        children$$1 = vnode.children,
-        text$$1 = vnode.text;
+        children = vnode.children,
+        text = vnode.text;
 
 
     var hooks = data && data.hooks || {};
     execute(hooks[HOOK_INIT], NULL, vnode);
 
-    if (falsy$1(sel)) {
-      return vnode.el = api.createText(text$$1);
+    if (falsy$1(tag)) {
+      return vnode.el = api.createText(text);
     }
 
-    if (sel === SEL_COMMENT) {
-      return vnode.el = api.createComment(text$$1);
+    if (tag === SEL_COMMENT) {
+      return vnode.el = api.createComment(text);
     }
 
-    var _parseSel = parseSel(sel),
-        tagName = _parseSel.tagName,
-        id = _parseSel.id,
-        className = _parseSel.className;
+    var el = vnode.el = api.createElement(tag, parentNode);
 
-    var el = api.createElement(tagName, parentNode);
-    if (id) {
-      el.id = id;
-    }
-    if (className) {
-      el.className = className;
-    }
-
-    vnode.el = el;
-
-    if (array(children$$1)) {
-      addVnodes(el, children$$1, 0, children$$1.length - 1, insertedQueue);
-    } else if (string(text$$1)) {
-      api.append(el, api.createText(text$$1));
+    if (array(children)) {
+      addVnodes(el, children, 0, children.length - 1, insertedQueue);
+    } else if (string(text)) {
+      api.append(el, api.createText(text));
     }
 
     if (data) {
@@ -1444,16 +1230,16 @@ function init(modules) {
     return vnode.el;
   };
 
-  var addVnodes = function addVnodes(parentNode, vnodes, startIndex, endIndex, insertedQueue, before$$1) {
+  var addVnodes = function addVnodes(parentNode, vnodes, startIndex, endIndex, insertedQueue, before) {
     for (var i = startIndex; i <= endIndex; i++) {
-      addVnode(parentNode, vnodes[i], insertedQueue, before$$1);
+      addVnode(parentNode, vnodes[i], insertedQueue, before);
     }
   };
 
-  var addVnode = function addVnode(parentNode, vnode, insertedQueue, before$$1) {
-    var el = createElement$$1(parentNode, vnode, insertedQueue);
+  var addVnode = function addVnode(parentNode, vnode, insertedQueue, before) {
+    var el = createElement(parentNode, vnode, insertedQueue);
     if (el) {
-      api.before(parentNode, el, before$$1);
+      api.before(parentNode, el, before);
     }
   };
 
@@ -1467,11 +1253,11 @@ function init(modules) {
   };
 
   var removeVnode = function removeVnode(parentNode, vnode) {
-    var sel = vnode.sel,
+    var tag = vnode.tag,
         el = vnode.el,
         data = vnode.data;
 
-    if (sel) {
+    if (tag) {
       destroyVnode(vnode);
       api.remove(parentNode, el);
 
@@ -1488,13 +1274,13 @@ function init(modules) {
 
   var destroyVnode = function destroyVnode(vnode) {
     var data = vnode.data,
-        children$$1 = vnode.children;
+        children = vnode.children;
 
     if (data) {
 
       // 先销毁 children
-      if (children$$1) {
-        each(children$$1, function (child) {
+      if (children) {
+        each(children, function (child) {
           destroyVnode(child);
         });
       }
@@ -1588,7 +1374,7 @@ function init(modules) {
                   }
                   // 新元素
                   else {
-                      activeVnode = createElement$$1(parentNode, newStartVnode, insertedQueue);
+                      activeVnode = createElement(parentNode, newStartVnode, insertedQueue);
                       if (activeVnode) {
                         activeVnode = newStartVnode;
                       }
@@ -1629,7 +1415,7 @@ function init(modules) {
 
     if (!isPatchable(oldVnode, vnode)) {
       var parentNode = api.parent(el);
-      if (createElement$$1(parentNode, vnode, insertedQueue)) {
+      if (createElement(parentNode, vnode, insertedQueue)) {
         parentNode && replaceVnode(parentNode, oldVnode, vnode);
       }
       return;
@@ -1683,7 +1469,7 @@ function init(modules) {
 
     if (api.isElement(oldVnode)) {
       var el = oldVnode;
-      oldVnode = Vnode(stringifySel(el), UNDEFINED, {}, []);
+      oldVnode = Vnode(api.tag(el), UNDEFINED, {}, []);
       oldVnode.el = el;
     }
 
@@ -1692,7 +1478,7 @@ function init(modules) {
       patchVnode(oldVnode, vnode, insertedQueue);
     } else {
       var parentNode = api.parent(oldVnode.el);
-      if (createElement$$1(parentNode, vnode, insertedQueue)) {
+      if (createElement(parentNode, vnode, insertedQueue)) {
         parentNode && replaceVnode(parentNode, oldVnode, vnode);
       }
     }
@@ -1725,13 +1511,13 @@ function updateAttrs(oldVnode, vnode) {
 
   var getValue = function getValue(attrs, name) {
     if (has$1(attrs, name)) {
-      var value = attrs[name];
-      return value !== UNDEFINED ? value : name;
+      return attrs[name] || CHAR_BLANK;
     }
   };
 
   each$1(newAttrs, function (value, name) {
-    if (getValue(newAttrs, name) !== getValue(oldAttrs, name)) {
+    value = getValue(newAttrs, name);
+    if (value !== getValue(oldAttrs, name)) {
       api.setAttr(el, name, value);
     }
   });
@@ -1896,7 +1682,7 @@ function createComponent(oldVnode, vnode) {
     attrs: attrs
   };
 
-  instance.component(vnode.sel, function (options) {
+  instance.component(vnode.tag, function (options) {
     var _el = el,
         $component = _el.$component;
 
@@ -3220,12 +3006,17 @@ function compile(content) {
           element.key = child.type === TEXT ? child.text : children;
         }
       } else if (child) {
-        // 预编译表达式，提升性能
-        if (type === DIRECTIVE && child.type === TEXT) {
-          var expr = compile$1(child.text);
-          target.expr = expr;
-          target.value = expr.source;
-          delete target.children;
+        if (child.type === TEXT) {
+          // 预编译表达式，提升性能
+          if (type === DIRECTIVE) {
+            var expr = compile$1(child.text);
+            target.expr = expr;
+            target.value = child.text;
+            delete target.children;
+          } else if (type === ATTRIBUTE) {
+            target.value = child.text;
+            delete target.children;
+          }
         }
         // 属性绑定，把 Attribute 转成 单向绑定 指令
         else if (type === ATTRIBUTE && child.type === EXPRESSION && child.safe && string(child.expr.keypath)) {
@@ -3342,7 +3133,11 @@ function compile(content) {
       }
       if (closed) {
         text += currentQuote;
-        popStack(pop(htmlStack).type);
+        closed = pop(htmlStack);
+        if (!closed.children) {
+          closed.value = CHAR_BLANK;
+        }
+        popStack(closed.type);
       }
       return text;
     } else {
@@ -3647,56 +3442,6 @@ function formatKeypath(keypath) {
 }
 
 /**
- * 标记节点数组，用于区分普通数组
- *
- * @param {*} nodes
- * @return {*}
- */
-function makeNodes(nodes) {
-  if (array(nodes)) {
-    nodes[CHAR_DASH] = TRUE;
-  }
-  return nodes;
-}
-
-/**
- * 是否是节点数组
- *
- * @param {*} nodes
- * @return {boolean}
- */
-function isNodes(nodes) {
-  return array(nodes) && nodes[CHAR_DASH];
-}
-
-/**
- * 合并多个节点
- *
- * 用于处理属性值和指令值
- *
- * @param {?Array} outputNodes
- * @param {?Array} sourceNodes
- * @return {*}
- */
-function mergeNodes(outputNodes, sourceNodes) {
-  if (array(outputNodes)) {
-    switch (outputNodes.length) {
-      // name=""
-      case 0:
-        return CHAR_BLANK;
-      // name="{{value}}"
-      case 1:
-        return outputNodes[0];
-      // name="{{value1}}{{value2}}"
-      default:
-        return outputNodes.join(CHAR_BLANK);
-    }
-  } else if (!falsy(sourceNodes)) {
-    return CHAR_BLANK;
-  }
-}
-
-/**
  * 渲染抽象语法树
  *
  * @param {Object} ast 编译出来的抽象语法树
@@ -3723,9 +3468,7 @@ function render(ast, data, instance) {
       nodeStack = [],
       htmlStack = [],
       partials = {},
-      nodes = [],
       deps = {};
-
   var sibling = void 0,
       cache = void 0,
       prevCache = void 0,
@@ -3744,43 +3487,70 @@ function render(ast, data, instance) {
     });
   };
 
-  var addChildNative = function addChildNative(children, child) {
-    var prevChild = last(children);
-    if (object(prevChild) && object(child)) {
-      var prop = 'text';
-      if (string(prevChild[prop]) && string(child[prop])) {
-        prevChild[prop] += child[prop];
-        return;
+  var addChild = function addChild(parent, child) {
+
+    if (parent && isDefined(child)) {
+
+      if (attributeRendering) {
+        if (has$1(parent, 'value')) {
+          parent.value += child;
+        } else {
+          parent.value = child;
+        }
+      } else {
+        // 文本节点需要拼接
+        // <div>123{{name}}456</div>
+        // <div>123{{user}}456</div>
+
+        var children = parent.children || (parent.children = []);
+        var prevChild = last(children),
+            prop = 'text';
+
+        if (primitive(child) || !has$1(child, prop)) {
+          if (object(prevChild) && has$1(child, prop)) {
+            prevChild[prop] += child;
+            return;
+          } else {
+            child = createTextVnode(child);
+          }
+        }
+
+        children.push(child);
       }
     }
-    children.push(child);
   };
 
-  var addChild = function addChild(child, parent) {
-
-    var collection = parent ? parent.children || (parent.children = makeNodes([])) : nodes;
-
-    if (isNodes(child)) {
-      each(child, function (child) {
-        addChildNative(collection, child);
-      });
-    } else {
-      addChildNative(collection, child);
-    }
-  };
-
-  var addAttr = function addAttr(key, value, parent) {
+  var addAttr = function addAttr(parent, key, value) {
     var attrs = parent.attrs || (parent.attrs = {});
     attrs[key] = value;
   };
 
-  var addDirective = function addDirective(directive, parent) {
+  var addDirective = function addDirective(parent, name, modifier, value, expr) {
     var directives = parent.directives || (parent.directives = {});
-    directives[join(directive.name, directive.modifier)] = directive;
+    directives[join(name, modifier)] = {
+      name: name,
+      modifier: modifier,
+      context: context,
+      keypath: keypath,
+      value: value,
+      expr: expr
+    };
+  };
+
+  var getValue = function getValue(source, output) {
+    if (has$1(output, 'value')) {
+      return output.value;
+    }
+    if (has$1(source, 'value')) {
+      return source.value;
+    }
+    if (source.children) {
+      return CHAR_BLANK;
+    }
   };
 
   var attributeRendering = void 0;
-  var pushStack = function pushStack(source, silent) {
+  var pushStack = function pushStack(source) {
     var type = source.type,
         attrs = source.attrs,
         children = source.children;
@@ -3789,13 +3559,8 @@ function render(ast, data, instance) {
     var parent = last(nodeStack),
         output = { type: type, source: source, parent: parent };
 
-    var value = execute(enter[type], NULL, [source, output]);
-
-    if (isDefined(value)) {
-      if (!silent && value !== FALSE) {
-        addChild(value, parent);
-      }
-      return value;
+    if (execute(enter[type], NULL, [source, output]) === FALSE) {
+      return;
     }
 
     if (isDefined(source.keypath)) {
@@ -3825,17 +3590,13 @@ function render(ast, data, instance) {
       traverseList(children);
     }
 
-    value = execute(leave[type], NULL, [source, output]);
-
-    if (!silent && isDefined(value)) {
-      addChild(value, parent);
-    }
-
-    pop(nodeStack);
+    execute(leave[type], NULL, [source, output]);
 
     if (htmlTypes[source.type]) {
       pop(htmlStack);
     }
+
+    pop(nodeStack);
 
     if (isDefined(source.forward)) {
       context = context.pop();
@@ -3845,27 +3606,7 @@ function render(ast, data, instance) {
       updateKeypath();
     }
 
-    return value;
-  };
-
-  var pushNode = function pushNode(node, silent) {
-    if (array(node)) {
-      node = {
-        children: node
-      };
-    }
-    return pushStack(node, silent);
-  };
-
-  var createDirective = function createDirective(name, modifier, value, expr) {
-    return {
-      name: name,
-      modifier: modifier,
-      context: context,
-      keypath: keypath,
-      value: value,
-      expr: expr
-    };
+    return output;
   };
 
   var filterNode = void 0;
@@ -3878,10 +3619,10 @@ function render(ast, data, instance) {
     }
   };
 
-  var executeExpr = function executeExpr(expr, needDep) {
+  var executeExpr = function executeExpr(expr, filterDep) {
     return execute$1(expr, function (keypath) {
       var result = context.get(keypath);
-      if (needDep !== FALSE) {
+      if (!filterDep) {
         deps[result.keypath] = result.value;
       }
       return result.value;
@@ -3901,7 +3642,13 @@ function render(ast, data, instance) {
 
     var partial = partials[name] || instance.importPartial(name);
     if (partial) {
-      pushNode(partial);
+      if (array(partial)) {
+        pushStack({
+          children: partial
+        });
+      } else {
+        pushStack(partial);
+      }
       return FALSE;
     }
     fatal('Partial "' + name + '" is not found.');
@@ -3913,7 +3660,7 @@ function render(ast, data, instance) {
   enter[IF$1] = enter[ELSE_IF$1] = function (source) {
     if (!executeExpr(source.expr)) {
       if (sibling && !elseTypes[sibling.type] && !attributeRendering) {
-        return createCommentVnode();
+        addChild(last(htmlStack), createCommentVnode());
       }
       return FALSE;
     }
@@ -3921,7 +3668,14 @@ function render(ast, data, instance) {
 
   leave[IF$1] = leave[ELSE_IF$1] = leave[ELSE$1] = function (source, output) {
     filterNode = filterElse;
-    return output.children;
+    var children = output.children;
+
+    if (children) {
+      var htmlNode = last(htmlStack);
+      each(children, function (child) {
+        addChild(htmlNode, child);
+      });
+    }
   };
 
   enter[EACH$1] = function (source) {
@@ -3968,7 +3722,8 @@ function render(ast, data, instance) {
   };
 
   enter[ELEMENT] = function (source, output) {
-    var key = source.key;
+    var _source = source,
+        key = _source.key;
 
     if (key) {
       var trackBy = void 0;
@@ -3976,10 +3731,14 @@ function render(ast, data, instance) {
         trackBy = key;
       } else if (array(key)) {
         attributeRendering = TRUE;
-        trackBy = mergeNodes(pushNode(key, TRUE), key);
+        source = {
+          type: ATTRIBUTE,
+          children: key
+        };
+        trackBy = getValue(source, pushStack(source));
         attributeRendering = NULL;
       }
-      if (trackBy) {
+      if (trackBy != NULL) {
 
         if (!currentCache) {
           prevCache = ast.cache || {};
@@ -3987,17 +3746,18 @@ function render(ast, data, instance) {
         }
 
         var _cache = prevCache[trackBy];
-        var result = context.get(keypath);
+        var _result = context.get(keypath);
 
         // 有缓存，且数据没有变化才算命中
-        if (_cache && _cache.value === result.value) {
+        if (_cache && _cache.value === _result.value) {
           currentCache[trackBy] = _cache;
-          deps[result.keypath] = result.value;
-          return _cache.result;
+          deps[_result.keypath] = _result.value;
+          addChild(htmlStack[htmlStack.length - 2], _cache.result);
+          return FALSE;
         } else {
           output.key = trackBy;
           currentCache[trackBy] = {
-            value: result.value
+            value: _result.value
           };
         }
       }
@@ -4005,10 +3765,8 @@ function render(ast, data, instance) {
   };
 
   leave[ELEMENT] = function (source, output) {
-    var key = output.key;
-
-    var props = void 0;
-
+    var key = output.key,
+        props = void 0;
     if (source.props) {
       props = {};
       each$1(source.props, function (expr, key) {
@@ -4027,21 +3785,16 @@ function render(ast, data, instance) {
       currentCache[key].result = vnode;
     }
 
-    return vnode;
+    addChild(htmlStack[htmlStack.length - 2], vnode);
   };
 
   leave[TEXT] = function (source) {
-    var text = source.text;
-    // 如果是元素的文本，而不是属性的文本
-    // 直接保持原样，因为 snabbdom 文本节点的结构和模板文本节点结构是一致的
-
-    return attributeRendering ? text : createTextVnode(text);
+    addChild(last(htmlStack), source.text);
   };
 
   leave[EXPRESSION] = function (source) {
     var htmlNode = last(htmlStack);
-    var text = executeExpr(source.expr, htmlNode && htmlNode.binding ? FALSE : TRUE);
-    return attributeRendering ? text : createTextVnode(text);
+    addChild(htmlNode, executeExpr(source.expr, htmlNode && htmlNode.source.binding));
   };
 
   leave[ATTRIBUTE] = function (source, output) {
@@ -4050,9 +3803,9 @@ function render(ast, data, instance) {
         children = source.children,
         binding = source.binding;
 
-    addAttr(name, mergeNodes(output.children, children), element);
-    if (string(binding)) {
-      addDirective(createDirective(DIRECTIVE_MODEL, name, binding), element);
+    addAttr(element, name, getValue(source, output));
+    if (binding) {
+      addDirective(element, DIRECTIVE_MODEL, name, binding);
     }
   };
 
@@ -4067,17 +3820,8 @@ function render(ast, data, instance) {
     //
     // model="xxx"
     // model=""
-    //
-    var name = source.name,
-        modifier = source.modifier,
-        expr = source.expr,
-        value = source.value;
 
-    if (output.children) {
-      value = mergeNodes(output.children, source.children);
-    }
-
-    addDirective(createDirective(name, modifier, value, expr), htmlStack[htmlStack.length - 2]);
+    addDirective(htmlStack[htmlStack.length - 2], source.name, source.modifier, getValue(source, output), source.expr);
   };
 
   leave[SPREAD$1] = function (source, output) {
@@ -4087,25 +3831,17 @@ function render(ast, data, instance) {
     //
     // 2. <Component {{... a ? aProps : bProps }}/>
     //    复杂的表达式，需要收集依赖
-    //
 
     var expr = source.expr,
         hasKeypath = string(expr.keypath),
-        value = void 0;
-    if (hasKeypath) {
-      value = executeExpr(expr, FALSE);
-    } else {
-      value = executeExpr(expr);
-    }
+        value = executeExpr(expr, hasKeypath);
 
     if (object(value)) {
       var element = last(htmlStack);
       each$1(value, function (value, name) {
-
+        addAttr(element, name, value);
         if (hasKeypath) {
-          addDirective(createDirective(DIRECTIVE_MODEL, name, join(expr.keypath, name)), element);
-        } else {
-          addAttr(name, value, element);
+          addDirective(element, DIRECTIVE_MODEL, name, join(expr.keypath, name));
         }
       });
     } else {
@@ -4113,13 +3849,15 @@ function render(ast, data, instance) {
     }
   };
 
-  leave[UNDEFINED] = function (source, output) {
-    return output.children;
+  var result = pushStack({
+    type: ELEMENT,
+    children: array(ast) ? ast : [ast]
+  });
+
+  return {
+    nodes: result.children,
+    deps: deps
   };
-
-  pushNode(ast);
-
-  return { nodes: nodes, deps: deps };
 }
 
 var Observer = function () {
@@ -4671,7 +4409,7 @@ function matchBestGetter(getters, keypath) {
  *
  * @type {RegExp}
  */
-var tag$1 = /<[^>]+>/;
+var tag = /<[^>]+>/;
 
 /**
  * 选择器
@@ -4737,6 +4475,159 @@ var BEFORE_DESTROY = 'beforeDestroy';
  * @type {string}
  */
 var AFTER_DESTROY = 'afterDestroy';
+
+var booleanAttrLiteral = 'allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare,default,defaultchecked,defaultmuted,defaultselected,defer,disabled,draggable,enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple,muted,nohref,noshade,noresize,novalidate,nowrap,open,pauseonexit,readonly,required,reversed,scoped,seamless,selected,sortable,spellcheck,translate,truespeed,typemustmatch,visible';
+var booleanAttrMap = toObject(split(booleanAttrLiteral, CHAR_COMMA), FALSE, TRUE);
+booleanAttrLiteral = NULL;
+
+var attr2Prop = {};
+attr2Prop['for'] = 'htmlFor';
+attr2Prop['value'] = 'value';
+attr2Prop['class'] = 'className';
+attr2Prop['style'] = 'style.cssText';
+attr2Prop['nohref'] = 'noHref';
+attr2Prop['noshade'] = 'noShade';
+attr2Prop['noresize'] = 'noResize';
+attr2Prop['readonly'] = 'readOnly';
+attr2Prop['defaultchecked'] = 'defaultChecked';
+attr2Prop['defaultmuted'] = 'defaultMuted';
+attr2Prop['defaultselected'] = 'defaultSelected';
+
+function createElement(tagName, parentNode) {
+  var SVGElement = win.SVGElement;
+
+  return tagName === 'svg' || parentNode && SVGElement && parentNode instanceof SVGElement ? doc.createElementNS('http://www.w3.org/2000/svg', tagName) : doc.createElement(tagName);
+}
+
+function createText(text) {
+  return doc.createTextNode(text || CHAR_BLANK);
+}
+
+function createComment(text) {
+  return doc.createComment(text || CHAR_BLANK);
+}
+
+function createEvent(event) {
+  return event;
+}
+
+function isElement(node) {
+  return node.nodeType === 1;
+}
+
+function setProp(node, name, value) {
+  set$1(node, name, value, FALSE);
+}
+
+function removeProp(node, name) {
+  setProp(node, name, NULL);
+}
+
+function setAttr(node, name, value) {
+  if (booleanAttrMap[name]) {
+    value = value === CHAR_BLANK || name === value ? TRUE : FALSE;
+  }
+  if (attr2Prop[name]) {
+    setProp(node, attr2Prop[name], value);
+  } else if (booleanAttrMap[name]) {
+    setProp(node, name, value);
+  } else {
+    node.setAttribute(name, value);
+  }
+}
+
+function removeAttr(node, name) {
+  if (attr2Prop[name]) {
+    removeProp(node, attr2Prop[name]);
+  } else if (booleanAttrMap[name]) {
+    removeProp(node, name);
+  } else {
+    node.removeAttribute(name);
+  }
+}
+
+function before(parentNode, newNode, referenceNode) {
+  if (referenceNode) {
+    parentNode.insertBefore(newNode, referenceNode);
+  } else {
+    append$1(parentNode, newNode);
+  }
+}
+
+function append$1(parentNode, child) {
+  parentNode.appendChild(child);
+}
+
+function replace(parentNode, newNode, oldNode) {
+  parentNode.replaceChild(newNode, oldNode);
+}
+
+function remove$1(parentNode, child) {
+  parentNode.removeChild(child);
+}
+
+function parent(node) {
+  return node.parentNode;
+}
+
+function next(node) {
+  return node.nextSibling;
+}
+
+function tag$1(node) {
+  var tagName = node.tagName;
+
+  return falsy$1(tagName) ? CHAR_BLANK : tagName.toLowerCase();
+}
+
+function children(node) {
+  return node.childNodes;
+}
+
+function text(node, content) {
+  return content == NULL ? node.nodeValue : node.nodeValue = content;
+}
+
+function html(node, content) {
+  return content == NULL ? node.innerHTML : node.innerHTML = content;
+}
+
+function find(selector, context) {
+  return (context || doc).querySelector(selector);
+}
+
+function on(element, type, listener) {
+  element.addEventListener(type, listener, FALSE);
+}
+
+function off(element, type, listener) {
+  element.removeEventListener(type, listener, FALSE);
+}
+
+var domApi = Object.freeze({
+	createElement: createElement,
+	createText: createText,
+	createComment: createComment,
+	createEvent: createEvent,
+	isElement: isElement,
+	setProp: setProp,
+	removeProp: removeProp,
+	setAttr: setAttr,
+	removeAttr: removeAttr,
+	before: before,
+	append: append$1,
+	replace: replace,
+	remove: remove$1,
+	parent: parent,
+	next: next,
+	tag: tag$1,
+	children: children,
+	text: text,
+	html: html,
+	find: find,
+	on: on,
+	off: off
+});
 
 /**
  * tap 事件
@@ -5331,7 +5222,7 @@ var Yox = function () {
       if (selector.test(template)) {
         template = api.html(api.find(template));
       }
-      if (!tag$1.test(template)) {
+      if (!tag.test(template)) {
         error$1('"template" option must have a root element.');
       }
     } else {
@@ -5879,7 +5770,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.41.2';
+Yox.version = '0.41.3';
 
 /**
  * 工具，便于扩展、插件使用
