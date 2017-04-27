@@ -13,6 +13,18 @@
                 hi, {{user.name}}.
             {{/partial}}
 
+            <div>
+                12-{{name1}}-{{name2}}-{{name3}}-{{name4}}-{{name5}}-34-{{user.name}}
+            </div>
+            <div>
+                <input type="checkbox" disabled="{{disabled1}}">
+                <input type="checkbox" disabled="{{disabled2}}">
+                <input type="checkbox" disabled="{{disabled3}}">
+                <input type="checkbox" disabled="disabled">
+                <input type="checkbox" disabled="abc">
+                <input type="checkbox" disabled>
+            </div>
+
             <p data-html="{{{title}}}">
                 {{title}}
             </p>
@@ -94,7 +106,13 @@
             template: '#template',
             data: {
                 title: '<strong id="id" class="class">Yox</strong>',
-
+                disabled1: true,
+                disabled2: false,
+                name1: true,
+                name2: null,
+                name3: 0,
+                name4: { },
+                name5: [ 1, 2, 3 ],
                 user: {
                     name: 'musicode',
                     age: 10,
