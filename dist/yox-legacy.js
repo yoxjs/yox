@@ -1576,16 +1576,11 @@ function updateAttrs(oldVnode, vnode) {
 
   var api = this;
 
-  var getValue = function getValue(attrs, name) {
-    if (has$1(attrs, name)) {
-      return attrs[name] != NULL ? attrs[name] : CHAR_BLANK;
-    }
-  };
-
   each$1(newAttrs, function (value, name) {
-    value = getValue(newAttrs, name);
-    if (value !== getValue(oldAttrs, name)) {
-      api.setAttr(el, name, value);
+    if (has$1(newAttrs, name)) {
+      if (!has$1(oldAttrs, name) || value !== oldAttrs[name]) {
+        api.setAttr(el, name, value);
+      }
     }
   });
 
@@ -1908,7 +1903,7 @@ var binaryList = sort(binaryMap, TRUE);
  * 节点基类
  */
 
-var Node = function Node(type, source) {
+var Node = function (type, source) {
   classCallCheck(this, Node);
 
   this.type = type;
@@ -3611,18 +3606,18 @@ function render(ast, data, instance) {
   };
 
   var getValue = function getValue(source, output) {
+    var value = void 0;
     if (has$1(output, 'value')) {
-      return output.value;
+      value = output.value;
+    } else if (has$1(source, 'value')) {
+      value = source.value;
+    } else if (source.expr) {
+      value = executeExpr(source.expr, source.binding);
     }
-    if (has$1(source, 'value')) {
-      return source.value;
+    if (value == NULL && (source.expr || source.children)) {
+      value = CHAR_BLANK;
     }
-    if (has$1(source, 'expr')) {
-      return executeExpr(source.expr, source.binding);
-    }
-    if (source.children) {
-      return CHAR_BLANK;
-    }
+    return value;
   };
 
   var attributeRendering = void 0;
@@ -4603,7 +4598,7 @@ function removeProp(node, name) {
 
 function setAttr(node, name, value) {
   if (booleanAttrMap[name]) {
-    value = value === CHAR_BLANK || name === value ? TRUE : FALSE;
+    value = value === TRUE || value === name || value === UNDEFINED ? TRUE : FALSE;
   }
   if (attr2Prop[name]) {
     setProp(node, attr2Prop[name], value);
@@ -4760,7 +4755,7 @@ var COMPOSITION_END = 'compositionend';
  *
  * @type {string}
  */
-var PROPERTY_CHANGE = 'propertychange';
+var PROPERTY_CHANGE = 'propertychange'
 
 var IEEvent = function () {
   function IEEvent(event, element) {
@@ -5957,7 +5952,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.41.4';
+Yox.version = '0.41.5';
 
 /**
  * 工具，便于扩展、插件使用
