@@ -3691,13 +3691,20 @@ function render(ast, data, instance) {
     }
   };
 
-  var executeExpr = function executeExpr(expr, filterDep) {
-    return execute$1(expr, function (keypath) {
-      var result = context.get(keypath);
-      if (!filterDep) {
-        deps[result.keypath] = result.value;
+  var executeExpr = function executeExpr(expr, filter) {
+    return execute$1(expr, function (key) {
+      var _context$get = context.get(key),
+          keypath = _context$get.keypath,
+          value = _context$get.value;
+
+      if (!filter && !numeric(keypath) && !func(value) && key !== SPECIAL_EVENT && key !== SPECIAL_KEYPATH) {
+        deps[keypath] = value;
+        // 响应数组长度的变化是个很普遍的需求
+        if (array(value)) {
+          deps[join(keypath, 'length')] = value.length;
+        }
       }
-      return result.value;
+      return value;
     }, instance);
   };
 
@@ -3919,7 +3926,7 @@ function render(ast, data, instance) {
         }
       });
     } else {
-      fatal('Spread "' + expr.source + '" must be an object.');
+      fatal('Spread "' + expr.source + '" expected to be an object.');
     }
   };
 
@@ -4013,7 +4020,7 @@ var Observer = function () {
 
             if (cacheable) {
               if (_getter[DIRTY]) {
-                delete _getter[DIRTY];
+                _getter[DIRTY] = FALSE;
               } else if (has$1(cache, keypath)) {
                 return cache[keypath];
               }
@@ -4260,6 +4267,9 @@ var Observer = function () {
             });
             addReversedDepKeypath(realpath);
           }
+        } else if (array(newValue)) {
+          realpath = join(realpath, 'length');
+          addDifference(realpath, realpath, getOldValue(realpath));
         }
       };
 
@@ -4599,7 +4609,7 @@ function removeProp(node, name) {
 
 function setAttr(node, name, value) {
   if (booleanAttrMap[name]) {
-    value = value === TRUE || value === name || value === UNDEFINED ? TRUE : FALSE;
+    value = value === TRUE || value === 'true' || value === name || value === UNDEFINED;
   }
   if (attr2Prop[name]) {
     setProp(node, attr2Prop[name], value);
@@ -4946,6 +4956,7 @@ api.on = function (element, type, listener, context) {
  * @param {HTMLElement} element
  * @param {string} type
  * @param {Function} listener
+ *
  */
 api.off = function (element, type, listener) {
   var $emitter = element.$emitter;
@@ -4954,7 +4965,7 @@ api.off = function (element, type, listener) {
   // emitter 会根据 type 和 listener 参数进行适当的删除
   $emitter.off(type, listener);
   // 根据 emitter 的删除结果来操作这里的事件 listener
-  each(types, function (type) {
+  each(types, function (type, index) {
     if ($emitter[type] && !$emitter.has(type)) {
       var nativeListener = $emitter[type];
       var special = api.specialEvents[type];
@@ -4964,8 +4975,12 @@ api.off = function (element, type, listener) {
         _off(element, type, nativeListener);
       }
       delete $emitter[type];
+      types.splice(index, 1);
     }
-  });
+  }, TRUE);
+  if (!types.length) {
+    api.removeProp(element, '$emitter');
+  }
 };
 
 /**
@@ -5343,7 +5358,7 @@ var Yox = function () {
         extensions = options.extensions;
 
 
-    extend(instance, extensions);
+    extensions && extend(instance, extensions);
 
     var source = props;
 
@@ -5354,7 +5369,7 @@ var Yox = function () {
       }
       // 如果传了 props，则 data 应该是个 function
       if (data && !func(data)) {
-        warn('"data" option should be a function.');
+        warn('"data" option expected to be a function.');
       }
     } else {
       source = {};
@@ -5406,7 +5421,7 @@ var Yox = function () {
         template = api.html(api.find(template));
       }
       if (!tag.test(template)) {
-        error$1('"template" option must have a root element.');
+        error$1('"template" option expected to have a root element.');
       }
     } else {
       template = NULL;
@@ -5425,7 +5440,7 @@ var Yox = function () {
           el = api.children(el)[0];
         }
       } else {
-        error$1('"el" option must be a html element.');
+        error$1('"el" option expected to be a html element.');
       }
     }
 
@@ -5436,7 +5451,7 @@ var Yox = function () {
     if (methods) {
       each$1(methods, function (fn, name) {
         if (has$1(prototype, name)) {
-          error$1('"' + name + '" method is conflicted with built-in methods.');
+          fatal('"' + name + '" method is conflicted with built-in methods.');
         }
         instance[name] = fn;
       });
@@ -5653,24 +5668,27 @@ var Yox = function () {
 
       var instance = this,
           args = arguments;
-      var $observer = instance.$observer,
-          $node = instance.$node;
-
 
       var oldValue = instance.get(TEMPLATE_KEY);
 
-      $observer.set(model$$1);
+      instance.$observer.set(model$$1);
 
       if (oldValue === instance.get(TEMPLATE_KEY) || args.length === 1) {
         return;
       }
 
       if (args.length === 2 && args[1]) {
-        instance.updateView($node, instance.render());
+        instance.updateView(instance.$node, instance.render());
       } else {
         instance.forceUpdate();
       }
     }
+
+    /**
+     * 对于某些特殊场景，修改了数据，但是模板的依赖中并没有这一项
+     * 而你非常确定需要更新模板，强制刷新正是你需要的
+     */
+
   }, {
     key: 'forceUpdate',
     value: function forceUpdate() {
@@ -5685,6 +5703,13 @@ var Yox = function () {
         });
       }
     }
+
+    /**
+     * 把模板抽象语法树渲染成 virtual dom
+     *
+     * @return {Object}
+     */
+
   }, {
     key: 'render',
     value: function render$$1() {
@@ -5711,7 +5736,7 @@ var Yox = function () {
     }
 
     /**
-     * 更新视图
+     * 更新 virtual dom
      *
      * @param {HTMLElement|Vnode} oldNode
      * @param {Vnode} newNode
@@ -5949,11 +5974,115 @@ var Yox = function () {
     value: function copy$$1(data, deep) {
       return copy(data, deep);
     }
+
+    /**
+     * 在数组指定位置插入元素
+     *
+     * @param {string} keypath
+     * @param {*} item
+     * @param {number} index
+     * @return {?boolean} 是否插入成功
+     */
+
+  }, {
+    key: 'insert',
+    value: function insert(keypath, item, index) {
+
+      var list = this.get(keypath);
+      if (!array(list)) {
+        list = [];
+      }
+
+      var _list = list,
+          length = _list.length;
+
+      if (index === TRUE || index === length) {
+        list.push(item);
+      } else if (index === FALSE || index === 0) {
+        list.unshift(item);
+      } else if (index > 0 && index < length) {
+        list.splice(index, 0, item);
+      } else {
+        return;
+      }
+
+      this.set(keypath, list);
+      return TRUE;
+    }
+
+    /**
+     * 在数组尾部添加元素
+     *
+     * @param {string} keypath
+     * @param {*} item
+     * @return {?boolean} 是否添加成功
+     */
+
+  }, {
+    key: 'append',
+    value: function append$$1(keypath, item) {
+      return this.insert(keypath, item, TRUE);
+    }
+
+    /**
+     * 在数组首部添加元素
+     *
+     * @param {string} keypath
+     * @param {*} item
+     * @return {?boolean} 是否添加成功
+     */
+
+  }, {
+    key: 'prepend',
+    value: function prepend$$1(keypath, item) {
+      return this.insert(keypath, item, FALSE);
+    }
+
+    /**
+     * 通过索引移除数组中的元素
+     *
+     * @param {string} keypath
+     * @param {number} index
+     * @return {?boolean} 是否移除成功
+     */
+
+  }, {
+    key: 'removeBy',
+    value: function removeBy(keypath, index) {
+      var list = this.get(keypath);
+      if (array(list) && index >= 0 && index < list.length) {
+        list.splice(index, 1);
+        this.set(keypath, list);
+        return TRUE;
+      }
+    }
+
+    /**
+     * 直接移除数组中的元素
+     *
+     * @param {string} keypath
+     * @param {*} item
+     * @return {Array}
+     */
+
+  }, {
+    key: 'remove',
+    value: function remove$$1(keypath, item) {
+      var list = this.get(keypath);
+      if (array(list)) {
+        var index = indexOf(list, item);
+        if (index >= 0) {
+          list.splice(index, 1);
+          this.set(keypath, list);
+          return TRUE;
+        }
+      }
+    }
   }]);
   return Yox;
 }();
 
-Yox.version = '0.41.6';
+Yox.version = '0.41.7';
 
 /**
  * 工具，便于扩展、插件使用
