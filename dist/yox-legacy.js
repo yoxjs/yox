@@ -6047,8 +6047,8 @@ var Yox = function () {
      */
 
   }, {
-    key: 'removeBy',
-    value: function removeBy(keypath, index) {
+    key: 'removeAt',
+    value: function removeAt(keypath, index) {
       var list = this.get(keypath);
       if (array(list) && index >= 0 && index < list.length) {
         list.splice(index, 1);
@@ -6062,7 +6062,7 @@ var Yox = function () {
      *
      * @param {string} keypath
      * @param {*} item
-     * @return {Array}
+     * @return {?boolean} 是否移除成功
      */
 
   }, {
@@ -6082,7 +6082,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.41.7';
+Yox.version = '0.41.8';
 
 /**
  * 工具，便于扩展、插件使用
