@@ -719,7 +719,7 @@ export default class Yox {
    * @param {number} index
    * @return {?boolean} 是否移除成功
    */
-  removeBy(keypath, index) {
+  removeAt(keypath, index) {
     let list = this.get(keypath)
     if (is.array(list)
       && index >= 0
@@ -736,7 +736,7 @@ export default class Yox {
    *
    * @param {string} keypath
    * @param {*} item
-   * @return {Array}
+   * @return {?boolean} 是否移除成功
    */
   remove(keypath, item) {
     let list = this.get(keypath)
@@ -758,7 +758,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.41.7'
+Yox.version = '0.41.8'
 
 /**
  * 工具，便于扩展、插件使用
