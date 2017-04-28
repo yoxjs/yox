@@ -61,7 +61,7 @@ api.specialEvents = {
  * @param {Function} listener
  * @param {?*} context
  */
-api.on =  function (element, type, listener, context) {
+api.on = function (element, type, listener, context) {
   let $emitter = element.$emitter || (element.$emitter = new Emitter())
   if (!$emitter.has(type)) {
     let nativeListener = function (e, type) {
@@ -91,8 +91,9 @@ api.on =  function (element, type, listener, context) {
  * @param {HTMLElement} element
  * @param {string} type
  * @param {Function} listener
+ *
  */
-api.off =  function (element, type, listener) {
+api.off = function (element, type, listener) {
   let { $emitter } = element
   let types = object.keys($emitter.listeners)
   // emitter 会根据 type 和 listener 参数进行适当的删除
@@ -100,7 +101,7 @@ api.off =  function (element, type, listener) {
   // 根据 emitter 的删除结果来操作这里的事件 listener
   array.each(
     types,
-    function (type) {
+    function (type, index) {
       if ($emitter[ type ] && !$emitter.has(type)) {
         let nativeListener = $emitter[ type ]
         let special = api.specialEvents[ type ]
@@ -111,9 +112,14 @@ api.off =  function (element, type, listener) {
           off(element, type, nativeListener)
         }
         delete $emitter[ type ]
+        types.splice(index, 1)
       }
-    }
+    },
+    env.TRUE
   )
+  if (!types.length) {
+    api.removeProp(element, '$emitter')
+  }
 }
 
 export default api

@@ -70,7 +70,7 @@ export default class Yox {
       extensions,
     } = options
 
-    object.extend(instance, extensions)
+    extensions && object.extend(instance, extensions)
 
     let source = props
 
@@ -81,7 +81,7 @@ export default class Yox {
       }
       // 如果传了 props，则 data 应该是个 function
       if (data && !is.func(data)) {
-        logger.warn('"data" option should be a function.')
+        logger.warn('"data" option expected to be a function.')
       }
     }
     else {
@@ -140,7 +140,7 @@ export default class Yox {
         )
       }
       if (!pattern.tag.test(template)) {
-        logger.error('"template" option must have a root element.')
+        logger.error('"template" option expected to have a root element.')
       }
     }
     else {
@@ -161,7 +161,7 @@ export default class Yox {
         }
       }
       else {
-        logger.error('"el" option must be a html element.')
+        logger.error('"el" option expected to be a html element.')
       }
     }
 
@@ -174,7 +174,7 @@ export default class Yox {
         methods,
         function (fn, name) {
           if (object.has(prototype, name)) {
-            logger.error(`"${name}" method is conflicted with built-in methods.`)
+            logger.fatal(`"${name}" method is conflicted with built-in methods.`)
           }
           instance[ name ] = fn
         }
@@ -366,11 +366,10 @@ export default class Yox {
   updateModel(model) {
 
     let instance = this, args = arguments
-    let { $observer, $node } = instance
 
     let oldValue = instance.get(TEMPLATE_KEY)
 
-    $observer.set(model)
+    instance.$observer.set(model)
 
     if (oldValue === instance.get(TEMPLATE_KEY)
       || args.length === 1
@@ -380,7 +379,7 @@ export default class Yox {
 
     if (args.length === 2 && args[ 1 ]) {
       instance.updateView(
-        $node,
+        instance.$node,
         instance.render()
       )
     }
@@ -390,6 +389,10 @@ export default class Yox {
 
   }
 
+  /**
+   * 对于某些特殊场景，修改了数据，但是模板的依赖中并没有这一项
+   * 而你非常确定需要更新模板，强制刷新正是你需要的
+   */
   forceUpdate() {
     let instance = this
     if (!instance.$pending) {
@@ -408,6 +411,11 @@ export default class Yox {
     }
   }
 
+  /**
+   * 把模板抽象语法树渲染成 virtual dom
+   *
+   * @return {Object}
+   */
   render() {
 
     let instance = this
@@ -415,11 +423,7 @@ export default class Yox {
 
     object.extend($context, $observer.data)
 
-    let { nodes, deps } = renderTemplate(
-      $template,
-      $context,
-      instance
-    )
+    let { nodes, deps } = renderTemplate($template, $context, instance)
 
     let keys = object.keys(deps)
     object.each(
@@ -435,7 +439,7 @@ export default class Yox {
   }
 
   /**
-   * 更新视图
+   * 更新 virtual dom
    *
    * @param {HTMLElement|Vnode} oldNode
    * @param {Vnode} newNode
@@ -652,6 +656,100 @@ export default class Yox {
     return object.copy(data, deep)
   }
 
+  /**
+   * 在数组指定位置插入元素
+   *
+   * @param {string} keypath
+   * @param {*} item
+   * @param {number} index
+   * @return {?boolean} 是否插入成功
+   */
+  insert(keypath, item, index) {
+
+    let list = this.get(keypath)
+    if (!is.array(list)) {
+      list = [ ]
+    }
+
+    let { length } = list
+    if (index === env.TRUE || index === length) {
+      list.push(item)
+    }
+    else if (index === env.FALSE || index === 0) {
+      list.unshift(item)
+    }
+    else if (index > 0 && index < length) {
+      list.splice(index, 0, item)
+    }
+    else {
+      return
+    }
+
+    this.set(keypath, list)
+    return env.TRUE
+
+  }
+
+  /**
+   * 在数组尾部添加元素
+   *
+   * @param {string} keypath
+   * @param {*} item
+   * @return {?boolean} 是否添加成功
+   */
+  append(keypath, item) {
+    return this.insert(keypath, item, env.TRUE)
+  }
+
+  /**
+   * 在数组首部添加元素
+   *
+   * @param {string} keypath
+   * @param {*} item
+   * @return {?boolean} 是否添加成功
+   */
+  prepend(keypath, item) {
+    return this.insert(keypath, item, env.FALSE)
+  }
+
+  /**
+   * 通过索引移除数组中的元素
+   *
+   * @param {string} keypath
+   * @param {number} index
+   * @return {?boolean} 是否移除成功
+   */
+  removeBy(keypath, index) {
+    let list = this.get(keypath)
+    if (is.array(list)
+      && index >= 0
+      && index < list.length
+    ) {
+      list.splice(index, 1)
+      this.set(keypath, list)
+      return env.TRUE
+    }
+  }
+
+  /**
+   * 直接移除数组中的元素
+   *
+   * @param {string} keypath
+   * @param {*} item
+   * @return {Array}
+   */
+  remove(keypath, item) {
+    let list = this.get(keypath)
+    if (is.array(list)) {
+      let index = array.indexOf(list, item)
+      if (index >= 0) {
+        list.splice(index, 1)
+        this.set(keypath, list)
+        return env.TRUE
+      }
+    }
+  }
+
 }
 
 
@@ -660,7 +758,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.41.6'
+Yox.version = '0.41.7'
 
 /**
  * 工具，便于扩展、插件使用
