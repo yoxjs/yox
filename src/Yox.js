@@ -532,7 +532,7 @@ export default class Yox {
             }
           )
         }
-        let method = instance[ callee.source ] || getValue(callee.source)
+        let method = instance[ callee.source ]
         if (execute(method, instance, args) === env.FALSE && isEvent) {
           event.prevent()
           event.stop()
