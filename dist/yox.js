@@ -2720,6 +2720,12 @@ var Element = function (_Node) {
     return _this;
   }
 
+  createClass(Element, [{
+    key: 'addAttr',
+    value: function addAttr(child) {
+      push(this.attrs || (this.attrs = []), child);
+    }
+  }]);
   return Element;
 }(Node$2);
 
@@ -3417,8 +3423,6 @@ var Context = function () {
 
       keypath = joinKeypath(this, keypath);
 
-      warn('Failed to lookup "' + keypath + '".');
-
       return {
         keypath: keypath
       };
@@ -3766,18 +3770,20 @@ function render(ast, data, instance) {
         var _cache = prevCache[trackBy];
 
         if (_cache) {
-          var isSame = TRUE;
-          each$1(_cache.deps, function (oldValue, key) {
-            var _context$get2 = context.get(key),
-                keypath = _context$get2.keypath,
-                value = _context$get2.value;
+          var isSame = _cache.keypath === keypath;
+          if (isSame) {
+            each$1(_cache.deps, function (oldValue, key) {
+              var _context$get2 = context.get(key),
+                  keypath = _context$get2.keypath,
+                  value = _context$get2.value;
 
-            if (value === oldValue) {
-              deps[keypath] = value;
-            } else {
-              return isSame = FALSE;
-            }
-          });
+              if (value === oldValue) {
+                deps[keypath] = value;
+              } else {
+                return isSame = FALSE;
+              }
+            });
+          }
           if (isSame) {
             currentCache[trackBy] = _cache;
             addChild(last(htmlStack), _cache.vnode);
@@ -3787,6 +3793,9 @@ function render(ast, data, instance) {
 
         cacheDeps = {};
         output.key = trackBy;
+        currentCache[trackBy] = {
+          keypath: keypath
+        };
       }
     }
   };
@@ -3814,10 +3823,8 @@ function render(ast, data, instance) {
     }, output.children, key, source.component);
 
     if (isDefined(key)) {
-      currentCache[key] = {
-        deps: cacheDeps,
-        vnode: vnode
-      };
+      currentCache[key].deps = cacheDeps;
+      currentCache[key].vnode = vnode;
       cacheDeps = NULL;
     }
 
@@ -4096,6 +4103,8 @@ var Observer = function () {
        * 当修改 b 时，要通知 a 更新，不通知 c 更新
        * 当修改 a 时，仅自己更新
        *
+       * 有时候，b 的数据来自 c 的过滤，当修改 b 时，实际是修改 c，这时候，应该从最深层开始往上通知
+       *
        * 当监听 user.* 时，如果修改了 user.name，不仅要触发 user.name 的 watcher，也要触发 user.* 的 watcher
        *
        * 这里遵循的一个原则是，只有当修改数据确实产生了数据变化，才会分析它的依赖
@@ -4185,6 +4194,8 @@ var Observer = function () {
         set$1(data, keypath, newValue);
       });
 
+      var nextDifferences = [];
+
       var fireDifference = function fireDifference(_ref) {
         var keypath = _ref.keypath,
             realpath = _ref.realpath,
@@ -4200,7 +4211,11 @@ var Observer = function () {
           if (match) {
             push(args, match);
           }
-          emitter.fire(keypath + (force ? FORCE : CHAR_BLANK), args, context);
+          if (force) {
+            emitter.fire(keypath + FORCE, args, context);
+          } else {
+            nextDifferences.push(args);
+          }
 
           newValue = getNewValue(realpath);
           if (newValue !== oldValue) {
@@ -4232,6 +4247,21 @@ var Observer = function () {
 
       for (var i = 0; i < differences.length; i++) {
         fireDifference(differences[i]);
+      }
+
+      if (nextDifferences.length) {
+        append(function () {
+          if (instance.deps) {
+            each(nextDifferences, function (difference) {
+              var keypath = difference[3] || difference[2];
+              var newValue = instance.get(keypath);
+              if (difference[1] !== newValue) {
+                difference[0] = newValue;
+                emitter.fire(difference[2], difference, context);
+              }
+            });
+          }
+        });
       }
     }
   }, {
@@ -4379,10 +4409,12 @@ function createWatch(action) {
 
       if (!isFuzzyKeypath(keypath)) {
         append(function () {
-          // get 会缓存一下当前值，便于下次对比
-          value = instance.get(keypath);
-          if (sync) {
-            execute(watcher, context, [value, UNDEFINED, keypath]);
+          if (instance.deps) {
+            // get 会缓存一下当前值，便于下次对比
+            value = instance.get(keypath);
+            if (sync) {
+              execute(watcher, context, [value, UNDEFINED, keypath]);
+            }
           }
         });
       }
@@ -4970,21 +5002,13 @@ var bindEvent = function (_ref) {
 };
 
 var inputControl = {
-  set: function set$$1(_ref) {
-    var el = _ref.el,
-        keypath = _ref.keypath,
-        instance = _ref.instance;
-
+  set: function set$$1(el, keypath, instance) {
     var value = toString(instance.get(keypath));
     if (value !== el.value) {
       el.value = value;
     }
   },
-  sync: function sync(_ref2) {
-    var el = _ref2.el,
-        keypath = _ref2.keypath,
-        instance = _ref2.instance;
-
+  sync: function sync(el, keypath, instance) {
     instance.set(keypath, el.value);
   },
 
@@ -4992,11 +5016,7 @@ var inputControl = {
 };
 
 var selectControl = {
-  set: function set$$1(_ref3) {
-    var el = _ref3.el,
-        keypath = _ref3.keypath,
-        instance = _ref3.instance;
-
+  set: function set$$1(el, keypath, instance) {
     var value = toString(instance.get(keypath));
     var options = el.options,
         selectedIndex = el.selectedIndex;
@@ -5010,10 +5030,7 @@ var selectControl = {
       });
     }
   },
-  sync: function sync(_ref4) {
-    var el = _ref4.el,
-        keypath = _ref4.keypath,
-        instance = _ref4.instance;
+  sync: function sync(el, keypath, instance) {
     var value = el.options[el.selectedIndex].value;
 
     instance.set(keypath, value);
@@ -5021,18 +5038,10 @@ var selectControl = {
 };
 
 var radioControl = {
-  set: function set$$1(_ref5) {
-    var el = _ref5.el,
-        keypath = _ref5.keypath,
-        instance = _ref5.instance;
-
+  set: function set$$1(el, keypath, instance) {
     el.checked = el.value === toString(instance.get(keypath));
   },
-  sync: function sync(_ref6) {
-    var el = _ref6.el,
-        keypath = _ref6.keypath,
-        instance = _ref6.instance;
-
+  sync: function sync(el, keypath, instance) {
     if (el.checked) {
       instance.set(keypath, el.value);
     }
@@ -5042,19 +5051,11 @@ var radioControl = {
 };
 
 var checkboxControl = {
-  set: function set$$1(_ref7) {
-    var el = _ref7.el,
-        keypath = _ref7.keypath,
-        instance = _ref7.instance;
-
+  set: function set$$1(el, keypath, instance) {
     var value = instance.get(keypath);
     el.checked = array(value) ? has(value, el.value, FALSE) : boolean(value) ? value : !!value;
   },
-  sync: function sync(_ref8) {
-    var el = _ref8.el,
-        keypath = _ref8.keypath,
-        instance = _ref8.instance;
-
+  sync: function sync(el, keypath, instance) {
     var value = instance.get(keypath);
     if (array(value)) {
       if (el.checked) {
@@ -5077,12 +5078,12 @@ var specialControls = {
   select: selectControl
 };
 
-function twoway(keypath, _ref9) {
-  var el = _ref9.el,
-      node = _ref9.node,
-      instance = _ref9.instance,
-      directives = _ref9.directives,
-      attrs = _ref9.attrs;
+function twoway(keypath, _ref) {
+  var el = _ref.el,
+      node = _ref.node,
+      instance = _ref.instance,
+      directives = _ref.directives,
+      attrs = _ref.attrs;
 
 
   var type = CHANGE,
@@ -5096,14 +5097,8 @@ function twoway(keypath, _ref9) {
     }
   }
 
-  var data = {
-    el: el,
-    keypath: keypath,
-    instance: instance
-  };
-
   var set$$1 = function set$$1() {
-    control.set(data);
+    control.set(el, keypath, instance);
   };
 
   instance.watch(keypath, set$$1, control.attr && !has$1(attrs, control.attr));
@@ -5115,7 +5110,7 @@ function twoway(keypath, _ref9) {
     directives: directives,
     type: type,
     listener: function listener() {
-      control.sync(data);
+      control.sync(el, keypath, instance);
     }
   });
 
@@ -5125,11 +5120,11 @@ function twoway(keypath, _ref9) {
   };
 }
 
-function oneway(keypath, _ref10) {
-  var el = _ref10.el,
-      node = _ref10.node,
-      instance = _ref10.instance,
-      component = _ref10.component;
+function oneway(keypath, _ref2) {
+  var el = _ref2.el,
+      node = _ref2.node,
+      instance = _ref2.instance,
+      component = _ref2.component;
 
 
   var set$$1 = function set$$1(value) {
@@ -5935,7 +5930,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.41.9';
+Yox.version = '0.42.0';
 
 /**
  * 工具，便于扩展、插件使用
