@@ -2720,12 +2720,6 @@ var Element = function (_Node) {
     return _this;
   }
 
-  createClass(Element, [{
-    key: 'addAttr',
-    value: function addAttr(child) {
-      push(this.attrs || (this.attrs = []), child);
-    }
-  }]);
   return Element;
 }(Node$2);
 
@@ -2991,11 +2985,9 @@ function compile(content) {
         }
       } else if (type === ATTRIBUTE && name === KEYWORD_UNIQUE) {
         var element = last(htmlStack);
-        var attrs = element.attrs;
-
-        remove(attrs, target);
-        if (!attrs.length) {
-          delete element.attrs;
+        remove(element.children, target);
+        if (!element.children.length) {
+          delete element.children;
         }
         if (!falsy(children)) {
           element.key = child.type === TEXT ? child.text : children;
@@ -3046,11 +3038,7 @@ function compile(content) {
 
     var currentNode = last(nodeStack);
     if (currentNode) {
-      if (htmlStack.length === 1 && currentNode.addAttr) {
-        currentNode.addAttr(node);
-      } else {
-        currentNode.addChild(node);
-      }
+      currentNode.addChild(node);
     } else {
       push(nodeList, node);
     }
@@ -3084,6 +3072,8 @@ function compile(content) {
     var match = content.match(closingTagPattern);
     if (match) {
       if (htmlStack.length === 1) {
+        var element = last(htmlStack);
+        element.divider = element.children ? element.children.length : 0;
         if (match[1] === CHAR_SLASH || selfClosingTagNamePattern.test(htmlStack[0].name)) {
           popStack(ELEMENT);
         }
@@ -3485,15 +3475,6 @@ function render(ast, data, instance) {
     return value !== UNDEFINED;
   };
 
-  var traverseList = function traverseList(list) {
-    each(list, function (node, index) {
-      if (!filterNode || filterNode(node)) {
-        sibling = list[index + 1];
-        pushStack(node);
-      }
-    });
-  };
-
   var addChild = function addChild(parent, child) {
 
     if (parent && isDefined(child)) {
@@ -3549,7 +3530,7 @@ function render(ast, data, instance) {
     if (has$1(output, 'value')) {
       value = output.value;
     } else if (source.expr) {
-      value = executeExpr(source.expr, source.binding || source.name === DIRECTIVE_MODEL);
+      value = executeExpr(source.expr, source.binding || source.type === DIRECTIVE);
     } else if (has$1(source, 'value')) {
       value = source.value;
     }
@@ -3562,7 +3543,7 @@ function render(ast, data, instance) {
   var attributeRendering = void 0;
   var pushStack = function pushStack(source) {
     var type = source.type,
-        attrs = source.attrs,
+        divider = source.divider,
         children = source.children;
 
 
@@ -3590,14 +3571,21 @@ function render(ast, data, instance) {
       push(htmlStack, output);
     }
 
-    if (attrs) {
-      attributeRendering = TRUE;
-      traverseList(attrs);
-      attributeRendering = NULL;
-    }
-
     if (children) {
-      traverseList(children);
+      each(children, function (node, index) {
+        if (index < divider) {
+          attributeRendering = TRUE;
+        } else if (attributeRendering && index >= divider) {
+          attributeRendering = NULL;
+        }
+        if (!filterNode || filterNode(node)) {
+          sibling = children[index + 1];
+          pushStack(node);
+        }
+      });
+      if (attributeRendering) {
+        attributeRendering = NULL;
+      }
     }
 
     execute(leave[type], NULL, [source, output]);
@@ -5701,7 +5689,7 @@ var Yox = function () {
               return execute$1(node, getValue, instance);
             });
           }
-          var method = instance[callee.source] || getValue(callee.source);
+          var method = instance[callee.source];
           if (execute(method, instance, args) === FALSE && isEvent) {
             event.prevent();
             event.stop();
