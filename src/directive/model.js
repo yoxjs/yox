@@ -173,7 +173,11 @@ function oneway(keypath, { el, node, instance, component }) {
 
 export default function (options) {
 
-  let { modifier, value, context } = options.node
+  let { modifier, expr, value, context } = options.node
+  if (expr) {
+    value = expr.keypath
+  }
+
   if (value) {
     let { keypath } = context.get(value)
     return modifier

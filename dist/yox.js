@@ -1592,7 +1592,7 @@ function bindDirective(vnode, key) {
     args.component = $component;
   }
 
-  var destroy = execute(instance.directive(node.name), NULL, args);
+  var destroy = execute(instance.directive(node.name), instance, args);
 
   if (func(destroy)) {
     if (!destroies) {
@@ -1626,7 +1626,7 @@ function updateDirectives(oldVnode, vnode) {
   each$1(newDirectives, function (directive, key) {
     if (has$1(oldDirectives, key)) {
       var oldDirective = oldDirectives[key];
-      if (oldDirective.value !== directive.value || oldDirective.context.get(THIS).value !== directive.context.get(THIS).value) {
+      if (oldDirective.value !== directive.value || oldDirective.keypath !== directive.keypath || oldDirective.context.get(THIS).value !== directive.context.get(THIS).value) {
         unbindDirective(oldVnode, key);
         bindDirective(vnode, key);
       }
@@ -3006,7 +3006,6 @@ function compile(content) {
           if (type === DIRECTIVE) {
             var expr = compile$1(child.text);
             target.expr = expr;
-            target.value = child.text;
             delete target.children;
           } else if (type === ATTRIBUTE) {
             target.value = child.text;
@@ -3420,6 +3419,12 @@ var Context = function () {
         return cache;
       }
 
+      if (keypath === SPECIAL_EVENT || keypath === SPECIAL_KEYPATH) {
+        return {
+          keypath: keypath
+        };
+      }
+
       keypath = joinKeypath(this, keypath);
 
       warn('Failed to lookup "' + keypath + '".');
@@ -3543,10 +3548,10 @@ function render(ast, data, instance) {
     var value = void 0;
     if (has$1(output, 'value')) {
       value = output.value;
+    } else if (source.expr) {
+      value = executeExpr(source.expr, source.binding || source.name === DIRECTIVE_MODEL);
     } else if (has$1(source, 'value')) {
       value = source.value;
-    } else if (source.expr) {
-      value = executeExpr(source.expr, source.binding);
     }
     if (value == NULL && (source.expr || source.children)) {
       value = CHAR_BLANK;
@@ -3624,6 +3629,12 @@ function render(ast, data, instance) {
     }
   };
 
+  // 缓存节点只处理一层，不支持下面这种多层缓存
+  // <div key="{{xx}}">
+  //     <div key="{{yy}}"></div>
+  // </div>
+  var cacheDeps = void 0;
+
   var executeExpr = function executeExpr(expr, filter) {
     return execute$1(expr, function (key) {
       var _context$get = context.get(key),
@@ -3632,9 +3643,16 @@ function render(ast, data, instance) {
 
       if (!filter && !numeric(keypath) && !func(value) && key !== SPECIAL_EVENT && key !== SPECIAL_KEYPATH) {
         deps[keypath] = value;
+        if (cacheDeps) {
+          cacheDeps[key] = value;
+        }
         // 响应数组长度的变化是个很普遍的需求
         if (array(value)) {
-          deps[join(keypath, 'length')] = value.length;
+          keypath = join(keypath, 'length');
+          deps[keypath] = value.length;
+          if (cacheDeps) {
+            cacheDeps[key] = value;
+          }
         }
       }
       return value;
@@ -3750,7 +3768,7 @@ function render(ast, data, instance) {
         trackBy = getValue(source, pushStack(source));
         attributeRendering = NULL;
       }
-      if (trackBy != NULL) {
+      if (isDefined(trackBy)) {
 
         if (!currentCache) {
           prevCache = ast.cache || {};
@@ -3758,27 +3776,41 @@ function render(ast, data, instance) {
         }
 
         var _cache = prevCache[trackBy];
-        var _result = context.get(keypath);
 
-        // 有缓存，且数据没有变化才算命中
-        if (_cache && _cache.value === _result.value) {
-          currentCache[trackBy] = _cache;
-          deps[_result.keypath] = _result.value;
-          addChild(last(htmlStack), _cache.result);
-          return FALSE;
-        } else {
-          output.key = trackBy;
-          currentCache[trackBy] = {
-            value: _result.value
-          };
+        if (_cache) {
+          var isSame = TRUE;
+          each$1(_cache.deps, function (oldValue, key) {
+            var _context$get2 = context.get(key),
+                keypath = _context$get2.keypath,
+                value = _context$get2.value;
+
+            if (value === oldValue) {
+              deps[keypath] = value;
+            } else {
+              return isSame = FALSE;
+            }
+          });
+          if (isSame) {
+            currentCache[trackBy] = _cache;
+            addChild(last(htmlStack), _cache.vnode);
+            return FALSE;
+          }
         }
+
+        cacheDeps = {};
+        output.key = trackBy;
       }
     }
   };
 
   leave[ELEMENT] = function (source, output) {
-    var key = output.key,
+
+    var key = void 0,
         props = void 0;
+    if (has$1(output, 'key')) {
+      key = output.key;
+    }
+
     if (source.props) {
       props = {};
       each$1(source.props, function (expr, key) {
@@ -3793,8 +3825,12 @@ function render(ast, data, instance) {
       directives: output.directives
     }, output.children, key, source.component);
 
-    if (key) {
-      currentCache[key].result = vnode;
+    if (isDefined(key)) {
+      currentCache[key] = {
+        deps: cacheDeps,
+        vnode: vnode
+      };
+      cacheDeps = NULL;
     }
 
     addChild(htmlStack[htmlStack.length - 2], vnode);
@@ -5137,8 +5173,13 @@ function oneway(keypath, _ref10) {
 var model = function (options) {
   var _options$node = options.node,
       modifier = _options$node.modifier,
+      expr = _options$node.expr,
       value = _options$node.value,
       context = _options$node.context;
+
+  if (expr) {
+    value = expr.keypath;
+  }
 
   if (value) {
     var _context$get = context.get(value),
@@ -5906,7 +5947,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.41.8';
+Yox.version = '0.41.9';
 
 /**
  * 工具，便于扩展、插件使用
