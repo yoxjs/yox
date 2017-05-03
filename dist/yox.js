@@ -1563,6 +1563,348 @@ var snabbdomProps = {
   update: updateProps
 };
 
+/**
+ * 字面量
+ *
+ * @type {number}
+ */
+var LITERAL = 1;
+
+/**
+ * 标识符
+ *
+ * @type {number}
+ */
+var IDENTIFIER = 2;
+
+/**
+ * 对象属性或数组下标
+ *
+ * @type {number}
+ */
+var MEMBER = 3;
+
+/**
+ * 一元表达式，如 - a
+ *
+ * @type {number}
+ */
+var UNARY = 4;
+
+/**
+ * 二元表达式，如 a + b
+ *
+ * @type {number}
+ */
+var BINARY = 5;
+
+/**
+ * 三元表达式，如 a ? b : c
+ *
+ * @type {number}
+ */
+var TERNARY = 6;
+
+/**
+ * 数组表达式，如 [ 1, 2, 3 ]
+ *
+ * @type {number}
+ */
+var ARRAY = 7;
+
+/**
+ * 函数调用表达式，如 a()
+ *
+ * @type {number}
+ */
+var CALL = 8;
+
+/**
+ * 节点基类
+ */
+
+var Node = function Node(type, source) {
+  classCallCheck(this, Node);
+
+  this.type = type;
+  this.source = trim(source);
+};
+
+var PLUS = '+';
+var MINUS = '-';
+var MULTIPLY = '*';
+var DIVIDE = '/';
+var MODULO = '%';
+var WAVE = '~';
+
+var AND = '&&';
+var OR = '||';
+var NOT = '!';
+var BOOLEAN = '!!';
+
+var SE = '===';
+var SNE = '!==';
+var LE = '==';
+var LNE = '!=';
+var LT = '<';
+var LTE = '<=';
+var GT = '>';
+var GTE = '>=';
+
+var unaryMap = {};
+
+unaryMap[PLUS] = unaryMap[MINUS] = unaryMap[NOT] = unaryMap[WAVE] = unaryMap[BOOLEAN] = TRUE;
+
+var unaryList = sort(unaryMap, TRUE);
+
+// 操作符和对应的优先级，数字越大优先级越高
+var binaryMap = {};
+
+binaryMap[OR] = 1;
+
+binaryMap[AND] = 2;
+
+binaryMap[LE] = binaryMap[LNE] = binaryMap[SE] = binaryMap[SNE] = 3;
+
+binaryMap[LT] = binaryMap[LTE] = binaryMap[GT] = binaryMap[GTE] = 4;
+
+binaryMap[PLUS] = binaryMap[MINUS] = 5;
+
+binaryMap[MULTIPLY] = binaryMap[DIVIDE] = binaryMap[MODULO] = 6;
+
+var binaryList = sort(binaryMap, TRUE);
+
+/**
+ * Unary 节点
+ *
+ * @param {string} operator
+ * @param {Node} arg
+ */
+
+var Unary = function (_Node) {
+  inherits(Unary, _Node);
+
+  function Unary(source, operator, arg) {
+    classCallCheck(this, Unary);
+
+    var _this = possibleConstructorReturn(this, (Unary.__proto__ || Object.getPrototypeOf(Unary)).call(this, UNARY, source));
+
+    _this.operator = operator;
+    _this.arg = arg;
+    return _this;
+  }
+
+  return Unary;
+}(Node);
+
+Unary[PLUS] = function (value) {
+  return +value;
+};
+Unary[MINUS] = function (value) {
+  return -value;
+};
+Unary[NOT] = function (value) {
+  return !value;
+};
+Unary[WAVE] = function (value) {
+  return ~value;
+};
+Unary[BOOLEAN] = function (value) {
+  return !!value;
+};
+
+/**
+ * Binary 节点
+ *
+ * @param {Node} left
+ * @param {string} operator
+ * @param {Node} right
+ */
+
+var Binary = function (_Node) {
+  inherits(Binary, _Node);
+
+  function Binary(source, left, operator, right) {
+    classCallCheck(this, Binary);
+
+    var _this = possibleConstructorReturn(this, (Binary.__proto__ || Object.getPrototypeOf(Binary)).call(this, BINARY, source));
+
+    _this.left = left;
+    _this.operator = operator;
+    _this.right = right;
+    return _this;
+  }
+
+  return Binary;
+}(Node);
+
+Binary[OR] = function (a, b) {
+  return a || b;
+};
+Binary[AND] = function (a, b) {
+  return a && b;
+};
+Binary[SE] = function (a, b) {
+  return a === b;
+};
+Binary[SNE] = function (a, b) {
+  return a !== b;
+};
+Binary[LE] = function (a, b) {
+  return a == b;
+};
+Binary[LNE] = function (a, b) {
+  return a != b;
+};
+Binary[LT] = function (a, b) {
+  return a < b;
+};
+Binary[LTE] = function (a, b) {
+  return a <= b;
+};
+Binary[GT] = function (a, b) {
+  return a > b;
+};
+Binary[GTE] = function (a, b) {
+  return a >= b;
+};
+Binary[PLUS] = function (a, b) {
+  return a + b;
+};
+Binary[MINUS] = function (a, b) {
+  return a - b;
+};
+Binary[MULTIPLY] = function (a, b) {
+  return a * b;
+};
+Binary[DIVIDE] = function (a, b) {
+  return a / b;
+};
+Binary[MODULO] = function (a, b) {
+  return a % b;
+};
+
+/**
+ * Member 节点
+ *
+ * @param {Node} object
+ * @param {Node} prop
+ */
+
+var Member = function (_Node) {
+  inherits(Member, _Node);
+
+  function Member(source, object, prop) {
+    classCallCheck(this, Member);
+
+    var _this = possibleConstructorReturn(this, (Member.__proto__ || Object.getPrototypeOf(Member)).call(this, MEMBER, source));
+
+    var props = [];
+    if (object.type === MEMBER) {
+      push(props, object.props);
+    } else {
+      push(props, object);
+    }
+
+    push(props, prop);
+
+    _this.props = props;
+
+    var success = TRUE;
+    var keypath = Member.stringify(_this, function () {
+      success = FALSE;
+    });
+    if (success) {
+      _this.keypath = keypath;
+    }
+
+    return _this;
+  }
+
+  return Member;
+}(Node);
+
+Member.stringify = function (node, execute) {
+  var keypaths = node.props.map(function (node, index) {
+    var type = node.type;
+
+    if (type !== LITERAL) {
+      if (index > 0) {
+        return execute(node);
+      } else if (type === IDENTIFIER) {
+        return node.name;
+      }
+    } else {
+      return node.value;
+    }
+  });
+  return stringify(keypaths);
+};
+
+var executor = {};
+
+executor[LITERAL] = function (node) {
+  return node.value;
+};
+
+executor[IDENTIFIER] = function (node, getter, context) {
+  return getter(node.name);
+};
+
+executor[MEMBER] = function (node, getter, context) {
+  var keypath = node.keypath;
+
+  if (!keypath) {
+    keypath = Member.stringify(node, function (node) {
+      return execute$1(node, getter, context);
+    });
+  }
+  return getter(keypath);
+};
+
+executor[UNARY] = function (node, getter, context) {
+  return Unary[node.operator](execute$1(node.arg, getter, context));
+};
+
+executor[BINARY] = function (node, getter, context) {
+  var left = node.left,
+      right = node.right;
+
+  return Binary[node.operator](execute$1(left, getter, context), execute$1(right, getter, context));
+};
+
+executor[TERNARY] = function (node, getter, context) {
+  var test = node.test,
+      consequent = node.consequent,
+      alternate = node.alternate;
+
+  return execute$1(test, getter, context) ? execute$1(consequent, getter, context) : execute$1(alternate, getter, context);
+};
+
+executor[ARRAY] = function (node, getter, context) {
+  return node.elements.map(function (node) {
+    return execute$1(node, getter, context);
+  });
+};
+
+executor[CALL] = function (node, getter, context) {
+  return execute(execute$1(node.callee, getter, context), context, node.args.map(function (node) {
+    return execute$1(node, getter, context);
+  }));
+};
+
+/**
+ * 表达式求值
+ *
+ * @param {Node} node 表达式抽象节点
+ * @param {Function} getter 读取数据的方法
+ * @param {*} context 表达式函数调用的执行上下文
+ * @return {*}
+ */
+function execute$1(node, getter, context) {
+  return executor[node.type](node, getter, context);
+}
+
 function bindDirective(vnode, key) {
   var el = vnode.el,
       component = vnode.component;
@@ -1611,6 +1953,17 @@ function unbindDirective(vnode, key) {
   }
 }
 
+function executeDirective(directive) {
+  var expr = directive.expr,
+      context = directive.context;
+
+  if (expr) {
+    return execute$1(expr, function (key) {
+      return context.get(key).value;
+    });
+  }
+}
+
 function updateDirectives(oldVnode, vnode) {
 
   var oldDirectives = oldVnode.data.directives;
@@ -1626,7 +1979,7 @@ function updateDirectives(oldVnode, vnode) {
   each$1(newDirectives, function (directive, key) {
     if (has$1(oldDirectives, key)) {
       var oldDirective = oldDirectives[key];
-      if (oldDirective.value !== directive.value || oldDirective.keypath !== directive.keypath || oldDirective.context.get(THIS).value !== directive.context.get(THIS).value) {
+      if (oldDirective.value !== directive.value || oldDirective.keypath !== directive.keypath || oldDirective.context.get(THIS).value !== directive.context.get(THIS).value || executeDirective(oldDirective) !== executeDirective(directive)) {
         unbindDirective(oldVnode, key);
         bindDirective(vnode, key);
       }
@@ -1733,117 +2086,6 @@ var snabbdomComponent = {
 };
 
 /**
- * 字面量
- *
- * @type {number}
- */
-var LITERAL = 1;
-
-/**
- * 标识符
- *
- * @type {number}
- */
-var IDENTIFIER = 2;
-
-/**
- * 对象属性或数组下标
- *
- * @type {number}
- */
-var MEMBER = 3;
-
-/**
- * 一元表达式，如 - a
- *
- * @type {number}
- */
-var UNARY = 4;
-
-/**
- * 二元表达式，如 a + b
- *
- * @type {number}
- */
-var BINARY = 5;
-
-/**
- * 三元表达式，如 a ? b : c
- *
- * @type {number}
- */
-var TERNARY = 6;
-
-/**
- * 数组表达式，如 [ 1, 2, 3 ]
- *
- * @type {number}
- */
-var ARRAY = 7;
-
-/**
- * 函数调用表达式，如 a()
- *
- * @type {number}
- */
-var CALL = 8;
-
-var PLUS = '+';
-var MINUS = '-';
-var MULTIPLY = '*';
-var DIVIDE = '/';
-var MODULO = '%';
-var WAVE = '~';
-
-var AND = '&&';
-var OR = '||';
-var NOT = '!';
-var BOOLEAN = '!!';
-
-var SE = '===';
-var SNE = '!==';
-var LE = '==';
-var LNE = '!=';
-var LT = '<';
-var LTE = '<=';
-var GT = '>';
-var GTE = '>=';
-
-var unaryMap = {};
-
-unaryMap[PLUS] = unaryMap[MINUS] = unaryMap[NOT] = unaryMap[WAVE] = unaryMap[BOOLEAN] = TRUE;
-
-var unaryList = sort(unaryMap, TRUE);
-
-// 操作符和对应的优先级，数字越大优先级越高
-var binaryMap = {};
-
-binaryMap[OR] = 1;
-
-binaryMap[AND] = 2;
-
-binaryMap[LE] = binaryMap[LNE] = binaryMap[SE] = binaryMap[SNE] = 3;
-
-binaryMap[LT] = binaryMap[LTE] = binaryMap[GT] = binaryMap[GTE] = 4;
-
-binaryMap[PLUS] = binaryMap[MINUS] = 5;
-
-binaryMap[MULTIPLY] = binaryMap[DIVIDE] = binaryMap[MODULO] = 6;
-
-var binaryList = sort(binaryMap, TRUE);
-
-/**
- * 节点基类
- */
-
-var Node = function Node(type, source) {
-  classCallCheck(this, Node);
-
-  this.type = type;
-  this.source = trim(source);
-};
-
-/**
  * Array 节点
  *
  * @param {Array.<Node>} elements
@@ -1863,77 +2105,6 @@ var Array$1 = function (_Node) {
 
   return Array;
 }(Node);
-
-/**
- * Binary 节点
- *
- * @param {Node} left
- * @param {string} operator
- * @param {Node} right
- */
-
-var Binary = function (_Node) {
-  inherits(Binary, _Node);
-
-  function Binary(source, left, operator, right) {
-    classCallCheck(this, Binary);
-
-    var _this = possibleConstructorReturn(this, (Binary.__proto__ || Object.getPrototypeOf(Binary)).call(this, BINARY, source));
-
-    _this.left = left;
-    _this.operator = operator;
-    _this.right = right;
-    return _this;
-  }
-
-  return Binary;
-}(Node);
-
-Binary[OR] = function (a, b) {
-  return a || b;
-};
-Binary[AND] = function (a, b) {
-  return a && b;
-};
-Binary[SE] = function (a, b) {
-  return a === b;
-};
-Binary[SNE] = function (a, b) {
-  return a !== b;
-};
-Binary[LE] = function (a, b) {
-  return a == b;
-};
-Binary[LNE] = function (a, b) {
-  return a != b;
-};
-Binary[LT] = function (a, b) {
-  return a < b;
-};
-Binary[LTE] = function (a, b) {
-  return a <= b;
-};
-Binary[GT] = function (a, b) {
-  return a > b;
-};
-Binary[GTE] = function (a, b) {
-  return a >= b;
-};
-Binary[PLUS] = function (a, b) {
-  return a + b;
-};
-Binary[MINUS] = function (a, b) {
-  return a - b;
-};
-Binary[MULTIPLY] = function (a, b) {
-  return a * b;
-};
-Binary[DIVIDE] = function (a, b) {
-  return a / b;
-};
-Binary[MODULO] = function (a, b) {
-  return a % b;
-};
 
 /**
  * Call 节点
@@ -2025,102 +2196,6 @@ var Literal = function (_Node) {
 
   return Literal;
 }(Node);
-
-/**
- * Member 节点
- *
- * @param {Node} object
- * @param {Node} prop
- */
-
-var Member = function (_Node) {
-  inherits(Member, _Node);
-
-  function Member(source, object, prop) {
-    classCallCheck(this, Member);
-
-    var _this = possibleConstructorReturn(this, (Member.__proto__ || Object.getPrototypeOf(Member)).call(this, MEMBER, source));
-
-    var props = [];
-    if (object.type === MEMBER) {
-      push(props, object.props);
-    } else {
-      push(props, object);
-    }
-
-    push(props, prop);
-
-    _this.props = props;
-
-    var success = TRUE;
-    var keypath = Member.stringify(_this, function () {
-      success = FALSE;
-    });
-    if (success) {
-      _this.keypath = keypath;
-    }
-
-    return _this;
-  }
-
-  return Member;
-}(Node);
-
-Member.stringify = function (node, execute) {
-  var keypaths = node.props.map(function (node, index) {
-    var type = node.type;
-
-    if (type !== LITERAL) {
-      if (index > 0) {
-        return execute(node);
-      } else if (type === IDENTIFIER) {
-        return node.name;
-      }
-    } else {
-      return node.value;
-    }
-  });
-  return stringify(keypaths);
-};
-
-/**
- * Unary 节点
- *
- * @param {string} operator
- * @param {Node} arg
- */
-
-var Unary = function (_Node) {
-  inherits(Unary, _Node);
-
-  function Unary(source, operator, arg) {
-    classCallCheck(this, Unary);
-
-    var _this = possibleConstructorReturn(this, (Unary.__proto__ || Object.getPrototypeOf(Unary)).call(this, UNARY, source));
-
-    _this.operator = operator;
-    _this.arg = arg;
-    return _this;
-  }
-
-  return Unary;
-}(Node);
-
-Unary[PLUS] = function (value) {
-  return +value;
-};
-Unary[MINUS] = function (value) {
-  return -value;
-};
-Unary[NOT] = function (value) {
-  return !value;
-};
-Unary[WAVE] = function (value) {
-  return ~value;
-};
-Unary[BOOLEAN] = function (value) {
-  return !!value;
-};
 
 // 区分关键字和普通变量
 // 举个例子：a === true
@@ -3011,6 +3086,7 @@ function compile(content) {
           if (type === DIRECTIVE) {
             var expr = compile$1(child.text);
             target.expr = expr;
+            target.value = child.text;
             delete target.children;
           } else if (type === ATTRIBUTE) {
             target.value = child.text;
@@ -3262,70 +3338,6 @@ function compile(content) {
   return compileCache[content] = nodeList;
 }
 
-var executor = {};
-
-executor[LITERAL] = function (node) {
-  return node.value;
-};
-
-executor[IDENTIFIER] = function (node, getter, context) {
-  return getter(node.name);
-};
-
-executor[MEMBER] = function (node, getter, context) {
-  var keypath = node.keypath;
-
-  if (!keypath) {
-    keypath = Member.stringify(node, function (node) {
-      return execute$1(node, getter, context);
-    });
-  }
-  return getter(keypath);
-};
-
-executor[UNARY] = function (node, getter, context) {
-  return Unary[node.operator](execute$1(node.arg, getter, context));
-};
-
-executor[BINARY] = function (node, getter, context) {
-  var left = node.left,
-      right = node.right;
-
-  return Binary[node.operator](execute$1(left, getter, context), execute$1(right, getter, context));
-};
-
-executor[TERNARY] = function (node, getter, context) {
-  var test = node.test,
-      consequent = node.consequent,
-      alternate = node.alternate;
-
-  return execute$1(test, getter, context) ? execute$1(consequent, getter, context) : execute$1(alternate, getter, context);
-};
-
-executor[ARRAY] = function (node, getter, context) {
-  return node.elements.map(function (node) {
-    return execute$1(node, getter, context);
-  });
-};
-
-executor[CALL] = function (node, getter, context) {
-  return execute(execute$1(node.callee, getter, context), context, node.args.map(function (node) {
-    return execute$1(node, getter, context);
-  }));
-};
-
-/**
- * 表达式求值
- *
- * @param {Node} node 表达式抽象节点
- * @param {Function} getter 读取数据的方法
- * @param {*} context 表达式函数调用的执行上下文
- * @return {*}
- */
-function execute$1(node, getter, context) {
-  return executor[node.type](node, getter, context);
-}
-
 var Context = function () {
 
   /**
@@ -3541,12 +3553,12 @@ function render(ast, data, instance) {
     var value = void 0;
     if (has$1(output, 'value')) {
       value = output.value;
-    } else if (source.expr) {
-      value = executeExpr(source.expr, source.binding || source.type === DIRECTIVE);
     } else if (has$1(source, 'value')) {
       value = source.value;
+    } else if (source.expr) {
+      value = executeExpr(source.expr, source.binding || source.type === DIRECTIVE);
     }
-    if (value == NULL && (source.expr || source.children)) {
+    if (!isDefined(value) && (source.expr || source.children)) {
       value = CHAR_BLANK;
     }
     return value;
@@ -5192,15 +5204,10 @@ function oneway(keypath, _ref2) {
 var model = function (options) {
   var _options$node = options.node,
       modifier = _options$node.modifier,
-      expr = _options$node.expr,
       value = _options$node.value,
       context = _options$node.context;
 
-  if (expr) {
-    value = expr.keypath;
-  }
-
-  if (value) {
+  if (!falsy$1(value)) {
     var _context$get = context.get(value),
         keypath = _context$get.keypath;
 
@@ -5966,7 +5973,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.42.1';
+Yox.version = '0.42.2';
 
 /**
  * 工具，便于扩展、插件使用
