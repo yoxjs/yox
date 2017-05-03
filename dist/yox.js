@@ -2975,6 +2975,7 @@ function compile(content) {
     if (target) {
       var _target = target,
           name = _target.name,
+          divider = _target.divider,
           children = _target.children;
 
       var child = getSingleChild(children);
@@ -2983,11 +2984,17 @@ function compile(content) {
         if (expectedName && name !== expectedName) {
           throwError('end tag expected </' + name + '> to be </' + expectedName + '>.');
         }
-        if (child && child.type === EXPRESSION && child.safe === FALSE) {
-          target.props = {
-            innerHTML: child.expr
-          };
-          delete target.children;
+        if (children && children.length - divider === 1) {
+          child = last(children);
+          if (child.type === EXPRESSION && child.safe === FALSE) {
+            target.props = {
+              innerHTML: child.expr
+            };
+            children.length = divider;
+            if (!divider) {
+              delete target.children;
+            }
+          }
         }
       } else if (type === ATTRIBUTE && name === KEYWORD_UNIQUE) {
         var element = last(htmlStack);
@@ -3012,7 +3019,8 @@ function compile(content) {
         }
         // 属性绑定，把 Attribute 转成 单向绑定 指令
         else if (type === ATTRIBUTE && child.type === EXPRESSION && child.safe) {
-            var _expr = child.expr;
+            var _child = child,
+                _expr = _child.expr;
 
             if (string(_expr.keypath)) {
               target.expr = _expr;
@@ -4110,10 +4118,14 @@ var Observer = function () {
        * 这里遵循的一个原则是，只有当修改数据确实产生了数据变化，才会分析它的依赖
        */
 
+      var joinKeypath = function joinKeypath(keypath1, keypath2) {
+        return keypath1 + CHAR_DASH + keypath2;
+      };
+
       var differences = [],
           differenceMap = {};
       var addDifference = function addDifference(keypath, realpath, oldValue, match, force) {
-        var fullpath = keypath + CHAR_DASH + realpath;
+        var fullpath = joinKeypath(keypath, realpath);
         if (!differenceMap[fullpath]) {
           differenceMap[fullpath] = TRUE;
           push(differences, {
@@ -4194,7 +4206,43 @@ var Observer = function () {
         set$1(data, keypath, newValue);
       });
 
-      var nextDifferences = [];
+      var addAsyncDifference = function addAsyncDifference(keypath, realpath, oldValue) {
+
+        var differences = instance.differences || (instance.differences = {});
+        differences[joinKeypath(keypath, realpath)] = {
+          keypath: keypath,
+          realpath: realpath,
+          oldValue: oldValue
+        };
+
+        if (!instance.pending) {
+          instance.pending = TRUE;
+          append(function () {
+            if (instance.pending) {
+              // 冻结这批变化
+              // 避免 fire 之后同步再次走进这里
+              var _differences = instance.differences;
+
+              delete instance.pending;
+              delete instance.differences;
+              each$1(_differences, function (difference) {
+                var keypath = difference.keypath,
+                    realpath = difference.realpath,
+                    oldValue = difference.oldValue,
+                    newValue = instance.get(realpath);
+
+                if (oldValue !== newValue) {
+                  var args = [newValue, oldValue, keypath];
+                  if (realpath !== keypath) {
+                    push(args, realpath);
+                  }
+                  emitter.fire(keypath, args, context);
+                }
+              });
+            }
+          });
+        }
+      };
 
       var fireDifference = function fireDifference(_ref) {
         var keypath = _ref.keypath,
@@ -4214,14 +4262,17 @@ var Observer = function () {
           if (force) {
             emitter.fire(keypath + FORCE, args, context);
           } else {
-            nextDifferences.push(args);
+            if (has$2(keypath, FORCE)) {
+              emitter.fire(keypath, args, context);
+            } else {
+              addAsyncDifference(keypath, realpath, oldValue);
+            }
           }
 
           newValue = getNewValue(realpath);
           if (newValue !== oldValue) {
             if (force) {
-              args[0] = newValue;
-              emitter.fire(keypath, args, context);
+              addAsyncDifference(keypath, realpath, oldValue);
             }
             each(watchKeypaths, function (key) {
               if (key !== realpath) {
@@ -4247,21 +4298,6 @@ var Observer = function () {
 
       for (var i = 0; i < differences.length; i++) {
         fireDifference(differences[i]);
-      }
-
-      if (nextDifferences.length) {
-        append(function () {
-          if (instance.deps) {
-            each(nextDifferences, function (difference) {
-              var keypath = difference[3] || difference[2];
-              var newValue = instance.get(keypath);
-              if (difference[1] !== newValue) {
-                difference[0] = newValue;
-                emitter.fire(difference[2], difference, context);
-              }
-            });
-          }
-        });
       }
     }
   }, {
@@ -5930,7 +5966,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.42.0';
+Yox.version = '0.42.1';
 
 /**
  * 工具，便于扩展、插件使用
