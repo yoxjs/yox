@@ -3032,10 +3032,6 @@ function compile(content) {
     fatal('Error compiling template:' + CHAR_BREAKLINE + content + CHAR_BREAKLINE + '- ' + msg);
   };
 
-  var getSingleChild = function getSingleChild(children) {
-    return children && children.length === 1 && children[0];
-  };
-
   var popStack = function popStack(type, expectedName) {
 
     var target = void 0;
@@ -3053,58 +3049,84 @@ function compile(content) {
           divider = _target.divider,
           children = _target.children;
 
-      var child = getSingleChild(children);
+      if (type === ELEMENT && expectedName && name !== expectedName) {
+        throwError('end tag expected </' + name + '> to be </' + expectedName + '>.');
+      }
+
+      // ==========================================
+      // 以下是性能优化的逻辑
+      // ==========================================
+
+      // 如果 children 没实际的数据，删掉它
+      // 避免在渲染阶段增加计算量
+      if (children && !children.length) {
+        delete target.children;
+      }
+      if (!target.children) {
+        if (has$1(target, 'divider')) {
+          delete target.divider;
+        }
+        return;
+      }
+
+      var onlyChild = children.length === 1 && children[0];
 
       if (type === ELEMENT) {
-        if (expectedName && name !== expectedName) {
-          throwError('end tag expected </' + name + '> to be </' + expectedName + '>.');
-        }
-        if (children && children.length - divider === 1) {
-          child = last(children);
-          if (child.type === EXPRESSION && child.safe === FALSE) {
+        // 只有一个子元素
+        // 并且这个子元素是非转义插值
+        // 转成 props
+        if (children.length - divider === 1) {
+          onlyChild = last(children);
+          if (onlyChild.type === EXPRESSION && onlyChild.safe === FALSE) {
             target.props = {
-              innerHTML: child.expr
+              innerHTML: onlyChild.expr
             };
-            children.length = divider;
-            if (!divider) {
+            if (divider) {
+              children.length = divider;
+            } else {
               delete target.children;
             }
           }
         }
-      } else if (type === ATTRIBUTE && name === KEYWORD_UNIQUE) {
-        var element = last(htmlStack);
-        remove(element.children, target);
-        if (!element.children.length) {
-          delete element.children;
-        }
-        if (!falsy(children)) {
-          element.key = child.type === TEXT ? child.text : children;
-        }
-      } else if (child) {
-        if (child.type === TEXT) {
-          // 预编译表达式，提升性能
-          if (type === DIRECTIVE) {
-            var expr = compile$1(child.text);
-            target.expr = expr;
-            target.value = child.text;
-            delete target.children;
-          } else if (type === ATTRIBUTE) {
-            target.value = child.text;
-            delete target.children;
-          }
-        }
-        // 属性绑定，把 Attribute 转成 单向绑定 指令
-        else if (type === ATTRIBUTE && child.type === EXPRESSION && child.safe) {
-            var _child = child,
-                _expr = _child.expr;
-
-            if (string(_expr.keypath)) {
-              target.expr = _expr;
-              target.binding = _expr.keypath;
-              delete target.children;
-            }
-          }
       }
+      // <div key="xx">
+      // 把 key 从属性中提出来，减少渲染时的遍历
+      else if (type === ATTRIBUTE && name === KEYWORD_UNIQUE) {
+          var element = last(htmlStack);
+          remove(element.children, target);
+          if (!element.children.length) {
+            delete element.children;
+          }
+          element.key = onlyChild && onlyChild.type === TEXT ? onlyChild.text : children;
+        } else if (onlyChild) {
+          if (onlyChild.type === TEXT) {
+            // 指令的值如果是纯文本，可以预编译表达式，提升性能
+            if (type === DIRECTIVE) {
+              var expr = compile$1(onlyChild.text);
+              target.expr = expr;
+              target.value = onlyChild.text;
+              delete target.children;
+            }
+            // 属性的值如果是纯文本，直接获取文本值
+            // 减少渲染时的遍历
+            else if (type === ATTRIBUTE) {
+                target.value = onlyChild.text;
+                delete target.children;
+              }
+          }
+          // <div class="{{className}}">
+          // 把 Attribute 转成 单向绑定 指令，可实现精确更新视图
+          else if (type === ATTRIBUTE && onlyChild.type === EXPRESSION && onlyChild.safe) {
+              var _onlyChild = onlyChild,
+                  _expr = _onlyChild.expr;
+
+              if (string(_expr.keypath)) {
+                target.expr = _expr;
+                target.binding = _expr.keypath;
+                delete target.children;
+              }
+            }
+        }
     } else {
       throwError('{{/' + type2Name[type] + '}} is not a pair.');
     }
@@ -3328,7 +3350,7 @@ function compile(content) {
       if (match[1].length === match[3].length) {
         parseDelimiter(match[2], match[0]);
       } else {
-        throwError('invalid expression: ' + match[0]);
+        throwError('invalid syntax: ' + match[0]);
       }
     } else {
       parseHtml(str);
@@ -3578,17 +3600,6 @@ function render(ast, data, instance) {
       return;
     }
 
-    if (isDefined(source.keypath)) {
-      push(keypathList, source.keypath);
-      updateKeypath();
-    }
-    if (isDefined(source.forward)) {
-      context = context.push(source.forward, keypath);
-    }
-    if (array(source.context)) {
-      execute(context.set, context, source.context);
-    }
-
     push(nodeStack, output);
 
     if (htmlTypes[type]) {
@@ -3619,14 +3630,6 @@ function render(ast, data, instance) {
     }
 
     pop(nodeStack);
-
-    if (isDefined(source.forward)) {
-      context = context.pop();
-    }
-    if (isDefined(source.keypath)) {
-      pop(keypathList);
-      updateKeypath();
-    }
 
     return output;
   };
@@ -3660,10 +3663,9 @@ function render(ast, data, instance) {
         }
         // 响应数组长度的变化是个很普遍的需求
         if (array(value)) {
-          keypath = join(keypath, 'length');
-          deps[keypath] = value.length;
+          deps[join(keypath, 'length')] = value.length;
           if (cacheDeps) {
-            cacheDeps[key] = value;
+            cacheDeps[join(key, 'length')] = value.length;
           }
         }
       }
@@ -3725,39 +3727,48 @@ function render(ast, data, instance) {
         index = source.index,
         children = source.children;
 
-    var forward = executeExpr(expr),
+    var value = executeExpr(expr),
         each$$1 = void 0;
 
-    if (array(forward)) {
+    if (array(value)) {
       each$$1 = each;
-    } else if (object(forward)) {
+    } else if (object(value)) {
       each$$1 = each$1;
     }
 
     if (each$$1) {
 
-      var list = [];
+      var eachKeypath = expr.keypath;
+      if (isDefined(eachKeypath)) {
+        push(keypathList, eachKeypath);
+        updateKeypath();
+      }
+      context = context.push(value, keypath);
 
-      each$$1(forward, function (forward, i) {
+      each$$1(value, function (value, i) {
 
-        var child = {
-          forward: forward,
-          children: children,
-          keypath: i
-        };
+        push(keypathList, i);
+        updateKeypath();
 
+        context = context.push(value, keypath);
         if (index) {
-          child.context = [index, i];
+          context.set(index, i);
         }
 
-        push(list, child);
+        pushStack({
+          children: children
+        });
+
+        context = context.pop();
+        pop(keypathList);
+        updateKeypath();
       });
 
-      pushStack({
-        forward: forward,
-        children: list,
-        keypath: expr.keypath
-      });
+      context = context.pop();
+      if (isDefined(eachKeypath)) {
+        pop(keypathList);
+        updateKeypath();
+      }
     }
 
     return FALSE;
@@ -3898,14 +3909,14 @@ function render(ast, data, instance) {
     //    复杂的表达式，需要收集依赖
 
     var expr = source.expr,
-        hasKeypath = string(expr.keypath),
-        value = executeExpr(expr, hasKeypath);
+        spreadKeypath = expr.keypath,
+        value = executeExpr(expr, spreadKeypath);
 
     if (object(value)) {
       var element = last(htmlStack);
       each$1(value, function (value, name) {
         addAttr(element, name, value);
-        if (hasKeypath) {
+        if (spreadKeypath) {
           addDirective(element, DIRECTIVE_MODEL, name, join(expr.keypath, name));
         }
       });
@@ -5973,7 +5984,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.42.2';
+Yox.version = '0.42.3';
 
 /**
  * 工具，便于扩展、插件使用
