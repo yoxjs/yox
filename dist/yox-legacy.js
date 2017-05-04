@@ -167,6 +167,7 @@ var RAW_NULL = 'null';
 var RAW_UNDEFINED = 'undefined';
 
 var RAW_THIS = 'this';
+var RAW_FUNCTION = 'function';
 
 /**
  * 浏览器环境下的 window 对象
@@ -196,7 +197,7 @@ function is(arg, type) {
 }
 
 function func(arg) {
-  return is(arg, 'function');
+  return is(arg, RAW_FUNCTION);
 }
 
 function array(arg) {
@@ -241,7 +242,7 @@ var is$1 = Object.freeze({
 });
 
 /**
- * 放肆的执行一个函数，不管它有没有
+ * 任性地执行一个函数，不管它有没有、是不是
  *
  * @param {?Function} fn 调用的函数
  * @param {*} context 执行函数时的 this 指向
@@ -699,12 +700,12 @@ function stringify(keypaths) {
   return keypaths.filter(filter).join(SEPARATOR_KEY);
 }
 
-function startsWith$1(keypath, prefix, split$$1) {
+function startsWith$1(keypath, prefix) {
   var temp = void 0;
   if (keypath === prefix) {
-    return split$$1 ? [keypath, CHAR_BLANK] : TRUE;
+    return prefix.length;
   } else if (startsWith(keypath, temp = prefix + SEPARATOR_KEY)) {
-    return split$$1 ? [prefix, slice(keypath, temp.length)] : TRUE;
+    return temp.length;
   } else {
     return FALSE;
   }
@@ -1132,7 +1133,7 @@ var logger = Object.freeze({
 });
 
 var nextTick = void 0;
-if (typeof MutationObserver === 'function') {
+if ((typeof MutationObserver === 'undefined' ? 'undefined' : _typeof(MutationObserver)) === RAW_FUNCTION) {
   nextTick = function nextTick(fn) {
     var observer = new MutationObserver(fn);
     var textNode = doc.createTextNode(CHAR_BLANK);
@@ -1141,7 +1142,7 @@ if (typeof MutationObserver === 'function') {
     });
     textNode.data = CHAR_WHITESPACE;
   };
-} else if (typeof setImmediate === 'function') {
+} else if ((typeof setImmediate === 'undefined' ? 'undefined' : _typeof(setImmediate)) === RAW_FUNCTION) {
   nextTick = setImmediate;
 } else {
   nextTick = setTimeout;
@@ -3563,9 +3564,9 @@ var Context = function () {
 function formatKeypath(keypath) {
   keypath = normalize(keypath);
   var lookup = TRUE,
-      items = startsWith$1(keypath, RAW_THIS, TRUE);
-  if (items) {
-    keypath = items[1];
+      length = startsWith$1(keypath, RAW_THIS);
+  if (number(length)) {
+    keypath = slice(keypath, length);
     lookup = FALSE;
   }
   return { keypath: keypath, lookup: lookup };
@@ -4325,6 +4326,12 @@ var Observer = function () {
           oldValue: oldValue
         };
 
+        each$1(cache, function (value, key) {
+          if (key !== realpath && startsWith$1(key, realpath)) {
+            delete cache[key];
+          }
+        });
+
         if (!instance.pending) {
           instance.pending = TRUE;
           append(function () {
@@ -4393,7 +4400,7 @@ var Observer = function () {
                       addDifference(key, realpath, getOldValue(realpath), _match);
                     }
                   }
-                } else if (startsWith$1(key, realpath)) {
+                } else if (startsWith$1(key, realpath) !== FALSE) {
                   addDifference(key, key, getOldValue(key));
                 }
               }
@@ -4617,10 +4624,11 @@ function matchBestGetter(getters, keypath) {
       rest = void 0;
 
   each(sort(getters, TRUE), function (prefix) {
-    if (prefix = startsWith$1(keypath, prefix, TRUE)) {
-      key = prefix[0];
+    var length = startsWith$1(keypath, prefix);
+    if (length !== FALSE) {
+      key = prefix;
       value = getters[key];
-      rest = prefix[1];
+      rest = slice(keypath, length);
       return FALSE;
     }
   });
@@ -6185,7 +6193,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.42.4';
+Yox.version = '0.42.5';
 
 /**
  * 工具，便于扩展、插件使用
