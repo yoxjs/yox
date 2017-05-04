@@ -71,107 +71,21 @@ if (!Function.prototype.bind) {
   };
 }
 
-/**
- * 为了压缩，定义的常量
- *
- * @type {boolean}
- */
-var TRUE = true;
-var FALSE = false;
-var NULL = null;
-var UNDEFINED = undefined;
-var THIS = 'this';
-
-/**
- * 浏览器环境下的 window 对象
- *
- * @type {?Window}
- */
-var win = typeof window !== 'undefined' ? window : NULL;
-
-/**
- * 浏览器环境下的 document 对象
- *
- * @type {?Document}
- */
-var doc = typeof document !== 'undefined' ? document : NULL;
-
-/**
- * 空函数
- *
- * @return {Function}
- */
-function noop() {
-  /** yox */
-}
-
-function is(arg, type) {
-  return type === 'numeric' ? numeric(arg) : Object.prototype.toString.call(arg).toLowerCase() === '[object ' + type + ']';
-}
-
-function func(arg) {
-  return is(arg, 'function');
-}
-
-function array(arg) {
-  return is(arg, 'array');
-}
-
-function object(arg) {
-  // 低版本 IE 会把 null 和 undefined 当作 object
-  return arg && is(arg, 'object');
-}
-
-function string(arg) {
-  return is(arg, 'string');
-}
-
-function number(arg) {
-  return is(arg, 'number');
-}
-
-function boolean(arg) {
-  return is(arg, 'boolean');
-}
-
-function primitive(arg) {
-  return string(arg) || number(arg) || boolean(arg) || arg == NULL;
-}
-
-function numeric(arg) {
-  return !isNaN(parseFloat(arg)) && isFinite(arg);
-}
-
-var is$1 = Object.freeze({
-	is: is,
-	func: func,
-	array: array,
-	object: object,
-	string: string,
-	number: number,
-	boolean: boolean,
-	primitive: primitive,
-	numeric: numeric
-});
-
-var execute = function (fn, context, args) {
-  if (func(fn)) {
-    if (array(args)) {
-      return fn.apply(context, args);
-    } else {
-      return fn.call(context, args);
-    }
-  }
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
+  return typeof obj;
+} : function (obj) {
+  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
 };
 
-var toNumber = function (str) {
-  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
 
-  if (numeric(str)) {
-    return +str;
-  }
-  return defaultValue;
-};
+
+
+
+
+
+
+
+
 
 var classCallCheck = function (instance, Constructor) {
   if (!(instance instanceof Constructor)) {
@@ -237,6 +151,116 @@ var possibleConstructorReturn = function (self, call) {
   }
 
   return call && (typeof call === "object" || typeof call === "function") ? call : self;
+};
+
+/**
+ * 为了压缩，定义的常量
+ */
+var TRUE = true;
+var FALSE = false;
+var NULL = null;
+var UNDEFINED = undefined;
+
+var RAW_TRUE = 'true';
+var RAW_FALSE = 'false';
+var RAW_NULL = 'null';
+var RAW_UNDEFINED = 'undefined';
+
+var RAW_THIS = 'this';
+
+/**
+ * 浏览器环境下的 window 对象
+ *
+ * @type {?Window}
+ */
+var win = (typeof window === 'undefined' ? 'undefined' : _typeof(window)) !== RAW_UNDEFINED ? window : NULL;
+
+/**
+ * 浏览器环境下的 document 对象
+ *
+ * @type {?Document}
+ */
+var doc = (typeof document === 'undefined' ? 'undefined' : _typeof(document)) !== RAW_UNDEFINED ? document : NULL;
+
+/**
+ * 空函数
+ *
+ * @type {Function}
+ */
+function noop() {
+  /** yox */
+}
+
+function is(arg, type) {
+  return type === 'numeric' ? numeric(arg) : Object.prototype.toString.call(arg).toLowerCase() === '[object ' + type + ']';
+}
+
+function func(arg) {
+  return is(arg, 'function');
+}
+
+function array(arg) {
+  return is(arg, 'array');
+}
+
+function object(arg) {
+  // 低版本 IE 会把 null 和 undefined 当作 object
+  return arg && is(arg, 'object');
+}
+
+function string(arg) {
+  return is(arg, 'string');
+}
+
+function number(arg) {
+  return is(arg, 'number');
+}
+
+function boolean(arg) {
+  return is(arg, 'boolean');
+}
+
+function primitive(arg) {
+  return string(arg) || number(arg) || boolean(arg) || arg == NULL;
+}
+
+function numeric(arg) {
+  return !isNaN(parseFloat(arg)) && isFinite(arg);
+}
+
+var is$1 = Object.freeze({
+	is: is,
+	func: func,
+	array: array,
+	object: object,
+	string: string,
+	number: number,
+	boolean: boolean,
+	primitive: primitive,
+	numeric: numeric
+});
+
+/**
+ * 放肆的执行一个函数，不管它有没有
+ *
+ * @param {?Function} fn 调用的函数
+ * @param {*} context 执行函数时的 this 指向
+ * @param {*} args 调用函数的参数，多参数时传入数组
+ * @return {*} 调用函数的返回值
+ */
+var execute = function (fn, context, args) {
+  if (func(fn)) {
+    return array(args) ? fn.apply(context, args) : fn.call(context, args);
+  }
+};
+
+var toNumber = function (str) {
+  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+
+  if (numeric(str)) {
+    return +str;
+  }
+  return defaultValue;
 };
 
 var Event = function () {
@@ -645,9 +669,6 @@ var string$1 = Object.freeze({
 
 var SEPARATOR_KEY = '.';
 
-var LEVEL_CURRENT = '.';
-
-
 var normalizeCache = {};
 
 function normalize(str) {
@@ -667,11 +688,11 @@ function normalize(str) {
 }
 
 function filter(term) {
-  return term !== CHAR_BLANK && term !== THIS && term !== LEVEL_CURRENT;
+  return term !== CHAR_BLANK && term !== RAW_THIS;
 }
 
 function parse(str) {
-  return split(normalize(str), SEPARATOR_KEY).filter(filter);
+  return normalize(str).split(SEPARATOR_KEY).filter(filter);
 }
 
 function stringify(keypaths) {
@@ -688,6 +709,8 @@ function startsWith$1(keypath, prefix, split$$1) {
     return FALSE;
   }
 }
+
+
 
 function join(keypath1, keypath2) {
   if (keypath1 && keypath2) {
@@ -781,6 +804,8 @@ function clear(object$$1) {
  * @return {Object}
  */
 function extend(original, object1, object2, object3) {
+  // 尽量不用 arguments
+  // 提供三个扩展对象足够了吧...
   each([object1, object2, object3], function (object$$1) {
     if (object(object$$1)) {
       each$1(object$$1, function (value, key) {
@@ -933,8 +958,16 @@ var Emitter = function () {
       var instance = this;
       var addOnce = function addOnce(listener, type) {
         if (func(listener)) {
-          listener.$once = function () {
+          var $magic = listener.$magic;
+
+          listener.$magic = function () {
+            execute($magic);
             instance.off(type, listener);
+            if ($magic) {
+              listener.$magic = $magic;
+            } else {
+              delete listener.$magic;
+            }
           };
         }
       };
@@ -989,12 +1022,7 @@ var Emitter = function () {
 
           var result = execute(listener, context, data);
 
-          var $once = listener.$once;
-
-          if (func($once)) {
-            $once();
-            delete listener.$once;
-          }
+          execute(listener.$magic);
 
           // 如果没有返回 false，而是调用了 event.stop 也算是返回 false
           if (isEvent) {
@@ -1034,7 +1062,7 @@ var Emitter = function () {
  *
  * @type {boolean}
  */
-var hasConsole = typeof console !== 'undefined';
+var hasConsole = (typeof console === 'undefined' ? 'undefined' : _typeof(console)) !== RAW_UNDEFINED;
 
 var debug = /yox/.test(noop.toString());
 
@@ -1094,6 +1122,8 @@ function fatal(msg) {
   throw new Error('[Yox fatal]: ' + msg);
 }
 
+
+
 var logger = Object.freeze({
 	log: log,
 	warn: warn,
@@ -1101,30 +1131,20 @@ var logger = Object.freeze({
 	fatal: fatal
 });
 
-function byObserver(fn) {
-  var observer = new MutationObserver(fn);
-  var textNode = doc.createTextNode(CHAR_BLANK);
-  observer.observe(textNode, {
-    characterData: TRUE
-  });
-  textNode.data = CHAR_WHITESPACE;
-}
-
-function byImmediate(fn) {
-  setImmediate(fn);
-}
-
-function byTimeout(fn) {
-  setTimeout(fn);
-}
-
 var nextTick = void 0;
 if (typeof MutationObserver === 'function') {
-  nextTick = byObserver;
+  nextTick = function nextTick(fn) {
+    var observer = new MutationObserver(fn);
+    var textNode = doc.createTextNode(CHAR_BLANK);
+    observer.observe(textNode, {
+      characterData: TRUE
+    });
+    textNode.data = CHAR_WHITESPACE;
+  };
 } else if (typeof setImmediate === 'function') {
-  nextTick = byImmediate;
+  nextTick = setImmediate;
 } else {
-  nextTick = byTimeout;
+  nextTick = setTimeout;
 }
 
 var nextTick$1 = function (fn) {
@@ -1133,8 +1153,8 @@ var nextTick$1 = function (fn) {
   if (doc) {
     var activeElement = doc.activeElement;
 
-    if (activeElement && 'autofocus' in activeElement) {
-      byTimeout(fn);
+    if (activeElement && exists(activeElement, 'autofocus')) {
+      setTimeout(fn);
       return;
     }
   }
@@ -1172,9 +1192,9 @@ function prepend(task) {
  * 立即执行已添加的任务
  */
 function run() {
-  var tasks = nextTasks;
+  var currentTasks = nextTasks;
   nextTasks = [];
-  each(tasks, function (task) {
+  each(currentTasks, function (task) {
     task();
   });
 }
@@ -2046,7 +2066,7 @@ function updateDirectives(oldVnode, vnode) {
   each$1(newDirectives, function (directive, key) {
     if (has$1(oldDirectives, key)) {
       var oldDirective = oldDirectives[key];
-      if (oldDirective.value !== directive.value || oldDirective.keypath !== directive.keypath || oldDirective.context.get(THIS).value !== directive.context.get(THIS).value || executeDirective(oldDirective) !== executeDirective(directive)) {
+      if (oldDirective.value !== directive.value || oldDirective.keypath !== directive.keypath || oldDirective.context.get(RAW_THIS).value !== directive.context.get(RAW_THIS).value || executeDirective(oldDirective) !== executeDirective(directive)) {
         unbindDirective(oldVnode, key);
         bindDirective(vnode, key);
       }
@@ -2268,11 +2288,11 @@ var Literal = function (_Node) {
 // 举个例子：a === true
 // 从解析器的角度来说，a 和 true 是一样的 token
 var keywords = {};
-// 兼容 IE8
-keywords['true'] = TRUE;
-keywords['false'] = FALSE;
-keywords['null'] = NULL;
-keywords['undefined'] = UNDEFINED;
+
+keywords[RAW_TRUE] = TRUE;
+keywords[RAW_FALSE] = FALSE;
+keywords[RAW_NULL] = NULL;
+keywords[RAW_UNDEFINED] = UNDEFINED;
 
 // 缓存编译结果
 var compileCache$1 = {};
@@ -3438,7 +3458,7 @@ var Context = function () {
     classCallCheck(this, Context);
 
     this.data = {};
-    this.data[THIS] = data;
+    this.data[RAW_THIS] = data;
     this.keypath = keypath;
     this.parent = parent;
     this.cache = {};
@@ -3466,7 +3486,7 @@ var Context = function () {
       if (has$1(cache, keypath)) {
         delete cache[keypath];
       }
-      data[keypath || THIS] = value;
+      data[keypath || RAW_THIS] = value;
     }
   }, {
     key: 'get',
@@ -3485,7 +3505,7 @@ var Context = function () {
         return join(context.keypath, keypath);
       };
       var getValue = function getValue(data, keypath) {
-        return exists(data, keypath) ? { value: data[keypath] } : get$1(data[THIS], keypath);
+        return exists(data, keypath) ? { value: data[keypath] } : get$1(data[RAW_THIS], keypath);
       };
 
       if (!has$1(cache, keypath)) {
@@ -3515,7 +3535,7 @@ var Context = function () {
         } else {
           cache[keypath] = {
             keypath: instance.keypath,
-            value: data[THIS]
+            value: data[RAW_THIS]
           };
         }
       }
@@ -3543,7 +3563,7 @@ var Context = function () {
 function formatKeypath(keypath) {
   keypath = normalize(keypath);
   var lookup = TRUE,
-      items = startsWith$1(keypath, THIS, TRUE);
+      items = startsWith$1(keypath, RAW_THIS, TRUE);
   if (items) {
     keypath = items[1];
     lookup = FALSE;
@@ -4534,15 +4554,20 @@ function createWatch(action) {
       updateWatchKeypaths(instance);
 
       if (!isFuzzyKeypath(keypath)) {
-        append(function () {
-          if (instance.deps) {
-            // get 会缓存一下当前值，便于下次对比
-            value = instance.get(keypath);
-            if (sync) {
-              execute(watcher, context, [value, UNDEFINED, keypath]);
+        // 既然是 watch, 就先通过 get 缓存当前值，便于下次对比
+        value = instance.get(keypath);
+        // 立即执行，通过 Emitter 提供的 $magic 扩展实现
+        if (sync) {
+          var syncKey = 'sync-' + keypath;
+          watcher.$magic = function () {
+            watcher[syncKey] = TRUE;
+          };
+          append(function () {
+            if (instance.deps && !watcher[syncKey]) {
+              execute(watcher, context, [instance.get(keypath), value, keypath]);
             }
-          }
-        });
+          });
+        }
       }
     });
   };
@@ -4724,7 +4749,7 @@ function removeProp(node, name) {
 
 function setAttr(node, name, value) {
   if (booleanAttrMap[name]) {
-    value = value === TRUE || value === 'true' || value === name || value === UNDEFINED;
+    value = value === TRUE || value === RAW_TRUE || value === name || value == NULL;
   }
   if (attr2Prop[name]) {
     setProp(node, attr2Prop[name], value);
@@ -5152,10 +5177,10 @@ var ref = function (_ref) {
  *
  * @param {Function} fn 需要节制调用的函数
  * @param {number} delay 调用的时间间隔
- * @param {?boolean} immediate 是否立即触发
+ * @param {?boolean} sync 是否立即触发
  * @return {Function}
  */
-var debounce = function (fn, delay, immediate) {
+var debounce = function (fn, delay, sync) {
 
   var timer = void 0;
 
@@ -5164,13 +5189,13 @@ var debounce = function (fn, delay, immediate) {
     if (!timer) {
 
       var args = toArray$1(arguments);
-      if (immediate) {
+      if (sync) {
         execute(fn, NULL, args);
       }
 
       timer = setTimeout(function () {
         timer = NULL;
-        if (!immediate) {
+        if (!sync) {
           execute(fn, NULL, args);
         }
       }, delay);
@@ -6160,7 +6185,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.42.3';
+Yox.version = '0.42.4';
 
 /**
  * 工具，便于扩展、插件使用
