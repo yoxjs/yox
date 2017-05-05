@@ -9,7 +9,7 @@ import * as event from '../config/event'
 
 // 避免连续多次点击，主要用于提交表单场景
 // 移动端的 tap 事件可自行在业务层打补丁实现
-const immediateTypes = [ event.CLICK, event.TAP ]
+const syncTypes = [ event.CLICK, event.TAP ]
 
 export default function ({ el, node, instance, component, directives, type, listener }) {
 
@@ -25,7 +25,7 @@ export default function ({ el, node, instance, component, directives, type, list
     if (lazy) {
       let { value } = lazy
       if (is.numeric(value) && value >= 0) {
-        listener = debounce(listener, value, array.has(immediateTypes, type))
+        listener = debounce(listener, value, array.has(syncTypes, type))
       }
       else if (type === event.INPUT) {
         type = event.CHANGE
