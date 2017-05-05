@@ -428,7 +428,7 @@ function each(array$$1, callback, reversed) {
 }
 
 /**
- * 合并多个数组
+ * 合并两个数组
  *
  * @param {Array} array1
  * @param {Array} array2
@@ -442,19 +442,30 @@ function merge(array1, array2) {
 }
 
 /**
+ * 添加
+ *
+ * @param {Array} original
+ * @param {*} value
+ * @param {string} action
+ */
+function addItem(original, value, action) {
+  if (array(value)) {
+    each(value, function (item) {
+      original[action](item);
+    });
+  } else {
+    original[action](value);
+  }
+}
+
+/**
  * 往后加
  *
  * @param {Array} original
  * @param {*} value
  */
 function push(original, value) {
-  if (array(value)) {
-    each(value, function (item) {
-      original.push(item);
-    });
-  } else {
-    original.push(value);
-  }
+  addItem(original, value, 'push');
 }
 
 /**
@@ -464,13 +475,7 @@ function push(original, value) {
  * @param {*} value
  */
 function unshift(original, value) {
-  if (array(value)) {
-    each(value, function (item) {
-      original.unshift(item);
-    });
-  } else {
-    original.unshift(value);
-  }
+  addItem(original, value, 'unshift');
 }
 
 /**
@@ -492,9 +497,10 @@ function toArray$1(array$$1) {
  * @return {Object}
  */
 function toObject(array$$1, key, value) {
-  var result = {};
+  var result = {},
+      hasValue = arguments.length === 3;
   each(array$$1, function (item, index) {
-    result[key ? item[key] : item] = value;
+    result[key ? item[key] : item] = hasValue ? value : item;
   });
   return result;
 }
@@ -1164,7 +1170,7 @@ var nextTick$1 = function (fn) {
 
 var nextTasks = [];
 
-function add(name, task) {
+function addTask(name, task) {
   if (!nextTasks.length) {
     nextTick$1(run);
   }
@@ -1177,7 +1183,7 @@ function add(name, task) {
  * @param {Function} task
  */
 function append(task) {
-  add('push', task);
+  addTask('push', task);
 }
 
 /**
@@ -1186,7 +1192,7 @@ function append(task) {
  * @param {Function} task
  */
 function prepend(task) {
-  add('unshift', task);
+  addTask('unshift', task);
 }
 
 /**
@@ -4708,9 +4714,7 @@ var BEFORE_DESTROY = 'beforeDestroy';
  */
 var AFTER_DESTROY = 'afterDestroy';
 
-var booleanAttrLiteral = 'allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare,default,defaultchecked,defaultmuted,defaultselected,defer,disabled,draggable,enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple,muted,nohref,noshade,noresize,novalidate,nowrap,open,pauseonexit,readonly,required,reversed,scoped,seamless,selected,sortable,spellcheck,translate,truespeed,typemustmatch,visible';
-var booleanAttrMap = toObject(split(booleanAttrLiteral, CHAR_COMMA), FALSE, TRUE);
-booleanAttrLiteral = NULL;
+var booleanAttrMap = toObject(split('allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare,default,defaultchecked,defaultmuted,defaultselected,defer,disabled,draggable,enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple,muted,nohref,noshade,noresize,novalidate,nowrap,open,pauseonexit,readonly,required,reversed,scoped,seamless,selected,sortable,spellcheck,translate,truespeed,typemustmatch,visible', CHAR_COMMA));
 
 var attr2Prop = {};
 attr2Prop['for'] = 'htmlFor';
@@ -5213,7 +5217,7 @@ var debounce = function (fn, delay, sync) {
 
 // 避免连续多次点击，主要用于提交表单场景
 // 移动端的 tap 事件可自行在业务层打补丁实现
-var immediateTypes = [CLICK, TAP];
+var syncTypes = [CLICK, TAP];
 
 var bindEvent = function (_ref) {
   var el = _ref.el,
@@ -5239,7 +5243,7 @@ var bindEvent = function (_ref) {
       var value = lazy.value;
 
       if (numeric(value) && value >= 0) {
-        listener = debounce(listener, value, has(immediateTypes, type));
+        listener = debounce(listener, value, has(syncTypes, type));
       } else if (type === INPUT) {
         type = CHANGE;
       }
@@ -6193,7 +6197,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.42.6';
+Yox.version = '0.42.7';
 
 /**
  * 工具，便于扩展、插件使用
