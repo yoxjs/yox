@@ -4250,7 +4250,7 @@ var Observer = function () {
         set$1(data, keypath, newValue);
       });
 
-      var addAsyncDifference = function addAsyncDifference(keypath, realpath, oldValue) {
+      var fireAsync = function fireAsync(keypath, realpath, oldValue) {
 
         var differences = instance.differences || (instance.differences = {});
         differences[joinKeypath(keypath, realpath)] = {
@@ -4283,7 +4283,7 @@ var Observer = function () {
 
                 if (oldValue !== newValue) {
                   var args = [newValue, oldValue, keypath];
-                  if (realpath !== keypath) {
+                  if (realpath && realpath !== keypath) {
                     push(args, realpath);
                   }
                   emitter.fire(keypath, args, context);
@@ -4315,14 +4315,14 @@ var Observer = function () {
             if (has$2(keypath, FORCE)) {
               emitter.fire(keypath, args, context);
             } else {
-              addAsyncDifference(keypath, realpath, oldValue);
+              fireAsync(keypath, realpath, oldValue);
             }
           }
 
           newValue = getNewValue(realpath);
           if (newValue !== oldValue) {
             if (force) {
-              addAsyncDifference(keypath, realpath, oldValue);
+              fireAsync(keypath, realpath, oldValue);
             }
             each(watchKeypaths, function (key) {
               if (key !== realpath) {
@@ -6017,7 +6017,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.42.5';
+Yox.version = '0.42.6';
 
 /**
  * 工具，便于扩展、插件使用
