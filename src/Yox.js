@@ -103,7 +103,7 @@ export default class Yox {
     let observer = new Observer({
       context: instance,
       data: source,
-      computed
+      computed,
     })
     instance.$observer = observer
 
@@ -532,10 +532,9 @@ export default class Yox {
             }
           )
         }
-        let method = instance[ callee.source ]
+        let method = instance[ callee.name ]
         if (execute(method, instance, args) === env.FALSE && isEvent) {
-          event.prevent()
-          event.stop()
+          event.prevent().stop()
         }
       }
     }
@@ -758,7 +757,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.42.7'
+Yox.version = '0.42.8'
 
 /**
  * 工具，便于扩展、插件使用

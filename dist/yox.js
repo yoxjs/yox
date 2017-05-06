@@ -212,8 +212,9 @@ var Event = function () {
   createClass(Event, [{
     key: 'prevent',
     value: function prevent() {
-      if (!this.isPrevented) {
-        var originalEvent = this.originalEvent;
+      var instance = this;
+      if (!instance.isPrevented) {
+        var originalEvent = instance.originalEvent;
 
         if (originalEvent) {
           if (func(originalEvent.prevent)) {
@@ -222,14 +223,16 @@ var Event = function () {
             originalEvent.preventDefault();
           }
         }
-        this.isPrevented = TRUE;
+        instance.isPrevented = TRUE;
       }
+      return instance;
     }
   }, {
     key: 'stop',
     value: function stop() {
-      if (!this.isStoped) {
-        var originalEvent = this.originalEvent;
+      var instance = this;
+      if (!instance.isStoped) {
+        var originalEvent = instance.originalEvent;
 
         if (originalEvent) {
           if (func(originalEvent.stop)) {
@@ -238,8 +241,9 @@ var Event = function () {
             originalEvent.stopPropagation();
           }
         }
-        this.isStoped = TRUE;
+        instance.isStoped = TRUE;
       }
+      return instance;
     }
   }]);
   return Event;
@@ -248,90 +252,6 @@ var Event = function () {
 Event.is = function (target) {
   return target instanceof Event;
 };
-
-/**
- * 为了压缩，定义的常用字符
- */
-
-function charAt(str) {
-  var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-
-  return str.charAt(index);
-}
-
-function codeAt(str) {
-  var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-
-  return str.charCodeAt(index);
-}
-
-var CHAR_BLANK = '';
-
-var CHAR_DOT = '.';
-var CODE_DOT = codeAt(CHAR_DOT);
-
-var CHAR_HASH = '#';
-var CODE_HASH = codeAt(CHAR_HASH);
-
-var CHAR_DASH = '-';
-var CODE_DASH = codeAt(CHAR_DASH);
-
-var CHAR_EQUAL = '=';
-var CODE_EQUAL = codeAt(CHAR_EQUAL);
-
-var CHAR_SLASH = '/';
-var CODE_SLASH = codeAt(CHAR_SLASH);
-
-var CHAR_COMMA = ',';
-var CODE_COMMA = codeAt(CHAR_COMMA);
-
-var CHAR_COLON = ':';
-var CODE_COLON = codeAt(CHAR_COLON);
-
-var CHAR_SEMCOL = ';';
-var CODE_SEMCOL = codeAt(CHAR_SEMCOL);
-
-var CHAR_SQUOTE = "'";
-var CODE_SQUOTE = codeAt(CHAR_SQUOTE);
-
-var CHAR_DQUOTE = '"';
-var CODE_DQUOTE = codeAt(CHAR_DQUOTE);
-
-var CHAR_OPAREN = '(';
-var CODE_OPAREN = codeAt(CHAR_OPAREN);
-
-var CHAR_CPAREN = ')';
-var CODE_CPAREN = codeAt(CHAR_CPAREN);
-
-var CHAR_OBRACK = '[';
-var CODE_OBRACK = codeAt(CHAR_OBRACK);
-
-var CHAR_CBRACK = ']';
-var CODE_CBRACK = codeAt(CHAR_CBRACK);
-
-var CHAR_OBRACE = '{';
-var CODE_OBRACE = codeAt(CHAR_OBRACE);
-
-var CHAR_CBRACE = '}';
-var CODE_CBRACE = codeAt(CHAR_CBRACE);
-
-var CHAR_LEFT = '<';
-var CODE_LEFT = codeAt(CHAR_LEFT);
-
-var CHAR_RIGHT = '>';
-var CODE_RIGHT = codeAt(CHAR_RIGHT);
-
-var CHAR_QUMARK = '?';
-var CODE_QUMARK = codeAt(CHAR_QUMARK);
-
-var CHAR_TAB = '\t';
-var CODE_TAB = codeAt(CHAR_TAB);
-
-var CHAR_BREAKLINE = '\n';
-var CODE_BREAKLINE = codeAt(CHAR_BREAKLINE);
-
-var CHAR_WHITESPACE = ' ';
-var CODE_WHITESPACE = codeAt(CHAR_WHITESPACE);
 
 /**
  * 遍历数组
@@ -536,6 +456,90 @@ var array$1 = Object.freeze({
 });
 
 /**
+ * 为了压缩，定义的常用字符
+ */
+
+function charAt(str) {
+  var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+
+  return str.charAt(index);
+}
+
+function codeAt(str) {
+  var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+
+  return str.charCodeAt(index);
+}
+
+var CHAR_BLANK = '';
+
+var CHAR_DOT = '.';
+var CODE_DOT = codeAt(CHAR_DOT);
+
+var CHAR_HASH = '#';
+var CODE_HASH = codeAt(CHAR_HASH);
+
+var CHAR_DASH = '-';
+var CODE_DASH = codeAt(CHAR_DASH);
+
+var CHAR_EQUAL = '=';
+var CODE_EQUAL = codeAt(CHAR_EQUAL);
+
+var CHAR_SLASH = '/';
+var CODE_SLASH = codeAt(CHAR_SLASH);
+
+var CHAR_COMMA = ',';
+var CODE_COMMA = codeAt(CHAR_COMMA);
+
+var CHAR_COLON = ':';
+var CODE_COLON = codeAt(CHAR_COLON);
+
+var CHAR_SEMCOL = ';';
+var CODE_SEMCOL = codeAt(CHAR_SEMCOL);
+
+var CHAR_SQUOTE = "'";
+var CODE_SQUOTE = codeAt(CHAR_SQUOTE);
+
+var CHAR_DQUOTE = '"';
+var CODE_DQUOTE = codeAt(CHAR_DQUOTE);
+
+var CHAR_OPAREN = '(';
+var CODE_OPAREN = codeAt(CHAR_OPAREN);
+
+var CHAR_CPAREN = ')';
+var CODE_CPAREN = codeAt(CHAR_CPAREN);
+
+var CHAR_OBRACK = '[';
+var CODE_OBRACK = codeAt(CHAR_OBRACK);
+
+var CHAR_CBRACK = ']';
+var CODE_CBRACK = codeAt(CHAR_CBRACK);
+
+var CHAR_OBRACE = '{';
+var CODE_OBRACE = codeAt(CHAR_OBRACE);
+
+var CHAR_CBRACE = '}';
+var CODE_CBRACE = codeAt(CHAR_CBRACE);
+
+var CHAR_LEFT = '<';
+var CODE_LEFT = codeAt(CHAR_LEFT);
+
+var CHAR_RIGHT = '>';
+var CODE_RIGHT = codeAt(CHAR_RIGHT);
+
+var CHAR_QUMARK = '?';
+var CODE_QUMARK = codeAt(CHAR_QUMARK);
+
+var CHAR_TAB = '\t';
+var CODE_TAB = codeAt(CHAR_TAB);
+
+var CHAR_BREAKLINE = '\n';
+var CODE_BREAKLINE = codeAt(CHAR_BREAKLINE);
+
+var CHAR_WHITESPACE = ' ';
+var CODE_WHITESPACE = codeAt(CHAR_WHITESPACE);
+
+/**
  * 转成驼峰
  *
  * @param {string} str
@@ -612,17 +616,20 @@ var SEPARATOR_KEY = '.';
 var normalizeCache = {};
 
 function normalize(str) {
-  if (!falsy$1(str) && indexOf$1(str, '[') > 0 && indexOf$1(str, ']') > 0) {
-    if (!has$1(normalizeCache, str)) {
-      normalizeCache[str] = str.replace(/\[\s*?([^\]]+)\s*?\]/g, function ($0, $1) {
-        var code = codeAt($1);
-        if (code === CODE_SQUOTE || code === CODE_DQUOTE) {
-          $1 = slice($1, 1, -1);
-        }
-        return '' + SEPARATOR_KEY + $1;
-      });
+  if (!falsy$1(str)) {
+    var start = indexOf$1(str, CHAR_OBRACK);
+    if (start > 0 && indexOf$1(str, CHAR_CBRACK) > start) {
+      if (!normalizeCache[str]) {
+        normalizeCache[str] = str.replace(/\[\s*?([^\]]+)\s*?\]/g, function ($0, $1) {
+          var code = codeAt($1);
+          if (code === CODE_SQUOTE || code === CODE_DQUOTE) {
+            $1 = slice($1, 1, -1);
+          }
+          return '' + SEPARATOR_KEY + $1;
+        });
+      }
+      return normalizeCache[str];
     }
-    return normalizeCache[str];
   }
   return str;
 }
@@ -632,11 +639,19 @@ function filter(term) {
 }
 
 function parse(str) {
-  return normalize(str).split(SEPARATOR_KEY).filter(filter);
+  var filterable = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : TRUE;
+
+  var result = normalize(str).split(SEPARATOR_KEY);
+  return filterable ? result.filter(filter) : result;
 }
 
 function stringify(keypaths) {
-  return keypaths.filter(filter).join(SEPARATOR_KEY);
+  var filterable = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : TRUE;
+
+  if (filterable) {
+    keypaths = keypaths.filter(filter);
+  }
+  return keypaths.join(SEPARATOR_KEY);
 }
 
 function startsWith$1(keypath, prefix) {
@@ -653,13 +668,17 @@ function startsWith$1(keypath, prefix) {
 
 
 function join(keypath1, keypath2) {
-  if (keypath1 && keypath2) {
-    return keypath1 + SEPARATOR_KEY + keypath2;
-  } else if (keypath1) {
-    return keypath1;
-  } else {
-    return keypath2 || CHAR_BLANK;
+  // keypath 可以是两种形式
+  // 1. 非空字符串
+  // 2. 数字
+  var result = [];
+  if (!falsy$1(keypath1) || number(keypath1)) {
+    push(result, keypath1);
   }
+  if (!falsy$1(keypath2) || number(keypath2)) {
+    push(result, keypath2);
+  }
+  return stringify(result, FALSE);
 }
 
 /**
@@ -672,6 +691,14 @@ function keys(object$$1) {
   return Object.keys(object$$1);
 }
 
+function sortByAsc(a, b) {
+  return a.length - b.length;
+}
+
+function sortByDesc(a, b) {
+  return b.length - a.length;
+}
+
 /**
  * 排序对象的 key
  *
@@ -680,17 +707,7 @@ function keys(object$$1) {
  * @return {Array.<string>}
  */
 function sort(object$$1, desc) {
-  var sorter = void 0;
-  if (desc) {
-    sorter = function sorter(a, b) {
-      return b.length - a.length;
-    };
-  } else {
-    sorter = function sorter(a, b) {
-      return a.length - b.length;
-    };
-  }
-  return keys(object$$1).sort(sorter);
+  return keys(object$$1).sort(desc ? sortByDesc : sortByAsc);
 }
 
 /**
@@ -800,9 +817,7 @@ function getValue(object$$1, key) {
  */
 function get$1(object$$1, keypath) {
 
-  if (!falsy$1(keypath) && !exists(object$$1, keypath)
-  // 不能以 . 开头
-  && indexOf$1(keypath, CHAR_DOT) > 0) {
+  if (!falsy$1(keypath) && !exists(object$$1, keypath) && indexOf$1(keypath, CHAR_DOT) > 0) {
     var list = parse(keypath);
     for (var i = 0, len = list.length; i < len; i++) {
       if (i < len - 1) {
@@ -835,7 +850,7 @@ function set$1(object$$1, keypath, value, autofill) {
   if (!falsy$1(keypath) && !exists(object$$1, keypath) && indexOf$1(keypath, CHAR_DOT) > 0) {
     var originalObject = object$$1;
     var list = parse(keypath);
-    var prop = pop(list);
+    var name = pop(list);
     each(list, function (item, index) {
       if (object$$1[item]) {
         object$$1 = object$$1[item];
@@ -846,7 +861,7 @@ function set$1(object$$1, keypath, value, autofill) {
       }
     });
     if (object$$1 && object$$1 !== originalObject) {
-      object$$1[prop] = value;
+      object$$1[name] = value;
     }
   } else {
     object$$1[keypath] = value;
@@ -967,8 +982,7 @@ var Emitter = function () {
           // 如果没有返回 false，而是调用了 event.stop 也算是返回 false
           if (isEvent) {
             if (result === FALSE) {
-              event.prevent();
-              event.stop();
+              event.prevent().stop();
             } else if (event.isStoped) {
               result = FALSE;
             }
@@ -997,14 +1011,23 @@ var Emitter = function () {
   return Emitter;
 }();
 
+var toString = function (str) {
+  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : CHAR_BLANK;
+
+  if (str != NULL && str.toString) {
+    return str.toString();
+  }
+  return defaultValue;
+};
+
 /**
  * 是否有原生的日志特性，没有必要单独实现
  *
- * @type {boolean}
+ * @type {?Object}
  */
-var hasConsole = (typeof console === 'undefined' ? 'undefined' : _typeof(console)) !== RAW_UNDEFINED;
+var Console = (typeof console === 'undefined' ? 'undefined' : _typeof(console)) !== RAW_UNDEFINED ? console : NULL;
 
-var debug = /yox/.test(noop.toString());
+var debug = /yox/.test(toString(noop));
 
 // 全局可覆盖
 // 比如开发环境，开了 debug 模式，但是有时候觉得看着一堆日志特烦，想强制关掉
@@ -1026,8 +1049,8 @@ function isDebug() {
  * @param {string} msg
  */
 function log(msg) {
-  if (hasConsole && isDebug()) {
-    console.log('[Yox log]: ' + msg);
+  if (Console && isDebug()) {
+    Console.log('[Yox log]: ' + msg);
   }
 }
 
@@ -1037,8 +1060,8 @@ function log(msg) {
  * @param {string} msg
  */
 function warn(msg) {
-  if (hasConsole && isDebug()) {
-    console.warn('[Yox warn]: ' + msg);
+  if (Console && isDebug()) {
+    Console.warn('[Yox warn]: ' + msg);
   }
 }
 
@@ -1048,8 +1071,8 @@ function warn(msg) {
  * @param {string} msg
  */
 function error$1(msg) {
-  if (hasConsole) {
-    console.error('[Yox error]: ' + msg);
+  if (Console) {
+    Console.error('[Yox error]: ' + msg);
   }
 }
 
@@ -1138,16 +1161,6 @@ function run() {
     task();
   });
 }
-
-var toString = function (str) {
-  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : CHAR_BLANK;
-
-  try {
-    return str.toString();
-  } catch (e) {
-    return defaultValue;
-  }
-};
 
 function Vnode(tag, text, data, children, key, component) {
   return {
@@ -1646,17 +1659,6 @@ var ARRAY = 7;
  */
 var CALL = 8;
 
-/**
- * 节点基类
- */
-
-var Node = function Node(type, source) {
-  classCallCheck(this, Node);
-
-  this.type = type;
-  this.source = trim(source);
-};
-
 var PLUS = '+';
 var MINUS = '-';
 var MULTIPLY = '*';
@@ -1701,119 +1703,87 @@ binaryMap[MULTIPLY] = binaryMap[DIVIDE] = binaryMap[MODULO] = 6;
 
 var binaryList = sort(binaryMap, TRUE);
 
-/**
- * Unary 节点
- *
- * @param {string} operator
- * @param {Node} arg
- */
+var unary = {};
 
-var Unary = function (_Node) {
-  inherits(Unary, _Node);
-
-  function Unary(source, operator, arg) {
-    classCallCheck(this, Unary);
-
-    var _this = possibleConstructorReturn(this, (Unary.__proto__ || Object.getPrototypeOf(Unary)).call(this, UNARY, source));
-
-    _this.operator = operator;
-    _this.arg = arg;
-    return _this;
-  }
-
-  return Unary;
-}(Node);
-
-Unary[PLUS] = function (value) {
-  return +value;
+unary[PLUS] = function (a) {
+  return +a;
 };
-Unary[MINUS] = function (value) {
-  return -value;
+unary[MINUS] = function (a) {
+  return -a;
 };
-Unary[NOT] = function (value) {
-  return !value;
+unary[NOT] = function (a) {
+  return !a;
 };
-Unary[WAVE] = function (value) {
-  return ~value;
+unary[WAVE] = function (a) {
+  return ~a;
 };
-Unary[BOOLEAN] = function (value) {
-  return !!value;
+unary[BOOLEAN] = function (a) {
+  return !!a;
 };
 
-/**
- * Binary 节点
- *
- * @param {Node} left
- * @param {string} operator
- * @param {Node} right
- */
+var binary = {};
 
-var Binary = function (_Node) {
-  inherits(Binary, _Node);
-
-  function Binary(source, left, operator, right) {
-    classCallCheck(this, Binary);
-
-    var _this = possibleConstructorReturn(this, (Binary.__proto__ || Object.getPrototypeOf(Binary)).call(this, BINARY, source));
-
-    _this.left = left;
-    _this.operator = operator;
-    _this.right = right;
-    return _this;
-  }
-
-  return Binary;
-}(Node);
-
-Binary[OR] = function (a, b) {
+binary[OR] = function (a, b) {
   return a || b;
 };
-Binary[AND] = function (a, b) {
+binary[AND] = function (a, b) {
   return a && b;
 };
-Binary[SE] = function (a, b) {
+binary[SE] = function (a, b) {
   return a === b;
 };
-Binary[SNE] = function (a, b) {
+binary[SNE] = function (a, b) {
   return a !== b;
 };
-Binary[LE] = function (a, b) {
+binary[LE] = function (a, b) {
   return a == b;
 };
-Binary[LNE] = function (a, b) {
+binary[LNE] = function (a, b) {
   return a != b;
 };
-Binary[LT] = function (a, b) {
+binary[LT] = function (a, b) {
   return a < b;
 };
-Binary[LTE] = function (a, b) {
+binary[LTE] = function (a, b) {
   return a <= b;
 };
-Binary[GT] = function (a, b) {
+binary[GT] = function (a, b) {
   return a > b;
 };
-Binary[GTE] = function (a, b) {
+binary[GTE] = function (a, b) {
   return a >= b;
 };
-Binary[PLUS] = function (a, b) {
+binary[PLUS] = function (a, b) {
   return a + b;
 };
-Binary[MINUS] = function (a, b) {
+binary[MINUS] = function (a, b) {
   return a - b;
 };
-Binary[MULTIPLY] = function (a, b) {
+binary[MULTIPLY] = function (a, b) {
   return a * b;
 };
-Binary[DIVIDE] = function (a, b) {
+binary[DIVIDE] = function (a, b) {
   return a / b;
 };
-Binary[MODULO] = function (a, b) {
+binary[MODULO] = function (a, b) {
   return a % b;
+};
+
+/**
+ * 节点基类
+ */
+
+var Node = function Node(type, raw) {
+  classCallCheck(this, Node);
+
+  this.type = type;
+  this.raw = trim(raw);
 };
 
 /**
  * Member 节点
  *
+ * @param {string} raw
  * @param {Node} object
  * @param {Node} prop
  */
@@ -1821,10 +1791,10 @@ Binary[MODULO] = function (a, b) {
 var Member = function (_Node) {
   inherits(Member, _Node);
 
-  function Member(source, object, prop) {
+  function Member(raw, object, prop) {
     classCallCheck(this, Member);
 
-    var _this = possibleConstructorReturn(this, (Member.__proto__ || Object.getPrototypeOf(Member)).call(this, MEMBER, source));
+    var _this = possibleConstructorReturn(this, (Member.__proto__ || Object.getPrototypeOf(Member)).call(this, MEMBER, raw));
 
     var props = [];
     if (object.type === MEMBER) {
@@ -1837,12 +1807,8 @@ var Member = function (_Node) {
 
     _this.props = props;
 
-    var success = TRUE;
-    var keypath = Member.stringify(_this, function () {
-      success = FALSE;
-    });
-    if (success) {
-      _this.keypath = keypath;
+    if (object.keypath && prop.type === LITERAL) {
+      _this.keypath = join(object.keypath, prop.value);
     }
 
     return _this;
@@ -1850,23 +1816,6 @@ var Member = function (_Node) {
 
   return Member;
 }(Node);
-
-Member.stringify = function (node, execute) {
-  var keypaths = node.props.map(function (node, index) {
-    var type = node.type;
-
-    if (type !== LITERAL) {
-      if (index > 0) {
-        return execute(node);
-      } else if (type === IDENTIFIER) {
-        return node.name;
-      }
-    } else {
-      return node.value;
-    }
-  });
-  return stringify(keypaths);
-};
 
 var executor = {};
 
@@ -1882,30 +1831,34 @@ executor[MEMBER] = function (node, getter, context) {
   var keypath = node.keypath;
 
   if (!keypath) {
-    keypath = Member.stringify(node, function (node) {
-      return execute$1(node, getter, context);
+    var keypaths = node.props.map(function (node, index) {
+      var type = node.type;
+
+      if (type !== LITERAL) {
+        if (index > 0) {
+          return execute$1(node, getter, context);
+        } else if (type === IDENTIFIER) {
+          return node.name;
+        }
+      } else {
+        return node.value;
+      }
     });
+    keypath = stringify(keypaths, env.FALSE);
   }
   return getter(keypath);
 };
 
 executor[UNARY] = function (node, getter, context) {
-  return Unary[node.operator](execute$1(node.arg, getter, context));
+  return unary[node.operator](execute$1(node.arg, getter, context));
 };
 
 executor[BINARY] = function (node, getter, context) {
-  var left = node.left,
-      right = node.right;
-
-  return Binary[node.operator](execute$1(left, getter, context), execute$1(right, getter, context));
+  return binary[node.operator](execute$1(node.left, getter, context), execute$1(node.right, getter, context));
 };
 
 executor[TERNARY] = function (node, getter, context) {
-  var test = node.test,
-      consequent = node.consequent,
-      alternate = node.alternate;
-
-  return execute$1(test, getter, context) ? execute$1(consequent, getter, context) : execute$1(alternate, getter, context);
+  return execute$1(node.test, getter, context) ? execute$1(node.consequent, getter, context) : execute$1(node.alternate, getter, context);
 };
 
 executor[ARRAY] = function (node, getter, context) {
@@ -2115,16 +2068,17 @@ var snabbdomComponent = {
 /**
  * Array 节点
  *
- * @param {Array.<Node>} elements
+ * @param {string} raw 源码
+ * @param {Array.<Node>} elements 数组元素
  */
 
 var Array$1 = function (_Node) {
   inherits(Array, _Node);
 
-  function Array(source, elements) {
+  function Array(raw, elements) {
     classCallCheck(this, Array);
 
-    var _this = possibleConstructorReturn(this, (Array.__proto__ || Object.getPrototypeOf(Array)).call(this, ARRAY, source));
+    var _this = possibleConstructorReturn(this, (Array.__proto__ || Object.getPrototypeOf(Array)).call(this, ARRAY, raw));
 
     _this.elements = elements;
     return _this;
@@ -2134,8 +2088,35 @@ var Array$1 = function (_Node) {
 }(Node);
 
 /**
+ * Binary 节点
+ *
+ * @param {string} raw
+ * @param {Node} left
+ * @param {string} operator
+ * @param {Node} right
+ */
+
+var Binary = function (_Node) {
+  inherits(Binary, _Node);
+
+  function Binary(raw, left, operator, right) {
+    classCallCheck(this, Binary);
+
+    var _this = possibleConstructorReturn(this, (Binary.__proto__ || Object.getPrototypeOf(Binary)).call(this, BINARY, raw));
+
+    _this.left = left;
+    _this.operator = operator;
+    _this.right = right;
+    return _this;
+  }
+
+  return Binary;
+}(Node);
+
+/**
  * Call 节点
  *
+ * @param {string} raw
  * @param {Node} callee
  * @param {Array.<Node>} args
  */
@@ -2143,10 +2124,10 @@ var Array$1 = function (_Node) {
 var Call = function (_Node) {
   inherits(Call, _Node);
 
-  function Call(source, callee, args) {
+  function Call(raw, callee, args) {
     classCallCheck(this, Call);
 
-    var _this = possibleConstructorReturn(this, (Call.__proto__ || Object.getPrototypeOf(Call)).call(this, CALL, source));
+    var _this = possibleConstructorReturn(this, (Call.__proto__ || Object.getPrototypeOf(Call)).call(this, CALL, raw));
 
     _this.callee = callee;
     _this.args = args;
@@ -2159,6 +2140,7 @@ var Call = function (_Node) {
 /**
  * Ternary 节点
  *
+ * @param {string} raw
  * @param {Node} test
  * @param {Node} consequent
  * @param {Node} alternate
@@ -2167,10 +2149,10 @@ var Call = function (_Node) {
 var Ternary = function (_Node) {
   inherits(Ternary, _Node);
 
-  function Ternary(source, test, consequent, alternate) {
+  function Ternary(raw, test, consequent, alternate) {
     classCallCheck(this, Ternary);
 
-    var _this = possibleConstructorReturn(this, (Ternary.__proto__ || Object.getPrototypeOf(Ternary)).call(this, TERNARY, source));
+    var _this = possibleConstructorReturn(this, (Ternary.__proto__ || Object.getPrototypeOf(Ternary)).call(this, TERNARY, raw));
 
     _this.test = test;
     _this.consequent = consequent;
@@ -2184,16 +2166,17 @@ var Ternary = function (_Node) {
 /**
  * Identifier 节点
  *
+ * @param {string} raw
  * @param {string} name
  */
 
 var Identifier = function (_Node) {
   inherits(Identifier, _Node);
 
-  function Identifier(source, name) {
+  function Identifier(raw, name) {
     classCallCheck(this, Identifier);
 
-    var _this = possibleConstructorReturn(this, (Identifier.__proto__ || Object.getPrototypeOf(Identifier)).call(this, IDENTIFIER, source));
+    var _this = possibleConstructorReturn(this, (Identifier.__proto__ || Object.getPrototypeOf(Identifier)).call(this, IDENTIFIER, raw));
 
     _this.name = name;
     _this.keypath = name;
@@ -2206,22 +2189,47 @@ var Identifier = function (_Node) {
 /**
  * Literal 节点
  *
+ * @param {string} raw
  * @param {*} value
  */
 
 var Literal = function (_Node) {
   inherits(Literal, _Node);
 
-  function Literal(source, value) {
+  function Literal(raw, value) {
     classCallCheck(this, Literal);
 
-    var _this = possibleConstructorReturn(this, (Literal.__proto__ || Object.getPrototypeOf(Literal)).call(this, LITERAL, source));
+    var _this = possibleConstructorReturn(this, (Literal.__proto__ || Object.getPrototypeOf(Literal)).call(this, LITERAL, raw));
 
     _this.value = value;
     return _this;
   }
 
   return Literal;
+}(Node);
+
+/**
+ * Unary 节点
+ *
+ * @param {string} raw
+ * @param {string} operator
+ * @param {Node} arg
+ */
+
+var Unary = function (_Node) {
+  inherits(Unary, _Node);
+
+  function Unary(raw, operator, arg) {
+    classCallCheck(this, Unary);
+
+    var _this = possibleConstructorReturn(this, (Unary.__proto__ || Object.getPrototypeOf(Unary)).call(this, UNARY, raw));
+
+    _this.operator = operator;
+    _this.arg = arg;
+    return _this;
+  }
+
+  return Unary;
 }(Node);
 
 // 区分关键字和普通变量
@@ -2364,9 +2372,7 @@ function compile$1(content) {
 
     var literal = cutString(start);
     if (literal) {
-      return careKeyword && has$1(keywords, literal) ? new Literal(literal, keywords[literal])
-      // this 也视为 IDENTIFIER
-      : new Identifier(literal, literal);
+      return careKeyword && has$1(keywords, literal) ? new Literal(literal, keywords[literal]) : new Identifier(literal, literal);
     }
 
     throwError();
@@ -2395,6 +2401,7 @@ function compile$1(content) {
   };
 
   var parseOperator = function parseOperator(sortedOperatorList) {
+
     skipWhitespace();
 
     var value = slice(content, index),
@@ -2429,7 +2436,7 @@ function compile$1(content) {
       else if (charCode === CODE_DOT) {
           index++;
           temp = parseIdentifier();
-          node = new Member(cutString(start), node, new Literal(temp.source, temp.name));
+          node = new Member(cutString(start), node, new Literal(temp.raw, temp.name));
         }
         // a[x]
         else if (charCode === CODE_OBRACK) {
@@ -2822,12 +2829,6 @@ var Element = function (_Node) {
     return _this;
   }
 
-  createClass(Element, [{
-    key: 'addAttr',
-    value: function addAttr(child) {
-      push(this.attrs || (this.attrs = []), child);
-    }
-  }]);
   return Element;
 }(Node$2);
 
@@ -2899,7 +2900,7 @@ var Expression = function (_Node) {
 var If = function (_Node) {
   inherits(If, _Node);
 
-  function If(expr, then) {
+  function If(expr) {
     classCallCheck(this, If);
 
     var _this = possibleConstructorReturn(this, (If.__proto__ || Object.getPrototypeOf(If)).call(this, IF$1));
@@ -3948,7 +3949,7 @@ function render(ast, data, instance) {
         }
       });
     } else {
-      fatal('Spread "' + expr.source + '" expected to be an object.');
+      fatal('Spread "' + expr.raw + '" expected to be an object.');
     }
   };
 
@@ -4052,15 +4053,15 @@ var Observer = function () {
               computedStack.push([]);
             }
 
-            var result = execute(get$$1, instance.context);
-            cache[keypath] = result;
+            var value = execute(get$$1, instance.context);
+            cache[keypath] = value;
 
             var newDeps = deps || pop(computedStack);
             if (array(newDeps)) {
               instance.setDeps(keypath, newDeps);
             }
 
-            return result;
+            return value;
           };
 
           _getter.toString = instance.computedGetters[keypath] = _getter;
@@ -4090,7 +4091,8 @@ var Observer = function () {
     key: 'get',
     value: function get$$1(keypath, defaultValue) {
 
-      var instance = this;
+      var instance = this,
+          result = void 0;
 
       var data = instance.data,
           cache = instance.cache,
@@ -4098,7 +4100,7 @@ var Observer = function () {
           computedGetters = instance.computedGetters;
 
 
-      if (!keypath) {
+      if (keypath === CHAR_BLANK) {
         return data;
       }
 
@@ -4111,7 +4113,6 @@ var Observer = function () {
         }
       }
 
-      var result = void 0;
       if (computedGetters) {
         var _matchBestGetter = matchBestGetter(computedGetters, keypath),
             value = _matchBestGetter.value,
@@ -5775,10 +5776,9 @@ var Yox = function () {
               return execute$1(node, getValue, instance);
             });
           }
-          var method = instance[callee.source];
+          var method = instance[callee.name];
           if (execute(method, instance, args) === FALSE && isEvent) {
-            event.prevent();
-            event.stop();
+            event.prevent().stop();
           }
         };
       } else if (value) {
@@ -6021,7 +6021,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.42.7';
+Yox.version = '0.42.8';
 
 /**
  * 工具，便于扩展、插件使用
