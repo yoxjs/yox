@@ -796,15 +796,6 @@ function copy(object$$1, deep) {
   return result;
 }
 
-function getValue(object$$1, key) {
-  // 如果函数改写了 toString，就调用 toString() 求值
-  var value = object$$1[key];
-  if (func(value) && value.toString !== Function.prototype.toString) {
-    value = value.toString();
-  }
-  return value;
-}
-
 /**
  * 从对象中查找一个 keypath
  *
@@ -821,7 +812,7 @@ function get$1(object$$1, keypath) {
     var list = parse(keypath);
     for (var i = 0, len = list.length; i < len; i++) {
       if (i < len - 1) {
-        object$$1 = getValue(object$$1, list[i]);
+        object$$1 = object$$1[list[i]];
         if (object$$1 == NULL) {
           return;
         }
@@ -833,7 +824,7 @@ function get$1(object$$1, keypath) {
 
   if (exists(object$$1, keypath)) {
     return {
-      value: getValue(object$$1, keypath)
+      value: object$$1[keypath]
     };
   }
 }
@@ -891,12 +882,17 @@ var Emitter = function () {
   createClass(Emitter, [{
     key: 'on',
     value: function on(type, listener) {
-      var listeners = this.listeners;
-
+      var listeners = this.listeners,
+          hasNew = void 0;
 
       var addListener = function addListener(listener, type) {
         if (func(listener)) {
-          push(listeners[type] || (listeners[type] = []), listener);
+          var list = listeners[type];
+          if (!list) {
+            list = listeners[type] = [];
+            hasNew = TRUE;
+          }
+          push(list, listener);
         }
       };
 
@@ -905,6 +901,8 @@ var Emitter = function () {
       } else if (string(type)) {
         addListener(listener, type);
       }
+
+      return hasNew;
     }
   }, {
     key: 'once',
@@ -939,11 +937,14 @@ var Emitter = function () {
     key: 'off',
     value: function off(type, listener) {
 
-      if (type == NULL) {
-        this.listeners = {};
-      } else {
-        var listeners = this.listeners;
+      var instance = this;
+      var listeners = instance.listeners;
 
+      var keys$$1 = keys(listeners);
+
+      if (type == NULL) {
+        listeners = instance.listeners = {};
+      } else {
         var list = listeners[type];
         if (list) {
           if (listener == NULL) {
@@ -956,6 +957,8 @@ var Emitter = function () {
           }
         }
       }
+
+      return keys$$1.length === keys(listeners).length;
     }
   }, {
     key: 'fire',
@@ -1844,7 +1847,7 @@ executor[MEMBER] = function (node, getter, context) {
         return node.value;
       }
     });
-    keypath = stringify(keypaths, env.FALSE);
+    keypath = stringify(keypaths, FALSE);
   }
   return getter(keypath);
 };
@@ -3398,11 +3401,18 @@ var Context = function () {
   function Context(data, keypath, parent) {
     classCallCheck(this, Context);
 
-    this.data = {};
-    this.data[RAW_THIS] = data;
-    this.keypath = keypath;
-    this.parent = parent;
-    this.cache = {};
+
+    var instance = this,
+        context = {};
+
+    context[RAW_THIS] = data;
+    context[SPECIAL_KEYPATH] = keypath;
+    instance.data = context;
+    instance.cache = {};
+
+    if (parent) {
+      instance.parent = parent;
+    }
   }
 
   createClass(Context, [{
@@ -3442,9 +3452,6 @@ var Context = function () {
           keypath = _formatKeypath2.keypath,
           lookup = _formatKeypath2.lookup;
 
-      var joinKeypath = function joinKeypath(context, keypath) {
-        return join(context.keypath, keypath);
-      };
       var getValue = function getValue(data, keypath) {
         return exists(data, keypath) ? { value: data[keypath] } : get$1(data[RAW_THIS], keypath);
       };
@@ -3469,29 +3476,24 @@ var Context = function () {
 
           if (result) {
             cache[keypath] = {
-              keypath: joinKeypath(instance, keypath),
+              keypath: join(instance.data[SPECIAL_KEYPATH], keypath),
               value: result.value
             };
           }
         } else {
           cache[keypath] = {
-            keypath: instance.keypath,
+            keypath: data[SPECIAL_KEYPATH],
             value: data[RAW_THIS]
           };
         }
       }
+
       cache = cache[keypath];
       if (cache) {
         return cache;
       }
 
-      if (keypath === SPECIAL_EVENT || keypath === SPECIAL_KEYPATH) {
-        return {
-          keypath: keypath
-        };
-      }
-
-      keypath = joinKeypath(this, keypath);
+      keypath = join(data[SPECIAL_KEYPATH], keypath);
 
       return {
         keypath: keypath
@@ -3522,18 +3524,11 @@ function formatKeypath(keypath) {
  */
 function render(ast, data, instance) {
 
-  var keypath = void 0,
+  var keypath = CHAR_BLANK,
       keypathList = [],
       updateKeypath = function updateKeypath() {
     keypath = stringify(keypathList);
-  },
-      getKeypath = function getKeypath() {
-    return keypath;
   };
-
-  updateKeypath();
-
-  getKeypath.toString = data[SPECIAL_KEYPATH] = getKeypath;
 
   var context = new Context(data, keypath),
       nodeStack = [],
@@ -4064,7 +4059,7 @@ var Observer = function () {
             return value;
           };
 
-          _getter.toString = instance.computedGetters[keypath] = _getter;
+          instance.computedGetters[keypath] = _getter;
         }
 
         if (set$$1) {
@@ -4169,26 +4164,6 @@ var Observer = function () {
        * 这里遵循的一个原则是，只有当修改数据确实产生了数据变化，才会分析它的依赖
        */
 
-      var joinKeypath = function joinKeypath(keypath1, keypath2) {
-        return keypath1 + CHAR_DASH + keypath2;
-      };
-
-      var differences = [],
-          differenceMap = {};
-      var addDifference = function addDifference(keypath, realpath, oldValue, match, force) {
-        var fullpath = joinKeypath(keypath, realpath);
-        if (!differenceMap[fullpath]) {
-          differenceMap[fullpath] = TRUE;
-          push(differences, {
-            keypath: keypath,
-            realpath: realpath,
-            oldValue: oldValue,
-            match: match,
-            force: force
-          });
-        }
-      };
-
       var oldCache = {},
           newCache = {};
       var getOldValue = function getOldValue(keypath) {
@@ -4204,26 +4179,22 @@ var Observer = function () {
         return newCache[keypath];
       };
 
-      var reversedDepMap = {};
-      var addReversedDepKeypath = function addReversedDepKeypath(keypath) {
-        if (reversedKeypaths && !reversedDepMap[keypath]) {
-          reversedDepMap[keypath] = TRUE;
-          each(reversedKeypaths, function (key) {
-            var list = void 0,
-                match = void 0;
-            if (key === keypath) {
-              list = reversedDeps[key];
-            } else if (isFuzzyKeypath(key)) {
-              match = matchKeypath(keypath, key);
-              if (match) {
-                list = reversedDeps[key];
-              }
-            }
-            if (list) {
-              each(list, function (key) {
-                addDifference(key, key, getOldValue(key), UNDEFINED, TRUE);
-              });
-            }
+      var joinKeypath = function joinKeypath(keypath1, keypath2) {
+        return keypath1 + CHAR_DASH + keypath2;
+      };
+
+      var differences = [],
+          differenceMap = {};
+      var addDifference = function addDifference(keypath, realpath, match, force) {
+        var fullpath = joinKeypath(keypath, realpath);
+        if (!differenceMap[fullpath]) {
+          differenceMap[fullpath] = TRUE;
+          push(differences, {
+            keypath: keypath,
+            realpath: realpath,
+            match: match,
+            force: force,
+            oldValue: getOldValue(realpath)
           });
         }
       };
@@ -4232,7 +4203,7 @@ var Observer = function () {
 
         keypath = normalize(keypath);
 
-        addDifference(keypath, keypath, getOldValue(keypath));
+        addDifference(keypath, keypath);
 
         if (computedSetters) {
           var setter = computedSetters[keypath];
@@ -4257,14 +4228,10 @@ var Observer = function () {
         set$1(data, keypath, newValue);
       });
 
-      var fireAsync = function fireAsync(keypath, realpath, oldValue) {
+      var fireDifference = function fireDifference(keypath, realpath, oldValue) {
 
         var differences = instance.differences || (instance.differences = {});
-        differences[joinKeypath(keypath, realpath)] = {
-          keypath: keypath,
-          realpath: realpath,
-          oldValue: oldValue
-        };
+        differences[joinKeypath(keypath, realpath)] = { keypath: keypath, realpath: realpath, oldValue: oldValue };
 
         each$1(cache, function (value, key) {
           if (key !== realpath && startsWith$1(key, realpath)) {
@@ -4301,13 +4268,13 @@ var Observer = function () {
         }
       };
 
-      var fireDifference = function fireDifference(_ref) {
-        var keypath = _ref.keypath,
-            realpath = _ref.realpath,
-            oldValue = _ref.oldValue,
-            match = _ref.match,
-            force = _ref.force;
-
+      var _loop = function _loop(i, difference) {
+        var _differences$i = differences[i],
+            keypath = _differences$i.keypath,
+            realpath = _differences$i.realpath,
+            oldValue = _differences$i.oldValue,
+            match = _differences$i.match,
+            force = _differences$i.force;
 
         var newValue = force ? oldValue : getNewValue(realpath);
         if (force || newValue !== oldValue) {
@@ -4321,40 +4288,63 @@ var Observer = function () {
           } else {
             if (has$2(keypath, FORCE)) {
               emitter.fire(keypath, args, context);
+              return 'break';
             } else {
-              fireAsync(keypath, realpath, oldValue);
+              fireDifference(keypath, realpath, oldValue);
             }
           }
 
           newValue = getNewValue(realpath);
           if (newValue !== oldValue) {
+
             if (force) {
-              fireAsync(keypath, realpath, oldValue);
+              fireDifference(keypath, realpath, oldValue);
             }
+
+            // 当 user.name 变化了
+            // 要通知 user.* 的观察者们
             each(watchKeypaths, function (key) {
               if (key !== realpath) {
                 if (isFuzzyKeypath(key)) {
-                  if (!has$2(realpath, FORCE)) {
-                    var _match = matchKeypath(realpath, key);
-                    if (_match) {
-                      addDifference(key, realpath, getOldValue(realpath), _match);
-                    }
+                  var _match = matchKeypath(realpath, key);
+                  if (_match) {
+                    addDifference(key, realpath, _match);
                   }
                 } else if (startsWith$1(key, realpath) !== FALSE) {
-                  addDifference(key, key, getOldValue(key));
+                  addDifference(key, key);
                 }
               }
             });
-            addReversedDepKeypath(realpath);
+
+            // a 依赖 b
+            // 当 b 变化了，要通知 a
+            each(reversedKeypaths, function (key) {
+              var list = void 0;
+              if (isFuzzyKeypath(key)) {
+                var _match2 = matchKeypath(realpath, key);
+                if (_match2) {
+                  list = reversedDeps[key];
+                }
+              } else if (key === realpath) {
+                list = reversedDeps[key];
+              }
+              if (list) {
+                each(list, function (key) {
+                  addDifference(key, key, UNDEFINED, TRUE);
+                });
+              }
+            });
           }
         } else if (array(newValue)) {
           realpath = join(realpath, 'length');
-          addDifference(realpath, realpath, getOldValue(realpath));
+          addDifference(realpath, realpath);
         }
       };
 
-      for (var i = 0; i < differences.length; i++) {
-        fireDifference(differences[i]);
+      for (var i = 0, difference; i < differences.length; i++) {
+        var _ret = _loop(i, difference);
+
+        if (_ret === 'break') break;
       }
     }
   }, {
@@ -4363,8 +4353,7 @@ var Observer = function () {
 
       var instance = this;
 
-      var deps = instance.deps,
-          reversedDeps = instance.reversedDeps;
+      var deps = instance.deps;
 
 
       if (newDeps !== deps[keypath]) {
@@ -4372,8 +4361,7 @@ var Observer = function () {
         deps[keypath] = newDeps;
         updateWatchKeypaths(instance);
 
-        // 全量更新
-        reversedDeps = {};
+        var reversedDeps = {};
 
         each$1(deps, function (deps, key) {
           each(deps, function (dep) {
@@ -4432,8 +4420,9 @@ extend(Observer.prototype, {
    * @param {?Function} watcher
    */
   unwatch: function unwatch(keypath, watcher) {
-    this.emitter.off(keypath, watcher);
-    updateWatchKeypaths(this);
+    if (this.emitter.off(keypath, watcher)) {
+      updateWatchKeypaths(this);
+    }
   }
 
 });
@@ -4441,10 +4430,9 @@ extend(Observer.prototype, {
 var FORCE = '._force_';
 var DIRTY = '_dirty_';
 
-function updateWatchKeypaths(instance) {
-  var deps = instance.deps,
-      emitter = instance.emitter;
+var syncIndex = 0;
 
+function updateWatchKeypaths(instance) {
 
   var watchKeypaths = {};
 
@@ -4453,12 +4441,12 @@ function updateWatchKeypaths(instance) {
   };
 
   // 1. 直接通过 watch 注册的
-  each$1(emitter.listeners, function (list, key) {
+  each$1(instance.emitter.listeners, function (list, key) {
     addKeypath(key);
   });
 
-  // 2. 计算属性的依赖属于间接 watch
-  each$1(deps, function (deps) {
+  // 2. 依赖属于间接 watch
+  each$1(instance.deps, function (deps) {
     each(deps, addKeypath);
   });
 
@@ -4476,17 +4464,10 @@ function createWatch(action) {
     var watchers = keypath;
     if (string(keypath)) {
       watchers = {};
-      watchers[keypath] = {
-        sync: sync,
-        watcher: watcher
-      };
+      watchers[keypath] = { sync: sync, watcher: watcher };
     }
 
     var instance = this;
-
-    var emitter = instance.emitter,
-        context = instance.context;
-
 
     each$1(watchers, function (value, keypath) {
 
@@ -4497,21 +4478,25 @@ function createWatch(action) {
         sync = value.sync;
       }
 
-      emitter[action](keypath, watcher);
-      updateWatchKeypaths(instance);
+      if (instance.emitter[action](keypath, watcher)) {
+        updateWatchKeypaths(instance);
+      }
 
       if (!isFuzzyKeypath(keypath)) {
         // 既然是 watch, 就先通过 get 缓存当前值，便于下次对比
         value = instance.get(keypath);
         // 立即执行，通过 Emitter 提供的 $magic 扩展实现
         if (sync) {
-          var syncKey = 'sync-' + keypath;
+          var syncKey = 'sync-' + syncIndex++;
           watcher.$magic = function () {
             watcher[syncKey] = TRUE;
+            delete watcher.$magic;
           };
           append(function () {
-            if (instance.deps && !watcher[syncKey]) {
-              execute(watcher, context, [instance.get(keypath), value, keypath]);
+            if (watcher[syncKey]) {
+              delete watcher[syncKey];
+            } else if (instance.context) {
+              execute(watcher, instance.context, [instance.get(keypath), value, keypath]);
             }
           });
         }
@@ -4527,6 +4512,7 @@ var patternCache = {};
  *
  * @param {string} keypath
  * @param {string} pattern
+ * return {?Array.<string>}
  */
 function matchKeypath(keypath, pattern) {
   var cache = patternCache[pattern];
@@ -4567,7 +4553,7 @@ function matchBestGetter(getters, keypath) {
     var length = startsWith$1(keypath, prefix);
     if (length !== FALSE) {
       key = prefix;
-      value = getters[key];
+      value = getters[prefix];
       rest = slice(keypath, length);
       return FALSE;
     }
@@ -5403,7 +5389,7 @@ var Yox = function () {
     filters && instance.filter(filters);
 
     if (template) {
-      // 过滤器和计算属性是预定义好的
+      // 过滤器是预定义好的
       // 在组件创建之后就不会改变，因此在此固化不变的 context
       // 避免每次更新都要全量 extend
       var filter = registry.filter;
@@ -5412,9 +5398,7 @@ var Yox = function () {
       // 全局过滤器
       filter && filter.data,
       // 本地过滤器
-      filters,
-      // 计算属性
-      observer.computedGetters);
+      filters);
       // 确保组件根元素有且只有一个
       instance.$template = Yox.compile(template)[0];
       // 首次渲染
@@ -5659,8 +5643,21 @@ var Yox = function () {
           $observer = instance.$observer,
           $context = instance.$context;
 
+      // 在单次渲染过程中，对于计算属性来说，不管开不开缓存，其实只需要计算一次即可
+      // 因为渲染过程中不会修改数据，如果频繁执行计算属性的 getter 函数
+      // 完全是无意义的性能消耗
 
-      extend($context, $observer.data);
+      var data = $observer.data,
+          computedGetters = $observer.computedGetters;
+
+
+      extend($context, data);
+
+      if (computedGetters) {
+        each$1(computedGetters, function (getter, key) {
+          $context[key] = getter();
+        });
+      }
 
       var _renderTemplate = render($template, $context, instance),
           nodes = _renderTemplate.nodes,
@@ -5770,7 +5767,6 @@ var Yox = function () {
               args = [event];
             }
           } else {
-            context.set(SPECIAL_KEYPATH, keypath);
             context.set(SPECIAL_EVENT, event);
             args = args.map(function (node) {
               return execute$1(node, getValue, instance);
@@ -6021,7 +6017,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.42.8';
+Yox.version = '0.42.9';
 
 /**
  * 工具，便于扩展、插件使用
