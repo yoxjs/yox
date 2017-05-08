@@ -468,15 +468,21 @@ export default class Yox {
     if ($node) {
       execute($options[ lifecycle.BEFORE_UPDATE ], instance)
       instance.$node = patch(oldNode, newNode)
-      execute($options[ lifecycle.AFTER_UPDATE ], instance)
     }
     else {
       execute($options[ lifecycle.BEFORE_MOUNT ], instance)
       $node = patch(oldNode, newNode)
       instance.$el = $node.el
       instance.$node = $node
-      execute($options[ lifecycle.AFTER_MOUNT ], instance)
     }
+
+    nextTask.append(
+      function () {
+        if (instance.$node) {
+          execute($options[ $node ? lifecycle.AFTER_UPDATE : lifecycle.AFTER_MOUNT ], instance)
+        }
+      }
+    )
 
   }
 

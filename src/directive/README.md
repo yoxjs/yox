@@ -12,7 +12,7 @@
   node: '指令对应的语法树节点',
   instance: '指令所属组件实例，和 component 不是一个概念',
   directives: 'DOM 元素上绑定的其他指令，有时需要用到其他指令的数据',
-  attributes: 'DOM 元素上声明的属性',
+  attrs: 'DOM 元素上声明的属性',
   component: '如果是作用于组件的指令，会传入该组件的实例'
 }
 ```

@@ -91,7 +91,7 @@ const specialControls = {
   select: selectControl,
 }
 
-function twoway(keypath, { el, node, instance, directives, attrs }) {
+function twoway(binding, { el, node, instance, directives, attrs }) {
 
   let type = event.CHANGE, tagName = api.tag(el), controlType = el.type
   let control = specialControls[ controlType ] || specialControls[ tagName ]
@@ -105,13 +105,14 @@ function twoway(keypath, { el, node, instance, directives, attrs }) {
       type = event.INPUT
     }
   }
+  tagName = controlType = env.NULL
 
   let set = function () {
-    control.set(el, keypath, instance)
+    control.set(el, binding, instance)
   }
 
   instance.watch(
-    keypath,
+    binding,
     set,
     control.attr && !object.has(attrs, control.attr)
   )
@@ -123,18 +124,18 @@ function twoway(keypath, { el, node, instance, directives, attrs }) {
     directives,
     type,
     listener() {
-      control.sync(el, keypath, instance)
+      control.sync(el, binding, instance)
     }
   })
 
   return function () {
-    instance.unwatch(keypath, set)
+    instance.unwatch(binding, set)
     destroy && destroy()
   }
 
 }
 
-function oneway(keypath, { el, node, instance, component }) {
+function oneway(binding, { el, node, instance, component }) {
 
   let set = function (value) {
     let name = node.modifier
@@ -150,14 +151,14 @@ function oneway(keypath, { el, node, instance, component }) {
       }
     }
     else {
-      api.setAttr(el, name, value !== env.UNDEFINED ? value : char.CHAR_BLANK)
+      api.setAttr(el, name, value)
     }
   }
 
-  instance.watch(keypath, set)
+  instance.watch(binding, set)
 
   return function () {
-    instance.unwatch(keypath, set)
+    instance.unwatch(binding, set)
   }
 
 }

@@ -5161,7 +5161,7 @@ var specialControls = {
   select: selectControl
 };
 
-function twoway(keypath, _ref) {
+function twoway(binding, _ref) {
   var el = _ref.el,
       node = _ref.node,
       instance = _ref.instance,
@@ -5179,12 +5179,13 @@ function twoway(keypath, _ref) {
       type = INPUT;
     }
   }
+  tagName = controlType = NULL;
 
   var set$$1 = function set$$1() {
-    control.set(el, keypath, instance);
+    control.set(el, binding, instance);
   };
 
-  instance.watch(keypath, set$$1, control.attr && !has$1(attrs, control.attr));
+  instance.watch(binding, set$$1, control.attr && !has$1(attrs, control.attr));
 
   var destroy = bindEvent({
     el: el,
@@ -5193,17 +5194,17 @@ function twoway(keypath, _ref) {
     directives: directives,
     type: type,
     listener: function listener() {
-      control.sync(el, keypath, instance);
+      control.sync(el, binding, instance);
     }
   });
 
   return function () {
-    instance.unwatch(keypath, set$$1);
+    instance.unwatch(binding, set$$1);
     destroy && destroy();
   };
 }
 
-function oneway(keypath, _ref2) {
+function oneway(binding, _ref2) {
   var el = _ref2.el,
       node = _ref2.node,
       instance = _ref2.instance,
@@ -5222,14 +5223,14 @@ function oneway(keypath, _ref2) {
         _set(component);
       }
     } else {
-      api.setAttr(el, name, value !== UNDEFINED ? value : CHAR_BLANK);
+      api.setAttr(el, name, value);
     }
   };
 
-  instance.watch(keypath, set$$1);
+  instance.watch(binding, set$$1);
 
   return function () {
-    instance.unwatch(keypath, set$$1);
+    instance.unwatch(binding, set$$1);
   };
 }
 
@@ -5692,14 +5693,18 @@ var Yox = function () {
       if ($node) {
         execute($options[BEFORE_UPDATE], instance);
         instance.$node = patch(oldNode, newNode);
-        execute($options[AFTER_UPDATE], instance);
       } else {
         execute($options[BEFORE_MOUNT], instance);
         $node = patch(oldNode, newNode);
         instance.$el = $node.el;
         instance.$node = $node;
-        execute($options[AFTER_MOUNT], instance);
       }
+
+      append(function () {
+        if (instance.$node) {
+          execute($options[$node ? AFTER_UPDATE : AFTER_MOUNT], instance);
+        }
+      });
     }
 
     /**
