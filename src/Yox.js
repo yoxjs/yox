@@ -465,21 +465,24 @@ export default class Yox {
       $options,
     } = instance
 
+    let afterHook
     if ($node) {
       execute($options[ lifecycle.BEFORE_UPDATE ], instance)
       instance.$node = patch(oldNode, newNode)
+      afterHook = lifecycle.AFTER_UPDATE
     }
     else {
       execute($options[ lifecycle.BEFORE_MOUNT ], instance)
       $node = patch(oldNode, newNode)
       instance.$el = $node.el
       instance.$node = $node
+      afterHook = lifecycle.AFTER_MOUNT
     }
 
     nextTask.append(
       function () {
         if (instance.$node) {
-          execute($options[ $node ? lifecycle.AFTER_UPDATE : lifecycle.AFTER_MOUNT ], instance)
+          execute($options[ afterHook ], instance)
         }
       }
     )

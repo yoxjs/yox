@@ -5690,19 +5690,22 @@ var Yox = function () {
           $options = instance.$options;
 
 
+      var afterHook = void 0;
       if ($node) {
         execute($options[BEFORE_UPDATE], instance);
         instance.$node = patch(oldNode, newNode);
+        afterHook = AFTER_UPDATE;
       } else {
         execute($options[BEFORE_MOUNT], instance);
         $node = patch(oldNode, newNode);
         instance.$el = $node.el;
         instance.$node = $node;
+        afterHook = AFTER_MOUNT;
       }
 
       append(function () {
         if (instance.$node) {
-          execute($options[$node ? AFTER_UPDATE : AFTER_MOUNT], instance);
+          execute($options[afterHook], instance);
         }
       });
     }
