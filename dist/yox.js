@@ -4028,20 +4028,10 @@ var Observer = function () {
 
         if (get$$1) {
 
-          if (cacheable) {
-            instance.watch(keypath + FORCE, function () {
-              _getter[DIRTY] = TRUE;
-            });
-          }
+          var getter = function getter() {
 
-          var _getter = function _getter() {
-
-            if (cacheable) {
-              if (_getter[DIRTY]) {
-                _getter[DIRTY] = FALSE;
-              } else if (has$1(cache, keypath)) {
-                return cache[keypath];
-              }
+            if (cacheable && has$1(cache, keypath)) {
+              return cache[keypath];
             }
 
             if (!deps) {
@@ -4059,7 +4049,7 @@ var Observer = function () {
             return value;
           };
 
-          instance.computedGetters[keypath] = _getter;
+          instance.computedGetters[keypath] = getter;
         }
 
         if (set$$1) {
@@ -4141,7 +4131,6 @@ var Observer = function () {
       var deps = instance.deps,
           data = instance.data,
           cache = instance.cache,
-          syncing = instance.syncing,
           emitter = instance.emitter,
           context = instance.context,
           reversedDeps = instance.reversedDeps,
@@ -4151,24 +4140,20 @@ var Observer = function () {
           reversedKeypaths = instance.reversedKeypaths;
 
 
-      if (syncing) {
+      if (instance[DIRTY]) {
 
-        delete instance.syncing;
+        delete instance[DIRTY];
 
-        watchKeypaths = {};
         reversedDeps = {};
-
-        var addKeypath = function addKeypath(keypath) {
-          watchKeypaths[keypath] = TRUE;
-        };
+        watchKeypaths = {};
 
         each$1(emitter.listeners, function (list, key) {
-          addKeypath(key);
+          watchKeypaths[key] = TRUE;
         });
 
         each$1(deps, function (deps, key) {
           each(deps, function (dep) {
-            addKeypath(dep);
+            watchKeypaths[dep] = TRUE;
             push(reversedDeps[dep] || (reversedDeps[dep] = []), key);
           });
         });
@@ -4198,7 +4183,7 @@ var Observer = function () {
           newCache = {};
       var getOldValue = function getOldValue(keypath) {
         if (!has$1(oldCache, keypath)) {
-          oldCache[keypath] = cache[keypath];
+          oldCache[keypath] = has$1(cache, keypath) ? cache[keypath] : instance.get(keypath);
         }
         return oldCache[keypath];
       };
@@ -4236,8 +4221,8 @@ var Observer = function () {
         if (computedSetters) {
           var setter = computedSetters[keypath];
           if (setter) {
-            addDifference(keypath, keypath, NULL, TRUE);
-            setter.call(context, newValue);
+            addDifference(keypath, keypath, UNDEFINED, TRUE);
+            execute(setter, context, newValue);
             return;
           } else {
             var _matchBestGetter2 = matchBestGetter(computedGetters, keypath),
@@ -4259,16 +4244,16 @@ var Observer = function () {
         set$1(data, keypath, newValue);
       });
 
-      var fireDifference = function fireDifference(keypath, realpath, oldValue) {
+      var finalDifferences = void 0;
+      var fireDifference = function fireDifference(keypath, realpath, oldValue, match) {
+
+        if (!finalDifferences) {
+          finalDifferences = {};
+        }
+        finalDifferences[realpath] = TRUE;
 
         var differences = instance.differences || (instance.differences = {});
-        differences[joinKeypath(keypath, realpath)] = { keypath: keypath, realpath: realpath, oldValue: oldValue };
-
-        each$1(cache, function (value, key) {
-          if (key !== realpath && startsWith$1(key, realpath)) {
-            delete cache[key];
-          }
-        });
+        differences[joinKeypath(keypath, realpath)] = { keypath: keypath, realpath: realpath, oldValue: oldValue, match: match };
 
         if (!instance.pending) {
           instance.pending = TRUE;
@@ -4284,12 +4269,13 @@ var Observer = function () {
                 var keypath = difference.keypath,
                     realpath = difference.realpath,
                     oldValue = difference.oldValue,
+                    match = difference.match,
                     newValue = instance.get(realpath);
 
                 if (oldValue !== newValue) {
                   var _args = [newValue, oldValue, keypath];
-                  if (realpath && realpath !== keypath) {
-                    push(_args, realpath);
+                  if (match) {
+                    push(_args, match);
                   }
                   emitter.fire(keypath, _args, context);
                 }
@@ -4316,22 +4302,20 @@ var Observer = function () {
           if (match) {
             push(args, match);
           }
-          if (force) {
-            emitter.fire(keypath + FORCE, args, context);
-          } else {
-            if (has$2(keypath, FORCE)) {
-              emitter.fire(keypath, args, context);
-              break;
-            } else {
-              fireDifference(keypath, realpath, oldValue);
-            }
+
+          if (has$1(cache, realpath)) {
+            delete cache[realpath];
+          }
+
+          if (!force) {
+            fireDifference(keypath, realpath, oldValue, match);
           }
 
           newValue = getNewValue(realpath);
           if (newValue !== oldValue) {
 
             if (force) {
-              fireDifference(keypath, realpath, oldValue);
+              fireDifference(keypath, realpath, oldValue, match);
             }
 
             // 当 user.name 变化了
@@ -4388,7 +4372,7 @@ var Observer = function () {
 
       if (newDeps !== deps[keypath]) {
         deps[keypath] = newDeps;
-        instance.syncing = TRUE;
+        instance[DIRTY] = TRUE;
       }
     }
   }, {
@@ -4439,13 +4423,12 @@ extend(Observer.prototype, {
    */
   unwatch: function unwatch(keypath, watcher) {
     if (this.emitter.off(keypath, watcher)) {
-      this.syncing = TRUE;
+      this[DIRTY] = TRUE;
     }
   }
 
 });
 
-var FORCE = '._force_';
 var DIRTY = '_dirty_';
 
 var syncIndex = 0;
@@ -4476,7 +4459,7 @@ function createWatch(action) {
       }
 
       if (instance.emitter[action](keypath, watcher)) {
-        instance.syncing = TRUE;
+        instance[DIRTY] = TRUE;
       }
 
       if (!isFuzzyKeypath(keypath)) {
@@ -6019,7 +6002,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.43.2';
+Yox.version = '0.43.3';
 
 /**
  * 工具，便于扩展、插件使用
