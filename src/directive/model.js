@@ -140,14 +140,8 @@ function oneway(binding, { el, node, instance, component }) {
   let set = function (value) {
     let name = node.modifier
     if (component) {
-      let set = function (component) {
+      if (component.set) {
         component.set(name, value)
-      }
-      if (is.array(component)) {
-        array.push(component, set)
-      }
-      else {
-        set(component)
       }
     }
     else {

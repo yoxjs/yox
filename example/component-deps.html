@@ -17,12 +17,6 @@
           <button on-click="innerIncrease()">
               innerIncrease
           </button>
-          <button on-click="outerIncrease()">
-              outerIncrease
-          </button>
-          <button on-click="user.increase()">
-              userIncrease
-          </button>
       </div>
     </script>
     <script id="template2" type="plain/text">
@@ -34,7 +28,7 @@
           {{user[variable]}}
           <br>
           {{ user.age > 10 ? title : variable }}
-          <Custom ref="child" title="{{title}}" user="{{user}}" outerIncrease="{{increase}}" />
+          <Custom ref="child" title="{{title}}" user="{{user}}" />
           <ul>
               {{#each list:index}}
               <li>
@@ -108,10 +102,7 @@
                     {
                         name: 'h3',
                     }
-                ],
-                increase: function () {
-                    console.log(this === instance, 'xxx')
-                }
+                ]
             },
             template: '#template2',
             components: {

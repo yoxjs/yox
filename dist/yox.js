@@ -4138,8 +4138,10 @@ var Observer = function () {
 
       var instance = this;
 
-      var data = instance.data,
+      var deps = instance.deps,
+          data = instance.data,
           cache = instance.cache,
+          syncing = instance.syncing,
           emitter = instance.emitter,
           context = instance.context,
           reversedDeps = instance.reversedDeps,
@@ -4147,6 +4149,34 @@ var Observer = function () {
           computedSetters = instance.computedSetters,
           watchKeypaths = instance.watchKeypaths,
           reversedKeypaths = instance.reversedKeypaths;
+
+
+      if (syncing) {
+
+        delete instance.syncing;
+
+        watchKeypaths = {};
+        reversedDeps = {};
+
+        var addKeypath = function addKeypath(keypath) {
+          watchKeypaths[keypath] = TRUE;
+        };
+
+        each$1(emitter.listeners, function (list, key) {
+          addKeypath(key);
+        });
+
+        each$1(deps, function (deps, key) {
+          each(deps, function (dep) {
+            addKeypath(dep);
+            push(reversedDeps[dep] || (reversedDeps[dep] = []), key);
+          });
+        });
+
+        reversedDeps = instance.reversedDeps = reversedDeps;
+        watchKeypaths = instance.watchKeypaths = sort(watchKeypaths, TRUE);
+        reversedKeypaths = instance.reversedKeypaths = sort(reversedDeps, TRUE);
+      }
 
       /**
        * a -> b -> c
@@ -4352,25 +4382,12 @@ var Observer = function () {
     value: function setDeps(keypath, newDeps) {
 
       var instance = this;
-
       var deps = instance.deps;
 
 
       if (newDeps !== deps[keypath]) {
-
         deps[keypath] = newDeps;
-        updateWatchKeypaths(instance);
-
-        var reversedDeps = {};
-
-        each$1(deps, function (deps, key) {
-          each(deps, function (dep) {
-            push(reversedDeps[dep] || (reversedDeps[dep] = []), key);
-          });
-        });
-
-        instance.reversedDeps = reversedDeps;
-        instance.reversedKeypaths = sort(reversedDeps, TRUE);
+        instance.syncing = TRUE;
       }
     }
   }, {
@@ -4421,7 +4438,7 @@ extend(Observer.prototype, {
    */
   unwatch: function unwatch(keypath, watcher) {
     if (this.emitter.off(keypath, watcher)) {
-      updateWatchKeypaths(this);
+      this.syncing = TRUE;
     }
   }
 
@@ -4431,27 +4448,6 @@ var FORCE = '._force_';
 var DIRTY = '_dirty_';
 
 var syncIndex = 0;
-
-function updateWatchKeypaths(instance) {
-
-  var watchKeypaths = {};
-
-  var addKeypath = function addKeypath(keypath) {
-    watchKeypaths[keypath] = TRUE;
-  };
-
-  // 1. 直接通过 watch 注册的
-  each$1(instance.emitter.listeners, function (list, key) {
-    addKeypath(key);
-  });
-
-  // 2. 依赖属于间接 watch
-  each$1(instance.deps, function (deps) {
-    each(deps, addKeypath);
-  });
-
-  instance.watchKeypaths = sort(watchKeypaths, TRUE);
-}
 
 /**
  * watch 和 watchOnce 逻辑相同
@@ -4479,7 +4475,7 @@ function createWatch(action) {
       }
 
       if (instance.emitter[action](keypath, watcher)) {
-        updateWatchKeypaths(instance);
+        instance.syncing = TRUE;
       }
 
       if (!isFuzzyKeypath(keypath)) {
@@ -4512,7 +4508,7 @@ var patternCache = {};
  *
  * @param {string} keypath
  * @param {string} pattern
- * return {?Array.<string>}
+ * @return {?Array.<string>}
  */
 function matchKeypath(keypath, pattern) {
   var cache = patternCache[pattern];
@@ -5214,13 +5210,8 @@ function oneway(binding, _ref2) {
   var set$$1 = function set$$1(value) {
     var name = node.modifier;
     if (component) {
-      var _set = function _set(component) {
+      if (component.set) {
         component.set(name, value);
-      };
-      if (array(component)) {
-        push(component, _set);
-      } else {
-        _set(component);
       }
     } else {
       api.setAttr(el, name, value);
@@ -6027,7 +6018,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.43.0';
+Yox.version = '0.43.1';
 
 /**
  * 工具，便于扩展、插件使用
