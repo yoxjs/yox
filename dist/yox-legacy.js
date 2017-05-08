@@ -4300,11 +4300,10 @@ var Observer = function () {
 
         keypath = normalize(keypath);
 
-        addDifference(keypath, keypath);
-
         if (computedSetters) {
           var setter = computedSetters[keypath];
           if (setter) {
+            addDifference(keypath, keypath, NULL, TRUE);
             setter.call(context, newValue);
             return;
           } else {
@@ -4315,6 +4314,7 @@ var Observer = function () {
             if (value && rest) {
               value = value();
               if (!primitive(value)) {
+                addDifference(keypath, keypath);
                 set$1(value, rest, newValue);
               }
               return;
@@ -4322,6 +4322,7 @@ var Observer = function () {
           }
         }
 
+        addDifference(keypath, keypath);
         set$1(data, keypath, newValue);
       });
 
@@ -6194,7 +6195,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.43.1';
+Yox.version = '0.43.2';
 
 /**
  * 工具，便于扩展、插件使用
