@@ -458,14 +458,13 @@ export default class Yox {
    */
   updateView(oldNode, newNode) {
 
-    let instance = this
+    let instance = this, afterHook
 
     let {
       $node,
       $options,
     } = instance
 
-    let afterHook
     if ($node) {
       execute($options[ lifecycle.BEFORE_UPDATE ], instance)
       instance.$node = patch(oldNode, newNode)
@@ -479,6 +478,8 @@ export default class Yox {
       afterHook = lifecycle.AFTER_MOUNT
     }
 
+    // 跟 nextTask 保持一个节奏
+    // 这样可以预留一些优化的余地
     nextTask.append(
       function () {
         if (instance.$node) {

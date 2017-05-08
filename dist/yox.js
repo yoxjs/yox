@@ -5684,13 +5684,13 @@ var Yox = function () {
     key: 'updateView',
     value: function updateView(oldNode, newNode) {
 
-      var instance = this;
+      var instance = this,
+          afterHook = void 0;
 
       var $node = instance.$node,
           $options = instance.$options;
 
 
-      var afterHook = void 0;
       if ($node) {
         execute($options[BEFORE_UPDATE], instance);
         instance.$node = patch(oldNode, newNode);
@@ -5703,6 +5703,8 @@ var Yox = function () {
         afterHook = AFTER_MOUNT;
       }
 
+      // 跟 nextTask 保持一个节奏
+      // 这样可以预留一些优化的余地
       append(function () {
         if (instance.$node) {
           execute($options[afterHook], instance);
