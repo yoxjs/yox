@@ -4323,11 +4323,11 @@ var Observer = function () {
                     newValue = instance.get(realpath);
 
                 if (oldValue !== newValue) {
-                  var args = [newValue, oldValue, keypath];
+                  var _args = [newValue, oldValue, keypath];
                   if (realpath && realpath !== keypath) {
-                    push(args, realpath);
+                    push(_args, realpath);
                   }
-                  emitter.fire(keypath, args, context);
+                  emitter.fire(keypath, _args, context);
                 }
               });
             }
@@ -4335,7 +4335,9 @@ var Observer = function () {
         }
       };
 
-      var _loop = function _loop(i, difference) {
+      for (var i = 0, difference; i < differences.length; i++) {
+        // 避免 babel 为了 let 作用域创建一个函数
+        // 这里所有变量声明换成 var
         var _differences$i = differences[i],
             keypath = _differences$i.keypath,
             realpath = _differences$i.realpath,
@@ -4355,7 +4357,7 @@ var Observer = function () {
           } else {
             if (has$2(keypath, FORCE)) {
               emitter.fire(keypath, args, context);
-              return 'break';
+              break;
             } else {
               fireDifference(keypath, realpath, oldValue);
             }
@@ -4370,48 +4372,46 @@ var Observer = function () {
 
             // 当 user.name 变化了
             // 要通知 user.* 的观察者们
-            each(watchKeypaths, function (key) {
-              if (key !== realpath) {
-                if (isFuzzyKeypath(key)) {
-                  var _match = matchKeypath(realpath, key);
-                  if (_match) {
-                    addDifference(key, realpath, _match);
+            if (watchKeypaths) {
+              each(watchKeypaths, function (key) {
+                if (key !== realpath) {
+                  if (isFuzzyKeypath(key)) {
+                    var _match = matchKeypath(realpath, key);
+                    if (_match) {
+                      addDifference(key, realpath, _match);
+                    }
+                  } else if (startsWith$1(key, realpath) !== FALSE) {
+                    addDifference(key, key);
                   }
-                } else if (startsWith$1(key, realpath) !== FALSE) {
-                  addDifference(key, key);
                 }
-              }
-            });
+              });
+            }
 
             // a 依赖 b
             // 当 b 变化了，要通知 a
-            each(reversedKeypaths, function (key) {
-              var list = void 0;
-              if (isFuzzyKeypath(key)) {
-                var _match2 = matchKeypath(realpath, key);
-                if (_match2) {
+            if (reversedKeypaths) {
+              each(reversedKeypaths, function (key) {
+                var list = void 0;
+                if (isFuzzyKeypath(key)) {
+                  var _match2 = matchKeypath(realpath, key);
+                  if (_match2) {
+                    list = reversedDeps[key];
+                  }
+                } else if (key === realpath) {
                   list = reversedDeps[key];
                 }
-              } else if (key === realpath) {
-                list = reversedDeps[key];
-              }
-              if (list) {
-                each(list, function (key) {
-                  addDifference(key, key, UNDEFINED, TRUE);
-                });
-              }
-            });
+                if (list) {
+                  each(list, function (key) {
+                    addDifference(key, key, UNDEFINED, TRUE);
+                  });
+                }
+              });
+            }
           }
         } else if (array(newValue)) {
           realpath = join(realpath, 'length');
           addDifference(realpath, realpath);
         }
-      };
-
-      for (var i = 0, difference; i < differences.length; i++) {
-        var _ret = _loop(i, difference);
-
-        if (_ret === 'break') break;
       }
     }
   }, {
@@ -6193,7 +6193,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.42.9';
+Yox.version = '0.43.0';
 
 /**
  * 工具，便于扩展、插件使用
