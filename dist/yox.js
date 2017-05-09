@@ -4113,7 +4113,12 @@ var Observer = function () {
         result = get$1(data, keypath);
       }
 
-      return result ? cache[keypath] = result.value : defaultValue;
+      if (result) {
+        return cache[keypath] = result.value;
+      }
+
+      cache[keypath] = UNDEFINED;
+      return defaultValue;
     }
 
     /**
@@ -4244,13 +4249,7 @@ var Observer = function () {
         set$1(data, keypath, newValue);
       });
 
-      var finalDifferences = void 0;
       var fireDifference = function fireDifference(keypath, realpath, oldValue, match) {
-
-        if (!finalDifferences) {
-          finalDifferences = {};
-        }
-        finalDifferences[realpath] = TRUE;
 
         var differences = instance.differences || (instance.differences = {});
         differences[joinKeypath(keypath, realpath)] = { keypath: keypath, realpath: realpath, oldValue: oldValue, match: match };
@@ -6002,7 +6001,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.43.3';
+Yox.version = '0.43.4';
 
 /**
  * 工具，便于扩展、插件使用
