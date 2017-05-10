@@ -4,23 +4,22 @@ import api from '../platform/web/api'
 
 export default function ({ el, node, instance, component }) {
 
-  let { modifier, attr, value, context } = node
-
-  let { keypath } = context.get(value)
+  let { keypath } = node.context.get(node.value)
 
   let set = function (value) {
-    if (attr) {
+    let name = node.modifier
+    if (node.prop) {
+      api.setProp(el, name, value)
+    }
+    else {
       if (component) {
         if (component.set) {
-          component.set(modifier, value)
+          component.set(name, value)
         }
       }
       else {
-        api.setAttr(el, modifier, value)
+        api.setAttr(el, name, value)
       }
-    }
-    else {
-      api.setProp(el, modifier, value)
     }
   }
 
