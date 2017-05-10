@@ -3977,7 +3977,7 @@ function render(ast, data, instance) {
     if (name) {
       addAttr(element, name, getValue(source, output));
       if (binding) {
-        addDirective(element, DIRECTIVE_BINDING, name, binding).attr = TRUE;
+        addDirective(element, DIRECTIVE_BINDING, name, binding);
       }
     }
   };
@@ -4014,7 +4014,7 @@ function render(ast, data, instance) {
       each$1(value, function (value, name) {
         addAttr(element, name, value);
         if (spreadKeypath) {
-          addDirective(element, DIRECTIVE_MODEL, name, join(expr.keypath, name));
+          addDirective(element, DIRECTIVE_BINDING, name, join(spreadKeypath, name));
         }
       });
     } else {
@@ -5380,25 +5380,22 @@ var binding = function (_ref) {
       node = _ref.node,
       instance = _ref.instance,
       component = _ref.component;
-  var modifier = node.modifier,
-      attr = node.attr,
-      value = node.value,
-      context = node.context;
 
-  var _context$get = context.get(value),
-      keypath = _context$get.keypath;
+  var _node$context$get = node.context.get(node.value),
+      keypath = _node$context$get.keypath;
 
   var set = function set(value) {
-    if (attr) {
+    var name = node.modifier;
+    if (node.prop) {
+      api.setProp(el, name, value);
+    } else {
       if (component) {
         if (component.set) {
-          component.set(modifier, value);
+          component.set(name, value);
         }
       } else {
-        api.setAttr(el, modifier, value);
+        api.setAttr(el, name, value);
       }
-    } else {
-      api.setProp(el, modifier, value);
     }
   };
 
@@ -6185,7 +6182,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.43.5';
+Yox.version = '0.43.6';
 
 /**
  * 工具，便于扩展、插件使用
