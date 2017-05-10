@@ -5367,16 +5367,6 @@ var Yox = function () {
     filters && instance.filter(filters);
 
     if (template) {
-      // 过滤器是预定义好的
-      // 在组件创建之后就不会改变，因此在此固化不变的 context
-      // 避免每次更新都要全量 extend
-      var filter = registry.filter;
-
-      instance.$context = extend({},
-      // 全局过滤器
-      filter && filter.data,
-      // 本地过滤器
-      filters);
       // 确保组件根元素有且只有一个
       template = Yox.compile(template);
       if (template.length > 1) {
@@ -5623,25 +5613,34 @@ var Yox = function () {
       var instance = this;
       var $template = instance.$template,
           $observer = instance.$observer,
-          $context = instance.$context;
+          $filters = instance.$filters;
+      var data = $observer.data,
+          computedGetters = $observer.computedGetters;
+      var filter = registry.filter;
+
+
+      var context = {};
+
+      extend(context,
+      // 全局过滤器
+      filter && filter.data,
+      // 本地过滤器
+      $filters,
+      // 本地数据
+      data);
 
       // 在单次渲染过程中，对于计算属性来说，不管开不开缓存，其实只需要计算一次即可
       // 因为渲染过程中不会修改数据，如果频繁执行计算属性的 getter 函数
       // 完全是无意义的性能消耗
-
-      var data = $observer.data,
-          computedGetters = $observer.computedGetters;
-
-
-      extend($context, data);
-
       if (computedGetters) {
         each$1(computedGetters, function (getter, key) {
-          $context[key] = getter();
+          if (key !== TEMPLATE_KEY) {
+            context[key] = getter();
+          }
         });
       }
 
-      var _renderTemplate = render($template, $context, instance),
+      var _renderTemplate = render($template, context, instance),
           nodes = _renderTemplate.nodes,
           deps = _renderTemplate.deps;
 
@@ -5804,7 +5803,7 @@ var Yox = function () {
 
       if ($node) {
         if (arguments[0] !== TRUE) {
-          vdom.patch($node, { text: CHAR_BLANK });
+          patch($node, { text: CHAR_BLANK });
         }
       }
 
@@ -6008,7 +6007,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.43.7';
+Yox.version = '0.43.8';
 
 /**
  * 工具，便于扩展、插件使用

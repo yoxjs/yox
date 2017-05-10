@@ -189,17 +189,6 @@ export default class Yox {
     filters && instance.filter(filters)
 
     if (template) {
-      // 过滤器是预定义好的
-      // 在组件创建之后就不会改变，因此在此固化不变的 context
-      // 避免每次更新都要全量 extend
-      let { filter } = registry
-      instance.$context = object.extend(
-        { },
-        // 全局过滤器
-        filter && filter.data,
-        // 本地过滤器
-        filters,
-      )
       // 确保组件根元素有且只有一个
       template = Yox.compile(template)
       if (template.length > 1) {
@@ -423,25 +412,37 @@ export default class Yox {
   render() {
 
     let instance = this
-    let { $template, $observer, $context } = instance
+    let { $template, $observer, $filters } = instance
+    let { data, computedGetters } = $observer
+    let { filter } = registry
+
+    let context = { }
+
+    object.extend(
+      context,
+      // 全局过滤器
+      filter && filter.data,
+      // 本地过滤器
+      $filters,
+      // 本地数据
+      data,
+    )
 
     // 在单次渲染过程中，对于计算属性来说，不管开不开缓存，其实只需要计算一次即可
     // 因为渲染过程中不会修改数据，如果频繁执行计算属性的 getter 函数
     // 完全是无意义的性能消耗
-    let { data, computedGetters } = $observer
-
-    object.extend($context, data)
-
     if (computedGetters) {
       object.each(
         computedGetters,
         function (getter, key) {
-          $context[ key ] = getter()
+          if (key !== TEMPLATE_KEY) {
+            context[ key ] = getter()
+          }
         }
       )
     }
 
-    let { nodes, deps } = renderTemplate($template, $context, instance)
+    let { nodes, deps } = renderTemplate($template, context, instance)
 
     let keys = object.keys(deps)
     object.each(
@@ -599,7 +600,7 @@ export default class Yox {
 
     if ($node) {
       if (arguments[ 0 ] !== env.TRUE) {
-        vdom.patch($node, { text: char.CHAR_BLANK })
+        patch($node, { text: char.CHAR_BLANK })
       }
     }
 
@@ -784,7 +785,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.43.7'
+Yox.version = '0.43.8'
 
 /**
  * 工具，便于扩展、插件使用
