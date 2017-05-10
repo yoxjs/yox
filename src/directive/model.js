@@ -91,7 +91,14 @@ const specialControls = {
   select: selectControl,
 }
 
-function twoway(binding, { el, node, instance, directives, attrs }) {
+export default function ({ el, node, instance, directives, attrs }) {
+
+  let { value, context } = node
+  if (string.falsy(value)) {
+    return
+  }
+
+  let { keypath } = context.get(value)
 
   let type = event.CHANGE, tagName = api.tag(el), controlType = el.type
   let control = specialControls[ controlType ] || specialControls[ tagName ]
@@ -108,11 +115,11 @@ function twoway(binding, { el, node, instance, directives, attrs }) {
   tagName = controlType = env.NULL
 
   let set = function () {
-    control.set(el, binding, instance)
+    control.set(el, keypath, instance)
   }
 
   instance.watch(
-    binding,
+    keypath,
     set,
     control.attr && !object.has(attrs, control.attr)
   )
@@ -124,51 +131,13 @@ function twoway(binding, { el, node, instance, directives, attrs }) {
     directives,
     type,
     listener() {
-      control.sync(el, binding, instance)
+      control.sync(el, keypath, instance)
     }
   })
 
   return function () {
-    instance.unwatch(binding, set)
+    instance.unwatch(keypath, set)
     destroy && destroy()
-  }
-
-}
-
-function oneway(binding, { el, node, instance, component }) {
-
-  let set = function (value) {
-    let name = node.modifier
-    if (component) {
-      if (component.set) {
-        component.set(name, value)
-      }
-    }
-    else {
-      api.setAttr(el, name, value)
-    }
-  }
-
-  instance.watch(binding, set)
-
-  return function () {
-    instance.unwatch(binding, set)
-  }
-
-}
-
-
-// 双向 model="xx"
-// 单向 name="{{value}}"
-
-export default function (options) {
-
-  let { modifier, value, context } = options.node
-  if (!string.falsy(value)) {
-    let { keypath } = context.get(value)
-    return modifier
-      ? oneway(keypath, options)
-      : twoway(keypath, options)
   }
 
 }

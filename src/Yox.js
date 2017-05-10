@@ -778,7 +778,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.43.4'
+Yox.version = '0.43.5'
 
 /**
  * 工具，便于扩展、插件使用
@@ -1060,6 +1060,7 @@ function magic(options) {
 import ref from './directive/ref'
 import event from './directive/event'
 import model from './directive/model'
+import binding from './directive/binding'
 
 // 全局注册内置指令
-Yox.directive({ ref, event, model })
+Yox.directive({ ref, event, model, binding })
