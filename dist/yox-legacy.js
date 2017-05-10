@@ -3168,20 +3168,20 @@ function compile(content) {
         return;
       }
 
-      var onlyChild = children.length === 1 && children[0];
+      var singleChild = children.length === 1 && children[0];
 
       if (type === ELEMENT) {
         // 只有一个子元素
         // 并且这个子元素是非转义插值
         // 转成 props
         if (children.length - divider === 1) {
-          onlyChild = last(children);
-          if (onlyChild.type === EXPRESSION) {
+          singleChild = last(children);
+          if (singleChild.type === EXPRESSION) {
             var props = {};
-            if (onlyChild.safe === FALSE) {
-              props.innerHTML = onlyChild.expr;
+            if (singleChild.safe === FALSE) {
+              props.innerHTML = singleChild.expr;
             } else {
-              props.innerText = onlyChild.expr;
+              props.innerText = singleChild.expr;
             }
             target.props = props;
             if (divider) {
@@ -3200,32 +3200,31 @@ function compile(content) {
           if (!element.children.length) {
             delete element.children;
           }
-          element.key = onlyChild && onlyChild.type === TEXT ? onlyChild.text : children;
-        } else if (onlyChild) {
-          if (onlyChild.type === TEXT) {
+          element.key = singleChild && singleChild.type === TEXT ? singleChild.text : children;
+        } else if (singleChild) {
+          if (singleChild.type === TEXT) {
             // 指令的值如果是纯文本，可以预编译表达式，提升性能
             if (type === DIRECTIVE) {
-              var expr = compile$1(onlyChild.text);
-              target.expr = expr;
-              target.value = onlyChild.text;
+              target.expr = compile$1(singleChild.text);
+              target.value = singleChild.text;
               delete target.children;
             }
             // 属性的值如果是纯文本，直接获取文本值
             // 减少渲染时的遍历
             else if (type === ATTRIBUTE) {
-                target.value = onlyChild.text;
+                target.value = singleChild.text;
                 delete target.children;
               }
           }
           // <div class="{{className}}">
           // 把 Attribute 转成 单向绑定 指令，可实现精确更新视图
-          else if (type === ATTRIBUTE && onlyChild.type === EXPRESSION && onlyChild.safe) {
-              var _onlyChild = onlyChild,
-                  _expr = _onlyChild.expr;
+          else if (type === ATTRIBUTE && singleChild.type === EXPRESSION) {
+              var _singleChild = singleChild,
+                  expr = _singleChild.expr;
 
-              if (string(_expr.keypath)) {
-                target.expr = _expr;
-                target.binding = _expr.keypath;
+              if (string(expr.keypath)) {
+                target.expr = expr;
+                target.binding = expr.keypath;
                 delete target.children;
               }
             }
@@ -3248,7 +3247,12 @@ function compile(content) {
     }
 
     if (elseTypes[type]) {
-      popStack(pop(ifStack).type);
+      var ifNode = pop(ifStack);
+      ifNode.then = node;
+      popStack(ifNode.type);
+      push(ifStack, node);
+      push(nodeStack, node);
+      return;
     }
 
     var currentNode = last(nodeStack);
@@ -3258,7 +3262,7 @@ function compile(content) {
       push(nodeList, node);
     }
 
-    if (ifTypes[type] || elseTypes[type]) {
+    if (ifTypes[type]) {
       push(ifStack, node);
     } else if (htmlTypes[type]) {
       push(htmlStack, node);
@@ -3707,10 +3711,8 @@ function render(ast, data, instance) {
         } else if (attributeRendering && index >= divider) {
           attributeRendering = NULL;
         }
-        if (!filterNode || filterNode(node)) {
-          sibling = children[index + 1];
-          pushStack(node);
-        }
+        sibling = children[index + 1];
+        pushStack(node);
       });
       if (attributeRendering) {
         attributeRendering = NULL;
@@ -3726,16 +3728,6 @@ function render(ast, data, instance) {
     pop(nodeStack);
 
     return output;
-  };
-
-  var filterNode = void 0;
-  var filterElse = function filterElse(node) {
-    if (elseTypes[node.type]) {
-      return FALSE;
-    } else {
-      filterNode = NULL;
-      return TRUE;
-    }
   };
 
   // 缓存节点只处理一层，不支持下面这种多层缓存
@@ -3796,8 +3788,13 @@ function render(ast, data, instance) {
   // 但如果失败的点原本是一个 DOM 元素
   // 就需要用注释节点来占位，否则 virtual dom 无法正常工作
   enter[IF$1] = enter[ELSE_IF$1] = function (source) {
-    if (!executeExpr(source.expr)) {
-      if (sibling && !elseTypes[sibling.type] && !attributeRendering) {
+    var expr = source.expr,
+        then = source.then;
+
+    if (!executeExpr(expr)) {
+      if (then) {
+        pushStack(then);
+      } else if (sibling && !attributeRendering) {
         addChild(last(htmlStack), createCommentVnode());
       }
       return FALSE;
@@ -3805,7 +3802,6 @@ function render(ast, data, instance) {
   };
 
   leave[IF$1] = leave[ELSE_IF$1] = leave[ELSE$1] = function (source, output) {
-    filterNode = filterElse;
     var children = output.children;
 
     if (children) {
@@ -5497,13 +5493,15 @@ var Yox = function () {
 
     execute(options[AFTER_CREATE], instance);
 
+    var templateError = '"template" option expected to have just one root element.';
+
     // 检查 template
     if (string(template)) {
       if (selector.test(template)) {
         template = api.html(api.find(template));
       }
       if (!tag.test(template)) {
-        error$1('"template" option expected to have a root element.');
+        error$1(templateError);
       }
     } else {
       template = NULL;
@@ -5556,7 +5554,11 @@ var Yox = function () {
       // 本地过滤器
       filters);
       // 确保组件根元素有且只有一个
-      instance.$template = Yox.compile(template)[0];
+      template = Yox.compile(template);
+      if (template.length > 1) {
+        fatal(templateError);
+      }
+      instance.$template = template[0];
       // 首次渲染
       instance.updateView(el || api.createElement('div'), instance.render());
     }
@@ -6182,7 +6184,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.43.6';
+Yox.version = '0.43.7';
 
 /**
  * 工具，便于扩展、插件使用
