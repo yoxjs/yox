@@ -132,6 +132,8 @@ export default class Yox {
 
     execute(options[ lifecycle.AFTER_CREATE ], instance)
 
+    let templateError = '"template" option expected to have just one root element.'
+
     // 检查 template
     if (is.string(template)) {
       if (pattern.selector.test(template)) {
@@ -140,7 +142,7 @@ export default class Yox {
         )
       }
       if (!pattern.tag.test(template)) {
-        logger.error('"template" option expected to have a root element.')
+        logger.error(templateError)
       }
     }
     else {
@@ -199,7 +201,11 @@ export default class Yox {
         filters,
       )
       // 确保组件根元素有且只有一个
-      instance.$template = Yox.compile(template)[ 0 ]
+      template = Yox.compile(template)
+      if (template.length > 1) {
+        logger.fatal(templateError)
+      }
+      instance.$template = template[ 0 ]
       // 首次渲染
       instance.updateView(
         el || api.createElement('div'),
@@ -778,7 +784,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.43.6'
+Yox.version = '0.43.7'
 
 /**
  * 工具，便于扩展、插件使用
