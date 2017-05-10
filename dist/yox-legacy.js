@@ -2672,6 +2672,7 @@ var DIRECTIVE_REF = 'ref';
 var DIRECTIVE_LAZY = 'lazy';
 var DIRECTIVE_MODEL = 'model';
 var DIRECTIVE_EVENT = 'event';
+var DIRECTIVE_BINDING = 'binding';
 
 var KEYWORD_UNIQUE = 'key';
 
@@ -3175,10 +3176,14 @@ function compile(content) {
         // 转成 props
         if (children.length - divider === 1) {
           onlyChild = last(children);
-          if (onlyChild.type === EXPRESSION && onlyChild.safe === FALSE) {
-            target.props = {
-              innerHTML: onlyChild.expr
-            };
+          if (onlyChild.type === EXPRESSION) {
+            var props = {};
+            if (onlyChild.safe === FALSE) {
+              props.innerHTML = onlyChild.expr;
+            } else {
+              props.innerText = onlyChild.expr;
+            }
+            target.props = props;
             if (divider) {
               children.length = divider;
             } else {
@@ -3484,12 +3489,12 @@ var Context = function () {
 
   createClass(Context, [{
     key: 'push',
-    value: function push$$1(data, keypath) {
+    value: function push(data, keypath) {
       return new Context(data, keypath, this);
     }
   }, {
     key: 'pop',
-    value: function pop$$1() {
+    value: function pop() {
       return this.parent;
     }
   }, {
@@ -3649,15 +3654,14 @@ function render(ast, data, instance) {
     attrs[key] = value;
   };
 
-  var addDirective = function addDirective(parent, name, modifier, value, expr) {
+  var addDirective = function addDirective(parent, name, modifier, value) {
     var directives = parent.directives || (parent.directives = {});
-    directives[join(name, modifier)] = {
+    return directives[join(name, modifier)] = {
       name: name,
       modifier: modifier,
       context: context,
       keypath: keypath,
-      value: value,
-      expr: expr
+      value: value
     };
   };
 
@@ -3933,6 +3937,9 @@ function render(ast, data, instance) {
       props = {};
       each$1(source.props, function (expr, key) {
         props[key] = executeExpr(expr);
+        if (expr.keypath) {
+          addDirective(output, DIRECTIVE_BINDING, key, expr.keypath).prop = TRUE;
+        }
       });
     }
 
@@ -3970,7 +3977,7 @@ function render(ast, data, instance) {
     if (name) {
       addAttr(element, name, getValue(source, output));
       if (binding) {
-        addDirective(element, DIRECTIVE_MODEL, name, binding);
+        addDirective(element, DIRECTIVE_BINDING, name, binding).attr = TRUE;
       }
     }
   };
@@ -3987,7 +3994,7 @@ function render(ast, data, instance) {
     // model="xxx"
     // model=""
 
-    addDirective(htmlStack[htmlStack.length - 2], source.name, source.modifier, getValue(source, output), source.expr);
+    addDirective(htmlStack[htmlStack.length - 2], source.name, source.modifier, getValue(source, output)).expr = source.expr;
   };
 
   leave[SPREAD$1] = function (source, output) {
@@ -4095,28 +4102,29 @@ var Observer = function () {
 
         if (get$$1) {
 
-          var getter = function getter() {
+          instance.computedGetters[keypath] = function () {
 
-            if (cacheable && has$1(cache, keypath)) {
-              return cache[keypath];
-            }
-
-            if (!deps) {
-              computedStack.push([]);
+            if (cacheable) {
+              if (has$1(cache, keypath)) {
+                return cache[keypath];
+              }
+              if (!deps) {
+                computedStack.push([]);
+              }
             }
 
             var value = execute(get$$1, instance.context);
             cache[keypath] = value;
 
-            var newDeps = deps || pop(computedStack);
-            if (array(newDeps)) {
-              instance.setDeps(keypath, newDeps);
+            if (cacheable) {
+              var newDeps = deps || pop(computedStack);
+              if (array(newDeps)) {
+                instance.setDeps(keypath, newDeps);
+              }
             }
 
             return value;
           };
-
-          instance.computedGetters[keypath] = getter;
         }
 
         if (set$$1) {
@@ -5316,13 +5324,21 @@ var specialControls = {
   select: selectControl
 };
 
-function twoway(binding, _ref) {
+var model = function (_ref) {
   var el = _ref.el,
       node = _ref.node,
       instance = _ref.instance,
       directives = _ref.directives,
       attrs = _ref.attrs;
+  var value = node.value,
+      context = node.context;
 
+  if (falsy$1(value)) {
+    return;
+  }
+
+  var _context$get = context.get(value),
+      keypath = _context$get.keypath;
 
   var type = CHANGE,
       tagName = api.tag(el),
@@ -5337,10 +5353,10 @@ function twoway(binding, _ref) {
   tagName = controlType = NULL;
 
   var set$$1 = function set$$1() {
-    control.set(el, binding, instance);
+    control.set(el, keypath, instance);
   };
 
-  instance.watch(binding, set$$1, control.attr && !has$1(attrs, control.attr));
+  instance.watch(keypath, set$$1, control.attr && !has$1(attrs, control.attr));
 
   var destroy = bindEvent({
     el: el,
@@ -5349,56 +5365,48 @@ function twoway(binding, _ref) {
     directives: directives,
     type: type,
     listener: function listener() {
-      control.sync(el, binding, instance);
+      control.sync(el, keypath, instance);
     }
   });
 
   return function () {
-    instance.unwatch(binding, set$$1);
+    instance.unwatch(keypath, set$$1);
     destroy && destroy();
   };
-}
+};
 
-function oneway(binding, _ref2) {
-  var el = _ref2.el,
-      node = _ref2.node,
-      instance = _ref2.instance,
-      component = _ref2.component;
+var binding = function (_ref) {
+  var el = _ref.el,
+      node = _ref.node,
+      instance = _ref.instance,
+      component = _ref.component;
+  var modifier = node.modifier,
+      attr = node.attr,
+      value = node.value,
+      context = node.context;
 
+  var _context$get = context.get(value),
+      keypath = _context$get.keypath;
 
-  var set$$1 = function set$$1(value) {
-    var name = node.modifier;
-    if (component) {
-      if (component.set) {
-        component.set(name, value);
+  var set = function set(value) {
+    if (attr) {
+      if (component) {
+        if (component.set) {
+          component.set(modifier, value);
+        }
+      } else {
+        api.setAttr(el, modifier, value);
       }
     } else {
-      api.setAttr(el, name, value);
+      api.setProp(el, modifier, value);
     }
   };
 
-  instance.watch(binding, set$$1);
+  instance.watch(keypath, set);
 
   return function () {
-    instance.unwatch(binding, set$$1);
+    instance.unwatch(keypath, set);
   };
-}
-
-// 双向 model="xx"
-// 单向 name="{{value}}"
-
-var model = function (options) {
-  var _options$node = options.node,
-      modifier = _options$node.modifier,
-      value = _options$node.value,
-      context = _options$node.context;
-
-  if (!falsy$1(value)) {
-    var _context$get = context.get(value),
-        keypath = _context$get.keypath;
-
-    return modifier ? oneway(keypath, options) : twoway(keypath, options);
-  }
 };
 
 var TEMPLATE_KEY = '_template_';
@@ -6177,7 +6185,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.43.4';
+Yox.version = '0.43.5';
 
 /**
  * 工具，便于扩展、插件使用
@@ -6450,7 +6458,7 @@ function magic(options) {
 }
 
 // 全局注册内置指令
-Yox.directive({ ref: ref, event: bindEvent, model: model });
+Yox.directive({ ref: ref, event: bindEvent, model: model, binding: binding });
 
 return Yox;
 
