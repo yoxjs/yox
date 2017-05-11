@@ -121,7 +121,7 @@ export default function ({ el, node, instance, directives, attrs }) {
   instance.watch(
     keypath,
     set,
-    control.attr && !object.has(attrs, control.attr)
+    !control.attr || !object.has(attrs, control.attr)
   )
 
   let destroy = bindEvent({

@@ -5176,7 +5176,7 @@ var model = function (_ref) {
     control.set(el, keypath, instance);
   };
 
-  instance.watch(keypath, set$$1, control.attr && !has$1(attrs, control.attr));
+  instance.watch(keypath, set$$1, !control.attr || !has$1(attrs, control.attr));
 
   var destroy = bindEvent({
     el: el,
@@ -6007,7 +6007,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.43.8';
+Yox.version = '0.43.9';
 
 /**
  * 工具，便于扩展、插件使用
