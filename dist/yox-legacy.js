@@ -1245,21 +1245,15 @@ function Vnode(tag, text, data, children, key, component) {
 
 var SEL_COMMENT = '!';
 
-var HOOK_INIT = 'init';
 var HOOK_CREATE = 'create';
-var HOOK_INSERT = 'insert';
 
 var HOOK_REMOVE = 'remove';
 var HOOK_DESTROY = 'destroy';
 
-var HOOK_PRE = 'pre';
-var HOOK_POST = 'post';
-
-var HOOK_PREPATCH = 'prepatch';
 var HOOK_UPDATE = 'update';
 var HOOK_POSTPATCH = 'postpatch';
 
-var moduleHooks = [HOOK_CREATE, HOOK_UPDATE, HOOK_REMOVE, HOOK_DESTROY, HOOK_PRE, HOOK_POST];
+var moduleHooks = [HOOK_CREATE, HOOK_UPDATE, HOOK_POSTPATCH, HOOK_REMOVE, HOOK_DESTROY];
 
 var emptyNode = Vnode(CHAR_BLANK, UNDEFINED, {}, []);
 
@@ -1300,15 +1294,12 @@ function init(modules, api) {
     });
   });
 
-  var createElement = function createElement(parentNode, vnode, insertedQueue) {
+  var createElement = function createElement(parentNode, vnode) {
     var tag = vnode.tag,
         data = vnode.data,
         children = vnode.children,
         text = vnode.text;
 
-
-    var hooks = data && data.hooks || {};
-    execute(hooks[HOOK_INIT], NULL, vnode);
 
     if (falsy$1(tag)) {
       return vnode.el = api.createText(text);
@@ -1321,33 +1312,26 @@ function init(modules, api) {
     var el = vnode.el = api.createElement(tag, parentNode);
 
     if (array(children)) {
-      addVnodes(el, children, 0, children.length - 1, insertedQueue);
+      addVnodes(el, children, 0, children.length - 1);
     } else if (string(text)) {
       api.append(el, api.createText(text));
     }
 
     if (data) {
-      data = [emptyNode, vnode];
-      moduleEmitter.fire(HOOK_CREATE, data, api);
-
-      execute(hooks[HOOK_CREATE], NULL, data);
-
-      if (hooks[HOOK_INSERT]) {
-        insertedQueue.push(vnode);
-      }
+      moduleEmitter.fire(HOOK_CREATE, [emptyNode, vnode], api);
     }
     // 钩子函数可能会替换元素
     return vnode.el;
   };
 
-  var addVnodes = function addVnodes(parentNode, vnodes, startIndex, endIndex, insertedQueue, before) {
+  var addVnodes = function addVnodes(parentNode, vnodes, startIndex, endIndex, before) {
     for (var i = startIndex; i <= endIndex; i++) {
-      addVnode(parentNode, vnodes[i], insertedQueue, before);
+      addVnode(parentNode, vnodes[i], before);
     }
   };
 
-  var addVnode = function addVnode(parentNode, vnode, insertedQueue, before) {
-    var el = createElement(parentNode, vnode, insertedQueue);
+  var addVnode = function addVnode(parentNode, vnode, before) {
+    var el = createElement(parentNode, vnode);
     if (el) {
       api.before(parentNode, el, before);
     }
@@ -1373,9 +1357,6 @@ function init(modules, api) {
 
       if (data) {
         moduleEmitter.fire(HOOK_REMOVE, vnode, api);
-        if (data.hooks) {
-          execute(data.hooks[HOOK_REMOVE], NULL, vnode);
-        }
       }
     } else if (el) {
       api.remove(parentNode, el);
@@ -1396,10 +1377,6 @@ function init(modules, api) {
       }
 
       moduleEmitter.fire(HOOK_DESTROY, vnode, api);
-
-      if (data.hooks) {
-        execute(data.hooks[HOOK_DESTROY], NULL, vnode);
-      }
     }
   };
 
@@ -1408,7 +1385,7 @@ function init(modules, api) {
     removeVnode(parentNode, oldVnode);
   };
 
-  var updateChildren = function updateChildren(parentNode, oldChildren, newChildren, insertedQueue) {
+  var updateChildren = function updateChildren(parentNode, oldChildren, newChildren) {
 
     var oldStartIndex = 0;
     var oldEndIndex = oldChildren.length - 1;
@@ -1435,14 +1412,14 @@ function init(modules, api) {
 
       // 优先从头到尾比较，位置相同且值得 patch
       else if (isPatchable(oldStartVnode, newStartVnode)) {
-          patchVnode(oldStartVnode, newStartVnode, insertedQueue);
+          patchVnode(oldStartVnode, newStartVnode);
           oldStartVnode = oldChildren[++oldStartIndex];
           newStartVnode = newChildren[++newStartIndex];
         }
 
         // 再从尾到头比较，位置相同且值得 patch
         else if (isPatchable(oldEndVnode, newEndVnode)) {
-            patchVnode(oldEndVnode, newEndVnode, insertedQueue);
+            patchVnode(oldEndVnode, newEndVnode);
             oldEndVnode = oldChildren[--oldEndIndex];
             newEndVnode = newChildren[--newEndIndex];
           }
@@ -1452,7 +1429,7 @@ function init(modules, api) {
           // 当 oldStartVnode 和 newEndVnode 值得 patch
           // 说明元素被移到右边了
           else if (isPatchable(oldStartVnode, newEndVnode)) {
-              patchVnode(oldStartVnode, newEndVnode, insertedQueue);
+              patchVnode(oldStartVnode, newEndVnode);
               api.before(parentNode, oldStartVnode.el, api.next(oldEndVnode.el));
               oldStartVnode = oldChildren[++oldStartIndex];
               newEndVnode = newChildren[--newEndIndex];
@@ -1461,7 +1438,7 @@ function init(modules, api) {
             // 当 oldEndVnode 和 newStartVnode 值得 patch
             // 说明元素被移到左边了
             else if (isPatchable(oldEndVnode, newStartVnode)) {
-                patchVnode(oldEndVnode, newStartVnode, insertedQueue);
+                patchVnode(oldEndVnode, newStartVnode);
                 api.before(parentNode, oldEndVnode.el, oldStartVnode.el);
                 oldEndVnode = oldChildren[--oldEndIndex];
                 newStartVnode = newChildren[++newStartIndex];
@@ -1479,12 +1456,12 @@ function init(modules, api) {
                   // 移动元素
                   if (number(oldIndex)) {
                     activeVnode = oldChildren[oldIndex];
-                    patchVnode(activeVnode, newStartVnode, insertedQueue);
+                    patchVnode(activeVnode, newStartVnode);
                     oldChildren[oldIndex] = NULL;
                   }
                   // 新元素
                   else {
-                      activeVnode = createElement(parentNode, newStartVnode, insertedQueue);
+                      activeVnode = createElement(parentNode, newStartVnode);
                       if (activeVnode) {
                         activeVnode = newStartVnode;
                       }
@@ -1500,24 +1477,19 @@ function init(modules, api) {
 
     if (oldStartIndex > oldEndIndex) {
       activeVnode = newChildren[newEndIndex + 1];
-      addVnodes(parentNode, newChildren, newStartIndex, newEndIndex, insertedQueue, activeVnode ? activeVnode.el : NULL);
+      addVnodes(parentNode, newChildren, newStartIndex, newEndIndex, activeVnode ? activeVnode.el : NULL);
     } else if (newStartIndex > newEndIndex) {
       removeVnodes(parentNode, oldChildren, oldStartIndex, oldEndIndex);
     }
   };
 
-  var patchVnode = function patchVnode(oldVnode, vnode, insertedQueue) {
+  var patchVnode = function patchVnode(oldVnode, vnode) {
 
     if (oldVnode === vnode) {
       return;
     }
 
-    var data = vnode.data;
-
-    var hooks = data && data.hooks || {};
-
     var args = [oldVnode, vnode];
-    execute(hooks[HOOK_PREPATCH], NULL, args);
 
     var el = oldVnode.el;
 
@@ -1525,15 +1497,16 @@ function init(modules, api) {
 
     if (!isPatchable(oldVnode, vnode)) {
       var parentNode = api.parent(el);
-      if (createElement(parentNode, vnode, insertedQueue)) {
+      if (createElement(parentNode, vnode)) {
         parentNode && replaceVnode(parentNode, oldVnode, vnode);
       }
       return;
     }
 
+    var data = vnode.data;
+
     if (data) {
       moduleEmitter.fire(HOOK_UPDATE, args, api);
-      execute(hooks[HOOK_UPDATE], NULL, args);
     }
 
     var newText = vnode.text;
@@ -1550,7 +1523,7 @@ function init(modules, api) {
       // 两个都有需要 diff
       if (newChildren && oldChildren) {
         if (newChildren !== oldChildren) {
-          updateChildren(el, oldChildren, newChildren, insertedQueue);
+          updateChildren(el, oldChildren, newChildren);
         }
       }
       // 有新的没旧的 - 新增节点
@@ -1558,7 +1531,7 @@ function init(modules, api) {
           if (string(oldText)) {
             api.text(el, CHAR_BLANK);
           }
-          addVnodes(el, newChildren, 0, newChildren.length - 1, insertedQueue);
+          addVnodes(el, newChildren, 0, newChildren.length - 1);
         }
         // 有旧的没新的 - 删除节点
         else if (oldChildren) {
@@ -1570,12 +1543,12 @@ function init(modules, api) {
             }
     }
 
-    execute(hooks[HOOK_POSTPATCH], NULL, args);
+    if (data) {
+      moduleEmitter.fire(HOOK_POSTPATCH, args, api);
+    }
   };
 
   return function (oldVnode, vnode) {
-
-    moduleEmitter.fire(HOOK_PRE, NULL, api);
 
     if (api.isElement(oldVnode)) {
       var el = oldVnode;
@@ -1583,21 +1556,14 @@ function init(modules, api) {
       oldVnode.el = el;
     }
 
-    var insertedQueue = [];
     if (isPatchable(oldVnode, vnode)) {
-      patchVnode(oldVnode, vnode, insertedQueue);
+      patchVnode(oldVnode, vnode);
     } else {
       var parentNode = api.parent(oldVnode.el);
-      if (createElement(parentNode, vnode, insertedQueue)) {
+      if (createElement(parentNode, vnode)) {
         parentNode && replaceVnode(parentNode, oldVnode, vnode);
       }
     }
-
-    each(insertedQueue, function (vnode) {
-      execute(vnode.data.hooks[HOOK_INSERT], NULL, vnode);
-    });
-
-    moduleEmitter.fire(HOOK_POST, NULL, api);
 
     return vnode;
   };
@@ -1639,38 +1605,52 @@ var snabbdomAttrs = {
   update: updateAttrs
 };
 
-function updateProps(oldVnode, vnode) {
+function setProps(oldVnode, vnode) {
 
-  var oldProps = oldVnode.data.props;
   var newProps = vnode.data.props;
-
-  if (vnode.component || !oldProps && !newProps) {
-    return;
+  if (newProps) {
+    var api = this,
+        oldProps = oldVnode.data.props || {};
+    each$1(newProps, function (value, name) {
+      if (value !== oldProps[name]) {
+        api.setProp(vnode.el, name, value);
+        if (oldVnode.children) {
+          delete oldVnode.children;
+        }
+      }
+    });
   }
-
-  oldProps = oldProps || {};
-  newProps = newProps || {};
-
-  var el = vnode.el;
-
-  var api = this;
-
-  each$1(newProps, function (value, name) {
-    if (value !== oldProps[name]) {
-      api.setProp(el, name, value);
-    }
-  });
-
-  each$1(oldProps, function (value, name) {
-    if (!has$1(newProps, name)) {
-      api.removeProp(el, name);
-    }
-  });
 }
 
+function removeProps(oldVnode, vnode) {
+
+  var oldProps = oldVnode.data.props;
+  if (oldProps) {
+    var api = this,
+        newProps = vnode.data.props || {};
+    each$1(oldProps, function (value, name) {
+      if (!has$1(newProps, name)) {
+        api.removeProp(vnode.el, name);
+      }
+    });
+  }
+}
+
+//
+// 旧 [ child1, child2 ]
+// 新 innerHTML
+//
+// 这种情况，要让外部先把 child1 child2 正常移除掉，再用 innerHTML 覆盖，否则指令无法销毁
+//
+// 旧 innerHTML
+// 新 [ child1, child2 ]
+//
+// 这种情况，先用 innerHTML 覆盖，再处理 child1 child2
+//
 var snabbdomProps = {
-  create: updateProps,
-  update: updateProps
+  create: setProps,
+  update: removeProps,
+  postpatch: setProps
 };
 
 /**
@@ -3747,13 +3727,6 @@ function render(ast, data, instance) {
         if (cacheDeps) {
           cacheDeps[key] = value;
         }
-        // 响应数组长度的变化是个很普遍的需求
-        if (array(value)) {
-          deps[join(keypath, 'length')] = value.length;
-          if (cacheDeps) {
-            cacheDeps[join(key, 'length')] = value.length;
-          }
-        }
       }
       return value;
     }, instance);
@@ -3932,9 +3905,11 @@ function render(ast, data, instance) {
     if (source.props) {
       props = {};
       each$1(source.props, function (expr, key) {
-        props[key] = executeExpr(expr);
-        if (expr.keypath) {
-          addDirective(output, DIRECTIVE_BINDING, key, expr.keypath).prop = TRUE;
+        var keypath = expr.keypath;
+
+        props[key] = executeExpr(expr, keypath);
+        if (keypath) {
+          addDirective(output, DIRECTIVE_BINDING, key, keypath).prop = TRUE;
         }
       });
     }
@@ -3984,11 +3959,8 @@ function render(ast, data, instance) {
     //   on-click="submit()"
     //   ref="child"
     //
-    // 2.如果指令的值包含插值语法，则会 merge 出最终值
+    // 2.如果指令的值包含插值语法，则会拼接出最终值
     //   on-click="haha{{name}}"
-    //
-    // model="xxx"
-    // model=""
 
     addDirective(htmlStack[htmlStack.length - 2], source.name, source.modifier, getValue(source, output)).expr = source.expr;
   };
@@ -4035,24 +4007,23 @@ var Observer = function () {
    * @param {Object} options
    * @property {Object} options.data
    * @property {?Object} options.computed
-   * @property {?Object} options.watchers
    * @property {?*} options.context 执行 watcher 函数的 this 指向
    */
   function Observer(options) {
     classCallCheck(this, Observer);
     var data = options.data,
         context = options.context,
-        computed = options.computed,
-        watchers = options.watchers;
+        computed = options.computed;
 
 
     var instance = this;
 
     instance.data = data;
-    instance.cache = {};
     instance.emitter = new Emitter();
     instance.context = context || instance;
 
+    // 缓存历史数据，便于对比变化
+    instance.cache = {};
     // 谁依赖了谁
     instance.deps = {};
     // 谁被谁依赖
@@ -4127,10 +4098,6 @@ var Observer = function () {
           instance.computedSetters[keypath] = set$$1;
         }
       });
-    }
-
-    if (object(watchers)) {
-      instance.watch(watchers);
     }
   }
 
@@ -4320,116 +4287,94 @@ var Observer = function () {
         set$1(data, keypath, newValue);
       });
 
-      var fireDifference = function fireDifference(keypath, realpath, oldValue, match) {
+      var i = -1,
+          difference = void 0,
+          keypath = void 0,
+          realpath = void 0,
+          oldValue = void 0,
+          nextDifferences = void 0;
+      while (difference = differences[++i]) {
 
-        var differences = instance.differences || (instance.differences = {});
-        differences[joinKeypath(keypath, realpath)] = { keypath: keypath, realpath: realpath, oldValue: oldValue, match: match };
+        keypath = difference.keypath;
+        realpath = difference.realpath;
+        oldValue = difference.oldValue;
 
-        if (!instance.pending) {
-          instance.pending = TRUE;
-          append(function () {
-            if (instance.pending) {
-              // 冻结这批变化
-              // 避免 fire 之后同步再次走进这里
-              var _differences = instance.differences;
-
-              delete instance.pending;
-              delete instance.differences;
-              each$1(_differences, function (difference) {
-                var keypath = difference.keypath,
-                    realpath = difference.realpath,
-                    oldValue = difference.oldValue,
-                    match = difference.match,
-                    newValue = instance.get(realpath);
-
-                if (oldValue !== newValue) {
-                  var _args = [newValue, oldValue, keypath];
-                  if (match) {
-                    push(_args, match);
-                  }
-                  emitter.fire(keypath, _args, context);
-                }
-              });
-            }
-          });
-        }
-      };
-
-      for (var i = 0, difference; i < differences.length; i++) {
-        // 避免 babel 为了 let 作用域创建一个函数
-        // 这里所有变量声明换成 var
-        var _differences$i = differences[i],
-            keypath = _differences$i.keypath,
-            realpath = _differences$i.realpath,
-            oldValue = _differences$i.oldValue,
-            match = _differences$i.match,
-            force = _differences$i.force;
-
-        var newValue = force ? oldValue : getNewValue(realpath);
-        if (force || newValue !== oldValue) {
-
-          var args = [newValue, oldValue, keypath];
-          if (match) {
-            push(args, match);
-          }
-
+        if (difference.force) {
           if (has$1(cache, realpath)) {
             delete cache[realpath];
           }
+        }
 
-          if (!force) {
-            fireDifference(keypath, realpath, oldValue, match);
+        if (getNewValue(realpath) !== oldValue || (difference.force = object(oldValue) || array(oldValue))) {
+
+          nextDifferences = instance.differences || (instance.differences = {});
+          nextDifferences[joinKeypath(keypath, realpath)] = difference;
+
+          // 当 user.name 变化了
+          // 要通知 user.* 的观察者们
+          if (watchKeypaths) {
+            each(watchKeypaths, function (key) {
+              if (key !== realpath) {
+                if (isFuzzyKeypath(key)) {
+                  var match = matchKeypath(realpath, key);
+                  if (match) {
+                    addDifference(key, realpath, match);
+                  }
+                } else if (startsWith$1(key, realpath) !== FALSE) {
+                  addDifference(key, key);
+                }
+              }
+            });
           }
 
-          newValue = getNewValue(realpath);
-          if (newValue !== oldValue) {
-
-            if (force) {
-              fireDifference(keypath, realpath, oldValue, match);
-            }
-
-            // 当 user.name 变化了
-            // 要通知 user.* 的观察者们
-            if (watchKeypaths) {
-              each(watchKeypaths, function (key) {
-                if (key !== realpath) {
-                  if (isFuzzyKeypath(key)) {
-                    var _match = matchKeypath(realpath, key);
-                    if (_match) {
-                      addDifference(key, realpath, _match);
-                    }
-                  } else if (startsWith$1(key, realpath) !== FALSE) {
-                    addDifference(key, key);
-                  }
-                }
-              });
-            }
-
-            // a 依赖 b
-            // 当 b 变化了，要通知 a
-            if (reversedKeypaths) {
-              each(reversedKeypaths, function (key) {
-                var list = void 0;
-                if (isFuzzyKeypath(key)) {
-                  var _match2 = matchKeypath(realpath, key);
-                  if (_match2) {
-                    list = reversedDeps[key];
-                  }
-                } else if (key === realpath) {
+          // a 依赖 b
+          // 当 b 变化了，要通知 a
+          if (reversedKeypaths) {
+            each(reversedKeypaths, function (key) {
+              var list = void 0;
+              if (isFuzzyKeypath(key)) {
+                var match = matchKeypath(realpath, key);
+                if (match) {
                   list = reversedDeps[key];
                 }
-                if (list) {
-                  each(list, function (key) {
-                    addDifference(key, key, UNDEFINED, TRUE);
-                  });
-                }
-              });
-            }
+              } else if (key === realpath) {
+                list = reversedDeps[key];
+              }
+              if (list) {
+                each(list, function (key) {
+                  addDifference(key, key, UNDEFINED, TRUE);
+                });
+              }
+            });
           }
-        } else if (array(newValue)) {
-          realpath = join(realpath, 'length');
-          addDifference(realpath, realpath);
         }
+      }
+
+      if (nextDifferences && !instance.pending) {
+        instance.pending = TRUE;
+        append(function () {
+          if (instance.pending) {
+            // 冻结这批变化
+            // 避免 fire 之后同步再次走进这里
+            var _differences = instance.differences;
+
+            delete instance.pending;
+            delete instance.differences;
+            each$1(_differences, function (difference) {
+              var keypath = difference.keypath,
+                  oldValue = difference.oldValue,
+                  newValue = instance.get(difference.realpath);
+
+              if (difference.force || oldValue !== newValue) {
+                var args = [newValue, oldValue, keypath];
+                if (difference.match) {
+                  push(args, difference.match);
+                }
+                emitter.fire(keypath, args, context);
+              }
+            });
+          }
+        });
       }
     }
   }, {
@@ -4444,11 +4389,6 @@ var Observer = function () {
         deps[keypath] = newDeps;
         instance[DIRTY] = TRUE;
       }
-    }
-  }, {
-    key: 'setCache',
-    value: function setCache(keypath, value) {
-      this.cache[keypath] = value;
     }
 
     /**
@@ -4501,8 +4441,6 @@ extend(Observer.prototype, {
 
 var DIRTY = '_dirty_';
 
-var syncIndex = 0;
-
 /**
  * watch 和 watchOnce 逻辑相同
  * 提出一个工厂方法
@@ -4537,15 +4475,18 @@ function createWatch(action) {
         value = instance.get(keypath);
         // 立即执行，通过 Emitter 提供的 $magic 扩展实现
         if (sync) {
-          var syncKey = 'sync-' + syncIndex++;
-          watcher.$magic = function () {
-            watcher[syncKey] = TRUE;
-            delete watcher.$magic;
+
+          var executed = FALSE,
+              magic = function magic() {
+            executed = TRUE;
+            if (watcher.$magic === magic) {
+              delete watcher.$magic;
+            }
           };
+          watcher.$magic = magic;
+
           append(function () {
-            if (watcher[syncKey]) {
-              delete watcher[syncKey];
-            } else if (instance.context) {
+            if (!executed && instance.context) {
               execute(watcher, instance.context, [instance.get(keypath), value, keypath]);
             }
           });
@@ -4595,21 +4536,18 @@ function isFuzzyKeypath(keypath) {
  */
 function matchBestGetter(getters, keypath) {
 
-  var key = void 0,
-      value = void 0,
-      rest = void 0;
+  var result = {};
 
   each(sort(getters, TRUE), function (prefix) {
     var length = startsWith$1(keypath, prefix);
     if (length !== FALSE) {
-      key = prefix;
-      value = getters[prefix];
-      rest = slice(keypath, length);
+      result.value = getters[prefix];
+      result.rest = slice(keypath, length);
       return FALSE;
     }
   });
 
-  return { key: key, value: value, rest: rest };
+  return result;
 }
 
 /**
@@ -5041,6 +4979,8 @@ api.specialEvents = {
   }
 };
 
+var EMITTER_KEY = '_emitter_';
+
 /**
  * 绑定事件
  *
@@ -5050,8 +4990,8 @@ api.specialEvents = {
  * @param {?*} context
  */
 api.on = function (element, type, listener, context) {
-  var $emitter = element.$emitter || (element.$emitter = new Emitter());
-  if (!$emitter.has(type)) {
+  var emitter = element[EMITTER_KEY] || (element[EMITTER_KEY] = new Emitter());
+  if (!emitter.has(type)) {
     var nativeListener = function nativeListener(e, type) {
       if (!Event.is(e)) {
         e = new Event(api.createEvent(e, element));
@@ -5059,9 +4999,9 @@ api.on = function (element, type, listener, context) {
       if (type) {
         e.type = type;
       }
-      $emitter.fire(e.type, e, context);
+      emitter.fire(e.type, e, context);
     };
-    $emitter[type] = nativeListener;
+    emitter[type] = nativeListener;
     var special = api.specialEvents[type];
     if (special) {
       special.on(element, nativeListener);
@@ -5069,7 +5009,7 @@ api.on = function (element, type, listener, context) {
       _on(element, type, nativeListener);
     }
   }
-  $emitter.on(type, listener);
+  emitter.on(type, listener);
 };
 
 /**
@@ -5081,27 +5021,26 @@ api.on = function (element, type, listener, context) {
  *
  */
 api.off = function (element, type, listener) {
-  var $emitter = element.$emitter;
-
-  var types = keys($emitter.listeners);
+  var emitter = element[EMITTER_KEY];
+  var types = keys(emitter.listeners);
   // emitter 会根据 type 和 listener 参数进行适当的删除
-  $emitter.off(type, listener);
+  emitter.off(type, listener);
   // 根据 emitter 的删除结果来操作这里的事件 listener
   each(types, function (type, index) {
-    if ($emitter[type] && !$emitter.has(type)) {
-      var nativeListener = $emitter[type];
+    if (emitter[type] && !emitter.has(type)) {
+      var nativeListener = emitter[type];
       var special = api.specialEvents[type];
       if (special) {
         special.off(element, nativeListener);
       } else {
         _off(element, type, nativeListener);
       }
-      delete $emitter[type];
+      delete emitter[type];
       types.splice(index, 1);
     }
   }, TRUE);
   if (!types.length) {
-    api.removeProp(element, '$emitter');
+    api.removeProp(element, EMITTER_KEY);
   }
 };
 
@@ -5301,11 +5240,10 @@ var checkboxControl = {
     var value = instance.get(keypath);
     if (array(value)) {
       if (el.checked) {
-        push(value, el.value);
+        instance.append(keypath, el.value);
       } else {
-        remove(value, el.value, FALSE);
+        instance.removeAt(keypath, indexOf(value, el.value, FALSE));
       }
-      instance.set(keypath, copy(value));
     } else {
       instance.set(keypath, el.checked);
     }
@@ -5337,16 +5275,13 @@ var model = function (_ref) {
       keypath = _context$get.keypath;
 
   var type = CHANGE,
-      tagName = api.tag(el),
-      controlType = el.type;
-  var control = specialControls[controlType] || specialControls[tagName];
+      control = specialControls[el.type] || specialControls[api.tag(el)];
   if (!control) {
     control = inputControl;
-    if ('oninput' in el || tagName === 'textarea' || controlType === 'text' || controlType === 'password') {
+    if (exists(el, 'autofocus')) {
       type = INPUT;
     }
   }
-  tagName = controlType = NULL;
 
   var set$$1 = function set$$1() {
     control.set(el, keypath, instance);
@@ -5801,7 +5736,7 @@ var Yox = function () {
       // 全局过滤器
       filter && filter.data,
       // 本地过滤器
-      $filters,
+      $filters && $filters.data,
       // 本地数据
       data);
 
@@ -5822,7 +5757,7 @@ var Yox = function () {
 
       var keys$$1 = keys(deps);
       each$1(keys$$1, function (key) {
-        $observer.setCache(key, deps[key]);
+        $observer.cache[key] = deps[key];
       });
       $observer.setDeps(TEMPLATE_KEY, keys$$1);
 
@@ -5861,7 +5796,7 @@ var Yox = function () {
 
       // 跟 nextTask 保持一个节奏
       // 这样可以预留一些优化的余地
-      append(function () {
+      prepend(function () {
         if (instance.$node) {
           execute($options[afterHook], instance);
         }
@@ -6108,6 +6043,7 @@ var Yox = function () {
       }
 
       this.set(keypath, list);
+
       return TRUE;
     }
 
@@ -6171,11 +6107,16 @@ var Yox = function () {
     value: function remove$$1(keypath, item) {
       var list = this.get(keypath);
       if (array(list)) {
-        var index = indexOf(list, item);
-        if (index >= 0) {
-          list.splice(index, 1);
+        var result = FALSE;
+        each(list, function (value, index) {
+          if (value === item) {
+            list.splice(index, 1);
+            result = TRUE;
+          }
+        }, TRUE);
+        if (result) {
           this.set(keypath, list);
-          return TRUE;
+          return result;
         }
       }
     }
@@ -6183,7 +6124,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.43.9';
+Yox.version = '0.44.0';
 
 /**
  * 工具，便于扩展、插件使用
