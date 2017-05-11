@@ -487,7 +487,7 @@ export default class Yox {
 
     // 跟 nextTask 保持一个节奏
     // 这样可以预留一些优化的余地
-    nextTask.append(
+    nextTask.prepend(
       function () {
         if (instance.$node) {
           execute($options[ afterHook ], instance)
@@ -769,11 +769,20 @@ export default class Yox {
   remove(keypath, item) {
     let list = this.get(keypath)
     if (is.array(list)) {
-      let index = array.indexOf(list, item)
-      if (index >= 0) {
-        list.splice(index, 1)
+      let result = env.FALSE
+      array.each(
+        list,
+        function (value, index) {
+          if (value === item) {
+            list.splice(index, 1)
+            result = env.TRUE
+          }
+        },
+        env.TRUE
+      )
+      if (result) {
         this.set(keypath, list)
-        return env.TRUE
+        return result
       }
     }
   }
