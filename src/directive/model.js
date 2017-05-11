@@ -45,7 +45,7 @@ const selectControl = {
   sync(el, keypath, instance) {
     let { value } = el.options[ el.selectedIndex ]
     instance.set(keypath, value)
-  }
+  },
 }
 
 const radioControl = {
@@ -71,12 +71,14 @@ const checkboxControl = {
     let value = instance.get(keypath)
     if (is.array(value)) {
       if (el.checked) {
-        array.push(value, el.value)
+        instance.append(keypath, el.value)
       }
       else {
-        array.remove(value, el.value, env.FALSE)
+        instance.removeAt(
+          keypath,
+          array.indexOf(value, el.value, env.FALSE)
+        )
       }
-      instance.set(keypath, object.copy(value))
     }
     else {
       instance.set(keypath, el.checked)
@@ -100,19 +102,13 @@ export default function ({ el, node, instance, directives, attrs }) {
 
   let { keypath } = context.get(value)
 
-  let type = event.CHANGE, tagName = api.tag(el), controlType = el.type
-  let control = specialControls[ controlType ] || specialControls[ tagName ]
+  let type = event.CHANGE, control = specialControls[ el.type ] || specialControls[ api.tag(el) ]
   if (!control) {
     control = inputControl
-    if ('oninput' in el
-      || tagName === 'textarea'
-      || controlType === 'text'
-      || controlType === 'password'
-    ) {
+    if (object.exists(el, 'autofocus')) {
       type = event.INPUT
     }
   }
-  tagName = controlType = env.NULL
 
   let set = function () {
     control.set(el, keypath, instance)
@@ -121,7 +117,7 @@ export default function ({ el, node, instance, directives, attrs }) {
   instance.watch(
     keypath,
     set,
-    !control.attr || !object.has(attrs, control.attr)
+    !control.attr || !object.has(attrs, control.attr),
   )
 
   let destroy = bindEvent({

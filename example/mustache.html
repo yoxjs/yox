@@ -34,12 +34,6 @@
             </p>
 
             <p>
-                {{#if title}}
-                    {{title}}
-                {{/if}}
-            </p>
-
-            <p>
               {{{users[0].name}}}
             </p>
 
@@ -144,6 +138,9 @@
                 formatDate: function (value) {
                     return value.getTime();
                 }
+            },
+            beforeUpdate: function () {
+                console.log('beforeUpdate');
             }
         });
 

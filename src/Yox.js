@@ -423,7 +423,7 @@ export default class Yox {
       // 全局过滤器
       filter && filter.data,
       // 本地过滤器
-      $filters,
+      $filters && $filters.data,
       // 本地数据
       data,
     )
@@ -448,7 +448,7 @@ export default class Yox {
     object.each(
       keys,
       function (key) {
-        $observer.setCache(key, deps[ key ])
+        $observer.cache[ key ] = deps[ key ]
       }
     )
     $observer.setDeps(TEMPLATE_KEY, keys)
@@ -713,6 +713,7 @@ export default class Yox {
     }
 
     this.set(keypath, list)
+
     return env.TRUE
 
   }
@@ -785,7 +786,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.43.9'
+Yox.version = '0.44.0'
 
 /**
  * 工具，便于扩展、插件使用

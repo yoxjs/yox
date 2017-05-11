@@ -17,9 +17,9 @@
     "rollup-plugin-uglify": "^1.0.1",
     "yox-common": "^0.11.4",
     "yox-expression-compiler": "^0.11.9",
-    "yox-observer": "^0.10.2",
-    "yox-snabbdom": "^0.10.2",
-    "yox-template-compiler": "^0.15.4"
+    "yox-observer": "^0.10.4",
+    "yox-snabbdom": "^0.10.3",
+    "yox-template-compiler": "^0.15.6"
   },
   "scripts": {
     "source": "rollup -c",
