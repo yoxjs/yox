@@ -192,41 +192,41 @@ function noop() {
   /** yox */
 }
 
-function is(arg, type) {
-  return type === 'numeric' ? numeric(arg) : Object.prototype.toString.call(arg).toLowerCase() === '[object ' + type + ']';
+function is(value, type) {
+  return type === 'numeric' ? numeric(value) : Object.prototype.toString.call(value).toLowerCase() === '[object ' + type + ']';
 }
 
-function func(arg) {
-  return is(arg, RAW_FUNCTION);
+function func(value) {
+  return is(value, RAW_FUNCTION);
 }
 
-function array(arg) {
-  return is(arg, 'array');
+function array(value) {
+  return is(value, 'array');
 }
 
-function object(arg) {
+function object(value) {
   // 低版本 IE 会把 null 和 undefined 当作 object
-  return arg && is(arg, 'object');
+  return value && is(value, 'object');
 }
 
-function string(arg) {
-  return is(arg, 'string');
+function string(value) {
+  return is(value, 'string');
 }
 
-function number(arg) {
-  return is(arg, 'number');
+function number(value) {
+  return is(value, 'number');
 }
 
-function boolean(arg) {
-  return is(arg, 'boolean');
+function boolean(value) {
+  return is(value, 'boolean');
 }
 
-function primitive(arg) {
-  return string(arg) || number(arg) || boolean(arg) || arg == NULL;
+function numeric(value) {
+  return !isNaN(parseFloat(value)) && isFinite(value);
 }
 
-function numeric(arg) {
-  return !isNaN(parseFloat(arg)) && isFinite(arg);
+function primitive(value) {
+  return string(value) || number(value) || boolean(value) || value == NULL;
 }
 
 var is$1 = Object.freeze({
@@ -237,8 +237,8 @@ var is$1 = Object.freeze({
 	string: string,
 	number: number,
 	boolean: boolean,
-	primitive: primitive,
-	numeric: numeric
+	numeric: numeric,
+	primitive: primitive
 });
 
 /**
@@ -382,20 +382,20 @@ function addItem(original, value, action) {
  * 往后加
  *
  * @param {Array} original
- * @param {*} value
+ * @param {*} item
  */
-function push(original, value) {
-  addItem(original, value, 'push');
+function push(original, item) {
+  addItem(original, item, 'push');
 }
 
 /**
  * 往前加
  *
  * @param {Array} original
- * @param {*} value
+ * @param {*} item
  */
-function unshift(original, value) {
-  addItem(original, value, 'unshift');
+function unshift(original, item) {
+  addItem(original, item, 'unshift');
 }
 
 /**
@@ -486,15 +486,17 @@ function pop(array$$1) {
  * @param {Array} array 数组
  * @param {*} item 待删除项
  * @param {?boolean} strict 是否全等判断，默认是全等
- * @return {boolean} 是否删除成功
+ * @return {number} 删除的数量
  */
 function remove(array$$1, item, strict) {
-  var index = indexOf(array$$1, item, strict);
-  if (index >= 0) {
-    array$$1.splice(index, 1);
-    return TRUE;
-  }
-  return FALSE;
+  var result = 0;
+  each(array$$1, function (value, index) {
+    if (strict === FALSE ? value == item : value === item) {
+      array$$1.splice(index, 1);
+      result++;
+    }
+  }, TRUE);
+  return result;
 }
 
 /**
@@ -607,7 +609,7 @@ var CHAR_WHITESPACE = ' ';
 var CODE_WHITESPACE = codeAt(CHAR_WHITESPACE);
 
 /**
- * 转成驼峰
+ * 连字符转成驼峰
  *
  * @param {string} str
  * @return {string}
@@ -622,6 +624,84 @@ function camelCase(str) {
 }
 
 /**
+ * 删除两侧空白符
+ *
+ * @param {*} str
+ * @return {string}
+ */
+function trim(str) {
+  return falsy$1(str) ? CHAR_BLANK : str.trim();
+}
+
+/**
+ * 截取字符串
+ *
+ * @param {string} str
+ * @param {number} start
+ * @param {?number} end
+ * @return {string}
+ */
+function slice(str, start, end) {
+  return number(end) ? str.slice(start, end) : str.slice(start);
+}
+
+/**
+ * 分割字符串
+ *
+ * @param {string} str
+ * @param {string} delimiter
+ * @return {Array}
+ */
+function split(str, delimiter) {
+  return falsy$1(str) ? [] : str.split(new RegExp('\\s*' + delimiter.replace(/[.*?]/g, '\\$&') + '\\s*'));
+}
+
+/**
+ * 获取子串的起始位置
+ *
+ * @param {string} str
+ * @param {string} part
+ * @return {number}
+ */
+function indexOf$1(str, part) {
+  return str.indexOf(part);
+}
+
+/**
+ * str 是否包含 part
+ *
+ * @param {string} str
+ * @param {string} part
+ * @return {boolean}
+ */
+function has$2(str, part) {
+  return indexOf$1(str, part) >= 0;
+}
+
+/**
+ * str 是否以 part 开始
+ *
+ * @param {string} str
+ * @param {string} part
+ * @return {boolean}
+ */
+function startsWith(str, part) {
+  return indexOf$1(str, part) === 0;
+}
+
+/**
+ * str 是否以 part 结束
+ *
+ * @param {string} str
+ * @param {string} part
+ * @return {boolean}
+ */
+function endsWith(str, part) {
+  var offset = str.length - part.length;
+  return offset >= 0 && str.lastIndexOf(part) === offset;
+}
+
+/**
  * 判断长度大于 0 的字符串
  *
  * @param {*} str
@@ -631,51 +711,16 @@ function falsy$1(str) {
   return !string(str) || str === CHAR_BLANK;
 }
 
-/**
- * 删除两侧空白符
- *
- * @param {*} str
- * @return {boolean}
- */
-function trim(str) {
-  return falsy$1(str) ? CHAR_BLANK : str.trim();
-}
-
-function slice(str, start, end) {
-  return number(end) ? str.slice(start, end) : str.slice(start);
-}
-
-function split(str, delimiter) {
-  return falsy$1(str) ? [] : str.split(new RegExp('\\s*' + delimiter.replace(/[.*?]/g, '\\$&') + '\\s*'));
-}
-
-function indexOf$1(str, part) {
-  return str.indexOf(part);
-}
-
-function has$2(str, part) {
-  return indexOf$1(str, part) >= 0;
-}
-
-function startsWith(str, part) {
-  return indexOf$1(str, part) === 0;
-}
-
-function endsWith(str, part) {
-  var offset = str.length - part.length;
-  return offset >= 0 && str.lastIndexOf(part) === offset;
-}
-
 var string$1 = Object.freeze({
 	camelCase: camelCase,
-	falsy: falsy$1,
 	trim: trim,
 	slice: slice,
 	split: split,
 	indexOf: indexOf$1,
 	has: has$2,
 	startsWith: startsWith,
-	endsWith: endsWith
+	endsWith: endsWith,
+	falsy: falsy$1
 });
 
 var SEPARATOR_KEY = '.';
@@ -1873,7 +1918,7 @@ executor[LITERAL] = function (node) {
   return node.value;
 };
 
-executor[IDENTIFIER] = function (node, getter, context) {
+executor[IDENTIFIER] = function (node, getter) {
   return getter(node.name);
 };
 
@@ -6106,25 +6151,16 @@ var Yox = function () {
     key: 'remove',
     value: function remove$$1(keypath, item) {
       var list = this.get(keypath);
-      if (array(list)) {
-        var result = FALSE;
-        each(list, function (value, index) {
-          if (value === item) {
-            list.splice(index, 1);
-            result = TRUE;
-          }
-        }, TRUE);
-        if (result) {
-          this.set(keypath, list);
-          return result;
-        }
+      if (array(list) && remove(list, item)) {
+        this.set(keypath, list);
+        return TRUE;
       }
     }
   }]);
   return Yox;
 }();
 
-Yox.version = '0.44.0';
+Yox.version = '0.44.1';
 
 /**
  * 工具，便于扩展、插件使用
