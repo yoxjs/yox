@@ -768,22 +768,9 @@ export default class Yox {
    */
   remove(keypath, item) {
     let list = this.get(keypath)
-    if (is.array(list)) {
-      let result = env.FALSE
-      array.each(
-        list,
-        function (value, index) {
-          if (value === item) {
-            list.splice(index, 1)
-            result = env.TRUE
-          }
-        },
-        env.TRUE
-      )
-      if (result) {
-        this.set(keypath, list)
-        return result
-      }
+    if (is.array(list) && array.remove(list, item)) {
+      this.set(keypath, list)
+      return env.TRUE
     }
   }
 
@@ -795,7 +782,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.44.0'
+Yox.version = '0.44.1'
 
 /**
  * 工具，便于扩展、插件使用
