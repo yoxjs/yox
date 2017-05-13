@@ -1592,9 +1592,6 @@ function setProps(oldVnode, vnode) {
     each$1(newProps, function (value, name) {
       if (value !== oldProps[name]) {
         api.setProp(vnode.el, name, value);
-        if (oldVnode.children) {
-          delete oldVnode.children;
-        }
       }
     });
   }
@@ -5984,7 +5981,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.44.1';
+Yox.version = '0.44.2';
 
 /**
  * 工具，便于扩展、插件使用
