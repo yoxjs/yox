@@ -3727,16 +3727,19 @@ function render(ast, data, instance) {
     }
 
     if (children) {
+      var hasDivider = isDefined(divider);
       each(children, function (node, index) {
-        if (index < divider) {
-          attributeRendering = TRUE;
-        } else if (attributeRendering && index >= divider) {
-          attributeRendering = NULL;
+        if (hasDivider) {
+          if (index < divider) {
+            attributeRendering = TRUE;
+          } else if (attributeRendering && index >= divider) {
+            attributeRendering = NULL;
+          }
         }
         sibling = children[index + 1];
         pushStack(node);
       });
-      if (attributeRendering) {
+      if (hasDivider && attributeRendering) {
         attributeRendering = NULL;
       }
     }
@@ -6157,7 +6160,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.44.2';
+Yox.version = '0.44.3';
 
 /**
  * 工具，便于扩展、插件使用
