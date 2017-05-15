@@ -4221,7 +4221,7 @@ var Observer = function () {
 
       var differences = [],
           differenceMap = {};
-      var addDifference = function addDifference(keypath, realpath, match, force) {
+      var addDifference = function addDifference(keypath, realpath, match) {
         var fullpath = joinKeypath(keypath, realpath);
         if (!differenceMap[fullpath]) {
           differenceMap[fullpath] = TRUE;
@@ -4229,7 +4229,6 @@ var Observer = function () {
             keypath: keypath,
             realpath: realpath,
             match: match,
-            force: force,
             oldValue: getOldValue(realpath)
           });
         }
@@ -4242,7 +4241,7 @@ var Observer = function () {
         if (computedSetters) {
           var setter = computedSetters[keypath];
           if (setter) {
-            addDifference(keypath, keypath, UNDEFINED, TRUE);
+            addDifference(keypath, keypath);
             execute(setter, context, newValue);
             return;
           } else {
@@ -4277,10 +4276,8 @@ var Observer = function () {
         realpath = difference.realpath;
         oldValue = difference.oldValue;
 
-        if (difference.force) {
-          if (has$1(cache, realpath)) {
-            delete cache[realpath];
-          }
+        if (has$1(cache, realpath)) {
+          delete cache[realpath];
         }
 
         if (getNewValue(realpath) !== oldValue || (difference.force = object(oldValue) || array(oldValue))) {
@@ -4320,7 +4317,7 @@ var Observer = function () {
               }
               if (list) {
                 each(list, function (key) {
-                  addDifference(key, key, UNDEFINED, TRUE);
+                  addDifference(key, key);
                 });
               }
             });
@@ -5984,7 +5981,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.44.3';
+Yox.version = '0.44.4';
 
 /**
  * 工具，便于扩展、插件使用
