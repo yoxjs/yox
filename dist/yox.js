@@ -3096,6 +3096,10 @@ function compile(content) {
         throwError('end tag expected </' + name + '> to be </' + expectedName + '>.');
       }
 
+      if (number(divider)) {
+        delete target.divider;
+      }
+
       // ==========================================
       // 以下是性能优化的逻辑
       // ==========================================
@@ -3106,9 +3110,6 @@ function compile(content) {
         delete target.children;
       }
       if (!target.children) {
-        if (has$1(target, 'divider')) {
-          delete target.divider;
-        }
         return;
       }
 
@@ -3148,7 +3149,7 @@ function compile(content) {
             if (singleChild.type === TEXT) {
               element.key = singleChild.text;
             } else if (singleChild.type === EXPRESSION) {
-              element.key = singleChild;
+              element.key = singleChild.expr;
             }
           } else {
             element.key = children;
@@ -3211,10 +3212,13 @@ function compile(content) {
 
     var currentNode = last(nodeStack);
     if (currentNode) {
-      var children = currentNode.children;
+      var children = currentNode.children,
+          divider = currentNode.divider;
 
       if (children) {
-        prevNode = last(children);
+        if (children.length !== divider) {
+          prevNode = children[children.length - 1];
+        }
       } else {
         children = currentNode.children = [];
       }
@@ -5980,7 +5984,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.44.5';
+Yox.version = '0.44.6';
 
 /**
  * 工具，便于扩展、插件使用
