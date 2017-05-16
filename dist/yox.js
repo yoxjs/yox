@@ -2743,22 +2743,11 @@ each$1(name2Type, function (type, name) {
 /**
  * 节点基类
  */
+var Node$2 = function Node(type) {
+  classCallCheck(this, Node);
 
-var Node$2 = function () {
-  function Node(type) {
-    classCallCheck(this, Node);
-
-    this.type = type;
-  }
-
-  createClass(Node, [{
-    key: 'addChild',
-    value: function addChild(child) {
-      push(this.children || (this.children = []), child);
-    }
-  }]);
-  return Node;
-}();
+  this.type = type;
+};
 
 /**
  * 属性节点
@@ -3155,7 +3144,15 @@ function compile(content) {
           if (!element.children.length) {
             delete element.children;
           }
-          element.key = singleChild && singleChild.type === TEXT ? singleChild.text : children;
+          if (singleChild) {
+            if (singleChild.type === TEXT) {
+              element.key = singleChild.text;
+            } else if (singleChild.type === EXPRESSION) {
+              element.key = singleChild;
+            }
+          } else {
+            element.key = children;
+          }
         } else if (singleChild) {
           if (singleChild.type === TEXT) {
             // 指令的值如果是纯文本，可以预编译表达式，提升性能
@@ -3210,11 +3207,27 @@ function compile(content) {
       return;
     }
 
+    var prevNode = void 0;
+
     var currentNode = last(nodeStack);
     if (currentNode) {
-      currentNode.addChild(node);
+      var children = currentNode.children;
+
+      if (children) {
+        prevNode = last(children);
+      } else {
+        children = currentNode.children = [];
+      }
+      push(children, node);
     } else {
+      prevNode = last(nodeList);
       push(nodeList, node);
+    }
+
+    // 上一个 if 节点没有 else 分支
+    // 在渲染时，如果这种 if 分支为 false，需要加上注释节点
+    if (prevNode && ifTypes[prevNode.type] && !htmlStack.length) {
+      prevNode.needFaker = TRUE;
     }
 
     if (ifTypes[type]) {
@@ -3566,8 +3579,7 @@ function render(ast, data, instance) {
       htmlStack = [],
       partials = {},
       deps = {};
-  var sibling = void 0,
-      cache = void 0,
+  var cache = void 0,
       prevCache = void 0,
       currentCache = void 0;
 
@@ -3579,13 +3591,7 @@ function render(ast, data, instance) {
 
     if (parent && isDefined(child)) {
 
-      if (attributeRendering) {
-        if (has$1(parent, 'value')) {
-          parent.value += child;
-        } else {
-          parent.value = child;
-        }
-      } else {
+      if (parent.type === ELEMENT) {
         // 文本节点需要拼接
         // <div>123{{name}}456</div>
         // <div>123{{user}}456</div>
@@ -3604,6 +3610,12 @@ function render(ast, data, instance) {
         }
 
         children.push(child);
+      } else {
+        if (has$1(parent, 'value')) {
+          parent.value += child;
+        } else {
+          parent.value = child;
+        }
       }
     }
   };
@@ -3639,10 +3651,8 @@ function render(ast, data, instance) {
     return value;
   };
 
-  var attributeRendering = void 0;
   var pushStack = function pushStack(source) {
     var type = source.type,
-        divider = source.divider,
         children = source.children;
 
 
@@ -3660,21 +3670,9 @@ function render(ast, data, instance) {
     }
 
     if (children) {
-      var hasDivider = isDefined(divider);
       each(children, function (node, index) {
-        if (hasDivider) {
-          if (index < divider) {
-            attributeRendering = TRUE;
-          } else if (attributeRendering && index >= divider) {
-            attributeRendering = NULL;
-          }
-        }
-        sibling = children[index + 1];
         pushStack(node);
       });
-      if (hasDivider && attributeRendering) {
-        attributeRendering = NULL;
-      }
     }
 
     execute(leave[type], NULL, [source, output]);
@@ -3740,12 +3738,13 @@ function render(ast, data, instance) {
   // 就需要用注释节点来占位，否则 virtual dom 无法正常工作
   enter[IF$1] = enter[ELSE_IF$1] = function (source) {
     var expr = source.expr,
-        then = source.then;
+        then = source.then,
+        needFaker = source.needFaker;
 
     if (!executeExpr(expr)) {
       if (then) {
         pushStack(then);
-      } else if (sibling && !attributeRendering) {
+      } else if (needFaker) {
         addChild(last(htmlStack), createCommentVnode());
       }
       return FALSE;
@@ -3823,14 +3822,14 @@ function render(ast, data, instance) {
       var trackBy = void 0;
       if (string(key)) {
         trackBy = key;
+      } else if (object(key)) {
+        trackBy = executeExpr(key);
       } else if (array(key)) {
-        attributeRendering = TRUE;
         source = {
           type: ATTRIBUTE,
           children: key
         };
         trackBy = getValue(source, pushStack(source));
-        attributeRendering = NULL;
       }
       if (isDefined(trackBy)) {
 
@@ -5981,7 +5980,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.44.4';
+Yox.version = '0.44.5';
 
 /**
  * 工具，便于扩展、插件使用
