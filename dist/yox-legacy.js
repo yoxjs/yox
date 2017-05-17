@@ -5905,18 +5905,19 @@ var Yox = function () {
             }, instance);
           };
           return function (event) {
-            var isEvent = Event.is(event);
+            var isEvent = Event.is(event),
+                result = void 0;
             if (!args.length) {
               if (isEvent) {
-                args = [event];
+                result = execute(method, instance, event);
               }
             } else {
               if (isEvent) {
                 context.set(SPECIAL_EVENT, event);
               }
-              args = args.map(getValue);
+              result = execute(method, instance, args.map(getValue));
             }
-            if (execute(method, instance, args) === FALSE && isEvent) {
+            if (result === FALSE && isEvent) {
               event.prevent().stop();
             }
           };
@@ -6158,7 +6159,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.44.7';
+Yox.version = '0.44.8';
 
 /**
  * 工具，便于扩展、插件使用
