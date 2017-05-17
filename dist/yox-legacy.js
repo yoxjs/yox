@@ -2806,8 +2806,8 @@ each$1(name2Type, function (type, name) {
 /**
  * 节点基类
  */
-var Node$2 = function Node(type) {
-  classCallCheck(this, Node);
+var Node$2 = function (type) {
+  classCallCheck(this, Node$2);
 
   this.type = type;
 };
@@ -6159,7 +6159,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.44.8';
+Yox.version = '0.44.9';
 
 /**
  * 工具，便于扩展、插件使用

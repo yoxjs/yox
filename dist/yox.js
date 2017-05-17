@@ -5983,7 +5983,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.44.8';
+Yox.version = '0.44.9';
 
 /**
  * 工具，便于扩展、插件使用
