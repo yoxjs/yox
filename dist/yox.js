@@ -461,16 +461,12 @@ var array$1 = Object.freeze({
  * 为了压缩，定义的常用字符
  */
 
-function charAt(str) {
-  var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-
-  return str.charAt(index);
+function charAt(str, index) {
+  return str.charAt(index || 0);
 }
 
-function codeAt(str) {
-  var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-
-  return str.charCodeAt(index);
+function codeAt(str, index) {
+  return str.charCodeAt(index || 0);
 }
 
 var CHAR_BLANK = '';
@@ -5603,9 +5599,9 @@ var Yox = function () {
 
       extend(context,
       // 全局过滤器
-      filter && filter.data,
+      filter,
       // 本地过滤器
-      $filters && $filters.data,
+      $filters,
       // 本地数据
       data);
 
@@ -5673,19 +5669,6 @@ var Yox = function () {
     }
 
     /**
-     * 导入编译后的子模板
-     *
-     * @param {string} name
-     * @return {Array}
-     */
-
-  }, {
-    key: 'importPartial',
-    value: function importPartial(name) {
-      return Yox.compile(this.partial(name));
-    }
-
-    /**
      * 创建子组件
      *
      * @param {Object} options 组件配置
@@ -5701,6 +5684,19 @@ var Yox = function () {
       var child = new Yox(options);
       push(this.$children || (this.$children = []), child);
       return child;
+    }
+
+    /**
+     * 导入编译后的子模板
+     *
+     * @param {string} name
+     * @return {Array}
+     */
+
+  }, {
+    key: 'importPartial',
+    value: function importPartial(name) {
+      return Yox.compile(this.partial(name));
     }
 
     /**
@@ -5722,31 +5718,33 @@ var Yox = function () {
 
 
       if (expr && expr.type === CALL) {
+        var callee = expr.callee,
+            args = expr.args,
+            method = instance[callee.name];
 
-        var getValue = function getValue(keypath) {
-          return context.get(keypath).value;
-        };
-
-        return function (event) {
-          var isEvent = Event.is(event);
-          var callee = expr.callee,
-              args = expr.args;
-
-          if (!args.length) {
-            if (isEvent) {
-              args = [event];
+        if (method) {
+          var getValue = function getValue(node) {
+            return execute$1(node, function (keypath) {
+              return context.get(keypath).value;
+            }, instance);
+          };
+          return function (event) {
+            var isEvent = Event.is(event);
+            if (!args.length) {
+              if (isEvent) {
+                args = [event];
+              }
+            } else {
+              if (isEvent) {
+                context.set(SPECIAL_EVENT, event);
+              }
+              args = args.map(getValue);
             }
-          } else {
-            context.set(SPECIAL_EVENT, event);
-            args = args.map(function (node) {
-              return execute$1(node, getValue, instance);
-            });
-          }
-          var method = instance[callee.name];
-          if (execute(method, instance, args) === FALSE && isEvent) {
-            event.prevent().stop();
-          }
-        };
+            if (execute(method, instance, args) === FALSE && isEvent) {
+              event.prevent().stop();
+            }
+          };
+        }
       } else if (value) {
         return function (event, data) {
           if (event.type !== value) {
@@ -5984,7 +5982,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.44.6';
+Yox.version = '0.44.7';
 
 /**
  * 工具，便于扩展、插件使用
@@ -6004,151 +6002,74 @@ var prototype = Yox.prototype;
 
 var registry = {};
 
-var Store = function () {
-  function Store() {
-    classCallCheck(this, Store);
+var COMPONENT = 'component';
 
-    this.data = {};
-  }
+function getResourceAsync(data, name, callback) {
+  var value = data[name];
+  if (func(value)) {
+    var $pending = value.$pending;
 
-  /**
-   * 异步取值
-   *
-   * @param {string} key
-   * @param {Function} callback
-   */
-
-
-  createClass(Store, [{
-    key: 'getAsync',
-    value: function getAsync(key, callback) {
-      var data = this.data;
-
-      var value = data[key];
-      if (func(value)) {
-        var $pending = value.$pending;
-
-        if (!$pending) {
-          $pending = value.$pending = [callback];
-          value(function (replacement) {
-            delete value.$pending;
-            data[key] = replacement;
-            each($pending, function (callback) {
-              callback(replacement);
-            });
-          });
-        } else {
-          push($pending, callback);
-        }
-      } else {
-        callback(value);
-      }
-    }
-
-    /**
-     * 同步取值
-     *
-     * @param {string} key
-     * @return {*}
-     */
-
-  }, {
-    key: 'get',
-    value: function get$$1(key) {
-      return this.data[key];
-    }
-  }, {
-    key: 'set',
-    value: function set$$1(key, value) {
-      var data = this.data;
-
-      if (object(key)) {
-        each$1(key, function (value, key) {
-          data[key] = value;
+    if (!$pending) {
+      $pending = value.$pending = [callback];
+      value(function (replacement) {
+        delete value.$pending;
+        data[name] = replacement;
+        each($pending, function (callback) {
+          callback(replacement);
         });
-      } else if (string(key)) {
-        data[key] = value;
-      }
+      });
+    } else {
+      push($pending, callback);
     }
-  }]);
-  return Store;
-}();
-
-// 支持异步注册
-
-
-var supportRegisterAsync = ['component'];
-
-// 解析注册参数
-function parseRegisterArguments(type, args) {
-  var id = args[0];
-  var value = args[1];
-  var callback = void 0;
-  if (has(supportRegisterAsync, type) && func(value)) {
-    callback = value;
-    value = UNDEFINED;
+  } else {
+    callback(value);
   }
-  return {
-    callback: callback,
-    args: value === UNDEFINED ? [id] : [id, value]
-  };
+}
+
+function setResource(data, name, value) {
+  if (object(name)) {
+    each$1(name, function (value, key) {
+      data[key] = value;
+    });
+  } else {
+    data[name] = value;
+  }
 }
 
 /**
  * 全局/本地注册
  *
- * @param {Object|string} id
+ * @param {Object|string} name
  * @param {?Object} value
  */
-each(merge(supportRegisterAsync, ['directive', 'partial', 'filter']), function (type) {
-  prototype[type] = function () {
-    var prop = '$' + type + 's';
-    var store = this[prop] || (this[prop] = new Store());
-
-    var _parseRegisterArgumen = parseRegisterArguments(type, arguments),
-        args = _parseRegisterArgumen.args,
-        callback = _parseRegisterArgumen.callback;
-
-    return magic({
-      args: args,
-      get: function get$$1(id) {
-        if (callback) {
-          store.getAsync(id, function (value) {
-            if (value) {
-              callback(value);
-            } else {
-              Yox[type](id, callback);
-            }
-          });
-        } else {
-          return store.get(id) || Yox[type](id);
-        }
-      },
-      set: function set$$1(id, value) {
-        store.set(id, value);
+each([COMPONENT, 'directive', 'partial', 'filter'], function (type) {
+  prototype[type] = function (name, value) {
+    var instance = this,
+        prop = '$' + type + 's',
+        data = instance[prop];
+    if (string(name)) {
+      var length = arguments.length,
+          hasValue = data && has$1(data, name);
+      if (length === 1) {
+        return hasValue ? data[name] : Yox[type](name);
+      } else if (length === 2 && type === COMPONENT && func(value)) {
+        return hasValue ? getResourceAsync(data, name, value) : Yox[type](name, value);
       }
-    });
+    }
+    setResource(data || (instance[prop] = {}), name, value);
   };
-  Yox[type] = function () {
-    var store = registry[type] || (registry[type] = new Store());
-
-    var _parseRegisterArgumen2 = parseRegisterArguments(type, arguments),
-        args = _parseRegisterArgumen2.args,
-        callback = _parseRegisterArgumen2.callback;
-
-    return magic({
-      args: args,
-      get: function get$$1(id) {
-        if (callback) {
-          store.getAsync(id, callback);
-        } else {
-          return store.get(id);
-        }
-      },
-      set: function set$$1(id, value) {
-        store.set(id, value);
+  Yox[type] = function (name, value) {
+    var data = registry[type];
+    if (string(name)) {
+      var length = arguments.length,
+          hasValue = data && has$1(data, name);
+      if (length === 1) {
+        return hasValue ? data[name] : UNDEFINED;
+      } else if (length === 2 && type === COMPONENT && func(value)) {
+        return hasValue ? getResourceAsync(data, name, value) : value();
       }
-    });
+    }
+    setResource(data || (registry[type] = {}), name, value);
   };
 });
 
@@ -6170,7 +6091,7 @@ Yox.compile = function (template) {
 };
 
 /**
- * 验证 props
+ * 验证 props，无爱请重写
  *
  * @param {Object} props 传递的数据
  * @param {Object} propTypes 数据格式
@@ -6232,29 +6153,6 @@ Yox.validate = function (props, propTypes) {
 Yox.use = function (plugin) {
   plugin.install(Yox);
 };
-
-function magic(options) {
-  var args = options.args,
-      get$$1 = options.get,
-      set$$1 = options.set;
-
-  args = toArray$1(args);
-
-  var key = args[0],
-      value = args[1];
-  if (object(key)) {
-    execute(set$$1, NULL, key);
-  } else if (string(key)) {
-    var _args = args,
-        length = _args.length;
-
-    if (length === 2) {
-      execute(set$$1, NULL, args);
-    } else if (length === 1) {
-      return execute(get$$1, NULL, key);
-    }
-  }
-}
 
 // 全局注册内置指令
 Yox.directive({ ref: ref, event: bindEvent, model: model, binding: binding });

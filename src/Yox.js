@@ -421,9 +421,9 @@ export default class Yox {
     object.extend(
       context,
       // 全局过滤器
-      filter && filter.data,
+      filter,
       // 本地过滤器
-      $filters && $filters.data,
+      $filters,
       // 本地数据
       data,
     )
@@ -498,18 +498,6 @@ export default class Yox {
   }
 
   /**
-   * 导入编译后的子模板
-   *
-   * @param {string} name
-   * @return {Array}
-   */
-  importPartial(name) {
-    return Yox.compile(
-      this.partial(name)
-    )
-  }
-
-  /**
    * 创建子组件
    *
    * @param {Object} options 组件配置
@@ -528,6 +516,18 @@ export default class Yox {
   }
 
   /**
+   * 导入编译后的子模板
+   *
+   * @param {string} name
+   * @return {Array}
+   */
+  importPartial(name) {
+    return Yox.compile(
+      this.partial(name)
+    )
+  }
+
+  /**
    * 把指令中的表达式编译成函数
    *
    * @param {Directive} directive
@@ -540,29 +540,33 @@ export default class Yox {
 
     if (expr && expr.type === expressionNodeType.CALL) {
 
-      let getValue = function (keypath) {
-        return context.get(keypath).value
-      }
-
-      return function (event) {
-        let isEvent = Event.is(event)
-        let { callee, args } = expr
-        if (!args.length) {
-          if (isEvent) {
-            args = [ event ]
-          }
-        }
-        else {
-          context.set(templateSyntax.SPECIAL_EVENT, event)
-          args = args.map(
-            function (node) {
-              return executeExpression(node, getValue, instance)
-            }
+      let { callee, args } = expr, method = instance[ callee.name ]
+      if (method) {
+        let getValue = function (node) {
+          return executeExpression(
+            node,
+            function (keypath) {
+              return context.get(keypath).value
+            },
+            instance
           )
         }
-        let method = instance[ callee.name ]
-        if (execute(method, instance, args) === env.FALSE && isEvent) {
-          event.prevent().stop()
+        return function (event) {
+          let isEvent = Event.is(event)
+          if (!args.length) {
+            if (isEvent) {
+              args = [ event ]
+            }
+          }
+          else {
+            if (isEvent) {
+              context.set(templateSyntax.SPECIAL_EVENT, event)
+            }
+            args = args.map(getValue)
+          }
+          if (execute(method, instance, args) === env.FALSE && isEvent) {
+            event.prevent().stop()
+          }
         }
       }
     }
@@ -782,7 +786,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.44.6'
+Yox.version = '0.44.7'
 
 /**
  * 工具，便于扩展、插件使用
@@ -801,151 +805,100 @@ let { prototype } = Yox
 // 全局注册
 let registry = { }
 
-class Store {
+const COMPONENT = 'component'
 
-  constructor() {
-    this.data = { }
-  }
-
-  /**
-   * 异步取值
-   *
-   * @param {string} key
-   * @param {Function} callback
-   */
-  getAsync(key, callback) {
-    let { data } = this
-    let value = data[ key ]
-    if (is.func(value)) {
-      let { $pending } = value
-      if (!$pending) {
-        $pending = value.$pending = [ callback ]
-        value(function (replacement) {
+function getResourceAsync(data, name, callback) {
+  let value = data[ name ]
+  if (is.func(value)) {
+    let { $pending } = value
+    if (!$pending) {
+      $pending = value.$pending = [ callback ]
+      value(
+        function (replacement) {
           delete value.$pending
-          data[ key ] = replacement
+          data[ name ] = replacement
           array.each(
             $pending,
             function (callback) {
               callback(replacement)
             }
           )
-        })
-      }
-      else {
-        array.push($pending, callback)
-      }
-    }
-    else {
-      callback(value)
-    }
-  }
-
-  /**
-   * 同步取值
-   *
-   * @param {string} key
-   * @return {*}
-   */
-  get(key) {
-    return this.data[ key ]
-  }
-
-  set(key, value) {
-    let { data } = this
-    if (is.object(key)) {
-      object.each(
-        key,
-        function (value, key) {
-          data[ key ] = value
         }
       )
     }
-    else if (is.string(key)) {
-      data[ key ] = value
+    else {
+      array.push($pending, callback)
     }
   }
-
+  else {
+    callback(value)
+  }
 }
 
-// 支持异步注册
-const supportRegisterAsync = [ 'component' ]
-
-// 解析注册参数
-function parseRegisterArguments(type, args) {
-  let id = args[ 0 ]
-  let value = args[ 1 ]
-  let callback
-  if (array.has(supportRegisterAsync, type)
-    && is.func(value)
-  ) {
-    callback = value
-    value = env.UNDEFINED
+function setResource(data, name, value) {
+  if (is.object(name)) {
+    object.each(
+      name,
+      function (value, key) {
+        data[ key ] = value
+      }
+    )
   }
-  return {
-    callback,
-    args: value === env.UNDEFINED ? [ id ] : [ id, value ],
+  else {
+    data[ name ] = value
   }
 }
 
 /**
  * 全局/本地注册
  *
- * @param {Object|string} id
+ * @param {Object|string} name
  * @param {?Object} value
  */
 array.each(
-  array.merge(
-    supportRegisterAsync,
-    [ 'directive', 'partial', 'filter' ]
-  ),
+  [ COMPONENT, 'directive', 'partial', 'filter' ],
   function (type) {
-    prototype[ type ] = function () {
-      let prop = `$${type}s`
-      let store = this[ prop ] || (this[ prop ] = new Store())
-      let { args, callback } = parseRegisterArguments(type, arguments)
-      return magic({
-        args,
-        get(id) {
-          if (callback) {
-            store.getAsync(
-              id,
-              function (value) {
-                if (value) {
-                  callback(value)
-                }
-                else {
-                  Yox[ type ](id, callback)
-                }
-              }
-            )
-          }
-          else {
-            return store.get(id) || Yox[ type ](id)
-          }
-        },
-        set(id, value) {
-          store.set(id, value)
+    prototype[ type ] = function (name, value) {
+      let instance = this, prop = `$${type}s`, data = instance[ prop ]
+      if (is.string(name)) {
+        let length = arguments.length, hasValue = data && object.has(data, name)
+        if (length === 1) {
+          return hasValue
+            ? data[ name ]
+            : Yox[ type ](name)
         }
-      })
-
+        else if (length === 2 && type === COMPONENT && is.func(value)) {
+          return hasValue
+            ? getResourceAsync(data, name, value)
+            : Yox[ type ](name, value)
+        }
+      }
+      setResource(
+        data || (instance[ prop ] = { }),
+        name,
+        value
+      )
     }
-    Yox[ type ] = function () {
-      let store = registry[ type ] || (registry[ type ] = new Store())
-      let { args, callback } = parseRegisterArguments(type, arguments)
-      return magic({
-        args,
-        get(id) {
-          if (callback) {
-            store.getAsync(id, callback)
-          }
-          else {
-            return store.get(id)
-          }
-        },
-        set(id, value) {
-          store.set(id, value)
+    Yox[ type ] = function (name, value) {
+      let data = registry[ type ]
+      if (is.string(name)) {
+        let length = arguments.length, hasValue = data && object.has(data, name)
+        if (length === 1) {
+          return hasValue
+            ? data[ name ]
+            : env.UNDEFINED
         }
-      })
+        else if (length === 2 && type === COMPONENT && is.func(value)) {
+          return hasValue
+            ? getResourceAsync(data, name, value)
+            : value()
+        }
+      }
+      setResource(
+        data || (registry[ type ] = { }),
+        name,
+        value
+      )
     }
   }
 )
@@ -970,7 +923,7 @@ Yox.compile = function (template) {
 }
 
 /**
- * 验证 props
+ * 验证 props，无爱请重写
  *
  * @param {Object} props 传递的数据
  * @param {Object} propTypes 数据格式
@@ -1039,26 +992,6 @@ Yox.validate = function (props, propTypes) {
  */
 Yox.use = function (plugin) {
   plugin.install(Yox)
-}
-
-function magic(options) {
-
-  let { args, get, set } = options
-  args = array.toArray(args)
-
-  let key = args[ 0 ], value = args[ 1 ]
-  if (is.object(key)) {
-    execute(set, env.NULL, key)
-  }
-  else if (is.string(key)) {
-    let { length } = args
-    if (length === 2) {
-      execute(set, env.NULL, args)
-    }
-    else if (length === 1) {
-      return execute(get, env.NULL, key)
-    }
-  }
 }
 
 import ref from './directive/ref'
