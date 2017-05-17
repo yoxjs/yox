@@ -552,19 +552,19 @@ export default class Yox {
           )
         }
         return function (event) {
-          let isEvent = Event.is(event)
+          let isEvent = Event.is(event), result
           if (!args.length) {
             if (isEvent) {
-              args = [ event ]
+              result = execute(method, instance, event)
             }
           }
           else {
             if (isEvent) {
               context.set(templateSyntax.SPECIAL_EVENT, event)
             }
-            args = args.map(getValue)
+            result = execute(method, instance, args.map(getValue))
           }
-          if (execute(method, instance, args) === env.FALSE && isEvent) {
+          if (result === env.FALSE && isEvent) {
             event.prevent().stop()
           }
         }
@@ -786,7 +786,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.44.7'
+Yox.version = '0.44.8'
 
 /**
  * 工具，便于扩展、插件使用
