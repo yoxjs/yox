@@ -254,6 +254,86 @@ Event.is = function (target) {
 };
 
 /**
+ * 为了压缩，定义的常用字符
+ */
+
+function charAt(str, index) {
+  return str.charAt(index || 0);
+}
+
+function codeAt(str, index) {
+  return str.charCodeAt(index || 0);
+}
+
+var CHAR_BLANK = '';
+
+var CHAR_DOT = '.';
+var CODE_DOT = codeAt(CHAR_DOT);
+
+var CHAR_HASH = '#';
+var CODE_HASH = codeAt(CHAR_HASH);
+
+var CHAR_DASH = '-';
+var CODE_DASH = codeAt(CHAR_DASH);
+
+var CHAR_EQUAL = '=';
+var CODE_EQUAL = codeAt(CHAR_EQUAL);
+
+var CHAR_SLASH = '/';
+var CODE_SLASH = codeAt(CHAR_SLASH);
+
+var CHAR_COMMA = ',';
+var CODE_COMMA = codeAt(CHAR_COMMA);
+
+var CHAR_COLON = ':';
+var CODE_COLON = codeAt(CHAR_COLON);
+
+var CHAR_SEMCOL = ';';
+var CODE_SEMCOL = codeAt(CHAR_SEMCOL);
+
+var CHAR_SQUOTE = "'";
+var CODE_SQUOTE = codeAt(CHAR_SQUOTE);
+
+var CHAR_DQUOTE = '"';
+var CODE_DQUOTE = codeAt(CHAR_DQUOTE);
+
+var CHAR_OPAREN = '(';
+var CODE_OPAREN = codeAt(CHAR_OPAREN);
+
+var CHAR_CPAREN = ')';
+var CODE_CPAREN = codeAt(CHAR_CPAREN);
+
+var CHAR_OBRACK = '[';
+var CODE_OBRACK = codeAt(CHAR_OBRACK);
+
+var CHAR_CBRACK = ']';
+var CODE_CBRACK = codeAt(CHAR_CBRACK);
+
+var CHAR_OBRACE = '{';
+var CODE_OBRACE = codeAt(CHAR_OBRACE);
+
+var CHAR_CBRACE = '}';
+var CODE_CBRACE = codeAt(CHAR_CBRACE);
+
+var CHAR_LEFT = '<';
+var CODE_LEFT = codeAt(CHAR_LEFT);
+
+var CHAR_RIGHT = '>';
+var CODE_RIGHT = codeAt(CHAR_RIGHT);
+
+var CHAR_QUMARK = '?';
+var CODE_QUMARK = codeAt(CHAR_QUMARK);
+
+var CHAR_TAB = '\t';
+var CODE_TAB = codeAt(CHAR_TAB);
+
+var CHAR_BREAKLINE = '\n';
+var CODE_BREAKLINE = codeAt(CHAR_BREAKLINE);
+
+var CHAR_WHITESPACE = ' ';
+var CODE_WHITESPACE = codeAt(CHAR_WHITESPACE);
+
+/**
  * 遍历数组
  *
  * @param {Array} array
@@ -456,86 +536,6 @@ var array$1 = Object.freeze({
 	remove: remove,
 	falsy: falsy
 });
-
-/**
- * 为了压缩，定义的常用字符
- */
-
-function charAt(str, index) {
-  return str.charAt(index || 0);
-}
-
-function codeAt(str, index) {
-  return str.charCodeAt(index || 0);
-}
-
-var CHAR_BLANK = '';
-
-var CHAR_DOT = '.';
-var CODE_DOT = codeAt(CHAR_DOT);
-
-var CHAR_HASH = '#';
-var CODE_HASH = codeAt(CHAR_HASH);
-
-var CHAR_DASH = '-';
-var CODE_DASH = codeAt(CHAR_DASH);
-
-var CHAR_EQUAL = '=';
-var CODE_EQUAL = codeAt(CHAR_EQUAL);
-
-var CHAR_SLASH = '/';
-var CODE_SLASH = codeAt(CHAR_SLASH);
-
-var CHAR_COMMA = ',';
-var CODE_COMMA = codeAt(CHAR_COMMA);
-
-var CHAR_COLON = ':';
-var CODE_COLON = codeAt(CHAR_COLON);
-
-var CHAR_SEMCOL = ';';
-var CODE_SEMCOL = codeAt(CHAR_SEMCOL);
-
-var CHAR_SQUOTE = "'";
-var CODE_SQUOTE = codeAt(CHAR_SQUOTE);
-
-var CHAR_DQUOTE = '"';
-var CODE_DQUOTE = codeAt(CHAR_DQUOTE);
-
-var CHAR_OPAREN = '(';
-var CODE_OPAREN = codeAt(CHAR_OPAREN);
-
-var CHAR_CPAREN = ')';
-var CODE_CPAREN = codeAt(CHAR_CPAREN);
-
-var CHAR_OBRACK = '[';
-var CODE_OBRACK = codeAt(CHAR_OBRACK);
-
-var CHAR_CBRACK = ']';
-var CODE_CBRACK = codeAt(CHAR_CBRACK);
-
-var CHAR_OBRACE = '{';
-var CODE_OBRACE = codeAt(CHAR_OBRACE);
-
-var CHAR_CBRACE = '}';
-var CODE_CBRACE = codeAt(CHAR_CBRACE);
-
-var CHAR_LEFT = '<';
-var CODE_LEFT = codeAt(CHAR_LEFT);
-
-var CHAR_RIGHT = '>';
-var CODE_RIGHT = codeAt(CHAR_RIGHT);
-
-var CHAR_QUMARK = '?';
-var CODE_QUMARK = codeAt(CHAR_QUMARK);
-
-var CHAR_TAB = '\t';
-var CODE_TAB = codeAt(CHAR_TAB);
-
-var CHAR_BREAKLINE = '\n';
-var CODE_BREAKLINE = codeAt(CHAR_BREAKLINE);
-
-var CHAR_WHITESPACE = ' ';
-var CODE_WHITESPACE = codeAt(CHAR_WHITESPACE);
 
 /**
  * 连字符转成驼峰
@@ -921,107 +921,44 @@ var Emitter = function () {
   }
 
   createClass(Emitter, [{
-    key: 'on',
-    value: function on(type, listener) {
-      var listeners = this.listeners,
-          hasNew = void 0;
-
-      var addListener = function addListener(listener, type) {
-        if (func(listener)) {
-          var list = listeners[type];
-          if (!list) {
-            list = listeners[type] = [];
-            hasNew = TRUE;
-          }
-          push(list, listener);
-        }
-      };
-
-      if (object(type)) {
-        each$1(type, addListener);
-      } else if (string(type)) {
-        addListener(listener, type);
-      }
-
-      return hasNew;
-    }
-  }, {
-    key: 'once',
-    value: function once(type, listener) {
-
-      var instance = this;
-      var addOnce = function addOnce(listener, type) {
-        if (func(listener)) {
-          var $magic = listener.$magic;
-
-          listener.$magic = function () {
-            execute($magic);
-            instance.off(type, listener);
-            if ($magic) {
-              listener.$magic = $magic;
-            } else {
-              delete listener.$magic;
-            }
-          };
-        }
-      };
-
-      if (object(type)) {
-        each$1(type, addOnce);
-      } else if (string(type)) {
-        addOnce(listener, type);
-      }
-
-      instance.on(type, listener);
-    }
-  }, {
-    key: 'off',
-    value: function off(type, listener) {
-
-      var instance = this;
-      var listeners = instance.listeners;
-
-      var keys$$1 = keys(listeners);
-
-      if (type == NULL) {
-        listeners = instance.listeners = {};
-      } else {
-        var list = listeners[type];
-        if (list) {
-          if (listener == NULL) {
-            list.length = 0;
-          } else {
-            remove(list, listener);
-          }
-          if (!list.length) {
-            delete listeners[type];
-          }
-        }
-      }
-
-      return keys$$1.length === keys(listeners).length;
-    }
-  }, {
     key: 'fire',
     value: function fire(type, data, context) {
 
-      var isComplete = TRUE;
-
-      var list = this.listeners[type];
+      var isComplete = TRUE,
+          listeners = this.listeners,
+          list = listeners[type];
       if (list) {
 
-        var event = data;
+        // 简单支持一下 jquery 的事件命名空间，即 type.namespace
+        // 不支持 a.b.namespace 这种多个 . 的情况
+        var event = data,
+            namespace = type.split(CHAR_DOT)[1];
         if (array(data)) {
           event = data[0];
         }
 
-        var isEvent = Event.is(event);
+        var isEvent = Event.is(event),
+            offQueue = void 0;
 
-        each(list, function (listener) {
+        each(list, function (item, index) {
 
-          var result = execute(listener, context, data);
+          if (namespace && item.namespace && namespace !== item.namespace) {
+            return;
+          }
 
-          execute(listener.$magic);
+          var result = execute(item.func, context !== UNDEFINED ? context : item.context, data);
+
+          // 执行次数
+          if (item.count > 0) {
+            item.count++;
+          } else {
+            item.count = 1;
+          }
+
+          // 注册的 listener 可以指定最大执行次数
+          if (item.count === item.max) {
+            push(offQueue || (offQueue = []), index);
+          }
 
           // 如果没有返回 false，而是调用了 event.stop 也算是返回 false
           if (isEvent) {
@@ -1036,6 +973,15 @@ var Emitter = function () {
             return isComplete = FALSE;
           }
         });
+
+        if (offQueue) {
+          each(offQueue, function (index) {
+            list.splice(index, 1);
+          }, TRUE);
+          if (!list.length) {
+            delete listeners[type];
+          }
+        }
       }
 
       return isComplete;
@@ -1048,12 +994,74 @@ var Emitter = function () {
       if (listener == NULL) {
         return !falsy(list);
       } else if (list) {
-        return has(list, listener);
+        var result = void 0;
+        each(list, function (item) {
+          if (result = item.func === listener) {
+            return FALSE;
+          }
+        });
+        return result;
       }
     }
   }]);
   return Emitter;
 }();
+
+extend(Emitter.prototype, {
+  on: on(),
+  once: on({ max: 1 }),
+  off: function off(type, listener) {
+
+    var instance = this;
+
+    if (type == NULL) {
+      instance.listeners = {};
+    } else {
+      var listeners = instance.listeners;
+
+      var list = listeners[type];
+      if (list) {
+        if (listener == NULL) {
+          list.length = 0;
+        } else {
+          each(list, function (item, index) {
+            if (item.func === listener) {
+              list.splice(index, 1);
+            }
+          }, TRUE);
+        }
+        if (!list.length) {
+          delete listeners[type];
+        }
+      }
+    }
+  }
+});
+
+function on(data) {
+  return function (type, listener) {
+    var listeners = this.listeners;
+
+
+    var addListener = function addListener(item, type) {
+      if (func(item)) {
+        item = { func: item };
+      }
+      if (object(item) && func(item.func)) {
+        if (data) {
+          extend(item, data);
+        }
+        push(listeners[type] || (listeners[type] = []), item);
+      }
+    };
+
+    if (object(type)) {
+      each$1(type, addListener);
+    } else if (string(type)) {
+      addListener(listener, type);
+    }
+  };
+}
 
 var toString = function (str) {
   var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : CHAR_BLANK;
@@ -1264,7 +1272,10 @@ function init(modules, api) {
 
   each(moduleHooks, function (hook) {
     each(modules, function (item) {
-      moduleEmitter.on(hook, item[hook]);
+      moduleEmitter.on(hook, {
+        context: api,
+        func: item[hook]
+      });
     });
   });
 
@@ -1292,7 +1303,7 @@ function init(modules, api) {
     }
 
     if (data) {
-      moduleEmitter.fire(HOOK_CREATE, [emptyNode, vnode], api);
+      moduleEmitter.fire(HOOK_CREATE, [emptyNode, vnode]);
     }
     // 钩子函数可能会替换元素
     return vnode.el;
@@ -1330,7 +1341,7 @@ function init(modules, api) {
       api.remove(parentNode, el);
 
       if (data) {
-        moduleEmitter.fire(HOOK_REMOVE, vnode, api);
+        moduleEmitter.fire(HOOK_REMOVE, vnode);
       }
     } else if (el) {
       api.remove(parentNode, el);
@@ -1350,7 +1361,7 @@ function init(modules, api) {
         });
       }
 
-      moduleEmitter.fire(HOOK_DESTROY, vnode, api);
+      moduleEmitter.fire(HOOK_DESTROY, vnode);
     }
   };
 
@@ -1480,7 +1491,7 @@ function init(modules, api) {
     var data = vnode.data;
 
     if (data) {
-      moduleEmitter.fire(HOOK_UPDATE, args, api);
+      moduleEmitter.fire(HOOK_UPDATE, args);
     }
 
     var newText = vnode.text;
@@ -1518,7 +1529,7 @@ function init(modules, api) {
     }
 
     if (data) {
-      moduleEmitter.fire(HOOK_POSTPATCH, args, api);
+      moduleEmitter.fire(HOOK_POSTPATCH, args);
     }
   };
 
@@ -4072,7 +4083,9 @@ var Observer = function () {
         }
 
         if (set$$1) {
-          instance.computedSetters[keypath] = set$$1;
+          instance.computedSetters[keypath] = function (value) {
+            set$$1.call(instance.context, value);
+          };
         }
       });
     }
@@ -4160,7 +4173,6 @@ var Observer = function () {
           data = instance.data,
           cache = instance.cache,
           emitter = instance.emitter,
-          context = instance.context,
           reversedDeps = instance.reversedDeps,
           computedGetters = instance.computedGetters,
           computedSetters = instance.computedSetters,
@@ -4247,7 +4259,7 @@ var Observer = function () {
           var setter = computedSetters[keypath];
           if (setter) {
             addDifference(keypath, keypath);
-            execute(setter, context, newValue);
+            setter(newValue);
             return;
           } else {
             var _matchBestGetter2 = matchBestGetter(computedGetters, keypath),
@@ -4358,7 +4370,7 @@ var Observer = function () {
                 if (difference.match) {
                   push(args, difference.match);
                 }
-                emitter.fire(keypath, args, context);
+                emitter.fire(keypath, args);
               }
             });
           }
@@ -4420,7 +4432,10 @@ extend(Observer.prototype, {
    * @param {?Function} watcher
    */
   unwatch: function unwatch(keypath, watcher) {
-    if (this.emitter.off(keypath, watcher)) {
+    var emitter = this.emitter;
+
+    emitter.off(keypath, watcher);
+    if (!emitter.has(keypath)) {
       this[DIRTY] = TRUE;
     }
   }
@@ -4456,28 +4471,21 @@ function createWatch(action) {
         sync = value.sync;
       }
 
-      if (instance.emitter[action](keypath, watcher)) {
+      var emitter = instance.emitter,
+          listener = { func: watcher, context: instance.context };
+      if (!emitter.has(keypath)) {
         instance[DIRTY] = TRUE;
       }
 
+      emitter[action](keypath, listener);
+
       if (!isFuzzyKeypath(keypath)) {
-        // 既然是 watch, 就先通过 get 缓存当前值，便于下次对比
-        value = instance.get(keypath);
-        // 立即执行，通过 Emitter 提供的 $magic 扩展实现
         if (sync) {
-
-          var executed = FALSE,
-              magic = function magic() {
-            executed = TRUE;
-            if (watcher.$magic === magic) {
-              delete watcher.$magic;
-            }
-          };
-          watcher.$magic = magic;
-
           append(function () {
-            if (!executed && instance.context) {
-              execute(watcher, instance.context, [instance.get(keypath), value, keypath]);
+            var context = instance.context;
+
+            if (context && !listener.count) {
+              execute(watcher, context, [instance.get(keypath), UNDEFINED, keypath]);
             }
           });
         }
@@ -4730,7 +4738,7 @@ function find(selector, context) {
   return (context || doc).querySelector(selector);
 }
 
-function on(element, type, listener) {
+function on$1(element, type, listener) {
   element.addEventListener(type, listener, FALSE);
 }
 
@@ -4759,7 +4767,7 @@ var domApi = Object.freeze({
 	text: text,
 	html: html,
 	find: find,
-	on: on,
+	on: on$1,
 	off: off
 });
 
@@ -6002,7 +6010,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.45.0';
+Yox.version = '0.45.1';
 
 /**
  * 工具，便于扩展、插件使用
