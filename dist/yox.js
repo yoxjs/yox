@@ -4115,12 +4115,20 @@ var Observer = function () {
 
       if (computedGetters) {
         var _matchBestGetter = matchBestGetter(computedGetters, keypath),
-            value = _matchBestGetter.value,
-            rest = _matchBestGetter.rest;
+            getter = _matchBestGetter.getter,
+            prop = _matchBestGetter.prop;
 
-        if (value) {
-          value = value();
-          result = rest && !primitive(value) ? get$1(value, rest) : { value: value };
+        if (getter) {
+          getter = getter();
+          if (prop) {
+            if (exists(getter, prop)) {
+              result = { value: getter[prop] };
+            } else if (!primitive(getter)) {
+              result = get$1(getter, prop);
+            }
+          } else {
+            result = { value: getter };
+          }
         }
       }
 
@@ -4192,8 +4200,6 @@ var Observer = function () {
        * 当修改 b 时，要通知 a 更新，不通知 c 更新
        * 当修改 a 时，仅自己更新
        *
-       * 有时候，b 的数据来自 c 的过滤，当修改 b 时，实际是修改 c，这时候，应该从最深层开始往上通知
-       *
        * 当监听 user.* 时，如果修改了 user.name，不仅要触发 user.name 的 watcher，也要触发 user.* 的 watcher
        *
        * 这里遵循的一个原则是，只有当修改数据确实产生了数据变化，才会分析它的依赖
@@ -4245,14 +4251,14 @@ var Observer = function () {
             return;
           } else {
             var _matchBestGetter2 = matchBestGetter(computedGetters, keypath),
-                value = _matchBestGetter2.value,
-                rest = _matchBestGetter2.rest;
+                getter = _matchBestGetter2.getter,
+                prop = _matchBestGetter2.prop;
 
-            if (value && rest) {
-              value = value();
-              if (!primitive(value)) {
+            if (getter && prop) {
+              getter = getter();
+              if (!primitive(getter)) {
                 addDifference(keypath, keypath);
-                set$1(value, rest, newValue);
+                set$1(getter, prop, newValue);
               }
               return;
             }
@@ -4268,6 +4274,7 @@ var Observer = function () {
           keypath = void 0,
           realpath = void 0,
           oldValue = void 0,
+          isChange = void 0,
           nextDifferences = void 0;
       while (difference = differences[++i]) {
 
@@ -4279,7 +4286,14 @@ var Observer = function () {
           delete cache[realpath];
         }
 
-        if (getNewValue(realpath) !== oldValue || (difference.force = object(oldValue) || array(oldValue))) {
+        isChange = getNewValue(realpath) !== oldValue;
+        if (!isChange && array(oldValue) && oldValue[Observer.FORCE]) {
+          isChange = TRUE;
+          difference.force = TRUE;
+          delete oldValue[Observer.FORCE];
+        }
+
+        if (isChange) {
 
           nextDifferences = instance.differences || (instance.differences = {});
           nextDifferences[joinKeypath(keypath, realpath)] = difference;
@@ -4413,6 +4427,8 @@ extend(Observer.prototype, {
 
 });
 
+Observer.FORCE = '_force_';
+
 var DIRTY = '_dirty_';
 
 /**
@@ -4515,8 +4531,8 @@ function matchBestGetter(getters, keypath) {
   each(sort(getters, TRUE), function (prefix) {
     var length = startsWith$1(keypath, prefix);
     if (length !== FALSE) {
-      result.value = getters[prefix];
-      result.rest = slice(keypath, length);
+      result.getter = getters[prefix];
+      result.prop = slice(keypath, length);
       return FALSE;
     }
   });
@@ -5811,7 +5827,7 @@ var Yox = function () {
      *
      * 不管 keypath 对应的数据是什么类型，操作后都是布尔型
      *
-     * @param {boolean} keypath
+     * @param {string} keypath
      * @return {boolean} 取反后的布尔值
      */
 
@@ -5910,6 +5926,7 @@ var Yox = function () {
         return;
       }
 
+      list[Observer.FORCE] = TRUE;
       this.set(keypath, list);
 
       return TRUE;
@@ -5956,6 +5973,7 @@ var Yox = function () {
     value: function removeAt(keypath, index) {
       var list = this.get(keypath);
       if (array(list) && index >= 0 && index < list.length) {
+        list[Observer.FORCE] = TRUE;
         list.splice(index, 1);
         this.set(keypath, list);
         return TRUE;
@@ -5975,6 +5993,7 @@ var Yox = function () {
     value: function remove$$1(keypath, item) {
       var list = this.get(keypath);
       if (array(list) && remove(list, item)) {
+        list[Observer.FORCE] = TRUE;
         this.set(keypath, list);
         return TRUE;
       }
@@ -5983,7 +6002,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.44.9';
+Yox.version = '0.45.0';
 
 /**
  * 工具，便于扩展、插件使用

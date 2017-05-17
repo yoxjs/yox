@@ -90,6 +90,10 @@
                 {{formatDate(today)}}
             </p>
 
+            <p>
+                {{filterUsers.length}}
+            </p>
+
         </div>
 
     </script>
@@ -130,6 +134,14 @@
                     }
                 ],
                 today: new Date()
+            },
+            computed: {
+                filterUsers: function () {
+                    var users = this.get('users');
+                    return users.filter(function (user) {
+                        return user.age > 10;
+                    });
+                }
             },
             partials: {
               bye: '<div>bye, {{user.name}}</div>'

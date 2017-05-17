@@ -631,7 +631,7 @@ export default class Yox {
    *
    * 不管 keypath 对应的数据是什么类型，操作后都是布尔型
    *
-   * @param {boolean} keypath
+   * @param {string} keypath
    * @return {boolean} 取反后的布尔值
    */
   toggle(keypath) {
@@ -716,6 +716,7 @@ export default class Yox {
       return
     }
 
+    list[ Observer.FORCE ] = env.TRUE
     this.set(keypath, list)
 
     return env.TRUE
@@ -757,6 +758,7 @@ export default class Yox {
       && index >= 0
       && index < list.length
     ) {
+      list[ Observer.FORCE ] = env.TRUE
       list.splice(index, 1)
       this.set(keypath, list)
       return env.TRUE
@@ -773,6 +775,7 @@ export default class Yox {
   remove(keypath, item) {
     let list = this.get(keypath)
     if (is.array(list) && array.remove(list, item)) {
+      list[ Observer.FORCE ] = env.TRUE
       this.set(keypath, list)
       return env.TRUE
     }
@@ -786,7 +789,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.44.8'
+Yox.version = '0.45.0'
 
 /**
  * 工具，便于扩展、插件使用
