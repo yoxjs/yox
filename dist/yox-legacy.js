@@ -71,11 +71,7 @@ if (!Function.prototype.bind) {
   };
 }
 
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
-  return typeof obj;
-} : function (obj) {
-  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
-};
+
 
 
 
@@ -89,7 +85,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
 var classCallCheck = function (instance, Constructor) {
   if (!(instance instanceof Constructor)) {
-    throw new TypeError("Cannot call a class as a function");
+    throw new Error("Cannot call a class as a function");
   }
 };
 
@@ -121,7 +117,7 @@ var createClass = function () {
 
 var inherits = function (subClass, superClass) {
   if (typeof superClass !== "function" && superClass !== null) {
-    throw new TypeError("Super expression must either be null or a function, not " + typeof superClass);
+    throw new Error("Super expression must either be null or a function, not " + typeof superClass);
   }
 
   subClass.prototype = Object.create(superClass && superClass.prototype, {
@@ -174,14 +170,14 @@ var RAW_FUNCTION = 'function';
  *
  * @type {?Window}
  */
-var win = (typeof window === 'undefined' ? 'undefined' : _typeof(window)) !== RAW_UNDEFINED ? window : NULL;
+var win = typeof window !== RAW_UNDEFINED ? window : NULL;
 
 /**
  * 浏览器环境下的 document 对象
  *
  * @type {?Document}
  */
-var doc = (typeof document === 'undefined' ? 'undefined' : _typeof(document)) !== RAW_UNDEFINED ? document : NULL;
+var doc = typeof document !== RAW_UNDEFINED ? document : NULL;
 
 /**
  * 空函数
@@ -278,7 +274,7 @@ var Event = function () {
 
   createClass(Event, [{
     key: 'prevent',
-    value: function prevent() {
+    value: function () {
       var instance = this;
       if (!instance.isPrevented) {
         var originalEvent = instance.originalEvent;
@@ -296,7 +292,7 @@ var Event = function () {
     }
   }, {
     key: 'stop',
-    value: function stop() {
+    value: function () {
       var instance = this;
       if (!instance.isStoped) {
         var originalEvent = instance.originalEvent;
@@ -763,7 +759,7 @@ function stringify(keypaths) {
 }
 
 function startsWith$1(keypath, prefix) {
-  var temp = void 0;
+  var temp;
   if (keypath === prefix) {
     return prefix.length;
   } else if (startsWith(keypath, temp = prefix + SEPARATOR_KEY)) {
@@ -989,7 +985,7 @@ var Emitter = function () {
 
   createClass(Emitter, [{
     key: 'fire',
-    value: function fire(type, data, context) {
+    value: function (type, data, context) {
 
       var isComplete = TRUE,
           listeners = this.listeners,
@@ -1005,7 +1001,7 @@ var Emitter = function () {
         }
 
         var isEvent = Event.is(event),
-            offQueue = void 0;
+            offQueue;
 
         each(list, function (item, index) {
 
@@ -1055,13 +1051,13 @@ var Emitter = function () {
     }
   }, {
     key: 'has',
-    value: function has$$1(type, listener) {
+    value: function (type, listener) {
 
       var list = this.listeners[type];
       if (listener == NULL) {
         return !falsy(list);
       } else if (list) {
-        var result = void 0;
+        var result;
         each(list, function (item) {
           if (result = item.func === listener) {
             return FALSE;
@@ -1110,7 +1106,7 @@ function on(data) {
     var listeners = this.listeners;
 
 
-    var addListener = function addListener(item, type) {
+    var addListener = function (item, type) {
       if (func(item)) {
         item = { func: item };
       }
@@ -1144,7 +1140,7 @@ var toString = function (str) {
  *
  * @type {?Object}
  */
-var Console = (typeof console === 'undefined' ? 'undefined' : _typeof(console)) !== RAW_UNDEFINED ? console : NULL;
+var Console = typeof console !== RAW_UNDEFINED ? console : NULL;
 
 var debug = /yox/.test(toString(noop));
 
@@ -1213,8 +1209,8 @@ var logger = Object.freeze({
 	fatal: fatal
 });
 
-var nextTick = void 0;
-if ((typeof MutationObserver === 'undefined' ? 'undefined' : _typeof(MutationObserver)) === RAW_FUNCTION) {
+var nextTick;
+if (typeof MutationObserver === RAW_FUNCTION) {
   nextTick = function nextTick(fn) {
     var observer = new MutationObserver(fn);
     var textNode = doc.createTextNode(CHAR_BLANK);
@@ -1223,7 +1219,7 @@ if ((typeof MutationObserver === 'undefined' ? 'undefined' : _typeof(MutationObs
     });
     textNode.data = CHAR_WHITESPACE;
   };
-} else if ((typeof setImmediate === 'undefined' ? 'undefined' : _typeof(setImmediate)) === RAW_FUNCTION) {
+} else if (typeof setImmediate === RAW_FUNCTION) {
   nextTick = setImmediate;
 } else {
   nextTick = setTimeout;
@@ -1346,7 +1342,7 @@ function init(modules, api) {
     });
   });
 
-  var createElement = function createElement(parentNode, vnode) {
+  var createElement = function (parentNode, vnode) {
     var tag = vnode.tag,
         data = vnode.data,
         children = vnode.children,
@@ -1376,20 +1372,20 @@ function init(modules, api) {
     return vnode.el;
   };
 
-  var addVnodes = function addVnodes(parentNode, vnodes, startIndex, endIndex, before) {
+  var addVnodes = function (parentNode, vnodes, startIndex, endIndex, before) {
     for (var i = startIndex; i <= endIndex; i++) {
       addVnode(parentNode, vnodes[i], before);
     }
   };
 
-  var addVnode = function addVnode(parentNode, vnode, before) {
+  var addVnode = function (parentNode, vnode, before) {
     var el = createElement(parentNode, vnode);
     if (el) {
       api.before(parentNode, el, before);
     }
   };
 
-  var removeVnodes = function removeVnodes(parentNode, vnodes, startIndex, endIndex) {
+  var removeVnodes = function (parentNode, vnodes, startIndex, endIndex) {
     for (var i = startIndex, vnode; i <= endIndex; i++) {
       vnode = vnodes[i];
       if (vnode) {
@@ -1398,7 +1394,7 @@ function init(modules, api) {
     }
   };
 
-  var removeVnode = function removeVnode(parentNode, vnode) {
+  var removeVnode = function (parentNode, vnode) {
     var tag = vnode.tag,
         el = vnode.el,
         data = vnode.data;
@@ -1415,7 +1411,7 @@ function init(modules, api) {
     }
   };
 
-  var destroyVnode = function destroyVnode(vnode) {
+  var destroyVnode = function (vnode) {
     var data = vnode.data,
         children = vnode.children;
 
@@ -1432,12 +1428,12 @@ function init(modules, api) {
     }
   };
 
-  var replaceVnode = function replaceVnode(parentNode, oldVnode, vnode) {
+  var replaceVnode = function (parentNode, oldVnode, vnode) {
     api.before(parentNode, vnode.el, oldVnode.el);
     removeVnode(parentNode, oldVnode);
   };
 
-  var updateChildren = function updateChildren(parentNode, oldChildren, newChildren) {
+  var updateChildren = function (parentNode, oldChildren, newChildren) {
 
     var oldStartIndex = 0;
     var oldEndIndex = oldChildren.length - 1;
@@ -1449,9 +1445,9 @@ function init(modules, api) {
     var newStartVnode = newChildren[newStartIndex];
     var newEndVnode = newChildren[newEndIndex];
 
-    var oldKeyToIndex = void 0,
-        oldIndex = void 0,
-        activeVnode = void 0;
+    var oldKeyToIndex,
+        oldIndex,
+        activeVnode;
 
     while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
 
@@ -1535,7 +1531,7 @@ function init(modules, api) {
     }
   };
 
-  var patchVnode = function patchVnode(oldVnode, vnode) {
+  var patchVnode = function (oldVnode, vnode) {
 
     if (oldVnode === vnode) {
       return;
@@ -2392,27 +2388,27 @@ function compile$1(content) {
   var length = content.length;
 
   var index = 0,
-      charCode = void 0;
+      charCode;
 
-  var throwError = function throwError() {
+  var throwError = function () {
     fatal('Failed to compile expression: ' + CHAR_BREAKLINE + content);
   };
 
-  var getCharCode = function getCharCode() {
+  var getCharCode = function () {
     return codeAt(content, index);
   };
 
-  var cutString = function cutString(start) {
+  var cutString = function (start) {
     return content.substring(start, index);
   };
 
-  var skipWhitespace = function skipWhitespace() {
+  var skipWhitespace = function () {
     while ((charCode = getCharCode()) && (charCode === CODE_WHITESPACE || charCode === CODE_TAB)) {
       index++;
     }
   };
 
-  var skipNumber = function skipNumber() {
+  var skipNumber = function () {
     if (getCharCode() === CODE_DOT) {
       skipDecimal();
     } else {
@@ -2423,13 +2419,13 @@ function compile$1(content) {
     }
   };
 
-  var skipDigit = function skipDigit() {
+  var skipDigit = function () {
     do {
       index++;
     } while (isDigit(getCharCode()));
   };
 
-  var skipDecimal = function skipDecimal() {
+  var skipDecimal = function () {
     // 跳过点号
     index++;
     // 后面必须紧跟数字
@@ -2440,7 +2436,7 @@ function compile$1(content) {
     }
   };
 
-  var skipString = function skipString() {
+  var skipString = function () {
 
     var quote = getCharCode();
 
@@ -2456,7 +2452,7 @@ function compile$1(content) {
     throwError();
   };
 
-  var skipIdentifier = function skipIdentifier() {
+  var skipIdentifier = function () {
     // 第一个字符一定是经过 isIdentifierStart 判断的
     // 因此循环至少要执行一次
     do {
@@ -2464,7 +2460,7 @@ function compile$1(content) {
     } while (isIdentifierPart(getCharCode()));
   };
 
-  var parseIdentifier = function parseIdentifier(careKeyword) {
+  var parseIdentifier = function (careKeyword) {
 
     var start = index;
     skipIdentifier();
@@ -2477,7 +2473,7 @@ function compile$1(content) {
     throwError();
   };
 
-  var parseTuple = function parseTuple(delimiter) {
+  var parseTuple = function (delimiter) {
 
     var list = [];
 
@@ -2499,12 +2495,12 @@ function compile$1(content) {
     throwError();
   };
 
-  var parseOperator = function parseOperator(sortedOperatorList) {
+  var parseOperator = function (sortedOperatorList) {
 
     skipWhitespace();
 
     var value = slice(content, index),
-        match = void 0;
+        match;
     each(sortedOperatorList, function (prefix) {
       if (startsWith(value, prefix)) {
         match = prefix;
@@ -2518,11 +2514,11 @@ function compile$1(content) {
     }
   };
 
-  var parseVariable = function parseVariable() {
+  var parseVariable = function () {
 
     var start = index,
         node = parseIdentifier(TRUE),
-        temp = void 0;
+        temp;
 
     while (index < length) {
       // a(x)
@@ -2549,14 +2545,14 @@ function compile$1(content) {
     return node;
   };
 
-  var parseToken = function parseToken() {
+  var parseToken = function () {
 
     skipWhitespace();
 
     charCode = getCharCode();
 
     var start = index,
-        temp = void 0;
+        temp;
 
     // 'xx' 或 "xx"
     if (charCode === CODE_SQUOTE || charCode === CODE_DQUOTE) {
@@ -2593,13 +2589,13 @@ function compile$1(content) {
     throwError();
   };
 
-  var parseBinary = function parseBinary() {
+  var parseBinary = function () {
 
     var stack = [index, parseToken()],
-        right = void 0,
-        next = void 0;
+        right,
+        next;
 
-    var createBinaryNode = function createBinaryNode() {
+    var createBinaryNode = function () {
       pop(stack);
       pop(stack);
       var action = pop(stack);
@@ -2634,7 +2630,7 @@ function compile$1(content) {
     return right;
   };
 
-  var parseExpression = function parseExpression(delimiter) {
+  var parseExpression = function (delimiter) {
 
     // 主要是区分三元和二元表达式
     // 三元表达式可以认为是 3 个二元表达式组成的
@@ -3143,15 +3139,15 @@ function compile(content) {
   var nodeStack = [],
       ifStack = [],
       htmlStack = [],
-      currentQuote = void 0;
+      currentQuote;
 
-  var throwError = function throwError(msg) {
+  var throwError = function (msg) {
     fatal('Error compiling template:' + CHAR_BREAKLINE + content + CHAR_BREAKLINE + '- ' + msg);
   };
 
-  var popStack = function popStack(type, expectedName) {
+  var popStack = function (type, expectedName) {
 
-    var target = void 0;
+    var target;
 
     each(nodeStack, function (node, i) {
       if (node.type === type) {
@@ -3261,7 +3257,7 @@ function compile(content) {
     }
   };
 
-  var addChild = function addChild(node) {
+  var addChild = function (node) {
     var type = node.type,
         text = node.text;
 
@@ -3282,7 +3278,7 @@ function compile(content) {
       return;
     }
 
-    var prevNode = void 0;
+    var prevNode;
 
     var currentNode = last(nodeStack);
     if (currentNode) {
@@ -3372,8 +3368,8 @@ function compile(content) {
   }, function (content) {
     if (htmlStack.length === 2) {
       var index = 0,
-          currentChar = void 0,
-          closed = void 0;
+          currentChar,
+          closed;
       while (currentChar = charAt(content, index)) {
         if (currentChar === currentQuote) {
           closed = TRUE;
@@ -3453,7 +3449,7 @@ function compile(content) {
     }
   }];
 
-  var parseHtml = function parseHtml(content) {
+  var parseHtml = function (content) {
     if (content) {
       (function () {
         var tpl = content;
@@ -3471,7 +3467,7 @@ function compile(content) {
     }
   };
 
-  var parseDelimiter = function parseDelimiter(content, all) {
+  var parseDelimiter = function (content, all) {
     if (content) {
       if (charAt(content) === CHAR_SLASH) {
         var name = slice(content, 1),
@@ -3494,7 +3490,7 @@ function compile(content) {
   };
 
   var str = content,
-      match = void 0;
+      match;
   while (str) {
     match = str.match(delimiterPattern);
     if (match) {
@@ -3539,17 +3535,17 @@ var Context = function () {
 
   createClass(Context, [{
     key: 'push',
-    value: function push(data, keypath) {
+    value: function (data, keypath) {
       return new Context(data, keypath, this);
     }
   }, {
     key: 'pop',
-    value: function pop() {
+    value: function () {
       return this.parent;
     }
   }, {
     key: 'set',
-    value: function set$$1(key, value) {
+    value: function (key, value) {
       var data = this.data,
           cache = this.cache;
 
@@ -3563,7 +3559,7 @@ var Context = function () {
     }
   }, {
     key: 'get',
-    value: function get$$1(key) {
+    value: function (key) {
 
       var instance = this;
       var _instance = instance,
@@ -3574,14 +3570,14 @@ var Context = function () {
           keypath = _formatKeypath2.keypath,
           lookup = _formatKeypath2.lookup;
 
-      var getValue = function getValue(data, keypath) {
+      var getValue = function (data, keypath) {
         return exists(data, keypath) ? { value: data[keypath] } : get$1(data[RAW_THIS], keypath);
       };
 
       if (!has$1(cache, keypath)) {
 
         if (keypath) {
-          var result = void 0;
+          var result;
 
           if (lookup) {
             while (instance) {
@@ -3657,15 +3653,15 @@ function render(ast, data, instance) {
       htmlStack = [],
       partials = {},
       deps = {};
-  var cache = void 0,
-      prevCache = void 0,
-      currentCache = void 0;
+  var cache,
+      prevCache,
+      currentCache;
 
-  var isDefined = function isDefined(value) {
+  var isDefined = function (value) {
     return value !== UNDEFINED;
   };
 
-  var addChild = function addChild(parent, child) {
+  var addChild = function (parent, child) {
 
     if (parent && isDefined(child)) {
 
@@ -3698,12 +3694,12 @@ function render(ast, data, instance) {
     }
   };
 
-  var addAttr = function addAttr(parent, key, value) {
+  var addAttr = function (parent, key, value) {
     var attrs = parent.attrs || (parent.attrs = {});
     attrs[key] = value;
   };
 
-  var addDirective = function addDirective(parent, name, modifier, value) {
+  var addDirective = function (parent, name, modifier, value) {
     var directives = parent.directives || (parent.directives = {});
     return directives[join(name, modifier)] = {
       name: name,
@@ -3714,8 +3710,8 @@ function render(ast, data, instance) {
     };
   };
 
-  var getValue = function getValue(source, output) {
-    var value = void 0;
+  var getValue = function (source, output) {
+    var value;
     if (has$1(output, 'value')) {
       value = output.value;
     } else if (has$1(source, 'value')) {
@@ -3729,7 +3725,7 @@ function render(ast, data, instance) {
     return value;
   };
 
-  var pushStack = function pushStack(source) {
+  var pushStack = function (source) {
     var type = source.type,
         children = source.children;
 
@@ -3768,9 +3764,9 @@ function render(ast, data, instance) {
   // <div key="{{xx}}">
   //     <div key="{{yy}}"></div>
   // </div>
-  var cacheDeps = void 0;
+  var cacheDeps;
 
-  var executeExpr = function executeExpr(expr, filter) {
+  var executeExpr = function (expr, filter) {
     return execute$1(expr, function (key) {
       var _context$get = context.get(key),
           keypath = _context$get.keypath,
@@ -3846,7 +3842,7 @@ function render(ast, data, instance) {
         children = source.children;
 
     var value = executeExpr(expr),
-        each$$1 = void 0;
+        each$$1;
 
     if (array(value)) {
       each$$1 = each;
@@ -3897,7 +3893,7 @@ function render(ast, data, instance) {
         key = _source.key;
 
     if (key) {
-      var trackBy = void 0;
+      var trackBy;
       if (string(key)) {
         trackBy = key;
       } else if (object(key)) {
@@ -3951,8 +3947,8 @@ function render(ast, data, instance) {
 
   leave[ELEMENT] = function (source, output) {
 
-    var key = void 0,
-        props = void 0;
+    var key,
+        props;
     if (has$1(output, 'key')) {
       key = output.key;
     }
@@ -4100,9 +4096,9 @@ var Observer = function () {
 
       each$1(computed, function (item, keypath) {
 
-        var get$$1 = void 0,
-            set$$1 = void 0,
-            deps = void 0,
+        var get$$1,
+            set$$1,
+            deps,
             cacheable = TRUE;
 
         if (func(item)) {
@@ -4169,10 +4165,10 @@ var Observer = function () {
 
   createClass(Observer, [{
     key: 'get',
-    value: function get$$1(keypath, defaultValue) {
+    value: function (keypath, defaultValue) {
 
       var instance = this,
-          result = void 0;
+          result;
 
       var data = instance.data,
           cache = instance.cache,
@@ -4232,7 +4228,7 @@ var Observer = function () {
 
   }, {
     key: 'set',
-    value: function set$$1(model) {
+    value: function (model) {
 
       var instance = this;
 
@@ -4286,26 +4282,26 @@ var Observer = function () {
 
       var oldCache = {},
           newCache = {};
-      var getOldValue = function getOldValue(keypath) {
+      var getOldValue = function (keypath) {
         if (!has$1(oldCache, keypath)) {
           oldCache[keypath] = has$1(cache, keypath) ? cache[keypath] : instance.get(keypath);
         }
         return oldCache[keypath];
       };
-      var getNewValue = function getNewValue(keypath) {
+      var getNewValue = function (keypath) {
         if (!has$1(newCache, keypath)) {
           newCache[keypath] = instance.get(keypath);
         }
         return newCache[keypath];
       };
 
-      var joinKeypath = function joinKeypath(keypath1, keypath2) {
+      var joinKeypath = function (keypath1, keypath2) {
         return keypath1 + CHAR_DASH + keypath2;
       };
 
       var differences = [],
           differenceMap = {};
-      var addDifference = function addDifference(keypath, realpath, match) {
+      var addDifference = function (keypath, realpath, match) {
         var fullpath = joinKeypath(keypath, realpath);
         if (!differenceMap[fullpath]) {
           differenceMap[fullpath] = TRUE;
@@ -4349,12 +4345,12 @@ var Observer = function () {
       });
 
       var i = -1,
-          difference = void 0,
-          keypath = void 0,
-          realpath = void 0,
-          oldValue = void 0,
-          isChange = void 0,
-          nextDifferences = void 0;
+          difference,
+          keypath,
+          realpath,
+          oldValue,
+          isChange,
+          nextDifferences;
       while (difference = differences[++i]) {
 
         keypath = difference.keypath;
@@ -4398,7 +4394,7 @@ var Observer = function () {
           // 当 b 变化了，要通知 a
           if (reversedKeypaths) {
             each(reversedKeypaths, function (key) {
-              var list = void 0;
+              var list;
               if (isFuzzyKeypath(key)) {
                 var match = matchKeypath(realpath, key);
                 if (match) {
@@ -4446,7 +4442,7 @@ var Observer = function () {
     }
   }, {
     key: 'setDeps',
-    value: function setDeps(keypath, newDeps) {
+    value: function (keypath, newDeps) {
 
       var instance = this;
       var deps = instance.deps;
@@ -4464,7 +4460,7 @@ var Observer = function () {
 
   }, {
     key: 'destroy',
-    value: function destroy() {
+    value: function () {
       this.emitter.off();
       clear(this);
     }
@@ -4532,7 +4528,7 @@ function createWatch(action) {
     each$1(watchers, function (value, keypath) {
 
       var watcher = value,
-          sync = void 0;
+          sync;
       if (object(value)) {
         watcher = value.watcher;
         sync = value.sync;
@@ -4907,12 +4903,12 @@ var IEEvent = function () {
 
   createClass(IEEvent, [{
     key: 'preventDefault',
-    value: function preventDefault() {
+    value: function () {
       this.originalEvent.returnValue = FALSE;
     }
   }, {
     key: 'stopPropagation',
-    value: function stopPropagation() {
+    value: function () {
       this.originalEvent.cancelBubble = TRUE;
     }
   }]);
@@ -5057,7 +5053,7 @@ var EMITTER_KEY = '_emitter_';
 api.on = function (element, type, listener, context) {
   var emitter = element[EMITTER_KEY] || (element[EMITTER_KEY] = new Emitter());
   if (!emitter.has(type)) {
-    var nativeListener = function nativeListener(e, type) {
+    var nativeListener = function (e, type) {
       if (!Event.is(e)) {
         e = new Event(api.createEvent(e, element));
       }
@@ -5135,7 +5131,7 @@ var ref = function (_ref) {
     $refs = instance.$refs = {};
   }
 
-  var set$$1 = function set$$1(target) {
+  var set$$1 = function (target) {
     $refs[value] = target;
   };
 
@@ -5168,7 +5164,7 @@ var ref = function (_ref) {
  */
 var debounce = function (fn, delay, sync) {
 
-  var timer = void 0;
+  var timer;
 
   return function () {
 
@@ -5224,7 +5220,7 @@ var bindEvent = function (_ref) {
     }
 
     if (component) {
-      var bind = function bind(component) {
+      var bind = function (component) {
         component.on(type, listener);
       };
       if (array(component)) {
@@ -5348,7 +5344,7 @@ var model = function (_ref) {
     }
   }
 
-  var set$$1 = function set$$1() {
+  var set$$1 = function () {
     control.set(el, keypath, instance);
   };
 
@@ -5380,7 +5376,7 @@ var binding = function (_ref) {
   var _node$context$get = node.context.get(node.value),
       keypath = _node$context$get.keypath;
 
-  var set = function set(value) {
+  var set = function (value) {
     var name = node.modifier;
     if (node.prop) {
       api.setProp(el, name, value);
@@ -5565,7 +5561,7 @@ var Yox = function () {
 
   createClass(Yox, [{
     key: 'get',
-    value: function get$$1(keypath, defaultValue) {
+    value: function (keypath, defaultValue) {
       return this.$observer.get(keypath, defaultValue);
     }
 
@@ -5578,10 +5574,10 @@ var Yox = function () {
 
   }, {
     key: 'set',
-    value: function set$$1(keypath, value) {
+    value: function (keypath, value) {
 
-      var model$$1 = void 0,
-          sync = void 0;
+      var model$$1,
+          sync;
       if (string(keypath)) {
         model$$1 = {};
         model$$1[keypath] = value;
@@ -5605,7 +5601,7 @@ var Yox = function () {
 
   }, {
     key: 'on',
-    value: function on(type, listener) {
+    value: function (type, listener) {
       this.$emitter.on(type, listener);
       return this;
     }
@@ -5620,7 +5616,7 @@ var Yox = function () {
 
   }, {
     key: 'once',
-    value: function once(type, listener) {
+    value: function (type, listener) {
       this.$emitter.once(type, listener);
       return this;
     }
@@ -5635,7 +5631,7 @@ var Yox = function () {
 
   }, {
     key: 'off',
-    value: function off(type, listener) {
+    value: function (type, listener) {
       this.$emitter.off(type, listener);
       return this;
     }
@@ -5650,7 +5646,7 @@ var Yox = function () {
 
   }, {
     key: 'fire',
-    value: function fire(type, data) {
+    value: function (type, data) {
 
       // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
       // 内部为了保持格式统一
@@ -5692,7 +5688,7 @@ var Yox = function () {
 
   }, {
     key: 'watch',
-    value: function watch(keypath, watcher, sync) {
+    value: function (keypath, watcher, sync) {
       this.$observer.watch(keypath, watcher, sync);
       return this;
     }
@@ -5708,7 +5704,7 @@ var Yox = function () {
 
   }, {
     key: 'watchOnce',
-    value: function watchOnce(keypath, watcher, sync) {
+    value: function (keypath, watcher, sync) {
       this.$observer.watchOnce(keypath, watcher, sync);
       return this;
     }
@@ -5723,7 +5719,7 @@ var Yox = function () {
 
   }, {
     key: 'unwatch',
-    value: function unwatch(keypath, watcher) {
+    value: function (keypath, watcher) {
       this.$observer.unwatch(keypath, watcher);
       return this;
     }
@@ -5736,7 +5732,7 @@ var Yox = function () {
 
   }, {
     key: 'updateModel',
-    value: function updateModel(model$$1) {
+    value: function (model$$1) {
 
       var instance = this,
           args = arguments;
@@ -5763,7 +5759,7 @@ var Yox = function () {
 
   }, {
     key: 'forceUpdate',
-    value: function forceUpdate() {
+    value: function () {
       var instance = this;
       if (!instance.$pending) {
         instance.$pending = TRUE;
@@ -5784,7 +5780,7 @@ var Yox = function () {
 
   }, {
     key: 'render',
-    value: function render$$1() {
+    value: function () {
 
       var instance = this;
       var $template = instance.$template,
@@ -5838,10 +5834,10 @@ var Yox = function () {
 
   }, {
     key: 'updateView',
-    value: function updateView(oldNode, newNode) {
+    value: function (oldNode, newNode) {
 
       var instance = this,
-          afterHook = void 0;
+          afterHook;
 
       var $node = instance.$node,
           $options = instance.$options;
@@ -5878,7 +5874,7 @@ var Yox = function () {
 
   }, {
     key: 'create',
-    value: function create(options, extra) {
+    value: function (options, extra) {
       options = extend({}, options, extra);
       options.parent = this;
       var child = new Yox(options);
@@ -5895,7 +5891,7 @@ var Yox = function () {
 
   }, {
     key: 'importPartial',
-    value: function importPartial(name) {
+    value: function (name) {
       return Yox.compile(this.partial(name));
     }
 
@@ -5908,7 +5904,7 @@ var Yox = function () {
 
   }, {
     key: 'compileDirective',
-    value: function compileDirective(directive) {
+    value: function (directive) {
 
       var instance = this;
       var value = directive.value,
@@ -5923,14 +5919,14 @@ var Yox = function () {
             method = instance[callee.name];
 
         if (method) {
-          var getValue = function getValue(node) {
+          var getValue = function (node) {
             return execute$1(node, function (keypath) {
               return context.get(keypath).value;
             }, instance);
           };
           return function (event) {
             var isEvent = Event.is(event),
-                result = void 0;
+                result;
             if (!args.length) {
               if (isEvent) {
                 result = execute(method, instance, event);
@@ -5963,7 +5959,7 @@ var Yox = function () {
 
   }, {
     key: 'destroy',
-    value: function destroy() {
+    value: function () {
 
       var instance = this;
 
@@ -6002,7 +5998,7 @@ var Yox = function () {
 
   }, {
     key: 'nextTick',
-    value: function nextTick(fn) {
+    value: function (fn) {
       append(fn);
     }
 
@@ -6017,7 +6013,7 @@ var Yox = function () {
 
   }, {
     key: 'toggle',
-    value: function toggle(keypath) {
+    value: function (keypath) {
       var value = !this.get(keypath);
       this.set(keypath, value);
       return value;
@@ -6036,7 +6032,7 @@ var Yox = function () {
 
   }, {
     key: 'increase',
-    value: function increase(keypath, step, max) {
+    value: function (keypath, step, max) {
       var value = toNumber(this.get(keypath), 0) + (numeric(step) ? step : 1);
       if (!numeric(max) || value <= max) {
         this.set(keypath, value);
@@ -6057,7 +6053,7 @@ var Yox = function () {
 
   }, {
     key: 'decrease',
-    value: function decrease(keypath, step, min) {
+    value: function (keypath, step, min) {
       var value = toNumber(this.get(keypath), 0) - (numeric(step) ? step : 1);
       if (!numeric(min) || value >= min) {
         this.set(keypath, value);
@@ -6075,7 +6071,7 @@ var Yox = function () {
 
   }, {
     key: 'copy',
-    value: function copy$$1(data, deep) {
+    value: function (data, deep) {
       return copy(data, deep);
     }
 
@@ -6090,7 +6086,7 @@ var Yox = function () {
 
   }, {
     key: 'insert',
-    value: function insert(keypath, item, index) {
+    value: function (keypath, item, index) {
 
       var list = this.get(keypath);
       if (!array(list)) {
@@ -6126,7 +6122,7 @@ var Yox = function () {
 
   }, {
     key: 'append',
-    value: function append$$1(keypath, item) {
+    value: function (keypath, item) {
       return this.insert(keypath, item, TRUE);
     }
 
@@ -6140,7 +6136,7 @@ var Yox = function () {
 
   }, {
     key: 'prepend',
-    value: function prepend$$1(keypath, item) {
+    value: function (keypath, item) {
       return this.insert(keypath, item, FALSE);
     }
 
@@ -6154,7 +6150,7 @@ var Yox = function () {
 
   }, {
     key: 'removeAt',
-    value: function removeAt(keypath, index) {
+    value: function (keypath, index) {
       var list = this.get(keypath);
       if (array(list) && index >= 0 && index < list.length) {
         list[Observer.FORCE] = TRUE;
@@ -6174,7 +6170,7 @@ var Yox = function () {
 
   }, {
     key: 'remove',
-    value: function remove$$1(keypath, item) {
+    value: function (keypath, item) {
       var list = this.get(keypath);
       if (array(list) && remove(list, item)) {
         list[Observer.FORCE] = TRUE;
@@ -6316,7 +6312,7 @@ Yox.validate = function (props, propTypes) {
       // 就当做此规则无效，和没写一样
       if (type) {
         var target = props[key],
-            matched = void 0;
+            matched;
         // 比较类型
         if (!falsy$1(type)) {
           matched = is(target, type);
