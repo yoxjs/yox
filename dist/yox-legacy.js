@@ -4517,7 +4517,8 @@ function createWatch(action) {
 
   return function (keypath, watcher, sync) {
 
-    var watchers = keypath;
+    var watchers = keypath,
+        creating = watcher === TRUE;
     if (string(keypath)) {
       watchers = {};
       watchers[keypath] = { sync: sync, watcher: watcher };
@@ -4535,7 +4536,9 @@ function createWatch(action) {
       }
 
       var emitter = instance.emitter,
-          listener = { func: watcher, context: instance.context };
+          context = instance.context,
+          listener = { func: watcher, context: context };
+
       if (!emitter.has(keypath)) {
         instance[DIRTY] = TRUE;
       }
@@ -4544,13 +4547,18 @@ function createWatch(action) {
 
       if (!isFuzzyKeypath(keypath)) {
         if (sync) {
-          append(function () {
-            var context = instance.context;
-
-            if (context && !listener.count) {
-              execute(watcher, context, [instance.get(keypath), UNDEFINED, keypath]);
-            }
-          });
+          var executeWatcher = function () {
+            execute(watcher, context, [instance.get(keypath), UNDEFINED, keypath]);
+          };
+          if (creating) {
+            append(function () {
+              if (instance.deps && !listener.count) {
+                executeWatcher();
+              }
+            });
+          } else {
+            executeWatcher();
+          }
         }
       }
     });
@@ -5481,7 +5489,7 @@ var Yox = function () {
     }
 
     // 等数据准备好之后，再触发 watchers
-    watchers && observer.watch(watchers);
+    watchers && observer.watch(watchers, TRUE);
 
     // 监听各种事件
     instance.$emitter = new Emitter();
@@ -6182,7 +6190,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.45.1';
+Yox.version = '0.45.2';
 
 /**
  * 工具，便于扩展、插件使用

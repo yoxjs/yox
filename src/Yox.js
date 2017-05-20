@@ -124,7 +124,7 @@ export default class Yox {
     }
 
     // 等数据准备好之后，再触发 watchers
-    watchers && observer.watch(watchers)
+    watchers && observer.watch(watchers, env.TRUE)
 
     // 监听各种事件
     instance.$emitter = new Emitter()
@@ -789,7 +789,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.45.1'
+Yox.version = '0.45.2'
 
 /**
  * 工具，便于扩展、插件使用
