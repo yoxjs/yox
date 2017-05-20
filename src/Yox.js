@@ -100,12 +100,11 @@ export default class Yox {
 
     // 先放 props
     // 当 data 是函数时，可以通过 this.get() 获取到外部数据
-    let observer = new Observer({
+    instance.$observer = new Observer({
       context: instance,
       data: source,
       computed,
     })
-    instance.$observer = observer
 
     // 后放 data
     let extend = is.func(data) ? execute(data, instance) : data
@@ -123,12 +122,10 @@ export default class Yox {
       )
     }
 
-    // 等数据准备好之后，再触发 watchers
-    watchers && observer.watch(watchers, env.TRUE)
-
     // 监听各种事件
     instance.$emitter = new Emitter()
-    events && instance.on(events)
+
+
 
     execute(options[ lifecycle.AFTER_CREATE ], instance)
 
@@ -199,6 +196,18 @@ export default class Yox {
       instance.updateView(
         el || api.createElement('div'),
         instance.render()
+      )
+    }
+
+    // 确保早于 AFTER_MOUNT 执行
+    if (watchers || events) {
+      nextTask.prepend(
+        function () {
+          if (instance.$emitter) {
+            watchers && instance.watch(watchers)
+            events && instance.on(events)
+          }
+        }
       )
     }
 
@@ -789,7 +798,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.45.2'
+Yox.version = '0.45.3'
 
 /**
  * 工具，便于扩展、插件使用

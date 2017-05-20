@@ -4450,8 +4450,7 @@ function createWatch(action) {
 
   return function (keypath, watcher, sync) {
 
-    var watchers = keypath,
-        creating = watcher === TRUE;
+    var watchers = keypath;
     if (string(keypath)) {
       watchers = {};
       watchers[keypath] = { sync: sync, watcher: watcher };
@@ -4469,30 +4468,18 @@ function createWatch(action) {
       }
 
       var emitter = instance.emitter,
-          context = instance.context,
-          listener = { func: watcher, context: context };
+          context = instance.context;
 
       if (!emitter.has(keypath)) {
         instance[DIRTY] = TRUE;
       }
+      emitter[action](keypath, {
+        func: watcher,
+        context: context
+      });
 
-      emitter[action](keypath, listener);
-
-      if (!isFuzzyKeypath(keypath)) {
-        if (sync) {
-          var executeWatcher = function () {
-            execute(watcher, context, [instance.get(keypath), UNDEFINED, keypath]);
-          };
-          if (creating) {
-            append(function () {
-              if (instance.deps && !listener.count) {
-                executeWatcher();
-              }
-            });
-          } else {
-            executeWatcher();
-          }
-        }
+      if (sync && !isFuzzyKeypath(keypath)) {
+        execute(watcher, context, [instance.get(keypath), UNDEFINED, keypath]);
       }
     });
   };
@@ -5293,12 +5280,11 @@ var Yox = function () {
 
     // 先放 props
     // 当 data 是函数时，可以通过 this.get() 获取到外部数据
-    var observer = new Observer({
+    instance.$observer = new Observer({
       context: instance,
       data: source,
       computed: computed
     });
-    instance.$observer = observer;
 
     // 后放 data
     var extend$$1 = func(data) ? execute(data, instance) : data;
@@ -5312,12 +5298,8 @@ var Yox = function () {
       });
     }
 
-    // 等数据准备好之后，再触发 watchers
-    watchers && observer.watch(watchers, TRUE);
-
     // 监听各种事件
     instance.$emitter = new Emitter();
-    events && instance.on(events);
 
     execute(options[AFTER_CREATE], instance);
 
@@ -5379,6 +5361,16 @@ var Yox = function () {
       instance.$template = template[0];
       // 首次渲染
       instance.updateView(el || api.createElement('div'), instance.render());
+    }
+
+    // 确保早于 AFTER_MOUNT 执行
+    if (watchers || events) {
+      prepend(function () {
+        if (instance.$emitter) {
+          watchers && instance.watch(watchers);
+          events && instance.on(events);
+        }
+      });
     }
   }
 
@@ -6014,7 +6006,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.45.2';
+Yox.version = '0.45.3';
 
 /**
  * 工具，便于扩展、插件使用
