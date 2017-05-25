@@ -4,6 +4,73 @@
 	(global.Yox = factory());
 }(this, (function () { 'use strict';
 
+if (!Object.keys) {
+  Object.keys = function (obj) {
+    var result = [];
+    for (var key in obj) {
+      push(result, key);
+    }
+    return result;
+  };
+  Object.freeze = function (obj) {
+    return obj;
+  };
+  Object.defineProperty = function (obj, key, descriptor) {
+    obj[key] = descriptor.value;
+  };
+  Object.create = function (proto, descriptor) {
+    function Class() {}
+    Class.prototype = proto;
+    proto = new Class();
+    var constructor = descriptor && descriptor.constructor;
+    if (constructor) {
+      proto.constructor = constructor.value;
+    }
+    return proto;
+  };
+}
+if (!String.prototype.trim) {
+  String.prototype.trim = function () {
+    return this.replace(/^\s*|\s*$/g, '');
+  };
+}
+if (!Array.prototype.map) {
+  Array.prototype.indexOf = function (target) {
+    var result = -1;
+    each(this, function (item, index) {
+      if (item === target) {
+        result = index;
+        return FALSE;
+      }
+    });
+    return result;
+  };
+  Array.prototype.map = function (fn) {
+    var result = [];
+    each(this, function (item, index) {
+      result.push(fn(item, index));
+    });
+    return result;
+  };
+  Array.prototype.filter = function (fn) {
+    var result = [];
+    each(this, function (item, index) {
+      if (fn(item, index)) {
+        result.push(item);
+      }
+    });
+    return result;
+  };
+}
+if (!Function.prototype.bind) {
+  Function.prototype.bind = function (context) {
+    var fn = this;
+    return function () {
+      return execute(fn, context, toArray$1(arguments));
+    };
+  };
+}
+
 
 
 
@@ -4821,73 +4888,6 @@ var COMPOSITION_END = 'compositionend';
  * @type {string}
  */
 var PROPERTY_CHANGE = 'propertychange';
-
-if (!Object.keys) {
-  Object.keys = function (obj) {
-    var result = [];
-    for (var key in obj) {
-      push(result, key);
-    }
-    return result;
-  };
-  Object.freeze = function (obj) {
-    return obj;
-  };
-  Object.defineProperty = function (obj, key, descriptor) {
-    obj[key] = descriptor.value;
-  };
-  Object.create = function (proto, descriptor) {
-    function Class() {}
-    Class.prototype = proto;
-    proto = new Class();
-    var constructor = descriptor && descriptor.constructor;
-    if (constructor) {
-      proto.constructor = constructor.value;
-    }
-    return proto;
-  };
-}
-if (!String.prototype.trim) {
-  String.prototype.trim = function () {
-    return this.replace(/^\s*|\s*$/g, '');
-  };
-}
-if (!Array.prototype.map) {
-  Array.prototype.indexOf = function (target) {
-    var result = -1;
-    each(this, function (item, index) {
-      if (item === target) {
-        result = index;
-        return FALSE;
-      }
-    });
-    return result;
-  };
-  Array.prototype.map = function (fn) {
-    var result = [];
-    each(this, function (item, index) {
-      result.push(fn(item, index));
-    });
-    return result;
-  };
-  Array.prototype.filter = function (fn) {
-    var result = [];
-    each(this, function (item, index) {
-      if (fn(item, index)) {
-        result.push(item);
-      }
-    });
-    return result;
-  };
-}
-if (!Function.prototype.bind) {
-  Function.prototype.bind = function (context) {
-    var fn = this;
-    return function () {
-      return execute(fn, context, toArray$1(arguments));
-    };
-  };
-}
 
 var IEEvent = function () {
   function IEEvent(event, element) {
