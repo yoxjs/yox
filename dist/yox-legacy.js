@@ -4544,7 +4544,7 @@ function createWatch(action) {
     if (string(keypath)) {
       watch(keypath, watcher, sync);
     } else {
-      each$1(watchers, function (value, keypath) {
+      each$1(keypath, function (value, keypath) {
         var watcher = value,
             sync;
         if (object(value)) {
