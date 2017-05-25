@@ -421,21 +421,14 @@ export default class Yox {
   render() {
 
     let instance = this
-    let { $template, $observer, $filters } = instance
+    let { $template, $observer, $context } = instance
     let { data, computedGetters } = $observer
-    let { filter } = registry
 
-    let context = { }
+    if (!$context) {
+      $context = instance.$context = object.extend({ }, registry.filter, instance.$filters)
+    }
 
-    object.extend(
-      context,
-      // 全局过滤器
-      filter,
-      // 本地过滤器
-      $filters,
-      // 本地数据
-      data,
-    )
+    object.extend($context, data)
 
     // 在单次渲染过程中，对于计算属性来说，不管开不开缓存，其实只需要计算一次即可
     // 因为渲染过程中不会修改数据，如果频繁执行计算属性的 getter 函数
@@ -445,13 +438,13 @@ export default class Yox {
         computedGetters,
         function (getter, key) {
           if (key !== TEMPLATE_KEY) {
-            context[ key ] = getter()
+            $context[ key ] = getter()
           }
         }
       )
     }
 
-    let { nodes, deps } = renderTemplate($template, context, instance)
+    let { nodes, deps } = renderTemplate($template, $context, instance)
 
     let keys = object.keys(deps)
     object.each(
@@ -798,7 +791,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.45.3'
+Yox.version = '0.45.4'
 
 /**
  * 工具，便于扩展、插件使用

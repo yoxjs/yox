@@ -5609,21 +5609,16 @@ var Yox = function () {
       var instance = this;
       var $template = instance.$template,
           $observer = instance.$observer,
-          $filters = instance.$filters;
+          $context = instance.$context;
       var data = $observer.data,
           computedGetters = $observer.computedGetters;
-      var filter = registry.filter;
 
 
-      var context = {};
+      if (!$context) {
+        $context = instance.$context = extend({}, registry.filter, instance.$filters);
+      }
 
-      extend(context,
-      // 全局过滤器
-      filter,
-      // 本地过滤器
-      $filters,
-      // 本地数据
-      data);
+      extend($context, data);
 
       // 在单次渲染过程中，对于计算属性来说，不管开不开缓存，其实只需要计算一次即可
       // 因为渲染过程中不会修改数据，如果频繁执行计算属性的 getter 函数
@@ -5631,12 +5626,12 @@ var Yox = function () {
       if (computedGetters) {
         each$1(computedGetters, function (getter, key) {
           if (key !== TEMPLATE_KEY) {
-            context[key] = getter();
+            $context[key] = getter();
           }
         });
       }
 
-      var _renderTemplate = render($template, context, instance),
+      var _renderTemplate = render($template, $context, instance),
           nodes = _renderTemplate.nodes,
           deps = _renderTemplate.deps;
 
@@ -6006,7 +6001,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.45.3';
+Yox.version = '0.45.4';
 
 /**
  * 工具，便于扩展、插件使用
