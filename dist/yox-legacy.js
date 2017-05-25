@@ -4,73 +4,6 @@
 	(global.Yox = factory());
 }(this, (function () { 'use strict';
 
-if (!Object.keys) {
-  Object.keys = function (obj) {
-    var result = [];
-    for (var key in obj) {
-      push(result, key);
-    }
-    return result;
-  };
-  Object.freeze = function (obj) {
-    return obj;
-  };
-  Object.defineProperty = function (obj, key, descriptor) {
-    obj[key] = descriptor.value;
-  };
-  Object.create = function (proto, descriptor) {
-    function Class() {}
-    Class.prototype = proto;
-    proto = new Class();
-    var constructor = descriptor && descriptor.constructor;
-    if (constructor) {
-      proto.constructor = constructor.value;
-    }
-    return proto;
-  };
-}
-if (!String.prototype.trim) {
-  String.prototype.trim = function () {
-    return this.replace(/^\s*|\s*$/g, '');
-  };
-}
-if (!Array.prototype.map) {
-  Array.prototype.indexOf = function (target) {
-    var result = -1;
-    each(this, function (item, index) {
-      if (item === target) {
-        result = index;
-        return FALSE;
-      }
-    });
-    return result;
-  };
-  Array.prototype.map = function (fn) {
-    var result = [];
-    each(this, function (item, index) {
-      result.push(fn(item, index));
-    });
-    return result;
-  };
-  Array.prototype.filter = function (fn) {
-    var result = [];
-    each(this, function (item, index) {
-      if (fn(item, index)) {
-        result.push(item);
-      }
-    });
-    return result;
-  };
-}
-if (!Function.prototype.bind) {
-  Function.prototype.bind = function (context) {
-    var fn = this;
-    return function () {
-      return execute(fn, context, toArray$1(arguments));
-    };
-  };
-}
-
 
 
 
@@ -4517,38 +4450,43 @@ function createWatch(action) {
 
   return function (keypath, watcher, sync) {
 
-    var watchers = keypath;
-    if (string(keypath)) {
-      watchers = {};
-      watchers[keypath] = { sync: sync, watcher: watcher };
-    }
-
     var instance = this;
 
-    each$1(watchers, function (value, keypath) {
-
-      var watcher = value,
-          sync;
-      if (object(value)) {
-        watcher = value.watcher;
-        sync = value.sync;
-      }
-
+    var watch = function (keypath, watcher, sync) {
       var emitter = instance.emitter,
           context = instance.context;
 
       if (!emitter.has(keypath)) {
         instance[DIRTY] = TRUE;
       }
+
       emitter[action](keypath, {
         func: watcher,
         context: context
       });
 
-      if (sync && !isFuzzyKeypath(keypath)) {
-        execute(watcher, context, [instance.get(keypath), UNDEFINED, keypath]);
+      if (!isFuzzyKeypath(keypath)) {
+        // 为了存下 oldValue
+        instance.get(keypath);
+        if (sync) {
+          execute(watcher, context, [instance.get(keypath), UNDEFINED, keypath]);
+        }
       }
-    });
+    };
+
+    if (string(keypath)) {
+      watch(keypath, watcher, sync);
+    } else {
+      each$1(watchers, function (value, keypath) {
+        var watcher = value,
+            sync;
+        if (object(value)) {
+          watcher = value.watcher;
+          sync = value.sync;
+        }
+        watch(keypath, watcher, sync);
+      });
+    }
   };
 }
 
@@ -4883,6 +4821,73 @@ var COMPOSITION_END = 'compositionend';
  * @type {string}
  */
 var PROPERTY_CHANGE = 'propertychange';
+
+if (!Object.keys) {
+  Object.keys = function (obj) {
+    var result = [];
+    for (var key in obj) {
+      push(result, key);
+    }
+    return result;
+  };
+  Object.freeze = function (obj) {
+    return obj;
+  };
+  Object.defineProperty = function (obj, key, descriptor) {
+    obj[key] = descriptor.value;
+  };
+  Object.create = function (proto, descriptor) {
+    function Class() {}
+    Class.prototype = proto;
+    proto = new Class();
+    var constructor = descriptor && descriptor.constructor;
+    if (constructor) {
+      proto.constructor = constructor.value;
+    }
+    return proto;
+  };
+}
+if (!String.prototype.trim) {
+  String.prototype.trim = function () {
+    return this.replace(/^\s*|\s*$/g, '');
+  };
+}
+if (!Array.prototype.map) {
+  Array.prototype.indexOf = function (target) {
+    var result = -1;
+    each(this, function (item, index) {
+      if (item === target) {
+        result = index;
+        return FALSE;
+      }
+    });
+    return result;
+  };
+  Array.prototype.map = function (fn) {
+    var result = [];
+    each(this, function (item, index) {
+      result.push(fn(item, index));
+    });
+    return result;
+  };
+  Array.prototype.filter = function (fn) {
+    var result = [];
+    each(this, function (item, index) {
+      if (fn(item, index)) {
+        result.push(item);
+      }
+    });
+    return result;
+  };
+}
+if (!Function.prototype.bind) {
+  Function.prototype.bind = function (context) {
+    var fn = this;
+    return function () {
+      return execute(fn, context, toArray$1(arguments));
+    };
+  };
+}
 
 var IEEvent = function () {
   function IEEvent(event, element) {
@@ -5387,6 +5392,12 @@ var binding = function (_ref) {
   };
 
   instance.watch(keypath, set);
+
+  if (array(component)) {
+    push(component, function (target) {
+      component = target;
+    });
+  }
 
   return function () {
     instance.unwatch(keypath, set);
@@ -6177,7 +6188,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.45.4';
+Yox.version = '0.45.5';
 
 /**
  * 工具，便于扩展、插件使用

@@ -1,5 +1,9 @@
 
+import * as is from 'yox-common/util/is'
+import * as array from 'yox-common/util/array'
 import * as string from 'yox-common/util/string'
+
+
 import api from '../platform/web/api'
 
 export default function ({ el, node, instance, component }) {
@@ -24,6 +28,15 @@ export default function ({ el, node, instance, component }) {
   }
 
   instance.watch(keypath, set)
+
+  if (is.array(component)) {
+    array.push(
+      component,
+      function (target) {
+        component = target
+      }
+    )
+  }
 
   return function () {
     instance.unwatch(keypath, set)

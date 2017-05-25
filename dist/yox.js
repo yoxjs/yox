@@ -4450,38 +4450,43 @@ function createWatch(action) {
 
   return function (keypath, watcher, sync) {
 
-    var watchers = keypath;
-    if (string(keypath)) {
-      watchers = {};
-      watchers[keypath] = { sync: sync, watcher: watcher };
-    }
-
     var instance = this;
 
-    each$1(watchers, function (value, keypath) {
-
-      var watcher = value,
-          sync;
-      if (object(value)) {
-        watcher = value.watcher;
-        sync = value.sync;
-      }
-
+    var watch = function (keypath, watcher, sync) {
       var emitter = instance.emitter,
           context = instance.context;
 
       if (!emitter.has(keypath)) {
         instance[DIRTY] = TRUE;
       }
+
       emitter[action](keypath, {
         func: watcher,
         context: context
       });
 
-      if (sync && !isFuzzyKeypath(keypath)) {
-        execute(watcher, context, [instance.get(keypath), UNDEFINED, keypath]);
+      if (!isFuzzyKeypath(keypath)) {
+        // 为了存下 oldValue
+        instance.get(keypath);
+        if (sync) {
+          execute(watcher, context, [instance.get(keypath), UNDEFINED, keypath]);
+        }
       }
-    });
+    };
+
+    if (string(keypath)) {
+      watch(keypath, watcher, sync);
+    } else {
+      each$1(watchers, function (value, keypath) {
+        var watcher = value,
+            sync;
+        if (object(value)) {
+          watcher = value.watcher;
+          sync = value.sync;
+        }
+        watch(keypath, watcher, sync);
+      });
+    }
   };
 }
 
@@ -5211,6 +5216,12 @@ var binding = function (_ref) {
   };
 
   instance.watch(keypath, set);
+
+  if (array(component)) {
+    push(component, function (target) {
+      component = target;
+    });
+  }
 
   return function () {
     instance.unwatch(keypath, set);
@@ -6001,7 +6012,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.45.4';
+Yox.version = '0.45.5';
 
 /**
  * 工具，便于扩展、插件使用

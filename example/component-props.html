@@ -9,6 +9,7 @@
     <div id="app"></div>
     <script id="template1" type="plain/text">
       <div id="custom-component">
+          {{minVersion}}-{{targetVersion}}
           name: {{name}}
           <br>
           age: {{age}}
@@ -16,7 +17,7 @@
           name: {{user.name}}
           <br>
           age: {{user.age}}
-          <button on-click="increase()">
+          <button on-click="fireIncrease()">
               increase
           </button>
       </div>
@@ -24,7 +25,7 @@
     <script id="template2" type="plain/text">
       <div id="root">
           <input ref="input" model="title" style="font-size: 18px;color: red;">
-          <Custom ref="child" name="123{{name}}" age="{{user.age}}{{#if user.age}}1{{/if}}" user="{{user}}" />
+          <Custom ref="child" name="123{{name}}" age="{{user.age}}{{#if user.age}}1{{/if}}" user="{{user}}" {{...info}} />
       </div>
     </script>
     <script src="../dist/yox.js"></script>
@@ -33,7 +34,7 @@
         var Custom = {
             template: '#template1',
             methods: {
-                increase: function () {
+                fireIncrease: function () {
                     this.fire('increase');
                 }
             },
@@ -70,6 +71,10 @@
                 user: {
                     name: 'Jake',
                     age: 0,
+                },
+                info: {
+                    minVersion: 1,
+                    targetVersion: 2,
                 }
             },
             template: '#template2',
