@@ -4295,10 +4295,6 @@ var Observer = function () {
         return newCache[keypath];
       };
 
-      var joinKeypath = function (keypath1, keypath2) {
-        return keypath1 + CHAR_DASH + keypath2;
-      };
-
       var differences = [],
           differenceMap = {};
       var addDifference = function (keypath, realpath, match) {
@@ -4509,6 +4505,10 @@ Observer.FORCE = '_force_';
 
 var DIRTY = '_dirty_';
 
+function joinKeypath(keypath, realpath) {
+  return keypath + CHAR_DASH + realpath;
+}
+
 /**
  * watch 和 watchOnce 逻辑相同
  * 提出一个工厂方法
@@ -4521,7 +4521,8 @@ function createWatch(action) {
 
     var watch = function (keypath, watcher, sync) {
       var emitter = instance.emitter,
-          context = instance.context;
+          context = instance.context,
+          differences = instance.differences;
 
       if (!emitter.has(keypath)) {
         instance[DIRTY] = TRUE;
@@ -4536,6 +4537,13 @@ function createWatch(action) {
         // 为了存下 oldValue
         instance.get(keypath);
         if (sync) {
+          if (differences) {
+            var difference = differences[joinKeypath(keypath, keypath)];
+            if (difference) {
+              difference.force = TRUE;
+              return;
+            }
+          }
           execute(watcher, context, [instance.get(keypath), UNDEFINED, keypath]);
         }
       }
@@ -6188,7 +6196,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.45.5';
+Yox.version = '0.45.6';
 
 /**
  * 工具，便于扩展、插件使用
