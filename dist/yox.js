@@ -822,12 +822,12 @@ function copy(object$$1, deep) {
   if (array(object$$1)) {
     result = [];
     each(object$$1, function (item, index) {
-      result[index] = deep ? copy(item) : item;
+      result[index] = deep ? copy(item, deep) : item;
     });
   } else if (object(object$$1)) {
     result = {};
     each$1(object$$1, function (value, key) {
-      result[key] = deep ? copy(value) : value;
+      result[key] = deep ? copy(value, deep) : value;
     });
   }
   return result;
@@ -6020,7 +6020,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.45.6';
+Yox.version = '0.45.7';
 
 /**
  * 工具，便于扩展、插件使用
