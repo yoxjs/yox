@@ -16,7 +16,7 @@
     "rollup-plugin-node-resolve": "^2.0.0",
     "rollup-plugin-uglify": "^1.0.1",
     "uglify-js": "^3.0.9",
-    "yox-common": "^0.11.7",
+    "yox-common": "^0.11.8",
     "yox-expression-compiler": "^0.12.0",
     "yox-observer": "^0.11.3",
     "yox-snabbdom": "^0.10.6",
