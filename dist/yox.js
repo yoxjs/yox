@@ -3078,7 +3078,23 @@ function compile(content) {
     fatal('Error compiling template:' + CHAR_BREAKLINE + content + CHAR_BREAKLINE + '- ' + msg);
   };
 
-  var popStack = function (type, expectedName) {
+  var popSelfClosingElementIfNeeded = function (popingTagName) {
+    var lastNode = last(nodeStack);
+    if (lastNode && lastNode.type === ELEMENT && lastNode.name !== popingTagName && selfClosingTagNamePattern.test(lastNode.name)) {
+      popStack(ELEMENT, lastNode.name);
+    }
+  };
+
+  var popStack = function (type, expectedTagName) {
+
+    /**
+     * <div>
+     *    <input>
+     * </div>
+     */
+    if (expectedTagName) {
+      popSelfClosingElementIfNeeded(expectedTagName);
+    }
 
     var target;
 
@@ -3095,8 +3111,8 @@ function compile(content) {
           divider = _target.divider,
           children = _target.children;
 
-      if (type === ELEMENT && expectedName && name !== expectedName) {
-        throwError('end tag expected </' + name + '> to be </' + expectedName + '>.');
+      if (type === ELEMENT && expectedTagName && name !== expectedTagName) {
+        throwError('end tag expected </' + name + '> to be </' + expectedTagName + '>.');
       }
 
       if (number(divider)) {
@@ -3202,6 +3218,20 @@ function compile(content) {
       node.text = text;
     }
 
+    /**
+     * <div>
+     *    <input>
+     *    <div></div>
+     * </div>
+     *
+     * <div>
+     *    <input>xxx
+     * </div>
+     */
+    if (!htmlStack.length) {
+      popSelfClosingElementIfNeeded();
+    }
+
     if (elseTypes[type]) {
       var ifNode = pop(ifStack);
       ifNode.then = node;
@@ -3268,7 +3298,7 @@ function compile(content) {
       if (htmlStack.length === 1) {
         var element = last(htmlStack);
         element.divider = element.children ? element.children.length : 0;
-        if (match[1] === CHAR_SLASH || selfClosingTagNamePattern.test(htmlStack[0].name)) {
+        if (match[1] === CHAR_SLASH) {
           popStack(ELEMENT);
         }
         pop(htmlStack);
@@ -6020,7 +6050,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.45.7';
+Yox.version = '0.45.8';
 
 /**
  * 工具，便于扩展、插件使用
