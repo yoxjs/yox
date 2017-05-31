@@ -1,9 +1,6 @@
 import babel from 'rollup-plugin-babel'
 import resolve from 'rollup-plugin-node-resolve'
 import commonjs from 'rollup-plugin-commonjs'
-import uglify from 'rollup-plugin-uglify'
-
-let minify = process.env.NODE_ENV === 'release'
 
 export default {
   entry: 'src/Yox.js',
@@ -13,7 +10,7 @@ export default {
     babel({
       presets: [ 'es2015-rollup' ],
       babelrc: false,
-      comments: minify ? false : true,
+      comments: true,
       runtimeHelpers: true
     }),
     resolve({
@@ -21,8 +18,7 @@ export default {
       main: true,
       browser: true,
     }),
-    commonjs(),
-    (minify && uglify()),
+    commonjs()
   ],
-  dest: minify ? 'dist/yox.min.js' : 'dist/yox.js'
+  dest: 'dist/yox.js'
 }

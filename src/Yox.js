@@ -703,6 +703,9 @@ export default class Yox {
     if (!is.array(list)) {
       list = [ ]
     }
+    else {
+      list = this.copy(list)
+    }
 
     let { length } = list
     if (index === env.TRUE || index === length) {
@@ -718,7 +721,6 @@ export default class Yox {
       return
     }
 
-    list[ Observer.FORCE ] = env.TRUE
     this.set(keypath, list)
 
     return env.TRUE
@@ -760,7 +762,7 @@ export default class Yox {
       && index >= 0
       && index < list.length
     ) {
-      list[ Observer.FORCE ] = env.TRUE
+      list = this.copy(list)
       list.splice(index, 1)
       this.set(keypath, list)
       return env.TRUE
@@ -776,10 +778,12 @@ export default class Yox {
    */
   remove(keypath, item) {
     let list = this.get(keypath)
-    if (is.array(list) && array.remove(list, item)) {
-      list[ Observer.FORCE ] = env.TRUE
-      this.set(keypath, list)
-      return env.TRUE
+    if (is.array(list)) {
+      list = this.copy(list)
+      if (array.remove(list, item)) {
+        this.set(keypath, list)
+        return env.TRUE
+      }
     }
   }
 
@@ -791,7 +795,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.45.8'
+Yox.version = '0.45.9'
 
 /**
  * 工具，便于扩展、插件使用

@@ -4308,7 +4308,6 @@ var Observer = function () {
           keypath,
           realpath,
           oldValue,
-          isChange,
           nextDifferences;
       while (difference = differences[++i]) {
 
@@ -4320,14 +4319,7 @@ var Observer = function () {
           delete cache[realpath];
         }
 
-        isChange = getNewValue(realpath) !== oldValue;
-        if (!isChange && array(oldValue) && oldValue[Observer.FORCE]) {
-          isChange = TRUE;
-          difference.force = TRUE;
-          delete oldValue[Observer.FORCE];
-        }
-
-        if (isChange) {
+        if (getNewValue(realpath) !== oldValue) {
 
           nextDifferences = instance.differences || (instance.differences = {});
           nextDifferences[joinKeypath(keypath, realpath)] = difference;
@@ -4463,8 +4455,6 @@ extend(Observer.prototype, {
   }
 
 });
-
-Observer.FORCE = '_force_';
 
 var DIRTY = '_dirty_';
 
@@ -5959,6 +5949,8 @@ var Yox = function () {
       var list = this.get(keypath);
       if (!array(list)) {
         list = [];
+      } else {
+        list = this.copy(list);
       }
 
       var _list = list,
@@ -5974,7 +5966,6 @@ var Yox = function () {
         return;
       }
 
-      list[Observer.FORCE] = TRUE;
       this.set(keypath, list);
 
       return TRUE;
@@ -6021,7 +6012,7 @@ var Yox = function () {
     value: function (keypath, index) {
       var list = this.get(keypath);
       if (array(list) && index >= 0 && index < list.length) {
-        list[Observer.FORCE] = TRUE;
+        list = this.copy(list);
         list.splice(index, 1);
         this.set(keypath, list);
         return TRUE;
@@ -6040,17 +6031,19 @@ var Yox = function () {
     key: 'remove',
     value: function (keypath, item) {
       var list = this.get(keypath);
-      if (array(list) && remove(list, item)) {
-        list[Observer.FORCE] = TRUE;
-        this.set(keypath, list);
-        return TRUE;
+      if (array(list)) {
+        list = this.copy(list);
+        if (remove(list, item)) {
+          this.set(keypath, list);
+          return TRUE;
+        }
       }
     }
   }]);
   return Yox;
 }();
 
-Yox.version = '0.45.8';
+Yox.version = '0.45.9';
 
 /**
  * 工具，便于扩展、插件使用
