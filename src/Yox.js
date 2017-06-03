@@ -1,6 +1,5 @@
 
 import execute from 'yox-common/function/execute'
-import toNumber from 'yox-common/function/toNumber'
 
 import Event from 'yox-common/util/Event'
 import Emitter from 'yox-common/util/Emitter'
@@ -105,6 +104,13 @@ export default class Yox {
       data: source,
       computed,
     })
+
+    instance.watch(
+      TEMPLATE_KEY,
+      function () {
+        instance.forceUpdate(env.FALSE)
+      }
+    )
 
     // 后放 data
     let extend = is.func(data) ? execute(data, instance) : data
@@ -229,24 +235,14 @@ export default class Yox {
    *
    * @param {string|Object} keypath
    * @param {?*} value
+   * @param {?boolean} sync
+   * @return {boolean} 是否会引起视图更新
    */
-  set(keypath, value) {
-
-    let model, sync
-    if (is.string(keypath)) {
-      model = { }
-      model[ keypath ] = value
-    }
-    else if (is.object(keypath)) {
-      model = keypath
-      sync = value === env.TRUE
-    }
-    else {
-      return
-    }
-
-    this.updateModel(model, sync)
-
+  set(keypath, value, sync) {
+    return array.has(
+      this.$observer.set(keypath, value, sync),
+      TEMPLATE_KEY
+    )
   }
 
   /**
@@ -361,56 +357,15 @@ export default class Yox {
   }
 
   /**
-   * 只更新数据，不更新视图
-   *
-   * @param {Object} model
-   */
-  updateModel(model) {
-
-    let instance = this, args = arguments
-
-    let oldValue = instance.get(TEMPLATE_KEY)
-
-    instance.$observer.set(model)
-
-    if (oldValue === instance.get(TEMPLATE_KEY)
-      || args.length === 1
-    ) {
-      return
-    }
-
-    if (args.length === 2 && args[ 1 ]) {
-      instance.updateView(
-        instance.$node,
-        instance.render()
-      )
-    }
-    else {
-      instance.forceUpdate()
-    }
-
-  }
-
-  /**
    * 对于某些特殊场景，修改了数据，但是模板的依赖中并没有这一项
    * 而你非常确定需要更新模板，强制刷新正是你需要的
    */
   forceUpdate() {
-    let instance = this
-    if (!instance.$pending) {
-      instance.$pending = env.TRUE
-      nextTask.prepend(
-        function () {
-          if (instance.$pending) {
-            delete instance.$pending
-            instance.updateView(
-              instance.$node,
-              instance.render()
-            )
-          }
-        }
-      )
-    }
+    let instance = this, arg = arguments[ 0 ]
+    instance.updateView(
+      instance.$node,
+      instance.render(is.boolean(arg) ? arg : env.TRUE)
+    )
   }
 
   /**
@@ -425,7 +380,13 @@ export default class Yox {
     let { data, computedGetters } = $observer
 
     if (!$context) {
-      $context = instance.$context = object.extend({ }, registry.filter, instance.$filters)
+      $context =
+      instance.$context =
+      object.extend(
+        { },
+        registry.filter,
+        instance.$filters
+      )
     }
 
     object.extend($context, data)
@@ -444,16 +405,8 @@ export default class Yox {
       )
     }
 
-    let { nodes, deps } = renderTemplate($template, $context, instance)
-
-    let keys = object.keys(deps)
-    object.each(
-      keys,
-      function (key) {
-        $observer.cache[ key ] = deps[ key ]
-      }
-    )
-    $observer.setDeps(TEMPLATE_KEY, keys)
+    let { nodes, deps } = renderTemplate($template, $context, instance, arguments[ 0 ])
+    $observer.setDeps(TEMPLATE_KEY, object.keys(deps))
 
     return nodes[ 0 ]
 
@@ -604,10 +557,8 @@ export default class Yox {
       array.remove($parent.$children, instance)
     }
 
-    if ($node) {
-      if (arguments[ 0 ] !== env.TRUE) {
-        patch($node, { text: char.CHAR_BLANK })
-      }
+    if ($node && arguments[ 0 ] !== env.TRUE) {
+      patch($node, { text: char.CHAR_BLANK })
     }
 
     $emitter.off()
@@ -625,7 +576,7 @@ export default class Yox {
    * @param {Function} fn
    */
   nextTick(fn) {
-    nextTask.append(fn)
+    this.$observer.nextTick(fn)
   }
 
   /**
@@ -637,9 +588,7 @@ export default class Yox {
    * @return {boolean} 取反后的布尔值
    */
   toggle(keypath) {
-    let value = !this.get(keypath)
-    this.set(keypath, value)
-    return value
+    return this.$observer.toggle(keypath)
   }
 
   /**
@@ -653,11 +602,7 @@ export default class Yox {
    * @return {number} 返回递增后的值
    */
   increase(keypath, step, max) {
-    let value = toNumber(this.get(keypath), 0) + (is.numeric(step) ? step : 1)
-    if (!is.numeric(max) || value <= max) {
-      this.set(keypath, value)
-    }
-    return value
+    return this.$observer.increase(keypath, step, max)
   }
 
   /**
@@ -671,11 +616,7 @@ export default class Yox {
    * @return {number} 返回递减后的值
    */
   decrease(keypath, step, min) {
-    let value = toNumber(this.get(keypath), 0) - (is.numeric(step) ? step : 1)
-    if (!is.numeric(min) || value >= min) {
-      this.set(keypath, value)
-    }
-    return value
+    return this.$observer.decrease(keypath, step, min)
   }
 
   /**
@@ -698,33 +639,7 @@ export default class Yox {
    * @return {?boolean} 是否插入成功
    */
   insert(keypath, item, index) {
-
-    let list = this.get(keypath)
-    if (!is.array(list)) {
-      list = [ ]
-    }
-    else {
-      list = this.copy(list)
-    }
-
-    let { length } = list
-    if (index === env.TRUE || index === length) {
-      list.push(item)
-    }
-    else if (index === env.FALSE || index === 0) {
-      list.unshift(item)
-    }
-    else if (index > 0 && index < length) {
-      list.splice(index, 0, item)
-    }
-    else {
-      return
-    }
-
-    this.set(keypath, list)
-
-    return env.TRUE
-
+    return this.$observer.insert(keypath, item, index)
   }
 
   /**
@@ -735,7 +650,7 @@ export default class Yox {
    * @return {?boolean} 是否添加成功
    */
   append(keypath, item) {
-    return this.insert(keypath, item, env.TRUE)
+    return this.$observer.insert(keypath, item, env.TRUE)
   }
 
   /**
@@ -746,7 +661,7 @@ export default class Yox {
    * @return {?boolean} 是否添加成功
    */
   prepend(keypath, item) {
-    return this.insert(keypath, item, env.FALSE)
+    return this.$observer.insert(keypath, item, env.FALSE)
   }
 
   /**
@@ -757,16 +672,7 @@ export default class Yox {
    * @return {?boolean} 是否移除成功
    */
   removeAt(keypath, index) {
-    let list = this.get(keypath)
-    if (is.array(list)
-      && index >= 0
-      && index < list.length
-    ) {
-      list = this.copy(list)
-      list.splice(index, 1)
-      this.set(keypath, list)
-      return env.TRUE
-    }
+    return this.$observer.removeAt(keypath, index)
   }
 
   /**
@@ -777,14 +683,7 @@ export default class Yox {
    * @return {?boolean} 是否移除成功
    */
   remove(keypath, item) {
-    let list = this.get(keypath)
-    if (is.array(list)) {
-      list = this.copy(list)
-      if (array.remove(list, item)) {
-        this.set(keypath, list)
-        return env.TRUE
-      }
-    }
+    return this.$observer.remove(keypath, item)
   }
 
 }
@@ -795,7 +694,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.45.9'
+Yox.version = '0.46.0'
 
 /**
  * 工具，便于扩展、插件使用

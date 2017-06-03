@@ -9,13 +9,42 @@
     <script id="template" type="plain/text">
 
         <div>
-            {{#partial hello}}
-                hi, {{user.name}}.
-            {{/partial}}
+            <h1>
+                插值
+            </h1>
 
             <div>
                 12-{{name1}}-{{name2}}-{{name3}}-{{name4}}-{{name5}}-34-{{user.name}}
             </div>
+
+            <p data-html="{{title}}">
+                {{title}}
+            </p>
+
+            <p>
+                {{{title}}}
+            </p>
+
+            <p>
+                {{filterUsers.length}}
+            </p>
+
+            <h1>
+                数组下标访问
+            </h1>
+
+            <p>
+                {{{users[0].name}}}
+            </p>
+
+            <p>
+                {{users.0.name}}
+            </p>
+
+            <h1>
+                子闭合标签
+            </h1>
+
             <div>
                 <input type="checkbox" disabled="{{disabled1}}"> disabled
                 <input type="checkbox" disabled="{{disabled2}}"> enabled
@@ -54,21 +83,10 @@
                 </video>
             </div>
 
-            <p data-html="{{title}}">
-                {{title}}
-            </p>
 
-            <p>
-                {{{title}}}
-            </p>
-
-            <p>
-              {{{users[0].name}}}
-            </p>
-
-            <p>
-              {{users.0.name}}
-            </p>
+            <h1>
+                循环数组
+            </h1>
 
             <p>
                 {{#each [1, 2, 3, 4]:index}}
@@ -107,6 +125,14 @@
                 {{/each}}
             </p>
 
+            <h1>
+                子模板
+            </h1>
+
+            {{#partial hello}}
+                hi, {{user.name}}.
+            {{/partial}}
+
             <p>
                 {{> hello}}
             </p>
@@ -115,13 +141,14 @@
                 1{{> bye}}
             </p>
 
+            <h1>
+                过滤器
+            </h1>
+
             <p>
                 {{formatDate(today)}}
             </p>
 
-            <p>
-                {{filterUsers.length}}
-            </p>
 
         </div>
 
@@ -173,7 +200,7 @@
                 }
             },
             partials: {
-              bye: '<div>bye, {{user.name}}</div>'
+                bye: '<div>bye, {{user.name}}</div>'
             },
             filters: {
                 formatDate: function (value) {

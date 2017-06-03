@@ -251,15 +251,6 @@ var execute = function (fn, context, args) {
   }
 };
 
-var toNumber = function (str) {
-  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-
-  if (numeric(str)) {
-    return +str;
-  }
-  return defaultValue;
-};
-
 var Event = function () {
   function Event(event) {
     classCallCheck(this, Event);
@@ -2128,13 +2119,19 @@ function createComponent(oldVnode, vnode) {
 }
 
 function updateComponent(oldVnode, vnode) {
-  var $component = vnode.el.$component;
+  var component = vnode.component,
+      el = vnode.el,
+      data = vnode.data;
+  var $component = el.$component;
 
-  if (vnode.component && object($component)) {
-    var attrs = vnode.data.attrs;
+  if (component && object($component)) {
+    var attrs = data.attrs,
+        forceUpdate = data.forceUpdate;
 
     if ($component.set) {
-      $component.set(attrs, TRUE);
+      if (!$component.set(attrs, TRUE) && forceUpdate) {
+        $component.forceUpdate();
+      }
     } else {
       $component.attrs = attrs;
     }
@@ -3668,9 +3665,10 @@ function formatKeypath(keypath) {
  * @param {Object} ast 编译出来的抽象语法树
  * @param {Object} data 渲染模板的数据
  * @param {Yox} instance 组件实例
- * @return {Array}
+ * @param {?boolean} forceUpdate 是否强制刷新子组件
+ * @return {Object}
  */
-function render(ast, data, instance) {
+function render(ast, data, instance, forceUpdate) {
 
   var keypath = CHAR_BLANK,
       keypathList = [],
@@ -3995,12 +3993,19 @@ function render(ast, data, instance) {
       });
     }
 
-    var vnode = createElementVnode(source.name, {
+    var component = source.component;
+
+    var data = {
       instance: instance,
       props: props,
       attrs: output.attrs,
       directives: output.directives
-    }, output.children, key, source.component);
+    };
+    if (component) {
+      data.forceUpdate = forceUpdate;
+    }
+
+    var vnode = createElementVnode(source.name, data, output.children, key, component);
 
     if (isDefined(key)) {
       currentCache[key].deps = cacheDeps;
@@ -4082,6 +4087,15 @@ function render(ast, data, instance) {
   };
 }
 
+var toNumber = function (str) {
+  var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+
+  if (numeric(str)) {
+    return +str;
+  }
+  return defaultValue;
+};
+
 var Observer = function () {
 
   /**
@@ -4099,7 +4113,7 @@ var Observer = function () {
 
     var instance = this;
 
-    instance.data = data;
+    instance.data = data || {};
     instance.emitter = new Emitter();
     instance.context = context || instance;
 
@@ -4107,8 +4121,6 @@ var Observer = function () {
     instance.cache = {};
     // 谁依赖了谁
     instance.deps = {};
-    // 谁被谁依赖
-    instance.reversedDeps = {};
 
     // 计算属性也是数据
     if (object(computed)) {
@@ -4150,25 +4162,29 @@ var Observer = function () {
 
         if (get$$1) {
 
+          var needDeps = cacheable;
+          if (needDeps && deps) {
+            needDeps = FALSE;
+            if (array(deps)) {
+              instance.setDeps(keypath, deps);
+            }
+          }
+
           instance.computedGetters[keypath] = function () {
 
-            if (cacheable) {
-              if (has$1(cache, keypath)) {
-                return cache[keypath];
-              }
-              if (!deps) {
-                computedStack.push([]);
-              }
+            if (cacheable && has$1(cache, keypath)) {
+              return cache[keypath];
+            }
+
+            if (needDeps) {
+              computedStack.push([]);
             }
 
             var value = execute(get$$1, instance.context);
             cache[keypath] = value;
 
-            if (cacheable) {
-              var newDeps = deps || pop(computedStack);
-              if (array(newDeps)) {
-                instance.setDeps(keypath, newDeps);
-              }
+            if (needDeps) {
+              instance.setDeps(keypath, pop(computedStack));
             }
 
             return value;
@@ -4253,12 +4269,23 @@ var Observer = function () {
     /**
      * 更新数据
      *
-     * @param {Object} model
+     * @param {string|Object} keypath
+     * @param {?*} value
+     * @param {?boolean} sync
      */
 
   }, {
     key: 'set',
-    value: function (model) {
+    value: function (keypath, value, sync) {
+
+      var model;
+      if (string(keypath)) {
+        model = {};
+        model[keypath] = value;
+      } else if (object(keypath)) {
+        model = keypath;
+        sync = value;
+      }
 
       var instance = this;
 
@@ -4266,58 +4293,46 @@ var Observer = function () {
           data = instance.data,
           cache = instance.cache,
           emitter = instance.emitter,
-          reversedDeps = instance.reversedDeps,
+          differences = instance.differences,
           computedGetters = instance.computedGetters,
           computedSetters = instance.computedSetters,
           watchKeypaths = instance.watchKeypaths,
-          reversedKeypaths = instance.reversedKeypaths;
+          watchFuzzyKeypaths = instance.watchFuzzyKeypaths;
 
 
       if (instance[DIRTY]) {
 
         delete instance[DIRTY];
 
-        reversedDeps = {};
-        watchKeypaths = {};
+        watchKeypaths = instance.watchKeypaths = {};
+        watchFuzzyKeypaths = instance.watchFuzzyKeypaths = {};
 
         each$1(emitter.listeners, function (list, key) {
-          watchKeypaths[key] = TRUE;
+          if (isFuzzyKeypath(key)) {
+            watchFuzzyKeypaths[key] = TRUE;
+          } else {
+            watchKeypaths[key] = TRUE;
+          }
         });
-
-        each$1(deps, function (deps, key) {
-          each(deps, function (dep) {
-            watchKeypaths[dep] = TRUE;
-            push(reversedDeps[dep] || (reversedDeps[dep] = []), key);
-          });
-        });
-
-        reversedDeps = instance.reversedDeps = reversedDeps;
-        watchKeypaths = instance.watchKeypaths = sort(watchKeypaths, TRUE);
-        reversedKeypaths = instance.reversedKeypaths = sort(reversedDeps, TRUE);
       }
 
       /**
-       * a -> b -> c
+       * 修改数据分 3 步：
        *
-       * a 依赖 b，b 依赖 c
-       *
-       * 当修改 c 时，要通知 a 和 b 更新
-       * 当修改 b 时，要通知 a 更新，不通知 c 更新
-       * 当修改 a 时，仅自己更新
-       *
-       * 当监听 user.* 时，如果修改了 user.name，不仅要触发 user.name 的 watcher，也要触发 user.* 的 watcher
-       *
-       * 这里遵循的一个原则是，只有当修改数据确实产生了数据变化，才会分析它的依赖
+       * 1. 预分析所有潜在的 watch 字段，并提取出 oldValue
+       * 2. 设值
+       * 3. 遍历第一步收集的所有 watch 字段，并提取出 newValue 进行对比
        */
 
-      var oldCache = {},
-          newCache = {};
+      var oldCache = {};
       var getOldValue = function (keypath) {
         if (!has$1(oldCache, keypath)) {
           oldCache[keypath] = has$1(cache, keypath) ? cache[keypath] : instance.get(keypath);
         }
         return oldCache[keypath];
       };
+
+      var newCache = {};
       var getNewValue = function (keypath) {
         if (!has$1(newCache, keypath)) {
           newCache[keypath] = instance.get(keypath);
@@ -4325,29 +4340,62 @@ var Observer = function () {
         return newCache[keypath];
       };
 
-      var differences = [],
-          differenceMap = {};
-      var addDifference = function (keypath, realpath, match) {
-        var fullpath = joinKeypath(keypath, realpath);
-        if (!differenceMap[fullpath]) {
-          differenceMap[fullpath] = TRUE;
-          push(differences, {
-            keypath: keypath,
-            realpath: realpath,
-            match: match,
-            oldValue: getOldValue(realpath)
-          });
-        }
+      var matchDeps = function (key, keypath) {
+        var result;
+        each(deps[key], function (dep) {
+          if (isFuzzyKeypath(dep)) {
+            result = matchKeypath(keypath, dep);
+          } else {
+            result = startsWith$1(dep, keypath);
+          }
+          if (!result && has$1(deps, dep)) {
+            result = matchDeps(dep, keypath);
+          }
+          if (result) {
+            return FALSE;
+          }
+        });
+        return result;
       };
+
+      var tasks = [];
 
       each$1(model, function (newValue, keypath) {
 
         keypath = normalize(keypath);
 
+        var oldValue = getOldValue(keypath);
+        if (newValue !== oldValue) {
+
+          push(tasks, {
+            keypath: keypath,
+            oldValue: oldValue
+          });
+
+          if (watchKeypaths) {
+            each$1(watchKeypaths, function (value, key) {
+              if (key !== keypath && startsWith$1(key, keypath)) {
+                push(tasks, {
+                  keypath: key,
+                  oldValue: getOldValue(key)
+                });
+              }
+            });
+          }
+
+          each$1(deps, function (list, key) {
+            if (matchDeps(key, keypath)) {
+              push(tasks, {
+                keypath: key,
+                oldValue: getOldValue(key)
+              });
+            }
+          });
+        }
+
         if (computedSetters) {
           var setter = computedSetters[keypath];
           if (setter) {
-            addDifference(keypath, keypath);
             setter(newValue);
             return;
           } else {
@@ -4358,7 +4406,6 @@ var Observer = function () {
             if (getter && prop) {
               getter = getter();
               if (!primitive(getter)) {
-                addDifference(keypath, keypath);
                 set$1(getter, prop, newValue);
               }
               return;
@@ -4366,110 +4413,232 @@ var Observer = function () {
           }
         }
 
-        addDifference(keypath, keypath);
         set$1(data, keypath, newValue);
       });
 
-      var i = -1,
-          difference,
-          keypath,
-          realpath,
-          oldValue,
-          nextDifferences;
-      while (difference = differences[++i]) {
+      var result = [];
 
-        keypath = difference.keypath;
-        realpath = difference.realpath;
-        oldValue = difference.oldValue;
+      each(tasks, function (task) {
+        var keypath = task.keypath,
+            oldValue = task.oldValue;
 
-        if (has$1(cache, realpath)) {
-          delete cache[realpath];
+
+        if (has$1(cache, keypath)) {
+          delete cache[keypath];
         }
 
-        if (getNewValue(realpath) !== oldValue) {
+        if (getNewValue(keypath) !== oldValue) {
 
-          nextDifferences = instance.differences || (instance.differences = {});
-          nextDifferences[joinKeypath(keypath, realpath)] = difference;
-
-          // 当 user.name 变化了
-          // 要通知 user.* 的观察者们
-          if (watchKeypaths) {
-            each(watchKeypaths, function (key) {
-              if (key !== realpath) {
-                if (isFuzzyKeypath(key)) {
-                  var match = matchKeypath(realpath, key);
-                  if (match) {
-                    addDifference(key, realpath, match);
-                  }
-                } else if (startsWith$1(key, realpath) !== FALSE) {
-                  addDifference(key, key);
-                }
-              }
-            });
+          if (!has(result, keypath)) {
+            push(result, keypath);
           }
 
-          // a 依赖 b
-          // 当 b 变化了，要通知 a
-          if (reversedKeypaths) {
-            each(reversedKeypaths, function (key) {
-              var list;
-              if (isFuzzyKeypath(key)) {
-                var match = matchKeypath(realpath, key);
-                if (match) {
-                  list = reversedDeps[key];
-                }
-              } else if (key === realpath) {
-                list = reversedDeps[key];
-              }
-              if (list) {
-                each(list, function (key) {
-                  addDifference(key, key);
+          if (!differences) {
+            differences = instance.differences = {};
+          }
+
+          differences[keypath] = task;
+        }
+      });
+
+      if (result.length) {
+        var fire = function () {
+          // 冻结这批变化
+          // 避免 fire 之后同步再次走进这里
+          var differences = instance.differences,
+              watchFuzzyKeypaths = instance.watchFuzzyKeypaths;
+
+          delete instance.differences;
+          if (instance.pending) {
+            delete instance.pending;
+          }
+          each$1(differences, function (difference) {
+            var keypath = difference.keypath,
+                oldValue = difference.oldValue,
+                newValue = instance.get(keypath);
+
+            if (difference.force || oldValue !== newValue) {
+              var args = [newValue, oldValue, keypath];
+              emitter.fire(keypath, args);
+              if (watchFuzzyKeypaths) {
+                each$1(watchFuzzyKeypaths, function (value, key) {
+                  var match = matchKeypath(keypath, key);
+                  if (match) {
+                    var newArgs = copy(args);
+                    push(newArgs, match);
+                    emitter.fire(key, newArgs);
+                  }
                 });
               }
-            });
-          }
+            }
+          });
+        };
+        if (sync) {
+          fire();
+        } else if (!instance.pending) {
+          instance.pending = TRUE;
+          append(function () {
+            if (instance.pending) {
+              fire();
+            }
+          });
         }
       }
 
-      if (nextDifferences && !instance.pending) {
-        instance.pending = TRUE;
-        append(function () {
-          if (instance.pending) {
-            // 冻结这批变化
-            // 避免 fire 之后同步再次走进这里
-            var _differences = instance.differences;
-
-            delete instance.pending;
-            delete instance.differences;
-            each$1(_differences, function (difference) {
-              var keypath = difference.keypath,
-                  oldValue = difference.oldValue,
-                  newValue = instance.get(difference.realpath);
-
-              if (difference.force || oldValue !== newValue) {
-                var args = [newValue, oldValue, keypath];
-                if (difference.match) {
-                  push(args, difference.match);
-                }
-                emitter.fire(keypath, args);
-              }
-            });
-          }
-        });
-      }
+      return result;
     }
   }, {
     key: 'setDeps',
     value: function (keypath, newDeps) {
-
-      var instance = this;
-      var deps = instance.deps;
-
+      var deps = this.deps;
 
       if (newDeps !== deps[keypath]) {
         deps[keypath] = newDeps;
-        instance[DIRTY] = TRUE;
+        this[DIRTY] = TRUE;
       }
+    }
+
+    /**
+     * 取反 keypath 对应的数据
+     *
+     * 不管 keypath 对应的数据是什么类型，操作后都是布尔型
+     *
+     * @param {string} keypath
+     * @return {boolean} 取反后的布尔值
+     */
+
+  }, {
+    key: 'toggle',
+    value: function (keypath) {
+      var value = !this.get(keypath);
+      this.set(keypath, value);
+      return value;
+    }
+
+    /**
+     * 递增 keypath 对应的数据
+     *
+     * 注意，最好是整型的加法，如果涉及浮点型，不保证计算正确
+     *
+     * @param {string} keypath 值必须能转型成数字，如果不能，则默认从 0 开始递增
+     * @param {?number} step 步进值，默认是 1
+     * @param {?number} min 可以递增到的最小值，默认不限制
+     * @return {number} 返回递增后的值
+     */
+
+  }, {
+    key: 'increase',
+    value: function (keypath, step, max) {
+      var value = toNumber(this.get(keypath), 0) + (numeric(step) ? step : 1);
+      if (!numeric(max) || value <= max) {
+        this.set(keypath, value);
+      }
+      return value;
+    }
+
+    /**
+     * 递减 keypath 对应的数据
+     *
+     * 注意，最好是整型的减法，如果涉及浮点型，不保证计算正确
+     *
+     * @param {string} keypath 值必须能转型成数字，如果不能，则默认从 0 开始递减
+     * @param {?number} step 步进值，默认是 1
+     * @param {?number} min 可以递减到的最小值，默认不限制
+     * @return {number} 返回递减后的值
+     */
+
+  }, {
+    key: 'decrease',
+    value: function (keypath, step, min) {
+      var value = toNumber(this.get(keypath), 0) - (numeric(step) ? step : 1);
+      if (!numeric(min) || value >= min) {
+        this.set(keypath, value);
+      }
+      return value;
+    }
+
+    /**
+     * 在数组指定位置插入元素
+     *
+     * @param {string} keypath
+     * @param {*} item
+     * @param {number} index
+     * @return {?boolean} 是否插入成功
+     */
+
+  }, {
+    key: 'insert',
+    value: function (keypath, item, index) {
+
+      var list = this.get(keypath);
+      if (!array(list)) {
+        list = [];
+      } else {
+        list = copy(list);
+      }
+
+      var _list = list,
+          length = _list.length;
+
+      if (index === TRUE || index === length) {
+        list.push(item);
+      } else if (index === FALSE || index === 0) {
+        list.unshift(item);
+      } else if (index > 0 && index < length) {
+        list.splice(index, 0, item);
+      } else {
+        return;
+      }
+
+      this.set(keypath, list);
+
+      return TRUE;
+    }
+
+    /**
+     * 通过索引移除数组中的元素
+     *
+     * @param {string} keypath
+     * @param {number} index
+     * @return {?boolean} 是否移除成功
+     */
+
+  }, {
+    key: 'removeAt',
+    value: function (keypath, index) {
+      var list = this.get(keypath);
+      if (array(list) && index >= 0 && index < list.length) {
+        list = copy(list);
+        list.splice(index, 1);
+        this.set(keypath, list);
+        return TRUE;
+      }
+    }
+
+    /**
+     * 直接移除数组中的元素
+     *
+     * @param {string} keypath
+     * @param {*} item
+     * @return {?boolean} 是否移除成功
+     */
+
+  }, {
+    key: 'remove',
+    value: function (keypath, item) {
+      var list = this.get(keypath);
+      if (array(list)) {
+        list = copy(list);
+        if (remove(list, item)) {
+          this.set(keypath, list);
+          return TRUE;
+        }
+      }
+    }
+  }, {
+    key: 'nextTick',
+    value: function (fn) {
+      append(fn);
     }
 
     /**
@@ -4525,10 +4694,6 @@ extend(Observer.prototype, {
 
 var DIRTY = '_dirty_';
 
-function joinKeypath(keypath, realpath) {
-  return keypath + CHAR_DASH + realpath;
-}
-
 /**
  * watch 和 watchOnce 逻辑相同
  * 提出一个工厂方法
@@ -4553,19 +4718,15 @@ function createWatch(action) {
         context: context
       });
 
-      if (!isFuzzyKeypath(keypath)) {
-        // 为了存下 oldValue
-        instance.get(keypath);
-        if (sync) {
-          if (differences) {
-            var difference = differences[joinKeypath(keypath, keypath)];
-            if (difference) {
-              difference.force = TRUE;
-              return;
-            }
+      if (sync && !isFuzzyKeypath(keypath)) {
+        if (differences) {
+          var difference = differences[keypath];
+          if (difference) {
+            difference.force = TRUE;
+            return;
           }
-          execute(watcher, context, [instance.get(keypath), UNDEFINED, keypath]);
         }
+        execute(watcher, context, [instance.get(keypath), UNDEFINED, keypath]);
       }
     };
 
@@ -5501,6 +5662,10 @@ var Yox = function () {
       computed: computed
     });
 
+    instance.watch(TEMPLATE_KEY, function () {
+      instance.forceUpdate(FALSE);
+    });
+
     // 后放 data
     var extend$$1 = func(data) ? execute(data, instance) : data;
     if (object(extend$$1)) {
@@ -5609,25 +5774,14 @@ var Yox = function () {
      *
      * @param {string|Object} keypath
      * @param {?*} value
+     * @param {?boolean} sync
+     * @return {boolean} 是否会引起视图更新
      */
 
   }, {
     key: 'set',
-    value: function (keypath, value) {
-
-      var model$$1,
-          sync;
-      if (string(keypath)) {
-        model$$1 = {};
-        model$$1[keypath] = value;
-      } else if (object(keypath)) {
-        model$$1 = keypath;
-        sync = value === TRUE;
-      } else {
-        return;
-      }
-
-      this.updateModel(model$$1, sync);
+    value: function (keypath, value, sync) {
+      return has(this.$observer.set(keypath, value, sync), TEMPLATE_KEY);
     }
 
     /**
@@ -5764,34 +5918,6 @@ var Yox = function () {
     }
 
     /**
-     * 只更新数据，不更新视图
-     *
-     * @param {Object} model
-     */
-
-  }, {
-    key: 'updateModel',
-    value: function (model$$1) {
-
-      var instance = this,
-          args = arguments;
-
-      var oldValue = instance.get(TEMPLATE_KEY);
-
-      instance.$observer.set(model$$1);
-
-      if (oldValue === instance.get(TEMPLATE_KEY) || args.length === 1) {
-        return;
-      }
-
-      if (args.length === 2 && args[1]) {
-        instance.updateView(instance.$node, instance.render());
-      } else {
-        instance.forceUpdate();
-      }
-    }
-
-    /**
      * 对于某些特殊场景，修改了数据，但是模板的依赖中并没有这一项
      * 而你非常确定需要更新模板，强制刷新正是你需要的
      */
@@ -5799,16 +5925,9 @@ var Yox = function () {
   }, {
     key: 'forceUpdate',
     value: function () {
-      var instance = this;
-      if (!instance.$pending) {
-        instance.$pending = TRUE;
-        prepend(function () {
-          if (instance.$pending) {
-            delete instance.$pending;
-            instance.updateView(instance.$node, instance.render());
-          }
-        });
-      }
+      var instance = this,
+          arg = arguments[0];
+      instance.updateView(instance.$node, instance.render(boolean(arg) ? arg : TRUE));
     }
 
     /**
@@ -5846,15 +5965,11 @@ var Yox = function () {
         });
       }
 
-      var _renderTemplate = render($template, $context, instance),
+      var _renderTemplate = render($template, $context, instance, arguments[0]),
           nodes = _renderTemplate.nodes,
           deps = _renderTemplate.deps;
 
-      var keys$$1 = keys(deps);
-      each$1(keys$$1, function (key) {
-        $observer.cache[key] = deps[key];
-      });
-      $observer.setDeps(TEMPLATE_KEY, keys$$1);
+      $observer.setDeps(TEMPLATE_KEY, keys(deps));
 
       return nodes[0];
     }
@@ -6010,10 +6125,8 @@ var Yox = function () {
         remove($parent.$children, instance);
       }
 
-      if ($node) {
-        if (arguments[0] !== TRUE) {
-          patch($node, { text: CHAR_BLANK });
-        }
+      if ($node && arguments[0] !== TRUE) {
+        patch($node, { text: CHAR_BLANK });
       }
 
       $emitter.off();
@@ -6033,7 +6146,7 @@ var Yox = function () {
   }, {
     key: 'nextTick',
     value: function (fn) {
-      append(fn);
+      this.$observer.nextTick(fn);
     }
 
     /**
@@ -6048,9 +6161,7 @@ var Yox = function () {
   }, {
     key: 'toggle',
     value: function (keypath) {
-      var value = !this.get(keypath);
-      this.set(keypath, value);
-      return value;
+      return this.$observer.toggle(keypath);
     }
 
     /**
@@ -6067,11 +6178,7 @@ var Yox = function () {
   }, {
     key: 'increase',
     value: function (keypath, step, max) {
-      var value = toNumber(this.get(keypath), 0) + (numeric(step) ? step : 1);
-      if (!numeric(max) || value <= max) {
-        this.set(keypath, value);
-      }
-      return value;
+      return this.$observer.increase(keypath, step, max);
     }
 
     /**
@@ -6088,11 +6195,7 @@ var Yox = function () {
   }, {
     key: 'decrease',
     value: function (keypath, step, min) {
-      var value = toNumber(this.get(keypath), 0) - (numeric(step) ? step : 1);
-      if (!numeric(min) || value >= min) {
-        this.set(keypath, value);
-      }
-      return value;
+      return this.$observer.decrease(keypath, step, min);
     }
 
     /**
@@ -6121,30 +6224,7 @@ var Yox = function () {
   }, {
     key: 'insert',
     value: function (keypath, item, index) {
-
-      var list = this.get(keypath);
-      if (!array(list)) {
-        list = [];
-      } else {
-        list = this.copy(list);
-      }
-
-      var _list = list,
-          length = _list.length;
-
-      if (index === TRUE || index === length) {
-        list.push(item);
-      } else if (index === FALSE || index === 0) {
-        list.unshift(item);
-      } else if (index > 0 && index < length) {
-        list.splice(index, 0, item);
-      } else {
-        return;
-      }
-
-      this.set(keypath, list);
-
-      return TRUE;
+      return this.$observer.insert(keypath, item, index);
     }
 
     /**
@@ -6158,7 +6238,7 @@ var Yox = function () {
   }, {
     key: 'append',
     value: function (keypath, item) {
-      return this.insert(keypath, item, TRUE);
+      return this.$observer.insert(keypath, item, TRUE);
     }
 
     /**
@@ -6172,7 +6252,7 @@ var Yox = function () {
   }, {
     key: 'prepend',
     value: function (keypath, item) {
-      return this.insert(keypath, item, FALSE);
+      return this.$observer.insert(keypath, item, FALSE);
     }
 
     /**
@@ -6186,13 +6266,7 @@ var Yox = function () {
   }, {
     key: 'removeAt',
     value: function (keypath, index) {
-      var list = this.get(keypath);
-      if (array(list) && index >= 0 && index < list.length) {
-        list = this.copy(list);
-        list.splice(index, 1);
-        this.set(keypath, list);
-        return TRUE;
-      }
+      return this.$observer.removeAt(keypath, index);
     }
 
     /**
@@ -6206,20 +6280,13 @@ var Yox = function () {
   }, {
     key: 'remove',
     value: function (keypath, item) {
-      var list = this.get(keypath);
-      if (array(list)) {
-        list = this.copy(list);
-        if (remove(list, item)) {
-          this.set(keypath, list);
-          return TRUE;
-        }
-      }
+      return this.$observer.remove(keypath, item);
     }
   }]);
   return Yox;
 }();
 
-Yox.version = '0.45.9';
+Yox.version = '0.46.0';
 
 /**
  * 工具，便于扩展、插件使用
