@@ -36,6 +36,7 @@ import * as lifecycle from './config/lifecycle'
 import api from './platform/web/api'
 
 const TEMPLATE_KEY = '_template_'
+const TEMPLATE_VALUE = 0
 
 const patch = snabbdom.init([ snabbdomComponent, snabbdomAttrs, snabbdomProps, snabbdomDirectives ], api)
 
@@ -89,11 +90,11 @@ export default class Yox {
 
     computed = computed ? object.copy(computed) : { }
 
-    let counter = 0
+    let counter = TEMPLATE_VALUE
     computed[ TEMPLATE_KEY ] = {
       deps: env.TRUE,
       get: function () {
-        return counter++
+        return ++counter
       }
     }
 
@@ -107,8 +108,11 @@ export default class Yox {
 
     instance.watch(
       TEMPLATE_KEY,
-      function () {
-        instance.forceUpdate(env.FALSE)
+      function (newValue, oldValue) {
+        instance.updateView(
+          instance.$node,
+          instance.render(TEMPLATE_VALUE === oldValue)
+        )
       }
     )
 
@@ -361,11 +365,27 @@ export default class Yox {
    * 而你非常确定需要更新模板，强制刷新正是你需要的
    */
   forceUpdate() {
-    let instance = this, arg = arguments[ 0 ]
-    instance.updateView(
-      instance.$node,
-      instance.render(is.boolean(arg) ? arg : env.TRUE)
-    )
+
+    let { $observer } = this
+
+    // 如果已排入队列，等待队列的刷新
+    let { differences } = $observer
+    if (differences) {
+      if (differences[ TEMPLATE_KEY ]) {
+        return
+      }
+    }
+    else {
+      differences = $observer.differences = { }
+    }
+
+    // 开始新的异步队列
+    differences[ TEMPLATE_KEY ] = {
+      keypath: TEMPLATE_KEY,
+      oldValue: TEMPLATE_VALUE,
+    }
+    $observer.flushAsync()
+
   }
 
   /**
@@ -694,7 +714,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.46.0'
+Yox.version = '0.46.1'
 
 /**
  * 工具，便于扩展、插件使用

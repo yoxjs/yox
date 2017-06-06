@@ -2097,6 +2097,9 @@ function createComponent(oldVnode, vnode) {
   };
 
   instance.component(vnode.tag, function (options) {
+    if (!options) {
+      fatal('Component [' + vnode.tag + '] is not found.');
+    }
     var _el = el,
         $component = _el.$component;
 
@@ -4442,50 +4445,68 @@ var Observer = function () {
       });
 
       if (result.length) {
-        var fire = function () {
-          // 冻结这批变化
-          // 避免 fire 之后同步再次走进这里
-          var differences = instance.differences,
-              watchFuzzyKeypaths = instance.watchFuzzyKeypaths;
-
-          delete instance.differences;
-          if (instance.pending) {
-            delete instance.pending;
-          }
-          each$1(differences, function (difference) {
-            var keypath = difference.keypath,
-                oldValue = difference.oldValue,
-                newValue = instance.get(keypath);
-
-            if (difference.force || oldValue !== newValue) {
-              var args = [newValue, oldValue, keypath];
-              emitter.fire(keypath, args);
-              if (watchFuzzyKeypaths) {
-                each$1(watchFuzzyKeypaths, function (value, key) {
-                  var match = matchKeypath(keypath, key);
-                  if (match) {
-                    var newArgs = copy(args);
-                    push(newArgs, match);
-                    emitter.fire(key, newArgs);
-                  }
-                });
-              }
-            }
-          });
-        };
         if (sync) {
-          fire();
-        } else if (!instance.pending) {
-          instance.pending = TRUE;
-          append(function () {
-            if (instance.pending) {
-              fire();
-            }
-          });
+          instance.flush();
+        } else {
+          instance.flushAsync();
         }
       }
 
       return result;
+    }
+  }, {
+    key: 'flush',
+    value: function () {
+
+      var instance = this;
+
+      if (instance.pending) {
+        delete instance.pending;
+      }
+
+      // 冻结这批变化
+      // 避免 fire 之后同步再次走进这里
+      var emitter = instance.emitter,
+          differences = instance.differences,
+          watchFuzzyKeypaths = instance.watchFuzzyKeypaths;
+
+      if (differences) {
+        delete instance.differences;
+
+        each$1(differences, function (difference) {
+          var keypath = difference.keypath,
+              oldValue = difference.oldValue,
+              newValue = instance.get(keypath);
+
+          if (difference.force || oldValue !== newValue) {
+            var args = [newValue, oldValue, keypath];
+            emitter.fire(keypath, args);
+            if (watchFuzzyKeypaths) {
+              each$1(watchFuzzyKeypaths, function (value, key) {
+                var match = matchKeypath(keypath, key);
+                if (match) {
+                  var newArgs = copy(args);
+                  push(newArgs, match);
+                  emitter.fire(key, newArgs);
+                }
+              });
+            }
+          }
+        });
+      }
+    }
+  }, {
+    key: 'flushAsync',
+    value: function () {
+      var instance = this;
+      if (!instance.pending) {
+        instance.pending = TRUE;
+        append(function () {
+          if (instance.pending) {
+            instance.flush();
+          }
+        });
+      }
     }
   }, {
     key: 'setDeps',
@@ -5594,6 +5615,7 @@ var binding = function (_ref) {
 };
 
 var TEMPLATE_KEY = '_template_';
+var TEMPLATE_VALUE = 0;
 
 var patch = init([snabbdomComponent, snabbdomAttrs, snabbdomProps, snabbdomDirectives], api);
 
@@ -5646,11 +5668,11 @@ var Yox = function () {
 
     computed = computed ? copy(computed) : {};
 
-    var counter = 0;
+    var counter = TEMPLATE_VALUE;
     computed[TEMPLATE_KEY] = {
       deps: TRUE,
       get: function get$$1() {
-        return counter++;
+        return ++counter;
       }
     };
 
@@ -5662,8 +5684,8 @@ var Yox = function () {
       computed: computed
     });
 
-    instance.watch(TEMPLATE_KEY, function () {
-      instance.forceUpdate(FALSE);
+    instance.watch(TEMPLATE_KEY, function (newValue, oldValue) {
+      instance.updateView(instance.$node, instance.render(TEMPLATE_VALUE === oldValue));
     });
 
     // 后放 data
@@ -5925,9 +5947,26 @@ var Yox = function () {
   }, {
     key: 'forceUpdate',
     value: function () {
-      var instance = this,
-          arg = arguments[0];
-      instance.updateView(instance.$node, instance.render(boolean(arg) ? arg : TRUE));
+      var $observer = this.$observer;
+
+      // 如果已排入队列，等待队列的刷新
+
+      var differences = $observer.differences;
+
+      if (differences) {
+        if (differences[TEMPLATE_KEY]) {
+          return;
+        }
+      } else {
+        differences = $observer.differences = {};
+      }
+
+      // 开始新的异步队列
+      differences[TEMPLATE_KEY] = {
+        keypath: TEMPLATE_KEY,
+        oldValue: TEMPLATE_VALUE
+      };
+      $observer.flushAsync();
     }
 
     /**
@@ -6286,7 +6325,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.46.0';
+Yox.version = '0.46.1';
 
 /**
  * 工具，便于扩展、插件使用
