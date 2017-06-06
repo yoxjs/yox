@@ -4281,13 +4281,16 @@ var Observer = function () {
     key: 'set',
     value: function (keypath, value, sync) {
 
-      var model;
+      var model,
+          result = [];
       if (string(keypath)) {
         model = {};
         model[keypath] = value;
       } else if (object(keypath)) {
         model = keypath;
         sync = value;
+      } else {
+        return result;
       }
 
       var instance = this;
@@ -4418,8 +4421,6 @@ var Observer = function () {
 
         set$1(data, keypath, newValue);
       });
-
-      var result = [];
 
       each(tasks, function (task) {
         var keypath = task.keypath,
@@ -6325,7 +6326,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.46.1';
+Yox.version = '0.46.2';
 
 /**
  * 工具，便于扩展、插件使用
