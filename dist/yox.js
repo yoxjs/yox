@@ -2014,7 +2014,8 @@ var snabbdomDirectives = {
 
 function createComponent(oldVnode, vnode) {
   var el = vnode.el,
-      component = vnode.component;
+      component = vnode.component,
+      children = vnode.children;
 
   if (!component) {
     return;
@@ -2026,7 +2027,8 @@ function createComponent(oldVnode, vnode) {
 
   el.$component = {
     queue: [],
-    attrs: attrs
+    attrs: attrs,
+    children: children
   };
 
   instance.component(vnode.tag, function (options) {
@@ -2041,6 +2043,7 @@ function createComponent(oldVnode, vnode) {
       component = instance.create(options, {
         el: el,
         props: $component.attrs,
+        slot: $component.children,
         replace: TRUE
       });
 
@@ -2057,6 +2060,7 @@ function createComponent(oldVnode, vnode) {
 function updateComponent(oldVnode, vnode) {
   var component = vnode.component,
       el = vnode.el,
+      children = vnode.children,
       data = vnode.data;
   var $component = el.$component;
 
@@ -2065,11 +2069,13 @@ function updateComponent(oldVnode, vnode) {
         forceUpdate = data.forceUpdate;
 
     if ($component.set) {
+      $component.$slot = children;
       if (!$component.set(attrs, TRUE) && forceUpdate) {
         $component.forceUpdate();
       }
     } else {
       $component.attrs = attrs;
+      $component.children = children;
     }
   }
 }
@@ -3854,9 +3860,24 @@ function render(ast, data, instance, forceUpdate) {
 
   enter[ELEMENT] = function (source, output) {
     var _source = source,
+        name = _source.name,
         key = _source.key;
 
-    if (key) {
+    if (name === 'slot') {
+      var $slot = instance.$slot;
+
+      if ($slot) {
+        if (array($slot)) {
+          pushStack({
+            children: $slot
+          });
+        } else {
+          pushStack($slot);
+        }
+        return FALSE;
+      }
+      fatal('slot is not found.');
+    } else if (key) {
       var trackBy;
       if (string(key)) {
         trackBy = key;
@@ -5458,6 +5479,7 @@ var Yox = function () {
 
     var el = options.el,
         data = options.data,
+        slot = options.slot,
         props = options.props,
         parent = options.parent,
         replace = options.replace,
@@ -5586,6 +5608,9 @@ var Yox = function () {
         fatal(templateError);
       }
       instance.$template = template[0];
+      if (slot) {
+        instance.$slot = slot;
+      }
       // 首次渲染
       instance.updateView(el || api.createElement('div'), instance.render());
     }
@@ -6150,7 +6175,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.46.2';
+Yox.version = '0.46.3';
 
 /**
  * 工具，便于扩展、插件使用

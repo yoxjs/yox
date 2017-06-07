@@ -54,6 +54,7 @@ export default class Yox {
     let {
       el,
       data,
+      slot,
       props,
       parent,
       replace,
@@ -202,6 +203,9 @@ export default class Yox {
         logger.fatal(templateError)
       }
       instance.$template = template[ 0 ]
+      if (slot) {
+        instance.$slot = slot
+      }
       // 首次渲染
       instance.updateView(
         el || api.createElement('div'),
@@ -714,7 +718,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.46.2'
+Yox.version = '0.46.3'
 
 /**
  * 工具，便于扩展、插件使用
