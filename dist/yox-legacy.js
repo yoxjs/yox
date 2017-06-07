@@ -3933,17 +3933,13 @@ function render(ast, data, instance, forceUpdate) {
     if (name === 'slot') {
       var $slot = instance.$slot;
 
-      if ($slot) {
-        if (array($slot)) {
-          pushStack({
-            children: $slot
-          });
-        } else {
-          pushStack($slot);
-        }
-        return FALSE;
+      if (array($slot)) {
+        var parentElement = htmlStack[htmlStack.length - 2];
+        each($slot, function (vnode) {
+          addChild(parentElement, vnode);
+        });
       }
-      fatal('slot is not found.');
+      return FALSE;
     } else if (key) {
       var trackBy;
       if (string(key)) {
@@ -6351,7 +6347,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.46.3';
+Yox.version = '0.46.4';
 
 /**
  * 工具，便于扩展、插件使用
