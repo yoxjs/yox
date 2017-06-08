@@ -15,11 +15,6 @@ import * as nextTask from 'yox-common/util/nextTask'
 
 import * as snabbdom from 'yox-snabbdom'
 
-import snabbdomAttrs from 'yox-snabbdom/modules/attrs'
-import snabbdomProps from 'yox-snabbdom/modules/props'
-import snabbdomDirectives from 'yox-snabbdom/modules/directives'
-import snabbdomComponent from 'yox-snabbdom/modules/component'
-
 import compileTemplate from 'yox-template-compiler/compile'
 import renderTemplate from 'yox-template-compiler/render'
 import * as templateSyntax from 'yox-template-compiler/src/syntax'
@@ -35,10 +30,10 @@ import * as lifecycle from './config/lifecycle'
 
 import api from './platform/web/api'
 
-const TEMPLATE_KEY = '_template_'
+const TEMPLATE_KEY = '_template'
 const TEMPLATE_VALUE = 0
 
-const patch = snabbdom.init([ snabbdomComponent, snabbdomAttrs, snabbdomProps, snabbdomDirectives ], api)
+const patch = snabbdom.init(api)
 
 export default class Yox {
 
@@ -54,7 +49,6 @@ export default class Yox {
     let {
       el,
       data,
-      slot,
       props,
       parent,
       replace,
@@ -109,10 +103,10 @@ export default class Yox {
 
     instance.watch(
       TEMPLATE_KEY,
-      function (newValue, oldValue) {
+      function () {
         instance.updateView(
           instance.$node,
-          instance.render(TEMPLATE_VALUE === oldValue)
+          instance.render()
         )
       }
     )
@@ -203,9 +197,6 @@ export default class Yox {
         logger.fatal(templateError)
       }
       instance.$template = template[ 0 ]
-      if (slot) {
-        instance.$slot = slot
-      }
       // 首次渲染
       instance.updateView(
         el || api.createElement('div'),
@@ -429,7 +420,7 @@ export default class Yox {
       )
     }
 
-    let { nodes, deps } = renderTemplate($template, $context, instance, arguments[ 0 ])
+    let { nodes, deps } = renderTemplate($template, $context, instance)
     $observer.setDeps(TEMPLATE_KEY, object.keys(deps))
 
     return nodes[ 0 ]
@@ -718,7 +709,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.46.4'
+Yox.version = '0.46.5'
 
 /**
  * 工具，便于扩展、插件使用

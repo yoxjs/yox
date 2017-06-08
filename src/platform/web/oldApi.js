@@ -21,9 +21,6 @@ if (!Object.keys) {
   Object.freeze = function (obj) {
     return obj
   }
-  Object.defineProperty = function (obj, key, descriptor) {
-    obj[ key ] = descriptor.value
-  }
   Object.create = function (proto, descriptor) {
     function Class() { }
     Class.prototype = proto

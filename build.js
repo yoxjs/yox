@@ -43,9 +43,9 @@ function optimize(source) {
    * 转成 value: function
    */
   source = source.replace(
-   /value: function [\w$]+/g,
-   function () {
-     return 'value: function '
+   /\.prototype\.(\w+) = function [$\w]+\(/g,
+   function ($0, $1) {
+     return '.prototype.' + $1 + ' = function ('
    }
   )
 

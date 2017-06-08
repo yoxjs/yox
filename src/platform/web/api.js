@@ -13,7 +13,7 @@ import * as event from '../../config/event'
 let api = object.copy(domApi)
 
 // import * as oldApi from './oldApi'
-//
+
 // if (!env.doc.addEventListener) {
 //   object.extend(api, oldApi)
 // }
@@ -53,7 +53,7 @@ api.specialEvents = {
   }
 }
 
-const EMITTER_KEY = '_emitter_'
+const EMITTER_KEY = '_emitter'
 
 /**
  * 绑定事件

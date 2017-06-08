@@ -8,8 +8,7 @@ export default {
   moduleName: 'Yox',
   plugins: [
     babel({
-      presets: [ 'es2015-rollup' ],
-      babelrc: false,
+      babelrc: true,
       comments: true,
       runtimeHelpers: true
     }),
