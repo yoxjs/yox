@@ -1,0 +1,17 @@
+{
+  "presets": [
+    [
+      "env",
+      {
+        "targets": {
+          "ie": 8
+        },
+        "modules": false,
+        "loose": true
+      }
+    ]
+  ],
+  "plugins": [
+    "external-helpers"
+  ]
+}
