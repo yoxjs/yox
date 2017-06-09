@@ -18,7 +18,6 @@ import * as snabbdom from 'yox-snabbdom'
 import compileTemplate from 'yox-template-compiler/compile'
 import renderTemplate from 'yox-template-compiler/render'
 import * as templateSyntax from 'yox-template-compiler/src/syntax'
-import * as templateNodeType from 'yox-template-compiler/src/nodeType'
 
 import executeExpression from 'yox-expression-compiler/execute'
 import * as expressionNodeType from 'yox-expression-compiler/src/nodeType'
@@ -709,7 +708,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.46.5'
+Yox.version = '0.46.6'
 
 /**
  * 工具，便于扩展、插件使用

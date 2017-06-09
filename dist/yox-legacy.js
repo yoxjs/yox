@@ -5513,9 +5513,17 @@ var model = function (_ref) {
     control.set(el, keypath, instance);
   };
 
-  instance.watch(keypath, set$$1, !control.attr || !has$1(attrs, control.attr));
+  if (!control.attr || !has$1(attrs, control.attr)) {
+    set$$1();
+  }
 
-  var destroy = bindEvent({
+  prepend(function () {
+    if (set$$1) {
+      instance.watch(keypath, set$$1);
+    }
+  });
+
+  var unbind = bindEvent({
     el: el,
     node: node,
     instance: instance,
@@ -5528,7 +5536,8 @@ var model = function (_ref) {
 
   return function () {
     instance.unwatch(keypath, set$$1);
-    destroy && destroy();
+    unbind && unbind();
+    set$$1 = NULL;
   };
 };
 
@@ -5556,7 +5565,14 @@ var binding = function (_ref) {
     }
   };
 
-  instance.watch(keypath, set);
+  // 同批次的修改
+  // 不应该响应 watch
+  // 因为模板已经全量更新
+  prepend(function () {
+    if (set) {
+      instance.watch(keypath, set);
+    }
+  });
 
   if (array(component)) {
     push(component, function (target) {
@@ -5566,6 +5582,7 @@ var binding = function (_ref) {
 
   return function () {
     instance.unwatch(keypath, set);
+    set = NULL;
   };
 };
 
@@ -6253,7 +6270,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.46.5';
+Yox.version = '0.46.6';
 
 /**
  * 工具，便于扩展、插件使用

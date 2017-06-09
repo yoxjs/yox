@@ -8,6 +8,7 @@ import * as array from 'yox-common/util/array'
 import * as object from 'yox-common/util/object'
 import * as string from 'yox-common/util/string'
 import * as logger from 'yox-common/util/logger'
+import * as nextTask from 'yox-common/util/nextTask'
 
 import bindEvent from './event'
 import api from '../platform/web/api'
@@ -114,13 +115,19 @@ export default function ({ el, node, instance, directives, attrs }) {
     control.set(el, keypath, instance)
   }
 
-  instance.watch(
-    keypath,
-    set,
-    !control.attr || !object.has(attrs, control.attr),
+  if (!control.attr || !object.has(attrs, control.attr)) {
+    set()
+  }
+
+  nextTask.prepend(
+    function () {
+      if (set) {
+        instance.watch(keypath, set)
+      }
+    }
   )
 
-  let destroy = bindEvent({
+  let unbind = bindEvent({
     el,
     node,
     instance,
@@ -133,7 +140,8 @@ export default function ({ el, node, instance, directives, attrs }) {
 
   return function () {
     instance.unwatch(keypath, set)
-    destroy && destroy()
+    unbind && unbind()
+    set = env.NULL
   }
 
 }
