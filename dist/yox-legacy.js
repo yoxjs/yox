@@ -1309,6 +1309,7 @@ function removeProps(vnode, oldVnode) {
       api = this;
 
   if (!component && oldProps) {
+    props = props || {};
     each$1(oldProps, function (value, name) {
       if (!has$1(props, name)) {
         api.removeProp(vnode.el, name);
@@ -1456,7 +1457,7 @@ function createComponent(vnode) {
 
   instance.component(tag, function (options) {
     if (!options) {
-      fatal('Component [' + tag + '] is not found.');
+      fatal('Component "' + tag + '" is not found.');
     }
     var _el = el,
         $component = _el.$component,
@@ -6270,7 +6271,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.46.6';
+Yox.version = '0.46.7';
 
 /**
  * 工具，便于扩展、插件使用
