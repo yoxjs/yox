@@ -571,7 +571,7 @@ export default class Yox {
       array.remove($parent.$children, instance)
     }
 
-    if ($node && arguments[ 0 ] !== env.TRUE) {
+    if ($node) {
       patch($node, { text: char.CHAR_BLANK })
     }
 
@@ -708,7 +708,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.46.7'
+Yox.version = '0.46.8'
 
 /**
  * 工具，便于扩展、插件使用

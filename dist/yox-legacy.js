@@ -1211,15 +1211,17 @@ var nextTick$1 = function (fn) {
 
 var nextTasks = [];
 
+function runTasks() {
+  var currentTasks = nextTasks;
+  nextTasks = [];
+  each(currentTasks, function (task) {
+    task();
+  });
+}
+
 function addTask(name, task) {
   if (!nextTasks.length) {
-    nextTick$1(function () {
-      var currentTasks = nextTasks;
-      nextTasks = [];
-      each(currentTasks, function (task) {
-        task();
-      });
-    });
+    nextTick$1(runTasks);
   }
   array$1[name](nextTasks, task);
 }
@@ -1355,7 +1357,7 @@ function bindDirective(vnode, key) {
   var $component = el.$component;
 
   if (component && object($component)) {
-    if (has$1($component, 'queue') && !has$1($component, 'set')) {
+    if ($component.queue && !$component.set) {
       $component = $component.queue;
     }
     options.component = $component;
@@ -1427,8 +1429,8 @@ function destroyDirectives(vnode) {
   var unbinds = vnode.unbinds;
 
   if (unbinds) {
-    each$1(unbinds, function (destroy) {
-      destroy();
+    each$1(unbinds, function (unbind) {
+      unbind();
     });
   }
 }
@@ -1457,7 +1459,7 @@ function createComponent(vnode) {
 
   instance.component(tag, function (options) {
     if (!options) {
-      fatal('Component "' + tag + '" is not found.');
+      fatal('"' + tag + '" component is not found.');
     }
     var _el = el,
         $component = _el.$component,
@@ -1485,9 +1487,10 @@ function createComponent(vnode) {
 function updateComponent(vnode) {
   var el = vnode.el,
       attrs = vnode.attrs,
+      component = vnode.component,
       $component = el.$component;
 
-  if (object($component)) {
+  if (component && $component) {
     if ($component.set) {
       $component.set(attrs, TRUE);
     } else {
@@ -1498,10 +1501,15 @@ function updateComponent(vnode) {
 
 function destroyComponent(vnode) {
   var el = vnode.el,
+      component = vnode.component,
       $component = el.$component;
-  if ($component) {
+  // 不加 component 会产生递归
+  // 因为组件元素既是父组件中的一个子元素，也是组件自己的根元素
+  // 因此该元素会产生两个 vnode
+
+  if (component && $component) {
     if ($component.destroy) {
-      $component.destroy(TRUE);
+      $component.destroy();
     }
     el.$component = NULL;
   }
@@ -1518,14 +1526,13 @@ var TAG_COMMENT = '!';
 var HOOK_CREATE = 'create';
 var HOOK_UPDATE = 'update';
 var HOOK_POSTPATCH = 'postpatch';
-var HOOK_REMOVE = 'remove';
 var HOOK_DESTROY = 'destroy';
 
 var modules = [component, attrs, props, directives];
 
 var moduleEmitter = new Emitter();
 
-each([HOOK_CREATE, HOOK_UPDATE, HOOK_POSTPATCH, HOOK_REMOVE, HOOK_DESTROY], function (hook) {
+each([HOOK_CREATE, HOOK_UPDATE, HOOK_POSTPATCH, HOOK_DESTROY], function (hook) {
   each(modules, function (item) {
     moduleEmitter.on(hook, item[hook]);
   });
@@ -1639,12 +1646,14 @@ function init(api) {
 
   var removeVnode = function (parentNode, vnode) {
     var tag = vnode.tag,
-        el = vnode.el;
+        el = vnode.el,
+        component$$1 = vnode.component;
 
     if (tag) {
       destroyVnode(vnode);
-      api.remove(parentNode, el);
-      moduleEmitter.fire(HOOK_REMOVE, vnode, api);
+      if (!component$$1) {
+        api.remove(parentNode, el);
+      }
     } else if (el) {
       api.remove(parentNode, el);
     }
@@ -6120,7 +6129,7 @@ var Yox = function () {
       remove($parent.$children, instance);
     }
 
-    if ($node && arguments[0] !== TRUE) {
+    if ($node) {
       patch($node, { text: CHAR_BLANK });
     }
 
@@ -6271,7 +6280,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.46.7';
+Yox.version = '0.46.8';
 
 /**
  * 工具，便于扩展、插件使用
