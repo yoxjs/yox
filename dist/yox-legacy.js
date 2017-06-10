@@ -1397,7 +1397,7 @@ function updateDirectives(vnode, oldVnode) {
     var unbind;
     if (has$1(oldDirectives, key)) {
       var oldDirective = oldDirectives[key];
-      if (directive.value !== oldDirective.value || directive.keypath !== oldDirective.keypath || directive.context.get(RAW_THIS).value !== oldDirective.context.get(RAW_THIS).value) {
+      if (directive.value !== oldDirective.value || directive.keypath !== oldDirective.keypath || directive.context.data !== oldDirective.context.data) {
         unbindDirective(oldVnode, key);
         unbind = bindDirective(vnode, key);
       }
@@ -1416,8 +1416,12 @@ function updateDirectives(vnode, oldVnode) {
   });
 
   var oldUnbinds = oldVnode && oldVnode.unbinds;
-  if (oldUnbinds && newUnbinds) {
-    extend(newUnbinds, oldUnbinds);
+  if (oldUnbinds) {
+    if (newUnbinds) {
+      extend(newUnbinds, oldUnbinds);
+    } else {
+      newUnbinds = oldUnbinds;
+    }
   }
 
   if (newUnbinds) {
@@ -3072,25 +3076,29 @@ function compile(content) {
           }
         }
       } else if (type === ATTRIBUTE) {
-        // <div key="xx">
-        // <div slot="xx">
-        // <slot name="xx">
-        // 把 key 从属性中提出来，减少渲染时的遍历
+        // 把数据从属性中提出来，减少渲染时的遍历
         var element = last(htmlStack),
             prop;
+        // <div key="xx">
         if (name === KEYWORD_UNIQUE) {
           prop = KEYWORD_UNIQUE;
-        } else if (name === KEYWORD_SLOT) {
-          prop = KEYWORD_SLOT;
-        } else if (name === 'name' && element.name === KEYWORD_SLOT) {
-          prop = KEYWORD_SLOT;
         }
+        // <div slot="xx">
+        else if (name === KEYWORD_SLOT) {
+            prop = KEYWORD_SLOT;
+          }
+          // <slot name="xx">
+          else if (element.name === KEYWORD_SLOT && name === 'name') {
+              prop = KEYWORD_SLOT;
+            }
         if (prop) {
           remove(element.children, target);
           if (!element.children.length) {
             delete element.children;
           }
           if (singleChild) {
+            // 这些特殊属性不支持插值
+            // 提升下性能
             if (singleChild.type === TEXT) {
               element[prop] = singleChild.text;
             } else if (singleChild.type === EXPRESSION) {
@@ -3534,7 +3542,7 @@ function execute$1(node, getter, context) {
 var Context = function () {
 
   /**
-   * @param {Object} data
+   * @param {Object} context
    * @param {string} keypath
    * @param {?Context} parent
    */
@@ -3543,11 +3551,11 @@ var Context = function () {
 
 
     var instance = this,
-        context = {};
+        temp = {};
+    temp[SPECIAL_KEYPATH] = keypath;
 
-    context[RAW_THIS] = data;
-    context[SPECIAL_KEYPATH] = keypath;
-    instance.data = context;
+    instance.data = data;
+    instance.temp = temp;
     instance.cache = {};
 
     if (parent) {
@@ -3564,16 +3572,18 @@ var Context = function () {
   };
 
   Context.prototype.set = function (key, value) {
-    var data = this.data,
+    var temp = this.temp,
         cache = this.cache;
 
     var _formatKeypath = formatKeypath(key),
         keypath = _formatKeypath.keypath;
 
-    if (has$1(cache, keypath)) {
-      delete cache[keypath];
+    if (keypath) {
+      if (has$1(cache, keypath)) {
+        delete cache[keypath];
+      }
+      temp[keypath] = value;
     }
-    data[keypath || RAW_THIS] = value;
   };
 
   Context.prototype.get = function (key) {
@@ -3581,24 +3591,38 @@ var Context = function () {
     var instance = this;
     var _instance = instance,
         data = _instance.data,
+        temp = _instance.temp,
         cache = _instance.cache;
 
     var _formatKeypath2 = formatKeypath(key),
         keypath = _formatKeypath2.keypath,
         lookup = _formatKeypath2.lookup;
 
-    var getValue = function (data, keypath) {
-      return exists(data, keypath) ? { value: data[keypath] } : get$1(data[RAW_THIS], keypath);
-    };
-
     if (!has$1(cache, keypath)) {
 
+      var result;
+
       if (keypath) {
-        var result;
+
+        var getValue = function (instance, keypath) {
+          var data = instance.data,
+              temp = instance.temp,
+              value;
+
+          if (exists(temp, keypath)) {
+            value = {
+              temp: TRUE,
+              value: temp[keypath]
+            };
+          } else {
+            value = get$1(data, keypath);
+          }
+          return value;
+        };
 
         if (lookup) {
           while (instance) {
-            result = getValue(instance.data, keypath);
+            result = getValue(instance, keypath);
             if (result) {
               break;
             } else {
@@ -3606,20 +3630,17 @@ var Context = function () {
             }
           }
         } else {
-          result = getValue(data, keypath);
-        }
-
-        if (result) {
-          cache[keypath] = {
-            keypath: join(instance.data[SPECIAL_KEYPATH], keypath),
-            value: result.value
-          };
+          result = getValue(instance, keypath);
         }
       } else {
-        cache[keypath] = {
-          keypath: data[SPECIAL_KEYPATH],
-          value: data[RAW_THIS]
+        result = {
+          value: data
         };
+      }
+
+      if (result) {
+        result.keypath = join(instance.temp[SPECIAL_KEYPATH], keypath);
+        cache[keypath] = result;
       }
     }
 
@@ -3628,10 +3649,8 @@ var Context = function () {
       return cache;
     }
 
-    keypath = join(data[SPECIAL_KEYPATH], keypath);
-
     return {
-      keypath: keypath
+      keypath: join(temp[SPECIAL_KEYPATH], keypath)
     };
   };
 
@@ -3648,6 +3667,8 @@ function formatKeypath(keypath) {
   }
   return { keypath: keypath, lookup: lookup };
 }
+
+var VALUE = 'value';
 
 /**
  * 渲染抽象语法树
@@ -3698,7 +3719,7 @@ function render(ast, data, instance) {
 
         children.push(child);
       } else {
-        if (has$1(parent, 'value')) {
+        if (has$1(parent, VALUE)) {
           parent.value += child;
         } else {
           parent.value = child;
@@ -3725,9 +3746,9 @@ function render(ast, data, instance) {
 
   var getValue = function (source, output) {
     var value;
-    if (has$1(output, 'value')) {
+    if (has$1(output, VALUE)) {
       value = output.value;
-    } else if (has$1(source, 'value')) {
+    } else if (has$1(source, VALUE)) {
       value = source.value;
     } else if (source.expr) {
       value = executeExpr(source.expr, source.binding || source.type === DIRECTIVE);
@@ -3783,9 +3804,10 @@ function render(ast, data, instance) {
     return execute$1(expr, function (key) {
       var _context$get = context.get(key),
           keypath = _context$get.keypath,
-          value = _context$get.value;
+          value = _context$get.value,
+          temp = _context$get.temp;
 
-      if (!filter && !numeric(keypath) && !func(value) && key !== SPECIAL_EVENT && key !== SPECIAL_KEYPATH) {
+      if (!filter && !temp) {
         deps[keypath] = value;
         if (cacheDeps) {
           cacheDeps[key] = value;
@@ -3817,7 +3839,7 @@ function render(ast, data, instance) {
       }
       return FALSE;
     }
-    fatal('Partial "' + name + '" is not found.');
+    fatal('"' + name + '" partial is not found.');
   };
 
   // 条件判断失败就没必要往下走了
@@ -4050,7 +4072,7 @@ function render(ast, data, instance) {
         }
       });
     } else {
-      fatal('Spread "' + expr.raw + '" expected to be an object.');
+      fatal('"' + expr.raw + '" spread expected to be an object.');
     }
   };
 
@@ -6280,7 +6302,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.46.8';
+Yox.version = '0.46.9';
 
 /**
  * 工具，便于扩展、插件使用

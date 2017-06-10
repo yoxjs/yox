@@ -134,6 +134,20 @@
             </p>
 
             <h1>
+                循环对象
+            </h1>
+
+            <p>
+                {{#each users:index}}
+                    {{#each this:key}}
+                        <div>
+                            {{index}}-{{key}}: {{this}}
+                        </div>
+                    {{/each}}
+                {{/each}}
+            </p>
+
+            <h1>
                 子模板
             </h1>
 
