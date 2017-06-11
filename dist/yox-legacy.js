@@ -3197,7 +3197,7 @@ function compile(content) {
     // 上一个 if 节点没有 else 分支
     // 在渲染时，如果这种 if 分支为 false，需要加上注释节点
     if (prevNode && ifTypes[prevNode.type] && !htmlStack.length) {
-      prevNode.needFaker = TRUE;
+      prevNode.stump = createCommentVnode();
     }
 
     if (ifTypes[type]) {
@@ -3706,8 +3706,7 @@ function render(ast, data, instance) {
             prop = 'text';
 
         // 文本节点需要拼接
-        // <div>123{{name}}456</div>
-        // <div>123{{user}}456</div>
+        // <div>123{{name}}456{{age}}789</div>
         if (primitive(child) || !has$1(child, prop)) {
           if (object(prevChild) && string(prevChild[prop])) {
             prevChild[prop] += toString(child);
@@ -3847,28 +3846,29 @@ function render(ast, data, instance) {
   // 就需要用注释节点来占位，否则 virtual dom 无法正常工作
   enter[IF$1] = enter[ELSE_IF$1] = function (source) {
     var expr = source.expr,
+        children = source.children,
         then = source.then,
-        needFaker = source.needFaker;
+        stump = source.stump;
 
-    if (!executeExpr(expr)) {
+    if (executeExpr(expr)) {
+      pushStack({
+        children: children
+      });
+    } else {
       if (then) {
         pushStack(then);
-      } else if (needFaker) {
-        addChild(last(htmlStack), createCommentVnode());
+      } else if (stump) {
+        addChild(last(htmlStack), stump);
       }
-      return FALSE;
     }
+    return FALSE;
   };
 
-  leave[IF$1] = leave[ELSE_IF$1] = leave[ELSE$1] = function (source, output) {
-    var children = output.children;
-
-    if (children) {
-      var htmlNode = last(htmlStack);
-      each(children, function (child) {
-        addChild(htmlNode, child);
-      });
-    }
+  enter[ELSE$1] = function (source) {
+    pushStack({
+      children: source.children
+    });
+    return FALSE;
   };
 
   enter[EACH$1] = function (source) {
@@ -6302,7 +6302,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.46.9';
+Yox.version = '0.47.0';
 
 /**
  * 工具，便于扩展、插件使用
