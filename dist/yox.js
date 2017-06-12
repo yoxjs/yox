@@ -5878,7 +5878,7 @@ var Yox = function () {
 
     // 跟 nextTask 保持一个节奏
     // 这样可以预留一些优化的余地
-    prepend(function () {
+    append(function () {
       if (instance.$node) {
         execute($options[afterHook], instance);
       }
@@ -6144,7 +6144,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.47.2';
+Yox.version = '0.47.3';
 
 /**
  * 工具，便于扩展、插件使用
