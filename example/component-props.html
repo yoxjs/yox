@@ -25,7 +25,8 @@
     <script id="template2" type="plain/text">
       <div id="root">
           <input ref="input" model="title" style="font-size: 18px;color: red;">
-          <Custom ref="child" name="123{{name}}" age="{{user.age}}{{#if user.age}}1{{/if}}" user="{{user}}" {{...info}} />
+          <Custom1 ref="child" name="123{{name}}" age="{{user.age}}{{#if user.age}}1{{/if}}" user="{{user}}" {{...info}} />
+          <Custom2 user="{{user}}" {{...user}} />
       </div>
     </script>
     <script src="../dist/yox.js"></script>
@@ -79,13 +80,19 @@
             },
             template: '#template2',
             components: {
-                Custom: function (callback) {
+                Custom1: function (callback) {
                     setTimeout(
                         function () {
                             callback(Custom)
                         },
-                        4000
+                        6000
                     );
+                },
+                Custom2: {
+                    template: '<Custom {{...this}} />',
+                    components: {
+                        Custom: Custom,
+                    }
                 }
             },
             events: {

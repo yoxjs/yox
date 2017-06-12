@@ -1273,8 +1273,98 @@ var props = {
   postpatch: createProps
 };
 
+function getComponentByTag(tag) {
+  return 'component' + tag;
+}
+
+function createComponent(vnode) {
+  var el = vnode.el,
+      tag = vnode.tag,
+      component = vnode.component,
+      instance = vnode.instance;
+
+  if (!component) {
+    return;
+  }
+
+  var key = getComponentByTag(tag);
+  el[key] = {
+    queue: [],
+    vnode: vnode
+  };
+
+  instance.component(tag, function (options) {
+    if (!options) {
+      fatal('"' + tag + '" component is not found.');
+    }
+    component = el[key];
+    if (component) {
+      var _component = component,
+          queue = _component.queue,
+          _vnode = _component.vnode;
+
+      if (array(queue)) {
+        component = instance.create(options, {
+          el: el,
+          props: _vnode.attrs,
+          replace: TRUE
+        });
+
+        el = _vnode.el = component.$el;
+        el[key] = component;
+
+        each(queue, function (callback) {
+          callback(component);
+        });
+      }
+    }
+  });
+}
+
+function updateComponent(vnode) {
+  var component = vnode.component;
+
+  if (component) {
+    component = vnode.el[getComponentByTag(vnode.tag)];
+    if (component) {
+      if (component.set) {
+        component.set(vnode.attrs, TRUE);
+      } else {
+        component.vnode = vnode;
+      }
+    }
+  }
+}
+
+function destroyComponent(vnode) {
+  var el = vnode.el,
+      component = vnode.component;
+  // 不加 component 会产生递归
+  // 因为组件元素既是父组件中的一个子元素，也是组件自己的根元素
+  // 因此该元素会产生两个 vnode
+
+  if (component) {
+    var key = getComponentByTag(vnode.tag);
+    component = el[key];
+    if (component) {
+      if (component.destroy) {
+        component.destroy();
+      }
+      el[key] = NULL;
+    }
+  }
+}
+
+var componentModule = {
+  create: createComponent,
+  update: updateComponent,
+  destroy: destroyComponent,
+  getComponentByTag: getComponentByTag
+};
+
 function bindDirective(vnode, key) {
   var el = vnode.el,
+      tag = vnode.tag,
       attrs = vnode.attrs,
       directives = vnode.directives,
       component = vnode.component,
@@ -1290,17 +1380,19 @@ function bindDirective(vnode, key) {
     attrs: attrs || {}
   };
 
-  var $component = el.$component;
-
-  if (component && object($component)) {
-    if ($component.queue && !$component.set) {
-      $component = $component.queue;
+  if (component) {
+    component = el[componentModule.getComponentByTag(tag)];
+    if (component) {
+      if (component.queue && !component.set) {
+        component = component.queue;
+      }
+      options.component = component;
     }
-    options.component = $component;
   }
 
   var bind = instance.directive(node.name),
       unbind = bind && bind(options);
+
   if (func(unbind)) {
     return unbind;
   }
@@ -1381,86 +1473,6 @@ var directives = {
   destroy: destroyDirectives
 };
 
-function createComponent(vnode) {
-  var el = vnode.el,
-      tag = vnode.tag,
-      attrs = vnode.attrs,
-      component = vnode.component,
-      instance = vnode.instance;
-
-  if (!component) {
-    return;
-  }
-
-  el.$component = {
-    queue: [],
-    attrs: attrs
-  };
-
-  instance.component(tag, function (options) {
-    if (!options) {
-      fatal('"' + tag + '" component is not found.');
-    }
-    var _el = el,
-        $component = _el.$component,
-        queue = $component.queue,
-        attrs = $component.attrs;
-
-    if ($component && array(queue)) {
-
-      component = instance.create(options, {
-        el: el,
-        props: attrs,
-        replace: TRUE
-      });
-
-      el = vnode.el = component.$el;
-      el.$component = component;
-
-      each(queue, function (callback) {
-        callback(component);
-      });
-    }
-  });
-}
-
-function updateComponent(vnode) {
-  var el = vnode.el,
-      attrs = vnode.attrs,
-      component = vnode.component,
-      $component = el.$component;
-
-  if (component && $component) {
-    if ($component.set) {
-      $component.set(attrs, TRUE);
-    } else {
-      $component.attrs = attrs;
-    }
-  }
-}
-
-function destroyComponent(vnode) {
-  var el = vnode.el,
-      component = vnode.component,
-      $component = el.$component;
-  // 不加 component 会产生递归
-  // 因为组件元素既是父组件中的一个子元素，也是组件自己的根元素
-  // 因此该元素会产生两个 vnode
-
-  if (component && $component) {
-    if ($component.destroy) {
-      $component.destroy();
-    }
-    el.$component = NULL;
-  }
-}
-
-var component = {
-  create: createComponent,
-  update: updateComponent,
-  destroy: destroyComponent
-};
-
 var TAG_COMMENT = '!';
 
 var HOOK_CREATE = 'create';
@@ -1468,7 +1480,7 @@ var HOOK_UPDATE = 'update';
 var HOOK_POSTPATCH = 'postpatch';
 var HOOK_DESTROY = 'destroy';
 
-var modules = [component, attrs, props, directives];
+var modules = [componentModule, attrs, props, directives];
 
 var moduleEmitter = new Emitter();
 
@@ -1587,11 +1599,11 @@ function init(api) {
   var removeVnode = function (parentNode, vnode) {
     var tag = vnode.tag,
         el = vnode.el,
-        component$$1 = vnode.component;
+        component = vnode.component;
 
     if (tag) {
       destroyVnode(vnode);
-      if (!component$$1) {
+      if (!component) {
         api.remove(parentNode, el);
       }
     } else if (el) {
@@ -2875,7 +2887,7 @@ var openingTagPattern = /<(\/)?([a-z][-a-z0-9]*)/i;
 var closingTagPattern = /^\s*(\/)?>/;
 var attributePattern = /^\s*([-:\w]+)(?:=(['"]))?/;
 var componentNamePattern = /[-A-Z]/;
-var selfClosingTagNamePattern = /source|param|input|img|br|hr/;
+var selfClosingTagNamePattern = /area|base|embed|track|source|param|input|col|img|br|hr/;
 
 // 缓存编译结果
 var compileCache = {};
@@ -6132,7 +6144,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.47.0';
+Yox.version = '0.47.1';
 
 /**
  * 工具，便于扩展、插件使用
