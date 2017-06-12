@@ -78,6 +78,8 @@ if (!Function.prototype.bind) {
 
 
 
+
+
 var classCallCheck = function (instance, Constructor) {
   if (!(instance instanceof Constructor)) {
     throw new Error("Cannot call a class as a function");
@@ -3207,7 +3209,7 @@ function compile(content) {
     // 上一个 if 节点没有 else 分支
     // 在渲染时，如果这种 if 分支为 false，需要加上注释节点
     if (prevNode && ifTypes[prevNode.type] && !htmlStack.length) {
-      prevNode.stump = createCommentVnode();
+      prevNode.stump = TRUE;
     }
 
     if (ifTypes[type]) {
@@ -3868,7 +3870,7 @@ function render(ast, data, instance) {
       if (then) {
         pushStack(then);
       } else if (stump) {
-        addChild(last(htmlStack), stump);
+        addChild(last(htmlStack), createCommentVnode());
       }
     }
     return FALSE;
@@ -6312,7 +6314,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.47.1';
+Yox.version = '0.47.2';
 
 /**
  * 工具，便于扩展、插件使用
