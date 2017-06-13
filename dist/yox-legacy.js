@@ -5472,7 +5472,8 @@ var selectControl = {
     var options = el.options,
         selectedIndex = el.selectedIndex;
 
-    if (value !== options[selectedIndex].value) {
+    var selectedOption = options[selectedIndex];
+    if (selectedOption && value !== selectedOption.value) {
       each(options, function (option, index) {
         if (option.value === value) {
           el.selectedIndex = index;
@@ -6314,7 +6315,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.47.3';
+Yox.version = '0.47.4';
 
 /**
  * 工具，便于扩展、插件使用

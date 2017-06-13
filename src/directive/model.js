@@ -31,7 +31,8 @@ const selectControl = {
   set(el, keypath, instance) {
     let value = toString(instance.get(keypath))
     let { options, selectedIndex } = el
-    if (value !== options[ selectedIndex ].value) {
+    let selectedOption = options[ selectedIndex ]
+    if (selectedOption && value !== selectedOption.value) {
       array.each(
         options,
         function (option, index) {
