@@ -19,5 +19,5 @@ export default {
     }),
     commonjs()
   ],
-  dest: 'dist/yox.js'
+  dest: 'dist/yox-legacy.js'
 }

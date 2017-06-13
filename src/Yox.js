@@ -127,7 +127,8 @@ export default class Yox {
     }
 
     // 监听各种事件
-    instance.$emitter = new Emitter()
+    // 支持命名空间
+    instance.$emitter = new Emitter(env.TRUE)
 
 
 
@@ -708,7 +709,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.47.6'
+Yox.version = '0.47.7'
 
 /**
  * 工具，便于扩展、插件使用

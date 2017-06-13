@@ -947,19 +947,27 @@ var object$1 = Object.freeze({
 });
 
 var Emitter = function () {
-  function Emitter() {
+
+  /**
+   *
+   * @param {boolean} namespace 是否需要命名空间
+   */
+  function Emitter(namespace) {
     classCallCheck(this, Emitter);
 
+    this.namespace = namespace;
     this.listeners = {};
   }
 
   Emitter.prototype.fire = function (type, data, context) {
-    var _parseType = parseType(type),
+    var namespace = this.namespace,
+        listeners = this.listeners;
+
+    var _parseType = parseType(type, namespace),
         name = _parseType.name,
         space = _parseType.space;
 
     var isComplete = TRUE,
-        listeners = this.listeners,
         list = listeners[name];
     if (list) {
 
@@ -970,7 +978,8 @@ var Emitter = function () {
           result;
 
       while (item = list[++i]) {
-        if (space && space !== item.space) {
+
+        if (space && item.space && space !== item.space) {
           continue;
         }
 
@@ -1011,10 +1020,11 @@ var Emitter = function () {
   };
 
   Emitter.prototype.has = function (type, listener) {
-    var _parseType2 = parseType(type),
+    var namespace = this.namespace,
+        listeners = this.listeners,
+        _parseType2 = parseType(type, namespace),
         name = _parseType2.name,
         space = _parseType2.space,
-        listeners = this.listeners,
         result = TRUE;
 
     var each$$1 = function (list) {
@@ -1051,7 +1061,7 @@ extend(Emitter.prototype, {
     if (type == NULL) {
       instance.listeners = {};
     } else {
-      var _parseType3 = parseType(type),
+      var _parseType3 = parseType(type, instance.namespace),
           name = _parseType3.name,
           space = _parseType3.space;
 
@@ -1082,7 +1092,8 @@ extend(Emitter.prototype, {
 
 function on(data) {
   return function (type, listener) {
-    var listeners = this.listeners;
+    var namespace = this.namespace,
+        listeners = this.listeners;
 
 
     var addListener = function (item, type) {
@@ -1094,7 +1105,7 @@ function on(data) {
           extend(item, data);
         }
 
-        var _parseType4 = parseType(type),
+        var _parseType4 = parseType(type, namespace),
             name = _parseType4.name,
             space = _parseType4.space;
 
@@ -1111,19 +1122,19 @@ function on(data) {
   };
 }
 
-function parseType(type) {
-  var index = indexOf$1(type, CHAR_DOT);
-  if (index >= 0) {
-    return {
-      name: slice(type, 0, index),
-      space: slice(type, index + 1)
-    };
-  } else {
-    return {
-      name: type,
-      space: CHAR_BLANK
-    };
+function parseType(type, namespace) {
+  var result = {
+    name: type,
+    space: CHAR_BLANK
+  };
+  if (namespace) {
+    var index = indexOf$1(type, CHAR_DOT);
+    if (index >= 0) {
+      result.name = slice(type, 0, index);
+      result.space = slice(type, index + 1);
+    }
   }
+  return result;
 }
 
 var toString = function (str) {
@@ -5748,7 +5759,8 @@ var Yox = function () {
     }
 
     // 监听各种事件
-    instance.$emitter = new Emitter();
+    // 支持命名空间
+    instance.$emitter = new Emitter(TRUE);
 
     execute(options[AFTER_CREATE], instance);
 
@@ -6345,7 +6357,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.47.6';
+Yox.version = '0.47.7';
 
 /**
  * 工具，便于扩展、插件使用
