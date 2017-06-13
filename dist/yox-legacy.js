@@ -404,10 +404,7 @@ function each(array$$1, callback, reversed) {
  * @return {Array}
  */
 function merge(array1, array2) {
-  var result = [];
-  push(result, array1);
-  push(result, array2);
-  return result;
+  return array1.concat(array2);
 }
 
 /**
@@ -957,30 +954,27 @@ var Emitter = function () {
   }
 
   Emitter.prototype.fire = function (type, data, context) {
+    var _parseType = parseType(type),
+        name = _parseType.name,
+        space = _parseType.space;
 
     var isComplete = TRUE,
         listeners = this.listeners,
-        list = listeners[type];
+        list = listeners[name];
     if (list) {
 
-      // 简单支持一下 jquery 的事件命名空间，即 type.namespace
-      // 不支持 a.b.namespace 这种多个 . 的情况
-      var event = data,
-          namespace = type.split(CHAR_DOT)[1];
-      if (array(data)) {
-        event = data[0];
-      }
+      var event = array(data) ? data[0] : data,
+          isEvent = Event.is(event),
+          i = -1,
+          item,
+          result;
 
-      var isEvent = Event.is(event),
-          offQueue;
-
-      each(list, function (item, index) {
-
-        if (namespace && item.namespace && namespace !== item.namespace) {
-          return;
+      while (item = list[++i]) {
+        if (space && item.space && space !== item.space) {
+          continue;
         }
 
-        var result = execute(item.func, isDef(context) ? context : item.context, data);
+        result = execute(item.func, isDef(context) ? context : item.context, data);
 
         // 执行次数
         if (item.count > 0) {
@@ -991,7 +985,7 @@ var Emitter = function () {
 
         // 注册的 listener 可以指定最大执行次数
         if (item.count === item.max) {
-          push(offQueue || (offQueue = []), index);
+          list.splice(i--, 1);
         }
 
         // 如果没有返回 false，而是调用了 event.stop 也算是返回 false
@@ -1006,15 +1000,10 @@ var Emitter = function () {
         if (result === FALSE) {
           return isComplete = FALSE;
         }
-      });
+      }
 
-      if (offQueue) {
-        each(offQueue, function (index) {
-          list.splice(index, 1);
-        }, TRUE);
-        if (!list.length) {
-          delete listeners[type];
-        }
+      if (!list.length) {
+        delete listeners[name];
       }
     }
 
@@ -1084,7 +1073,13 @@ function on(data) {
         if (data) {
           extend(item, data);
         }
-        push(listeners[type] || (listeners[type] = []), item);
+
+        var _parseType2 = parseType(type),
+            name = _parseType2.name,
+            space = _parseType2.space;
+
+        item.space = space;
+        push(listeners[name] || (listeners[name] = []), item);
       }
     };
 
@@ -1094,6 +1089,21 @@ function on(data) {
       addListener(listener, type);
     }
   };
+}
+
+function parseType(type) {
+  var index = indexOf$1(type, CHAR_DOT);
+  if (index > 0) {
+    return {
+      name: slice(type, 0, index),
+      space: slice(type, index + 1)
+    };
+  } else {
+    return {
+      name: type,
+      space: CHAR_BLANK
+    };
+  }
 }
 
 var toString = function (str) {
@@ -6315,7 +6325,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.47.4';
+Yox.version = '0.47.5';
 
 /**
  * 工具，便于扩展、插件使用
