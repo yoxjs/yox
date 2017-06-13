@@ -970,7 +970,7 @@ var Emitter = function () {
           result;
 
       while (item = list[++i]) {
-        if (space && item.space && space !== item.space) {
+        if (space && space !== item.space) {
           continue;
         }
 
@@ -1011,19 +1011,31 @@ var Emitter = function () {
   };
 
   Emitter.prototype.has = function (type, listener) {
+    var _parseType2 = parseType(type),
+        name = _parseType2.name,
+        space = _parseType2.space,
+        listeners = this.listeners,
+        result = TRUE;
 
-    var list = this.listeners[type];
-    if (listener == NULL) {
-      return !falsy(list);
-    } else if (list) {
-      var result;
-      each(list, function (item) {
-        if (result = item.func === listener) {
-          return FALSE;
+    var each$$1 = function (list) {
+      each(list, function (item, index) {
+        if ((!space || space === item.space) && (!listener || listener === item.func)) {
+          return result = FALSE;
         }
       });
       return result;
+    };
+
+    if (name) {
+      var list = listeners[name];
+      if (list) {
+        each$$1(list);
+      }
+    } else if (space) {
+      each$1(listeners, each$$1);
     }
+
+    return !result;
   };
 
   return Emitter;
@@ -1039,22 +1051,30 @@ extend(Emitter.prototype, {
     if (type == NULL) {
       instance.listeners = {};
     } else {
-      var listeners = instance.listeners;
+      var _parseType3 = parseType(type),
+          name = _parseType3.name,
+          space = _parseType3.space;
 
-      var list = listeners[type];
-      if (list) {
-        if (listener == NULL) {
-          list.length = 0;
-        } else {
-          each(list, function (item, index) {
-            if (item.func === listener) {
-              list.splice(index, 1);
-            }
-          }, TRUE);
-        }
+      var each$$1 = function (list, name) {
+        each(list, function (item, index) {
+          if ((!space || space === item.space) && (!listener || listener === item.func)) {
+            list.splice(index, 1);
+          }
+        }, TRUE);
         if (!list.length) {
-          delete listeners[type];
+          delete _listeners[name];
         }
+      };
+
+      var _listeners = instance.listeners;
+
+      if (name) {
+        var list = _listeners[name];
+        if (list) {
+          each$$1(list, name);
+        }
+      } else if (space) {
+        each$1(_listeners, each$$1);
       }
     }
   }
@@ -1074,9 +1094,9 @@ function on(data) {
           extend(item, data);
         }
 
-        var _parseType2 = parseType(type),
-            name = _parseType2.name,
-            space = _parseType2.space;
+        var _parseType4 = parseType(type),
+            name = _parseType4.name,
+            space = _parseType4.space;
 
         item.space = space;
         push(listeners[name] || (listeners[name] = []), item);
@@ -1093,7 +1113,7 @@ function on(data) {
 
 function parseType(type) {
   var index = indexOf$1(type, CHAR_DOT);
-  if (index > 0) {
+  if (index >= 0) {
     return {
       name: slice(type, 0, index),
       space: slice(type, index + 1)
@@ -6325,7 +6345,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.47.5';
+Yox.version = '0.47.6';
 
 /**
  * 工具，便于扩展、插件使用
