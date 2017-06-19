@@ -131,9 +131,6 @@ export default class Yox {
     instance.$emitter = new Emitter(env.TRUE)
 
 
-
-    execute(options[ lifecycle.AFTER_CREATE ], instance)
-
     let templateError = '"template" option expected to have just one root element.'
 
     // 检查 template
@@ -189,6 +186,8 @@ export default class Yox {
     directives && instance.directive(directives)
     partials && instance.partial(partials)
     filters && instance.filter(filters)
+
+    execute(options[ lifecycle.AFTER_CREATE ], instance)
 
     if (template) {
       // 确保组件根元素有且只有一个
@@ -709,7 +708,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.47.8'
+Yox.version = '0.47.9'
 
 /**
  * 工具，便于扩展、插件使用

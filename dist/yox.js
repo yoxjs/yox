@@ -4818,7 +4818,7 @@ var selector = /^[#.][-\w+]+$/;
 var BEFORE_CREATE = 'beforeCreate';
 
 /**
- * 绑定事件和数据监听之后触发
+ * 初始化结束，渲染模板之前触发
  *
  * @type {string}
  */
@@ -5076,7 +5076,7 @@ var COMPOSITION_END = 'compositionend';
 var api = copy(domApi);
 
 // import * as oldApi from './oldApi'
-
+//
 // if (!env.doc.addEventListener) {
 //   object.extend(api, oldApi)
 // }
@@ -5588,8 +5588,6 @@ var Yox = function () {
     // 支持命名空间
     instance.$emitter = new Emitter(TRUE);
 
-    execute(options[AFTER_CREATE], instance);
-
     var templateError = '"template" option expected to have just one root element.';
 
     // 检查 template
@@ -5638,6 +5636,8 @@ var Yox = function () {
     directives && instance.directive(directives);
     partials && instance.partial(partials);
     filters && instance.filter(filters);
+
+    execute(options[AFTER_CREATE], instance);
 
     if (template) {
       // 确保组件根元素有且只有一个
@@ -6183,7 +6183,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.47.8';
+Yox.version = '0.47.9';
 
 /**
  * 工具，便于扩展、插件使用
