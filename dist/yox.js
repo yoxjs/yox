@@ -4282,7 +4282,6 @@ var Observer = function () {
         data = instance.data,
         cache = instance.cache,
         emitter = instance.emitter,
-        differences = instance.differences,
         computedGetters = instance.computedGetters,
         computedSetters = instance.computedSetters,
         watchKeypaths = instance.watchKeypaths,
@@ -4420,10 +4419,7 @@ var Observer = function () {
           push(result, keypath);
         }
 
-        if (!differences) {
-          differences = instance.differences = {};
-        }
-
+        var differences = instance.differences || (instance.differences = {});
         differences[keypath] = task;
       }
     });
@@ -6187,7 +6183,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.47.7';
+Yox.version = '0.47.8';
 
 /**
  * 工具，便于扩展、插件使用
