@@ -2525,8 +2525,8 @@ var ELSE_IF = 'else if';
 var EACH = '#each';
 var PARTIAL = '#partial';
 var IMPORT = '>';
-var COMMENT = '! ';
 var SPREAD = '...';
+var COMMENT = /^!\s/;
 
 var SPECIAL_EVENT = '$event';
 var SPECIAL_KEYPATH = '$keypath';
@@ -3328,7 +3328,7 @@ function compile(content) {
       return source ? new Spread(compile$1(source)) : throwError('invalid spread: ' + all);
     }
   }, function (source, all) {
-    if (!startsWith(source, COMMENT)) {
+    if (!COMMENT.test(source)) {
       source = trim(source);
       return source ? new Expression(compile$1(source), !endsWith(all, '}}}')) : throwError('invalid expression: ' + all);
     }
@@ -3528,6 +3528,12 @@ function execute$1(node, getter, context) {
   return executor[node.type](node, getter, context);
 }
 
+var isNative = function (fn) {
+  if (func(fn)) {
+    return has$2(fn.toString(), '[native code]');
+  }
+};
+
 var Context = function () {
 
   /**
@@ -3596,17 +3602,20 @@ var Context = function () {
         var getValue = function (instance, keypath) {
           var data = instance.data,
               temp = instance.temp,
-              value;
+              result;
 
           if (exists(temp, keypath)) {
-            value = {
+            result = {
               temp: TRUE,
               value: temp[keypath]
             };
           } else {
-            value = get$1(data, keypath);
+            result = get$1(data, keypath);
+            if (result && isNative(result.value)) {
+              warn('find a native function by ' + keypath + '.');
+            }
           }
-          return value;
+          return result;
         };
 
         if (lookup) {
@@ -6183,7 +6192,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.47.9';
+Yox.version = '0.48.0';
 
 /**
  * 工具，便于扩展、插件使用
