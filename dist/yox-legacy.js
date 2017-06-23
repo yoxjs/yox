@@ -3440,6 +3440,12 @@ function compile(content) {
 
   var str = content,
       match;
+
+  // 干掉 html 注释
+  str = str.replace(/<!--[\s\S]*?-->/g, function () {
+    return CHAR_BLANK;
+  });
+
   while (str) {
     match = str.match(delimiterPattern);
     if (match) {
@@ -6362,7 +6368,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.48.0';
+Yox.version = '0.48.1';
 
 /**
  * 工具，便于扩展、插件使用
