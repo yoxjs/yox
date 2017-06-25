@@ -1345,9 +1345,17 @@ function createComponent(vnode) {
           _vnode = _component.vnode;
 
       if (array(queue)) {
+        var attrs = _vnode.attrs,
+            children = _vnode.children;
+
+        if (children) {
+          attrs = attrs || {};
+          attrs.$children = children;
+        }
+
         component = instance.create(options, {
           el: el,
-          props: _vnode.attrs,
+          props: attrs,
           replace: TRUE
         });
 
@@ -1363,13 +1371,19 @@ function createComponent(vnode) {
 }
 
 function updateComponent(vnode) {
-  var component = vnode.component;
+  var component = vnode.component,
+      attrs = vnode.attrs,
+      children = vnode.children;
 
   if (component) {
     component = vnode.el[getComponentByTag(vnode.tag)];
     if (component) {
       if (component.set) {
-        component.set(vnode.attrs, TRUE);
+        if (children) {
+          attrs = attrs || {};
+          attrs.$children = children;
+        }
+        component.set(attrs, TRUE);
       } else {
         component.vnode = vnode;
       }
@@ -1398,7 +1412,7 @@ function destroyComponent(vnode) {
 
 var componentModule = {
   create: createComponent,
-  update: updateComponent,
+  postpatch: updateComponent,
   destroy: destroyComponent,
   getComponentByTag: getComponentByTag
 };
@@ -1584,11 +1598,23 @@ function createComponentVnode(tag, attrs$$1, props$$1, directives$$1, children, 
 
 function init(api) {
 
+  var fireHook = function (name, vnode, oldVnode) {
+    if (!vnode[name]) {
+      moduleEmitter.fire(name, [vnode, oldVnode], api);
+      vnode[name] = TRUE;
+    }
+  };
+
   var createElement = function (parentNode, vnode) {
-    var tag = vnode.tag,
+    var el = vnode.el,
+        tag = vnode.tag,
         children = vnode.children,
         text = vnode.text;
 
+
+    if (el) {
+      return el;
+    }
 
     if (falsy$1(tag)) {
       return vnode.el = api.createText(text);
@@ -1598,7 +1624,7 @@ function init(api) {
       return vnode.el = api.createComment(text);
     }
 
-    var el = vnode.el = api.createElement(tag, parentNode);
+    el = vnode.el = api.createElement(tag, parentNode);
 
     if (array(children)) {
       addVnodes(el, children, 0, children.length - 1);
@@ -1606,7 +1632,7 @@ function init(api) {
       api.append(el, api.createText(text));
     }
 
-    moduleEmitter.fire(HOOK_CREATE, vnode, api);
+    fireHook(HOOK_CREATE, vnode);
 
     // 钩子函数可能会替换元素
     return vnode.el;
@@ -1660,7 +1686,7 @@ function init(api) {
         destroyVnode(child);
       });
     }
-    moduleEmitter.fire(HOOK_DESTROY, vnode, api);
+    fireHook(HOOK_DESTROY, vnode);
   };
 
   var replaceVnode = function (parentNode, oldVnode, vnode) {
@@ -1784,8 +1810,7 @@ function init(api) {
       return;
     }
 
-    var args = [vnode, oldVnode];
-    moduleEmitter.fire(HOOK_UPDATE, args, api);
+    fireHook(HOOK_UPDATE, vnode, oldVnode);
 
     var newText = vnode.text;
     var newChildren = vnode.children;
@@ -1821,7 +1846,7 @@ function init(api) {
             }
     }
 
-    moduleEmitter.fire(HOOK_POSTPATCH, args, api);
+    fireHook(HOOK_POSTPATCH, vnode, oldVnode);
   };
 
   return function (oldVnode, vnode) {
@@ -2531,6 +2556,7 @@ var COMMENT = /^!\s/;
 var SPECIAL_EVENT = '$event';
 var SPECIAL_KEYPATH = '$keypath';
 
+
 var DIRECTIVE_CUSTOM_PREFIX = 'o-';
 var DIRECTIVE_EVENT_PREFIX = 'on-';
 
@@ -2541,7 +2567,6 @@ var DIRECTIVE_EVENT = 'event';
 var DIRECTIVE_BINDING = 'binding';
 
 var KEYWORD_UNIQUE = 'key';
-var KEYWORD_SLOT = 'slot';
 
 /**
  * 元素 节点
@@ -3049,7 +3074,7 @@ function compile(content) {
         // 转成 props
         if (children.length - divider === 1) {
           singleChild = last(children);
-          if (singleChild.type === EXPRESSION) {
+          if (singleChild.type === EXPRESSION && singleChild.expr.raw !== SPECIAL_CHILDREN) {
             var props = {};
             if (singleChild.safe === FALSE) {
               props.innerHTML = singleChild.expr;
@@ -3072,14 +3097,6 @@ function compile(content) {
         if (name === KEYWORD_UNIQUE) {
           prop = KEYWORD_UNIQUE;
         }
-        // <div slot="xx">
-        else if (name === KEYWORD_SLOT) {
-            prop = KEYWORD_SLOT;
-          }
-          // <slot name="xx">
-          else if (element.name === KEYWORD_SLOT && name === 'name') {
-              prop = KEYWORD_SLOT;
-            }
         if (prop) {
           remove(element.children, target);
           if (!element.children.length) {
@@ -3672,6 +3689,7 @@ function formatKeypath(keypath) {
   return { keypath: keypath, lookup: lookup };
 }
 
+var TEXT$1 = 'text';
 var VALUE = 'value';
 
 /**
@@ -3706,21 +3724,24 @@ function render(ast, data, instance) {
       if (parent.type === ELEMENT) {
 
         var children = parent.children || (parent.children = []);
-        var prevChild = last(children),
-            prop = 'text';
+        var prevChild = last(children);
 
-        // 文本节点需要拼接
-        // <div>123{{name}}456{{age}}789</div>
-        if (primitive(child) || !has$1(child, prop)) {
-          if (object(prevChild) && string(prevChild[prop])) {
-            prevChild[prop] += toString(child);
+        if (primitive(child)) {
+          if (object(prevChild) && string(prevChild[TEXT$1])) {
+            prevChild[TEXT$1] += toString(child);
             return;
           } else {
-            child = createTextVnode(child);
+            children.push(createTextVnode(child));
           }
+        } else if (array(child)) {
+          each(child, function (item) {
+            if (has$1(item, TEXT$1)) {
+              children.push(item);
+            }
+          });
+        } else if (has$1(child, TEXT$1)) {
+          children.push(child);
         }
-
-        children.push(child);
       } else {
         if (has$1(parent, VALUE)) {
           parent.value += child;
@@ -3929,71 +3950,53 @@ function render(ast, data, instance) {
 
   enter[ELEMENT] = function (source, output) {
     var name = source.name,
-        slot = source.slot,
         key = source.key;
-    // 嵌入 slot
-    // <slot></slot>
 
-    if (name === KEYWORD_SLOT) {}
-    // slot = instance.slot(slot)
-    // if (is.array($slot)) {
-    //   let parentElement = htmlStack[ htmlStack.length - 2 ]
-    //   array.each(
-    //     $slot,
-    //     function (vnode) {
-    //       addChild(parentElement, vnode)
-    //     }
-    //   )
-    // }
-    // return env.FALSE
-
-    // 定义 slot
-    // <div slot="header">
-    else if (slot) {} else if (key) {
-        var trackBy;
-        if (string(key)) {
-          trackBy = key;
-        } else if (object(key)) {
-          trackBy = executeExpr(key);
-        }
-        if (isDef(trackBy)) {
-
-          if (!currentCache) {
-            prevCache = ast.cache || {};
-            currentCache = ast.cache = {};
-          }
-
-          var _cache = prevCache[trackBy];
-
-          if (_cache) {
-            var isSame = _cache.keypath === keypath;
-            if (isSame) {
-              each$1(_cache.deps, function (oldValue, key) {
-                var _context$get2 = context.get(key),
-                    keypath = _context$get2.keypath,
-                    value = _context$get2.value;
-
-                if (value === oldValue) {
-                  deps[keypath] = value;
-                } else {
-                  return isSame = FALSE;
-                }
-              });
-            }
-            if (isSame) {
-              currentCache[trackBy] = _cache;
-              addChild(last(htmlStack), _cache.vnode);
-              return FALSE;
-            }
-          }
-
-          cacheDeps = {};
-          output.key = trackBy;
-          currentCache[trackBy] = {
-            keypath: keypath
-          };
-        }
+    if (key) {
+      var trackBy;
+      if (string(key)) {
+        trackBy = key;
+      } else if (object(key)) {
+        trackBy = executeExpr(key);
       }
+      if (isDef(trackBy)) {
+
+        if (!currentCache) {
+          prevCache = ast.cache || {};
+          currentCache = ast.cache = {};
+        }
+
+        var _cache = prevCache[trackBy];
+
+        if (_cache) {
+          var isSame = _cache.keypath === keypath;
+          if (isSame) {
+            each$1(_cache.deps, function (oldValue, key) {
+              var _context$get2 = context.get(key),
+                  keypath = _context$get2.keypath,
+                  value = _context$get2.value;
+
+              if (value === oldValue) {
+                deps[keypath] = value;
+              } else {
+                return isSame = FALSE;
+              }
+            });
+          }
+          if (isSame) {
+            currentCache[trackBy] = _cache;
+            addChild(last(htmlStack), _cache.vnode);
+            return FALSE;
+          }
+        }
+
+        cacheDeps = {};
+        output.key = trackBy;
+        currentCache[trackBy] = {
+          keypath: keypath
+        };
+      }
+    }
   };
 
   leave[ELEMENT] = function (source, output) {
@@ -6198,7 +6201,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.48.1';
+Yox.version = '0.48.2';
 
 /**
  * 工具，便于扩展、插件使用
