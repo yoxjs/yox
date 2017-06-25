@@ -2619,7 +2619,7 @@ var COMMENT = /^!\s/;
 
 var SPECIAL_EVENT = '$event';
 var SPECIAL_KEYPATH = '$keypath';
-
+var SPECIAL_CHILDREN = '$children';
 
 var DIRECTIVE_CUSTOM_PREFIX = 'o-';
 var DIRECTIVE_EVENT_PREFIX = 'on-';
@@ -5729,6 +5729,10 @@ var Yox = function () {
     if (object(source)) {
       if (object(propTypes)) {
         source = Yox.validate(source, propTypes);
+        var children = props[SPECIAL_CHILDREN];
+        if (children) {
+          source[SPECIAL_CHILDREN] = children;
+        }
       }
       // 如果传了 props，则 data 应该是个 function
       if (data && !func(data)) {
@@ -6371,7 +6375,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.48.2';
+Yox.version = '0.48.3';
 
 /**
  * 工具，便于扩展、插件使用
