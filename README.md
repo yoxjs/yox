@@ -111,6 +111,7 @@ CDN
 * [Data Binding](http://code.hcharts.cn/musicode/94B0Qo)
 * [Render List](http://code.hcharts.cn/musicode/hMt0Qb)
 * [Event Handle](http://code.hcharts.cn/musicode/hMd0Lr)
+* [Custom Component](https://jsfiddle.net/musicode/3jx6x8e1/4/)
 
 ## Document
 
