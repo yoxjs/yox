@@ -72,9 +72,10 @@ export default class Yox {
     if (is.object(source)) {
       if (is.object(propTypes)) {
         source = Yox.validate(source, propTypes)
-        let children = props[ templateSyntax.SPECIAL_CHILDREN ]
+        // $children 不用校验
+        let children = props.$children
         if (children) {
-          source[ templateSyntax.SPECIAL_CHILDREN ] = children
+          source.$children = children
         }
       }
       // 如果传了 props，则 data 应该是个 function
@@ -712,7 +713,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.48.3'
+Yox.version = '0.48.4'
 
 /**
  * 工具，便于扩展、插件使用

@@ -2555,7 +2555,6 @@ var COMMENT = /^!\s/;
 
 var SPECIAL_EVENT = '$event';
 var SPECIAL_KEYPATH = '$keypath';
-var SPECIAL_CHILDREN = '$children';
 
 var DIRECTIVE_CUSTOM_PREFIX = 'o-';
 var DIRECTIVE_EVENT_PREFIX = 'on-';
@@ -3043,7 +3042,8 @@ function compile(content) {
       var _target = target,
           name = _target.name,
           divider = _target.divider,
-          children = _target.children;
+          children = _target.children,
+          component = _target.component;
 
       if (type === ELEMENT && expectedTagName && name !== expectedTagName) {
         throwError('end tag expected </' + name + '> to be </' + expectedTagName + '>.');
@@ -3060,9 +3060,11 @@ function compile(content) {
       // 如果 children 没实际的数据，删掉它
       // 避免在渲染阶段增加计算量
       if (children && !children.length) {
+        children = NULL;
         delete target.children;
       }
-      if (!target.children) {
+
+      if (component || !children) {
         return;
       }
 
@@ -3074,7 +3076,7 @@ function compile(content) {
         // 转成 props
         if (children.length - divider === 1) {
           singleChild = last(children);
-          if (singleChild.type === EXPRESSION && singleChild.expr.raw !== SPECIAL_CHILDREN) {
+          if (singleChild.type === EXPRESSION && singleChild.expr.raw !== '$children') {
             var props = {};
             if (singleChild.safe === FALSE) {
               props.innerHTML = singleChild.expr;
@@ -5559,9 +5561,10 @@ var Yox = function () {
     if (object(source)) {
       if (object(propTypes)) {
         source = Yox.validate(source, propTypes);
-        var children = props[SPECIAL_CHILDREN];
+        // $children 不用校验
+        var children = props.$children;
         if (children) {
-          source[SPECIAL_CHILDREN] = children;
+          source.$children = children;
         }
       }
       // 如果传了 props，则 data 应该是个 function
@@ -6205,7 +6208,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.48.3';
+Yox.version = '0.48.4';
 
 /**
  * 工具，便于扩展、插件使用
