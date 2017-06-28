@@ -4,7 +4,6 @@
 	(global.Yox = factory());
 }(this, (function () { 'use strict';
 
-
 if (!Object.keys) {
   Object.keys = function (obj) {
     var result = [];
@@ -68,6 +67,9 @@ if (!Function.prototype.bind) {
     };
   };
 }
+
+
+
 
 
 
@@ -1376,39 +1378,6 @@ var props = {
   postpatch: createProps
 };
 
-var SYNTAX_IF = '#if';
-var SYNTAX_ELSE = 'else';
-var SYNTAX_ELSE_IF = 'else if';
-var SYNTAX_EACH = '#each';
-var SYNTAX_PARTIAL = '#partial';
-var SYNTAX_IMPORT = '>';
-var SYNTAX_SPREAD = '...';
-var SYNTAX_COMMENT = /^!\s/;
-
-var SPECIAL_EVENT = '$event';
-var SPECIAL_KEYPATH = '$keypath';
-var SPECIAL_CHILDREN = '$children';
-
-var DIRECTIVE_CUSTOM_PREFIX = 'o-';
-var DIRECTIVE_EVENT_PREFIX = 'on-';
-
-var DIRECTIVE_REF = 'ref';
-var DIRECTIVE_LAZY = 'lazy';
-var DIRECTIVE_MODEL = 'model';
-var DIRECTIVE_EVENT = 'event';
-var DIRECTIVE_BINDING = 'binding';
-
-var KEYWORD_UNIQUE = 'key';
-
-var HOOK_BEFORE_CREATE = 'beforeCreate';
-var HOOK_AFTER_CREATE = 'afterCreate';
-var HOOK_BEFORE_MOUNT = 'beforeMount';
-var HOOK_AFTER_MOUNT = 'afterMount';
-var HOOK_BEFORE_UPDATE = 'beforeUpdate';
-var HOOK_AFTER_UPDATE = 'afterUpdate';
-var HOOK_BEFORE_DESTROY = 'beforeDestroy';
-var HOOK_AFTER_DESTROY = 'afterDestroy';
-
 function getComponentByTag(tag) {
   return 'component' + tag;
 }
@@ -1440,17 +1409,10 @@ function createComponent(vnode) {
           _vnode = _component.vnode;
 
       if (array(queue)) {
-        var attrs = _vnode.attrs,
-            children = _vnode.children;
-
-        if (children) {
-          attrs = attrs || {};
-          attrs[SPECIAL_CHILDREN] = children;
-        }
 
         component = instance.create(options, {
           el: el,
-          props: attrs,
+          props: _vnode.attrs,
           replace: TRUE
         });
 
@@ -1467,17 +1429,12 @@ function createComponent(vnode) {
 
 function updateComponent(vnode) {
   var component = vnode.component,
-      attrs = vnode.attrs,
-      children = vnode.children;
+      attrs = vnode.attrs;
 
   if (component) {
     component = vnode.el[getComponentByTag(vnode.tag)];
     if (component) {
       if (component.set) {
-        if (children) {
-          attrs = attrs || {};
-          attrs[SPECIAL_CHILDREN] = children;
-        }
         component.set(attrs, TRUE);
       } else {
         component.vnode = vnode;
@@ -1706,10 +1663,6 @@ function init(api) {
         children = vnode.children,
         text = vnode.text;
 
-
-    if (el) {
-      return el;
-    }
 
     if (falsy$1(tag)) {
       return vnode.el = api.createText(text);
@@ -1973,6 +1926,39 @@ var snabbdom = Object.freeze({
 	createComponentVnode: createComponentVnode,
 	init: init
 });
+
+var SYNTAX_IF = '#if';
+var SYNTAX_ELSE = 'else';
+var SYNTAX_ELSE_IF = 'else if';
+var SYNTAX_EACH = '#each';
+var SYNTAX_PARTIAL = '#partial';
+var SYNTAX_IMPORT = '>';
+var SYNTAX_SPREAD = '...';
+var SYNTAX_COMMENT = /^!\s/;
+
+var SPECIAL_EVENT = '$event';
+var SPECIAL_KEYPATH = '$keypath';
+var SPECIAL_CHILDREN = '$children';
+
+var DIRECTIVE_CUSTOM_PREFIX = 'o-';
+var DIRECTIVE_EVENT_PREFIX = 'on-';
+
+var DIRECTIVE_REF = 'ref';
+var DIRECTIVE_LAZY = 'lazy';
+var DIRECTIVE_MODEL = 'model';
+var DIRECTIVE_EVENT = 'event';
+var DIRECTIVE_BINDING = 'binding';
+
+var KEYWORD_UNIQUE = 'key';
+
+var HOOK_BEFORE_CREATE = 'beforeCreate';
+var HOOK_AFTER_CREATE = 'afterCreate';
+var HOOK_BEFORE_MOUNT = 'beforeMount';
+var HOOK_AFTER_MOUNT = 'afterMount';
+var HOOK_BEFORE_UPDATE = 'beforeUpdate';
+var HOOK_AFTER_UPDATE = 'afterUpdate';
+var HOOK_BEFORE_DESTROY = 'beforeDestroy';
+var HOOK_AFTER_DESTROY = 'afterDestroy';
 
 /**
  * 字面量
@@ -4087,9 +4073,13 @@ function render(ast, data, instance) {
   };
 
   leave[ELEMENT] = function (source, output) {
-    var key = output.key,
+    var component = source.component,
+        key = output.key,
+        attrs = output.attrs,
+        children = output.children,
         props,
-        vnode;
+        vnode,
+        create;
 
     if (source.props) {
       props = {};
@@ -4109,7 +4099,20 @@ function render(ast, data, instance) {
       });
     }
 
-    vnode = snabbdom[source.component ? 'createComponentVnode' : 'createElementVnode'](source.name, output.attrs, props, output.directives, output.children, key, instance);
+    if (component) {
+      create = 'createComponentVnode';
+      if (children) {
+        if (!attrs) {
+          attrs = {};
+        }
+        attrs[SPECIAL_CHILDREN] = children;
+        children = UNDEFINED;
+      }
+    } else {
+      create = 'createElementVnode';
+    }
+
+    vnode = snabbdom[create](source.name, attrs, props, output.directives, children, key, instance);
 
     if (isDef(key)) {
       currentCache[key].deps = cacheDeps;
@@ -5701,9 +5704,8 @@ var Yox = function () {
       if (object(propTypes)) {
         source = Yox.validate(source, propTypes);
         // $children 不用校验
-        var children = props.$children;
-        if (children) {
-          source.$children = children;
+        if (has$1(props, SPECIAL_CHILDREN)) {
+          source[SPECIAL_CHILDREN] = props[SPECIAL_CHILDREN];
         }
       }
       // 如果传了 props，则 data 应该是个 function
@@ -6347,7 +6349,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.48.5';
+Yox.version = '0.48.6';
 
 /**
  * 工具，便于扩展、插件使用
