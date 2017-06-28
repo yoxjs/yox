@@ -4,6 +4,7 @@
 	(global.Yox = factory());
 }(this, (function () { 'use strict';
 
+
 if (!Object.keys) {
   Object.keys = function (obj) {
     var result = [];
@@ -67,9 +68,6 @@ if (!Function.prototype.bind) {
     };
   };
 }
-
-
-
 
 
 
@@ -1378,6 +1376,39 @@ var props = {
   postpatch: createProps
 };
 
+var SYNTAX_IF = '#if';
+var SYNTAX_ELSE = 'else';
+var SYNTAX_ELSE_IF = 'else if';
+var SYNTAX_EACH = '#each';
+var SYNTAX_PARTIAL = '#partial';
+var SYNTAX_IMPORT = '>';
+var SYNTAX_SPREAD = '...';
+var SYNTAX_COMMENT = /^!\s/;
+
+var SPECIAL_EVENT = '$event';
+var SPECIAL_KEYPATH = '$keypath';
+var SPECIAL_CHILDREN = '$children';
+
+var DIRECTIVE_CUSTOM_PREFIX = 'o-';
+var DIRECTIVE_EVENT_PREFIX = 'on-';
+
+var DIRECTIVE_REF = 'ref';
+var DIRECTIVE_LAZY = 'lazy';
+var DIRECTIVE_MODEL = 'model';
+var DIRECTIVE_EVENT = 'event';
+var DIRECTIVE_BINDING = 'binding';
+
+var KEYWORD_UNIQUE = 'key';
+
+var HOOK_BEFORE_CREATE = 'beforeCreate';
+var HOOK_AFTER_CREATE = 'afterCreate';
+var HOOK_BEFORE_MOUNT = 'beforeMount';
+var HOOK_AFTER_MOUNT = 'afterMount';
+var HOOK_BEFORE_UPDATE = 'beforeUpdate';
+var HOOK_AFTER_UPDATE = 'afterUpdate';
+var HOOK_BEFORE_DESTROY = 'beforeDestroy';
+var HOOK_AFTER_DESTROY = 'afterDestroy';
+
 function getComponentByTag(tag) {
   return 'component' + tag;
 }
@@ -1414,7 +1445,7 @@ function createComponent(vnode) {
 
         if (children) {
           attrs = attrs || {};
-          attrs.$children = children;
+          attrs[SPECIAL_CHILDREN] = children;
         }
 
         component = instance.create(options, {
@@ -1445,7 +1476,7 @@ function updateComponent(vnode) {
       if (component.set) {
         if (children) {
           attrs = attrs || {};
-          attrs.$children = children;
+          attrs[SPECIAL_CHILDREN] = children;
         }
         component.set(attrs, TRUE);
       } else {
@@ -2608,29 +2639,6 @@ function compile$1(content) {
   return compileCache$1[content] = parseExpression();
 }
 
-var IF = '#if';
-var ELSE = 'else';
-var ELSE_IF = 'else if';
-var EACH = '#each';
-var PARTIAL = '#partial';
-var IMPORT = '>';
-var SPREAD = '...';
-var COMMENT = /^!\s/;
-
-var SPECIAL_EVENT = '$event';
-var SPECIAL_KEYPATH = '$keypath';
-
-var DIRECTIVE_CUSTOM_PREFIX = 'o-';
-var DIRECTIVE_EVENT_PREFIX = 'on-';
-
-var DIRECTIVE_REF = 'ref';
-var DIRECTIVE_LAZY = 'lazy';
-var DIRECTIVE_MODEL = 'model';
-var DIRECTIVE_EVENT = 'event';
-var DIRECTIVE_BINDING = 'binding';
-
-var KEYWORD_UNIQUE = 'key';
-
 /**
  * 元素 节点
  *
@@ -2664,42 +2672,42 @@ var DIRECTIVE = 4;
  *
  * @type {number}
  */
-var IF$1 = 5;
+var IF = 5;
 
 /**
  * else if 节点
  *
  * @type {number}
  */
-var ELSE_IF$1 = 6;
+var ELSE_IF = 6;
 
 /**
  * else 节点
  *
  * @type {number}
  */
-var ELSE$1 = 7;
+var ELSE = 7;
 
 /**
  * each 节点
  *
  * @type {number}
  */
-var EACH$1 = 8;
+var EACH = 8;
 
 /**
  * partial 节点
  *
  * @type {number}
  */
-var PARTIAL$1 = 9;
+var PARTIAL = 9;
 
 /**
  * import 节点
  *
  * @type {number}
  */
-var IMPORT$1 = 10;
+var IMPORT = 10;
 
 /**
  * 表达式 节点
@@ -2713,7 +2721,7 @@ var EXPRESSION = 11;
  *
  * @type {number}
  */
-var SPREAD$1 = 12;
+var SPREAD = 12;
 
 // if 带条件的
 var ifTypes = {};
@@ -2730,11 +2738,11 @@ var name2Type = {};
 // 类型 -> 名称的映射
 var type2Name = {};
 
-ifTypes[IF$1] = ifTypes[ELSE_IF$1] = elseTypes[ELSE_IF$1] = elseTypes[ELSE$1] = htmlTypes[ELEMENT] = htmlTypes[ATTRIBUTE] = htmlTypes[DIRECTIVE] = leafTypes[TEXT] = leafTypes[IMPORT$1] = leafTypes[SPREAD$1] = leafTypes[EXPRESSION] = builtInDirectives[DIRECTIVE_REF] = builtInDirectives[DIRECTIVE_LAZY] = builtInDirectives[DIRECTIVE_MODEL] = TRUE;
+ifTypes[IF] = ifTypes[ELSE_IF] = elseTypes[ELSE_IF] = elseTypes[ELSE] = htmlTypes[ELEMENT] = htmlTypes[ATTRIBUTE] = htmlTypes[DIRECTIVE] = leafTypes[TEXT] = leafTypes[IMPORT] = leafTypes[SPREAD] = leafTypes[EXPRESSION] = builtInDirectives[DIRECTIVE_REF] = builtInDirectives[DIRECTIVE_LAZY] = builtInDirectives[DIRECTIVE_MODEL] = TRUE;
 
-name2Type['if'] = IF$1;
-name2Type['each'] = EACH$1;
-name2Type['partial'] = PARTIAL$1;
+name2Type['if'] = IF;
+name2Type['each'] = EACH;
+name2Type['partial'] = PARTIAL;
 
 each$1(name2Type, function (type, name) {
   type2Name[type] = name;
@@ -2810,7 +2818,7 @@ var Each = function (_Node) {
   function Each(expr, index) {
     classCallCheck(this, Each);
 
-    var _this = possibleConstructorReturn(this, _Node.call(this, EACH$1));
+    var _this = possibleConstructorReturn(this, _Node.call(this, EACH));
 
     _this.expr = expr;
     if (index) {
@@ -2856,7 +2864,7 @@ var Else = function (_Node) {
 
   function Else() {
     classCallCheck(this, Else);
-    return possibleConstructorReturn(this, _Node.call(this, ELSE$1));
+    return possibleConstructorReturn(this, _Node.call(this, ELSE));
   }
 
   return Else;
@@ -2874,7 +2882,7 @@ var ElseIf = function (_Node) {
   function ElseIf(expr, then) {
     classCallCheck(this, ElseIf);
 
-    var _this = possibleConstructorReturn(this, _Node.call(this, ELSE_IF$1));
+    var _this = possibleConstructorReturn(this, _Node.call(this, ELSE_IF));
 
     _this.expr = expr;
     return _this;
@@ -2918,7 +2926,7 @@ var If = function (_Node) {
   function If(expr) {
     classCallCheck(this, If);
 
-    var _this = possibleConstructorReturn(this, _Node.call(this, IF$1));
+    var _this = possibleConstructorReturn(this, _Node.call(this, IF));
 
     _this.expr = expr;
     return _this;
@@ -2939,7 +2947,7 @@ var Import = function (_Node) {
   function Import(name) {
     classCallCheck(this, Import);
 
-    var _this = possibleConstructorReturn(this, _Node.call(this, IMPORT$1));
+    var _this = possibleConstructorReturn(this, _Node.call(this, IMPORT));
 
     _this.name = name;
     return _this;
@@ -2960,7 +2968,7 @@ var Partial = function (_Node) {
   function Partial(name) {
     classCallCheck(this, Partial);
 
-    var _this = possibleConstructorReturn(this, _Node.call(this, PARTIAL$1));
+    var _this = possibleConstructorReturn(this, _Node.call(this, PARTIAL));
 
     _this.name = name;
     return _this;
@@ -2981,7 +2989,7 @@ var Spread = function (_Node) {
   function Spread(expr) {
     classCallCheck(this, Spread);
 
-    var _this = possibleConstructorReturn(this, _Node.call(this, SPREAD$1));
+    var _this = possibleConstructorReturn(this, _Node.call(this, SPREAD));
 
     _this.expr = expr;
     return _this;
@@ -3128,31 +3136,45 @@ function compile(content) {
         delete target.children;
       }
 
-      if (component || !children) {
+      if (!children) {
         return;
       }
 
       var singleChild = children.length === 1 && children[0];
 
       if (type === ELEMENT) {
-        // 只有一个子元素
-        // 并且这个子元素是非转义插值
-        // 转成 props
         if (children.length - divider === 1) {
           singleChild = last(children);
-          if (singleChild.type === EXPRESSION && singleChild.expr.raw !== '$children') {
-            var props = {};
-            if (singleChild.safe === FALSE) {
-              props.innerHTML = singleChild.expr;
+          if (singleChild.type === TEXT) {
+            if (component) {
+              var attr = new Attribute(SPECIAL_CHILDREN);
+              attr.children = [singleChild];
+              children[divider] = attr;
             } else {
-              props.innerText = singleChild.expr;
+              target.props = {
+                innerText: singleChild.text
+              };
+              pop(children);
             }
-            target.props = props;
-            if (divider) {
-              children.length = divider;
+          } else if (singleChild.type === EXPRESSION && singleChild.expr.raw !== SPECIAL_CHILDREN) {
+            if (component) {
+              var _attr = new Attribute(SPECIAL_CHILDREN);
+              _attr.children = [singleChild];
+              children[divider] = _attr;
             } else {
-              delete target.children;
+              var props = {};
+              if (singleChild.safe === FALSE) {
+                props.innerHTML = singleChild.expr;
+              } else {
+                props.innerText = singleChild.expr;
+              }
+              target.props = props;
+              pop(children);
             }
+          }
+
+          if (!children.length) {
+            delete target.children;
           }
         }
       } else if (type === ATTRIBUTE) {
@@ -3169,8 +3191,7 @@ function compile(content) {
             delete element.children;
           }
           if (singleChild) {
-            // 这些特殊属性不支持插值
-            // 提升下性能
+            // 为了提升性能，这些特殊属性不支持插值
             if (singleChild.type === TEXT) {
               element[prop] = singleChild.text;
             } else if (singleChild.type === EXPRESSION) {
@@ -3374,44 +3395,44 @@ function compile(content) {
   }];
 
   var delimiterParsers = [function (source, all) {
-    if (startsWith(source, EACH)) {
-      var terms = split(slicePrefix(source, EACH), CHAR_COLON);
+    if (startsWith(source, SYNTAX_EACH)) {
+      var terms = split(slicePrefix(source, SYNTAX_EACH), CHAR_COLON);
       if (terms[0]) {
         return new Each(compile$1(trim(terms[0])), trim(terms[1]));
       }
       throwError('invalid each: ' + all);
     }
   }, function (source, all) {
-    if (startsWith(source, IMPORT)) {
-      source = slicePrefix(source, IMPORT);
+    if (startsWith(source, SYNTAX_IMPORT)) {
+      source = slicePrefix(source, SYNTAX_IMPORT);
       return source ? new Import(source) : throwError('invalid import: ' + all);
     }
   }, function (source, all) {
-    if (startsWith(source, PARTIAL)) {
-      source = slicePrefix(source, PARTIAL);
+    if (startsWith(source, SYNTAX_PARTIAL)) {
+      source = slicePrefix(source, SYNTAX_PARTIAL);
       return source ? new Partial(source) : throwError('invalid partial: ' + all);
     }
   }, function (source, all) {
-    if (startsWith(source, IF)) {
-      source = slicePrefix(source, IF);
+    if (startsWith(source, SYNTAX_IF)) {
+      source = slicePrefix(source, SYNTAX_IF);
       return source ? new If(compile$1(source)) : throwError('invalid if: ' + all);
     }
   }, function (source, all) {
-    if (startsWith(source, ELSE_IF)) {
-      source = slicePrefix(source, ELSE_IF);
+    if (startsWith(source, SYNTAX_ELSE_IF)) {
+      source = slicePrefix(source, SYNTAX_ELSE_IF);
       return source ? new ElseIf(compile$1(source)) : throwError('invalid else if: ' + all);
     }
   }, function (source) {
-    if (startsWith(source, ELSE)) {
+    if (startsWith(source, SYNTAX_ELSE)) {
       return new Else();
     }
   }, function (source, all) {
-    if (startsWith(source, SPREAD)) {
-      source = slicePrefix(source, SPREAD);
+    if (startsWith(source, SYNTAX_SPREAD)) {
+      source = slicePrefix(source, SYNTAX_SPREAD);
       return source ? new Spread(compile$1(source)) : throwError('invalid spread: ' + all);
     }
   }, function (source, all) {
-    if (!COMMENT.test(source)) {
+    if (!SYNTAX_COMMENT.test(source)) {
       source = trim(source);
       return source ? new Expression(compile$1(source), !endsWith(all, '}}}')) : throwError('invalid expression: ' + all);
     }
@@ -3910,12 +3931,12 @@ function render(ast, data, instance) {
   var enter = {},
       leave = {};
 
-  enter[PARTIAL$1] = function (source) {
+  enter[PARTIAL] = function (source) {
     partials[source.name] = source.children;
     return FALSE;
   };
 
-  enter[IMPORT$1] = function (source) {
+  enter[IMPORT] = function (source) {
     var name = source.name;
 
     var partial = partials[name] || instance.importPartial(name);
@@ -3935,7 +3956,7 @@ function render(ast, data, instance) {
   // 条件判断失败就没必要往下走了
   // 但如果失败的点原本是一个 DOM 元素
   // 就需要用注释节点来占位，否则 virtual dom 无法正常工作
-  enter[IF$1] = enter[ELSE_IF$1] = function (source) {
+  enter[IF] = enter[ELSE_IF] = function (source) {
     var expr = source.expr,
         children = source.children,
         then = source.then,
@@ -3955,14 +3976,14 @@ function render(ast, data, instance) {
     return FALSE;
   };
 
-  enter[ELSE$1] = function (source) {
+  enter[ELSE] = function (source) {
     pushStack({
       children: source.children
     });
     return FALSE;
   };
 
-  enter[EACH$1] = function (source) {
+  enter[EACH] = function (source) {
     var expr = source.expr,
         index = source.index,
         children = source.children;
@@ -4073,12 +4094,18 @@ function render(ast, data, instance) {
     if (source.props) {
       props = {};
       each$1(source.props, function (expr, key) {
-        var keypath = expr.keypath;
+        var value;
+        if (primitive(expr)) {
+          value = expr;
+        } else {
+          var _keypath = expr.keypath;
 
-        props[key] = executeExpr(expr, keypath);
-        if (keypath) {
-          addDirective(output, DIRECTIVE_BINDING, key, keypath).prop = TRUE;
+          value = executeExpr(expr, _keypath);
+          if (_keypath) {
+            addDirective(output, DIRECTIVE_BINDING, key, _keypath).prop = TRUE;
+          }
         }
+        props[key] = value;
       });
     }
 
@@ -4124,7 +4151,7 @@ function render(ast, data, instance) {
     addDirective(htmlStack[htmlStack.length - 2], source.name, source.modifier, getValue(source, output)).expr = source.expr;
   };
 
-  leave[SPREAD$1] = function (source, output) {
+  leave[SPREAD] = function (source, output) {
 
     // 1. <Component {{...props}} />
     //    把 props.xx 当做单向绑定指令，无需收集依赖
@@ -4894,64 +4921,6 @@ var tag = /<[^>]+>/;
  */
 var selector = /^[#.][-\w+]+$/;
 
-/**
- * 进入 `new Yox(options)` 之后立即触发，钩子函数会传入 `options`
- *
- * @type {string}
- */
-var BEFORE_CREATE = 'beforeCreate';
-
-/**
- * 初始化结束，渲染模板之前触发
- *
- * @type {string}
- */
-var AFTER_CREATE = 'afterCreate';
-
-/**
- * 模板编译，加入 DOM 树之前触发
- *
- * @type {string}
- */
-var BEFORE_MOUNT = 'beforeMount';
-
-/**
- * 加入 DOM 树之后触发
- *
- * 这时可通过 `$el` 获取组件根元素
- *
- * @type {string}
- */
-var AFTER_MOUNT = 'afterMount';
-
-/**
- * 视图更新之前触发
- *
- * @type {string}
- */
-var BEFORE_UPDATE = 'beforeUpdate';
-
-/**
- * 视图更新之后触发
- *
- * @type {string}
- */
-var AFTER_UPDATE = 'afterUpdate';
-
-/**
- * 销毁之前触发
- *
- * @type {string}
- */
-var BEFORE_DESTROY = 'beforeDestroy';
-
-/**
- * 销毁之后触发
- *
- * @type {string}
- */
-var AFTER_DESTROY = 'afterDestroy';
-
 var booleanAttrMap = toObject(split('allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare,default,defaultchecked,defaultmuted,defaultselected,defer,disabled,draggable,enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple,muted,nohref,noshade,noresize,novalidate,nowrap,open,pauseonexit,readonly,required,reversed,scoped,seamless,selected,sortable,spellcheck,translate,truespeed,typemustmatch,visible', CHAR_COMMA));
 
 var attr2Prop = {};
@@ -5703,7 +5672,7 @@ var Yox = function () {
     // 如果不绑着，其他方法调不到钩子
     instance.$options = options;
 
-    execute(options[BEFORE_CREATE], instance, options);
+    execute(options[HOOK_BEFORE_CREATE], instance, options);
 
     var el = options.el,
         data = options.data,
@@ -5832,7 +5801,7 @@ var Yox = function () {
     partials && instance.partial(partials);
     filters && instance.filter(filters);
 
-    execute(options[AFTER_CREATE], instance);
+    execute(options[HOOK_AFTER_CREATE], instance);
 
     if (template) {
       // 确保组件根元素有且只有一个
@@ -6099,15 +6068,15 @@ var Yox = function () {
 
 
     if ($node) {
-      execute($options[BEFORE_UPDATE], instance);
+      execute($options[HOOK_BEFORE_UPDATE], instance);
       instance.$node = patch(oldNode, newNode);
-      afterHook = AFTER_UPDATE;
+      afterHook = HOOK_AFTER_UPDATE;
     } else {
-      execute($options[BEFORE_MOUNT], instance);
+      execute($options[HOOK_BEFORE_MOUNT], instance);
       $node = patch(oldNode, newNode);
       instance.$el = $node.el;
       instance.$node = $node;
-      afterHook = AFTER_MOUNT;
+      afterHook = HOOK_AFTER_MOUNT;
     }
 
     // 跟 nextTask 保持一个节奏
@@ -6221,7 +6190,7 @@ var Yox = function () {
         $observer = instance.$observer;
 
 
-    execute($options[BEFORE_DESTROY], instance);
+    execute($options[HOOK_BEFORE_DESTROY], instance);
 
     if ($parent && $parent.$children) {
       remove($parent.$children, instance);
@@ -6236,7 +6205,7 @@ var Yox = function () {
 
     clear(instance);
 
-    execute($options[AFTER_DESTROY], instance);
+    execute($options[HOOK_AFTER_DESTROY], instance);
   };
 
   /**
@@ -6378,7 +6347,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.48.4';
+Yox.version = '0.48.5';
 
 /**
  * 工具，便于扩展、插件使用

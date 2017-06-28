@@ -17,15 +17,14 @@ import * as snabbdom from 'yox-snabbdom'
 
 import compileTemplate from 'yox-template-compiler/compile'
 import renderTemplate from 'yox-template-compiler/render'
-import * as templateSyntax from 'yox-template-compiler/src/syntax'
 
 import executeExpression from 'yox-expression-compiler/execute'
 import * as expressionNodeType from 'yox-expression-compiler/src/nodeType'
 
 import Observer from 'yox-observer'
+import * as config from 'yox-config'
 
 import * as pattern from './config/pattern'
-import * as lifecycle from './config/lifecycle'
 
 import api from './platform/web/api'
 
@@ -43,7 +42,7 @@ export default class Yox {
     // 如果不绑着，其他方法调不到钩子
     instance.$options = options
 
-    execute(options[ lifecycle.BEFORE_CREATE ], instance, options)
+    execute(options[ config.HOOK_BEFORE_CREATE ], instance, options)
 
     let {
       el,
@@ -192,7 +191,7 @@ export default class Yox {
     partials && instance.partial(partials)
     filters && instance.filter(filters)
 
-    execute(options[ lifecycle.AFTER_CREATE ], instance)
+    execute(options[ config.HOOK_AFTER_CREATE ], instance)
 
     if (template) {
       // 确保组件根元素有且只有一个
@@ -447,16 +446,16 @@ export default class Yox {
     } = instance
 
     if ($node) {
-      execute($options[ lifecycle.BEFORE_UPDATE ], instance)
+      execute($options[ config.HOOK_BEFORE_UPDATE ], instance)
       instance.$node = patch(oldNode, newNode)
-      afterHook = lifecycle.AFTER_UPDATE
+      afterHook = config.HOOK_AFTER_UPDATE
     }
     else {
-      execute($options[ lifecycle.BEFORE_MOUNT ], instance)
+      execute($options[ config.HOOK_BEFORE_MOUNT ], instance)
       $node = patch(oldNode, newNode)
       instance.$el = $node.el
       instance.$node = $node
-      afterHook = lifecycle.AFTER_MOUNT
+      afterHook = config.HOOK_AFTER_MOUNT
     }
 
     // 跟 nextTask 保持一个节奏
@@ -534,7 +533,7 @@ export default class Yox {
           }
           else {
             if (isEvent) {
-              context.set(templateSyntax.SPECIAL_EVENT, event)
+              context.set(config.SPECIAL_EVENT, event)
             }
             result = execute(method, instance, args.map(getValue))
           }
@@ -570,7 +569,7 @@ export default class Yox {
       $observer,
     } = instance
 
-    execute($options[ lifecycle.BEFORE_DESTROY ], instance)
+    execute($options[ config.HOOK_BEFORE_DESTROY ], instance)
 
     if ($parent && $parent.$children) {
       array.remove($parent.$children, instance)
@@ -585,7 +584,7 @@ export default class Yox {
 
     object.clear(instance)
 
-    execute($options[ lifecycle.AFTER_DESTROY ], instance)
+    execute($options[ config.HOOK_AFTER_DESTROY ], instance)
 
   }
 
@@ -713,7 +712,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.48.4'
+Yox.version = '0.48.5'
 
 /**
  * 工具，便于扩展、插件使用
