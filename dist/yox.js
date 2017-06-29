@@ -1586,13 +1586,6 @@ function createComponentVnode(tag, attrs$$1, props$$1, directives$$1, children, 
 
 function init(api) {
 
-  var fireHook = function (name, vnode, oldVnode) {
-    if (!vnode[name]) {
-      moduleEmitter.fire(name, [vnode, oldVnode], api);
-      vnode[name] = TRUE;
-    }
-  };
-
   var createElement = function (parentNode, vnode) {
     var el = vnode.el,
         tag = vnode.tag,
@@ -1616,7 +1609,7 @@ function init(api) {
       api.append(el, api.createText(text));
     }
 
-    fireHook(HOOK_CREATE, vnode);
+    moduleEmitter.fire(HOOK_CREATE, vnode, api);
 
     // 钩子函数可能会替换元素
     return vnode.el;
@@ -1670,7 +1663,7 @@ function init(api) {
         destroyVnode(child);
       });
     }
-    fireHook(HOOK_DESTROY, vnode);
+    moduleEmitter.fire(HOOK_DESTROY, vnode, api);
   };
 
   var replaceVnode = function (parentNode, oldVnode, vnode) {
@@ -1794,7 +1787,8 @@ function init(api) {
       return;
     }
 
-    fireHook(HOOK_UPDATE, vnode, oldVnode);
+    var args = [vnode, oldVnode];
+    moduleEmitter.fire(HOOK_UPDATE, args, api);
 
     var newText = vnode.text;
     var newChildren = vnode.children;
@@ -1830,7 +1824,7 @@ function init(api) {
             }
     }
 
-    fireHook(HOOK_POSTPATCH, vnode, oldVnode);
+    moduleEmitter.fire(HOOK_POSTPATCH, args, api);
   };
 
   return function (oldVnode, vnode) {
@@ -2983,6 +2977,46 @@ function trimBreakline(content) {
 }
 
 /**
+ * 把一堆插值优化成表达式
+ *
+ * @param {Array} children
+ */
+function optimizeExpression(children) {
+
+  // "xxx{{name}}" => 优化成 {{ 'xxx' + name }}
+  // "xxx{{name1}}{{name2}} => 优化成 {{ 'xxx' + name1 + name2 }}"
+
+  var current;
+
+  var addNode = function (node) {
+    if (!current) {
+      current = node;
+    } else {
+      current = new Binary(CHAR_BLANK, current, '+', node);
+    }
+  };
+
+  each(children, function (child) {
+    var type = child.type,
+        expr = child.expr,
+        text = child.text;
+
+    if (type === EXPRESSION && expr.raw !== SPECIAL_CHILDREN) {
+      addNode(child.expr);
+    } else if (type === TEXT) {
+      addNode(new Literal(CHAR_BLANK, text));
+    } else {
+      current = NULL;
+      return FALSE;
+    }
+  });
+
+  if (current) {
+    return new Expression(current, TRUE);
+  }
+}
+
+/**
  * 把模板编译为抽象语法树
  *
  * @param {string} content
@@ -3062,11 +3096,19 @@ function compile(content) {
         return;
       }
 
-      var singleChild = children.length === 1 && children[0];
-
       if (type === ELEMENT) {
+
+        var realChildren = children.slice(divider);
+        if (realChildren.length > 1) {
+          var result = optimizeExpression(realChildren);
+          if (result) {
+            children.length = divider;
+            push(children, result);
+          }
+        }
+
         if (children.length - divider === 1) {
-          singleChild = last(children);
+          var singleChild = last(children);
           if (singleChild.type === TEXT) {
             if (component) {
               var attr = new Attribute(SPECIAL_CHILDREN);
@@ -3099,55 +3141,66 @@ function compile(content) {
             delete target.children;
           }
         }
-      } else if (type === ATTRIBUTE) {
-        // 把数据从属性中提出来，减少渲染时的遍历
-        var element = last(htmlStack),
-            prop;
-        // <div key="xx">
-        if (name === KEYWORD_UNIQUE) {
-          prop = KEYWORD_UNIQUE;
-        }
-        if (prop) {
-          remove(element.children, target);
-          if (!element.children.length) {
-            delete element.children;
-          }
-          if (singleChild) {
-            // 为了提升性能，这些特殊属性不支持插值
-            if (singleChild.type === TEXT) {
-              element[prop] = singleChild.text;
-            } else if (singleChild.type === EXPRESSION) {
-              element[prop] = singleChild.expr;
-            }
-          }
-        }
-      } else if (singleChild) {
-        if (singleChild.type === TEXT) {
-          // 指令的值如果是纯文本，可以预编译表达式，提升性能
-          if (type === DIRECTIVE) {
-            target.expr = compile$1(singleChild.text);
-            target.value = singleChild.text;
-            delete target.children;
-          }
-          // 属性的值如果是纯文本，直接获取文本值
-          // 减少渲染时的遍历
-          else if (type === ATTRIBUTE) {
-              target.value = singleChild.text;
-              delete target.children;
-            }
-        }
-        // <div class="{{className}}">
-        // 把 Attribute 转成 单向绑定 指令，可实现精确更新视图
-        else if (type === ATTRIBUTE && singleChild.type === EXPRESSION) {
-            var _singleChild = singleChild,
-                expr = _singleChild.expr;
+      } else {
 
-            if (string(expr.keypath)) {
-              target.expr = expr;
-              target.binding = expr.keypath;
-              delete target.children;
+        if (children.length > 1) {
+          var _result = optimizeExpression(children);
+          if (_result) {
+            children = [_result];
+          }
+        }
+
+        var _singleChild = children.length === 1 && children[0];
+
+        if (type === ATTRIBUTE) {
+          // 把数据从属性中提出来，减少渲染时的遍历
+          var element = last(htmlStack),
+              prop;
+          // <div key="xx">
+          if (name === KEYWORD_UNIQUE) {
+            prop = KEYWORD_UNIQUE;
+          }
+          if (prop) {
+            remove(element.children, target);
+            if (!element.children.length) {
+              delete element.children;
+            }
+            if (_singleChild) {
+              // 为了提升性能，这些特殊属性不支持插值
+              if (_singleChild.type === TEXT) {
+                element[prop] = _singleChild.text;
+              } else if (_singleChild.type === EXPRESSION) {
+                element[prop] = _singleChild.expr;
+              }
             }
           }
+        } else if (_singleChild) {
+          if (_singleChild.type === TEXT) {
+            // 指令的值如果是纯文本，可以预编译表达式，提升性能
+            if (type === DIRECTIVE) {
+              target.expr = compile$1(_singleChild.text);
+              target.value = _singleChild.text;
+              delete target.children;
+            }
+            // 属性的值如果是纯文本，直接获取文本值
+            // 减少渲染时的遍历
+            else if (type === ATTRIBUTE) {
+                target.value = _singleChild.text;
+                delete target.children;
+              }
+          }
+          // <div class="{{className}}">
+          // 把 Attribute 转成 单向绑定 指令，可实现精确更新视图
+          else if (type === ATTRIBUTE && _singleChild.type === EXPRESSION) {
+              var expr = _singleChild.expr;
+
+              if (string(expr.keypath)) {
+                target.expr = expr;
+                target.binding = expr.keypath;
+                delete target.children;
+              }
+            }
+        }
       }
     } else {
       throwError('{{/' + type2Name[type] + '}} is not a pair.');
@@ -6179,7 +6232,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.48.6';
+Yox.version = '0.48.7';
 
 /**
  * 工具，便于扩展、插件使用
