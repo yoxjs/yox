@@ -1290,8 +1290,11 @@ function removeProps(vnode, oldVnode) {
   if (!component && oldProps) {
     props = props || {};
     each$1(oldProps, function (value, name) {
+      // 现在只有 innerText 和 innerHTML 会走进这里
+      // 对于这两种属性，为了确保兼容性，不能设为 null 或 undefined，因为 IE 会认为是字符串 null 或 undefined
+      // 但我们真实想要的是置为空字符串
       if (!has$1(props, name)) {
-        api.removeProp(vnode.el, name);
+        api.setProp(vnode.el, name, CHAR_BLANK);
       }
     });
   }
@@ -1314,95 +1317,8 @@ var props = {
   postpatch: createProps
 };
 
-function getComponentByTag(tag) {
-  return 'component' + tag;
-}
-
-function createComponent(vnode) {
-  var el = vnode.el,
-      tag = vnode.tag,
-      component = vnode.component,
-      instance = vnode.instance;
-
-  if (!component) {
-    return;
-  }
-
-  var key = getComponentByTag(tag);
-  el[key] = {
-    queue: [],
-    vnode: vnode
-  };
-
-  instance.component(tag, function (options) {
-    if (!options) {
-      fatal('"' + tag + '" component is not found.');
-    }
-    component = el[key];
-    if (component) {
-      var _component = component,
-          queue = _component.queue,
-          _vnode = _component.vnode;
-
-      if (array(queue)) {
-
-        component = instance.create(options, {
-          el: el,
-          props: _vnode.attrs,
-          replace: TRUE
-        });
-
-        el = _vnode.el = component.$el;
-        el[key] = component;
-
-        each(queue, function (callback) {
-          callback(component);
-        });
-      }
-    }
-  });
-}
-
-function updateComponent(vnode) {
-  var component = vnode.component,
-      attrs = vnode.attrs;
-
-  if (component) {
-    component = vnode.el[getComponentByTag(vnode.tag)];
-    if (component) {
-      if (component.set) {
-        component.set(attrs, TRUE);
-      } else {
-        component.vnode = vnode;
-      }
-    }
-  }
-}
-
-function destroyComponent(vnode) {
-  var el = vnode.el,
-      component = vnode.component;
-  // 不加 component 会产生递归
-  // 因为组件元素既是父组件中的一个子元素，也是组件自己的根元素
-  // 因此该元素会产生两个 vnode
-
-  if (component) {
-    var key = getComponentByTag(vnode.tag);
-    component = el[key];
-    if (component) {
-      if (component.destroy) {
-        component.destroy();
-      }
-      el[key] = NULL;
-    }
-  }
-}
-
-var componentModule = {
-  create: createComponent,
-  postpatch: updateComponent,
-  destroy: destroyComponent,
-  getComponentByTag: getComponentByTag
+var getComponentByTag = function (tag) {
+  return "component_" + tag;
 };
 
 function bindDirective(vnode, key) {
@@ -1424,7 +1340,7 @@ function bindDirective(vnode, key) {
   };
 
   if (component) {
-    component = el[componentModule.getComponentByTag(tag)];
+    component = el[getComponentByTag(tag)];
     if (component) {
       if (component.queue && !component.set) {
         component = component.queue;
@@ -1516,6 +1432,92 @@ var directives = {
   destroy: destroyDirectives
 };
 
+function createComponent(vnode) {
+  var el = vnode.el,
+      tag = vnode.tag,
+      component = vnode.component,
+      instance = vnode.instance;
+
+  if (!component) {
+    return;
+  }
+
+  var key = getComponentByTag(tag);
+  el[key] = {
+    queue: [],
+    vnode: vnode
+  };
+
+  instance.component(tag, function (options) {
+    if (!options) {
+      fatal('"' + tag + '" component is not found.');
+    }
+    component = el[key];
+    if (component) {
+      var _component = component,
+          queue = _component.queue,
+          _vnode = _component.vnode;
+
+      if (array(queue)) {
+
+        component = instance.create(options, {
+          el: el,
+          props: _vnode.attrs,
+          replace: TRUE
+        });
+
+        el = _vnode.el = component.$el;
+        el[key] = component;
+
+        each(queue, function (callback) {
+          callback(component);
+        });
+      }
+    }
+  });
+}
+
+function updateComponent(vnode) {
+  var component = vnode.component,
+      attrs = vnode.attrs;
+
+  if (component) {
+    component = vnode.el[getComponentByTag(vnode.tag)];
+    if (component) {
+      if (component.set) {
+        component.set(attrs, TRUE);
+      } else {
+        component.vnode = vnode;
+      }
+    }
+  }
+}
+
+function destroyComponent(vnode) {
+  var el = vnode.el,
+      component = vnode.component;
+  // 不加 component 会产生递归
+  // 因为组件元素既是父组件中的一个子元素，也是组件自己的根元素
+  // 因此该元素会产生两个 vnode
+
+  if (component) {
+    var key = getComponentByTag(vnode.tag);
+    component = el[key];
+    if (component) {
+      if (component.destroy) {
+        component.destroy();
+      }
+      el[key] = NULL;
+    }
+  }
+}
+
+var component = {
+  create: createComponent,
+  postpatch: updateComponent,
+  destroy: destroyComponent
+};
+
 var TAG_COMMENT = '!';
 
 var HOOK_CREATE = 'create';
@@ -1523,7 +1525,7 @@ var HOOK_UPDATE = 'update';
 var HOOK_POSTPATCH = 'postpatch';
 var HOOK_DESTROY = 'destroy';
 
-var modules = [componentModule, attrs, props, directives];
+var modules = [component, attrs, props, directives];
 
 var moduleEmitter = new Emitter();
 
@@ -1643,11 +1645,11 @@ function init(api) {
   var removeVnode = function (parentNode, vnode) {
     var tag = vnode.tag,
         el = vnode.el,
-        component = vnode.component;
+        component$$1 = vnode.component;
 
     if (tag) {
       destroyVnode(vnode);
-      if (!component) {
+      if (!component$$1) {
         api.remove(parentNode, el);
       }
     } else if (el) {
@@ -3235,7 +3237,7 @@ function compile(content) {
 
     if (elseTypes[type]) {
       var ifNode = pop(ifStack);
-      ifNode.then = node;
+      ifNode.next = node;
       popStack(ifNode.type);
       push(ifStack, node);
       push(nodeStack, node);
@@ -3931,30 +3933,34 @@ function render(ast, data, instance) {
   // 条件判断失败就没必要往下走了
   // 但如果失败的点原本是一个 DOM 元素
   // 就需要用注释节点来占位，否则 virtual dom 无法正常工作
-  enter[IF] = enter[ELSE_IF] = function (source) {
-    var expr = source.expr,
-        children = source.children,
-        then = source.then,
-        stump = source.stump;
-
-    if (executeExpr(expr)) {
-      pushStack({
-        children: children
-      });
-    } else {
-      if (then) {
-        pushStack(then);
-      } else if (stump) {
-        addChild(last(htmlStack), createCommentVnode());
+  enter[IF] = function (source) {
+    while (TRUE) {
+      // 有判断条件
+      if (source.expr) {
+        if (executeExpr(source.expr)) {
+          pushStack({
+            children: source.children
+          });
+          break;
+        } else {
+          if (source.next) {
+            source = source.next;
+          } else {
+            if (source.stump) {
+              addChild(last(htmlStack), createCommentVnode());
+            }
+            break;
+          }
+        }
       }
+      // 无判断条件，即 else
+      else {
+          pushStack({
+            children: source.children
+          });
+          break;
+        }
     }
-    return FALSE;
-  };
-
-  enter[ELSE] = function (source) {
-    pushStack({
-      children: source.children
-    });
     return FALSE;
   };
 
@@ -6232,7 +6238,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.48.7';
+Yox.version = '0.48.8';
 
 /**
  * 工具，便于扩展、插件使用
