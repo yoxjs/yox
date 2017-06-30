@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>二维数组</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div id="app"></div>
+    <script id="template" type="plain/text">
+
+        <div>
+            {{#each list:outerIndex}}
+                {{#each this:innerIndex}}
+                    <button on-click="click(this, $keypath, outerIndex, innerIndex)">
+                        {{outerIndex}}-{{innerIndex}}
+                    </button>
+                {{/each}}
+                <div class="seperator"></div>
+            {{/each}}
+        </div>
+
+    </script>
+    <script src="../dist/yox.js"></script>
+    <script>
+        var instance = new Yox({
+            el: '#app',
+            template: '#template',
+            data: {
+                list: [
+                    [
+                        {
+                           name: '0-0',
+                           age: 1,
+                        },
+                        {
+                           name: '0-1'
+                        }
+                    ],
+                    [
+                        {
+                           name: '1-0'
+                        },
+                        {
+                           name: '1-1'
+                        }
+                    ]
+                ]
+            },
+            methods: {
+                click: function (item, keypath, outerIndex, innerIndex) {
+                    console.log(item, keypath, outerIndex, innerIndex)
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>

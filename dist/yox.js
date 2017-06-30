@@ -2082,21 +2082,21 @@ var Call = function (_Node) {
  *
  * @param {string} raw
  * @param {Node} test
- * @param {Node} consequent
- * @param {Node} alternate
+ * @param {Node} yes
+ * @param {Node} no
  */
 
 var Ternary = function (_Node) {
   inherits(Ternary, _Node);
 
-  function Ternary(raw, test, consequent, alternate) {
+  function Ternary(raw, test, yes, no) {
     classCallCheck(this, Ternary);
 
     var _this = possibleConstructorReturn(this, _Node.call(this, TERNARY, raw));
 
     _this.test = test;
-    _this.consequent = consequent;
-    _this.alternate = alternate;
+    _this.yes = yes;
+    _this.no = no;
     return _this;
   }
 
@@ -2515,7 +2515,7 @@ function compile$1(content) {
 
     // 主要是区分三元和二元表达式
     // 三元表达式可以认为是 3 个二元表达式组成的
-    // test ? consequent : alternate
+    // test ? yes : no
 
     // 跳过开始字符
     if (delimiter) {
@@ -2530,16 +2530,16 @@ function compile$1(content) {
     if (getCharCode() === CODE_QUMARK) {
       index++;
 
-      var consequent = parseBinary();
+      var yes = parseBinary();
       skipWhitespace();
 
       if (getCharCode() === CODE_COLON) {
         index++;
 
-        var alternate = parseBinary();
+        var no = parseBinary();
         skipWhitespace();
 
-        return new Ternary(cutString(start), test, consequent, alternate);
+        return new Ternary(cutString(start), test, yes, no);
       } else {
         throwError();
       }
@@ -3001,14 +3001,51 @@ function optimizeExpression(children) {
   };
 
   each(children, function (child) {
-    var type = child.type,
-        expr = child.expr,
-        text = child.text;
+    var _child = child,
+        type = _child.type,
+        expr = _child.expr,
+        text = _child.text;
 
     if (type === EXPRESSION && expr.raw !== SPECIAL_CHILDREN) {
       addNode(child.expr);
     } else if (type === TEXT) {
       addNode(new Literal(CHAR_BLANK, text));
+    } else if (type === IF) {
+
+      var list = [],
+          _children;
+
+      var append = function (node) {
+        var last$$1 = last(list);
+        if (last$$1) {
+          last$$1.no = node;
+        }
+        push(list, node);
+      };
+
+      while (child) {
+        _children = child.children;
+        if (_children) {
+          _children = optimizeExpression(_children);
+          if (_children) {
+            _children = _children.expr;
+          } else {
+            current = NULL;
+            return FALSE;
+          }
+        }
+        if (!_children) {
+          _children = new Literal(CHAR_BLANK, CHAR_BLANK);
+        }
+        if (child.expr) {
+          append(new Ternary(CHAR_BLANK, child.expr, _children, new Literal(CHAR_BLANK, CHAR_BLANK)));
+        } else {
+          append(_children);
+        }
+        child = child.next;
+      }
+
+      addNode(list[0]);
     } else {
       current = NULL;
       return FALSE;
@@ -3150,7 +3187,8 @@ function compile(content) {
         if (children.length > 1) {
           var _result = optimizeExpression(children);
           if (_result) {
-            children = [_result];
+            children.length = 0;
+            push(children, _result);
           }
         }
 
@@ -3158,13 +3196,9 @@ function compile(content) {
 
         if (type === ATTRIBUTE) {
           // 把数据从属性中提出来，减少渲染时的遍历
-          var element = last(htmlStack),
-              prop;
+          var element = last(htmlStack);
           // <div key="xx">
           if (name === KEYWORD_UNIQUE) {
-            prop = KEYWORD_UNIQUE;
-          }
-          if (prop) {
             remove(element.children, target);
             if (!element.children.length) {
               delete element.children;
@@ -3172,9 +3206,9 @@ function compile(content) {
             if (_singleChild) {
               // 为了提升性能，这些特殊属性不支持插值
               if (_singleChild.type === TEXT) {
-                element[prop] = _singleChild.text;
+                element.key = _singleChild.text;
               } else if (_singleChild.type === EXPRESSION) {
-                element[prop] = _singleChild.expr;
+                element.key = _singleChild.expr;
               }
             }
           }
@@ -3198,10 +3232,10 @@ function compile(content) {
           else if (type === ATTRIBUTE && _singleChild.type === EXPRESSION) {
               var expr = _singleChild.expr;
 
+              target.expr = expr;
+              delete target.children;
               if (string(expr.keypath)) {
-                target.expr = expr;
                 target.binding = expr.keypath;
-                delete target.children;
               }
             }
         }
@@ -3590,7 +3624,7 @@ executor[BINARY] = function (node, getter, context) {
 };
 
 executor[TERNARY] = function (node, getter, context) {
-  return execute$1(node.test, getter, context) ? execute$1(node.consequent, getter, context) : execute$1(node.alternate, getter, context);
+  return execute$1(node.test, getter, context) ? execute$1(node.yes, getter, context) : execute$1(node.no, getter, context);
 };
 
 executor[ARRAY] = function (node, getter, context) {
@@ -4026,8 +4060,8 @@ function render(ast, data, instance) {
       if (isDef(trackBy)) {
 
         if (!currentCache) {
-          prevCache = ast.cache || {};
-          currentCache = ast.cache = {};
+          prevCache = instance.$templateCache || {};
+          currentCache = instance.$templateCache = {};
         }
 
         var _cache = prevCache[trackBy];
@@ -6234,7 +6268,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.48.9';
+Yox.version = '0.49.0';
 
 /**
  * 工具，便于扩展、插件使用

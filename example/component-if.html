@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>组件 if</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div id="app"></div>
+
+    <script id="template1" type="plain/text">
+        <div id="custom-component1">
+            1
+        </div>
+    </script>
+
+    <script id="template2" type="plain/text">
+        <div id="custom-component2"{{#if name1}} class="{{name1}}"{{/if}}>
+            2-{{name1}}
+        </div>
+    </script>
+
+    <script id="template3" type="plain/text">
+      <div id="root">
+          {{#if loading}}
+                <Custom1 key="123" name="custom1" />
+          {{else}}
+                <Custom2 key="456" name="custom2" />
+          {{/if}}
+      </div>
+    </script>
+
+    <script src="../dist/yox.js"></script>
+    <script>
+
+        var Custom1 = {
+            template: '#template1',
+            beforeMount: function () {
+                console.log('Custom1 beforeMount');
+            },
+            afterMount: function () {
+                console.log('Custom1 afterMount');
+            },
+            beforeUpdate: function () {
+                console.log('Custom1 beforeUpdate');
+            },
+            afterUpdate: function () {
+                console.log('Custom1 afterUpdate');
+            },
+            beforeDestroy: function () {
+                console.log('Custom1 beforeDestroy');
+            },
+            afterDestroy: function () {
+                console.log('Custom1 afterDestroy');
+            }
+        };
+
+        var Custom2 = {
+            template: '#template2',
+            beforeMount: function () {
+                console.log('Custom2 beforeMount');
+            },
+            afterMount: function () {
+                console.log('Custom2 afterMount');
+            },
+            beforeUpdate: function () {
+                console.log('Custom2 beforeUpdate');
+            },
+            afterUpdate: function () {
+                console.log('Custom2 afterUpdate');
+            },
+            beforeDestroy: function () {
+                console.log('Custom2 beforeDestroy');
+            },
+            afterDestroy: function () {
+                console.log('Custom2 afterDestroy');
+            }
+        };
+
+        var instance = new Yox({
+            el: '#app',
+            data: {
+                loading: true
+            },
+            template: '#template3',
+            components: {
+                Custom1: Custom1,
+                Custom2: Custom2
+            },
+            afterMount: function () {
+                console.log(this.get('loading'));
+                setTimeout(
+                    function() {
+                        instance.set('loading', false);
+                        console.log(instance.get('loading'));
+                    },
+                    1000
+                );
+            }
+        });
+
+    </script>
+</body>
+</html>

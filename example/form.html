@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>表单</title>
+</head>
+<body>
+    <div id="app"></div>
+    <script id="template" type="plain/text">
+
+        <form action="/login">
+            <button on-click="click1">
+                click1
+            </button>
+            <button on-click="click2()">
+                click2
+            </button>
+            <button on-click="click3">
+                click3
+            </button>
+            <button on-click="click4()">
+                click4
+            </button>
+
+            <a href="http://baidu.com" on-click="click3">
+                click3
+            </a>
+        </form>
+
+    </script>
+    <script src="../dist/yox.js"></script>
+    <script>
+        var instance = new Yox({
+            el: '#app',
+            template: '#template',
+            data: { },
+            events: {
+                click1: function (event) {
+                    event.prevent();
+                },
+                click3: function (event) {
+                    return false;
+                }
+            },
+            methods: {
+                click2: function (event) {
+                    event.prevent();
+                },
+                click4: function (event) {
+                    return false;
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>

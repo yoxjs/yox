@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>各种 bugfix 的本地调试环境</title>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script src="../dist/yox.js"></script>
+    <script>
+        var instance = new Yox({
+          el: '#app',
+            data: {
+              title: ' yox ',
+              disabled: false,
+              submiting: false,
+              submiting3: true,
+              onClick: function () {
+                  instance.set({
+                      disabled: true,
+                        submiting: true
+                    });
+                    setTimeout(
+                      function () {
+                          instance.set({
+                                disabled: false,
+                                submiting: false
+                            });
+                        },
+                        1000
+                    );
+                }
+            },
+            template: `
+                <div>
+                    <img
+                        src="{{compressImage(url, imgWidth, height)}}"
+                        srcset="{{compressImage(url, imgWidth * 2, height * 2)}} 2x"
+                        width="{{imgWidth}}px"
+                        height="{{imgHeight}}px"
+                        data-title="{{name}}"
+                        ondragstart="return false">
+
+                    <div>
+                        111{{title}}222{{title}}
+                    </div>
+                    <div>
+                        111{{trim(title)}}
+                    </div>
+
+                    <div>
+                        111
+                        {{#if disabled}}
+                            222
+                        {{else if submiting1}}
+                            333
+                        {{else if submiting2}}
+
+                        {{else if submiting3}}
+                            333
+                        {{else if submiting4}}
+                            333
+                        {{/if}}
+                    </div>
+
+                </div>
+            `,
+            filters: {
+                trim: function (str) {
+                    return str.trim();
+                }
+            },
+            components: {
+              Button: {
+                  propTypes: {
+                      disabled: {
+                          type: 'boolean',
+                            value: false,
+                        },
+                        onClick: {
+                          type: 'function'
+                        }
+                    },
+                  watchers: {
+                      $children: function () {
+
+                      }
+                  },
+                  template: `
+                      <button disabled="{{disabled}}" on-click="click()">
+                          {{getType($children)}}-{{$children}}
+                        </button>
+                    `,
+                    filters: {
+                        getType: function (value) {
+                            console.log(value)
+                            return typeof value;
+                        }
+                    },
+                    methods: {
+                      click: function () {
+                          var onClick = this.get('onClick');
+                            if (Yox.is.func(onClick)) {
+                              onClick();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

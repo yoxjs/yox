@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TODO</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/todomvc-app-css@2.0.6/index.css">
+</head>
+<body>
+    <div id="app"></div>
+    <!-- 除了用 script 文本节点，也可以用 AMD 文本插件加载模板 -->
+    <script id="template" type="text/plain">
+      <section class="todoapp" on-click="ads">
+
+        <header class="header">
+          <h1>todos</h1>
+          <input class="new-todo"
+            autofocus
+            autocomplete="off"
+            placeholder="What needs to be done?"
+            model="newTodo"
+            on-keydown="addTodo()">
+        </header>
+
+        {{#if todos.length}}
+
+        <section class="main">
+          <input class="toggle-all" type="checkbox" model="allDone">
+          <ul class="todo-list">
+          {{#each filteredTodos:index}}
+            <li class="todo{{#if completed}} completed{{/if}}{{#if this === editedTodo}} editing{{/if}}" key="{{id}}">
+              <div class="view">
+                <input class="toggle" type="checkbox" model="completed">
+                <label on-dblclick="editTodo(this)">
+                  {{title}}
+                </label>
+                <button class="destroy" on-click="removeTodo(this)"></button>
+              </div>
+              <input class="edit"
+                type="text"
+                model="title"
+                o-todo-focus="this == editedTodo"
+                on-blur="cancelEdit(index)"
+                on-keyup="doneEdit(index, $event)">
+            </li>
+          {{/each}}
+          </ul>
+        </section>
+
+        <footer class="footer">
+          <span class="todo-count">
+            <strong>{{remaining}}</strong> {{pluralize(remaining)}} left
+          </span>
+          <ul class="filters">
+            <li><a href="#/all" class="{{#if visibility == 'all'}}selected{{/if}}">All</a></li>
+            <li><a href="#/active" class="{{#if visibility == 'active'}}selected{{/if}}">Active</a></li>
+            <li><a href="#/completed" class="{{#if visibility == 'completed'}}selected{{/if}}">Completed</a></li>
+          </ul>
+
+          {{#if todos.length > remaining}}
+          <button class="clear-completed" on-click="removeCompleted()">
+            Clear completed
+          </button>
+          {{/if}}
+
+        </footer>
+
+        {{/if}}
+
+      </section>
+    </script>
+    <script src="../../dist/yox.js"></script>
+    <script>
+
+// Full spec-compliant TodoMVC with localStorage persistence
+// and hash-based routing in ~120 effective lines of JavaScript.
+
+// localStorage persistence
+var STORAGE_KEY = 'todos-yoxjs'
+var todoStorage = {
+  fetch: function () {
+    var todos = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+    todos.forEach(function (todo, index) {
+      todo.id = index
+    })
+    todoStorage.uid = todos.length
+    return todos
+  },
+  save: function (todos) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(todos))
+  }
+}
+
+// visibility filters
+var filters = {
+  all: function (todos) {
+    return todos
+  },
+  active: function (todos) {
+    return todos.filter(function (todo) {
+      return !todo.completed
+    })
+  },
+  completed: function (todos) {
+    return todos.filter(function (todo) {
+      return todo.completed
+    })
+  }
+}
+
+var app = new Yox({
+  el: '#app',
+  template: '#template',
+
+  data: {
+    todos: todoStorage.fetch(),
+    newTodo: '',
+    editedTodo: null,
+    visibility: 'all'
+  },
+
+  watchers: {
+    '**': function (newValue, oldValue, keypath, realpath) {
+      console.log(this, newValue, oldValue, keypath, realpath)
+      if (realpath.startsWith('todos')
+        || realpath.startsWith('filteredTodos')
+      ) {
+        todoStorage.save(this.get('todos'))
+      }
+    }
+  },
+
+  computed: {
+    filteredTodos: {
+      deps: ['visibility', 'todos', 'todos.**'],
+      get: function () {
+        return filters[this.get('visibility')](this.get('todos'))
+      }
+    },
+    remaining: {
+      cache: false,
+      get: function () {
+        return filters.active(this.get('todos')).length
+      },
+    },
+    allDone: {
+      get: function () {
+        return this.remaining === 0
+      },
+      set: function (value) {
+        var me = this
+        me.get('filteredTodos').forEach(function (todo, index) {
+          me.set('filteredTodos.' + index + '.completed', value)
+        })
+      }
+    }
+  },
+
+  filters: {
+    pluralize: function (n) {
+      return n === 1 ? 'item' : 'items'
+    }
+  },
+
+  // methods that implement data logic.
+  // note there's no DOM manipulation here at all.
+  methods: {
+    addTodo: function (event) {
+      // enter
+      if (event.originalEvent.keyCode !== 13) {
+        return
+      }
+      var value = this.get('newTodo')
+      if (value) {
+        value = value.trim()
+      }
+      if (!value) {
+        return
+      }
+      this.append(
+        'todos',
+        {
+          id: todoStorage.uid++,
+          title: value,
+          completed: false
+        }
+      )
+      this.set('newTodo', '')
+    },
+
+    removeTodo: function (todo) {
+      this.remove('todos', todo)
+    },
+
+    editTodo: function (todo) {
+      this.beforeEditCache = todo.title
+      this.set('editedTodo', todo)
+    },
+
+    doneEdit: function (index, event) {
+      // enter
+      if (event && event.originalEvent.keyCode !== 13) {
+        return
+      }
+
+      if (!this.get('editedTodo')) {
+        return
+      }
+      this.set('editedTodo', null)
+
+      var todo = this.get('filteredTodos.' + index)
+      var title = todo.title.trim()
+      if (title) {
+        this.set('filteredTodos.' + index + '.title', title)
+      }
+      else {
+        this.removeTodo(todo)
+      }
+    },
+
+    cancelEdit: function (index, event) {
+      this.set('editedTodo', null)
+      this.set('filteredTodos.' + index + '.title', this.beforeEditCache)
+    },
+
+    removeCompleted: function () {
+      this.set('todos', filters.active(this.get('todos')))
+    }
+  },
+
+  // a custom directive to wait for the DOM to be updated
+  // before focusing on the input field.
+  // http://vuejs.org/guide/custom-directive.html
+  directives: {
+    todoFocus: function (options) {
+      if (options.node.value) {
+        options.el.focus()
+      }
+    }
+  }
+})
+
+// handle routing
+function onHashChange () {
+  var visibility = window.location.hash.replace(/#\/?/, '')
+  if (filters[visibility]) {
+    app.set('visibility', visibility)
+  } else {
+    window.location.hash = ''
+    app.set('visibility', 'all')
+  }
+}
+
+window.addEventListener('hashchange', onHashChange)
+onHashChange()
+
+    </script>
+</body>
+</html>

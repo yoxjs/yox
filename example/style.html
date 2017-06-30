@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Style</title>
+    <style type="text/css">
+        #login {
+            background-color: red;
+        }
+        #login .logo {
+            color: green;
+        }
+        .btn {
+            background-color: blue;
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    <script id="template" type="text/plain">
+        <div id="login">
+            <p class="logo">
+                {{message}}
+            </p>
+            <button class="btn" on-click="reverseMessage()">
+                Reverse Message
+            </button>
+        </div>
+    </script>
+
+    <script src="../dist/yox-legacy.js"></script>
+    <script>
+        var instance = new Yox({
+            el: '#app',
+            template: '#template',
+            data: {
+                message: 'Hello Yox.js!'
+            },
+            methods: {
+                reverseMessage: function () {
+                    this.set(
+                        'message',
+                        this.get('message').split('').reverse().join('')
+                    );
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>
