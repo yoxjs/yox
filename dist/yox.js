@@ -1156,8 +1156,20 @@ var logger = Object.freeze({
 	fatal: fatal
 });
 
+var isNative = function (fn) {
+  if (func(fn)) {
+    return has$2(fn.toString(), '[native code]');
+  }
+};
+
 var nextTick;
-if (typeof MutationObserver === RAW_FUNCTION) {
+if (typeof Promise === RAW_FUNCTION && isNative(Promise)) {
+  var promise = Promise.resolve();
+  nextTick = function nextTick(fn) {
+    promise.then(fn);
+    setTimeout(noop);
+  };
+} else if (typeof MutationObserver === RAW_FUNCTION) {
   nextTick = function nextTick(fn) {
     var observer = new MutationObserver(fn);
     var textNode = doc.createTextNode(CHAR_BLANK);
@@ -1173,16 +1185,6 @@ if (typeof MutationObserver === RAW_FUNCTION) {
 }
 
 var nextTick$1 = function (fn) {
-  // 移动端的输入法唤起时，貌似会影响 MutationObserver 的 nextTick 触发
-  // 因此当输入框是激活状态时，改用 setTimeout
-  if (doc) {
-    var activeElement = doc.activeElement;
-
-    if (activeElement && exists(activeElement, 'autofocus')) {
-      setTimeout(fn);
-      return;
-    }
-  }
   nextTick(fn);
 };
 
@@ -3614,12 +3616,6 @@ executor[CALL] = function (node, getter, context) {
 function execute$1(node, getter, context) {
   return executor[node.type](node, getter, context);
 }
-
-var isNative = function (fn) {
-  if (func(fn)) {
-    return has$2(fn.toString(), '[native code]');
-  }
-};
 
 var Context = function () {
 
@@ -6238,7 +6234,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.48.8';
+Yox.version = '0.48.9';
 
 /**
  * 工具，便于扩展、插件使用
