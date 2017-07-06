@@ -12,7 +12,8 @@
         var instance = new Yox({
           el: '#app',
             data: {
-              a: 1,
+              a: 2,
+              b: 2,
               title: ' yox ',
               disabled: false,
               submiting: false,
@@ -35,7 +36,7 @@
             },
             template: `
                 <div>
-                    {{#if a == 1 || a == 2}}
+                    {{#if a == 1 || a != b + 1}}
                         123
                     {{/if}}
                     <img

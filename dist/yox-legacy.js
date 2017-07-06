@@ -2546,28 +2546,29 @@ function compile$1(content) {
     // 处理优先级，确保循环结束时，是相同的优先级操作
     while (next = parseOperator(binaryList)) {
 
+      length = stack.length;
+
+      if (length > 7 && binaryMap[next] < stack[length - 4]) {
+        stack.splice(length - 7, 6, new Binary(cutString(stack[length - 8], stack[length - 1]), stack[length - 7], stack[length - 5], stack[length - 2]));
+      }
+
       push(stack, next);
       push(stack, binaryMap[next]);
       push(stack, index);
       push(stack, parseToken());
       push(stack, index);
+    }
 
+    while (TRUE) {
       length = stack.length;
-
-      if (length > 12) {
-        if (binaryMap[next] < stack[length - 9]) {
-          stack.splice(length - 12, 6, new Binary(cutString(stack[length - 13], stack[length - 6]), stack[length - 12], stack[length - 10], stack[length - 7]));
-        } else {
-          stack.splice(length - 7, 6, new Binary(cutString(stack[length - 8], stack[length - 1]), stack[length - 7], stack[length - 5], stack[length - 2]));
-        }
+      if (length > 8 && stack[length - 4] > stack[length - 9]) {
+        stack.splice(length - 7, 6, new Binary(cutString(stack[length - 8], stack[length - 1]), stack[length - 7], stack[length - 5], stack[length - 2]));
+      } else if (length > 7) {
+        stack.splice(1, 6, new Binary(cutString(stack[0], stack[7]), stack[1], stack[3], stack[6]));
+      } else {
+        return stack[1];
       }
     }
-
-    while (stack.length > 7) {
-      stack.splice(1, 6, new Binary(cutString(stack[0], stack[7]), stack[1], stack[3], stack[6]));
-    }
-
-    return stack[1];
   };
 
   var parseExpression = function (delimiter) {
@@ -6444,7 +6445,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.49.3';
+Yox.version = '0.49.4';
 
 /**
  * 工具，便于扩展、插件使用
