@@ -2482,18 +2482,21 @@ function compile$1(content) {
     // 处理优先级，确保循环结束时，是相同的优先级操作
     while (next = parseOperator(binaryList)) {
 
-      length = stack.length;
-
-      // 处理左边
-      if (length > 7 && binaryMap[next] < stack[length - 4]) {
-        stack.splice(length - 7, 6, new Binary(cutString(stack[length - 8], stack[length - 1]), stack[length - 7], stack[length - 5], stack[length - 2]));
-      }
-
       push(stack, next);
       push(stack, binaryMap[next]);
       push(stack, index);
       push(stack, parseToken());
       push(stack, index);
+
+      length = stack.length;
+
+      if (length > 12) {
+        if (binaryMap[next] < stack[length - 9]) {
+          stack.splice(length - 12, 6, new Binary(cutString(stack[length - 13], stack[length - 6]), stack[length - 12], stack[length - 10], stack[length - 7]));
+        } else {
+          stack.splice(length - 7, 6, new Binary(cutString(stack[length - 8], stack[length - 1]), stack[length - 7], stack[length - 5], stack[length - 2]));
+        }
+      }
     }
 
     while (stack.length > 7) {
@@ -3859,7 +3862,7 @@ function render(ast, data, instance) {
     };
   };
 
-  var getValue = function (source, output) {
+  var getValue = function (element, source, output) {
     var value;
     if (has$1(output, VALUE)) {
       value = output.value;
@@ -3869,7 +3872,13 @@ function render(ast, data, instance) {
       value = executeExpr(source.expr, source.binding || source.type === DIRECTIVE);
     }
     if (!isDef(value)) {
-      value = source.expr || source.children ? CHAR_BLANK : TRUE;
+      if (source.expr || source.children) {
+        value = CHAR_BLANK;
+      } else if (element.component) {
+        value = TRUE;
+      } else {
+        value = source.name;
+      }
     }
     return value;
   };
@@ -4158,7 +4167,7 @@ function render(ast, data, instance) {
     var name = source.name,
         binding = source.binding;
 
-    addAttr(element, name, getValue(source, output));
+    addAttr(element, name, getValue(element, source, output));
     if (binding) {
       addDirective(element, DIRECTIVE_BINDING, name, binding);
     }
@@ -4173,7 +4182,9 @@ function render(ast, data, instance) {
     // 2.如果指令的值包含插值语法，则会拼接出最终值
     //   on-click="haha{{name}}"
 
-    addDirective(htmlStack[htmlStack.length - 2], source.name, source.modifier, getValue(source, output)).expr = source.expr;
+    var element = htmlStack[htmlStack.length - 2];
+
+    addDirective(element, source.name, source.modifier, getValue(element, source, output)).expr = source.expr;
   };
 
   leave[SPREAD] = function (source, output) {
@@ -6263,7 +6274,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.49.2';
+Yox.version = '0.49.3';
 
 /**
  * 工具，便于扩展、插件使用

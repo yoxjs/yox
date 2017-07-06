@@ -12,6 +12,7 @@
         var instance = new Yox({
           el: '#app',
             data: {
+              a: 1,
               title: ' yox ',
               disabled: false,
               submiting: false,
@@ -34,6 +35,9 @@
             },
             template: `
                 <div>
+                    {{#if a == 1 || a == 2}}
+                        123
+                    {{/if}}
                     <img
                         src="{{compressImage(url, imgWidth, height)}}"
                         srcset="{{compressImage(url, imgWidth * 2, height * 2)}} 2x"
