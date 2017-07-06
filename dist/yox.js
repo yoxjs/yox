@@ -2279,8 +2279,8 @@ function compile$1(content) {
     return codeAt(content, index);
   };
 
-  var cutString = function (start) {
-    return content.substring(start, index);
+  var cutString = function (start, end) {
+    return content.substring(start, end == NULL ? index : end);
   };
 
   var skipWhitespace = function () {
@@ -2472,43 +2472,35 @@ function compile$1(content) {
 
   var parseBinary = function () {
 
-    var stack = [index, parseToken()],
-        right,
-        next;
+    var stack = [index, parseToken(), index],
+        next,
+        length;
 
-    var createBinaryNode = function () {
-      pop(stack);
-      pop(stack);
-      var action = pop(stack);
-      var left = pop(stack);
-      return new Binary(cutString(last(stack)), left, action, right);
-    };
+    // stack 的结构必须是 token 之后跟一个 index
+    // 这样在裁剪原始字符串时，才有据可查
 
+    // 处理优先级，确保循环结束时，是相同的优先级操作
     while (next = parseOperator(binaryList)) {
 
+      length = stack.length;
+
       // 处理左边
-      if (stack.length > 5 && binaryMap[next] < stack[stack.length - 3]) {
-        right = pop(stack);
-        push(stack, createBinaryNode());
+      if (length > 7 && binaryMap[next] < stack[length - 4]) {
+        stack.splice(length - 7, 6, new Binary(cutString(stack[length - 8], stack[length - 1]), stack[length - 7], stack[length - 5], stack[length - 2]));
       }
 
       push(stack, next);
       push(stack, binaryMap[next]);
       push(stack, index);
       push(stack, parseToken());
+      push(stack, index);
     }
 
-    // 处理右边
-    // 右边只有等到所有 token 解析完成才能开始
-    // 比如 a + b * c / d
-    // 此时右边的优先级 >= 左边的优先级，因此可以脑残的直接逆序遍历
-
-    right = pop(stack);
-    while (stack.length > 4) {
-      right = createBinaryNode();
+    while (stack.length > 7) {
+      stack.splice(1, 6, new Binary(cutString(stack[0], stack[7]), stack[1], stack[3], stack[6]));
     }
 
-    return right;
+    return stack[1];
   };
 
   var parseExpression = function (delimiter) {
@@ -2990,12 +2982,17 @@ function optimizeExpression(children) {
   // "xxx{{name}}" => 优化成 {{ 'xxx' + name }}
   // "xxx{{name1}}{{name2}} => 优化成 {{ 'xxx' + name1 + name2 }}"
 
-  var current;
+  var current,
+      blankString = new Literal(CHAR_BLANK, CHAR_BLANK);
 
   var addNode = function (node) {
     if (!current) {
       current = node;
     } else {
+      // 为了确保是字符串拼接，而不是加法，多个相加时，第一个必须确保是空字符串
+      if (current.type !== BINARY || current.raw !== CHAR_BLANK) {
+        current = new Binary(CHAR_BLANK, blankString, '+', current);
+      }
       current = new Binary(CHAR_BLANK, current, '+', node);
     }
   };
@@ -3035,10 +3032,10 @@ function optimizeExpression(children) {
           }
         }
         if (!_children) {
-          _children = new Literal(CHAR_BLANK, CHAR_BLANK);
+          _children = blankString;
         }
         if (child.expr) {
-          append(new Ternary(CHAR_BLANK, child.expr, _children, new Literal(CHAR_BLANK, CHAR_BLANK)));
+          append(new Ternary(CHAR_BLANK, child.expr, _children, blankString));
         } else {
           append(_children);
         }
@@ -6266,7 +6263,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.49.1';
+Yox.version = '0.49.2';
 
 /**
  * 工具，便于扩展、插件使用
