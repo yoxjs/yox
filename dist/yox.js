@@ -5616,23 +5616,21 @@ var Yox = function () {
 
     extensions && extend(instance, extensions);
 
-    var source = props;
-
-    // 检查 props
-    if (object(source)) {
-      if (object(propTypes)) {
-        source = Yox.validate(source, propTypes);
-        // $children 不用校验
-        if (has$1(props, SPECIAL_CHILDREN)) {
-          source[SPECIAL_CHILDREN] = props[SPECIAL_CHILDREN];
-        }
-      }
-      // 如果传了 props，则 data 应该是个 function
-      if (data && !func(data)) {
-        warn('"data" option expected to be a function.');
+    var source;
+    if (object(propTypes)) {
+      source = Yox.validate(props || {}, propTypes);
+      // validate 可能过滤 $children 字段
+      // 这里确保外面传入的 $children 还在
+      if (props && has$1(props, SPECIAL_CHILDREN)) {
+        source[SPECIAL_CHILDREN] = props[SPECIAL_CHILDREN];
       }
     } else {
-      source = {};
+      source = props || {};
+    }
+
+    // 如果传了 props，则 data 应该是个 function
+    if (props && object(data)) {
+      warn('"data" option expected to be a function.');
     }
 
     computed = computed ? copy(computed) : {};
@@ -6268,7 +6266,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.49.0';
+Yox.version = '0.49.1';
 
 /**
  * 工具，便于扩展、插件使用

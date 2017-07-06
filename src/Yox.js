@@ -65,24 +65,22 @@ export default class Yox {
 
     extensions && object.extend(instance, extensions)
 
-    let source = props
-
-    // 检查 props
-    if (is.object(source)) {
-      if (is.object(propTypes)) {
-        source = Yox.validate(source, propTypes)
-        // $children 不用校验
-        if (object.has(props, config.SPECIAL_CHILDREN)) {
-          source[ config.SPECIAL_CHILDREN ] = props[ config.SPECIAL_CHILDREN ]
-        }
-      }
-      // 如果传了 props，则 data 应该是个 function
-      if (data && !is.func(data)) {
-        logger.warn('"data" option expected to be a function.')
+    let source
+    if (is.object(propTypes)) {
+      source = Yox.validate(props || { }, propTypes)
+      // validate 可能过滤 $children 字段
+      // 这里确保外面传入的 $children 还在
+      if (props && object.has(props, config.SPECIAL_CHILDREN)) {
+        source[ config.SPECIAL_CHILDREN ] = props[ config.SPECIAL_CHILDREN ]
       }
     }
     else {
-      source = { }
+      source = props || { }
+    }
+
+    // 如果传了 props，则 data 应该是个 function
+    if (props && is.object(data)) {
+      logger.warn('"data" option expected to be a function.')
     }
 
     computed = computed ? object.copy(computed) : { }
@@ -711,7 +709,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.49.0'
+Yox.version = '0.49.1'
 
 /**
  * 工具，便于扩展、插件使用
@@ -859,6 +857,7 @@ Yox.validate = function (props, propTypes) {
   object.each(
     propTypes,
     function (rule, key) {
+
       let { type, value, required } = rule
 
       required = required === env.TRUE
