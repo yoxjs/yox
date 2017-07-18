@@ -105,6 +105,10 @@ function noop() {
   /** yox */
 }
 
+var isDef = function (target) {
+  return target !== UNDEFINED;
+};
+
 function is(value, type) {
   return type === 'numeric' ? numeric(value) : Object.prototype.toString.call(value).toLowerCase() === '[object ' + type + ']';
 }
@@ -219,10 +223,6 @@ var Event = function () {
 
 Event.is = function (target) {
   return target instanceof Event;
-};
-
-var isDef = function (target) {
-  return target !== UNDEFINED;
 };
 
 /**
@@ -6275,7 +6275,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.49.4';
+Yox.version = '0.49.5';
 
 /**
  * 工具，便于扩展、插件使用
@@ -6400,7 +6400,7 @@ Yox.validate = function (props, propTypes) {
 
     required = required === TRUE || func(required) && required(props);
 
-    if (has$1(props, key)) {
+    if (isDef(props[key])) {
       // 如果不写 type 或 type 不是 字符串 或 数组
       // 就当做此规则无效，和没写一样
       if (type) {

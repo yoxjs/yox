@@ -1,4 +1,5 @@
 
+import isDef from 'yox-common/function/isDef'
 import execute from 'yox-common/function/execute'
 
 import Event from 'yox-common/util/Event'
@@ -709,7 +710,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.49.4'
+Yox.version = '0.49.5'
 
 /**
  * 工具，便于扩展、插件使用
@@ -863,7 +864,7 @@ Yox.validate = function (props, propTypes) {
       required = required === env.TRUE
         || (is.func(required) && required(props))
 
-      if (object.has(props, key)) {
+      if (isDef(props[ key ])) {
         // 如果不写 type 或 type 不是 字符串 或 数组
         // 就当做此规则无效，和没写一样
         if (type) {
