@@ -3276,8 +3276,11 @@ function compile(content) {
                 element.key = _singleChild.expr;
               }
             }
+            return;
           }
-        } else if (_singleChild) {
+        }
+
+        if (_singleChild) {
           if (_singleChild.type === TEXT) {
             // 指令的值如果是纯文本，可以预编译表达式，提升性能
             if (type === DIRECTIVE) {
@@ -6445,7 +6448,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.49.5';
+Yox.version = '0.49.6';
 
 /**
  * 工具，便于扩展、插件使用
