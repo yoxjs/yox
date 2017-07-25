@@ -4555,14 +4555,18 @@ var Observer = function () {
       set$1(data, keypath, newValue);
     });
 
+    var cacheKeys = keys(cache);
+
     each(tasks, function (task) {
       var keypath = task.keypath,
           oldValue = task.oldValue;
 
 
-      if (has$1(cache, keypath)) {
-        delete cache[keypath];
-      }
+      each(cacheKeys, function (key) {
+        if (startsWith(key, keypath)) {
+          delete cache[key];
+        }
+      });
 
       if (getNewValue(keypath) !== oldValue) {
 
@@ -6278,7 +6282,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.49.6';
+Yox.version = '0.49.7';
 
 /**
  * 工具，便于扩展、插件使用
