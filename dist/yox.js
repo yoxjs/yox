@@ -4479,16 +4479,37 @@ var Observer = function () {
       return newCache[keypath];
     };
 
-    var matchDeps = function (key, keypath) {
+    var tasks = [],
+        taskKeys = {};
+
+    var addTask = function (keypath) {
+      if (!taskKeys[keypath]) {
+        taskKeys[keypath] = TRUE;
+        push(tasks, {
+          keypath: keypath,
+          oldValue: getOldValue(keypath)
+        });
+      }
+    };
+
+    /**
+     * 当一个值变化时（对应 keypath)
+     * 分析依赖它的那些数据是否发生了变化
+     *
+     * @param {string} keypath
+     * @param {string} testKey
+     * @return {?Array}
+     */
+    var testDeps = function (keypath, testKey) {
       var result;
-      each(deps[key], function (dep) {
+      each(deps[testKey], function (dep) {
         if (isFuzzyKeypath(dep)) {
           result = matchKeypath(keypath, dep);
         } else {
           result = startsWith$1(dep, keypath);
         }
         if (!result && has$1(deps, dep)) {
-          result = matchDeps(dep, keypath);
+          result = testDeps(keypath, dep);
         }
         if (result) {
           return FALSE;
@@ -4497,7 +4518,25 @@ var Observer = function () {
       return result;
     };
 
-    var tasks = [];
+    var depKeys = keys(deps);
+    var matchDeps = function (keypath) {
+
+      var hasFound;
+
+      while (TRUE) {
+        hasFound = FALSE;
+        each(depKeys, function (key) {
+          if (key !== keypath && !taskKeys[key] && testDeps(keypath, key)) {
+            hasFound = TRUE;
+            addTask(key);
+            matchDeps(key);
+          }
+        });
+        if (!hasFound) {
+          break;
+        }
+      }
+    };
 
     each$1(model, function (newValue, keypath) {
 
@@ -4506,30 +4545,17 @@ var Observer = function () {
       var oldValue = getOldValue(keypath);
       if (newValue !== oldValue) {
 
-        push(tasks, {
-          keypath: keypath,
-          oldValue: oldValue
-        });
+        addTask(keypath);
 
         if (watchKeypaths) {
           each$1(watchKeypaths, function (value, key) {
             if (key !== keypath && startsWith$1(key, keypath)) {
-              push(tasks, {
-                keypath: key,
-                oldValue: getOldValue(key)
-              });
+              addTask(key);
             }
           });
         }
 
-        each$1(deps, function (list, key) {
-          if (matchDeps(key, keypath)) {
-            push(tasks, {
-              keypath: key,
-              oldValue: getOldValue(key)
-            });
-          }
-        });
+        matchDeps(keypath);
       }
 
       if (computedSetters) {
@@ -4561,12 +4587,11 @@ var Observer = function () {
       var keypath = task.keypath,
           oldValue = task.oldValue;
 
+      // 清掉计算属性的缓存
 
-      each(cacheKeys, function (key) {
-        if (startsWith(key, keypath)) {
-          delete cache[key];
-        }
-      });
+      if (has$1(cache, keypath)) {
+        delete cache[keypath];
+      }
 
       if (getNewValue(keypath) !== oldValue) {
 
@@ -4576,6 +4601,12 @@ var Observer = function () {
 
         var differences = instance.differences || (instance.differences = {});
         differences[keypath] = task;
+
+        each(cacheKeys, function (key) {
+          if (key !== keypath && startsWith$1(key, keypath)) {
+            delete cache[key];
+          }
+        });
       }
     });
 
@@ -6282,7 +6313,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.49.7';
+Yox.version = '0.49.8';
 
 /**
  * 工具，便于扩展、插件使用
