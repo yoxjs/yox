@@ -1569,6 +1569,10 @@ function createTextVnode(text) {
   };
 }
 
+function isTextVnode(vnode) {
+  return vnode && has$1(vnode, 'text') && !has$1(vnode, 'tag');
+}
+
 function createElementVnode(tag, attrs$$1, props$$1, directives$$1, children, key, instance) {
   return {
     tag: tag,
@@ -1856,6 +1860,7 @@ function init(api) {
 var snabbdom = Object.freeze({
 	createCommentVnode: createCommentVnode,
 	createTextVnode: createTextVnode,
+	isTextVnode: isTextVnode,
 	createElementVnode: createElementVnode,
 	createComponentVnode: createComponentVnode,
 	init: init
@@ -3800,20 +3805,25 @@ var VALUE = 'value';
  */
 function render(ast, data, instance) {
 
+  // 为了减少字符，一个 let 定义完所有变量
+  // 这里不考虑是否一行过长
   var keypath = CHAR_BLANK,
       keypathList = [],
-      updateKeypath = function updateKeypath() {
-    keypath = stringify(keypathList);
-  };
-
-  var context = new Context(data, keypath),
+      context = new Context(data, keypath),
       nodeStack = [],
       htmlStack = [],
       partials = {},
-      deps = {};
-  var cache,
+      deps = {},
+      enter = {},
+      leave = {},
+      cache,
       prevCache,
-      currentCache;
+      currentCache,
+      cacheDeps;
+
+  var updateKeypath = function () {
+    keypath = stringify(keypathList);
+  };
 
   var addChild = function (parent, child) {
 
@@ -3825,7 +3835,7 @@ function render(ast, data, instance) {
         var prevChild = last(children);
 
         if (primitive(child)) {
-          if (object(prevChild) && string(prevChild[TEXT$1]) && !prevChild.tag) {
+          if (isTextVnode(prevChild)) {
             prevChild[TEXT$1] += toString(child);
           } else {
             children.push(createTextVnode(child));
@@ -3925,7 +3935,6 @@ function render(ast, data, instance) {
   // <div key="{{xx}}">
   //     <div key="{{yy}}"></div>
   // </div>
-  var cacheDeps;
 
   var executeExpr = function (expr, filter) {
     return execute$1(expr, function (key) {
@@ -3943,9 +3952,6 @@ function render(ast, data, instance) {
       return value;
     }, instance);
   };
-
-  var enter = {},
-      leave = {};
 
   enter[PARTIAL] = function (source) {
     partials[source.name] = source.children;
@@ -6312,7 +6318,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.49.9';
+Yox.version = '0.50.0';
 
 /**
  * 工具，便于扩展、插件使用
