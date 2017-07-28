@@ -3889,9 +3889,8 @@ function render(ast, data, instance) {
         var prevChild = last(children);
 
         if (primitive(child)) {
-          if (object(prevChild) && string(prevChild[TEXT$1])) {
+          if (object(prevChild) && string(prevChild[TEXT$1]) && !prevChild.tag) {
             prevChild[TEXT$1] += toString(child);
-            return;
           } else {
             children.push(createTextVnode(child));
           }
@@ -6483,7 +6482,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.49.8';
+Yox.version = '0.49.9';
 
 /**
  * 工具，便于扩展、插件使用
