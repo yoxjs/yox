@@ -3898,20 +3898,22 @@ function render(ast, data, instance) {
         var children = parent.children || (parent.children = []);
         var prevChild = last(children);
 
-        if (primitive(child)) {
-          if (isTextVnode(prevChild)) {
-            prevChild[TEXT$1] += toString(child);
-          } else {
-            children.push(createTextVnode(child));
-          }
-        } else if (array(child)) {
+        if (array(child)) {
           each(child, function (item) {
             if (has$1(item, TEXT$1)) {
               children.push(item);
             }
           });
-        } else if (has$1(child, TEXT$1)) {
-          children.push(child);
+        } else if (object(child)) {
+          if (has$1(child, TEXT$1)) {
+            children.push(child);
+          }
+        } else {
+          if (isTextVnode(prevChild)) {
+            prevChild[TEXT$1] += toString(child);
+          } else {
+            children.push(createTextVnode(child));
+          }
         }
       } else {
         if (has$1(parent, VALUE)) {
@@ -6488,7 +6490,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.50.0';
+Yox.version = '0.50.1';
 
 /**
  * 工具，便于扩展、插件使用

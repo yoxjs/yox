@@ -118,7 +118,8 @@ function minify(source) {
       compress: {
         warnings: false,
         // see https://github.com/ecomfe/edp/issues/230
-        conditionals: false
+        conditionals: false,
+        properties: false,
       },
       mangle: {
           reserved: ['require', 'exports', 'module']
