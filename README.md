@@ -4,6 +4,8 @@ Just like Vue, but it is more lightweight and easy than Vue.
 
 The key is that yox supports IE6.
 
+**可用于生产环境，没有 Vue 使用经验不建议使用，谢谢**。
+
 > QQ 群 232021930
 
 ```js
