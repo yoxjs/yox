@@ -1099,7 +1099,7 @@ function isDebug() {
     var DEBUG = win.DEBUG;
 
     if (boolean(DEBUG)) {
-      return BEBUG;
+      return DEBUG;
     }
   }
   return debug;
@@ -5212,7 +5212,7 @@ var api = copy(domApi);
 
 // import * as oldApi from './oldApi'
 //
-// if (!env.doc.addEventListener) {
+// if (env.doc && !env.doc.addEventListener) {
 //   object.extend(api, oldApi)
 // }
 
@@ -6320,7 +6320,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.50.1';
+Yox.version = '0.50.2';
 
 /**
  * 工具，便于扩展、插件使用
