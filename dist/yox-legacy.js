@@ -946,6 +946,8 @@ var object$1 = Object.freeze({
 	set: set$1
 });
 
+var guid = 0;
+
 var Emitter = function () {
 
   /**
@@ -973,7 +975,7 @@ var Emitter = function () {
 
       var event = array(data) ? data[0] : data,
           isEvent = Event.is(event),
-          timestamp = +new Date(),
+          fireId = guid++,
           i = -1,
           j,
           item,
@@ -981,7 +983,8 @@ var Emitter = function () {
 
       while (item = list[++i]) {
 
-        item.ts = timestamp;
+        // 当前执行 id
+        item.id = fireId;
 
         if (space && item.space && space !== item.space) {
           continue;
@@ -1017,16 +1020,14 @@ var Emitter = function () {
         // 解绑了一些 event handler
         // 则往回找最远的未执行的 item
         if (i >= 0 && item !== list[i]) {
-          j = -1;
+          j = i;
           while (item = list[i]) {
-            if (item.ts !== timestamp) {
+            if (item.id !== fireId) {
               j = i;
             }
             i--;
           }
-          if (j >= 0) {
-            i = j - 1;
-          }
+          i = j - 1;
         }
       }
 
@@ -6509,7 +6510,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.50.3';
+Yox.version = '0.50.4';
 
 /**
  * 工具，便于扩展、插件使用
