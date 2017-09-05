@@ -973,11 +973,15 @@ var Emitter = function () {
 
       var event = array(data) ? data[0] : data,
           isEvent = Event.is(event),
+          timestamp = +new Date(),
           i = -1,
+          j,
           item,
           result;
 
       while (item = list[++i]) {
+
+        item.ts = timestamp;
 
         if (space && item.space && space !== item.space) {
           continue;
@@ -1008,6 +1012,21 @@ var Emitter = function () {
 
         if (result === FALSE) {
           return isComplete = FALSE;
+        }
+
+        // 解绑了一些 event handler
+        // 则往回找最远的未执行的 item
+        if (i >= 0 && item !== list[i]) {
+          j = -1;
+          while (item = list[i]) {
+            if (item.ts !== timestamp) {
+              j = i;
+            }
+            i--;
+          }
+          if (j >= 0) {
+            i = j - 1;
+          }
         }
       }
 
@@ -6490,7 +6509,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.50.2';
+Yox.version = '0.50.3';
 
 /**
  * 工具，便于扩展、插件使用
