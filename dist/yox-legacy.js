@@ -5087,8 +5087,6 @@ var tag = /<[^>]+>/;
  */
 var selector = /^[#.][-\w+]+$/;
 
-var booleanAttrMap = toObject(split('allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare,default,defaultchecked,defaultmuted,defaultselected,defer,disabled,draggable,enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple,muted,nohref,noshade,noresize,novalidate,nowrap,open,pauseonexit,readonly,required,reversed,scoped,seamless,selected,sortable,spellcheck,translate,truespeed,typemustmatch,visible', CHAR_COMMA));
-
 var attr2Prop = {};
 attr2Prop['for'] = 'htmlFor';
 attr2Prop['value'] = 'value';
@@ -5133,12 +5131,13 @@ function removeProp(node, name) {
 }
 
 function setAttr(node, name, value) {
-  if (booleanAttrMap[name]) {
+  var isBoolean = boolean(node[name]);
+  if (isBoolean) {
     value = value === TRUE || value === RAW_TRUE || value === name;
   }
   if (attr2Prop[name]) {
     setProp(node, attr2Prop[name], value);
-  } else if (booleanAttrMap[name]) {
+  } else if (isBoolean) {
     setProp(node, name, value);
   } else {
     node.setAttribute(name, value);
@@ -5148,7 +5147,7 @@ function setAttr(node, name, value) {
 function removeAttr(node, name) {
   if (attr2Prop[name]) {
     removeProp(node, attr2Prop[name]);
-  } else if (booleanAttrMap[name]) {
+  } else if (boolean(node[name])) {
     removeProp(node, name);
   } else {
     node.removeAttribute(name);
@@ -6510,7 +6509,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.50.4';
+Yox.version = '0.50.5';
 
 /**
  * 工具，便于扩展、插件使用
