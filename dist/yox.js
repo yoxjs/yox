@@ -937,7 +937,7 @@ var Emitter = function () {
 
         // 注册的 listener 可以指定最大执行次数
         if (item.count === item.max) {
-          list.splice(i--, 1);
+          list.splice(i, 1);
         }
 
         // 如果没有返回 false，而是调用了 event.stop 也算是返回 false
@@ -6350,7 +6350,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.50.7';
+Yox.version = '0.50.8';
 
 /**
  * 工具，便于扩展、插件使用
