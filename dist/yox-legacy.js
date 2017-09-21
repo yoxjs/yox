@@ -3310,15 +3310,23 @@ function compile(content) {
         if (_singleChild) {
           if (_singleChild.type === TEXT) {
             // 指令的值如果是纯文本，可以预编译表达式，提升性能
+            var text = _singleChild.text;
+
             if (type === DIRECTIVE) {
-              target.expr = compile$1(_singleChild.text);
-              target.value = _singleChild.text;
+              // 有可能写了个中文，例如“中文”，这种是没法作为表达式解析的
+              // 就像你在浏览器控制台输入了“中文”，照样报错
+              try {
+                target.expr = compile$1(text);
+              } catch (e) {
+                target.expr = new Literal(text, text);
+              }
+              target.value = text;
               delete target.children;
             }
             // 属性的值如果是纯文本，直接获取文本值
             // 减少渲染时的遍历
             else if (type === ATTRIBUTE) {
-                target.value = _singleChild.text;
+                target.value = text;
                 delete target.children;
               }
           }
@@ -5294,6 +5302,7 @@ var COMPOSITION_END = 'compositionend';
  */
 var PROPERTY_CHANGE = 'propertychange';
 
+
 var IEEvent = function () {
   function IEEvent(event, element) {
     classCallCheck(this, IEEvent);
@@ -6520,7 +6529,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.50.8';
+Yox.version = '0.50.9';
 
 /**
  * 工具，便于扩展、插件使用

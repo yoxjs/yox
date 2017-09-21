@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>指令</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div id="app"></div>
+    <script id="template" type="plain/text">
+
+        <div>
+            <button o-click1="english">
+                11
+            </button>
+            <button o-click2="中文">
+                22
+            </button>
+            <button o-click3="{{name}}">
+                33
+            </button>
+        </div>
+
+    </script>
+    <script src="../dist/yox.js"></script>
+    <script>
+        var instance = new Yox({
+            el: '#app',
+            template: '#template',
+            data: {
+                name: 'yox'
+            },
+            directives: {
+                click1: function (options) {
+                    console.log('1', options);
+                },
+                click2: function (options) {
+                    console.log('2', options);
+                },
+                click3: function (options) {
+                    console.log('3', options);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
