@@ -184,10 +184,20 @@ export default class Yox {
       )
     }
 
-    components && instance.component(components)
-    directives && instance.directive(directives)
-    partials && instance.partial(partials)
-    filters && instance.filter(filters)
+    // 聪明的 set...
+    let smartSet = function (key, value) {
+      if (is.func(value)) {
+        instance[ key ](execute(value, instance))
+      }
+      else if (is.object(value)) {
+        instance[ key ](value)
+      }
+    }
+
+    smartSet('component', components)
+    smartSet('directive', directives)
+    smartSet('partial', partials)
+    smartSet('filter', filters)
 
     execute(options[ config.HOOK_AFTER_CREATE ], instance)
 
@@ -710,7 +720,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.50.6'
+Yox.version = '0.50.7'
 
 /**
  * 工具，便于扩展、插件使用

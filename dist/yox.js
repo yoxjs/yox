@@ -5790,10 +5790,19 @@ var Yox = function () {
       });
     }
 
-    components && instance.component(components);
-    directives && instance.directive(directives);
-    partials && instance.partial(partials);
-    filters && instance.filter(filters);
+    // 聪明的 set...
+    var smartSet = function (key, value) {
+      if (func(value)) {
+        instance[key](execute(value, instance));
+      } else if (object(value)) {
+        instance[key](value);
+      }
+    };
+
+    smartSet('component', components);
+    smartSet('directive', directives);
+    smartSet('partial', partials);
+    smartSet('filter', filters);
 
     execute(options[HOOK_AFTER_CREATE], instance);
 
@@ -6341,7 +6350,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.50.6';
+Yox.version = '0.50.7';
 
 /**
  * 工具，便于扩展、插件使用
