@@ -720,7 +720,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.50.9'
+Yox.version = '0.51.0'
 
 /**
  * 工具，便于扩展、插件使用
@@ -911,7 +911,12 @@ Yox.validate = function (props, propTypes) {
         logger.warn(`"${key}" prop is not found.`)
       }
       else if (object.has(rule, 'value')) {
-        result[ key ] = is.func(value) ? value(props) : value
+        if (type === env.RAW_FUNCTION) {
+          result[ key ] = value
+        }
+        else {
+          result[ key ] = is.func(value) ? value(props) : value
+        }
       }
     }
   )

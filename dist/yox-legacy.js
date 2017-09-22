@@ -5302,7 +5302,6 @@ var COMPOSITION_END = 'compositionend';
  */
 var PROPERTY_CHANGE = 'propertychange';
 
-
 var IEEvent = function () {
   function IEEvent(event, element) {
     classCallCheck(this, IEEvent);
@@ -6529,7 +6528,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.50.9';
+Yox.version = '0.51.0';
 
 /**
  * 工具，便于扩展、插件使用
@@ -6684,7 +6683,11 @@ Yox.validate = function (props, propTypes) {
     } else if (required) {
       warn('"' + key + '" prop is not found.');
     } else if (has$1(rule, 'value')) {
-      result[key] = func(value) ? value(props) : value;
+      if (type === RAW_FUNCTION) {
+        result[key] = value;
+      } else {
+        result[key] = func(value) ? value(props) : value;
+      }
     }
   });
   return result;
