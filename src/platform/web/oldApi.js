@@ -18,9 +18,6 @@ if (!Object.keys) {
     }
     return result
   }
-  Object.freeze = function (obj) {
-    return obj
-  }
   Object.create = function (proto, descriptor) {
     function Class() { }
     Class.prototype = proto
@@ -72,18 +69,6 @@ if (!Array.prototype.map) {
       }
     )
     return result
-  }
-}
-if (!Function.prototype.bind) {
-  Function.prototype.bind = function (context) {
-    let fn = this
-    return function () {
-      return execute(
-        fn,
-        context,
-        array.toArray(arguments)
-      )
-    }
   }
 }
 

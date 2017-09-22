@@ -38,6 +38,17 @@ function optimize(source) {
    }
   )
 
+
+  /**
+   * 把 Object.freeze 去掉
+   */
+  source = source.replace(
+   /Object\.freeze\(([^)]+)\)/g,
+   function ($0, $1) {
+     return $1
+   }
+  )
+
   /**
    * 类属性 value: function has$$1
    * 转成 value: function

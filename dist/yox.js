@@ -146,7 +146,7 @@ function primitive(value) {
   return string(value) || number(value) || boolean(value) || value == NULL;
 }
 
-var is$1 = Object.freeze({
+var is$1 = {
 	is: is,
 	func: func,
 	array: array,
@@ -156,7 +156,7 @@ var is$1 = Object.freeze({
 	boolean: boolean,
 	numeric: numeric,
 	primitive: primitive
-});
+};
 
 /**
  * 任性地执行一个函数，不管它有没有、是不是
@@ -491,7 +491,7 @@ function falsy(array$$1) {
   return !array(array$$1) || array$$1.length === 0;
 }
 
-var array$1 = Object.freeze({
+var array$1 = {
 	each: each,
 	merge: merge,
 	push: push,
@@ -504,7 +504,7 @@ var array$1 = Object.freeze({
 	pop: pop,
 	remove: remove,
 	falsy: falsy
-});
+};
 
 /**
  * 连字符转成驼峰
@@ -609,7 +609,7 @@ function falsy$1(str) {
   return !string(str) || str === CHAR_BLANK;
 }
 
-var string$1 = Object.freeze({
+var string$1 = {
 	camelCase: camelCase,
 	trim: trim,
 	slice: slice,
@@ -619,7 +619,7 @@ var string$1 = Object.freeze({
 	startsWith: startsWith,
 	endsWith: endsWith,
 	falsy: falsy$1
-});
+};
 
 var SEPARATOR_KEY = '.';
 
@@ -869,7 +869,7 @@ function set$1(object$$1, keypath, value, autofill) {
   }
 }
 
-var object$1 = Object.freeze({
+var object$1 = {
 	keys: keys,
 	sort: sort,
 	each: each$1,
@@ -880,7 +880,7 @@ var object$1 = Object.freeze({
 	copy: copy,
 	get: get$1,
 	set: set$1
-});
+};
 
 var guid = 0;
 
@@ -1169,12 +1169,12 @@ function fatal(msg) {
 
 
 
-var logger = Object.freeze({
+var logger = {
 	log: log,
 	warn: warn,
 	error: error$1,
 	fatal: fatal
-});
+};
 
 var isNative = function (fn) {
   if (func(fn)) {
@@ -1877,14 +1877,14 @@ function init(api) {
   };
 }
 
-var snabbdom = Object.freeze({
+var snabbdom = {
 	createCommentVnode: createCommentVnode,
 	createTextVnode: createTextVnode,
 	isTextVnode: isTextVnode,
 	createElementVnode: createElementVnode,
 	createComponentVnode: createComponentVnode,
 	init: init
-});
+};
 
 var SYNTAX_IF = '#if';
 var SYNTAX_ELSE = 'else';
@@ -5158,7 +5158,7 @@ function off(element, type, listener) {
   element.removeEventListener(type, listener, FALSE);
 }
 
-var domApi = Object.freeze({
+var domApi = {
 	createElement: createElement,
 	createText: createText,
 	createComment: createComment,
@@ -5181,7 +5181,7 @@ var domApi = Object.freeze({
 	find: find,
 	on: on$1,
 	off: off
-});
+};
 
 /**
  * tap 事件
@@ -6358,7 +6358,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.51.0';
+Yox.version = '0.51.1';
 
 /**
  * 工具，便于扩展、插件使用
