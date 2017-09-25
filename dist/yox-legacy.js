@@ -5014,12 +5014,14 @@ function createWatch(action) {
       }
       each$1(keypath, function (value, keypath) {
         var watcher = value,
-            sync;
+            innerSync = sync;
         if (object(value)) {
           watcher = value.watcher;
-          sync = value.sync;
+          if (boolean(value.sync)) {
+            innerSync = value.sync;
+          }
         }
-        watch(keypath, watcher, sync);
+        watch(keypath, watcher, innerSync);
       });
     }
   };
@@ -6524,7 +6526,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.51.2';
+Yox.version = '0.51.3';
 
 /**
  * 工具，便于扩展、插件使用
