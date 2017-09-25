@@ -4343,9 +4343,13 @@ var Observer = function () {
 
     var instance = this;
 
+    if (!context) {
+      context = instance;
+    }
+
     instance.data = data || {};
     instance.emitter = new Emitter();
-    instance.context = context || instance;
+    instance.context = context;
 
     // 缓存历史数据，便于对比变化
     instance.cache = {};
@@ -4410,7 +4414,7 @@ var Observer = function () {
               computedStack.push([]);
             }
 
-            var value = execute(get$$1, instance.context);
+            var value = execute(get$$1, context);
             cache[keypath] = value;
 
             if (needDeps) {
@@ -4423,7 +4427,7 @@ var Observer = function () {
 
         if (set$$1) {
           instance.computedSetters[keypath] = function (value) {
-            set$$1.call(instance.context, value);
+            set$$1.call(context, value);
           };
         }
       });
@@ -5005,6 +5009,9 @@ function createWatch(action) {
     if (string(keypath)) {
       watch(keypath, watcher, sync);
     } else {
+      if (watcher === TRUE) {
+        sync = watcher;
+      }
       each$1(keypath, function (value, keypath) {
         var watcher = value,
             sync;
@@ -6517,7 +6524,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.51.1';
+Yox.version = '0.51.2';
 
 /**
  * 工具，便于扩展、插件使用
