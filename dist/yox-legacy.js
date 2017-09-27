@@ -69,6 +69,7 @@ if (!Array.prototype.map) {
 
 
 
+
 var classCallCheck = function (instance, Constructor) {
   if (!(instance instanceof Constructor)) {
     throw new Error("Cannot call a class as a function");
@@ -1777,18 +1778,19 @@ function init(api) {
         oldEndVnode = oldChildren[--oldEndIndex];
       }
 
-      // 优先从头到尾比较，位置相同且值得 patch
-      else if (isPatchable(oldStartVnode, newStartVnode)) {
-          patchVnode(oldStartVnode, newStartVnode);
-          oldStartVnode = oldChildren[++oldStartIndex];
-          newStartVnode = newChildren[++newStartIndex];
+      // 从尾到头比较，位置相同且值得 patch
+      // 从后开始的原因是，当删除了前面的元素，从前往后不合理
+      else if (isPatchable(oldEndVnode, newEndVnode)) {
+          patchVnode(oldEndVnode, newEndVnode);
+          oldEndVnode = oldChildren[--oldEndIndex];
+          newEndVnode = newChildren[--newEndIndex];
         }
 
-        // 再从尾到头比较，位置相同且值得 patch
-        else if (isPatchable(oldEndVnode, newEndVnode)) {
-            patchVnode(oldEndVnode, newEndVnode);
-            oldEndVnode = oldChildren[--oldEndIndex];
-            newEndVnode = newChildren[--newEndIndex];
+        // 从头到尾比较，位置相同且值得 patch
+        else if (isPatchable(oldStartVnode, newStartVnode)) {
+            patchVnode(oldStartVnode, newStartVnode);
+            oldStartVnode = oldChildren[++oldStartIndex];
+            newStartVnode = newChildren[++newStartIndex];
           }
 
           // 比较完两侧的节点，剩下就是 位置发生改变的节点 和 全新的节点
@@ -6526,7 +6528,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.51.3';
+Yox.version = '0.51.4';
 
 /**
  * 工具，便于扩展、插件使用
