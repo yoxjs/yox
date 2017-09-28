@@ -18,7 +18,7 @@ import * as oldApi from './oldApi'
 //   object.extend(api, oldApi)
 // }
 
-// let { on, off } = api
+let { on, off } = api
 
 /**
  * 特殊事件，外部可扩展

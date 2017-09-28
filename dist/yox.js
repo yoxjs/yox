@@ -1008,8 +1008,8 @@ var Emitter = function () {
 }();
 
 extend(Emitter.prototype, {
-  on: on$1(),
-  once: on$1({ max: 1 }),
+  on: on(),
+  once: on({ max: 1 }),
   off: function off(type, listener) {
 
     var instance = this;
@@ -1046,7 +1046,7 @@ extend(Emitter.prototype, {
   }
 });
 
-function on$1(data) {
+function on(data) {
   return function (type, listener) {
     var namespace = this.namespace,
         listeners = this.listeners;
@@ -5197,11 +5197,11 @@ function find(selector, context) {
   return (context || doc).querySelector(selector);
 }
 
-function on$2(element, type, listener) {
+function on$1(element, type, listener) {
   element.addEventListener(type, listener, FALSE);
 }
 
-function off$1(element, type, listener) {
+function off(element, type, listener) {
   element.removeEventListener(type, listener, FALSE);
 }
 
@@ -5226,8 +5226,8 @@ var domApi = {
 	text: text,
 	html: html,
 	find: find,
-	on: on$2,
-	off: off$1
+	on: on$1,
+	off: off
 };
 
 /**
@@ -5343,26 +5343,18 @@ var api = copy(domApi);
 //   object.extend(api, oldApi)
 // }
 
-// let { on, off } = api
+var _on = api.on;
+var _off = api.off;
 
 /**
  * 特殊事件，外部可扩展
  *
  * @type {Object}
  */
+
 api.specialEvents = {
   input: {
-    on: function (_on) {
-      function on$$1(_x, _x2) {
-        return _on.apply(this, arguments);
-      }
-
-      on$$1.toString = function () {
-        return _on.toString();
-      };
-
-      return on$$1;
-    }(function (el, listener) {
+    on: function on$$1(el, listener) {
       var locked = FALSE;
       api.on(el, COMPOSITION_START, listener[COMPOSITION_START] = function () {
         locked = TRUE;
@@ -5371,28 +5363,18 @@ api.specialEvents = {
         locked = FALSE;
         listener(e, INPUT);
       });
-      on(el, INPUT, listener[INPUT] = function (e) {
+      _on(el, INPUT, listener[INPUT] = function (e) {
         if (!locked) {
           listener(e);
         }
       });
-    }),
-    off: function (_off) {
-      function off$$1(_x3, _x4) {
-        return _off.apply(this, arguments);
-      }
-
-      off$$1.toString = function () {
-        return _off.toString();
-      };
-
-      return off$$1;
-    }(function (el, listener) {
+    },
+    off: function off$$1(el, listener) {
       api.off(el, COMPOSITION_START, listener[COMPOSITION_START]);
       api.off(el, COMPOSITION_END, listener[COMPOSITION_END]);
-      off(el, INPUT, listener[INPUT]);
+      _off(el, INPUT, listener[INPUT]);
       listener[COMPOSITION_START] = listener[COMPOSITION_END] = listener[INPUT] = NULL;
-    })
+    }
   }
 };
 
@@ -5423,7 +5405,7 @@ api.on = function (element, type, listener, context) {
     if (special) {
       special.on(element, nativeListener);
     } else {
-      on(element, type, nativeListener);
+      _on(element, type, nativeListener);
     }
   }
   emitter.on(type, listener);
@@ -5450,7 +5432,7 @@ api.off = function (element, type, listener) {
       if (special) {
         special.off(element, nativeListener);
       } else {
-        off(element, type, nativeListener);
+        _off(element, type, nativeListener);
       }
       delete emitter[type];
       types.splice(index, 1);
