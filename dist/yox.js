@@ -1008,8 +1008,8 @@ var Emitter = function () {
 }();
 
 extend(Emitter.prototype, {
-  on: on(),
-  once: on({ max: 1 }),
+  on: on$1(),
+  once: on$1({ max: 1 }),
   off: function off(type, listener) {
 
     var instance = this;
@@ -1046,7 +1046,7 @@ extend(Emitter.prototype, {
   }
 });
 
-function on(data) {
+function on$1(data) {
   return function (type, listener) {
     var namespace = this.namespace,
         listeners = this.listeners;
@@ -1464,6 +1464,15 @@ function setRef(vnode, value) {
   }
 }
 
+function removeRef(vnode) {
+  var ref = vnode.ref,
+      instance = vnode.instance;
+
+  if (ref) {
+    delete instance.$refs[ref];
+  }
+}
+
 function createComponent(vnode) {
   var el = vnode.el,
       tag = vnode.tag,
@@ -1550,6 +1559,7 @@ function destroyComponent(vnode) {
       el[key] = NULL;
     }
   }
+  removeRef(vnode);
 }
 
 var component = {
@@ -4113,22 +4123,19 @@ function render(ast, data, instance) {
     return FALSE;
   };
 
-  function getKeywordValue(value) {
+  var getKeywordValue = function (value) {
     if (string(value)) {
       return value;
     } else if (object(value)) {
       return executeExpr(value);
     }
-  }
+  };
 
   enter[ELEMENT] = function (source, output) {
     var name = source.name,
         key = source.key,
         ref = source.ref;
 
-    if (ref) {
-      output.ref = getKeywordValue(ref);
-    }
     if (key) {
       var trackBy = getKeywordValue(key);
       if (isDef(trackBy)) {
@@ -4168,6 +4175,9 @@ function render(ast, data, instance) {
           keypath: keypath
         };
       }
+    }
+    if (ref) {
+      output.ref = getKeywordValue(ref);
     }
   };
 
@@ -5187,11 +5197,11 @@ function find(selector, context) {
   return (context || doc).querySelector(selector);
 }
 
-function on$1(element, type, listener) {
+function on$2(element, type, listener) {
   element.addEventListener(type, listener, FALSE);
 }
 
-function off(element, type, listener) {
+function off$1(element, type, listener) {
   element.removeEventListener(type, listener, FALSE);
 }
 
@@ -5216,8 +5226,8 @@ var domApi = {
 	text: text,
 	html: html,
 	find: find,
-	on: on$1,
-	off: off
+	on: on$2,
+	off: off$1
 };
 
 /**
@@ -5274,26 +5284,85 @@ var COMPOSITION_END = 'compositionend';
  * @type {string}
  */
 
+if (!Object.keys) {
+  Object.keys = function (obj) {
+    var result = [];
+    for (var key in obj) {
+      push(result, key);
+    }
+    return result;
+  };
+  Object.create = function (proto, descriptor) {
+    function Class() {}
+    Class.prototype = proto;
+    proto = new Class();
+    var constructor = descriptor && descriptor.constructor;
+    if (constructor) {
+      proto.constructor = constructor.value;
+    }
+    return proto;
+  };
+}
+if (!String.prototype.trim) {
+  String.prototype.trim = function () {
+    return this.replace(/^\s*|\s*$/g, '');
+  };
+}
+if (!Array.prototype.map) {
+  Array.prototype.indexOf = function (target) {
+    var result = -1;
+    each(this, function (item, index) {
+      if (item === target) {
+        result = index;
+        return FALSE;
+      }
+    });
+    return result;
+  };
+  Array.prototype.map = function (fn) {
+    var result = [];
+    each(this, function (item, index) {
+      result.push(fn(item, index));
+    });
+    return result;
+  };
+  Array.prototype.filter = function (fn) {
+    var result = [];
+    each(this, function (item, index) {
+      if (fn(item, index)) {
+        result.push(item);
+      }
+    });
+    return result;
+  };
+}
+
 var api = copy(domApi);
 
-// import * as oldApi from './oldApi'
-//
 // if (env.doc && !env.doc.addEventListener) {
 //   object.extend(api, oldApi)
 // }
 
-var _on = api.on;
-var _off = api.off;
+// let { on, off } = api
 
 /**
  * 特殊事件，外部可扩展
  *
  * @type {Object}
  */
-
 api.specialEvents = {
   input: {
-    on: function on$$1(el, listener) {
+    on: function (_on) {
+      function on$$1(_x, _x2) {
+        return _on.apply(this, arguments);
+      }
+
+      on$$1.toString = function () {
+        return _on.toString();
+      };
+
+      return on$$1;
+    }(function (el, listener) {
       var locked = FALSE;
       api.on(el, COMPOSITION_START, listener[COMPOSITION_START] = function () {
         locked = TRUE;
@@ -5302,18 +5371,28 @@ api.specialEvents = {
         locked = FALSE;
         listener(e, INPUT);
       });
-      _on(el, INPUT, listener[INPUT] = function (e) {
+      on(el, INPUT, listener[INPUT] = function (e) {
         if (!locked) {
           listener(e);
         }
       });
-    },
-    off: function off$$1(el, listener) {
+    }),
+    off: function (_off) {
+      function off$$1(_x3, _x4) {
+        return _off.apply(this, arguments);
+      }
+
+      off$$1.toString = function () {
+        return _off.toString();
+      };
+
+      return off$$1;
+    }(function (el, listener) {
       api.off(el, COMPOSITION_START, listener[COMPOSITION_START]);
       api.off(el, COMPOSITION_END, listener[COMPOSITION_END]);
-      _off(el, INPUT, listener[INPUT]);
+      off(el, INPUT, listener[INPUT]);
       listener[COMPOSITION_START] = listener[COMPOSITION_END] = listener[INPUT] = NULL;
-    }
+    })
   }
 };
 
@@ -5344,7 +5423,7 @@ api.on = function (element, type, listener, context) {
     if (special) {
       special.on(element, nativeListener);
     } else {
-      _on(element, type, nativeListener);
+      on(element, type, nativeListener);
     }
   }
   emitter.on(type, listener);
@@ -5371,7 +5450,7 @@ api.off = function (element, type, listener) {
       if (special) {
         special.off(element, nativeListener);
       } else {
-        _off(element, type, nativeListener);
+        off(element, type, nativeListener);
       }
       delete emitter[type];
       types.splice(index, 1);
@@ -6062,14 +6141,9 @@ var Yox = function () {
     var instance = this,
         afterHook;
 
-    var $refs = instance.$refs,
-        $node = instance.$node,
+    var $node = instance.$node,
         $options = instance.$options;
 
-
-    if ($refs) {
-      clear($refs);
-    }
 
     if ($node) {
       execute($options[HOOK_BEFORE_UPDATE], instance);
@@ -6351,7 +6425,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.51.5';
+Yox.version = '0.51.6';
 
 /**
  * 工具，便于扩展、插件使用

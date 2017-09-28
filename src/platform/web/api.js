@@ -14,11 +14,11 @@ let api = object.copy(domApi)
 
 import * as oldApi from './oldApi'
 
-if (env.doc && !env.doc.addEventListener) {
-  object.extend(api, oldApi)
-}
+// if (env.doc && !env.doc.addEventListener) {
+//   object.extend(api, oldApi)
+// }
 
-let { on, off } = api
+// let { on, off } = api
 
 /**
  * 特殊事件，外部可扩展

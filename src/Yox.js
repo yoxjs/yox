@@ -449,14 +449,9 @@ export default class Yox {
     let instance = this, afterHook
 
     let {
-      $refs,
       $node,
       $options,
     } = instance
-
-    if ($refs) {
-      object.clear($refs)
-    }
 
     if ($node) {
       execute($options[ config.HOOK_BEFORE_UPDATE ], instance)
@@ -725,7 +720,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.51.5'
+Yox.version = '0.51.6'
 
 /**
  * 工具，便于扩展、插件使用

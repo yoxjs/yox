@@ -1517,6 +1517,15 @@ function setRef(vnode, value) {
   }
 }
 
+function removeRef(vnode) {
+  var ref = vnode.ref,
+      instance = vnode.instance;
+
+  if (ref) {
+    delete instance.$refs[ref];
+  }
+}
+
 function createComponent(vnode) {
   var el = vnode.el,
       tag = vnode.tag,
@@ -1603,6 +1612,7 @@ function destroyComponent(vnode) {
       el[key] = NULL;
     }
   }
+  removeRef(vnode);
 }
 
 var component = {
@@ -4166,22 +4176,19 @@ function render(ast, data, instance) {
     return FALSE;
   };
 
-  function getKeywordValue(value) {
+  var getKeywordValue = function (value) {
     if (string(value)) {
       return value;
     } else if (object(value)) {
       return executeExpr(value);
     }
-  }
+  };
 
   enter[ELEMENT] = function (source, output) {
     var name = source.name,
         key = source.key,
         ref = source.ref;
 
-    if (ref) {
-      output.ref = getKeywordValue(ref);
-    }
     if (key) {
       var trackBy = getKeywordValue(key);
       if (isDef(trackBy)) {
@@ -4221,6 +4228,9 @@ function render(ast, data, instance) {
           keypath: keypath
         };
       }
+    }
+    if (ref) {
+      output.ref = getKeywordValue(ref);
     }
   };
 
@@ -6221,14 +6231,9 @@ var Yox = function () {
     var instance = this,
         afterHook;
 
-    var $refs = instance.$refs,
-        $node = instance.$node,
+    var $node = instance.$node,
         $options = instance.$options;
 
-
-    if ($refs) {
-      clear($refs);
-    }
 
     if ($node) {
       execute($options[HOOK_BEFORE_UPDATE], instance);
@@ -6510,7 +6515,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.51.5';
+Yox.version = '0.51.6';
 
 /**
  * 工具，便于扩展、插件使用
