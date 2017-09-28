@@ -69,7 +69,6 @@ if (!Array.prototype.map) {
 
 
 
-
 var classCallCheck = function (instance, Constructor) {
   if (!(instance instanceof Constructor)) {
     throw new Error("Cannot call a class as a function");
@@ -1508,13 +1507,25 @@ var directives = {
   destroy: destroyDirectives
 };
 
+function setRef(vnode, value) {
+  var ref = vnode.ref,
+      instance = vnode.instance;
+
+  if (ref) {
+    var refs = instance.$refs || (instance.$refs = {});
+    refs[ref] = value;
+  }
+}
+
 function createComponent(vnode) {
   var el = vnode.el,
       tag = vnode.tag,
+      ref = vnode.ref,
       component = vnode.component,
       instance = vnode.instance;
 
   if (!component) {
+    setRef(vnode, el);
     return;
   }
 
@@ -1545,6 +1556,8 @@ function createComponent(vnode) {
         el = _vnode.el = component.$el;
         el[key] = component;
 
+        setRef(_vnode, component);
+
         each(queue, function (callback) {
           callback(component);
         });
@@ -1555,17 +1568,21 @@ function createComponent(vnode) {
 
 function updateComponent(vnode) {
   var component = vnode.component,
+      el = vnode.el,
       attrs = vnode.attrs;
 
   if (component) {
     component = vnode.el[getComponentByTag(vnode.tag)];
     if (component) {
       if (component.set) {
+        setRef(vnode, component);
         component.set(attrs, TRUE);
       } else {
         component.vnode = vnode;
       }
     }
+  } else {
+    setRef(vnode, el);
   }
 }
 
@@ -1647,7 +1664,7 @@ function isTextVnode(vnode) {
   return vnode && has$1(vnode, 'text') && !has$1(vnode, 'tag');
 }
 
-function createElementVnode(tag, attrs$$1, props$$1, directives$$1, children, key, instance) {
+function createElementVnode(tag, attrs$$1, props$$1, directives$$1, children, key, ref, instance) {
   return {
     tag: tag,
     attrs: attrs$$1,
@@ -1655,13 +1672,14 @@ function createElementVnode(tag, attrs$$1, props$$1, directives$$1, children, ke
     directives: directives$$1,
     children: children,
     key: key,
+    ref: ref,
     instance: instance,
     text: UNDEFINED
   };
 }
 
-function createComponentVnode(tag, attrs$$1, props$$1, directives$$1, children, key, instance) {
-  var vnode = createElementVnode(tag, attrs$$1, props$$1, directives$$1, children, key, instance);
+function createComponentVnode(tag, attrs$$1, props$$1, directives$$1, children, key, ref, instance) {
+  var vnode = createElementVnode(tag, attrs$$1, props$$1, directives$$1, children, key, ref, instance);
   vnode.component = TRUE;
   return vnode;
 }
@@ -1778,19 +1796,18 @@ function init(api) {
         oldEndVnode = oldChildren[--oldEndIndex];
       }
 
-      // 从尾到头比较，位置相同且值得 patch
-      // 从后开始的原因是，当删除了前面的元素，从前往后不合理
-      else if (isPatchable(oldEndVnode, newEndVnode)) {
-          patchVnode(oldEndVnode, newEndVnode);
-          oldEndVnode = oldChildren[--oldEndIndex];
-          newEndVnode = newChildren[--newEndIndex];
+      // 从头到尾比较，位置相同且值得 patch
+      else if (isPatchable(oldStartVnode, newStartVnode)) {
+          patchVnode(oldStartVnode, newStartVnode);
+          oldStartVnode = oldChildren[++oldStartIndex];
+          newStartVnode = newChildren[++newStartIndex];
         }
 
-        // 从头到尾比较，位置相同且值得 patch
-        else if (isPatchable(oldStartVnode, newStartVnode)) {
-            patchVnode(oldStartVnode, newStartVnode);
-            oldStartVnode = oldChildren[++oldStartIndex];
-            newStartVnode = newChildren[++newStartIndex];
+        // 从尾到头比较，位置相同且值得 patch
+        else if (isPatchable(oldEndVnode, newEndVnode)) {
+            patchVnode(oldEndVnode, newEndVnode);
+            oldEndVnode = oldChildren[--oldEndIndex];
+            newEndVnode = newChildren[--newEndIndex];
           }
 
           // 比较完两侧的节点，剩下就是 位置发生改变的节点 和 全新的节点
@@ -1957,12 +1974,12 @@ var SPECIAL_CHILDREN = '$children';
 var DIRECTIVE_CUSTOM_PREFIX = 'o-';
 var DIRECTIVE_EVENT_PREFIX = 'on-';
 
-var DIRECTIVE_REF = 'ref';
 var DIRECTIVE_LAZY = 'lazy';
 var DIRECTIVE_MODEL = 'model';
 var DIRECTIVE_EVENT = 'event';
 var DIRECTIVE_BINDING = 'binding';
 
+var KEYWORD_REF = 'ref';
 var KEYWORD_UNIQUE = 'key';
 
 var HOOK_BEFORE_CREATE = 'beforeCreate';
@@ -2734,7 +2751,7 @@ var name2Type = {};
 // 类型 -> 名称的映射
 var type2Name = {};
 
-ifTypes[IF] = ifTypes[ELSE_IF] = elseTypes[ELSE_IF] = elseTypes[ELSE] = htmlTypes[ELEMENT] = htmlTypes[ATTRIBUTE] = htmlTypes[DIRECTIVE] = leafTypes[TEXT] = leafTypes[IMPORT] = leafTypes[SPREAD] = leafTypes[EXPRESSION] = builtInDirectives[DIRECTIVE_REF] = builtInDirectives[DIRECTIVE_LAZY] = builtInDirectives[DIRECTIVE_MODEL] = TRUE;
+ifTypes[IF] = ifTypes[ELSE_IF] = elseTypes[ELSE_IF] = elseTypes[ELSE] = htmlTypes[ELEMENT] = htmlTypes[ATTRIBUTE] = htmlTypes[DIRECTIVE] = leafTypes[TEXT] = leafTypes[IMPORT] = leafTypes[SPREAD] = leafTypes[EXPRESSION] = builtInDirectives[DIRECTIVE_LAZY] = builtInDirectives[DIRECTIVE_MODEL] = TRUE;
 
 name2Type['if'] = IF;
 name2Type['each'] = EACH;
@@ -3278,10 +3295,11 @@ function compile(content) {
         var _singleChild = children.length === 1 && children[0];
 
         if (type === ATTRIBUTE) {
-          // 把数据从属性中提出来，减少渲染时的遍历
-          var element = last(htmlStack);
           // <div key="xx">
-          if (name === KEYWORD_UNIQUE) {
+          // <div ref="xx">
+          if (name === KEYWORD_UNIQUE || name === KEYWORD_REF) {
+            // 把数据从属性中提出来，减少渲染时的遍历
+            var element = last(htmlStack);
             remove(element.children, target);
             if (!element.children.length) {
               delete element.children;
@@ -3289,9 +3307,9 @@ function compile(content) {
             if (_singleChild) {
               // 为了提升性能，这些特殊属性不支持插值
               if (_singleChild.type === TEXT) {
-                element.key = _singleChild.text;
+                element[name] = _singleChild.text;
               } else if (_singleChild.type === EXPRESSION) {
-                element.key = _singleChild.expr;
+                element[name] = _singleChild.expr;
               }
             }
             return;
@@ -4148,17 +4166,24 @@ function render(ast, data, instance) {
     return FALSE;
   };
 
+  function getKeywordValue(value) {
+    if (string(value)) {
+      return value;
+    } else if (object(value)) {
+      return executeExpr(value);
+    }
+  }
+
   enter[ELEMENT] = function (source, output) {
     var name = source.name,
-        key = source.key;
+        key = source.key,
+        ref = source.ref;
 
+    if (ref) {
+      output.ref = getKeywordValue(ref);
+    }
     if (key) {
-      var trackBy;
-      if (string(key)) {
-        trackBy = key;
-      } else if (object(key)) {
-        trackBy = executeExpr(key);
-      }
+      var trackBy = getKeywordValue(key);
       if (isDef(trackBy)) {
 
         if (!currentCache) {
@@ -4202,6 +4227,7 @@ function render(ast, data, instance) {
   leave[ELEMENT] = function (source, output) {
     var component = source.component,
         key = output.key,
+        ref = output.ref,
         attrs = output.attrs,
         children = output.children,
         props,
@@ -4239,7 +4265,7 @@ function render(ast, data, instance) {
       create = 'createElementVnode';
     }
 
-    vnode = snabbdom[create](source.name, attrs, props, output.directives, children, key, instance);
+    vnode = snabbdom[create](source.name, attrs, props, output.directives, children, key, ref, instance);
 
     if (isDef(key)) {
       currentCache[key].deps = cacheDeps;
@@ -5516,55 +5542,6 @@ api.off = function (element, type, listener) {
 };
 
 /**
- * <Component ref="component" />
- * <input ref="input">
- */
-
-var ref = function (_ref) {
-  var el = _ref.el,
-      node = _ref.node,
-      instance = _ref.instance,
-      component = _ref.component;
-  var value = node.value;
-
-  if (falsy$1(value)) {
-    return;
-  }
-
-  var $refs = instance.$refs;
-
-  if (object($refs)) {
-    if (has$1($refs, value)) {
-      error$1('Passing a ref "' + value + '" is existed.');
-    }
-  } else {
-    $refs = instance.$refs = {};
-  }
-
-  var set$$1 = function (target) {
-    $refs[value] = target;
-  };
-
-  if (component) {
-    if (array(component)) {
-      push(component, set$$1);
-    } else {
-      set$$1(component);
-    }
-  } else {
-    set$$1(el);
-  }
-
-  return function () {
-    if (has$1($refs, value)) {
-      delete $refs[value];
-    } else if (array(component)) {
-      remove(component, set$$1);
-    }
-  };
-};
-
-/**
  * 节流调用
  *
  * @param {Function} fn 需要节制调用的函数
@@ -6244,9 +6221,14 @@ var Yox = function () {
     var instance = this,
         afterHook;
 
-    var $node = instance.$node,
+    var $refs = instance.$refs,
+        $node = instance.$node,
         $options = instance.$options;
 
+
+    if ($refs) {
+      clear($refs);
+    }
 
     if ($node) {
       execute($options[HOOK_BEFORE_UPDATE], instance);
@@ -6528,7 +6510,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.51.4';
+Yox.version = '0.51.5';
 
 /**
  * 工具，便于扩展、插件使用
@@ -6705,7 +6687,7 @@ Yox.use = function (plugin) {
 };
 
 // 全局注册内置指令
-Yox.directive({ ref: ref, event: bindEvent, model: model, binding: binding });
+Yox.directive({ event: bindEvent, model: model, binding: binding });
 
 return Yox;
 

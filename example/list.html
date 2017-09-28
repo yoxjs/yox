@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>List</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div id="app"></div>
+    <script id="template" type="plain/text">
+
+        <div>
+        {{#each users:index}}
+
+                <User ref="xxx{{'user' + id}}" user="{{this}}" />
+
+        {{/each}}
+        </div>
+
+    </script>
+
+    <script id="template2" type="plain/text">
+
+        <div id="{{user.id}}">
+            {{user.videoOn}}-{{user.audioOn}}
+        </div>
+
+    </script>
+
+    <script src="../dist/yox.js"></script>
+    <script>
+        var Component = {
+            propTypes: {
+                user: {
+                    type: 'object'
+                }
+            },
+            template: '#template2',
+            beforeCreate: function () {
+                console.log('beforeCreate')
+            },
+            afterCreate: function () {
+                console.log('afterCreate', this.get(''))
+            },
+            beforeUpdate: function () {
+                console.log('beforeUpdate', this.get(''))
+            },
+            afterUpdate: function () {
+                console.log('afterUpdate', this.get(''))
+            },
+            beforeDestroy: function () {
+                console.log('beforeDestroy', this.get(''))
+            },
+            afterDestroy: function () {
+                console.log('afterDestroy')
+            }
+        }
+        var instance = new Yox({
+            el: '#app',
+            template: '#template',
+            data: {
+                users: [
+                    {
+                        id: '11',
+                        videoOn: true,
+                        audioOn: true,
+                    },
+                    {
+                        id: '22',
+                        videoOn: true,
+                        audioOn: true,
+                    }
+                ]
+            },
+            components: {
+                User: Component
+            }
+        });
+        console.log(1)
+    </script>
+</body>
+</html>

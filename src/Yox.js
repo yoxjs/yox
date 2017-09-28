@@ -449,9 +449,14 @@ export default class Yox {
     let instance = this, afterHook
 
     let {
+      $refs,
       $node,
       $options,
     } = instance
+
+    if ($refs) {
+      object.clear($refs)
+    }
 
     if ($node) {
       execute($options[ config.HOOK_BEFORE_UPDATE ], instance)
@@ -720,7 +725,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.51.4'
+Yox.version = '0.51.5'
 
 /**
  * 工具，便于扩展、插件使用
@@ -934,10 +939,9 @@ Yox.use = function (plugin) {
   plugin.install(Yox)
 }
 
-import ref from './directive/ref'
 import event from './directive/event'
 import model from './directive/model'
 import binding from './directive/binding'
 
 // 全局注册内置指令
-Yox.directive({ ref, event, model, binding })
+Yox.directive({ event, model, binding })
