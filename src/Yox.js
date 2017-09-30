@@ -40,6 +40,10 @@ export default class Yox {
 
     let instance = this
 
+    if (!is.object(options)) {
+      options = { }
+    }
+
     // 如果不绑着，其他方法调不到钩子
     instance.$options = options
 
@@ -720,7 +724,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.51.6'
+Yox.version = '0.51.7'
 
 /**
  * 工具，便于扩展、插件使用

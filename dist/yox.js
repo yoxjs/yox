@@ -1998,11 +1998,18 @@ var TERNARY = 6;
 var ARRAY = 7;
 
 /**
+ * 对象表达式
+ *
+ * @type {number}
+ */
+var OBJECT = 8;
+
+/**
  * 函数调用表达式，如 a()
  *
  * @type {number}
  */
-var CALL = 8;
+var CALL = 9;
 
 var PLUS = '+';
 var MINUS = '-';
@@ -2079,6 +2086,30 @@ var Array$1 = function (_Node) {
   }
 
   return Array;
+}(Node);
+
+/**
+ * Object 节点
+ *
+ * @param {string} raw 源码
+ * @param {Array.<string>} keys
+ * @param {Array.<Node>} values
+ */
+
+var Object$1 = function (_Node) {
+  inherits(Object, _Node);
+
+  function Object(raw, keys, values) {
+    classCallCheck(this, Object);
+
+    var _this = possibleConstructorReturn(this, _Node.call(this, OBJECT, raw));
+
+    _this.keys = keys;
+    _this.values = values;
+    return _this;
+  }
+
+  return Object;
 }(Node);
 
 /**
@@ -2430,6 +2461,53 @@ function compile$1(content) {
     throwError();
   };
 
+  var parseObject = function () {
+
+    var keys$$1 = [],
+        values = [],
+        current = keys$$1;
+
+    // 跳过开始字符 {
+    index++;
+
+    while (index < length) {
+      charCode = getCharCode();
+      // }
+      if (charCode === CODE_CBRACE) {
+        index++;
+        if (keys$$1.length !== values.length) {
+          throwError();
+        }
+        return {
+          keys: keys$$1.map(function (item) {
+            if (item.type === IDENTIFIER) {
+              return item.name;
+            } else if (item.type === LITERAL) {
+              return item.value;
+            } else {
+              throwError();
+            }
+          }),
+          values: values
+        };
+      }
+      // :
+      else if (charCode === CODE_COLON) {
+          current = values;
+          index++;
+        }
+        // ,
+        else if (charCode === CODE_COMMA) {
+            current = keys$$1;
+            index++;
+          } else {
+            push(current, parseExpression());
+          }
+    }
+
+    throwError();
+  };
+
   var parseOperator = function (sortedOperatorList) {
 
     skipWhitespace();
@@ -2506,6 +2584,9 @@ function compile$1(content) {
       else if (charCode === CODE_OBRACK) {
           temp = parseTuple(CODE_CBRACK);
           return new Array$1(cutString(start), temp);
+        } else if (charCode === CODE_OBRACE) {
+          temp = parseObject();
+          return new Object$1(cutString(start), temp.keys, temp.values);
         }
         // (xx)
         else if (charCode === CODE_OPAREN) {
@@ -3700,6 +3781,14 @@ executor[ARRAY] = function (node, getter, context) {
   return node.elements.map(function (node) {
     return execute$1(node, getter, context);
   });
+};
+
+executor[OBJECT] = function (node, getter, context) {
+  var result = {};
+  each(node.keys, function (key, index) {
+    result[key] = execute$1(node.values[index], getter, context);
+  });
+  return result;
 };
 
 executor[CALL] = function (node, getter, context) {
@@ -5284,60 +5373,9 @@ var COMPOSITION_END = 'compositionend';
  * @type {string}
  */
 
-if (!Object.keys) {
-  Object.keys = function (obj) {
-    var result = [];
-    for (var key in obj) {
-      push(result, key);
-    }
-    return result;
-  };
-  Object.create = function (proto, descriptor) {
-    function Class() {}
-    Class.prototype = proto;
-    proto = new Class();
-    var constructor = descriptor && descriptor.constructor;
-    if (constructor) {
-      proto.constructor = constructor.value;
-    }
-    return proto;
-  };
-}
-if (!String.prototype.trim) {
-  String.prototype.trim = function () {
-    return this.replace(/^\s*|\s*$/g, '');
-  };
-}
-if (!Array.prototype.map) {
-  Array.prototype.indexOf = function (target) {
-    var result = -1;
-    each(this, function (item, index) {
-      if (item === target) {
-        result = index;
-        return FALSE;
-      }
-    });
-    return result;
-  };
-  Array.prototype.map = function (fn) {
-    var result = [];
-    each(this, function (item, index) {
-      result.push(fn(item, index));
-    });
-    return result;
-  };
-  Array.prototype.filter = function (fn) {
-    var result = [];
-    each(this, function (item, index) {
-      if (fn(item, index)) {
-        result.push(item);
-      }
-    });
-    return result;
-  };
-}
-
 var api = copy(domApi);
+
+// import * as oldApi from './oldApi'
 
 // if (env.doc && !env.doc.addEventListener) {
 //   object.extend(api, oldApi)
@@ -5723,27 +5761,32 @@ var Yox = function () {
 
     var instance = this;
 
+    if (!object(options)) {
+      options = {};
+    }
+
     // 如果不绑着，其他方法调不到钩子
     instance.$options = options;
 
     execute(options[HOOK_BEFORE_CREATE], instance, options);
 
-    var el = options.el,
-        data = options.data,
-        props = options.props,
-        parent = options.parent,
-        replace = options.replace,
-        computed = options.computed,
-        template = options.template,
-        components = options.components,
-        directives = options.directives,
-        partials = options.partials,
-        filters = options.filters,
-        events = options.events,
-        watchers = options.watchers,
-        methods = options.methods,
-        propTypes = options.propTypes,
-        extensions = options.extensions;
+    var _options = options,
+        el = _options.el,
+        data = _options.data,
+        props = _options.props,
+        parent = _options.parent,
+        replace = _options.replace,
+        computed = _options.computed,
+        template = _options.template,
+        components = _options.components,
+        directives = _options.directives,
+        partials = _options.partials,
+        filters = _options.filters,
+        events = _options.events,
+        watchers = _options.watchers,
+        methods = _options.methods,
+        propTypes = _options.propTypes,
+        extensions = _options.extensions;
 
 
     extensions && extend(instance, extensions);
@@ -6407,7 +6450,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.51.6';
+Yox.version = '0.51.7';
 
 /**
  * 工具，便于扩展、插件使用
