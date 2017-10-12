@@ -4130,6 +4130,9 @@ function render(ast, data, instance) {
   // 但如果失败的点原本是一个 DOM 元素
   // 就需要用注释节点来占位，否则 virtual dom 无法正常工作
   enter[IF] = function (source) {
+    var _source = source,
+        stump = _source.stump;
+
     while (TRUE) {
       // 有判断条件
       if (source.expr) {
@@ -4142,7 +4145,7 @@ function render(ast, data, instance) {
           if (source.next) {
             source = source.next;
           } else {
-            if (source.stump) {
+            if (stump) {
               addChild(last(htmlStack), createCommentVnode());
             }
             break;
@@ -6450,7 +6453,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.51.7';
+Yox.version = '0.51.8';
 
 /**
  * 工具，便于扩展、插件使用
