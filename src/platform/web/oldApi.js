@@ -169,9 +169,12 @@ export function setProp(element, name, value) {
     object.set(element, name, value)
   }
   catch (e) {
-    if (element.tagName === 'STYLE' && name === 'innerHTML') {
+    if (element.tagName === 'STYLE' && (name === 'innerHTML' || name === 'textContent')) {
       element.setAttribute('type', 'text/css')
       element.styleSheet.cssText = value;
+    }
+    else if (name === 'textContent') {
+      element.innerText = value
     }
   }
 }

@@ -5312,9 +5312,6 @@ attr2Prop['defaultchecked'] = 'defaultChecked';
 attr2Prop['defaultmuted'] = 'defaultMuted';
 attr2Prop['defaultselected'] = 'defaultSelected';
 
-var propFallback = {};
-propFallback.textContent = 'innerText';
-
 function createElement(tagName, parentNode) {
   var SVGElement = win.SVGElement;
 
@@ -5338,9 +5335,6 @@ function isElement(node) {
 }
 
 function setProp(node, name, value) {
-  if (propFallback[name] && !exists(node, name)) {
-    name = propFallback[name];
-  }
   set$1(node, name, value, FALSE);
 }
 
@@ -5600,9 +5594,11 @@ function setProp$1(element, name, value) {
   try {
     set$1(element, name, value);
   } catch (e) {
-    if (element.tagName === 'STYLE' && name === 'innerHTML') {
+    if (element.tagName === 'STYLE' && (name === 'innerHTML' || name === 'textContent')) {
       element.setAttribute('type', 'text/css');
       element.styleSheet.cssText = value;
+    } else if (name === 'textContent') {
+      element.innerText = value;
     }
   }
 }
@@ -6707,7 +6703,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.52.1';
+Yox.version = '0.52.2';
 
 /**
  * 工具，便于扩展、插件使用
