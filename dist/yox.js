@@ -4410,6 +4410,8 @@ var Observer = function () {
    * @property {Object} options.data
    * @property {?Object} options.computed
    * @property {?*} options.context 执行 watcher 函数的 this 指向
+   * @property {?Function} options.beforeFlush
+   * @property {?Function} options.afterFlush
    */
   function Observer(options) {
     classCallCheck(this, Observer);
@@ -4420,6 +4422,8 @@ var Observer = function () {
     instance.data = options.data || {};
     instance.context = options.context || instance;
     instance.emitter = new Emitter();
+    instance.beforeFlush = options.beforeFlush;
+    instance.afterFlush = options.afterFlush;
 
     // 谁依赖了谁
     instance.deps = {};
@@ -4785,6 +4789,8 @@ var Observer = function () {
       return;
     }
 
+    execute(instance.beforeFlush, instance, differences);
+
     each$1(differences, function (oldValue, keypath) {
 
       var newValue = instance.get(keypath);
@@ -4804,6 +4810,8 @@ var Observer = function () {
         });
       }
     });
+
+    execute(instance.afterFlush, instance, differences);
   };
 
   Observer.prototype.flushAsync = function () {
@@ -5882,28 +5890,20 @@ var Yox = function () {
     instance.$observer = new Observer({
       context: instance,
       data: source,
-      computed: computed
-    });
-
-    var counter = TEMPLATE_VALUE;
-    instance.$observer.addComputed(TEMPLATE_KEY, {
-      deps: TRUE,
-      get: function get$$1() {
-        return ++counter;
+      computed: computed,
+      beforeFlush: function beforeFlush(differences) {
+        if (has$1(differences, TEMPLATE_KEY)) {
+          delete differences[TEMPLATE_KEY];
+          instance.updateView(instance.$node, instance.render());
+        }
       }
     });
 
-    var updatePending;
-    instance.watch(TEMPLATE_KEY, function () {
-      // 确保当前 tick 的任务都执行完了，最后更新模板
-      if (!updatePending) {
-        updatePending = TRUE;
-        prepend(function () {
-          updatePending = FALSE;
-          if (instance.$node) {
-            instance.updateView(instance.$node, instance.render());
-          }
-        });
+    var counter = TEMPLATE_VALUE;
+    instance.addComputed(TEMPLATE_KEY, {
+      deps: TRUE,
+      get: function get$$1() {
+        return ++counter;
       }
     });
 
@@ -6004,6 +6004,18 @@ var Yox = function () {
       });
     }
   }
+
+  /**
+   * 添加计算属性
+   *
+   * @param {string} keypath
+   * @param {Function|Object} computed
+   */
+
+
+  Yox.prototype.addComputed = function (keypath, computed) {
+    return this.$observer.addComputed(keypath, computed);
+  };
 
   /**
    * 取值

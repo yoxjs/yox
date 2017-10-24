@@ -94,37 +94,24 @@ export default class Yox {
       context: instance,
       data: source,
       computed,
+      beforeFlush: function (differences) {
+        if (object.has(differences, TEMPLATE_KEY)) {
+          delete differences[ TEMPLATE_KEY ]
+          instance.updateView(
+            instance.$node,
+            instance.render()
+          )
+        }
+      }
     })
 
     let counter = TEMPLATE_VALUE
-    instance.$observer.addComputed(
+    instance.addComputed(
       TEMPLATE_KEY,
       {
         deps: env.TRUE,
         get: function () {
           return ++counter
-        }
-      }
-    )
-
-    let updatePending
-    instance.watch(
-      TEMPLATE_KEY,
-      function () {
-        // 确保当前 tick 的任务都执行完了，最后更新模板
-        if (!updatePending) {
-          updatePending = env.TRUE
-          nextTask.prepend(
-            function () {
-              updatePending = env.FALSE
-              if (instance.$node) {
-                instance.updateView(
-                  instance.$node,
-                  instance.render()
-                )
-              }
-            }
-          )
         }
       }
     )
@@ -244,6 +231,16 @@ export default class Yox {
       )
     }
 
+  }
+
+  /**
+   * 添加计算属性
+   *
+   * @param {string} keypath
+   * @param {Function|Object} computed
+   */
+  addComputed(keypath, computed) {
+    return this.$observer.addComputed(keypath, computed)
   }
 
   /**
