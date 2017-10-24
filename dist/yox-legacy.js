@@ -3348,7 +3348,7 @@ function compile(content) {
               children[divider] = attr;
             } else {
               target.props = {
-                innerText: singleChild.text
+                textContent: singleChild.text
               };
               pop(children);
             }
@@ -3362,7 +3362,7 @@ function compile(content) {
               if (singleChild.safe === FALSE) {
                 props.innerHTML = singleChild.expr;
               } else {
-                props.innerText = singleChild.expr;
+                props.textContent = singleChild.expr;
               }
               target.props = props;
               pop(children);
@@ -5312,6 +5312,9 @@ attr2Prop['defaultchecked'] = 'defaultChecked';
 attr2Prop['defaultmuted'] = 'defaultMuted';
 attr2Prop['defaultselected'] = 'defaultSelected';
 
+var propFallback = {};
+propFallback.textContent = 'innerText';
+
 function createElement(tagName, parentNode) {
   var SVGElement = win.SVGElement;
 
@@ -5335,6 +5338,9 @@ function isElement(node) {
 }
 
 function setProp(node, name, value) {
+  if (propFallback[name] && !exists(node, name)) {
+    name = propFallback[name];
+  }
   set$1(node, name, value, FALSE);
 }
 
@@ -6701,7 +6707,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.52.0';
+Yox.version = '0.52.1';
 
 /**
  * 工具，便于扩展、插件使用
