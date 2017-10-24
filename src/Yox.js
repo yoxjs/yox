@@ -88,16 +88,6 @@ export default class Yox {
       logger.warn('"data" option expected to be a function.')
     }
 
-    computed = computed ? object.copy(computed) : { }
-
-    let counter = TEMPLATE_VALUE
-    computed[ TEMPLATE_KEY ] = {
-      deps: env.TRUE,
-      get: function () {
-        return ++counter
-      }
-    }
-
     // 先放 props
     // 当 data 是函数时，可以通过 this.get() 获取到外部数据
     instance.$observer = new Observer({
@@ -106,13 +96,36 @@ export default class Yox {
       computed,
     })
 
+    let counter = TEMPLATE_VALUE
+    instance.$observer.addComputed(
+      TEMPLATE_KEY,
+      {
+        deps: env.TRUE,
+        get: function () {
+          return ++counter
+        }
+      }
+    )
+
+    let updatePending
     instance.watch(
       TEMPLATE_KEY,
       function () {
-        instance.updateView(
-          instance.$node,
-          instance.render()
-        )
+        // 确保当前 tick 的任务都执行完了，最后更新模板
+        if (!updatePending) {
+          updatePending = env.TRUE
+          nextTask.prepend(
+            function () {
+              updatePending = env.FALSE
+              if (instance.$node) {
+                instance.updateView(
+                  instance.$node,
+                  instance.render()
+                )
+              }
+            }
+          )
+        }
       }
     )
 
@@ -249,12 +262,11 @@ export default class Yox {
    *
    * @param {string|Object} keypath
    * @param {?*} value
-   * @param {?boolean} sync
    * @return {boolean} 是否会引起视图更新
    */
-  set(keypath, value, sync) {
+  set(keypath, value) {
     return array.has(
-      this.$observer.set(keypath, value, sync),
+      this.$observer.set(keypath, value),
       TEMPLATE_KEY
     )
   }
@@ -374,7 +386,7 @@ export default class Yox {
    * 对于某些特殊场景，修改了数据，但是模板的依赖中并没有这一项
    * 而你非常确定需要更新模板，强制刷新正是你需要的
    */
-  forceUpdate() {
+  forceUpdate(sync) {
 
     let { $observer } = this
 
@@ -382,6 +394,9 @@ export default class Yox {
     let { differences } = $observer
     if (differences) {
       if (differences[ TEMPLATE_KEY ]) {
+        if (sync) {
+          $observer.flush()
+        }
         return
       }
     }
@@ -390,11 +405,13 @@ export default class Yox {
     }
 
     // 开始新的异步队列
-    differences[ TEMPLATE_KEY ] = {
-      keypath: TEMPLATE_KEY,
-      oldValue: TEMPLATE_VALUE,
+    differences[ TEMPLATE_KEY ] = TEMPLATE_VALUE
+    if (sync) {
+      $observer.flush()
     }
-    $observer.flushAsync()
+    else {
+      $observer.flushAsync()
+    }
 
   }
 
@@ -724,7 +741,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.51.8'
+Yox.version = '0.52.0'
 
 /**
  * 工具，便于扩展、插件使用

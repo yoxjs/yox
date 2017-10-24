@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>错误写法应有错误提示</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div id="app"></div>
+    <script id="template1" type="plain/text">
+
+        <div>
+            <span>
+                123123
+            <span>
+        </div>
+
+    </script>
+    <script id="template2" type="plain/text">
+
+        <div>
+            {{#if a}}
+                aaa
+            {{/if}}
+            {{#each list}}
+                {{this}}
+            {{/each}}
+        </div>
+
+    </script>
+    <script src="../dist/yox.js"></script>
+    <script>
+        setTimeout(
+            function () {
+                // new Yox({
+                //     el: '#app',
+                //     template: '#template1'
+                // });
+            }
+        );
+
+        setTimeout(
+            function () {
+                new Yox({
+                    el: '#app',
+                    template: '#template2',
+                    data: {
+                        list: [1, 2, 3, 4]
+                    }
+                });
+            }
+        );
+
+    </script>
+</body>
+</html>

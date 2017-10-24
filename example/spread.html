@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>demo</title>
+</head>
+<body>
+    <div id="app"></div>
+    <script id="template" type="plain/text">
+
+        <div>
+            {{#each list:index}}
+                <div>
+                    <User index="{{index}}" {{...this}} />
+                    <span>
+                        {{index + 1 }}
+                    </span>
+                    /
+                    <span>
+                        {{list.length}}
+                    </span>
+                </div>
+            {{/each}}
+
+        </div>
+
+    </script>
+
+    <script id="template-user" type="plain/text">
+
+        <div>
+            {{index}}: {{name}} - <span>{{age}}</span>
+        </div>
+
+    </script>
+
+    <script src="../dist/yox.js"></script>
+    <script>
+        var instance = new Yox({
+            el: '#app',
+            template: '#template',
+            data: {
+                list: [
+                    {
+                        name: 'name1',
+                        age: 1
+                    },
+                    {
+                        name: 'name2',
+                    },
+                    {
+                        name: 'name3',
+                        age: 3
+                    },
+                    {
+                        name: 'name4',
+                        age: 4
+                    }
+                ]
+            },
+            components: {
+                User: {
+                    template: '#template-user',
+                    propTypes: {
+                        name: {
+                            type: 'string'
+                        },
+                        age: {
+                            type: 'number'
+                        },
+                        index: {
+                            type: 'number'
+                        }
+                    }
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>

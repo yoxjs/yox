@@ -4413,109 +4413,123 @@ var Observer = function () {
    */
   function Observer(options) {
     classCallCheck(this, Observer);
-    var data = options.data,
-        context = options.context,
-        computed = options.computed;
 
 
     var instance = this;
 
-    if (!context) {
-      context = instance;
-    }
-
-    instance.data = data || {};
+    instance.data = options.data || {};
+    instance.context = options.context || instance;
     instance.emitter = new Emitter();
-    instance.context = context;
 
-    // 缓存历史数据，便于对比变化
-    instance.cache = {};
     // 谁依赖了谁
     instance.deps = {};
+    // 谁被谁依赖
+    instance.invertedDeps = {};
+    // 谁被谁依赖
+    instance.invertedFuzzyDeps = {};
+
+    // 把计算属性拆为 getter 和 setter
+    instance.computedGetters = {};
+    instance.computedSetters = {};
+
+    // 计算属性的缓存值
+    instance.computedCache = {};
+
+    // 辅助获取计算属性的依赖
+    instance.computedStack = [];
+
+    // 正在监听的 keypath
+    instance.watchKeypaths = {};
+    // 模糊监听，如 user.*
+    instance.watchFuzzyKeypaths = {};
 
     // 计算属性也是数据
-    if (object(computed)) {
-
-      // 把计算属性拆为 getter 和 setter
-      instance.computedGetters = {};
-      instance.computedSetters = {};
-
-      // 辅助获取计算属性的依赖
-      instance.computedStack = [];
-
-      var cache = instance.cache,
-          computedStack = instance.computedStack;
-
-
-      each$1(computed, function (item, keypath) {
-
-        var get$$1,
-            set$$1,
-            deps,
-            cacheable = TRUE;
-
-        if (func(item)) {
-          get$$1 = item;
-        } else if (object(item)) {
-          if (item.deps) {
-            deps = item.deps;
-          }
-          if (boolean(item.cache)) {
-            cacheable = item.cache;
-          }
-          if (func(item.get)) {
-            get$$1 = item.get;
-          }
-          if (func(item.set)) {
-            set$$1 = item.set;
-          }
-        }
-
-        if (get$$1) {
-
-          var needDeps = cacheable;
-          if (needDeps && deps) {
-            needDeps = FALSE;
-            if (array(deps)) {
-              instance.setDeps(keypath, deps);
-            }
-          }
-
-          instance.computedGetters[keypath] = function () {
-
-            if (cacheable && has$1(cache, keypath)) {
-              return cache[keypath];
-            }
-
-            if (needDeps) {
-              computedStack.push([]);
-            }
-
-            var value = execute(get$$1, context);
-            cache[keypath] = value;
-
-            if (needDeps) {
-              instance.setDeps(keypath, pop(computedStack));
-            }
-
-            return value;
-          };
-        }
-
-        if (set$$1) {
-          instance.computedSetters[keypath] = function (value) {
-            set$$1.call(context, value);
-          };
-        }
+    if (object(options.computed)) {
+      each$1(options.computed, function (item, keypath) {
+        instance.addComputed(keypath, item);
       });
     }
   }
 
   /**
+   * 添加计算属性
+   *
+   * @param {string} keypath
+   * @param {Function|Object} computed
+   */
+
+
+  Observer.prototype.addComputed = function (keypath, computed) {
+
+    var instance = this,
+        cache = TRUE,
+        get$$1,
+        set$$1,
+        deps;
+
+    if (func(computed)) {
+      get$$1 = computed;
+    } else if (object(computed)) {
+      if (boolean(computed.cache)) {
+        cache = computed.cache;
+      }
+      if (func(computed.get)) {
+        get$$1 = computed.get;
+      }
+      if (func(computed.set)) {
+        set$$1 = computed.set;
+      }
+      if (computed.deps) {
+        deps = computed.deps;
+      }
+    }
+
+    if (get$$1) {
+
+      var needDeps;
+
+      if (deps) {
+        needDeps = FALSE;
+        if (array(deps)) {
+          instance.setDeps(keypath, deps);
+        }
+      } else {
+        needDeps = cache;
+      }
+
+      instance.computedGetters[keypath] = function () {
+
+        if (cache && has$1(instance.computedCache, keypath)) {
+          return instance.computedCache[keypath];
+        }
+
+        if (needDeps) {
+          instance.computedStack.push([]);
+        }
+
+        var value = execute(get$$1, instance.context);
+        instance.computedCache[keypath] = value;
+
+        if (needDeps) {
+          instance.setDeps(keypath, pop(instance.computedStack));
+        }
+
+        return value;
+      };
+    }
+
+    if (set$$1) {
+      instance.computedSetters[keypath] = function (value) {
+        set$$1.call(instance.context, value);
+      };
+    }
+  };
+
+  /**
    * 获取数据
    *
    * @param {string} keypath
-   * @param {*} defaultValue
+   * @param {?*} defaultValue
    * @return {?*}
    */
 
@@ -4525,54 +4539,41 @@ var Observer = function () {
     var instance = this,
         result;
 
-    var data = instance.data,
-        cache = instance.cache,
-        computedStack = instance.computedStack,
-        computedGetters = instance.computedGetters;
-
-
+    // 传入 '' 获取整个 data
     if (keypath === CHAR_BLANK) {
-      return data;
+      return instance.data;
     }
 
     keypath = normalize(keypath);
 
-    if (computedStack) {
-      var list = last(computedStack);
-      if (list) {
-        push(list, keypath);
-      }
+    // 收集计算属性依赖
+    var list = last(instance.computedStack);
+    if (list) {
+      push(list, keypath);
     }
 
-    if (computedGetters) {
-      var _matchBestGetter = matchBestGetter(computedGetters, keypath),
-          getter = _matchBestGetter.getter,
-          prop = _matchBestGetter.prop;
+    var _matchBestGetter = matchBestGetter(instance.computedGetters, keypath),
+        getter = _matchBestGetter.getter,
+        prop = _matchBestGetter.prop;
 
-      if (getter) {
-        getter = getter();
-        if (prop) {
-          if (exists(getter, prop)) {
-            result = { value: getter[prop] };
-          } else if (!primitive(getter)) {
-            result = get$1(getter, prop);
-          }
-        } else {
-          result = { value: getter };
+    if (getter) {
+      getter = getter();
+      if (prop) {
+        if (exists(getter, prop)) {
+          result = { value: getter[prop] };
+        } else if (!primitive(getter)) {
+          result = get$1(getter, prop);
         }
+      } else {
+        result = { value: getter };
       }
     }
 
     if (!result) {
-      result = get$1(data, keypath);
+      result = get$1(instance.data, keypath);
     }
 
-    if (result) {
-      return cache[keypath] = result.value;
-    }
-
-    cache[keypath] = UNDEFINED;
-    return defaultValue;
+    return result ? result.value : defaultValue;
   };
 
   /**
@@ -4586,207 +4587,182 @@ var Observer = function () {
 
   Observer.prototype.set = function (keypath, value, sync) {
 
-    var model,
-        result = [];
-    if (string(keypath)) {
-      model = {};
-      model[keypath] = value;
-    } else if (object(keypath)) {
-      model = keypath;
-      sync = value;
-    } else {
-      return result;
-    }
+    var instance = this,
+        outerDifferences = {};
 
-    var instance = this;
+    // 数据监听有两种
+    // 1. 类似计算属性的依赖关系，如计算属性 A 的依赖是 B 和 C，当 B 或 C 变了，必须检测 A 是否变了
+    // 2. watch/watchOnce，只监听单一 keypath 的变化
+    //
+    // 当我们修改一项数据时
+    // 如果是基本类型的数据，需要判断是否有 watcher 正在监听它，以及它是否命中模糊匹配，以及它是否是别的数据的依赖
+    // 如果是引用类型的数据，除了有基本类型的判断，还得判断它的属性是否变化，如监听 user.name，修改了 user，也得判断 user.name 是否变化，此外，子属性的变化又会带来一次递归判断
+    //
+    // 一旦数据发生变化，如果它影响了计算属性，则需立即清除计算属性的缓存，才可获取最新值
+    // 而 watcher 的触发则需等到 nextTick 后
+    // 也就是说，你必须在设值时知道它会导致哪些数据发生变化，而不是在 nextTick 批量计算
 
-    var deps = instance.deps,
-        data = instance.data,
-        cache = instance.cache,
-        emitter = instance.emitter,
-        computedGetters = instance.computedGetters,
-        computedSetters = instance.computedSetters,
-        watchKeypaths = instance.watchKeypaths,
-        watchFuzzyKeypaths = instance.watchFuzzyKeypaths;
-
-
-    if (instance[DIRTY]) {
-
-      delete instance[DIRTY];
-
-      watchKeypaths = instance.watchKeypaths = {};
-      watchFuzzyKeypaths = instance.watchFuzzyKeypaths = {};
-
-      each$1(emitter.listeners, function (list, key) {
-        if (isFuzzyKeypath(key)) {
-          watchFuzzyKeypaths[key] = TRUE;
-        } else {
-          watchKeypaths[key] = TRUE;
-        }
+    var addInverted = function (differences, inverted) {
+      each$1(inverted, function (count, invertedKeypath) {
+        addDifference(differences, invertedKeypath, UNDEFINED, instance.get(invertedKeypath), TRUE);
       });
-    }
-
-    /**
-     * 修改数据分 3 步：
-     *
-     * 1. 预分析所有潜在的 watch 字段，并提取出 oldValue
-     * 2. 设值
-     * 3. 遍历第一步收集的所有 watch 字段，并提取出 newValue 进行对比
-     */
-
-    var oldCache = {};
-    var getOldValue = function (keypath) {
-      if (!has$1(oldCache, keypath)) {
-        oldCache[keypath] = has$1(cache, keypath) ? cache[keypath] : instance.get(keypath);
-      }
-      return oldCache[keypath];
     };
 
-    var newCache = {};
-    var getNewValue = function (keypath) {
-      if (!has$1(newCache, keypath)) {
-        newCache[keypath] = instance.get(keypath);
-      }
-      return newCache[keypath];
-    };
+    var addDifference = function (differences, keypath, newValue, oldValue, force) {
+      if (force || oldValue !== newValue) {
+        // 自己
+        differences[keypath] = oldValue;
 
-    var tasks = [],
-        taskKeys = {};
-
-    var addTask = function (keypath) {
-      if (!taskKeys[keypath]) {
-        taskKeys[keypath] = TRUE;
-        push(tasks, {
-          keypath: keypath,
-          oldValue: getOldValue(keypath)
-        });
-      }
-    };
-
-    /**
-     * 当一个值变化时（对应 keypath)
-     * 分析依赖它的那些数据是否发生了变化
-     *
-     * @param {string} keypath
-     * @param {string} testKey
-     * @return {?Array}
-     */
-    var testDeps = function (keypath, testKey) {
-      var result;
-      each(deps[testKey], function (dep) {
-        if (isFuzzyKeypath(dep)) {
-          result = matchKeypath(keypath, dep);
-        } else {
-          result = startsWith$1(dep, keypath);
+        // 依赖
+        var inverted = instance.invertedDeps[keypath];
+        if (inverted) {
+          addInverted(differences, inverted);
         }
-        if (!result && has$1(deps, dep)) {
-          result = testDeps(keypath, dep);
-        }
-        if (result) {
-          return FALSE;
-        }
-      });
-      return result;
-    };
 
-    var depKeys = keys(deps);
-    var matchDeps = function (keypath) {
-
-      var hasFound;
-
-      while (TRUE) {
-        hasFound = FALSE;
-        each(depKeys, function (key) {
-          if (key !== keypath && !taskKeys[key] && testDeps(keypath, key)) {
-            hasFound = TRUE;
-            addTask(key);
-            matchDeps(key);
+        each$1(instance.invertedFuzzyDeps, function (inverted, fuzzyKeypath) {
+          if (matchKeypath(keypath, fuzzyKeypath)) {
+            addInverted(differences, inverted);
           }
         });
-        if (!hasFound) {
-          break;
+
+        // 子属性
+        var oldIsObject = object(oldValue),
+            newIsObject = newIsObject;
+        if (oldIsObject || newIsObject) {
+          var keys$$1;
+          if (oldIsObject) {
+            keys$$1 = keys(oldValue);
+            if (newIsObject) {
+              each(keys(newValue), function (key) {
+                if (!has(keys$$1, key)) {
+                  push(keys$$1, key);
+                }
+              });
+            }
+          } else {
+            keys$$1 = keys(newValue);
+          }
+          if (keys$$1) {
+            each(keys$$1, function (key) {
+              addDifference(differences, join(keypath, key), newIsObject ? newValue[key] : UNDEFINED, oldIsObject ? oldValue[key] : UNDEFINED);
+            });
+          }
+        } else {
+          var oldIsArray = array(oldValue),
+              newIsArray = array(newValue);
+          if (oldIsArray || newIsArray) {
+            var oldLength = oldIsArray ? oldValue.length : UNDEFINED,
+                newLength = newIsArray ? newValue.length : UNDEFINED;
+            addDifference(differences, join(keypath, 'length'), newLength, oldLength);
+            var length;
+            if (oldIsArray) {
+              length = oldLength;
+              if (newLength > oldLength) {
+                length = newLength;
+              }
+            } else {
+              length = newLength;
+            }
+            for (var i = 0; i < length; i++) {
+              addDifference(differences, join(keypath, i), newIsArray ? newValue[i] : UNDEFINED, oldIsArray ? oldValue[i] : UNDEFINED);
+            }
+          }
         }
       }
     };
 
-    each$1(model, function (newValue, keypath) {
+    var setValue = function (newValue, keypath) {
 
       keypath = normalize(keypath);
 
-      var oldValue = getOldValue(keypath);
+      var oldValue = instance.get(keypath),
+          innerDifferences = {};
+
+      addDifference(innerDifferences, keypath, newValue, oldValue);
+
+      var setter = instance.computedSetters[keypath];
+      if (setter) {
+        setter(newValue);
+      } else {
+        var _matchBestGetter2 = matchBestGetter(instance.computedGetters, keypath),
+            getter = _matchBestGetter2.getter,
+            prop = _matchBestGetter2.prop;
+
+        if (getter && prop) {
+          getter = getter();
+          if (primitive(getter)) {
+            return;
+          } else {
+            set$1(getter, prop, newValue);
+          }
+        } else {
+          set$1(instance.data, keypath, newValue);
+        }
+      }
+
       if (newValue !== oldValue) {
 
-        addTask(keypath);
+        var computedKeypaths = keys(instance.computedCache);
 
-        if (watchKeypaths) {
-          each$1(watchKeypaths, function (value, key) {
-            if (key !== keypath && startsWith$1(key, keypath)) {
-              addTask(key);
-            }
-          });
-        }
+        each$1(innerDifferences, function (oldValue, keypath) {
+          if (oldValue !== instance.get(keypath)) {
+            outerDifferences[keypath] = oldValue;
 
-        matchDeps(keypath);
-      }
+            var invertedKeypaths = instance.invertedDeps[keypath];
+            var invertedFuzzyKeypaths = [];
 
-      if (computedSetters) {
-        var setter = computedSetters[keypath];
-        if (setter) {
-          setter(newValue);
-          return;
-        } else {
-          var _matchBestGetter2 = matchBestGetter(computedGetters, keypath),
-              getter = _matchBestGetter2.getter,
-              prop = _matchBestGetter2.prop;
+            each$1(instance.invertedFuzzyDeps, function (invertedKeypaths, fuzzyKeypath) {
+              if (matchKeypath(keypath, fuzzyKeypath)) {
+                push(invertedFuzzyKeypaths, fuzzyKeypath);
+              }
+            });
 
-          if (getter && prop) {
-            getter = getter();
-            if (!primitive(getter)) {
-              set$1(getter, prop, newValue);
-            }
-            return;
-          }
-        }
-      }
-
-      set$1(data, keypath, newValue);
-    });
-
-    var cacheKeys = keys(cache);
-
-    each(tasks, function (task) {
-      var keypath = task.keypath,
-          oldValue = task.oldValue;
-
-      // 清掉计算属性的缓存
-
-      if (has$1(cache, keypath)) {
-        delete cache[keypath];
-      }
-
-      if (getNewValue(keypath) !== oldValue) {
-
-        if (!has(result, keypath)) {
-          push(result, keypath);
-        }
-
-        var differences = instance.differences || (instance.differences = {});
-        differences[keypath] = task;
-
-        each(cacheKeys, function (key) {
-          if (key !== keypath && startsWith$1(key, keypath)) {
-            delete cache[key];
+            // 计算属性要立即生效，否则取值会出问题
+            each(computedKeypaths, function (computedKeypath, index) {
+              var needRemove;
+              if (computedKeypath === keypath || invertedKeypaths && invertedKeypaths[computedKeypath]) {
+                needRemove = TRUE;
+              } else {
+                each(invertedFuzzyKeypaths, function (fuzzyKeypath) {
+                  if (instance.invertedFuzzyDeps[fuzzyKeypath][computedKeypath]) {
+                    needRemove = TRUE;
+                    return FALSE;
+                  }
+                });
+              }
+              if (needRemove) {
+                computedKeypaths.splice(index, 1);
+                delete instance.computedCache[computedKeypath];
+              }
+            }, TRUE);
           }
         });
+      }
+    };
+
+    if (string(keypath)) {
+      setValue(value, keypath);
+    } else if (object(keypath)) {
+      each$1(keypath, setValue);
+    }
+
+    var result = [],
+        differences = instance.differences;
+
+    each$1(outerDifferences, function (oldValue, keypath) {
+      if (oldValue !== instance.get(keypath)) {
+        push(result, keypath);
+        if (!differences) {
+          differences = instance.differences = {};
+        }
+        if (!has$1(differences, keypath)) {
+          differences[keypath] = oldValue;
+        }
       }
     });
 
     if (result.length) {
-      if (sync) {
-        instance.flush();
-      } else {
-        instance.flushAsync();
-      }
+      instance.flushAsync();
     }
 
     return result;
@@ -4800,42 +4776,34 @@ var Observer = function () {
       delete instance.pending;
     }
 
-    // 冻结这批变化
-    // 避免 fire 之后同步再次走进这里
-    var emitter = instance.emitter,
-        differences = instance.differences,
-        watchFuzzyKeypaths = instance.watchFuzzyKeypaths;
+    var differences = instance.differences;
+
 
     if (differences) {
       delete instance.differences;
-
-      var sortedList = [];
-
-      each$1(differences, function (difference, keypath) {
-        array$1[startsWith(keypath, '_') ? 'unshift' : 'push'](sortedList, difference);
-      });
-
-      each(sortedList, function (difference) {
-        var keypath = difference.keypath,
-            oldValue = difference.oldValue,
-            newValue = instance.get(keypath);
-
-        if (difference.force || oldValue !== newValue) {
-          var args = [newValue, oldValue, keypath];
-          emitter.fire(keypath, args);
-          if (watchFuzzyKeypaths) {
-            each$1(watchFuzzyKeypaths, function (value, key) {
-              var match = matchKeypath(keypath, key);
-              if (match) {
-                var newArgs = copy(args);
-                push(newArgs, match);
-                emitter.fire(key, newArgs);
-              }
-            });
-          }
-        }
-      });
+    } else {
+      return;
     }
+
+    each$1(differences, function (oldValue, keypath) {
+
+      var newValue = instance.get(keypath);
+
+      if (oldValue !== newValue) {
+
+        var args = [newValue, oldValue, keypath];
+        instance.emitter.fire(keypath, args);
+
+        each$1(instance.watchFuzzyKeypaths, function (value, key) {
+          var match = matchKeypath(keypath, key);
+          if (match) {
+            var newArgs = copy(args);
+            push(newArgs, match);
+            instance.emitter.fire(key, newArgs);
+          }
+        });
+      }
+    });
   };
 
   Observer.prototype.flushAsync = function () {
@@ -4850,12 +4818,93 @@ var Observer = function () {
     }
   };
 
-  Observer.prototype.setDeps = function (keypath, newDeps) {
-    var deps = this.deps;
+  Observer.prototype.setDeps = function (keypath, value) {
+    var deps = this.deps,
+        invertedDeps = this.invertedDeps,
+        invertedFuzzyDeps = this.invertedFuzzyDeps;
 
-    if (newDeps !== deps[keypath]) {
-      deps[keypath] = newDeps;
-      this[DIRTY] = TRUE;
+    var oldValue = deps[keypath];
+    if (oldValue !== value) {
+
+      var added = [],
+          removed = [];
+
+      if (oldValue) {
+        each([oldValue, value], function (deps) {
+          each(deps, function (dep) {
+            if (has(value, dep)) {
+              if (!has(oldValue, dep)) {
+                push(added, dep);
+              }
+            } else if (has(oldValue, dep)) {
+              push(removed, dep);
+            }
+          });
+        });
+      } else {
+        added = value;
+      }
+
+      if (removed.length) {
+
+        var remove$$1 = function (dep, keypath) {
+
+          var isFuzzy = isFuzzyKeypath(dep);
+          var deps = isFuzzy ? invertedFuzzyDeps : invertedDeps;
+
+          var target = deps[dep];
+          if (target[keypath] > 0) {
+            target[keypath]--;
+            if (deps[keypath]) {
+              each$1(deps[keypath], function (count, key) {
+                remove$$1(dep, key);
+              });
+            }
+          }
+
+          if (!target[keypath]) {
+            delete target[keypath];
+          }
+        };
+
+        each(removed, function (dep) {
+          remove$$1(dep, keypath);
+        });
+      }
+
+      if (added.length) {
+
+        var add = function (dep, keypath, autoCreate) {
+
+          var isFuzzy = isFuzzyKeypath(dep);
+          var deps = isFuzzy ? invertedFuzzyDeps : invertedDeps;
+
+          // dep 是 keypath 的一个依赖
+          var target = deps[dep];
+          if (!target && autoCreate) {
+            target = deps[dep] = {};
+          }
+          if (target) {
+            if (number(target[keypath])) {
+              target[keypath]++;
+            } else {
+              target[keypath] = 1;
+            }
+            // dep 同样是 keypath 的父级的依赖
+            if (deps[keypath]) {
+              each$1(deps[keypath], function (count, key) {
+                add(dep, key);
+              });
+            }
+          }
+        };
+
+        each(added, function (dep) {
+          add(dep, keypath, TRUE);
+        });
+      }
+
+      deps[keypath] = value;
     }
   };
 
@@ -5035,56 +5084,73 @@ extend(Observer.prototype, {
    * @param {?Function} watcher
    */
   unwatch: function unwatch(keypath, watcher) {
-    var emitter = this.emitter;
-
-    emitter.off(keypath, watcher);
-    if (!emitter.has(keypath)) {
-      this[DIRTY] = TRUE;
+    var instance = this;
+    if (string(keypath)) {
+      _unwatch(instance, keypath, watcher);
+    } else if (object(keypath)) {
+      each$1(keypath, function (watcher, keypath) {
+        _unwatch(instance, keypath, watcher);
+      });
     }
   }
 
 });
 
-var DIRTY = '_dirty_';
+function watch(instance, action, keypath, watcher, sync) {
+  var emitter = instance.emitter,
+      context = instance.context,
+      differences = instance.differences;
 
-/**
- * watch 和 watchOnce 逻辑相同
- * 提出一个工厂方法
- */
+
+  var isFuzzy = isFuzzyKeypath(keypath);
+
+  if (!emitter.has(keypath)) {
+    if (isFuzzy) {
+      instance.watchFuzzyKeypaths[keypath] = TRUE;
+    } else {
+      instance.watchKeypaths[keypath] = TRUE;
+    }
+  }
+
+  emitter[action](keypath, {
+    func: watcher,
+    context: context
+  });
+
+  if (sync && !isFuzzy) {
+    if (differences) {
+      var difference = differences[keypath];
+      if (difference) {
+        difference.force = TRUE;
+        return;
+      }
+    }
+    execute(watcher, context, [instance.get(keypath), UNDEFINED, keypath]);
+  }
+}
+
+function _unwatch(instance, keypath, watcher) {
+  var emitter = instance.emitter;
+
+  if (emitter.has(keypath)) {
+    emitter.off(keypath, watcher);
+    if (!emitter.has(keypath)) {
+      if (isFuzzyKeypath(keypath)) {
+        delete instance.watchFuzzyKeypaths[keypath];
+      } else {
+        delete instance.watchKeypaths[keypath];
+      }
+    }
+  }
+}
 function createWatch(action) {
 
   return function (keypath, watcher, sync) {
 
     var instance = this;
 
-    var watch = function (keypath, watcher, sync) {
-      var emitter = instance.emitter,
-          context = instance.context,
-          differences = instance.differences;
-
-      if (!emitter.has(keypath)) {
-        instance[DIRTY] = TRUE;
-      }
-
-      emitter[action](keypath, {
-        func: watcher,
-        context: context
-      });
-
-      if (sync && !isFuzzyKeypath(keypath)) {
-        if (differences) {
-          var difference = differences[keypath];
-          if (difference) {
-            difference.force = TRUE;
-            return;
-          }
-        }
-        execute(watcher, context, [instance.get(keypath), UNDEFINED, keypath]);
-      }
-    };
-
     if (string(keypath)) {
-      watch(keypath, watcher, sync);
+      watch(instance, action, keypath, watcher, sync);
     } else {
       if (watcher === TRUE) {
         sync = watcher;
@@ -5098,7 +5164,7 @@ function createWatch(action) {
             innerSync = value.sync;
           }
         }
-        watch(keypath, watcher, innerSync);
+        watch(instance, action, keypath, watcher, innerSync);
       });
     }
   };
@@ -5811,16 +5877,6 @@ var Yox = function () {
       warn('"data" option expected to be a function.');
     }
 
-    computed = computed ? copy(computed) : {};
-
-    var counter = TEMPLATE_VALUE;
-    computed[TEMPLATE_KEY] = {
-      deps: TRUE,
-      get: function get$$1() {
-        return ++counter;
-      }
-    };
-
     // 先放 props
     // 当 data 是函数时，可以通过 this.get() 获取到外部数据
     instance.$observer = new Observer({
@@ -5829,8 +5885,26 @@ var Yox = function () {
       computed: computed
     });
 
+    var counter = TEMPLATE_VALUE;
+    instance.$observer.addComputed(TEMPLATE_KEY, {
+      deps: TRUE,
+      get: function get$$1() {
+        return ++counter;
+      }
+    });
+
+    var updatePending;
     instance.watch(TEMPLATE_KEY, function () {
-      instance.updateView(instance.$node, instance.render());
+      // 确保当前 tick 的任务都执行完了，最后更新模板
+      if (!updatePending) {
+        updatePending = TRUE;
+        prepend(function () {
+          updatePending = FALSE;
+          if (instance.$node) {
+            instance.updateView(instance.$node, instance.render());
+          }
+        });
+      }
     });
 
     // 后放 data
@@ -5949,13 +6023,12 @@ var Yox = function () {
    *
    * @param {string|Object} keypath
    * @param {?*} value
-   * @param {?boolean} sync
    * @return {boolean} 是否会引起视图更新
    */
 
 
-  Yox.prototype.set = function (keypath, value, sync) {
-    return has(this.$observer.set(keypath, value, sync), TEMPLATE_KEY);
+  Yox.prototype.set = function (keypath, value) {
+    return has(this.$observer.set(keypath, value), TEMPLATE_KEY);
   };
 
   /**
@@ -6090,7 +6163,7 @@ var Yox = function () {
    */
 
 
-  Yox.prototype.forceUpdate = function () {
+  Yox.prototype.forceUpdate = function (sync) {
     var $observer = this.$observer;
 
     // 如果已排入队列，等待队列的刷新
@@ -6099,6 +6172,9 @@ var Yox = function () {
 
     if (differences) {
       if (differences[TEMPLATE_KEY]) {
+        if (sync) {
+          $observer.flush();
+        }
         return;
       }
     } else {
@@ -6106,11 +6182,12 @@ var Yox = function () {
     }
 
     // 开始新的异步队列
-    differences[TEMPLATE_KEY] = {
-      keypath: TEMPLATE_KEY,
-      oldValue: TEMPLATE_VALUE
-    };
-    $observer.flushAsync();
+    differences[TEMPLATE_KEY] = TEMPLATE_VALUE;
+    if (sync) {
+      $observer.flush();
+    } else {
+      $observer.flushAsync();
+    }
   };
 
   /**
@@ -6453,7 +6530,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.51.8';
+Yox.version = '0.52.0';
 
 /**
  * 工具，便于扩展、插件使用
