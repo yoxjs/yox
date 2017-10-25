@@ -30,7 +30,6 @@ import * as pattern from './config/pattern'
 import api from './platform/web/api'
 
 const TEMPLATE_KEY = '_template'
-const TEMPLATE_VALUE = 0
 
 const patch = snabbdom.init(api)
 
@@ -94,27 +93,27 @@ export default class Yox {
       context: instance,
       data: source,
       computed,
-      beforeFlush: function (differences) {
-        if (object.has(differences, TEMPLATE_KEY)) {
-          delete differences[ TEMPLATE_KEY ]
-          instance.updateView(
-            instance.$node,
-            instance.render()
+      beforeFlush: function (flushing) {
+        // 疑似变化
+        if (object.has(flushing, TEMPLATE_KEY)) {
+          delete flushing[ TEMPLATE_KEY ]
+
+          array.each(
+            this.deps[ TEMPLATE_KEY ],
+            function (dep) {
+              if (flushing[ dep ]) {
+                instance.updateView(
+                  instance.$node,
+                  instance.render()
+                )
+                return env.FALSE
+              }
+            }
           )
+
         }
       }
     })
-
-    let counter = TEMPLATE_VALUE
-    instance.addComputed(
-      TEMPLATE_KEY,
-      {
-        deps: env.TRUE,
-        get: function () {
-          return ++counter
-        }
-      }
-    )
 
     // 后放 data
     let extend = is.func(data) ? execute(data, instance) : data
@@ -390,7 +389,7 @@ export default class Yox {
     // 如果已排入队列，等待队列的刷新
     let { differences } = $observer
     if (differences) {
-      if (differences[ TEMPLATE_KEY ]) {
+      if (object.has(differences, TEMPLATE_KEY)) {
         if (sync) {
           $observer.flush()
         }
@@ -402,7 +401,7 @@ export default class Yox {
     }
 
     // 开始新的异步队列
-    differences[ TEMPLATE_KEY ] = TEMPLATE_VALUE
+    differences[ TEMPLATE_KEY ] = env.UNDEFINED
     if (sync) {
       $observer.flush()
     }
@@ -421,7 +420,6 @@ export default class Yox {
 
     let instance = this
     let { $template, $observer, $context } = instance
-    let { data, computedGetters } = $observer
 
     if (!$context) {
       $context =
@@ -433,21 +431,17 @@ export default class Yox {
       )
     }
 
-    object.extend($context, data)
+    object.extend($context, $observer.data)
 
     // 在单次渲染过程中，对于计算属性来说，不管开不开缓存，其实只需要计算一次即可
     // 因为渲染过程中不会修改数据，如果频繁执行计算属性的 getter 函数
     // 完全是无意义的性能消耗
-    if (computedGetters) {
-      object.each(
-        computedGetters,
-        function (getter, key) {
-          if (key !== TEMPLATE_KEY) {
-            $context[ key ] = getter()
-          }
-        }
-      )
-    }
+    object.each(
+      $observer.computedGetters,
+      function (getter, key) {
+        $context[ key ] = getter()
+      }
+    )
 
     let { nodes, deps } = renderTemplate($template, $context, instance)
     $observer.setDeps(TEMPLATE_KEY, object.keys(deps))
@@ -738,7 +732,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.52.2'
+Yox.version = '0.52.3'
 
 /**
  * 工具，便于扩展、插件使用

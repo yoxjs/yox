@@ -4585,11 +4585,10 @@ var Observer = function () {
    *
    * @param {string|Object} keypath
    * @param {?*} value
-   * @param {?boolean} sync
    */
 
 
-  Observer.prototype.set = function (keypath, value, sync) {
+  Observer.prototype.set = function (keypath, value) {
 
     var instance = this,
         outerDifferences = {};
@@ -4658,16 +4657,7 @@ var Observer = function () {
             var oldLength = oldIsArray ? oldValue.length : UNDEFINED,
                 newLength = newIsArray ? newValue.length : UNDEFINED;
             addDifference(differences, join(keypath, 'length'), newLength, oldLength);
-            var length;
-            if (oldIsArray) {
-              length = oldLength;
-              if (newLength > oldLength) {
-                length = newLength;
-              }
-            } else {
-              length = newLength;
-            }
-            for (var i = 0; i < length; i++) {
+            for (var i = 0, length = getMax(newLength, oldLength); i < length; i++) {
               addDifference(differences, join(keypath, i), newIsArray ? newValue[i] : UNDEFINED, oldIsArray ? oldValue[i] : UNDEFINED);
             }
           }
@@ -4709,7 +4699,8 @@ var Observer = function () {
         var computedKeypaths = keys(instance.computedCache);
 
         each$1(innerDifferences, function (oldValue, keypath) {
-          if (oldValue !== instance.get(keypath)) {
+          var newValue = instance.get(keypath);
+          if (isChange(newValue, oldValue, instance.deps[keypath])) {
             outerDifferences[keypath] = oldValue;
 
             var invertedKeypaths = instance.invertedDeps[keypath];
@@ -4754,7 +4745,8 @@ var Observer = function () {
         differences = instance.differences;
 
     each$1(outerDifferences, function (oldValue, keypath) {
-      if (oldValue !== instance.get(keypath)) {
+      var newValue = instance.get(keypath);
+      if (isChange(newValue, oldValue, instance.deps[keypath])) {
         push(result, keypath);
         if (!differences) {
           differences = instance.differences = {};
@@ -4789,29 +4781,33 @@ var Observer = function () {
       return;
     }
 
-    execute(instance.beforeFlush, instance, differences);
+    // 确定待 flush 的数据
+    var flushing = {};
 
     each$1(differences, function (oldValue, keypath) {
-
       var newValue = instance.get(keypath);
-
-      if (oldValue !== newValue) {
-
-        var args = [newValue, oldValue, keypath];
-        instance.emitter.fire(keypath, args);
-
-        each$1(instance.watchFuzzyKeypaths, function (value, key) {
-          var match = matchKeypath(keypath, key);
-          if (match) {
-            var newArgs = copy(args);
-            push(newArgs, match);
-            instance.emitter.fire(key, newArgs);
-          }
-        });
+      if (isChange(newValue, oldValue, instance.deps[keypath])) {
+        flushing[keypath] = [newValue, oldValue, keypath];
       }
     });
 
-    execute(instance.afterFlush, instance, differences);
+    execute(instance.beforeFlush, instance, flushing);
+
+    each$1(flushing, function (args, keypath) {
+
+      instance.emitter.fire(keypath, args);
+
+      each$1(instance.watchFuzzyKeypaths, function (value, key) {
+        var match = matchKeypath(keypath, key);
+        if (match) {
+          var newArgs = copy(args);
+          push(newArgs, match);
+          instance.emitter.fire(key, newArgs);
+        }
+      });
+    });
+
+    execute(instance.afterFlush, instance, flushing);
   };
 
   Observer.prototype.flushAsync = function () {
@@ -5106,8 +5102,7 @@ extend(Observer.prototype, {
 
 function watch(instance, action, keypath, watcher, sync) {
   var emitter = instance.emitter,
-      context = instance.context,
-      differences = instance.differences;
+      context = instance.context;
 
 
   var isFuzzy = isFuzzyKeypath(keypath);
@@ -5126,13 +5121,6 @@ function watch(instance, action, keypath, watcher, sync) {
   });
 
   if (sync && !isFuzzy) {
-    if (differences) {
-      var difference = differences[keypath];
-      if (difference) {
-        difference.force = TRUE;
-        return;
-      }
-    }
     execute(watcher, context, [instance.get(keypath), UNDEFINED, keypath]);
   }
 }
@@ -5151,6 +5139,7 @@ function _unwatch(instance, keypath, watcher) {
     }
   }
 }
+
 function createWatch(action) {
 
   return function (keypath, watcher, sync) {
@@ -5230,6 +5219,41 @@ function matchBestGetter(getters, keypath) {
   });
 
   return result;
+}
+
+/**
+ * 获取最大值
+ *
+ * @param {number|undefined} a
+ * @param {number|undefined} b
+ * @return {number}
+ */
+function getMax(a, b) {
+  var max;
+  if (a >= 0) {
+    max = a;
+    if (b > a) {
+      max = b;
+    }
+  } else if (b >= 0) {
+    max = b;
+  }
+  return max;
+}
+
+/**
+ * 新旧值变化有两种情况：
+ *
+ * 1. 值不同
+ * 2. 值相同，都是 undefined，并且有依赖，这通常表示一个虚拟值
+ *
+ * @param {*} newValue
+ * @param {*} oldValue
+ * @param {*} deps
+ * @return {boolean}
+ */
+function isChange(newValue, oldValue, deps) {
+  return newValue !== oldValue || newValue === UNDEFINED && deps;
 }
 
 /**
@@ -5827,7 +5851,6 @@ var binding = function (_ref) {
 };
 
 var TEMPLATE_KEY = '_template';
-var TEMPLATE_VALUE = 0;
 
 var patch = init(api);
 
@@ -5891,19 +5914,18 @@ var Yox = function () {
       context: instance,
       data: source,
       computed: computed,
-      beforeFlush: function beforeFlush(differences) {
-        if (has$1(differences, TEMPLATE_KEY)) {
-          delete differences[TEMPLATE_KEY];
-          instance.updateView(instance.$node, instance.render());
-        }
-      }
-    });
+      beforeFlush: function beforeFlush(flushing) {
+        // 疑似变化
+        if (has$1(flushing, TEMPLATE_KEY)) {
+          delete flushing[TEMPLATE_KEY];
 
-    var counter = TEMPLATE_VALUE;
-    instance.addComputed(TEMPLATE_KEY, {
-      deps: TRUE,
-      get: function get$$1() {
-        return ++counter;
+          each(this.deps[TEMPLATE_KEY], function (dep) {
+            if (flushing[dep]) {
+              instance.updateView(instance.$node, instance.render());
+              return FALSE;
+            }
+          });
+        }
       }
     });
 
@@ -6183,7 +6205,7 @@ var Yox = function () {
     var differences = $observer.differences;
 
     if (differences) {
-      if (differences[TEMPLATE_KEY]) {
+      if (has$1(differences, TEMPLATE_KEY)) {
         if (sync) {
           $observer.flush();
         }
@@ -6194,7 +6216,7 @@ var Yox = function () {
     }
 
     // 开始新的异步队列
-    differences[TEMPLATE_KEY] = TEMPLATE_VALUE;
+    differences[TEMPLATE_KEY] = UNDEFINED;
     if (sync) {
       $observer.flush();
     } else {
@@ -6215,26 +6237,20 @@ var Yox = function () {
     var $template = instance.$template,
         $observer = instance.$observer,
         $context = instance.$context;
-    var data = $observer.data,
-        computedGetters = $observer.computedGetters;
 
 
     if (!$context) {
       $context = instance.$context = extend({}, registry.filter, instance.$filters);
     }
 
-    extend($context, data);
+    extend($context, $observer.data);
 
     // 在单次渲染过程中，对于计算属性来说，不管开不开缓存，其实只需要计算一次即可
     // 因为渲染过程中不会修改数据，如果频繁执行计算属性的 getter 函数
     // 完全是无意义的性能消耗
-    if (computedGetters) {
-      each$1(computedGetters, function (getter, key) {
-        if (key !== TEMPLATE_KEY) {
-          $context[key] = getter();
-        }
-      });
-    }
+    each$1($observer.computedGetters, function (getter, key) {
+      $context[key] = getter();
+    });
 
     var _renderTemplate = render($template, $context, instance),
         nodes = _renderTemplate.nodes,
@@ -6542,7 +6558,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.52.2';
+Yox.version = '0.52.3';
 
 /**
  * 工具，便于扩展、插件使用

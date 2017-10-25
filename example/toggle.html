@@ -11,12 +11,12 @@
 
           {{#if open}}
               <div>
-                  <div on-click="set('open', false)">
+                  <div on-click="close()">
                       close
                   </div>
               </div>
           {{/if}}
-          <div on-click="set('open', true)">
+          <div on-click="open()">
               open
           </div>
       </div>
@@ -33,8 +33,17 @@
           template: '#template',
           watchers: {
             open: function (newValue, oldValue) {
-              console.log(newValue, oldValue)
+                console.log(newValue, oldValue)
             }
+          },
+
+          methods: {
+              open: function () {
+                  this.set('open', true)
+              },
+              close: function () {
+                  this.set('open', false)
+              }
           },
 
           beforeUpdate: function () {
