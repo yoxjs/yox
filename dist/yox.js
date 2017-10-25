@@ -4630,7 +4630,7 @@ var Observer = function () {
 
         // 子属性
         var oldIsObject = object(oldValue),
-            newIsObject = newIsObject;
+            newIsObject = object(newValue);
         if (oldIsObject || newIsObject) {
           var keys$$1;
           if (oldIsObject) {
@@ -6558,7 +6558,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.52.3';
+Yox.version = '0.52.4';
 
 /**
  * 工具，便于扩展、插件使用
