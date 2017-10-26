@@ -30,6 +30,7 @@ import * as pattern from './config/pattern'
 import api from './platform/web/api'
 
 const TEMPLATE_KEY = '_template'
+const TEMPLATE_VALUE = 9
 
 const patch = snabbdom.init(api)
 
@@ -98,18 +99,29 @@ export default class Yox {
         if (object.has(flushing, TEMPLATE_KEY)) {
           delete flushing[ TEMPLATE_KEY ]
 
-          array.each(
-            this.deps[ TEMPLATE_KEY ],
-            function (dep) {
-              if (flushing[ dep ]) {
-                instance.updateView(
-                  instance.$node,
-                  instance.render()
-                )
-                return env.FALSE
+          let updateView = function () {
+            instance.updateView(
+              instance.$node,
+              instance.render()
+            )
+          }
+
+          // 强制更新
+          if (flushing[ TEMPLATE_KEY ] === TEMPLATE_VALUE) {
+            updateView()
+          }
+          // 排查依赖
+          else {
+            array.each(
+              this.deps[ TEMPLATE_KEY ],
+              function (dep) {
+                if (flushing[ dep ]) {
+                  updateView()
+                  return env.FALSE
+                }
               }
-            }
-          )
+            )
+          }
 
         }
       }
@@ -386,22 +398,12 @@ export default class Yox {
 
     let { $observer } = this
 
-    // 如果已排入队列，等待队列的刷新
     let { differences } = $observer
-    if (differences) {
-      if (object.has(differences, TEMPLATE_KEY)) {
-        if (sync) {
-          $observer.flush()
-        }
-        return
-      }
-    }
-    else {
+    if (!differences) {
       differences = $observer.differences = { }
     }
 
-    // 开始新的异步队列
-    differences[ TEMPLATE_KEY ] = env.UNDEFINED
+    differences[ TEMPLATE_KEY ] = TEMPLATE_VALUE
     if (sync) {
       $observer.flush()
     }
@@ -732,7 +734,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.52.6'
+Yox.version = '0.52.7'
 
 /**
  * 工具，便于扩展、插件使用

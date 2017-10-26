@@ -6006,6 +6006,7 @@ var binding = function (_ref) {
 };
 
 var TEMPLATE_KEY = '_template';
+var TEMPLATE_VALUE = 9;
 
 var patch = init(api);
 
@@ -6074,12 +6075,23 @@ var Yox = function () {
         if (has$1(flushing, TEMPLATE_KEY)) {
           delete flushing[TEMPLATE_KEY];
 
-          each(this.deps[TEMPLATE_KEY], function (dep) {
-            if (flushing[dep]) {
-              instance.updateView(instance.$node, instance.render());
-              return FALSE;
+          var updateView = function () {
+            instance.updateView(instance.$node, instance.render());
+          };
+
+          // 强制更新
+          if (flushing[TEMPLATE_KEY] === TEMPLATE_VALUE) {
+            updateView();
+          }
+          // 排查依赖
+          else {
+              each(this.deps[TEMPLATE_KEY], function (dep) {
+                if (flushing[dep]) {
+                  updateView();
+                  return FALSE;
+                }
+              });
             }
-          });
         }
       }
     });
@@ -6354,24 +6366,13 @@ var Yox = function () {
 
   Yox.prototype.forceUpdate = function (sync) {
     var $observer = this.$observer;
-
-    // 如果已排入队列，等待队列的刷新
-
     var differences = $observer.differences;
 
-    if (differences) {
-      if (has$1(differences, TEMPLATE_KEY)) {
-        if (sync) {
-          $observer.flush();
-        }
-        return;
-      }
-    } else {
+    if (!differences) {
       differences = $observer.differences = {};
     }
 
-    // 开始新的异步队列
-    differences[TEMPLATE_KEY] = UNDEFINED;
+    differences[TEMPLATE_KEY] = TEMPLATE_VALUE;
     if (sync) {
       $observer.flush();
     } else {
@@ -6713,7 +6714,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.52.6';
+Yox.version = '0.52.7';
 
 /**
  * 工具，便于扩展、插件使用
