@@ -3360,13 +3360,7 @@ function compile(content) {
             var text = _singleChild.text;
 
             if (type === DIRECTIVE) {
-              // 有可能写了个中文，例如“中文”，这种是没法作为表达式解析的
-              // 就像你在浏览器控制台输入了“中文”，照样报错
-              try {
-                target.expr = compile$1(text);
-              } catch (e) {
-                target.expr = new Literal(text, text);
-              }
+              target.expr = compile$1(text);
               target.value = text;
               delete target.children;
             }
@@ -6558,7 +6552,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.52.4';
+Yox.version = '0.52.5';
 
 /**
  * 工具，便于扩展、插件使用
