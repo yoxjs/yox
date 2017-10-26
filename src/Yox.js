@@ -116,7 +116,7 @@ export default class Yox {
     })
 
     // 后放 data
-    let extend = is.func(data) ? execute(data, instance) : data
+    let extend = is.func(data) ? execute(data, instance, options) : data
     if (is.object(extend)) {
       object.each(
         extend,
@@ -732,7 +732,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.52.5'
+Yox.version = '0.52.6'
 
 /**
  * 工具，便于扩展、插件使用

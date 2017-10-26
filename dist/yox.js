@@ -5924,7 +5924,7 @@ var Yox = function () {
     });
 
     // 后放 data
-    var extend$$1 = func(data) ? execute(data, instance) : data;
+    var extend$$1 = func(data) ? execute(data, instance, options) : data;
     if (object(extend$$1)) {
       each$1(extend$$1, function (value, key) {
         if (has$1(source, key)) {
@@ -6552,7 +6552,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.52.5';
+Yox.version = '0.52.6';
 
 /**
  * 工具，便于扩展、插件使用
