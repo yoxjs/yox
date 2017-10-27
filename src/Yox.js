@@ -97,7 +97,6 @@ export default class Yox {
       beforeFlush: function (flushing) {
         // 疑似变化
         if (object.has(flushing, TEMPLATE_KEY)) {
-          delete flushing[ TEMPLATE_KEY ]
 
           let updateView = function () {
             instance.updateView(
@@ -122,6 +121,8 @@ export default class Yox {
               }
             )
           }
+
+          delete flushing[ TEMPLATE_KEY ]
 
         }
       }
@@ -734,7 +735,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.52.7'
+Yox.version = '0.52.8'
 
 /**
  * 工具，便于扩展、插件使用

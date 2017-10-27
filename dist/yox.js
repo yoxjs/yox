@@ -5912,7 +5912,6 @@ var Yox = function () {
       beforeFlush: function beforeFlush(flushing) {
         // 疑似变化
         if (has$1(flushing, TEMPLATE_KEY)) {
-          delete flushing[TEMPLATE_KEY];
 
           var updateView = function () {
             instance.updateView(instance.$node, instance.render());
@@ -5931,6 +5930,8 @@ var Yox = function () {
                 }
               });
             }
+
+          delete flushing[TEMPLATE_KEY];
         }
       }
     });
@@ -6553,7 +6554,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.52.7';
+Yox.version = '0.52.8';
 
 /**
  * 工具，便于扩展、插件使用
