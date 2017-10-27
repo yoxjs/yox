@@ -106,7 +106,7 @@ export default class Yox {
           }
 
           // 强制更新
-          if (flushing[ TEMPLATE_KEY ] === TEMPLATE_VALUE) {
+          if (flushing[ TEMPLATE_KEY ][ 1 ] === TEMPLATE_VALUE) {
             updateView()
           }
           // 排查依赖
