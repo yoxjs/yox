@@ -14,6 +14,8 @@ import bindEvent from './event'
 import api from '../platform/web/api'
 import * as event from '../config/event'
 
+const VALUE = 'value'
+
 const inputControl = {
   set(el, keypath, instance) {
     let value = toString(instance.get(keypath))
@@ -24,7 +26,7 @@ const inputControl = {
   sync(el, keypath, instance) {
     instance.set(keypath, el.value)
   },
-  attr: 'value',
+  attr: VALUE,
 }
 
 const selectControl = {
@@ -89,13 +91,22 @@ const checkboxControl = {
   attr: 'checked'
 }
 
+const componentControl = {
+  set(component, keypath, instance) {
+    component.set(VALUE, instance.get(keypath))
+  },
+  sync(component, keypath, instance) {
+    instance.set(keypath, component.get(VALUE))
+  },
+}
+
 const specialControls = {
   radio: radioControl,
   checkbox: checkboxControl,
   select: selectControl,
 }
 
-export default function ({ el, node, instance, directives, attrs }) {
+export default function ({ el, node, instance, directives, attrs, component }) {
 
   let { value, context } = node
   if (string.falsy(value)) {
@@ -104,44 +115,89 @@ export default function ({ el, node, instance, directives, attrs }) {
 
   let { keypath } = context.get(value)
 
-  let type = event.CHANGE, control = specialControls[ el.type ] || specialControls[ api.tag(el) ]
-  if (!control) {
-    control = inputControl
-    if (object.exists(el, 'autofocus')) {
-      type = event.INPUT
+  let set = function () {
+    if (control) {
+      control.set(target, keypath, instance)
     }
   }
-
-  let set = function () {
-    control.set(el, keypath, instance)
+  let sync = function () {
+    control.sync(target, keypath, instance)
   }
 
-  if (!control.attr || !object.has(attrs, control.attr)) {
-    set()
+  let target, control, unbindTarget, unbindInstance
+  if (component) {
+
+    let callback = function (component) {
+      target = component
+      control = componentControl
+      if (!object.has(attrs, VALUE)) {
+        set()
+      }
+      component.watch(VALUE, sync)
+      unbindTarget = function () {
+        component.unwatch(VALUE, sync)
+      }
+    }
+
+    if (component.set) {
+      callback(component)
+    }
+    else if (is.array(component)) {
+      array.push(
+        component,
+        callback
+      )
+      unbindTarget = function () {
+        array.remove(
+          component,
+          callback
+        )
+      }
+    }
+
+  }
+  else {
+
+    target = el
+    control = specialControls[ el.type ] || specialControls[ api.tag(el) ]
+
+    let type = event.CHANGE
+    if (!control) {
+      control = inputControl
+      if (object.exists(el, 'autofocus')) {
+        type = event.INPUT
+      }
+    }
+
+    if (!control.attr || !object.has(attrs, control.attr)) {
+      set()
+    }
+
+    unbindTarget = bindEvent({
+      el,
+      node,
+      instance,
+      directives,
+      type,
+      listener: sync,
+    })
+
   }
 
   nextTask.prepend(
     function () {
       if (set) {
         instance.watch(keypath, set)
+        unbindInstance = function () {
+          instance.unwatch(keypath, set)
+        }
       }
     }
   )
 
-  let unbind = bindEvent({
-    el,
-    node,
-    instance,
-    directives,
-    type,
-    listener() {
-      control.sync(el, keypath, instance)
-    }
-  })
-
   return function () {
-    instance.unwatch(keypath, set)
-    unbind && unbind()
+    unbindTarget && unbindTarget()
+    unbindInstance && unbindInstance()
     set = env.NULL
   }
 

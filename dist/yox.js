@@ -5642,19 +5642,23 @@ var bindEvent = function (_ref) {
     }
 
     if (component) {
+      var unbind;
       var bind = function (component) {
         component.on(type, listener);
+        unbind = function unbind() {
+          component.off(type, listener);
+        };
       };
       if (array(component)) {
         push(component, bind);
+        unbind = function unbind() {
+          remove(component, bind);
+        };
       } else {
         bind(component);
       }
       return function () {
-        component.off(type, listener);
-        if (array(component)) {
-          remove(component, bind);
-        }
+        unbind();
       };
     } else {
       api.on(el, type, listener);
@@ -5664,6 +5668,8 @@ var bindEvent = function (_ref) {
     }
   }
 };
+
+var VALUE$1 = 'value';
 
 var inputControl = {
   set: function set$$1(el, keypath, instance) {
@@ -5676,7 +5682,7 @@ var inputControl = {
     instance.set(keypath, el.value);
   },
 
-  attr: 'value'
+  attr: VALUE$1
 };
 
 var selectControl = {
@@ -5736,6 +5742,15 @@ var checkboxControl = {
   attr: 'checked'
 };
 
+var componentControl = {
+  set: function set$$1(component, keypath, instance) {
+    component.set(VALUE$1, instance.get(keypath));
+  },
+  sync: function sync(component, keypath, instance) {
+    instance.set(keypath, component.get(VALUE$1));
+  }
+};
+
 var specialControls = {
   radio: radioControl,
   checkbox: checkboxControl,
@@ -5747,7 +5762,8 @@ var model = function (_ref) {
       node = _ref.node,
       instance = _ref.instance,
       directives = _ref.directives,
-      attrs = _ref.attrs;
+      attrs = _ref.attrs,
+      component = _ref.component;
   var value = node.value,
       context = node.context;
 
@@ -5758,43 +5774,80 @@ var model = function (_ref) {
   var _context$get = context.get(value),
       keypath = _context$get.keypath;
 
-  var type = CHANGE,
-      control = specialControls[el.type] || specialControls[api.tag(el)];
-  if (!control) {
-    control = inputControl;
-    if (exists(el, 'autofocus')) {
-      type = INPUT;
-    }
-  }
-
   var set$$1 = function () {
-    control.set(el, keypath, instance);
+    if (control) {
+      control.set(target, keypath, instance);
+    }
+  };
+  var sync = function () {
+    control.sync(target, keypath, instance);
   };
 
-  if (!control.attr || !has$1(attrs, control.attr)) {
-    set$$1();
+  var target,
+      control,
+      unbindTarget,
+      unbindInstance;
+  if (component) {
+
+    var callback = function (component) {
+      target = component;
+      control = componentControl;
+      if (!has$1(attrs, VALUE$1)) {
+        set$$1();
+      }
+      component.watch(VALUE$1, sync);
+      unbindTarget = function unbindTarget() {
+        component.unwatch(VALUE$1, sync);
+      };
+    };
+
+    if (component.set) {
+      callback(component);
+    } else if (array(component)) {
+      push(component, callback);
+      unbindTarget = function unbindTarget() {
+        remove(component, callback);
+      };
+    }
+  } else {
+
+    target = el;
+    control = specialControls[el.type] || specialControls[api.tag(el)];
+
+    var type = CHANGE;
+    if (!control) {
+      control = inputControl;
+      if (exists(el, 'autofocus')) {
+        type = INPUT;
+      }
+    }
+
+    if (!control.attr || !has$1(attrs, control.attr)) {
+      set$$1();
+    }
+
+    unbindTarget = bindEvent({
+      el: el,
+      node: node,
+      instance: instance,
+      directives: directives,
+      type: type,
+      listener: sync
+    });
   }
 
   prepend(function () {
     if (set$$1) {
       instance.watch(keypath, set$$1);
-    }
-  });
-
-  var unbind = bindEvent({
-    el: el,
-    node: node,
-    instance: instance,
-    directives: directives,
-    type: type,
-    listener: function listener() {
-      control.sync(el, keypath, instance);
+      unbindInstance = function unbindInstance() {
+        instance.unwatch(keypath, set$$1);
+      };
     }
   });
 
   return function () {
-    instance.unwatch(keypath, set$$1);
-    unbind && unbind();
+    unbindTarget && unbindTarget();
+    unbindInstance && unbindInstance();
     set$$1 = NULL;
   };
 };
@@ -6554,7 +6607,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.52.8';
+Yox.version = '0.52.9';
 
 /**
  * 工具，便于扩展、插件使用

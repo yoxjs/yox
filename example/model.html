@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>组件 if</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div id="app"></div>
+
+    <script id="template1" type="plain/text">
+        <div>
+            <Input1 model="name1" />
+            <Input2 model="name2" />
+        </div>
+    </script>
+
+    <script id="template2" type="plain/text">
+        <input type="text" model="value">
+    </script>
+
+    <script src="../dist/yox.js"></script>
+    <script>
+
+        var Input = {
+            template: '#template2',
+            propTypes: {
+                value: {
+                    type: 'string',
+                    value: ''
+                }
+            },
+            watchers: {
+                value: function (value) {
+                    console.log(value)
+                }
+            }
+        };
+
+        var instance = new Yox({
+            el: '#app',
+            data: {
+                name1: '111',
+                name2: '333'
+            },
+            template: '#template1',
+            components: {
+                Input1: function (callback) {
+                    setTimeout(
+                        function () {
+                            callback(Input);
+                        },
+                        200
+                    );
+                },
+                Input2: Input,
+            },
+            watchers: {
+                name1: function (name) {
+                    console.log(name)
+                },
+                name2: function (name) {
+                    console.log(name)
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>
