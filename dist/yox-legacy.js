@@ -4700,12 +4700,14 @@ var Observer = function () {
         } else {
           var oldIsArray = array(oldValue),
               newIsArray = array(newValue);
-          if (oldIsArray || newIsArray) {
-            var oldLength = oldIsArray ? oldValue.length : UNDEFINED,
-                newLength = newIsArray ? newValue.length : UNDEFINED;
+          var oldLength = oldIsArray || string(oldValue) ? oldValue.length : UNDEFINED;
+          var newLength = newIsArray || string(newValue) ? newValue.length : UNDEFINED;
+          if (number(oldLength) || number(newLength)) {
             addDifference(differences, join(keypath, 'length'), newLength, oldLength);
-            for (var i = 0, length = getMax(newLength, oldLength); i < length; i++) {
-              addDifference(differences, join(keypath, i), newIsArray ? newValue[i] : UNDEFINED, oldIsArray ? oldValue[i] : UNDEFINED);
+            if (oldIsArray || newIsArray) {
+              for (var i = 0, length = getMax(newLength, oldLength); i < length; i++) {
+                addDifference(differences, join(keypath, i), newIsArray ? newValue[i] : UNDEFINED, oldIsArray ? oldValue[i] : UNDEFINED);
+              }
             }
           }
         }
@@ -6768,7 +6770,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.52.9';
+Yox.version = '0.53.0';
 
 /**
  * 工具，便于扩展、插件使用
