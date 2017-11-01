@@ -5612,13 +5612,14 @@ function find$1(selector, context) {
 
 function setProp$1(element, name, value) {
   try {
+    if (name === 'textContent' && !exists(element, name)) {
+      name = 'innerText';
+    }
     set$1(element, name, value);
   } catch (e) {
-    if (element.tagName === 'STYLE' && (name === 'innerHTML' || name === 'textContent')) {
+    if (element.tagName === 'STYLE' && (name === 'innerHTML' || name === 'innerText')) {
       element.setAttribute('type', 'text/css');
       element.styleSheet.cssText = value;
-    } else if (name === 'textContent') {
-      element.innerText = value;
     }
   }
 }
@@ -6770,7 +6771,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.53.0';
+Yox.version = '0.53.1';
 
 /**
  * 工具，便于扩展、插件使用

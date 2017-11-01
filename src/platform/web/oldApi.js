@@ -166,15 +166,15 @@ export function find(selector, context) {
 
 export function setProp(element, name, value) {
   try {
+    if (name === 'textContent' && !object.exists(element, name)) {
+      name = 'innerText'
+    }
     object.set(element, name, value)
   }
   catch (e) {
-    if (element.tagName === 'STYLE' && (name === 'innerHTML' || name === 'textContent')) {
+    if (element.tagName === 'STYLE' && (name === 'innerHTML' || name === 'innerText')) {
       element.setAttribute('type', 'text/css')
       element.styleSheet.cssText = value;
-    }
-    else if (name === 'textContent') {
-      element.innerText = value
     }
   }
 }

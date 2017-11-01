@@ -6609,7 +6609,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.53.0';
+Yox.version = '0.53.1';
 
 /**
  * 工具，便于扩展、插件使用
