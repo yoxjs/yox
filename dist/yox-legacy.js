@@ -4,6 +4,9 @@
 	(global.Yox = factory());
 }(this, (function () { 'use strict';
 
+
+
+
 if (!Object.keys) {
   Object.keys = function (obj) {
     var result = [];
@@ -56,11 +59,6 @@ if (!Array.prototype.map) {
     return result;
   };
 }
-
-
-
-
-
 
 
 
@@ -4903,13 +4901,13 @@ var Observer = function () {
         var remove$$1 = function (dep, keypath) {
 
           var isFuzzy = isFuzzyKeypath(dep);
-          var deps = isFuzzy ? invertedFuzzyDeps : invertedDeps;
+          var tempDeps = isFuzzy ? invertedFuzzyDeps : invertedDeps;
 
-          var target = deps[dep];
+          var target = tempDeps[dep];
           if (target[keypath] > 0) {
             target[keypath]--;
-            if (deps[keypath]) {
-              each$1(deps[keypath], function (count, key) {
+            if (tempDeps[keypath]) {
+              each$1(tempDeps[keypath], function (count, key) {
                 remove$$1(dep, key);
               });
             }
@@ -4930,12 +4928,12 @@ var Observer = function () {
         var add = function (dep, keypath, autoCreate) {
 
           var isFuzzy = isFuzzyKeypath(dep);
-          var deps = isFuzzy ? invertedFuzzyDeps : invertedDeps;
+          var tempDeps = isFuzzy ? invertedFuzzyDeps : invertedDeps;
 
           // dep 是 keypath 的一个依赖
-          var target = deps[dep];
+          var target = tempDeps[dep];
           if (!target && autoCreate) {
-            target = deps[dep] = {};
+            target = tempDeps[dep] = {};
           }
           if (target) {
             if (number(target[keypath])) {
@@ -4944,9 +4942,9 @@ var Observer = function () {
               target[keypath] = 1;
             }
             // dep 同样是 keypath 的父级的依赖
-            if (deps[keypath]) {
-              each$1(deps[keypath], function (count, key) {
-                add(dep, key);
+            if (deps[dep]) {
+              each$1(deps[dep], function (key) {
+                add(key, keypath);
               });
             }
           }
@@ -5359,7 +5357,7 @@ function setProp(node, name, value) {
 }
 
 function removeProp(node, name) {
-  setProp(node, name, NULL);
+  setProp(node, name, string(node[name]) ? CHAR_BLANK : NULL);
 }
 
 function setAttr(node, name, value) {
@@ -6771,7 +6769,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.53.1';
+Yox.version = '0.53.2';
 
 /**
  * 工具，便于扩展、插件使用
