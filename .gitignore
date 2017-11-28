@@ -4,3 +4,5 @@ node_modules
 .edp*
 edp-*
 
+
+package-lock.json

@@ -4,9 +4,6 @@
 	(global.Yox = factory());
 }(this, (function () { 'use strict';
 
-
-
-
 if (!Object.keys) {
   Object.keys = function (obj) {
     var result = [];
@@ -59,6 +56,11 @@ if (!Array.prototype.map) {
     return result;
   };
 }
+
+
+
+
+
 
 
 
@@ -4658,6 +4660,9 @@ var Observer = function () {
 
     var addDifference = function (differences, keypath, newValue, oldValue, force) {
       if (force || oldValue !== newValue) {
+        if (has$1(differences, keypath)) {
+          return;
+        }
         // 自己
         differences[keypath] = oldValue;
 
@@ -6769,7 +6774,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.53.2';
+Yox.version = '0.53.3';
 
 /**
  * 工具，便于扩展、插件使用
