@@ -13,6 +13,7 @@ import * as object from 'yox-common/util/object'
 import * as string from 'yox-common/util/string'
 import * as logger from 'yox-common/util/logger'
 import * as nextTask from 'yox-common/util/nextTask'
+import * as keypathUtil from 'yox-common/util/keypath'
 
 import * as snabbdom from 'yox-snabbdom'
 
@@ -538,6 +539,7 @@ export default class Yox {
 
       let { callee, args } = expr, method = instance[ callee.name ]
       if (method) {
+
         let getValue = function (node) {
           return executeExpression(
             node,
@@ -547,32 +549,59 @@ export default class Yox {
             instance
           )
         }
-        return function (event) {
-          let isEvent = Event.is(event), result
-          if (!args.length) {
-            if (isEvent) {
-              result = execute(method, instance, event)
-            }
+
+        let watchKeypath = keypathUtil.join(keypath, '**')
+        let watchHandler = function (newValue, oldValue, absoluteKeypath) {
+
+          if (keypath) {
+            let length = keypathUtil.startsWith(absoluteKeypath, keypath)
+            context.set(
+              absoluteKeypath.substr(length),
+              newValue
+            )
           }
           else {
-            if (isEvent) {
-              context.set(config.SPECIAL_EVENT, event)
-            }
-            result = execute(method, instance, args.map(getValue))
+            context.set(absoluteKeypath, newValue)
           }
-          if (result === env.FALSE && isEvent) {
-            event.prevent().stop()
+
+        }
+
+        instance.watch(watchKeypath, watchHandler)
+
+        return {
+          destroy: function () {
+            instance.unwatch(watchKeypath, watchHandler)
+          },
+
+          listener: function (event) {
+            let isEvent = Event.is(event), result
+            if (!args.length) {
+              if (isEvent) {
+                result = execute(method, instance, event)
+              }
+            }
+            else {
+              if (isEvent) {
+                context.set(config.SPECIAL_EVENT, event)
+              }
+              result = execute(method, instance, args.map(getValue))
+            }
+            if (result === env.FALSE && isEvent) {
+              event.prevent().stop()
+            }
           }
         }
       }
     }
     else if (value) {
-      return function (event, data) {
-        if (event.type !== value) {
-          event = new Event(event)
-          event.type = value
+      return {
+        listener: function (event, data) {
+          if (event.type !== value) {
+            event = new Event(event)
+            event.type = value
+          }
+          instance.fire(event, data)
         }
-        instance.fire(event, data)
       }
     }
   }
@@ -735,7 +764,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.53.3'
+Yox.version = '0.53.4'
 
 /**
  * 工具，便于扩展、插件使用

@@ -5791,8 +5791,15 @@ var bindEvent = function (_ref) {
   if (!type) {
     type = node.modifier;
   }
+
+  var destroy = noop;
+
   if (!listener) {
-    listener = instance.compileDirective(node);
+    var result = instance.compileDirective(node);
+    listener = result.listener;
+    if (result.destroy) {
+      destroy = result.destroy;
+    }
   }
 
   if (type && listener) {
@@ -5826,11 +5833,13 @@ var bindEvent = function (_ref) {
       }
       return function () {
         unbind();
+        destroy();
       };
     } else {
       api.on(el, type, listener);
       return function () {
         api.off(el, type, listener);
+        destroy();
       };
     }
   }
@@ -6567,36 +6576,59 @@ var Yox = function () {
           method = instance[callee.name];
 
       if (method) {
+
         var getValue = function (node) {
           return execute$1(node, function (keypath) {
             return context.get(keypath).value;
           }, instance);
         };
-        return function (event) {
-          var isEvent = Event.is(event),
-              result;
-          if (!args.length) {
-            if (isEvent) {
-              result = execute(method, instance, event);
-            }
+
+        var watchKeypath = join(keypath, '**');
+        var watchHandler = function (newValue, oldValue, absoluteKeypath) {
+
+          if (keypath) {
+            var length = startsWith$1(absoluteKeypath, keypath);
+            context.set(absoluteKeypath.substr(length), newValue);
           } else {
-            if (isEvent) {
-              context.set(SPECIAL_EVENT, event);
-            }
-            result = execute(method, instance, args.map(getValue));
+            context.set(absoluteKeypath, newValue);
           }
-          if (result === FALSE && isEvent) {
-            event.prevent().stop();
+        };
+
+        instance.watch(watchKeypath, watchHandler);
+
+        return {
+          destroy: function destroy() {
+            instance.unwatch(watchKeypath, watchHandler);
+          },
+
+          listener: function listener(event) {
+            var isEvent = Event.is(event),
+                result;
+            if (!args.length) {
+              if (isEvent) {
+                result = execute(method, instance, event);
+              }
+            } else {
+              if (isEvent) {
+                context.set(SPECIAL_EVENT, event);
+              }
+              result = execute(method, instance, args.map(getValue));
+            }
+            if (result === FALSE && isEvent) {
+              event.prevent().stop();
+            }
           }
         };
       }
     } else if (value) {
-      return function (event, data) {
-        if (event.type !== value) {
-          event = new Event(event);
-          event.type = value;
+      return {
+        listener: function listener(event, data) {
+          if (event.type !== value) {
+            event = new Event(event);
+            event.type = value;
+          }
+          instance.fire(event, data);
         }
-        instance.fire(event, data);
       };
     }
   };
@@ -6774,7 +6806,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.53.3';
+Yox.version = '0.53.4';
 
 /**
  * 工具，便于扩展、插件使用

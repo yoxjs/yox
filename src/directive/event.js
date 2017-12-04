@@ -2,6 +2,7 @@
 import debounce from 'yox-common/function/debounce'
 
 import * as is from 'yox-common/util/is'
+import * as env from 'yox-common/util/env'
 import * as array from 'yox-common/util/array'
 
 import api from '../platform/web/api'
@@ -16,8 +17,15 @@ export default function ({ el, node, instance, component, directives, type, list
   if (!type) {
     type = node.modifier
   }
+
+  let destroy = env.noop
+
   if (!listener) {
-    listener = instance.compileDirective(node)
+    let result = instance.compileDirective(node)
+    listener = result.listener
+    if (result.destroy) {
+      destroy = result.destroy
+    }
   }
 
   if (type && listener) {
@@ -51,12 +59,14 @@ export default function ({ el, node, instance, component, directives, type, list
       }
       return function () {
         unbind()
+        destroy()
       }
     }
     else {
       api.on(el, type, listener)
       return function () {
         api.off(el, type, listener)
+        destroy()
       }
     }
   }
