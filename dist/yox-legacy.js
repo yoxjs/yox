@@ -5796,9 +5796,11 @@ var bindEvent = function (_ref) {
 
   if (!listener) {
     var result = instance.compileDirective(node);
-    listener = result.listener;
-    if (result.destroy) {
-      destroy = result.destroy;
+    if (result) {
+      listener = result.listener;
+      if (result.destroy) {
+        destroy = result.destroy;
+      }
     }
   }
 

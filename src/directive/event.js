@@ -22,9 +22,11 @@ export default function ({ el, node, instance, component, directives, type, list
 
   if (!listener) {
     let result = instance.compileDirective(node)
-    listener = result.listener
-    if (result.destroy) {
-      destroy = result.destroy
+    if (result) {
+      listener = result.listener
+      if (result.destroy) {
+        destroy = result.destroy
+      }
     }
   }
 
