@@ -3907,6 +3907,9 @@ var Context = function () {
 
       if (result) {
         result.keypath = join(instance.temp[SPECIAL_KEYPATH], keypath);
+        if (func(result.value) && result.value.$computed) {
+          result.value = result.value();
+        }
         cache[keypath] = result;
       }
     }
@@ -4495,7 +4498,7 @@ var Observer = function () {
         needDeps = cache;
       }
 
-      instance.computedGetters[keypath] = function () {
+      var getter = function () {
 
         if (cache && has$1(instance.computedCache, keypath)) {
           return instance.computedCache[keypath];
@@ -4514,12 +4517,17 @@ var Observer = function () {
 
         return value;
       };
+
+      getter.$computed = TRUE;
+      instance.computedGetters[keypath] = getter;
     }
 
     if (set$$1) {
-      instance.computedSetters[keypath] = function (value) {
+      var setter = function (value) {
         set$$1.call(instance.context, value);
       };
+      setter.$computed = TRUE;
+      instance.computedSetters[keypath] = setter;
     }
   };
 
@@ -6308,14 +6316,7 @@ var Yox = function () {
       $context = instance.$context = extend({}, registry.filter, instance.$filters);
     }
 
-    extend($context, $observer.data);
-
-    // 在单次渲染过程中，对于计算属性来说，不管开不开缓存，其实只需要计算一次即可
-    // 因为渲染过程中不会修改数据，如果频繁执行计算属性的 getter 函数
-    // 完全是无意义的性能消耗
-    each$1($observer.computedGetters, function (getter, key) {
-      $context[key] = getter();
-    });
+    extend($context, $observer.data, $observer.computedGetters);
 
     var _renderTemplate = render($template, $context, instance),
         nodes = _renderTemplate.nodes,
@@ -6646,7 +6647,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.53.4';
+Yox.version = '0.53.6';
 
 /**
  * 工具，便于扩展、插件使用

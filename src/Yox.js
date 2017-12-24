@@ -435,17 +435,7 @@ export default class Yox {
       )
     }
 
-    object.extend($context, $observer.data)
-
-    // 在单次渲染过程中，对于计算属性来说，不管开不开缓存，其实只需要计算一次即可
-    // 因为渲染过程中不会修改数据，如果频繁执行计算属性的 getter 函数
-    // 完全是无意义的性能消耗
-    object.each(
-      $observer.computedGetters,
-      function (getter, key) {
-        $context[ key ] = getter()
-      }
-    )
+    object.extend($context, $observer.data, $observer.computedGetters)
 
     let { nodes, deps } = renderTemplate($template, $context, instance)
     $observer.setDeps(TEMPLATE_KEY, object.keys(deps))
@@ -764,7 +754,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.53.4'
+Yox.version = '0.53.6'
 
 /**
  * 工具，便于扩展、插件使用
