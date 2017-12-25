@@ -878,6 +878,8 @@ function get$1(object$$1, keypath) {
         object$$1 = object$$1[list[i]];
         if (object$$1 == NULL) {
           return;
+        } else if (func(object$$1) && object$$1.getter) {
+          object$$1 = object$$1();
         }
       } else {
         keypath = list[i];
@@ -886,8 +888,12 @@ function get$1(object$$1, keypath) {
   }
 
   if (exists(object$$1, keypath)) {
+    var value = object$$1[keypath];
+    if (func(value) && value.getter) {
+      value = value();
+    }
     return {
-      value: object$$1[keypath]
+      value: value
     };
   }
 }
@@ -3960,9 +3966,6 @@ var Context = function () {
 
       if (result) {
         result.keypath = join(instance.temp[SPECIAL_KEYPATH], keypath);
-        if (func(result.value) && result.value.$computed) {
-          result.value = result.value();
-        }
         cache[keypath] = result;
       }
     }
@@ -4571,7 +4574,7 @@ var Observer = function () {
         return value;
       };
 
-      getter.$computed = TRUE;
+      getter.getter = TRUE;
       instance.computedGetters[keypath] = getter;
     }
 
@@ -4579,7 +4582,7 @@ var Observer = function () {
       var setter = function (value) {
         set$$1.call(instance.context, value);
       };
-      setter.$computed = TRUE;
+      setter.setter = TRUE;
       instance.computedSetters[keypath] = setter;
     }
   };
@@ -6809,7 +6812,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.53.6';
+Yox.version = '0.53.7';
 
 /**
  * 工具，便于扩展、插件使用
