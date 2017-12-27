@@ -3081,7 +3081,7 @@ var openingTagPattern = /<(\/)?([a-z][-a-z0-9]*)/i;
 var closingTagPattern = /^\s*(\/)?>/;
 var attributePattern = /^\s*([-:\w]+)(?:=(['"]))?/;
 var componentNamePattern = /[-A-Z]/;
-var selfClosingTagNamePattern = /area|base|embed|track|source|param|input|col|img|br|hr/;
+var selfClosingTagNames = ['area', 'base', 'embed', 'track', 'source', 'param', 'input', 'col', 'img', 'br', 'hr'];
 
 // 缓存编译结果
 var compileCache = {};
@@ -3226,7 +3226,7 @@ function compile(content) {
 
   var popSelfClosingElementIfNeeded = function (popingTagName) {
     var lastNode = last(nodeStack);
-    if (lastNode && lastNode.type === ELEMENT && lastNode.name !== popingTagName && selfClosingTagNamePattern.test(lastNode.name)) {
+    if (lastNode && lastNode.type === ELEMENT && lastNode.name !== popingTagName && has(selfClosingTagNames, lastNode.name)) {
       popStack(ELEMENT, lastNode.name);
     }
   };
@@ -6650,7 +6650,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.53.7';
+Yox.version = '0.53.8';
 
 /**
  * 工具，便于扩展、插件使用
