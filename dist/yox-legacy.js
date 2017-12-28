@@ -4689,8 +4689,10 @@ var Observer = function () {
           }
         });
 
-        // $children 是一个特殊对象，不能参与递归，否则会挂
-        if (keypath === SPECIAL_CHILDREN) {
+        // 我们认为 $ 开头的变量是不可递归的
+        // 比如浏览器中常见的 $0 表示当前选中元素
+        // DOM 元素是不能递归的
+        if (startsWith(keypath, '$')) {
           return;
         }
 
@@ -6817,7 +6819,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.53.9';
+Yox.version = '0.54.0';
 
 /**
  * 工具，便于扩展、插件使用
