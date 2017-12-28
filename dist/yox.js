@@ -4636,6 +4636,11 @@ var Observer = function () {
           }
         });
 
+        // $children 是一个特殊对象，不能参与递归，否则会挂
+        if (keypath === SPECIAL_CHILDREN) {
+          return;
+        }
+
         // 子属性
         var oldIsObject = object(oldValue),
             newIsObject = object(newValue);
@@ -6650,7 +6655,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.53.8';
+Yox.version = '0.53.9';
 
 /**
  * 工具，便于扩展、插件使用
