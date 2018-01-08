@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>组件嵌套</title>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script src="../dist/yox.js"></script>
+    <script>
+        var List = {
+            template: `
+                <ul>
+                    {{$children}}
+                </ul>
+            `
+        };
+
+        var Item = {
+            template: `
+                <li on-click="click()">
+                    {{$children}}
+                </li>
+            `,
+            propTypes: {
+                onClick: {
+                    type: 'function'
+                }
+            },
+            methods: {
+                click: function () {
+                    var onClick = this.get('onClick');
+                    if (onClick) {
+                        onClick(this);
+                    }
+                }
+            }
+        };
+
+
+        var instance = new Yox({
+          el: '#app',
+            data: {
+                list: [
+                    '111',
+                    '222',
+                    '333'
+                ],
+                onItemClick: function (item) {
+                    console.log(item);
+                }
+            },
+            template: `
+                <div>
+                    <List>
+                        {{#each list:index}}
+                            <Item ref="{{'item' + index}}" onClick="{{onItemClick}}">
+                                {{this}}
+                            </Item>
+                        {{/each}}
+                    </List>
+                </div>
+            `,
+            components: {
+                List: List,
+                Item: Item,
+            }
+        });
+    </script>
+</body>
+</html>

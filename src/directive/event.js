@@ -43,24 +43,9 @@ export default function ({ el, node, instance, component, directives, type, list
     }
 
     if (component) {
-      let unbind
-      let bind = function (component) {
-        component.on(type, listener)
-        unbind = function () {
-          component.off(type, listener)
-        }
-      }
-      if (is.array(component)) {
-        array.push(component, bind)
-        unbind = function () {
-          array.remove(component, bind)
-        }
-      }
-      else {
-        bind(component)
-      }
+      component.on(type, listener)
       return function () {
-        unbind()
+        component.off(type, listener)
         destroy()
       }
     }

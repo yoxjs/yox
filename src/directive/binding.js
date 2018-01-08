@@ -17,9 +17,7 @@ export default function ({ el, node, instance, component }) {
     }
     else {
       if (component) {
-        if (component.set) {
-          component.set(name, value)
-        }
+        component.set(name, value)
       }
       else {
         api.setAttr(el, name, value)
@@ -37,15 +35,6 @@ export default function ({ el, node, instance, component }) {
       }
     }
   )
-
-  if (is.array(component)) {
-    array.push(
-      component,
-      function (target) {
-        component = target
-      }
-    )
-  }
 
   return function () {
     instance.unwatch(keypath, set)

@@ -127,32 +127,14 @@ export default function ({ el, node, instance, directives, attrs, component }) {
   let target, control, unbindTarget, unbindInstance
   if (component) {
 
-    let callback = function (component) {
-      target = component
-      control = componentControl
-      if (!object.has(attrs, VALUE)) {
-        set()
-      }
-      component.watch(VALUE, sync)
-      unbindTarget = function () {
-        component.unwatch(VALUE, sync)
-      }
+    target = component
+    control = componentControl
+    if (!object.has(attrs, VALUE)) {
+      set()
     }
-
-    if (component.set) {
-      callback(component)
-    }
-    else if (is.array(component)) {
-      array.push(
-        component,
-        callback
-      )
-      unbindTarget = function () {
-        array.remove(
-          component,
-          callback
-        )
-      }
+    component.watch(VALUE, sync)
+    unbindTarget = function () {
+      component.unwatch(VALUE, sync)
     }
 
   }

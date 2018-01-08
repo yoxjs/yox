@@ -1398,11 +1398,7 @@ var props = {
   postpatch: createProps
 };
 
-var getComponentByTag = function (tag) {
-  return "component_" + tag;
-};
-
-function bindDirective(vnode, key) {
+function bindDirective(vnode, key, api) {
   var el = vnode.el,
       tag = vnode.tag,
       attrs = vnode.attrs,
@@ -1421,13 +1417,7 @@ function bindDirective(vnode, key) {
   };
 
   if (component) {
-    component = el[getComponentByTag(tag)];
-    if (component) {
-      if (component.queue && !component.set) {
-        component = component.queue;
-      }
-      options.component = component;
-    }
+    options.component = api.getComponent(el);
   }
 
   var bind = instance.directive(node.name),
@@ -1459,7 +1449,8 @@ function updateDirectives(vnode, oldVnode) {
   newDirectives = newDirectives || {};
   oldDirectives = oldDirectives || {};
 
-  var newUnbinds;
+  var api = this,
+      newUnbinds;
 
   each$1(newDirectives, function (directive, key) {
     var unbind;
@@ -1467,10 +1458,10 @@ function updateDirectives(vnode, oldVnode) {
       var oldDirective = oldDirectives[key];
       if (directive.value !== oldDirective.value || directive.keypath !== oldDirective.keypath || directive.context.data !== oldDirective.context.data) {
         unbindDirective(oldVnode, key);
-        unbind = bindDirective(vnode, key);
+        unbind = bindDirective(vnode, key, api);
       }
     } else {
-      unbind = bindDirective(vnode, key);
+      unbind = bindDirective(vnode, key, api);
     }
     if (unbind) {
       (newUnbinds || (newUnbinds = {}))[key] = unbind;
@@ -1513,20 +1504,14 @@ var directives = {
   destroy: destroyDirectives
 };
 
-function setRef(vnode, value) {
-  var ref = vnode.ref,
-      instance = vnode.instance;
-
+function setRef(instance, ref, value) {
   if (ref) {
     var refs = instance.$refs || (instance.$refs = {});
     refs[ref] = value;
   }
 }
 
-function removeRef(vnode) {
-  var ref = vnode.ref,
-      instance = vnode.instance;
-
+function removeRef(instance, ref) {
   if (ref) {
     delete instance.$refs[ref];
   }
@@ -1534,91 +1519,47 @@ function removeRef(vnode) {
 
 function createComponent(vnode) {
   var el = vnode.el,
-      tag = vnode.tag,
-      ref = vnode.ref,
       component = vnode.component,
-      instance = vnode.instance;
-
-  if (!component) {
-    setRef(vnode, el);
-    return;
-  }
-
-  var key = getComponentByTag(tag);
-  el[key] = {
-    queue: [],
-    vnode: vnode
-  };
-
-  instance.component(tag, function (options) {
-    if (!options) {
-      fatal('"' + tag + '" component is not found.');
-    }
-    component = el[key];
-    if (component) {
-      var _component = component,
-          queue = _component.queue,
-          _vnode = _component.vnode;
-
-      if (array(queue)) {
-
-        component = instance.create(options, {
-          el: el,
-          props: _vnode.attrs,
-          replace: TRUE
-        });
-
-        el = _vnode.el = component.$el;
-        el[key] = component;
-
-        setRef(_vnode, component);
-
-        each(queue, function (callback) {
-          callback(component);
-        });
-      }
-    }
-  });
-}
-
-function updateComponent(vnode) {
-  var component = vnode.component,
-      el = vnode.el,
-      attrs = vnode.attrs;
+      instance = vnode.instance,
+      ref = vnode.ref;
 
   if (component) {
-    component = vnode.el[getComponentByTag(vnode.tag)];
-    if (component) {
-      if (component.set) {
-        setRef(vnode, component);
-        component.set(attrs, TRUE);
-      } else {
-        component.vnode = vnode;
-      }
-    }
-  } else {
-    setRef(vnode, el);
+    el = this.getComponent(el);
+  }
+  setRef(instance, ref, el);
+}
+
+function updateComponent(vnode, oldVnode) {
+  var el = vnode.el,
+      component = vnode.component,
+      instance = vnode.instance,
+      ref = vnode.ref;
+
+
+  if (component) {
+    el = component;
+    component.set(vnode.attrs);
+  }
+
+  if (oldVnode && oldVnode.ref !== ref) {
+    removeRef(instance, oldVnode.ref);
+    setRef(instance, ref, el);
   }
 }
 
 function destroyComponent(vnode) {
   var el = vnode.el,
-      component = vnode.component;
+      component = vnode.component,
+      instance = vnode.instance,
+      ref = vnode.ref;
   // 不加 component 会产生递归
   // 因为组件元素既是父组件中的一个子元素，也是组件自己的根元素
   // 因此该元素会产生两个 vnode
 
   if (component) {
-    var key = getComponentByTag(vnode.tag);
-    component = el[key];
-    if (component) {
-      if (component.destroy) {
-        component.destroy();
-      }
-      el[key] = NULL;
-    }
+    this.getComponent(el).destroy();
   }
-  removeRef(vnode);
+  removeRef(instance, ref);
 }
 
 var component = {
@@ -1703,10 +1644,13 @@ function createComponentVnode(tag, attrs$$1, props$$1, directives$$1, children, 
 function init(api) {
 
   var createElement = function (parentNode, vnode) {
-    var el = vnode.el,
-        tag = vnode.tag,
-        children = vnode.children,
-        text = vnode.text;
+    var _vnode = vnode,
+        el = _vnode.el,
+        tag = _vnode.tag,
+        component$$1 = _vnode.component,
+        children = _vnode.children,
+        text = _vnode.text,
+        instance = _vnode.instance;
 
 
     if (falsy$1(tag)) {
@@ -1717,18 +1661,50 @@ function init(api) {
       return vnode.el = api.createComment(text);
     }
 
-    el = vnode.el = api.createElement(tag, parentNode);
+    // 不管是组件还是元素，必须先有一个元素
+    el = vnode.el = api.createElement(component$$1 ? 'div' : tag, parentNode);
 
-    if (array(children)) {
-      addVnodes(el, children, 0, children.length - 1);
-    } else if (string(text)) {
-      api.append(el, api.createText(text));
+    if (component$$1) {
+
+      api.setComponent(el, vnode);
+
+      instance.component(tag, function (options) {
+
+        if (!options) {
+          fatal('"' + tag + '" component is not found.');
+        }
+
+        vnode = api.getComponent(el);
+
+        if (vnode && tag === vnode.tag) {
+          component$$1 = (vnode.parent || vnode.instance).create(options, {
+            el: el,
+            props: vnode.attrs,
+            replace: TRUE
+          });
+          el = component$$1.$el;
+          if (!el) {
+            fatal('"' + tag + '" component must have a root element.');
+          }
+
+          vnode.el = el;
+          api.setComponent(el, component$$1);
+
+          moduleEmitter.fire(HOOK_CREATE, vnode, api);
+        }
+      });
+    } else {
+
+      if (array(children)) {
+        addVnodes(el, children, 0, children.length - 1);
+      } else if (string(text)) {
+        api.append(el, api.createText(text));
+      }
+
+      moduleEmitter.fire(HOOK_CREATE, vnode, api);
     }
 
-    moduleEmitter.fire(HOOK_CREATE, vnode, api);
-
-    // 钩子函数可能会替换元素
-    return vnode.el;
+    return el;
   };
 
   var addVnodes = function (parentNode, vnodes, startIndex, endIndex, before) {
@@ -1762,8 +1738,16 @@ function init(api) {
         component$$1 = vnode.component;
 
     if (tag) {
-      destroyVnode(vnode);
-      if (!component$$1) {
+      if (component$$1) {
+        component$$1 = api.getComponent(el);
+        if (component$$1.set) {
+          destroyVnode(vnode);
+        } else {
+          api.remove(parentNode, el);
+        }
+        api.setComponent(el, NULL);
+      } else {
+        destroyVnode(vnode);
         api.remove(parentNode, el);
       }
     } else if (el) {
@@ -1891,7 +1875,8 @@ function init(api) {
       return;
     }
 
-    var el = oldVnode.el;
+    var el = oldVnode.el,
+        component$$1 = oldVnode.component;
 
     vnode.el = el;
 
@@ -1901,6 +1886,14 @@ function init(api) {
         parentNode && replaceVnode(parentNode, oldVnode, vnode);
       }
       return;
+    }
+
+    if (component$$1) {
+      component$$1 = api.getComponent(el);
+      if (!component$$1.set) {
+        api.setComponent(el, vnode);
+        return;
+      }
     }
 
     var args = [vnode, oldVnode];
@@ -1945,21 +1938,10 @@ function init(api) {
 
   return function (oldVnode, vnode) {
 
-    if (api.isElement(oldVnode)) {
-      oldVnode = {
-        el: oldVnode,
-        tag: api.tag(oldVnode)
-      };
-    }
-
-    if (isPatchable(oldVnode, vnode)) {
-      patchVnode(oldVnode, vnode);
-    } else {
-      var parentNode = api.parent(oldVnode.el);
-      if (createElement(parentNode, vnode)) {
-        parentNode && replaceVnode(parentNode, oldVnode, vnode);
-      }
-    }
+    patchVnode(api.isElement(oldVnode) ? {
+      el: oldVnode,
+      tag: api.tag(oldVnode)
+    } : oldVnode, vnode);
 
     return vnode;
   };
@@ -4039,6 +4021,7 @@ function render(ast, data, instance) {
         if (array(child)) {
           each(child, function (item) {
             if (has$1(item, TEXT$1)) {
+              item.parent = instance;
               children.push(item);
             }
           });
@@ -5465,6 +5448,14 @@ function off(element, type, listener) {
   element.removeEventListener(type, listener, FALSE);
 }
 
+function getComponent(element) {
+  return element.component;
+}
+
+function setComponent(element, component) {
+  return element.component = component;
+}
+
 var domApi = {
 	createElement: createElement,
 	createText: createText,
@@ -5487,7 +5478,9 @@ var domApi = {
 	html: html,
 	find: find,
 	on: on$1,
-	off: off
+	off: off,
+	getComponent: getComponent,
+	setComponent: setComponent
 };
 
 /**
@@ -5836,23 +5829,9 @@ var bindEvent = function (_ref) {
     }
 
     if (component) {
-      var unbind;
-      var bind = function (component) {
-        component.on(type, listener);
-        unbind = function unbind() {
-          component.off(type, listener);
-        };
-      };
-      if (array(component)) {
-        push(component, bind);
-        unbind = function unbind() {
-          remove(component, bind);
-        };
-      } else {
-        bind(component);
-      }
+      component.on(type, listener);
       return function () {
-        unbind();
+        component.off(type, listener);
         destroy();
       };
     } else {
@@ -5985,26 +5964,15 @@ var model = function (_ref) {
       unbindInstance;
   if (component) {
 
-    var callback = function (component) {
-      target = component;
-      control = componentControl;
-      if (!has$1(attrs, VALUE$1)) {
-        set$$1();
-      }
-      component.watch(VALUE$1, sync);
-      unbindTarget = function unbindTarget() {
-        component.unwatch(VALUE$1, sync);
-      };
-    };
-
-    if (component.set) {
-      callback(component);
-    } else if (array(component)) {
-      push(component, callback);
-      unbindTarget = function unbindTarget() {
-        remove(component, callback);
-      };
+    target = component;
+    control = componentControl;
+    if (!has$1(attrs, VALUE$1)) {
+      set$$1();
     }
+    component.watch(VALUE$1, sync);
+    unbindTarget = function unbindTarget() {
+      component.unwatch(VALUE$1, sync);
+    };
   } else {
 
     target = el;
@@ -6063,9 +6031,7 @@ var binding = function (_ref) {
       api.setProp(el, name, value);
     } else {
       if (component) {
-        if (component.set) {
-          component.set(name, value);
-        }
+        component.set(name, value);
       } else {
         api.setAttr(el, name, value);
       }
@@ -6080,12 +6046,6 @@ var binding = function (_ref) {
       instance.watch(keypath, set);
     }
   });
-
-  if (array(component)) {
-    push(component, function (target) {
-      component = target;
-    });
-  }
 
   return function () {
     instance.unwatch(keypath, set);
@@ -6819,7 +6779,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.54.0';
+Yox.version = '0.54.1';
 
 /**
  * 工具，便于扩展、插件使用
