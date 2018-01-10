@@ -1484,8 +1484,8 @@ function updateComponent(vnode, oldVnode) {
 
 
   if (component) {
-    el = component;
-    component.set(vnode.attrs);
+    el = this.getComponent(el);
+    el.set(vnode.attrs);
   }
 
   if (oldVnode && oldVnode.ref !== ref) {
@@ -6617,7 +6617,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.54.1';
+Yox.version = '0.54.2';
 
 /**
  * 工具，便于扩展、插件使用
