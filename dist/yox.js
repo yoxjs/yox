@@ -4851,23 +4851,23 @@ var Observer = function () {
 
       if (removed.length) {
 
-        var remove$$1 = function (dep, keypath) {
+        var remove$$1 = function (dep, key) {
 
           var isFuzzy = isFuzzyKeypath(dep);
           var tempDeps = isFuzzy ? invertedFuzzyDeps : invertedDeps;
 
           var target = tempDeps[dep];
-          if (target[keypath] > 0) {
-            target[keypath]--;
-            if (tempDeps[keypath]) {
-              each$1(tempDeps[keypath], function (count, key) {
+          if (target[key] > 0) {
+            target[key]--;
+            if (tempDeps[key]) {
+              each$1(tempDeps[key], function (count, key) {
                 remove$$1(dep, key);
               });
             }
           }
 
-          if (!target[keypath]) {
-            delete target[keypath];
+          if (!target[key]) {
+            delete target[key];
           }
         };
 
@@ -4878,26 +4878,31 @@ var Observer = function () {
 
       if (added.length) {
 
-        var add = function (dep, keypath, autoCreate) {
+        var add = function (dep, key, autoCreate) {
 
           var isFuzzy = isFuzzyKeypath(dep);
           var tempDeps = isFuzzy ? invertedFuzzyDeps : invertedDeps;
 
-          // dep 是 keypath 的一个依赖
+          // dep 是 key 的一个依赖
           var target = tempDeps[dep];
           if (!target && autoCreate) {
             target = tempDeps[dep] = {};
           }
           if (target) {
-            if (number(target[keypath])) {
-              target[keypath]++;
+            if (number(target[key])) {
+              target[key]++;
             } else {
-              target[keypath] = 1;
+              target[key] = 1;
+              if (key === keypath && invertedDeps[key]) {
+                each$1(invertedDeps[key], function (value, parentKey) {
+                  add(dep, parentKey);
+                });
+              }
             }
-            // dep 同样是 keypath 的父级的依赖
+            // dep 同样是 key 的父级的依赖
             if (deps[dep]) {
-              each$1(deps[dep], function (key) {
-                add(key, keypath);
+              each$1(deps[dep], function (subKey) {
+                add(subKey, key);
               });
             }
           }
@@ -6617,7 +6622,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.54.2';
+Yox.version = '0.54.3';
 
 /**
  * 工具，便于扩展、插件使用
