@@ -3098,7 +3098,7 @@ function isBreakline(content) {
  * @return {string}
  */
 function trimBreakline(content) {
-  return content.replace(/^\s*[\n|\r]|[\n|\r]\s*$/g, CHAR_BLANK);
+  return content.replace(/^\s*[\n|\r]\s*|\s*[\n|\r]\s*$/g, CHAR_BLANK);
 }
 
 /**
@@ -6622,7 +6622,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.54.3';
+Yox.version = '0.54.4';
 
 /**
  * 工具，便于扩展、插件使用
