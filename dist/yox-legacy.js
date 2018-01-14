@@ -1548,18 +1548,7 @@ function updateComponent(vnode, oldVnode) {
 }
 
 function destroyComponent(vnode) {
-  var el = vnode.el,
-      component = vnode.component,
-      instance = vnode.instance,
-      ref = vnode.ref;
-  // 不加 component 会产生递归
-  // 因为组件元素既是父组件中的一个子元素，也是组件自己的根元素
-  // 因此该元素会产生两个 vnode
-
-  if (component) {
-    this.getComponent(el).destroy();
-  }
-  removeRef(instance, ref);
+  removeRef(vnode.instance, vnode.ref);
 }
 
 var component = {
@@ -1742,6 +1731,7 @@ function init(api) {
         component$$1 = api.getComponent(el);
         if (component$$1.set) {
           destroyVnode(vnode);
+          component$$1.destroy();
         } else {
           api.remove(parentNode, el);
         }
@@ -6784,7 +6774,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.54.4';
+Yox.version = '0.54.5';
 
 /**
  * 工具，便于扩展、插件使用
