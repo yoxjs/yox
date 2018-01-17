@@ -1727,17 +1727,7 @@ function init(api) {
         component$$1 = vnode.component;
 
     if (tag) {
-      if (component$$1) {
-        component$$1 = api.getComponent(el);
-        if (component$$1.set) {
-          destroyVnode(vnode);
-          component$$1.destroy();
-        } else {
-          api.remove(parentNode, el);
-        }
-        api.setComponent(el, NULL);
-      } else {
-        destroyVnode(vnode);
+      if (!destroyVnode(vnode)) {
         api.remove(parentNode, el);
       }
     } else if (el) {
@@ -1746,9 +1736,20 @@ function init(api) {
   };
 
   var destroyVnode = function (vnode) {
-    var children = vnode.children;
+    var el = vnode.el,
+        component$$1 = vnode.component,
+        children = vnode.children;
 
-    if (children) {
+    if (component$$1) {
+      component$$1 = api.getComponent(el);
+      if (component$$1.set) {
+        moduleEmitter.fire(HOOK_DESTROY, vnode, api);
+        api.setComponent(el, NULL);
+        component$$1.destroy();
+        return true;
+      }
+      api.setComponent(el, NULL);
+    } else if (children) {
       each(children, function (child) {
         destroyVnode(child);
       });
@@ -6774,7 +6775,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.54.5';
+Yox.version = '0.54.6';
 
 /**
  * 工具，便于扩展、插件使用
