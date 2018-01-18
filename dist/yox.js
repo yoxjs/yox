@@ -5753,7 +5753,7 @@ var checkboxControl = {
 
 var componentControl = {
   set: function set$$1(component, keypath, instance) {
-    component.set(VALUE$1, instance.get(keypath));
+    component.set(component.$options.model || VALUE$1, instance.get(keypath));
   },
   sync: function sync(component, keypath, instance) {
     instance.set(keypath, component.get(VALUE$1));
@@ -6161,12 +6161,13 @@ var Yox = function () {
    * 触发事件
    *
    * @param {string} type
-   * @param {?*} data
+   * @param {?*} data 事件数据
+   * @param {?boolean} downward 向下发事件
    * @return {boolean} 是否正常结束
    */
 
 
-  Yox.prototype.fire = function (type, data) {
+  Yox.prototype.fire = function (type, data, downward) {
 
     // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
     // 内部为了保持格式统一
@@ -6187,11 +6188,20 @@ var Yox = function () {
     }
 
     var $parent = instance.$parent,
+        $children = instance.$children,
         $emitter = instance.$emitter;
 
     var isComplete = $emitter.fire(event.type, args, instance);
-    if (isComplete && $parent) {
-      isComplete = $parent.fire(event, data);
+    if (isComplete) {
+      if (downward) {
+        if ($children) {
+          each($children, function (child) {
+            return isComplete = child.fire(event, data, TRUE);
+          });
+        }
+      } else if ($parent) {
+        isComplete = $parent.fire(event, data);
+      }
     }
 
     return isComplete;
@@ -6613,7 +6623,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.54.6';
+Yox.version = '0.54.7';
 
 /**
  * 工具，便于扩展、插件使用

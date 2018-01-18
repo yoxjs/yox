@@ -93,7 +93,10 @@ const checkboxControl = {
 
 const componentControl = {
   set(component, keypath, instance) {
-    component.set(VALUE, instance.get(keypath))
+    component.set(
+      component.$options.model || VALUE,
+      instance.get(keypath)
+    )
   },
   sync(component, keypath, instance) {
     instance.set(keypath, component.get(VALUE))

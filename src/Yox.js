@@ -321,10 +321,11 @@ export default class Yox {
    * 触发事件
    *
    * @param {string} type
-   * @param {?*} data
+   * @param {?*} data 事件数据
+   * @param {?boolean} downward 向下发事件
    * @return {boolean} 是否正常结束
    */
-  fire(type, data) {
+  fire(type, data, downward) {
 
     // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
     // 内部为了保持格式统一
@@ -344,10 +345,22 @@ export default class Yox {
       array.push(args, data)
     }
 
-    let { $parent, $emitter } = instance
+    let { $parent, $children, $emitter } = instance
     let isComplete = $emitter.fire(event.type, args, instance)
-    if (isComplete && $parent) {
-      isComplete = $parent.fire(event, data)
+    if (isComplete) {
+      if (downward) {
+        if ($children) {
+          array.each(
+            $children,
+            function (child) {
+              return isComplete = child.fire(event, data, env.TRUE)
+            }
+          )
+        }
+      }
+      else if ($parent) {
+        isComplete = $parent.fire(event, data)
+      }
     }
 
     return isComplete
@@ -754,7 +767,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.54.6'
+Yox.version = '0.54.7'
 
 /**
  * 工具，便于扩展、插件使用
