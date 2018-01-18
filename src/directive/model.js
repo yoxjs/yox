@@ -94,12 +94,15 @@ const checkboxControl = {
 const componentControl = {
   set(component, keypath, instance) {
     component.set(
-      component.$options.model || VALUE,
+      component.$model,
       instance.get(keypath)
     )
   },
   sync(component, keypath, instance) {
-    instance.set(keypath, component.get(VALUE))
+    instance.set(
+      keypath,
+      component.get(component.$model)
+    )
   },
 }
 
@@ -132,13 +135,19 @@ export default function ({ el, node, instance, directives, attrs, component }) {
 
     target = component
     control = componentControl
-    if (!object.has(attrs, VALUE)) {
+
+    let field = component.$options.model || VALUE
+
+    if (!object.has(attrs, field)) {
       set()
     }
-    component.watch(VALUE, sync)
+    component.watch(field, sync)
     unbindTarget = function () {
-      component.unwatch(VALUE, sync)
+      component.unwatch(field, sync)
+      delete component.$model
     }
+
+    component.$model = field
 
   }
   else {

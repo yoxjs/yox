@@ -5915,10 +5915,10 @@ var checkboxControl = {
 
 var componentControl = {
   set: function set$$1(component, keypath, instance) {
-    component.set(component.$options.model || VALUE$1, instance.get(keypath));
+    component.set(component.$model, instance.get(keypath));
   },
   sync: function sync(component, keypath, instance) {
-    instance.set(keypath, component.get(VALUE$1));
+    instance.set(keypath, component.get(component.$model));
   }
 };
 
@@ -5962,13 +5962,19 @@ var model = function (_ref) {
 
     target = component;
     control = componentControl;
-    if (!has$1(attrs, VALUE$1)) {
+
+    var field = component.$options.model || VALUE$1;
+
+    if (!has$1(attrs, field)) {
       set$$1();
     }
-    component.watch(VALUE$1, sync);
+    component.watch(field, sync);
     unbindTarget = function unbindTarget() {
-      component.unwatch(VALUE$1, sync);
+      component.unwatch(field, sync);
+      delete component.$model;
     };
+
+    component.$model = field;
   } else {
 
     target = el;
@@ -6785,7 +6791,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.54.7';
+Yox.version = '0.54.8';
 
 /**
  * 工具，便于扩展、插件使用
