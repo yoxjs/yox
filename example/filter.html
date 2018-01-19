@@ -7,32 +7,13 @@
 <body>
     <div id="app"></div>
     <script id="template" type="plain/text">
-
         <div>
-
-            {{formatDate(date)}}
-
-            <br>
-
-            {{formatAmount(amount)}}
-
-            <br>
-
-            {{#if isArray(list) && list.length > 0}}
-                {{#each list}}
-                    {{name}}
-                    {{#if name == selected}}
-                        已选中
-                    {{/if}}
-                    <br>
-                {{/each}}
-            {{/if}}
-
+            >
         </div>
-
     </script>
     <script src="../dist/yox.js"></script>
     <script>
+
         var instance = new Yox({
             el: '#app',
             template: '#template',
@@ -60,9 +41,7 @@
                 formatDate: function (value) {
                     return '日期';
                 },
-                formatAmount: function (value) {
-                    return '金额';
-                }
+
             }
         });
 
