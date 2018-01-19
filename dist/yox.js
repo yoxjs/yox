@@ -5801,7 +5801,7 @@ var model = function (_ref) {
     target = component;
     control = componentControl;
 
-    var field = component.$options.model || VALUE$1;
+    var field = component.$model = component.$options.model || VALUE$1;
 
     if (!has$1(attrs, field)) {
       set$$1();
@@ -5811,8 +5811,6 @@ var model = function (_ref) {
       component.unwatch(field, sync);
       delete component.$model;
     };
-
-    component.$model = field;
   } else {
 
     target = el;
@@ -6629,7 +6627,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.54.8';
+Yox.version = '0.54.9';
 
 /**
  * 工具，便于扩展、插件使用

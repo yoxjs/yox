@@ -136,7 +136,7 @@ export default function ({ el, node, instance, directives, attrs, component }) {
     target = component
     control = componentControl
 
-    let field = component.$options.model || VALUE
+    let field = component.$model = component.$options.model || VALUE
 
     if (!object.has(attrs, field)) {
       set()
@@ -146,8 +146,6 @@ export default function ({ el, node, instance, directives, attrs, component }) {
       component.unwatch(field, sync)
       delete component.$model
     }
-
-    component.$model = field
 
   }
   else {
