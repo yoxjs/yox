@@ -17,8 +17,7 @@ import * as keypathUtil from 'yox-common/util/keypath'
 
 import * as snabbdom from 'yox-snabbdom'
 
-import compileTemplate from 'yox-template-compiler/compile'
-import renderTemplate from 'yox-template-compiler/render'
+import * as templateCompiler from 'yox-template-compiler'
 
 import executeExpression from 'yox-expression-compiler/execute'
 import * as expressionNodeType from 'yox-expression-compiler/src/nodeType'
@@ -450,7 +449,7 @@ export default class Yox {
 
     object.extend($context, $observer.data, $observer.computedGetters)
 
-    let { nodes, deps } = renderTemplate($template, $context, instance)
+    let { nodes, deps } = templateCompiler.render($template, $context, instance)
     $observer.setDeps(TEMPLATE_KEY, object.keys(deps))
 
     return nodes[ 0 ]
@@ -899,7 +898,9 @@ Yox.nextTick = nextTask.append
  */
 Yox.compile = function (template) {
   return is.string(template)
-    ? compileTemplate(template)
+    ? templateCompiler.convert(
+        templateCompiler.compile(template)
+      )
     : template
 }
 

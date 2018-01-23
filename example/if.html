@@ -9,12 +9,44 @@
     <div id="app"></div>
     <script id="template" type="plain/text">
 
-        <div>
+        <div id="id1" {{#if a}} class="a"{{else}} title="123"{{/if}}>
+            1{{a}}2{{e}}{{user}}-{{n}}
 
+            {{#if a}}
+                3
+                <a>a</a>
+            {{else}}
+                4
+                <b>b</b>
+            {{/if}}
 
-            <div class="test{{#if a}} a{{/if}}{{#if b}} b{{/if}}{{#if c}} c{{/if}}">
-                haha
+            {{list}}
+            5
+
+            <div class="abc" src="{{user.name}}" {{...attrs}}>
+                1
             </div>
+
+            {{#partial name}}
+                <h1>{{user.name}}</h1>
+            {{/partial}}
+
+            {{#each user.tags:index}}
+                {{name}}-{{index}}-{{$keypath}}
+                <br>
+                <br>
+                {{#each list[index]}}
+                    !!{{this}}-{{$keypath}}<br>
+                {{/each}}
+                <br>
+                <br>
+                {{#each children}}
+                    {{this}}-{{$keypath}}<br>
+                {{/each}}
+            {{/each}}
+
+            {{> name}}
+            {{> xxx}}
         </div>
 
     </script>
@@ -24,12 +56,31 @@
             el: '#app',
             template: '#template',
             data: {
-                a: true,
+                a: false,
                 b: true,
-                c: true
+                c: true,
+                d: [],
+                n: null,
+                attrs: {
+                    title: '13',
+                    id: 'div',
+                },
+                user: { name: 'yox', tags: [
+                  { name: '1', children: ['11', '12', '13'] },
+                  { name: '2', children: ['21', '22', '23'] },
+                  { name: '3', children: ['31', '32', '33'] },
+                ] },
+                list: [
+                  [ '北京0', '上海0', '深圳0' ],
+                  [ '北京1', '上海1', '深圳1' ],
+                  [ '北京2', '上海2', '深圳2' ]
+                ]
+            },
+            partials: {
+                xxx: '<h1>xxx</h1>'
             }
         });
-
+        console.log(instance.$template)
     </script>
 </body>
 </html>
