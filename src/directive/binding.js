@@ -3,12 +3,13 @@ import * as is from 'yox-common/util/is'
 import * as env from 'yox-common/util/env'
 import * as array from 'yox-common/util/array'
 import * as nextTask from 'yox-common/util/nextTask'
+import * as keypathUtil from 'yox-common/util/keypath'
 
 import api from '../platform/web/api'
 
 export default function ({ el, node, instance, component }) {
 
-  let { keypath } = node.context.get(node.value)
+  let keypath = instance.lookup(node.value, node.keypathStack)
 
   let set = function (value) {
     let name = node.modifier

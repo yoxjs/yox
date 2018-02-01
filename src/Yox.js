@@ -17,23 +17,25 @@ import * as keypathUtil from 'yox-common/util/keypath'
 
 import * as snabbdom from 'yox-snabbdom'
 
-import compileTemplate from 'yox-template-compiler/compile'
-import renderTemplate from 'yox-template-compiler/render'
-
-import executeExpression from 'yox-expression-compiler/execute'
+import * as templateCompiler from 'yox-template-compiler'
+import * as expressionCompiler from 'yox-expression-compiler'
 import * as expressionNodeType from 'yox-expression-compiler/src/nodeType'
 
-import Observer from 'yox-observer'
+import {
+  Watcher,
+  Observer,
+} from 'yox-observer'
+
 import * as config from 'yox-config'
 
 import * as pattern from './config/pattern'
 
 import api from './platform/web/api'
 
-const TEMPLATE_KEY = '_template'
-const TEMPLATE_VALUE = 9
-
 const patch = snabbdom.init(api)
+
+const TEMPLATE = 'template'
+const TEMPLATE_COMPUTED = '$' + TEMPLATE
 
 export default class Yox {
 
@@ -95,38 +97,6 @@ export default class Yox {
       context: instance,
       data: source,
       computed,
-      beforeFlush: function (flushing) {
-        // 疑似变化
-        if (object.has(flushing, TEMPLATE_KEY)) {
-
-          let updateView = function () {
-            instance.updateView(
-              instance.$node,
-              instance.render()
-            )
-          }
-
-          // 强制更新
-          if (flushing[ TEMPLATE_KEY ][ 1 ] === TEMPLATE_VALUE) {
-            updateView()
-          }
-          // 排查依赖
-          else {
-            array.each(
-              this.deps[ TEMPLATE_KEY ],
-              function (dep) {
-                if (flushing[ dep ]) {
-                  updateView()
-                  return env.FALSE
-                }
-              }
-            )
-          }
-
-          delete flushing[ TEMPLATE_KEY ]
-
-        }
-      }
     })
 
     // 后放 data
@@ -149,8 +119,7 @@ export default class Yox {
     // 支持命名空间
     instance.$emitter = new Emitter(env.TRUE)
 
-
-    let templateError = '"template" option expected to have just one root element.'
+    let templateError = `"${TEMPLATE}" option expected to have just one root element.`
 
     // 检查 template
     if (is.string(template)) {
@@ -219,16 +188,32 @@ export default class Yox {
     execute(options[ config.HOOK_AFTER_CREATE ], instance)
 
     if (template) {
+
       // 确保组件根元素有且只有一个
       template = Yox.compile(template)
       if (template.length > 1) {
         logger.fatal(templateError)
       }
       instance.$template = template[ 0 ]
-      // 首次渲染
+
+      instance.$renderCount = 0
+      instance.$renderWatcher = instance.$observer.addComputed(
+        TEMPLATE_COMPUTED,
+        function () {
+          instance.$renderCount++
+          return instance.render()
+        }
+      )
+      if (!watchers) {
+        watchers = { }
+      }
+      watchers[ TEMPLATE_COMPUTED ] = function (newNode, oldNode) {
+        instance.updateView(newNode, oldNode)
+      }
+
       instance.updateView(
-        el || api.createElement('div'),
-        instance.render()
+        instance.get(TEMPLATE_COMPUTED),
+        el || api.createElement('div')
       )
     }
 
@@ -236,9 +221,11 @@ export default class Yox {
     if (watchers || events) {
       nextTask.prepend(
         function () {
-          if (instance.$emitter) {
-            watchers && instance.watch(watchers)
-            events && instance.on(events)
+          if (watchers && instance.$observer) {
+            instance.watch(watchers)
+          }
+          if (events && instance.$emitter) {
+            instance.on(events)
           }
         }
       )
@@ -272,13 +259,9 @@ export default class Yox {
    *
    * @param {string|Object} keypath
    * @param {?*} value
-   * @return {boolean} 是否会引起视图更新
    */
   set(keypath, value) {
-    return array.has(
-      this.$observer.set(keypath, value),
-      TEMPLATE_KEY
-    )
+    this.$observer.set(keypath, value)
   }
 
   /**
@@ -406,24 +389,70 @@ export default class Yox {
   }
 
   /**
+   * 向上查找数据
+   *
+   * @param {string} key
+   * @param {Array.<string>} stack
+   * @param {?Object} localVars
+   * @param {?Object} defaultVars
+   * @return {?*}
+   */
+  lookup(key, stack, localVars, defaultVars) {
+
+    let instance = this, value
+
+    let index = stack.length - 1
+    let lookup = index > 0 && keypathUtil.startsWith(key, env.RAW_THIS) === env.FALSE
+
+    let getKeypath = function (index) {
+      let keypath = keypathUtil.join(stack[ index ], key)
+      if (localVars && object.has(localVars, keypath)) {
+        value = localVars[ keypath ]
+        return keypath
+      }
+      value = instance.get(keypath, getKeypath)
+      if (value === getKeypath) {
+        if (lookup && index > 0) {
+          return getKeypath(index - 1)
+        }
+      }
+      else {
+        return keypath
+      }
+    }
+
+    let keypath = getKeypath(index)
+
+    if (localVars) {
+      if (keypath != env.NULL) {
+        return value
+      }
+      if (defaultVars) {
+        return defaultVars[ key ]
+      }
+    }
+    else {
+      return keypath
+    }
+
+  }
+
+  /**
    * 对于某些特殊场景，修改了数据，但是模板的依赖中并没有这一项
    * 而你非常确定需要更新模板，强制刷新正是你需要的
    */
-  forceUpdate(sync) {
+  forceUpdate() {
 
-    let { $observer } = this
+    let { $renderCount } = this
 
-    let { differences } = $observer
-    if (!differences) {
-      differences = $observer.differences = { }
-    }
+    this.$observer.nextRun()
 
-    differences[ TEMPLATE_KEY ] = TEMPLATE_VALUE
-    if (sync) {
-      $observer.flush()
-    }
-    else {
-      $observer.flushAsync()
+    // 没重新渲染
+    if (this.$renderCount === $renderCount) {
+      this.updateView(
+        this.$renderWatcher.get(env.TRUE),
+        this.$node
+      )
     }
 
   }
@@ -436,34 +465,61 @@ export default class Yox {
   render() {
 
     let instance = this
-    let { $template, $observer, $context } = instance
 
-    if (!$context) {
-      $context =
-      instance.$context =
-      object.extend(
-        { },
-        registry.filter,
-        instance.$filters
-      )
+    let { $template, $getter, $setter } = instance
+
+    if (!$getter) {
+
+      let filters = object.extend({ }, registry.filter, instance.$filters)
+
+      $getter =
+      instance.$getter = function (expr, keypathStack, binding) {
+        let lastWatcher = Observer.watcher
+        if (binding) {
+          Observer.watcher = env.NULL
+        }
+        let value = expressionCompiler.execute(
+          expr,
+          function (key) {
+            if (key === config.SPECIAL_KEYPATH) {
+              return array.last(keypathStack)
+            }
+            return instance.lookup(key, keypathStack, instance.$vars, filters)
+          },
+          instance
+        )
+        if (binding) {
+          Observer.watcher = lastWatcher
+        }
+        return value
+      }
     }
 
-    object.extend($context, $observer.data, $observer.computedGetters)
+    if (!$setter) {
+      $setter =
+      instance.$setter = function (currentKeypath, key, value) {
+        instance.$vars[ keypathUtil.join(currentKeypath, key) ] = value
+      }
+    }
 
-    let { nodes, deps } = renderTemplate($template, $context, instance)
-    $observer.setDeps(TEMPLATE_KEY, object.keys(deps))
+    // 渲染模板过程中产生的临时变量
+    instance.$vars = { }
 
-    return nodes[ 0 ]
-
+    return templateCompiler.render(
+      $template,
+      $getter,
+      $setter,
+      instance
+    )
   }
 
   /**
    * 更新 virtual dom
    *
-   * @param {HTMLElement|Vnode} oldNode
    * @param {Vnode} newNode
+   * @param {HTMLElement|Vnode} oldNode
    */
-  updateView(oldNode, newNode) {
+  updateView(newNode, oldNode) {
 
     let instance = this, afterHook
 
@@ -536,75 +592,40 @@ export default class Yox {
   compileDirective(directive) {
 
     let instance = this
-    let { value, expr, keypath, context } = directive
+    let { value, expr, keypath, keypathStack } = directive
 
     if (expr && expr.type === expressionNodeType.CALL) {
-
       let { callee, args } = expr, method = instance[ callee.name ]
       if (method) {
-
         let getValue = function (node) {
-          return executeExpression(
-            node,
-            function (keypath) {
-              return context.get(keypath).value
-            },
-            instance
-          )
+          return instance.$getter(node, keypathStack)
         }
-
-        let watchKeypath = keypathUtil.join(keypath, '**')
-        let watchHandler = function (newValue, oldValue, absoluteKeypath) {
-
-          if (keypath) {
-            let length = keypathUtil.startsWith(absoluteKeypath, keypath)
-            context.set(
-              absoluteKeypath.substr(length),
-              newValue
-            )
+        return function (event) {
+          let isEvent = Event.is(event), result
+          if (!args.length) {
+            if (isEvent) {
+              result = execute(method, instance, event)
+            }
           }
           else {
-            context.set(absoluteKeypath, newValue)
+            if (isEvent) {
+              instance.$setter(keypath, config.SPECIAL_EVENT, event)
+            }
+            result = execute(method, instance, args.map(getValue))
           }
-
-        }
-
-        instance.watch(watchKeypath, watchHandler)
-
-        return {
-          destroy: function () {
-            instance.unwatch(watchKeypath, watchHandler)
-          },
-
-          listener: function (event) {
-            let isEvent = Event.is(event), result
-            if (!args.length) {
-              if (isEvent) {
-                result = execute(method, instance, event)
-              }
-            }
-            else {
-              if (isEvent) {
-                context.set(config.SPECIAL_EVENT, event)
-              }
-              result = execute(method, instance, args.map(getValue))
-            }
-            if (result === env.FALSE && isEvent) {
-              event.prevent().stop()
-            }
+          if (result === env.FALSE && isEvent) {
+            event.prevent().stop()
           }
         }
       }
     }
     else if (value) {
-      return {
-        listener: function (event, data) {
-          if (event.type !== value) {
-            event = new Event(event)
-            event.type = value
-          }
-          instance.fire(event, data)
+      return function (event, data) {
+        if (event.type !== value) {
+          event = new Event(event)
+          event.type = value
         }
+        instance.fire(event, data)
       }
     }
   }
@@ -767,7 +788,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.55.0'
+Yox.version = '0.56.0'
 
 /**
  * 工具，便于扩展、插件使用
@@ -899,7 +920,9 @@ Yox.nextTick = nextTask.append
  */
 Yox.compile = function (template) {
   return is.string(template)
-    ? compileTemplate(template)
+    ? templateCompiler.convert(
+        templateCompiler.compile(template)
+      )
     : template
 }
 

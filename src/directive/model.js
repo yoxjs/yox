@@ -9,6 +9,7 @@ import * as object from 'yox-common/util/object'
 import * as string from 'yox-common/util/string'
 import * as logger from 'yox-common/util/logger'
 import * as nextTask from 'yox-common/util/nextTask'
+import * as keypathUtil from 'yox-common/util/keypath'
 
 import bindEvent from './event'
 import api from '../platform/web/api'
@@ -114,12 +115,15 @@ const specialControls = {
 
 export default function ({ el, node, instance, directives, attrs, component }) {
 
-  let { value, context } = node
+  let { value, keypathStack } = node
   if (string.falsy(value)) {
     return
   }
 
-  let { keypath } = context.get(value)
+  let keypath = instance.lookup(value, keypathStack)
+  if (!keypath) {
+    logger.fatal(`"${value}" is not defined on the instance but referenced during render.`)
+  }
 
   let set = function () {
     if (control) {

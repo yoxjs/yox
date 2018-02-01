@@ -10,10 +10,21 @@
     <script id="template" type="plain/text">
 
         <div>
-
-
             <div class="test{{#if a}} a{{/if}}{{#if b}} b{{/if}}{{#if c}} c{{/if}}">
-                haha
+                <span>--</span>
+                {{#if a}}
+                    a
+                {{/if}}
+                <span>--</span>
+                {{#if b}}
+                    b
+                {{else if c}}
+                    c
+                {{/if}}
+                <span>--</span>
+                {{#if e}}
+                    e
+                {{/if}}
             </div>
         </div>
 
@@ -25,8 +36,9 @@
             template: '#template',
             data: {
                 a: true,
-                b: true,
-                c: true
+                b: false,
+                c: false,
+                e: false
             }
         });
 

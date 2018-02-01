@@ -18,15 +18,10 @@ export default function ({ el, node, instance, component, directives, type, list
     type = node.modifier
   }
 
-  let destroy = env.noop
-
   if (!listener) {
     let result = instance.compileDirective(node)
     if (result) {
-      listener = result.listener
-      if (result.destroy) {
-        destroy = result.destroy
-      }
+      listener = result
     }
   }
 
@@ -46,14 +41,12 @@ export default function ({ el, node, instance, component, directives, type, list
       component.on(type, listener)
       return function () {
         component.off(type, listener)
-        destroy()
       }
     }
     else {
       api.on(el, type, listener)
       return function () {
         api.off(el, type, listener)
-        destroy()
       }
     }
   }
