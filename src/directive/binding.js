@@ -10,6 +10,11 @@ import api from '../platform/web/api'
 export default function ({ el, node, instance, component }) {
 
   let keypath = instance.lookup(node.value, node.keypathStack)
+  // 比如写了个 <div>{{name}}</div>
+  // 删了数据却忘了删模板，无视之
+  if (!keypath) {
+    return
+  }
 
   let set = function (value) {
     let name = node.modifier
