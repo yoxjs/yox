@@ -4050,8 +4050,20 @@ function render(render, getter, setter, instance) {
               modifier = item.modifier,
               expr = item.expr,
               children = item.children,
-              binding = item.binding;
+              binding = item.binding,
+              data = item.data;
 
+          // 延展数据
+
+          if (data) {
+            each$1(data, function (value, key) {
+              attributes[key] = value;
+              if (binding) {
+                addDirective(DIRECTIVE_BINDING, key, join$1(binding, key));
+              }
+            });
+            return;
+          }
 
           var value;
           if (has$1(item, 'value')) {
@@ -4078,10 +4090,6 @@ function render(render, getter, setter, instance) {
           } else if (type === DIRECTIVE) {
             addDirective(name, modifier, value).expr = expr;
           }
-          // 延展出来的数据
-          else {
-              extend(attributes, item);
-            }
         };
         each(attrs, function (item) {
           if (item) {
@@ -4096,10 +4104,10 @@ function render(render, getter, setter, instance) {
     }
 
     // 处理 children
-    var children = [],
-        lastChild;
+    var children = [];
 
     if (childs) {
+      var lastChild;
       var addChild = function (child) {
         if (isVnode(child)) {
           if (child.component) {
@@ -4193,7 +4201,13 @@ function render(render, getter, setter, instance) {
   // spread
   s = function s(expr) {
     var value = getter(expr, keypathStack);
-    return object(value) ? value : fatal('"' + expr.raw + '" spread expected to be an object.');
+    if (object(value)) {
+      return {
+        data: value,
+        binding: expr.staticKeypath
+      };
+    }
+    fatal('"' + expr.raw + '" spread expected to be an object.');
   },
       localPartials = {},
 
@@ -5297,7 +5311,7 @@ var COMPOSITION_END = 'compositionend';
 var api = copy(domApi);
 
 // import * as oldApi from './oldApi'
-
+//
 // if (env.doc && !env.doc.addEventListener) {
 //   object.extend(api, oldApi)
 // }
@@ -6109,14 +6123,16 @@ var Yox = function () {
 
 
   Yox.prototype.forceUpdate = function () {
-    var $renderCount = this.$renderCount;
+
+    if (this.$node) {
+      var $renderCount = this.$renderCount;
 
 
-    this.$observer.nextRun();
+      this.$observer.nextRun();
 
-    // 没重新渲染
-    if (this.$renderCount === $renderCount) {
-      this.updateView(this.$renderWatcher.get(TRUE), this.$node);
+      if (this.$renderCount === $renderCount) {
+        this.updateView(this.$renderWatcher.get(TRUE), this.$node);
+      }
     }
   };
 

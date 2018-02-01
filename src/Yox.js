@@ -443,16 +443,18 @@ export default class Yox {
    */
   forceUpdate() {
 
-    let { $renderCount } = this
+    if (this.$node) {
 
-    this.$observer.nextRun()
+      let { $renderCount } = this
 
-    // 没重新渲染
-    if (this.$renderCount === $renderCount) {
-      this.updateView(
-        this.$renderWatcher.get(env.TRUE),
-        this.$node
-      )
+      this.$observer.nextRun()
+
+      if (this.$renderCount === $renderCount) {
+        this.updateView(
+          this.$renderWatcher.get(env.TRUE),
+          this.$node
+        )
+      }
     }
 
   }
