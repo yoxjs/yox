@@ -207,8 +207,8 @@ export default class Yox {
       if (!watchers) {
         watchers = { }
       }
-      watchers[ TEMPLATE_COMPUTED ] = function (newNode, oldNode) {
-        instance.updateView(newNode, oldNode)
+      watchers[ TEMPLATE_COMPUTED ] = function (newNode) {
+        instance.updateView(newNode, instance.$node)
       }
 
       instance.updateView(

@@ -5466,10 +5466,7 @@ var bindEvent = function (_ref) {
   }
 
   if (!listener) {
-    var result = instance.compileDirective(node);
-    if (result) {
-      listener = result;
-    }
+    listener = instance.compileDirective(node);
   }
 
   if (type && listener) {
@@ -5686,32 +5683,36 @@ var binding = function (_ref) {
 
   var keypath = instance.lookup(node.value, node.keypathStack);
 
-  var set = function (value) {
-    var name = node.modifier;
-    if (node.prop) {
-      api.setProp(el, name, value);
-    } else {
-      if (component) {
-        component.set(name, value);
+  // 比如写了个 <div>{{name}}</div>
+  // 删了数据却忘了删模板，无视之
+  if (keypath) {
+    var set = function (value) {
+      var name = node.modifier;
+      if (node.prop) {
+        api.setProp(el, name, value);
       } else {
-        api.setAttr(el, name, value);
+        if (component) {
+          component.set(name, value);
+        } else {
+          api.setAttr(el, name, value);
+        }
       }
-    }
-  };
+    };
 
-  // 同批次的修改
-  // 不应该响应 watch
-  // 因为模板已经全量更新
-  prepend(function () {
-    if (set) {
-      instance.watch(keypath, set);
-    }
-  });
+    // 同批次的修改
+    // 不应该响应 watch
+    // 因为模板已经全量更新
+    prepend(function () {
+      if (set) {
+        instance.watch(keypath, set);
+      }
+    });
 
-  return function () {
-    instance.unwatch(keypath, set);
-    set = NULL;
-  };
+    return function () {
+      instance.unwatch(keypath, set);
+      set = NULL;
+    };
+  }
 };
 
 var patch = init(api);
@@ -5874,8 +5875,8 @@ var Yox = function () {
       if (!watchers) {
         watchers = {};
       }
-      watchers[TEMPLATE_COMPUTED] = function (newNode, oldNode) {
-        instance.updateView(newNode, oldNode);
+      watchers[TEMPLATE_COMPUTED] = function (newNode) {
+        instance.updateView(newNode, instance.$node);
       };
 
       instance.updateView(instance.get(TEMPLATE_COMPUTED), el || api.createElement('div'));

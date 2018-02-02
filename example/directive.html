@@ -10,7 +10,7 @@
     <script id="template" type="plain/text">
 
         <div>
-            <button o-click1="english">
+            <button o-click1="english"{{#if !disabled}} on-click="haha" on-mousenter="heihei" title="{{name}}"{{/if}}>
                 11
             </button>
             <button o-click2="'中文'">
@@ -28,7 +28,8 @@
             el: '#app',
             template: '#template',
             data: {
-                name: 'yox'
+                name: 'yox',
+                disabled: true
             },
             directives: {
                 click1: function (options) {
