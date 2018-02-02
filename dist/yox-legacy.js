@@ -3441,7 +3441,7 @@ var Partial = function (_Node) {
   }
 
   Partial.prototype.stringify = function () {
-    return this.stringifyCall('p', [this.stringifyString(this.name), this.stringifyArray(this.children)]);
+    return this.stringifyCall('p', [this.stringifyString(this.name), 'function(){return ' + this.stringifyArray(this.children) + '}']);
   };
 
   return Partial;
@@ -4274,10 +4274,13 @@ function render(render, getter, setter, instance) {
 
   // import
   i = function i(name) {
-    var partial = localPartials[name] || instance.importPartial(name);
+    if (localPartials[name]) {
+      return toArray$$1(localPartials[name]());
+    }
+    var partial = instance.importPartial(name);
     if (partial) {
       return toArray$$1(partial.map(function (item) {
-        return func(item) ? item(a, c, m, e, o, s, p, i) : item;
+        return item(a, c, m, e, o, s, p, i);
       }));
     }
     fatal('"' + name + '" partial is not found.');
