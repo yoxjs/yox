@@ -122,7 +122,8 @@ export default function ({ el, node, instance, directives, attrs, component }) {
 
   let keypath = instance.lookup(value, keypathStack)
   if (!keypath) {
-    logger.fatal(`"${value}" is not defined on the instance but referenced during render.`)
+    logger.warn(`"${value}" is not defined on the instance but using for model.`)
+    keypath = value
   }
 
   let set = function () {

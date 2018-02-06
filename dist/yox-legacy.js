@@ -932,8 +932,6 @@ var object$1 = {
 	set: set$1
 };
 
-var guid = 0;
-
 var Emitter = function () {
 
   /**
@@ -960,23 +958,18 @@ var Emitter = function () {
     if (list) {
 
       var event = array(data) ? data[0] : data,
-          isEvent = Event.is(event),
-          fireId = ++guid,
-          i = -1,
-          j,
-          item,
-          result;
+          isEvent = Event.is(event);
 
-      while (item = list[++i]) {
+      each(list.slice(), function (item) {
 
-        // 当前执行 id
-        item.id = fireId;
+        var index = indexOf(list, item);
 
-        if (space && item.space && space !== item.space) {
-          continue;
+        // 在 fire 过程中被移除了
+        if (index < 0 || space && item.space && space !== item.space) {
+          return;
         }
 
-        result = execute(item.func, isDef(context) ? context : item.context, data);
+        var result = execute(item.func, isDef(context) ? context : item.context, data);
 
         // 执行次数
         if (item.count > 0) {
@@ -987,8 +980,7 @@ var Emitter = function () {
 
         // 注册的 listener 可以指定最大执行次数
         if (item.count === item.max) {
-          list.splice(i, 1);
-          execute(item.onRemove);
+          list.splice(index, 1);
         }
 
         // 如果没有返回 false，而是调用了 event.stop 也算是返回 false
@@ -1003,20 +995,7 @@ var Emitter = function () {
         if (result === FALSE) {
           return isComplete = FALSE;
         }
-
-        // 解绑了一些 event handler
-        // 则往回找最远的未执行的 item
-        if (i >= 0 && item !== list[i]) {
-          j = i;
-          while (item = list[i]) {
-            if (item.id !== fireId) {
-              j = i;
-            }
-            i--;
-          }
-          i = j - 1;
-        }
-      }
+      });
 
       if (!list.length) {
         delete listeners[name];
@@ -1070,9 +1049,8 @@ extend(Emitter.prototype, {
 
     var each$$1 = function (list, name) {
       each(list, function (item, index) {
-        if (filter(item)) {
+        if (!filter || filter(item)) {
           list.splice(index, 1);
-          execute(item.onRemove);
         }
       }, TRUE);
       if (!list.length) {
@@ -1089,17 +1067,13 @@ extend(Emitter.prototype, {
         return (!space || space === item.space) && (!listener || listener === item.func);
       };
       if (name) {
-        var list = listeners[name];
-        if (list) {
-          each$$1(list, name);
+        if (listeners[name]) {
+          each$$1(listeners[name], name);
         }
       } else if (space) {
         each$1(listeners, each$$1);
       }
     } else {
-      filter = function filter() {
-        return TRUE;
-      };
       each$1(listeners, each$$1);
     }
   }
@@ -1126,7 +1100,6 @@ function on(data) {
 
         item.space = space;
         push(listeners[name] || (listeners[name] = []), item);
-        execute(item.onAdd);
       }
     };
 
@@ -3626,18 +3599,20 @@ function compile$$1(content) {
               var attr = new Attribute(SPECIAL_CHILDREN);
               attr.children = [singleChild];
               children[divider] = attr;
+              target.divider++;
             } else {
               target.props = {
                 textContent: singleChild.text
               };
               pop(children);
             }
-          } else if (singleChild.type === EXPRESSION && singleChild.expr.raw !== SPECIAL_CHILDREN) {
+          } else if (singleChild.type === EXPRESSION) {
             if (component) {
               var _attr = new Attribute(SPECIAL_CHILDREN);
               _attr.children = [singleChild];
               children[divider] = _attr;
-            } else {
+              target.divider++;
+            } else if (singleChild.expr.raw !== SPECIAL_CHILDREN) {
               var props = {};
               if (singleChild.safe === FALSE) {
                 props.innerHTML = singleChild.expr;
@@ -4204,13 +4179,24 @@ function render(render, getter, setter, instance) {
   // each
   e = function e(expr, generate, index) {
 
-    var each$$1,
-        value = getter(expr, keypathStack);
+    var value = getter(expr, keypathStack),
+        each$$1;
 
     if (array(value)) {
-      each$$1 = each;
+      if (value.length) {
+        each$$1 = function each$$1(callback) {
+          each(value, function (_, i) {
+            callback(i);
+          });
+        };
+      }
     } else if (object(value)) {
-      each$$1 = each$1;
+      var keys$$1 = keys(value);
+      if (keys$$1.length) {
+        each$$1 = function each$$1(callback) {
+          each(keys$$1, callback);
+        };
+      }
     }
 
     if (each$$1) {
@@ -4223,17 +4209,17 @@ function render(render, getter, setter, instance) {
         pushKeypath(eachKeypath);
       }
 
-      each$$1(value, function (item, i) {
+      each$$1(function (key) {
 
         var lastKeypath = keypath,
             lastKeypathStack = keypathStack;
 
-        pushKeypath(i);
+        pushKeypath(key);
 
-        setter(keypath, RAW_THIS, item);
+        setter(keypath, RAW_THIS, value[key]);
 
         if (index) {
-          setter(keypath, index, i);
+          setter(keypath, index, key);
         }
 
         each(generate(), function (item) {
@@ -4302,7 +4288,7 @@ var toNumber = function (str) {
 
 var LENGTH = 'length';
 
-var guid$1 = 0;
+var guid = 0;
 
 /**
  * 记录对比值
@@ -4431,13 +4417,13 @@ var Computed = function () {
     classCallCheck(this, Computed);
 
 
-    this.id = ++guid$1;
+    this.id = ++guid;
     this.keypath = keypath;
     this.observer = observer;
     this.deps = [];
   }
 
-  Computed.prototype.update = function (newValue, oldValue, key) {
+  Computed.prototype.update = function (newValue, oldValue, key, changes) {
 
     var instance = this;
     var observer = instance.observer,
@@ -4452,7 +4438,11 @@ var Computed = function () {
     // 当前计算属性是否是其他计算属性的依赖
     each$1(observer.computed, function (computed, key) {
       if (computed.hasDep(keypath)) {
-        observer.emitter.fire(keypath, [instance.get(), value, keypath]);
+        var _newValue = instance.get();
+        if (_newValue !== value) {
+          changes.push(keypath, _newValue, value, keypath);
+          return FALSE;
+        }
       }
     });
   };
@@ -4535,7 +4525,7 @@ var Observer = function () {
 
     var instance = this;
 
-    instance.id = ++guid$1;
+    instance.id = ++guid;
     instance.data = options.data || {};
     instance.context = options.context || instance;
     instance.emitter = new Emitter();
@@ -4550,12 +4540,13 @@ var Observer = function () {
 
   Observer.prototype.onChange = function (newValue, oldValue, keypath, computed, computedValue) {
 
-    var instance = this;
+    var instance = this,
+        changes = instance.changes || (instance.changes = {});
 
-    instance.changes = updateValue(instance.changes, newValue, oldValue, keypath);
+    changes = updateValue(changes, newValue, oldValue, keypath);
 
-    if (computed && !instance.changes[computed.keypath]) {
-      instance.changes[computed.keypath] = {
+    if (computed.keypath && !changes[computed.keypath]) {
+      changes[computed.keypath] = {
         computed: computed,
         oldValue: computedValue
       };
@@ -4565,7 +4556,7 @@ var Observer = function () {
       instance.pending = TRUE;
       instance.nextTick(function () {
         if (instance.pending) {
-          var changes = instance.changes;
+          var _changes = instance.changes;
 
 
           instance.pending = instance.changes = NULL;
@@ -4574,7 +4565,7 @@ var Observer = function () {
 
           var listenerKeys = keys(asyncEmitter.listeners);
 
-          each$1(changes, function (item, keypath) {
+          each$1(_changes, function (item, keypath) {
             var newValue = item.newValue,
                 oldValue = item.oldValue,
                 computed = item.computed;
@@ -4647,12 +4638,13 @@ var Observer = function () {
           return target[prop];
         } else if (target != NULL) {
           result = get$1(target, prop);
-          return result ? result.value : UNDEFINED;
         }
       }
     }
 
-    result = get$1(instance.data, keypath);
+    if (!result) {
+      result = get$1(instance.data, keypath);
+    }
 
     return result ? result.value : defaultValue;
   };
@@ -4673,6 +4665,8 @@ var Observer = function () {
 
 
     var listenKeys = keys(emitter.listeners);
+
+    var changes = [];
 
     var setValue = function (value, keypath) {
 
@@ -4700,7 +4694,7 @@ var Observer = function () {
       each(listenKeys, function (listenKey) {
         if (isFuzzyKeypath(listenKey)) {
           if (matchKeypath(keypath, listenKey)) {
-            emitter.fire(listenKey, [newValue, oldValue, keypath]);
+            changes.push(listenKey, newValue, oldValue, keypath);
           } else {
             push(fuzzyKeypaths, listenKey);
           }
@@ -4708,7 +4702,7 @@ var Observer = function () {
           var listenNewValue = getNewValue(listenKey),
               listenOldValue = instance.get(listenKey);
           if (listenNewValue !== listenOldValue) {
-            emitter.fire(listenKey, [listenNewValue, listenOldValue, listenKey]);
+            changes.push(listenKey, listenNewValue, listenOldValue, listenKey);
           }
         }
       });
@@ -4723,7 +4717,7 @@ var Observer = function () {
 
             each(fuzzyKeypaths, function (fuzzyKeypath) {
               if (matchKeypath(key, fuzzyKeypath)) {
-                emitter.fire(fuzzyKeypath, [newValue, oldValue, key]);
+                changes.push(fuzzyKeypath, newValue, oldValue, key);
               }
             });
 
@@ -4785,6 +4779,10 @@ var Observer = function () {
       setValue(value, keypath);
     } else if (object(keypath)) {
       each$1(keypath, setValue);
+    }
+
+    for (var i = 0; i < changes.length; i += 4) {
+      emitter.fire(changes[i], [changes[i + 1], changes[i + 2], changes[i + 3], changes]);
     }
   };
 
@@ -5735,7 +5733,8 @@ var model = function (_ref) {
 
   var keypath = instance.lookup(value, keypathStack);
   if (!keypath) {
-    fatal('"' + value + '" is not defined on the instance but referenced during render.');
+    warn('"' + value + '" is not defined on the instance but using for model.');
+    keypath = value;
   }
 
   var set$$1 = function () {
