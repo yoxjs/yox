@@ -119,10 +119,10 @@ var app = new Yox({
   },
 
   watchers: {
-    '**': function (newValue, oldValue, keypath, realpath) {
-      console.log(this, newValue, oldValue, keypath, realpath)
-      if (realpath.startsWith('todos')
-        || realpath.startsWith('filteredTodos')
+    '**': function (newValue, oldValue, keypath) {
+      console.log(this, newValue, oldValue, keypath)
+      if (keypath.startsWith('todos')
+        || keypath.startsWith('filteredTodos')
       ) {
         todoStorage.save(this.get('todos'))
       }

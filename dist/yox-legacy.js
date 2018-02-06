@@ -4130,8 +4130,10 @@ function render(render, getter, setter, instance) {
             value = join(children, '');
           }
 
-          if (!isDef(value)) {
-            if (expr || children) {
+          // <input checked>
+          // <div title="{{title}}" 这种写法，如果没取到值，就是 undefined
+          if (!isDef(value) && !expr) {
+            if (children) {
               value = CHAR_BLANK;
             } else {
               value = isComponent ? TRUE : name;
@@ -4298,6 +4300,10 @@ var toNumber = function (str) {
   return defaultValue;
 };
 
+var LENGTH = 'length';
+
+var guid$1 = 0;
+
 /**
  * 记录对比值
  *
@@ -4322,21 +4328,49 @@ function updateValue(changes, newValue, oldValue, keypath) {
 }
 
 /**
- * 遍历 keypath 的每一段
+ * 对比新旧对象
  *
- * @param {string} keypath
+ * @param {?Object} newObject
+ * @param {?Object} oldObject
  * @param {Function} callback
  */
-function eachKeypath$1(keypath, callback) {
-  if (callback(keypath) !== FALSE) {
-    for (var i = keypath.length - 1; i >= 0;) {
-      i = lastIndexOf(keypath, KEYPATH_SEPARATOR, i);
-      if (i > 0) {
-        if (callback(slice(keypath, 0, i)) === FALSE) {
-          return;
-        }
-        i--;
-      }
+function diffObject(newObject, oldObject, callback) {
+
+  var keys$$1;
+  if (oldObject) {
+    if (newObject) {
+      keys$$1 = keys(extend({}, oldObject, newObject));
+    } else {
+      keys$$1 = keys(oldObject);
+    }
+  } else if (newObject) {
+    keys$$1 = keys(newObject);
+  }
+  if (keys$$1) {
+    each(keys$$1, function (key) {
+      callback(newObject ? newObject[key] : UNDEFINED, oldObject ? oldObject[key] : UNDEFINED, key);
+    });
+  }
+}
+
+/**
+ * 对比新旧数组
+ *
+ * @param {?Array} newArray
+ * @param {?Array} oldArray
+ * @param {Function} callback
+ */
+function diffArray(newArray, oldArray, callback) {
+
+  if (newArray || oldArray) {
+
+    var newLength = newArray ? newArray[LENGTH] : 0;
+    var oldLength = oldArray ? oldArray[LENGTH] : 0;
+
+    callback(newArray ? newLength : UNDEFINED, oldArray ? oldLength : UNDEFINED, LENGTH);
+
+    for (var i = 0, length = Math.max(newLength, oldLength); i < length; i++) {
+      callback(newArray ? newArray[i] : UNDEFINED, oldArray ? oldArray[i] : UNDEFINED, i);
     }
   }
 }
@@ -4348,7 +4382,7 @@ var patternCache = {};
  *
  * @param {string} keypath
  * @param {string} pattern
- * @return {?Array.<string>}
+ * @return {boolean}
  */
 function matchKeypath(keypath, pattern) {
   var cache = patternCache[pattern];
@@ -4356,10 +4390,7 @@ function matchKeypath(keypath, pattern) {
     cache = pattern.replace(/\./g, '\\.').replace(/\*\*/g, '([\.\\w]+?)').replace(/\*/g, '(\\w+)');
     cache = patternCache[pattern] = new RegExp('^' + cache + '$');
   }
-  var match = keypath.match(cache);
-  if (match) {
-    return toArray$1(match).slice(1);
-  }
+  return cache.test(keypath);
 }
 
 /**
@@ -4395,18 +4426,38 @@ function matchBest(sorted, keypath) {
   return result;
 }
 
-var guid$1 = 0;
+var Computed = function () {
+  function Computed(keypath, observer) {
+    classCallCheck(this, Computed);
 
-var Watcher = function () {
-  function Watcher(keypath, callback) {
-    classCallCheck(this, Watcher);
 
     this.id = ++guid$1;
     this.keypath = keypath;
-    this.callback = callback;
+    this.observer = observer;
+    this.deps = [];
   }
 
-  Watcher.prototype.get = function (force) {
+  Computed.prototype.update = function (newValue, oldValue, key) {
+
+    var instance = this;
+    var observer = instance.observer,
+        keypath = instance.keypath,
+        value = instance.value;
+
+
+    instance.changes = updateValue(instance.changes, newValue, oldValue, key);
+
+    observer.onChange(newValue, oldValue, key, instance, value);
+
+    // 当前计算属性是否是其他计算属性的依赖
+    each$1(observer.computed, function (computed, key) {
+      if (computed.hasDep(keypath)) {
+        observer.emitter.fire(keypath, [instance.get(), value, keypath]);
+      }
+    });
+  };
+
+  Computed.prototype.get = function (force) {
     var value = this.value,
         cache = this.cache;
 
@@ -4415,25 +4466,41 @@ var Watcher = function () {
     }
     // 减少取值频率，尤其是处理复杂的计算规则
     else if (force || this.isDirty()) {
-        var lastWatcher = Observer.watcher;
-        Observer.watcher = this;
+        var lastComputed = Observer.computed;
+        Observer.computed = this;
         value = this.value = this.getter();
-        Observer.watcher = lastWatcher;
+        Observer.computed = lastComputed;
         this.changes = NULL;
       }
     return value;
   };
 
-  Watcher.prototype.update = function (newValue, oldValue, keypath) {
-    this.changes = updateValue(this.changes, newValue, oldValue, keypath);
-    var callback = this.callback;
+  Computed.prototype.hasDep = function (dep) {
+    return has(this.deps, dep);
+  };
 
-    if (callback) {
-      callback(newValue, oldValue, keypath, this);
+  Computed.prototype.addDep = function (dep) {
+    if (!this.hasDep(dep)) {
+      push(this.deps, dep);
+      this.observer.watch(dep, this.update, FALSE, this);
     }
   };
 
-  Watcher.prototype.isDirty = function () {
+  Computed.prototype.removeDep = function (dep) {
+    if (this.hasDep(dep)) {
+      remove(this.deps, dep);
+      this.observer.unwatch(dep, this.update);
+    }
+  };
+
+  Computed.prototype.clearDep = function () {
+    var instance = this;
+    each(instance.deps, function (dep) {
+      instance.removeDep(dep);
+    }, TRUE);
+  };
+
+  Computed.prototype.isDirty = function () {
     var changes = this.changes,
         result;
     if (isDef(changes)) {
@@ -4451,7 +4518,7 @@ var Watcher = function () {
     return result;
   };
 
-  return Watcher;
+  return Computed;
 }();
 
 var Observer = function () {
@@ -4468,72 +4535,11 @@ var Observer = function () {
 
     var instance = this;
 
+    instance.id = ++guid$1;
     instance.data = options.data || {};
     instance.context = options.context || instance;
     instance.emitter = new Emitter();
-    instance.computed = {};
-    instance.watchers = {};
-
-    var changes,
-        watchers;
-    instance.onChange = function (newValue, oldValue, keypath, watcher) {
-
-      changes = updateValue(changes, newValue, oldValue, keypath);
-
-      // 计算属性，需要记录自己的 oldValue
-      // 在 nextTick 时记录 newValue
-      if (watcher.getter && !changes[watcher.keypath]) {
-        changes[watcher.keypath] = {
-          oldValue: watcher.value
-        };
-      }
-      // 记录触发过变化的 watcher
-      // 方便 nextTick 取新值、清 changes
-      if (!watchers) {
-        watchers = {};
-      }
-      watchers[watcher.id] = watcher;
-
-      if (!instance.pending) {
-        instance.pending = TRUE;
-        instance.nextTick(function () {
-          if (instance.pending) {
-            instance.pending = FALSE;
-
-            var currentWatchers = copy(watchers);
-            var currentChanges = copy(changes);
-
-            watchers = changes = NULL;
-
-            each$1(currentWatchers, function (watcher) {
-              if (watcher.getter) {
-                currentChanges[watcher.keypath].newValue = watcher.get();
-              } else if (watcher.changes) {
-                watcher.changes = NULL;
-              }
-            });
-
-            var emitter = instance.emitter;
-
-            var listeners = keys(emitter.listeners);
-            each$1(currentChanges, function (item, keypath) {
-              if (item.newValue !== item.oldValue) {
-                var args = [item.newValue, item.oldValue, keypath];
-                emitter.fire(keypath, args);
-                each(listeners, function (key) {
-                  var match;
-                  if (isFuzzyKeypath(key) && (match = matchKeypath(keypath, key))) {
-                    var newArgs = copy(args);
-                    push(newArgs, match);
-                    emitter.fire(key, newArgs);
-                  }
-                });
-              }
-            });
-          }
-        });
-      }
-    };
+    instance.asyncEmitter = new Emitter();
 
     if (options.computed) {
       each$1(options.computed, function (item, keypath) {
@@ -4541,6 +4547,55 @@ var Observer = function () {
       });
     }
   }
+
+  Observer.prototype.onChange = function (newValue, oldValue, keypath, computed, computedValue) {
+
+    var instance = this;
+
+    instance.changes = updateValue(instance.changes, newValue, oldValue, keypath);
+
+    if (computed && !instance.changes[computed.keypath]) {
+      instance.changes[computed.keypath] = {
+        computed: computed,
+        oldValue: computedValue
+      };
+    }
+
+    if (!instance.pending) {
+      instance.pending = TRUE;
+      instance.nextTick(function () {
+        if (instance.pending) {
+          var changes = instance.changes;
+
+
+          instance.pending = instance.changes = NULL;
+
+          var asyncEmitter = instance.asyncEmitter;
+
+          var listenerKeys = keys(asyncEmitter.listeners);
+
+          each$1(changes, function (item, keypath) {
+            var newValue = item.newValue,
+                oldValue = item.oldValue,
+                computed = item.computed;
+
+            if (computed) {
+              newValue = computed.get();
+            }
+            if (newValue !== oldValue) {
+              var args = [newValue, oldValue, keypath];
+              asyncEmitter.fire(keypath, args);
+              each(listenerKeys, function (key) {
+                if (isFuzzyKeypath(key) && matchKeypath(keypath, key)) {
+                  asyncEmitter.fire(key, args);
+                }
+              });
+            }
+          });
+        }
+      });
+    }
+  };
 
   /**
    * 获取数据
@@ -4569,35 +4624,35 @@ var Observer = function () {
 
     // 调用 get 时，外面想要获取依赖必须设置是谁在收集依赖
     // 如果没设置，则跳过依赖收集
-    var watcher = Observer.watcher;
-    if (watcher) {
-      eachKeypath$1(keypath, function (subKeypath) {
-        instance.addWatcher(watcher, subKeypath);
-      });
+    if (Observer.computed) {
+      Observer.computed.addDep(keypath);
     }
 
-    if (instance.reversedComputedKeys) {
-      var _matchBest = matchBest(instance.reversedComputedKeys, keypath),
+    var computed = instance.computed,
+        reversedComputedKeys = instance.reversedComputedKeys;
+
+    if (computed) {
+      var target = computed[keypath];
+      if (target) {
+        return target.get();
+      }
+
+      var _matchBest = matchBest(reversedComputedKeys, keypath),
           name = _matchBest.name,
           prop = _matchBest.prop;
 
-      if (name) {
-        var target = instance.computed[name].get();
-        if (prop) {
-          if (exists(target, prop)) {
-            return target[prop];
-          } else if (!primitive(target)) {
-            result = get$1(target, prop);
-          }
-        } else {
-          return target;
+      if (name && prop) {
+        target = instance.computed[name].get();
+        if (exists(target, prop)) {
+          return target[prop];
+        } else if (target != NULL) {
+          result = get$1(target, prop);
+          return result ? result.value : UNDEFINED;
         }
       }
     }
 
-    if (!result) {
-      result = get$1(instance.data, keypath);
-    }
+    result = get$1(instance.data, keypath);
 
     return result ? result.value : defaultValue;
   };
@@ -4614,62 +4669,46 @@ var Observer = function () {
 
     var instance = this;
 
+    var emitter = instance.emitter;
+
+
+    var listenKeys = keys(emitter.listeners);
+
     var setValue = function (value, keypath) {
 
       keypath = normalize(keypath);
 
       var newValue = value,
           oldValue = instance.get(keypath);
+
       if (newValue === oldValue) {
         return;
       }
 
-      var watchers = instance.watchers,
-          context = instance.context;
-
-
       var getNewValue = function (key) {
-        key = slice(key, startsWith$1(key, keypath));
-        if (key) {
-          key = get$1(value, key);
-          if (key) {
-            return key.value;
-          }
-        } else {
+        if (key === keypath || value == NULL) {
           return value;
         }
-      };
-
-      var updated = {};
-      var updateWatchers = function (watchKey, newValue, oldValue, keypath) {
-        if (watchers[watchKey]) {
-          var uniqueKey = watchKey + ':' + keypath;
-          if (!updated[uniqueKey]) {
-            updated[uniqueKey] = TRUE;
-            each(watchers[watchKey], function (watcher) {
-              watcher.update(newValue, oldValue, keypath);
-              if (keypath !== watcher.keypath) {
-                updateWatchers(watcher.keypath, newValue, oldValue, keypath);
-              }
-            });
-          }
+        key = get$1(value, slice(key, startsWith$1(key, keypath)));
+        if (key) {
+          return key.value;
         }
       };
 
-      var match,
-          fuzzyKeypaths = [];
-      each$1(watchers, function (list, watchKey) {
-        if (isFuzzyKeypath(watchKey)) {
-          if (matchKeypath(keypath, watchKey)) {
-            updateWatchers(watchKey, newValue, oldValue, keypath);
+      var fuzzyKeypaths = [];
+
+      each(listenKeys, function (listenKey) {
+        if (isFuzzyKeypath(listenKey)) {
+          if (matchKeypath(keypath, listenKey)) {
+            emitter.fire(listenKey, [newValue, oldValue, keypath]);
           } else {
-            push(fuzzyKeypaths, watchKey);
+            push(fuzzyKeypaths, listenKey);
           }
-        } else if (watchKey.indexOf(keypath) === 0) {
-          var watchNewValue = getNewValue(watchKey),
-              watchOldValue = instance.get(watchKey);
-          if (watchNewValue !== watchOldValue) {
-            updateWatchers(watchKey, watchNewValue, watchOldValue, watchKey);
+        } else if (startsWith(listenKey, keypath)) {
+          var listenNewValue = getNewValue(listenKey),
+              listenOldValue = instance.get(listenKey);
+          if (listenNewValue !== listenOldValue) {
+            emitter.fire(listenKey, [listenNewValue, listenOldValue, listenKey]);
           }
         }
       });
@@ -4677,14 +4716,14 @@ var Observer = function () {
       // 存在模糊匹配的需求
       // 必须对数据进行递归
       // 性能确实会慢一些，但是很好用啊，几乎可以监听所有的数据
-      if (fuzzyKeypaths.length) {
+      if (fuzzyKeypaths[LENGTH]) {
 
         var addChange = function (newValue, oldValue, key) {
           if (newValue !== oldValue) {
 
             each(fuzzyKeypaths, function (fuzzyKeypath) {
               if (matchKeypath(key, fuzzyKeypath)) {
-                updateWatchers(fuzzyKeypath, newValue, oldValue, key);
+                emitter.fire(fuzzyKeypath, [newValue, oldValue, key]);
               }
             });
 
@@ -4695,42 +4734,20 @@ var Observer = function () {
               return;
             }
 
-            // 子属性
-            var oldIsObject = object(oldValue),
-                newIsObject = object(newValue);
-            if (oldIsObject || newIsObject) {
-              var keys$$1;
-              if (oldIsObject) {
-                keys$$1 = keys(oldValue);
-                if (newIsObject) {
-                  each(keys(newValue), function (key) {
-                    if (!has(keys$$1, key)) {
-                      push(keys$$1, key);
-                    }
-                  });
-                }
-              } else {
-                keys$$1 = keys(newValue);
-              }
-              if (keys$$1) {
-                each(keys$$1, function (subKey) {
-                  addChange(newIsObject ? newValue[subKey] : UNDEFINED, oldIsObject ? oldValue[subKey] : UNDEFINED, join$1(key, subKey));
-                });
-              }
+            var newIs = string(newValue),
+                oldIs = string(oldValue);
+            if (newIs || oldIs) {
+              addChange(newIs ? newValue[LENGTH] : UNDEFINED, oldIs ? oldValue[LENGTH] : UNDEFINED, join$1(key, LENGTH));
             } else {
-              var oldIsArray = array(oldValue),
-                  newIsArray = array(newValue);
-              var oldLength = oldIsArray || string(oldValue) ? oldValue.length : UNDEFINED;
-              var newLength = newIsArray || string(newValue) ? newValue.length : UNDEFINED;
-              if (number(oldLength) || number(newLength)) {
-                addChange(newLength, oldLength, join$1(key, 'length'));
-              }
-              if (oldIsArray || newIsArray) {
-                newLength = toNumber(newLength);
-                oldLength = toNumber(oldLength);
-                for (var i = 0, length = Math.max(newLength, oldLength); i < length; i++) {
-                  addChange(newIsArray ? newValue[i] : UNDEFINED, oldIsArray ? oldValue[i] : UNDEFINED, join$1(key, i));
-                }
+              newIs = object(newValue), oldIs = object(oldValue);
+              if (newIs || oldIs) {
+                diffObject(newIs && newValue, oldIs && oldValue, function (newValue, oldValue, prop) {
+                  addChange(newValue, oldValue, join$1(key, prop));
+                });
+              } else {
+                diffArray(array(newValue) && newValue, array(oldValue) && oldValue, function (newValue, oldValue, index) {
+                  addChange(newValue, oldValue, join$1(key, index));
+                });
               }
             }
           }
@@ -4739,74 +4756,35 @@ var Observer = function () {
         addChange(value, instance.get(keypath), keypath);
       }
 
-      var target = instance.computed[keypath];
-      if (target && target.set) {
-        target.set(value);
-      } else {
-        if (instance.reversedComputedKeys) {
-          var _matchBest2 = matchBest(instance.reversedComputedKeys, keypath),
-              name = _matchBest2.name,
-              prop = _matchBest2.prop;
+      var computed = instance.computed,
+          reversedComputedKeys = instance.reversedComputedKeys;
 
-          if (name && prop) {
-            target = instance.computed[name].get();
-            if (!primitive(target)) {
-              set$1(target, prop, value);
-            }
-            return;
-          }
+      if (computed) {
+        var target = computed[keypath];
+        if (target && target.set) {
+          target.set(value);
+          return;
         }
-        set$1(instance.data, keypath, value);
+
+        var _matchBest2 = matchBest(reversedComputedKeys, keypath),
+            name = _matchBest2.name,
+            prop = _matchBest2.prop;
+
+        if (name && prop) {
+          target = computed[name].get();
+          if (!primitive(target)) {
+            set$1(target, prop, value);
+          }
+          return;
+        }
       }
+      set$1(instance.data, keypath, value);
     };
 
     if (string(keypath)) {
       setValue(value, keypath);
     } else if (object(keypath)) {
       each$1(keypath, setValue);
-    }
-  };
-
-  /**
-   * 添加数据监听
-   *
-   * @param {Watcher} watcher
-   * @param {string} watchKey
-   */
-
-
-  Observer.prototype.addWatcher = function (watcher, watchKey) {
-    var watchers = this.watchers[watchKey] || (this.watchers[watchKey] = []);
-    watchers.push(watcher);
-  };
-
-  /**
-   * 移除数据监听
-   *
-   * @param {Watcher} watcher
-   * @param {?string} watchKey
-   */
-
-
-  Observer.prototype.removeWatcher = function (watcher, watchKey) {
-    var watchers = this.watchers;
-
-    if (watchers) {
-      var remove$$1 = function (list, watchKey) {
-        each(list, function (item, index) {
-          if (item === watcher) {
-            list.splice(index, 1);
-          }
-        }, TRUE);
-      };
-      if (watchKey) {
-        var list = watchers[watchKey];
-        if (list) {
-          remove$$1(list, watchKey);
-        }
-      } else {
-        each$1(watchers, remove$$1);
-      }
     }
   };
 
@@ -4845,22 +4823,22 @@ var Observer = function () {
 
     if (get$$1 || set$$1) {
 
-      var watcher = new Watcher(keypath, instance.onChange);
+      var _computed = new Computed(keypath, instance);
 
       if (get$$1) {
-        var hasDeps = array(deps) && deps.length > 0;
+        var hasDeps = array(deps) && deps[LENGTH] > 0;
         if (hasDeps) {
           each(deps, function (dep) {
-            instance.addWatcher(watcher, dep);
+            _computed.addDep(dep);
           });
         }
-        watcher.cache = cache;
-        watcher.getter = function () {
+        _computed.cache = cache;
+        _computed.getter = function () {
           if (cache) {
             if (hasDeps) {
-              Observer.watcher = NULL;
+              Observer.computed = NULL;
             } else {
-              instance.removeWatcher(watcher);
+              _computed.clearDep();
             }
           }
           return execute(get$$1, instance.context);
@@ -4868,18 +4846,20 @@ var Observer = function () {
       }
 
       if (set$$1) {
-        watcher.set = function (value) {
+        _computed.set = function (value) {
           set$$1.call(instance.context, value);
         };
       }
 
-      instance.addWatcher(watcher, keypath);
+      if (!instance.computed) {
+        instance.computed = {};
+      }
 
-      instance.computed[keypath] = watcher;
+      instance.computed[keypath] = _computed;
 
       instance.reversedComputedKeys = sort(instance.computed, TRUE);
 
-      return watcher;
+      return _computed;
     }
   };
 
@@ -4958,9 +4938,7 @@ var Observer = function () {
       list = copy(list);
     }
 
-    var _list = list,
-        length = _list.length;
-
+    var length = list[LENGTH];
     if (index === TRUE || index === length) {
       list.push(item);
     } else if (index === FALSE || index === 0) {
@@ -4987,7 +4965,7 @@ var Observer = function () {
 
   Observer.prototype.removeAt = function (keypath, index) {
     var list = this.get(keypath);
-    if (array(list) && index >= 0 && index < list.length) {
+    if (array(list) && index >= 0 && index < list[LENGTH]) {
       list = copy(list);
       list.splice(index, 1);
       this.set(keypath, list);
@@ -5029,6 +5007,8 @@ var Observer = function () {
 
 
   Observer.prototype.destroy = function () {
+    this.emitter.off();
+    this.asyncEmitter.off();
     clear(this);
   };
 
@@ -5062,13 +5042,16 @@ extend(Observer.prototype, {
    * @param {Function} watcher
    */
   unwatch: function unwatch(keypath, watcher) {
-    var emitter = this.emitter;
+    var emitter = this.emitter,
+        asyncEmitter = this.asyncEmitter;
 
     if (string(keypath)) {
       emitter.off(keypath, watcher);
+      asyncEmitter.off(keypath, watcher);
     } else if (object(keypath)) {
       each$1(keypath, function (watcher, keypath) {
         emitter.off(keypath, watcher);
+        asyncEmitter.off(keypath, watcher);
       });
     }
   }
@@ -5077,63 +5060,47 @@ extend(Observer.prototype, {
 
 function createWatch(action) {
 
-  var watch = function (instance, keypath, watcher, sync) {
-    var emitter = instance.emitter,
-        context = instance.context;
+  var watch = function (instance, keypath, func$$1, sync, computed) {
+    var context = instance.context;
 
 
-    var data = {
-      context: context,
-      func: watcher,
-      watchers: [],
-      onAdd: function onAdd() {
-        var addWatcher = function (keypath) {
-          var watcher = new Watcher(keypath, instance.onChange);
-          push(data.watchers, watcher);
-          instance.addWatcher(watcher, keypath);
-        };
-        if (isFuzzyKeypath(keypath)) {
-          addWatcher(keypath);
-        } else {
-          eachKeypath$1(keypath, function (keypath) {
-            addWatcher(keypath);
-          });
-        }
-      },
-      onRemove: function onRemove() {
-        each(data.watchers, function (watcher) {
-          instance.removeWatcher(watcher, watcher.keypath);
-        });
-      }
-    };
+    instance.emitter[action](keypath, {
+      func: computed ? func$$1 : instance.onChange,
+      context: computed ? computed : instance
+    });
 
-    emitter[action](keypath, data);
+    if (!computed) {
+      instance.asyncEmitter[action](keypath, {
+        func: func$$1,
+        context: context
+      });
+    }
 
     if (sync) {
-      execute(watcher, context, [instance.get(keypath), UNDEFINED, keypath]);
+      execute(func$$1, context, [instance.get(keypath), UNDEFINED, keypath]);
     }
   };
 
-  return function (keypath, watcher, sync) {
+  return function (keypath, watcher, sync, computed) {
 
     var instance = this;
 
     if (string(keypath)) {
-      watch(instance, keypath, watcher, sync);
+      watch(instance, keypath, watcher, sync, computed);
     } else {
       if (watcher === TRUE) {
         sync = watcher;
       }
       each$1(keypath, function (value, keypath) {
         var watcher = value,
-            innerSync = sync;
+            itemSync = sync;
         if (object(value)) {
           watcher = value.watcher;
           if (boolean(value.sync)) {
-            innerSync = value.sync;
+            itemSync = value.sync;
           }
         }
-        watch(instance, keypath, watcher, innerSync);
+        watch(instance, keypath, watcher, itemSync, computed);
       });
     }
   };
@@ -5973,8 +5940,12 @@ var Yox = function () {
       if (selector.test(template)) {
         template = api.html(api.find(template));
       }
+      // 如果是根组件，必须有一个根元素
+      // 如果是子组件，可以是 $children
       if (!tag.test(template)) {
-        error$1(templateError);
+        if (!parent || trim(template) !== SPECIAL_CHILDREN) {
+          error$1(templateError);
+        }
       }
     } else {
       template = NULL;
@@ -6036,7 +6007,7 @@ var Yox = function () {
       instance.$template = template[0];
 
       instance.$renderCount = 0;
-      instance.$renderWatcher = instance.$observer.addComputed(TEMPLATE_COMPUTED, function () {
+      instance.$renderComputed = instance.$observer.addComputed(TEMPLATE_COMPUTED, function () {
         instance.$renderCount++;
         return instance.render();
       });
@@ -6300,7 +6271,7 @@ var Yox = function () {
       this.$observer.nextRun();
 
       if (this.$renderCount === $renderCount) {
-        this.updateView(this.$renderWatcher.get(TRUE), this.$node);
+        this.updateView(this.$renderComputed.get(TRUE), this.$node);
       }
     }
   };
@@ -6313,7 +6284,7 @@ var Yox = function () {
 
 
   Yox.prototype.render = function () {
-
+    console.time('render');
     var instance = this;
 
     var $template = instance.$template,
@@ -6326,9 +6297,9 @@ var Yox = function () {
       var filters = extend({}, registry.filter, instance.$filters);
 
       $getter = instance.$getter = function (expr, keypathStack, binding$$1) {
-        var lastWatcher = Observer.watcher;
+        var lastComputed = Observer.computed;
         if (binding$$1) {
-          Observer.watcher = NULL;
+          Observer.computed = NULL;
         }
         var value = execute$1(expr, function (key) {
           if (key === SPECIAL_KEYPATH) {
@@ -6337,7 +6308,7 @@ var Yox = function () {
           return instance.lookup(key, keypathStack, instance.$vars, filters);
         }, instance);
         if (binding$$1) {
-          Observer.watcher = lastWatcher;
+          Observer.computed = lastComputed;
         }
         return value;
       };
@@ -6352,7 +6323,10 @@ var Yox = function () {
     // 渲染模板过程中产生的临时变量
     instance.$vars = {};
 
-    return render($template, $getter, $setter, instance);
+    var result = render($template, $getter, $setter, instance);
+
+    console.timeEnd('render');
+    return result;
   };
 
   /**

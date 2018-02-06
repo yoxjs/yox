@@ -22,7 +22,7 @@ import * as expressionCompiler from 'yox-expression-compiler'
 import * as expressionNodeType from 'yox-expression-compiler/src/nodeType'
 
 import {
-  Watcher,
+  Computed,
   Observer,
 } from 'yox-observer'
 
@@ -128,8 +128,12 @@ export default class Yox {
           api.find(template)
         )
       }
+      // 如果是根组件，必须有一个根元素
+      // 如果是子组件，可以是 $children
       if (!pattern.tag.test(template)) {
-        logger.error(templateError)
+        if (!parent || string.trim(template) !== config.SPECIAL_CHILDREN) {
+          logger.error(templateError)
+        }
       }
     }
     else {
@@ -197,7 +201,7 @@ export default class Yox {
       instance.$template = template[ 0 ]
 
       instance.$renderCount = 0
-      instance.$renderWatcher = instance.$observer.addComputed(
+      instance.$renderComputed = instance.$observer.addComputed(
         TEMPLATE_COMPUTED,
         function () {
           instance.$renderCount++
@@ -451,7 +455,7 @@ export default class Yox {
 
       if (this.$renderCount === $renderCount) {
         this.updateView(
-          this.$renderWatcher.get(env.TRUE),
+          this.$renderComputed.get(env.TRUE),
           this.$node
         )
       }
@@ -465,7 +469,7 @@ export default class Yox {
    * @return {Object}
    */
   render() {
-
+console.time('render')
     let instance = this
 
     let { $template, $getter, $setter } = instance
@@ -476,9 +480,9 @@ export default class Yox {
 
       $getter =
       instance.$getter = function (expr, keypathStack, binding) {
-        let lastWatcher = Observer.watcher
+        let lastComputed = Observer.computed
         if (binding) {
-          Observer.watcher = env.NULL
+          Observer.computed = env.NULL
         }
         let value = expressionCompiler.execute(
           expr,
@@ -491,7 +495,7 @@ export default class Yox {
           instance
         )
         if (binding) {
-          Observer.watcher = lastWatcher
+          Observer.computed = lastComputed
         }
         return value
       }
@@ -507,12 +511,15 @@ export default class Yox {
     // 渲染模板过程中产生的临时变量
     instance.$vars = { }
 
-    return templateCompiler.render(
+    let result = templateCompiler.render(
       $template,
       $getter,
       $setter,
       instance
     )
+
+    console.timeEnd('render')
+    return result
   }
 
   /**
