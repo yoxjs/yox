@@ -59,6 +59,7 @@ export default class Yox {
       parent,
       replace,
       computed,
+      children,
       template,
       components,
       directives,
@@ -76,10 +77,8 @@ export default class Yox {
     let source
     if (is.object(propTypes)) {
       source = Yox.validate(props || { }, propTypes)
-      // validate 可能过滤 $children 字段
-      // 这里确保外面传入的 $children 还在
-      if (props && object.has(props, config.SPECIAL_CHILDREN)) {
-        source[ config.SPECIAL_CHILDREN ] = props[ config.SPECIAL_CHILDREN ]
+      if (children) {
+        source[ config.SPECIAL_CHILDREN ] = children
       }
     }
     else {

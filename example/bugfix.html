@@ -27,7 +27,7 @@
           el: '#app',
             data: {
               disabled: false,
-                submiting: false,
+              submiting: false,
               onClick: function () {
                   instance.set({
                       disabled: true,
@@ -45,25 +45,54 @@
                 }
             },
             template: `
-                <Button disabled="{{disabled}}" onClick="{{onClick}}">
-                    {{submiting ? 'Submiting' : 'Submit'}}
-                </Button>
+                <div>
+<Button type="info">
+                          {{submiting ? 'Submiting1' : 'Submit1'}}
+                      </Button>
+                  <Button type="primary">
+                      <Button type="info">
+                          {{submiting ? 'Submiting1' : 'Submit1'}}
+                      </Button>
+                  </Button>
+                </div>
             `,
             components: {
               Button: {
                   propTypes: {
                       disabled: {
-                          type: 'boolean',
-                            value: false,
-                        },
-                        onClick: {
-                          type: 'function'
-                        }
+                        type: 'boolean',
+                        value: false,
+                      },
+                      type: {
+                        type: 'string',
+                        value: false,
+                      },
+                      onClick: {
+                        type: 'function'
+                      }
                     },
                   template: `
-                      <button disabled="{{disabled}}" on-click="click()">
-                          {{$children}}
-                        </button>
+                      <div class="bell-button
+                          {{#if type}} bell-{{type}}{{/if}}
+                          {{#if shape}} bell-{{shape}}{{/if}}
+                          {{#if size}} bell-{{size}}{{/if}}
+                          {{#if long}} bell-long{{/if}}
+                          {{#if disabled}} bell-disabled{{/if}}
+                          {{#if className}} {{className}}{{/if}}
+                      " on-click="click">
+
+                          {{#if icon}}
+                              <i class="bell-icon {{icon}}"></i>
+                          {{/if}}
+
+                          <span>
+                              {{#if label}}
+                                  {{label}}
+                              {{else}}
+                                  {{$children}}
+                              {{/if}}
+                          </span>
+                      </div>
                     `,
                     methods: {
                       click: function () {
