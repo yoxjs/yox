@@ -59,15 +59,15 @@ export default class Yox {
       parent,
       replace,
       computed,
-      children,
       template,
       components,
       directives,
       partials,
       filters,
+      slots,
       events,
-      watchers,
       methods,
+      watchers,
       propTypes,
       extensions,
     } = options
@@ -77,12 +77,13 @@ export default class Yox {
     let source
     if (is.object(propTypes)) {
       source = Yox.validate(props || { }, propTypes)
-      if (children) {
-        source[ config.SPECIAL_CHILDREN ] = children
-      }
     }
     else {
       source = props || { }
+    }
+
+    if (slots) {
+      object.extend(source, slots)
     }
 
     // 如果传了 props，则 data 应该是个 function
@@ -477,22 +478,30 @@ console.time('render')
 
       let filters = object.extend({ }, registry.filter, instance.$filters)
 
+      let getValue = function (key, keypathStack) {
+        return key === config.SPECIAL_KEYPATH
+          ? array.last(keypathStack)
+          : instance.lookup(key, keypathStack, instance.$vars, filters)
+      }
+
       $getter =
       instance.$getter = function (expr, keypathStack, binding) {
-        let lastComputed = Observer.computed
+        let lastComputed = Observer.computed, value
         if (binding) {
           Observer.computed = env.NULL
         }
-        let value = expressionCompiler.execute(
-          expr,
-          function (key) {
-            if (key === config.SPECIAL_KEYPATH) {
-              return array.last(keypathStack)
-            }
-            return instance.lookup(key, keypathStack, instance.$vars, filters)
-          },
-          instance
-        )
+        if (expr.staticKeypath) {
+          value = getValue(expr.staticKeypath, keypathStack)
+        }
+        else {
+          value = expressionCompiler.execute(
+            expr,
+            function (key) {
+              return getValue(key, keypathStack)
+            },
+            instance
+          )
+        }
         if (binding) {
           Observer.computed = lastComputed
         }
@@ -610,16 +619,16 @@ console.time('render')
         }
         return function (event) {
           let isEvent = Event.is(event), result
-          if (!args.length) {
-            if (isEvent) {
-              result = execute(method, instance, event)
-            }
-          }
-          else {
+          if (args && args.length) {
             if (isEvent) {
               instance.$setter(keypath, config.SPECIAL_EVENT, event)
             }
             result = execute(method, instance, args.map(getValue))
+          }
+          else {
+            if (isEvent) {
+              result = execute(method, instance, event)
+            }
           }
           if (result === env.FALSE && isEvent) {
             event.prevent().stop()
