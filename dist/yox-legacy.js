@@ -3482,7 +3482,9 @@ var Spread = function (_Node) {
   }
 
   Spread.prototype.stringify = function () {
-    return this.stringifyCall('s', [this.stringifyExpression(this.expr), this.expr.staticKeypath]);
+    var expr = this.expr;
+
+    return this.stringifyCall('s', [this.stringifyExpression(expr), expr.staticKeypath && this.stringifyString(expr.staticKeypath)]);
   };
 
   return Spread;
