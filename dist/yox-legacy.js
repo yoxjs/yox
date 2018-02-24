@@ -4112,38 +4112,42 @@ function render(render, getter, setter, instance) {
     }
   },
       attrHandler = function attrHandler(node) {
-    if (func(node)) {
-      node();
-    } else if (node.type === ATTRIBUTE) {
-      var value;
-      if (has$1(node, 'value')) {
-        value = node.value;
-      } else if (node.expr) {
-        value = o(node.expr, node.binding);
-      } else if (node.children) {
-        value = getValue(node.children);
+    if (isDef(node)) {
+      if (func(node)) {
+        node();
+      } else if (node.type === ATTRIBUTE) {
+        var value;
+        if (has$1(node, 'value')) {
+          value = node.value;
+        } else if (node.expr) {
+          value = o(node.expr, node.binding);
+        } else if (node.children) {
+          value = getValue(node.children);
+        } else {
+          value = currentElement.component ? TRUE : node.name;
+        }
+        addAttr(node.name, value, node.binding);
       } else {
-        value = currentElement.component ? TRUE : node.name;
+        addDirective(node.name, node.modifier, node.value).expr = node.expr;
       }
-      addAttr(node.name, value, node.binding);
-    } else {
-      addDirective(node.name, node.modifier, node.value).expr = node.expr;
     }
   },
       childHandler = function childHandler(node) {
-    if (func(node)) {
-      node();
-    } else if (values) {
-      values[values[RAW_LENGTH]] = node;
-    } else if (currentElement.opened === TRUE) {
+    if (isDef(node)) {
+      if (func(node)) {
+        node();
+      } else if (values) {
+        values[values[RAW_LENGTH]] = node;
+      } else if (currentElement.opened === TRUE) {
 
-      if (array(node)) {
-        each(node, addChild);
+        if (array(node)) {
+          each(node, addChild);
+        } else {
+          addChild(node);
+        }
       } else {
-        addChild(node);
+        attrHandler(node);
       }
-    } else {
-      attrHandler(node);
     }
   },
       getValue = function getValue(generate) {
@@ -4315,7 +4319,7 @@ function render(render, getter, setter, instance) {
 
   // spread
   s = function s(value, staticKeypath) {
-    if (object(value)) {
+    if (object(value) && currentElement.opened !== TRUE) {
       each$1(value, function (value, key) {
         addAttr(key, value, staticKeypath && join$1(staticKeypath, key));
       });
@@ -5722,20 +5726,23 @@ var selectControl = {
 
     if (selectedIndex >= 0) {
       var selectedOption = options[selectedIndex];
-      if (selectedOption && value !== selectedOption.value) {
-        each(options, function (option, index) {
-          if (option.value === value) {
-            el.selectedIndex = index;
-            return FALSE;
-          }
-        });
+      if (selectedOption) {
+        var newValue = isDef(selectedOption.value) ? selectedOption.value : selectedOption.text;
+        if (value !== newValue) {
+          each(options, function (option, index) {
+            var optionValue = isDef(option.value) ? option.value : option.text;
+            if (optionValue === newValue) {
+              el.selectedIndex = index;
+              return FALSE;
+            }
+          });
+        }
       }
     }
   },
   sync: function sync(el, keypath, instance) {
-    var value = el.options[el.selectedIndex].value;
-
-    instance.set(keypath, value);
+    var selectedOption = el.options[el.selectedIndex];
+    instance.set(keypath, isDef(selectedOption.value) ? selectedOption.value : selectedOption.text);
   }
 };
 

@@ -1,4 +1,5 @@
 
+import isDef from 'yox-common/function/isDef'
 import toString from 'yox-common/function/toString'
 
 import * as is from 'yox-common/util/is'
@@ -36,22 +37,29 @@ const selectControl = {
     let { options, selectedIndex } = el
     if (selectedIndex >= 0) {
       let selectedOption = options[ selectedIndex ]
-      if (selectedOption && value !== selectedOption.value) {
-        array.each(
-          options,
-          function (option, index) {
-            if (option.value === value) {
-              el.selectedIndex = index
-              return env.FALSE
+      if (selectedOption) {
+        let newValue = isDef(selectedOption.value) ? selectedOption.value : selectedOption.text
+        if (value !== newValue) {
+          array.each(
+            options,
+            function (option, index) {
+              let optionValue = isDef(option.value) ? option.value : option.text
+              if (optionValue === newValue) {
+                el.selectedIndex = index
+                return env.FALSE
+              }
             }
-          }
-        )
+          )
+        }
       }
     }
   },
   sync(el, keypath, instance) {
-    let { value } = el.options[ el.selectedIndex ]
-    instance.set(keypath, value)
+    let selectedOption = el.options[ el.selectedIndex ]
+    instance.set(
+      keypath,
+      isDef(selectedOption.value) ? selectedOption.value : selectedOption.text
+    )
   },
 }
 
