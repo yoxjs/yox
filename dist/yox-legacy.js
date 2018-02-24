@@ -3637,8 +3637,10 @@ function compile$$1(content) {
 
       if (type === ELEMENT) {
         // 优化只有一个子节点的情况
-        if (!component && children[RAW_LENGTH] - divider === 1) {
+        if (!component && tag !== 'template' && children[RAW_LENGTH] - divider === 1) {
+
           var singleChild = last(children);
+
           // 子节点是纯文本
           if (singleChild.type === TEXT) {
             target.props = [{
@@ -3674,7 +3676,7 @@ function compile$$1(content) {
           // <div ref="xx">
           // <slot name="xx">
           var element = last(htmlStack);
-          if (name === 'key' || name === 'ref' || name === 'slot' || element.tag === 'slot' && name === 'name') {
+          if (name === 'key' || name === 'ref' || element.tag === 'template' && name === 'slot' || element.tag === 'slot' && name === 'name') {
             // 把数据从属性中提出来，减少渲染时的遍历
             remove(element.children, target);
             if (!element.children[RAW_LENGTH]) {
@@ -4257,7 +4259,7 @@ function render(render, getter, setter, instance) {
     }
 
     if (slot && lastComponent) {
-      addSlot(slotPrefix + getValue(slot), result);
+      addSlot(slotPrefix + getValue(slot), children);
       return;
     }
 
