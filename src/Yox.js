@@ -130,10 +130,8 @@ export default class Yox {
       }
       // 如果是根组件，必须有一个根元素
       // 如果是子组件，可以是 $children
-      if (!pattern.tag.test(template)) {
-        if (!parent || string.trim(template) !== config.SPECIAL_CHILDREN) {
-          logger.error(templateError)
-        }
+      if (!pattern.tag.test(template) && !parent) {
+        logger.error(templateError)
       }
     }
     else {
@@ -490,8 +488,8 @@ console.time('render')
         if (binding) {
           Observer.computed = env.NULL
         }
-        if (expr.staticKeypath) {
-          value = getValue(expr.staticKeypath, keypathStack)
+        if (is.string(expr)) {
+          value = getValue(expr, keypathStack)
         }
         else {
           value = expressionCompiler.execute(

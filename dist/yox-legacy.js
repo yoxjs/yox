@@ -1566,7 +1566,6 @@ var SYNTAX_COMMENT = /^!\s/;
 
 var SPECIAL_EVENT = '$event';
 var SPECIAL_KEYPATH = '$keypath';
-var SPECIAL_CHILDREN = '$children';
 
 var DIRECTIVE_CUSTOM_PREFIX = 'o-';
 var DIRECTIVE_EVENT_PREFIX = 'on-';
@@ -1575,10 +1574,6 @@ var DIRECTIVE_LAZY = 'lazy';
 var DIRECTIVE_MODEL = 'model';
 var DIRECTIVE_EVENT = 'event';
 var DIRECTIVE_BINDING = 'binding';
-
-var KEYWORD_REF = 'ref';
-var KEYWORD_SLOT = 'slot';
-var KEYWORD_UNIQUE = 'key';
 
 var HOOK_BEFORE_CREATE = 'beforeCreate';
 var HOOK_AFTER_CREATE = 'afterCreate';
@@ -3212,19 +3207,19 @@ var Each = function (_Node) {
 /**
  * 元素节点
  *
- * @param {string} name
+ * @param {string} tag
  * @param {?boolean} component 是否是组件
  */
 
 var Element = function (_Node) {
   inherits(Element, _Node);
 
-  function Element(name, component) {
+  function Element(tag, component) {
     classCallCheck(this, Element);
 
     var _this = possibleConstructorReturn(this, _Node.call(this, ELEMENT));
 
-    _this.name = name;
+    _this.tag = tag;
     if (component) {
       _this.component = component;
     }
@@ -3234,11 +3229,12 @@ var Element = function (_Node) {
   Element.prototype.stringify = function () {
 
     var me = this;
-    var name = me.name,
+    var tag = me.tag,
         divider = me.divider,
         component = me.component,
         props = me.props,
         slot = me.slot,
+        name = me.name,
         key = me.key,
         ref = me.ref;
 
@@ -3261,7 +3257,11 @@ var Element = function (_Node) {
     // 反过来
     // 这样序列化能省更多字符
 
-    if (slot) {
+    if (name) {
+      addArray(name, 'x');
+    }
+
+    if (slot || params[RAW_LENGTH]) {
       addArray(slot, 'x');
     }
 
@@ -3285,7 +3285,7 @@ var Element = function (_Node) {
       addArray(props, 'z');
     }
 
-    unshift(params, me.stringifyString(name));
+    unshift(params, me.stringifyString(tag));
     unshift(params, component ? 1 : 0);
 
     return this.stringifyCall('c', params);
@@ -3581,8 +3581,8 @@ function compile$$1(content) {
 
   var popSelfClosingElementIfNeeded = function (popingTagName) {
     var lastNode = last(nodeStack);
-    if (lastNode && lastNode.type === ELEMENT && lastNode.name !== popingTagName && has(selfClosingTagNames, lastNode.name)) {
-      popStack(ELEMENT, lastNode.name);
+    if (lastNode && lastNode.type === ELEMENT && lastNode.tag !== popingTagName && has(selfClosingTagNames, lastNode.tag)) {
+      popStack(ELEMENT, lastNode.tag);
     }
   };
 
@@ -3608,13 +3608,14 @@ function compile$$1(content) {
 
     if (target) {
       var _target = target,
+          tag = _target.tag,
           name = _target.name,
           divider = _target.divider,
           children = _target.children,
           component = _target.component;
 
-      if (type === ELEMENT && expectedTagName && name !== expectedTagName) {
-        throwError('end tag expected </' + name + '> to be </' + expectedTagName + '>.');
+      if (type === ELEMENT && expectedTagName && tag !== expectedTagName) {
+        throwError('end tag expected </' + tag + '> to be </' + expectedTagName + '>.');
       }
 
       // ==========================================
@@ -3643,7 +3644,7 @@ function compile$$1(content) {
               value: singleChild.text
             }];
             pop(children);
-          } else if (singleChild.type === EXPRESSION && !startsWith(singleChild.expr.raw, '$')) {
+          } else if (singleChild.type === EXPRESSION) {
             var props = [];
             if (singleChild.safe === FALSE) {
               push(props, {
@@ -3669,9 +3670,10 @@ function compile$$1(content) {
         if (type === ATTRIBUTE) {
           // <div key="xx">
           // <div ref="xx">
-          if (name === KEYWORD_UNIQUE || name === KEYWORD_SLOT || name === KEYWORD_REF) {
+          // <slot name="xx">
+          var element = last(htmlStack);
+          if (name === 'key' || name === 'ref' || name === 'slot' || element.tag === 'slot' && name === 'name') {
             // 把数据从属性中提出来，减少渲染时的遍历
-            var element = last(htmlStack);
             remove(element.children, target);
             if (!element.children[RAW_LENGTH]) {
               delete element.children;
@@ -4034,6 +4036,7 @@ function render(render, getter, setter, instance) {
   var keypath = CHAR_BLANK,
       keypaths = [],
       keypathStack = [keypath],
+      rootStack = [keypath],
       pushKeypath = function pushKeypath(newKeypath) {
     push(keypaths, newKeypath);
     newKeypath = stringify(keypaths);
@@ -4051,24 +4054,8 @@ function render(render, getter, setter, instance) {
       values,
       currentElement,
       elementStack = [],
-      pushElement = function pushElement(element) {
-    currentElement = element;
-    push(elementStack, element);
-  },
-      popElement = function popElement(lastElement) {
-    currentElement = lastElement;
-    pop(elementStack);
-  },
       currentComponent,
       componentStack = [],
-      pushComponent = function pushComponent(component) {
-    currentComponent = component;
-    push(componentStack, component);
-  },
-      popComponent = function popComponent(lastComponent) {
-    currentComponent = lastComponent;
-    pop(componentStack);
-  },
       addAttr = function addAttr(name, value, binding) {
     var attrs = currentElement.attrs || (currentElement.attrs = {});
     attrs[name] = value;
@@ -4109,6 +4096,7 @@ function render(render, getter, setter, instance) {
       push(children, currentElement.lastChild = createTextVnode(node));
     }
   },
+      slotPrefix = '$slot_',
       addSlot = function addSlot(name, slot) {
     var slots = currentComponent.slots || (currentComponent.slots = {});
     if (slots[name]) {
@@ -4129,7 +4117,7 @@ function render(render, getter, setter, instance) {
       if (has$1(node, 'value')) {
         value = node.value;
       } else if (node.expr) {
-        value = getter(node.expr, keypathStack, node.binding);
+        value = o(node.expr, node.binding);
       } else if (node.children) {
         value = getValue(node.children);
       } else {
@@ -4187,7 +4175,7 @@ function render(render, getter, setter, instance) {
         var _value = value,
             staticKeypath = _value.staticKeypath;
 
-        value = getter(value, keypathStack, staticKeypath);
+        value = o(value, staticKeypath);
         if (staticKeypath) {
           addDirective(DIRECTIVE_BINDING, name, staticKeypath).prop = TRUE;
         }
@@ -4199,19 +4187,30 @@ function render(render, getter, setter, instance) {
 
 
   // create
-  c = function c(component, tag, props, attrs, childs, ref, key, slot) {
+  c = function c(component, tag, props, attrs, childs, ref, key, slot, name) {
+
+    if (tag === 'slot') {
+      if (name) {
+        name = getValue(name);
+        if (name) {
+          return getter(slotPrefix + name, rootStack);
+        }
+      }
+      return;
+    }
 
     var lastElement = currentElement,
         lastComponent = currentComponent;
 
-    var element = {
+    currentElement = {
       component: component
     };
 
-    pushElement(element);
+    push(elementStack, currentElement);
 
     if (component) {
-      pushComponent(element);
+      currentComponent = currentElement;
+      push(componentStack, currentElement);
     }
 
     if (key) {
@@ -4236,21 +4235,23 @@ function render(render, getter, setter, instance) {
       childs();
       children = currentElement.children;
       if (component && children) {
-        addSlot(SPECIAL_CHILDREN, children);
+        addSlot(slotPrefix + 'children', children);
         children = UNDEFINED;
       }
     }
 
     var result = snabbdom[component ? 'createComponentVnode' : 'createElementVnode'](tag, currentElement.attrs, currentElement.props, currentElement.directives, children, currentElement.slots, ref, key, instance);
 
-    popElement(lastElement);
+    currentElement = lastElement;
+    pop(elementStack);
 
     if (component) {
-      popComponent(lastComponent);
+      currentComponent = lastComponent;
+      pop(componentStack);
     }
 
     if (slot && lastComponent) {
-      addSlot('$' + getValue(slot), result);
+      addSlot(slotPrefix + getValue(slot), result);
       return;
     }
 
@@ -4263,24 +4264,13 @@ function render(render, getter, setter, instance) {
   // each
   e = function e(expr, generate, index) {
 
-    var value = getter(expr, keypathStack),
+    var value = o(expr),
         each$$1;
 
     if (array(value)) {
-      if (value[RAW_LENGTH]) {
-        each$$1 = function each$$1(callback) {
-          each(value, function (_, i) {
-            callback(i);
-          });
-        };
-      }
+      each$$1 = each;
     } else if (object(value)) {
-      var keys$$1 = keys(value);
-      if (keys$$1[RAW_LENGTH]) {
-        each$$1 = function each$$1(callback) {
-          each(keys$$1, callback);
-        };
-      }
+      each$$1 = each$1;
     }
 
     if (each$$1) {
@@ -4292,14 +4282,14 @@ function render(render, getter, setter, instance) {
         pushKeypath(eachKeypath);
       }
 
-      each$$1(function (key) {
+      each$$1(value, function (item, key) {
 
         var lastKeypath = keypath,
             lastKeypathStack = keypathStack;
 
         pushKeypath(key);
 
-        setter(keypath, RAW_THIS, value[key]);
+        setter(keypath, RAW_THIS, item);
 
         if (index) {
           setter(keypath, index, key);
@@ -4317,8 +4307,8 @@ function render(render, getter, setter, instance) {
   },
 
   // output（e 被 each 占了..)
-  o = function o(expr) {
-    return getter(expr, keypathStack);
+  o = function o(expr, binding) {
+    return getter(expr.staticKeypath || expr, keypathStack, binding);
   },
 
   // spread
@@ -5728,14 +5718,16 @@ var selectControl = {
     var options = el.options,
         selectedIndex = el.selectedIndex;
 
-    var selectedOption = options[selectedIndex];
-    if (selectedOption && value !== selectedOption.value) {
-      each(options, function (option, index) {
-        if (option.value === value) {
-          el.selectedIndex = index;
-          return FALSE;
-        }
-      });
+    if (selectedIndex >= 0) {
+      var selectedOption = options[selectedIndex];
+      if (selectedOption && value !== selectedOption.value) {
+        each(options, function (option, index) {
+          if (option.value === value) {
+            el.selectedIndex = index;
+            return FALSE;
+          }
+        });
+      }
     }
   },
   sync: function sync(el, keypath, instance) {
@@ -5850,9 +5842,7 @@ var model = function (_ref) {
     var type = CHANGE;
     if (!control) {
       control = inputControl;
-      if (exists(el, 'autofocus')) {
-        type = INPUT;
-      }
+      type = INPUT;
     }
 
     if (!control.attr || !has$1(attrs, control.attr)) {
@@ -6018,10 +6008,8 @@ var Yox = function () {
       }
       // 如果是根组件，必须有一个根元素
       // 如果是子组件，可以是 $children
-      if (!tag.test(template)) {
-        if (!parent || trim(template) !== SPECIAL_CHILDREN) {
-          error$1(templateError);
-        }
+      if (!tag.test(template) && !parent) {
+        error$1(templateError);
       }
     } else {
       template = NULL;
@@ -6382,8 +6370,8 @@ var Yox = function () {
         if (binding$$1) {
           Observer.computed = NULL;
         }
-        if (expr.staticKeypath) {
-          value = getValue(expr.staticKeypath, keypathStack);
+        if (string(expr)) {
+          value = getValue(expr, keypathStack);
         } else {
           value = execute$1(expr, function (key) {
             return getValue(key, keypathStack);

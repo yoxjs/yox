@@ -34,17 +34,19 @@ const selectControl = {
   set(el, keypath, instance) {
     let value = toString(instance.get(keypath))
     let { options, selectedIndex } = el
-    let selectedOption = options[ selectedIndex ]
-    if (selectedOption && value !== selectedOption.value) {
-      array.each(
-        options,
-        function (option, index) {
-          if (option.value === value) {
-            el.selectedIndex = index
-            return env.FALSE
+    if (selectedIndex >= 0) {
+      let selectedOption = options[ selectedIndex ]
+      if (selectedOption && value !== selectedOption.value) {
+        array.each(
+          options,
+          function (option, index) {
+            if (option.value === value) {
+              el.selectedIndex = index
+              return env.FALSE
+            }
           }
-        }
-      )
+        )
+      }
     }
   },
   sync(el, keypath, instance) {
@@ -161,9 +163,7 @@ export default function ({ el, node, instance, directives, attrs, component }) {
     let type = event.CHANGE
     if (!control) {
       control = inputControl
-      if (object.exists(el, 'autofocus')) {
-        type = event.INPUT
-      }
+      type = event.INPUT
     }
 
     if (!control.attr || !object.has(attrs, control.attr)) {

@@ -48,6 +48,9 @@
                 <div>
 <Button type="info">
                           {{submiting ? 'Submiting1' : 'Submit1'}}
+                          <div slot="haha">
+                              haha
+                          </div>
                       </Button>
                   <Button type="primary">
                       <Button type="info">
@@ -84,12 +87,12 @@
                           {{#if icon}}
                               <i class="bell-icon {{icon}}"></i>
                           {{/if}}
-
+                          <slot name="haha" />
                           <span>
                               {{#if label}}
                                   {{label}}
                               {{else}}
-                                  {{$children}}
+                                  <slot name="children" />
                               {{/if}}
                           </span>
                       </div>
