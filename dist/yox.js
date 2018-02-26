@@ -4717,7 +4717,7 @@ var Observer = function () {
           } else {
             push(fuzzyKeypaths, listenKey);
           }
-        } else if (startsWith(listenKey, keypath)) {
+        } else if (startsWith$1(listenKey, keypath)) {
           var listenNewValue = getNewValue(listenKey),
               listenOldValue = instance.get(listenKey);
           if (listenNewValue !== listenOldValue) {
@@ -5921,7 +5921,9 @@ var Yox = function () {
         instance.$renderCount++;
         return instance.render();
       });
-      if (!watchers) {
+      if (watchers) {
+        watchers = copy(watchers);
+      } else {
         watchers = {};
       }
       watchers[TEMPLATE_COMPUTED] = function (newNode) {

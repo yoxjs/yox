@@ -206,7 +206,10 @@ export default class Yox {
           return instance.render()
         }
       )
-      if (!watchers) {
+      if (watchers) {
+        watchers = object.copy(watchers)
+      }
+      else {
         watchers = { }
       }
       watchers[ TEMPLATE_COMPUTED ] = function (newNode) {

@@ -18,7 +18,7 @@
     "yox-common": "^0.14.0",
     "yox-config": "0.0.4",
     "yox-expression-compiler": "^0.13.5",
-    "yox-observer": "^0.15.2",
+    "yox-observer": "^0.15.5",
     "yox-snabbdom": "^0.14.7",
     "yox-template-compiler": "^0.21.7"
   },
