@@ -3250,45 +3250,48 @@ var Element = function (_Node) {
     }
 
     var addArray = function (arr, name) {
-      arr = me.stringifyArray(arr, name);
+      arr = me.stringifyArray(arr, name || 'x');
       unshift(params, arr ? me.stringifyFunction(arr) : RAW_UNDEFINED);
     };
 
-    // 反过来
-    // 这样序列化能省更多字符
+    if (tag === 'template') {
+      if (slot && children[RAW_LENGTH]) {
+        addArray(children);
+        addArray(slot);
+        return this.stringifyCall('a', params);
+      }
+    } else if (tag === 'slot') {
+      if (name) {
+        addArray(name);
+        return this.stringifyCall('b', params);
+      }
+    } else {
 
-    if (name) {
-      addArray(name, 'x');
+      if (key) {
+        addArray(key);
+      }
+
+      if (ref || params[RAW_LENGTH]) {
+        addArray(ref);
+      }
+
+      if (children[RAW_LENGTH] || params[RAW_LENGTH]) {
+        addArray(children);
+      }
+
+      if (attrs[RAW_LENGTH] || params[RAW_LENGTH]) {
+        addArray(attrs, 'y');
+      }
+
+      if (props && props[RAW_LENGTH] || params[RAW_LENGTH]) {
+        addArray(props, 'z');
+      }
+
+      unshift(params, me.stringifyString(tag));
+      unshift(params, component ? 1 : 0);
+
+      return this.stringifyCall('c', params);
     }
-
-    if (slot || params[RAW_LENGTH]) {
-      addArray(slot, 'x');
-    }
-
-    if (key || params[RAW_LENGTH]) {
-      addArray(key, 'x');
-    }
-
-    if (ref || params[RAW_LENGTH]) {
-      addArray(ref, 'x');
-    }
-
-    if (children[RAW_LENGTH] || params[RAW_LENGTH]) {
-      addArray(children, 'x');
-    }
-
-    if (attrs[RAW_LENGTH] || params[RAW_LENGTH]) {
-      addArray(attrs, 'y');
-    }
-
-    if (props && props[RAW_LENGTH] || params[RAW_LENGTH]) {
-      addArray(props, 'z');
-    }
-
-    unshift(params, me.stringifyString(tag));
-    unshift(params, component ? 1 : 0);
-
-    return this.stringifyCall('c', params);
   };
 
   return Element;
@@ -4010,9 +4013,11 @@ function compile$$1(content) {
  */
 function convert(ast) {
   return ast.map(function (item) {
-    return new Function('c', 'e', 'i', 'm', 'o', 'p', 's', 'x', 'y', 'z', 'return ' + item.stringify());
+    return new Function('a', 'b', 'c', 'e', 'i', 'm', 'o', 'p', 's', 'x', 'y', 'z', 'return ' + item.stringify());
   });
 }
+
+var SLOT_PREFIX = '$slot_';
 
 /**
  * 渲染抽象语法树
@@ -4058,8 +4063,24 @@ function render(render, getter, setter, instance) {
       values,
       currentElement,
       elementStack = [],
+      pushElement = function pushElement(element) {
+    currentElement = element;
+    push(elementStack, element);
+  },
+      popElement = function popElement(lastElement) {
+    currentElement = lastElement;
+    pop(elementStack);
+  },
       currentComponent,
       componentStack = [],
+      pushComponent = function pushComponent(component) {
+    currentComponent = component;
+    push(componentStack, component);
+  },
+      popComponent = function popComponent(lastComponent) {
+    currentComponent = lastComponent;
+    pop(componentStack);
+  },
       addAttr = function addAttr(name, value, binding) {
     var attrs = currentElement.attrs || (currentElement.attrs = {});
     attrs[name] = value;
@@ -4100,7 +4121,6 @@ function render(render, getter, setter, instance) {
       push(children, currentElement.lastChild = createTextVnode(node));
     }
   },
-      slotPrefix = '$slot_',
       addSlot = function addSlot(name, slot) {
     var slots = currentComponent.slots || (currentComponent.slots = {});
     if (slots[name]) {
@@ -4194,31 +4214,46 @@ function render(render, getter, setter, instance) {
   },
 
 
-  // create
-  c = function c(component, tag, props, attrs, childs, ref, key, slot, name) {
+  // template
+  a = function a(name, childs) {
 
-    if (tag === 'slot') {
-      if (name) {
-        name = getValue(name);
-        if (name) {
-          return getter(slotPrefix + name, rootStack);
-        }
-      }
-      return;
+    if (currentComponent && (name = getValue(name))) {
+
+      var lastElement = currentElement;
+
+      pushElement({
+        opened: TRUE
+      });
+
+      childs();
+
+      addSlot(SLOT_PREFIX + name, currentElement.children);
+
+      popElement(lastElement);
     }
+  },
+
+  // slot
+  b = function b(name) {
+    name = getValue(name);
+    if (name) {
+      return getter(SLOT_PREFIX + name, rootStack);
+    }
+  },
+
+
+  // create
+  c = function c(component, tag, props, attrs, childs, ref, key) {
 
     var lastElement = currentElement,
         lastComponent = currentComponent;
 
-    currentElement = {
+    pushElement({
       component: component
-    };
-
-    push(elementStack, currentElement);
+    });
 
     if (component) {
-      currentComponent = currentElement;
-      push(componentStack, currentElement);
+      pushComponent(currentElement);
     }
 
     if (key) {
@@ -4243,24 +4278,17 @@ function render(render, getter, setter, instance) {
       childs();
       children = currentElement.children;
       if (component && children) {
-        addSlot(slotPrefix + 'children', children);
+        addSlot(SLOT_PREFIX + 'children', children);
         children = UNDEFINED;
       }
     }
 
     var result = snabbdom[component ? 'createComponentVnode' : 'createElementVnode'](tag, currentElement.attrs, currentElement.props, currentElement.directives, children, currentElement.slots, ref, key, instance);
 
-    currentElement = lastElement;
-    pop(elementStack);
+    popElement(lastElement);
 
     if (component) {
-      currentComponent = lastComponent;
-      pop(componentStack);
-    }
-
-    if (slot && lastComponent) {
-      addSlot(slotPrefix + getValue(slot), children);
-      return;
+      popComponent(lastComponent);
     }
 
     return result;
@@ -4348,7 +4376,7 @@ function render(render, getter, setter, instance) {
     fatal('"' + name + '" partial is not found.');
   },
       executeRender = function executeRender(render) {
-    return render(c, e, i, m, o, p, s, x, y, z);
+    return render(a, b, c, e, i, m, o, p, s, x, y, z);
   };
 
   return executeRender(render);
