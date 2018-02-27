@@ -119,7 +119,7 @@ api.off = function (element, type, listener) {
     },
     env.TRUE
   )
-  if (!types.length) {
+  if (!types[ env.RAW_LENGTH ]) {
     api.removeProp(element, EMITTER_KEY)
   }
 }

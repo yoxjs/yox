@@ -4221,9 +4221,11 @@ function render(render, getter, setter, instance) {
       currentElement.opened = TRUE;
       childs();
       children = currentElement.children;
-      if (component && children) {
-        addSlot(SLOT_PREFIX + 'children', children);
-        children = UNDEFINED;
+      if (component) {
+        addSlot(slotPrefix + 'children', children || []);
+        if (children) {
+          children = UNDEFINED;
+        }
       }
     }
 
@@ -5939,7 +5941,7 @@ var Yox = function () {
 
       // 确保组件根元素有且只有一个
       template = Yox.compile(template);
-      if (template.length > 1) {
+      if (template[RAW_LENGTH] > 1) {
         fatal(templateError);
       }
       instance.$template = template[0];
@@ -6163,7 +6165,7 @@ var Yox = function () {
     var instance = this,
         value;
 
-    var index = stack.length - 1;
+    var index = stack[RAW_LENGTH] - 1;
     var lookup = index > 0 && startsWith$1(key, RAW_THIS) === FALSE;
 
     var getKeypath = function (index) {
@@ -6371,7 +6373,7 @@ var Yox = function () {
         return function (event) {
           var isEvent = Event.is(event),
               result;
-          if (args && args.length) {
+          if (args && args[RAW_LENGTH]) {
             if (isEvent) {
               instance.$setter(keypath, SPECIAL_EVENT, event);
             }
@@ -6636,7 +6638,7 @@ each([COMPONENT, 'directive', 'partial', 'filter'], function (type) {
         prop = '$' + type + 's',
         data = instance[prop];
     if (string(name)) {
-      var length = arguments.length,
+      var length = arguments[RAW_LENGTH],
           hasValue = data && has$1(data, name);
       if (length === 1) {
         return hasValue ? data[name] : Yox[type](name);
@@ -6649,7 +6651,7 @@ each([COMPONENT, 'directive', 'partial', 'filter'], function (type) {
   Yox[type] = function (name, value) {
     var data = registry[type];
     if (string(name)) {
-      var length = arguments.length,
+      var length = arguments[RAW_LENGTH],
           hasValue = data && has$1(data, name);
       if (length === 1) {
         return hasValue ? data[name] : UNDEFINED;

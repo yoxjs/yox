@@ -193,7 +193,7 @@ export default class Yox {
 
       // 确保组件根元素有且只有一个
       template = Yox.compile(template)
-      if (template.length > 1) {
+      if (template[ env.RAW_LENGTH ] > 1) {
         logger.fatal(templateError)
       }
       instance.$template = template[ 0 ]
@@ -406,7 +406,7 @@ export default class Yox {
 
     let instance = this, value
 
-    let index = stack.length - 1
+    let index = stack[ env.RAW_LENGTH ] - 1
     let lookup = index > 0 && keypathUtil.startsWith(key, env.RAW_THIS) === env.FALSE
 
     let getKeypath = function (index) {
@@ -620,7 +620,7 @@ console.time('render')
         }
         return function (event) {
           let isEvent = Event.is(event), result
-          if (args && args.length) {
+          if (args && args[ env.RAW_LENGTH ]) {
             if (isEvent) {
               instance.$setter(keypath, config.SPECIAL_EVENT, event)
             }
@@ -881,7 +881,7 @@ array.each(
     prototype[ type ] = function (name, value) {
       let instance = this, prop = `$${type}s`, data = instance[ prop ]
       if (is.string(name)) {
-        let length = arguments.length, hasValue = data && object.has(data, name)
+        let length = arguments[ env.RAW_LENGTH ], hasValue = data && object.has(data, name)
         if (length === 1) {
           return hasValue
             ? data[ name ]
@@ -902,7 +902,7 @@ array.each(
     Yox[ type ] = function (name, value) {
       let data = registry[ type ]
       if (is.string(name)) {
-        let length = arguments.length, hasValue = data && object.has(data, name)
+        let length = arguments[ env.RAW_LENGTH ], hasValue = data && object.has(data, name)
         if (length === 1) {
           return hasValue
             ? data[ name ]
