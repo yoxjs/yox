@@ -4222,7 +4222,7 @@ function render(render, getter, setter, instance) {
       childs();
       children = currentElement.children;
       if (component) {
-        addSlot(slotPrefix + 'children', children || []);
+        addSlot(SLOT_PREFIX + 'children', children || []);
         if (children) {
           children = UNDEFINED;
         }
@@ -5484,7 +5484,7 @@ api.off = function (element, type, listener) {
       types.splice(index, 1);
     }
   }, TRUE);
-  if (!types.length) {
+  if (!types[RAW_LENGTH]) {
     api.removeProp(element, EMITTER_KEY);
   }
 };
