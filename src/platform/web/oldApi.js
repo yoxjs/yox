@@ -170,7 +170,7 @@ export function find(selector, context) {
 
 export function setProp(element, name, value) {
   try {
-    if (name === 'textContent' && !object.exists(element, name)) {
+    if (name === 'textContent' && !object.has(element, name)) {
       name = 'innerText'
     }
     object.set(element, name, value)
@@ -178,7 +178,7 @@ export function setProp(element, name, value) {
   catch (e) {
     if (element.tagName === 'STYLE' && (name === 'innerHTML' || name === 'innerText')) {
       element.setAttribute('type', 'text/css')
-      element.styleSheet.cssText = value;
+      element.styleSheet.cssText = value
     }
   }
 }
