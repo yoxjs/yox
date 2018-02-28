@@ -108,7 +108,7 @@ function noop() {
   /** yox */
 }
 
-var isDef$1 = function (target) {
+var isDef = function (target) {
   return target !== UNDEFINED;
 };
 
@@ -881,7 +881,7 @@ var Emitter = function () {
           return;
         }
 
-        var result = execute(item.func, isDef$1(context) ? context : item.context, data);
+        var result = execute(item.func, isDef(context) ? context : item.context, data);
 
         // 执行次数
         if (item.count > 0) {
@@ -1553,7 +1553,7 @@ function createKeyToIndex(vnodes, startIndex, endIndex) {
       key;
   while (startIndex <= endIndex) {
     key = vnodes[startIndex].key;
-    if (isDef$1(key)) {
+    if (isDef(key)) {
       result[key] = startIndex;
     }
     startIndex++;
@@ -4026,7 +4026,7 @@ function render(render, getter, setter, instance) {
     }
   },
       attrHandler = function attrHandler(node) {
-    if (isDef$1(node)) {
+    if (isDef(node)) {
       if (func(node)) {
         node();
       } else if (node.type === ATTRIBUTE) {
@@ -4047,7 +4047,7 @@ function render(render, getter, setter, instance) {
     }
   },
       childHandler = function childHandler(node) {
-    if (isDef$1(node)) {
+    if (isDef(node)) {
       if (func(node)) {
         node();
       } else if (values) {
@@ -4486,7 +4486,7 @@ var Computed = function () {
   Computed.prototype.isDirty = function () {
     var changes = this.changes,
         result;
-    if (isDef$1(changes)) {
+    if (isDef(changes)) {
       if (changes) {
         each$1(changes, function (item, keypath) {
           if (item.newValue !== item.oldValue) {
@@ -5533,10 +5533,10 @@ var selectControl = {
     if (selectedIndex >= 0) {
       var selectedOption = options[selectedIndex];
       if (selectedOption) {
-        var newValue = isDef$1(selectedOption.value) ? selectedOption.value : selectedOption.text;
+        var newValue = isDef(selectedOption.value) ? selectedOption.value : selectedOption.text;
         if (value !== newValue) {
           each(options, function (option, index) {
-            var optionValue = isDef$1(option.value) ? option.value : option.text;
+            var optionValue = isDef(option.value) ? option.value : option.text;
             if (optionValue === newValue) {
               el.selectedIndex = index;
               return FALSE;
@@ -5548,7 +5548,7 @@ var selectControl = {
   },
   sync: function sync(el, keypath, instance) {
     var selectedOption = el.options[el.selectedIndex];
-    instance.set(keypath, isDef$1(selectedOption.value) ? selectedOption.value : selectedOption.text);
+    instance.set(keypath, isDef(selectedOption.value) ? selectedOption.value : selectedOption.text);
   }
 };
 
@@ -6636,7 +6636,7 @@ Yox.validate = function (props, propTypes) {
 
     required = required === TRUE || func(required) && required(props);
 
-    if (isDef$1(props[key])) {
+    if (isDef(props[key])) {
       // 如果不写 type 或 type 不是 字符串 或 数组
       // 就当做此规则无效，和没写一样
       if (type) {
