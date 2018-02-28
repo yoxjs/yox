@@ -4522,35 +4522,33 @@ var Computed = function () {
     classCallCheck(this, Computed);
 
 
-    this.id = ++guid;
-    this.keypath = keypath;
-    this.observer = observer;
-    this.deps = [];
-  }
-
-  Computed.prototype.update = function (newValue, oldValue, key, changes) {
-
     var instance = this;
-    var observer = instance.observer,
-        keypath = instance.keypath,
-        value = instance.value;
+
+    instance.id = ++guid;
+    instance.keypath = keypath;
+    instance.observer = observer;
+    instance.deps = [];
+
+    instance.update = function (newValue, oldValue, key, changes) {
+      var value = instance.value;
 
 
-    instance.changes = updateValue(instance.changes, newValue, oldValue, key);
+      instance.changes = updateValue(instance.changes, newValue, oldValue, key);
 
-    observer.onChange(newValue, oldValue, key, instance, value);
+      observer.onChange(newValue, oldValue, key, instance, value);
 
-    // 当前计算属性是否是其他计算属性的依赖
-    each$1(observer.computed, function (computed, key) {
-      if (computed.hasDep(keypath)) {
-        var _newValue = instance.get();
-        if (_newValue !== value) {
-          changes.push(keypath, _newValue, value, keypath);
-          return FALSE;
+      // 当前计算属性是否是其他计算属性的依赖
+      each$1(observer.computed, function (computed, key) {
+        if (computed.hasDep(keypath)) {
+          var _newValue = instance.get();
+          if (_newValue !== value) {
+            changes.push(keypath, _newValue, value, keypath);
+            return FALSE;
+          }
         }
-      }
-    });
-  };
+      });
+    };
+  }
 
   Computed.prototype.get = function (force) {
     var value = this.value,
