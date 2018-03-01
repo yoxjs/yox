@@ -46,22 +46,18 @@
             },
             template: `
                 <div>
-<Button type="info">
-                          {{submiting ? 'Submiting1' : 'Submit1'}}
-                          <template slot="haha1">
-                              haha1
+                      <Button type="info" status="1">
+                          <template slot="haha">
+                              <div>11</div>
                           </template>
-                          <template slot="haha2">
-                              <strong>
-                                  haha2
-                              </strong>
+                          <template slot="haha">
+                              <div>22</div>
+                          </template>
+                          <template slot="haha">
+                              <div>33</div>
                           </template>
                       </Button>
-                  <Button type="primary">
-                      <Button type="info">
-                          {{submiting ? 'Submiting1' : 'Submit1'}}
-                      </Button>
-                  </Button>
+
                 </div>
             `,
             components: {
@@ -70,6 +66,10 @@
                       disabled: {
                         type: 'boolean',
                         value: false,
+                      },
+                      status: {
+                        type: 'numeric',
+                        value: 100
                       },
                       type: {
                         type: 'string',
@@ -80,28 +80,7 @@
                       }
                     },
                   template: `
-                      <div class="bell-button
-                          {{#if type}} bell-{{type}}{{/if}}
-                          {{#if shape}} bell-{{shape}}{{/if}}
-                          {{#if size}} bell-{{size}}{{/if}}
-                          {{#if long}} bell-long{{/if}}
-                          {{#if disabled}} bell-disabled{{/if}}
-                          {{#if className}} {{className}}{{/if}}
-                      " on-click="click">
-
-                          {{#if icon}}
-                              <i class="bell-icon {{icon}}"></i>
-                          {{/if}}
-                          <slot name="haha1" />
-                          <slot name="haha2" />
-                          <span>
-                              {{#if label}}
-                                  {{label}}
-                              {{else}}
-                                  <slot name="children" />
-                              {{/if}}
-                          </span>
-                      </div>
+                      <div><slot name="haha" /></div>
                     `,
                     methods: {
                       click: function () {

@@ -4016,11 +4016,7 @@ function render(render, getter, setter, instance) {
       addSlot = function addSlot(name, slot) {
     var slots = currentComponent.slots || (currentComponent.slots = {});
     if (slots[name]) {
-      if (array(slots[name])) {
-        push(slots[name], slot);
-      } else {
-        slots[name] = [slots[name], slot];
-      }
+      push(slots[name], slot);
     } else {
       slots[name] = slot;
     }
@@ -4129,7 +4125,8 @@ function render(render, getter, setter, instance) {
   b = function b(name) {
     name = getValue(name);
     if (name) {
-      return getter(SLOT_PREFIX + name, rootStack);
+      var result = getter(SLOT_PREFIX + name, rootStack);
+      return array(result) && result.length === 1 ? result[0] : result;
     }
   },
 
