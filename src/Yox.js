@@ -404,10 +404,17 @@ export default class Yox {
    */
   lookup(key, stack, localVars, defaultVars) {
 
-    let instance = this, value
+    let instance = this, index = stack[ env.RAW_LENGTH ] - 1, lookup, value
 
-    let index = stack[ env.RAW_LENGTH ] - 1
-    let lookup = index > 0 && keypathUtil.startsWith(key, env.RAW_THIS) === env.FALSE
+    if (index > 0) {
+      let length = keypathUtil.startsWith(key, env.RAW_THIS)
+      if (length === env.FALSE) {
+        lookup = env.TRUE
+      }
+      else {
+        key = string.slice(key, length)
+      }
+    }
 
     let getKeypath = function (index) {
       let keypath = keypathUtil.join(stack[ index ], key)

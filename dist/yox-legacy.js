@@ -6268,10 +6268,18 @@ var Yox = function () {
   Yox.prototype.lookup = function (key, stack, localVars, defaultVars) {
 
     var instance = this,
+        index = stack[RAW_LENGTH] - 1,
+        lookup,
         value;
 
-    var index = stack[RAW_LENGTH] - 1;
-    var lookup = index > 0 && startsWith$1(key, RAW_THIS) === FALSE;
+    if (index > 0) {
+      var length = startsWith$1(key, RAW_THIS);
+      if (length === FALSE) {
+        lookup = TRUE;
+      } else {
+        key = slice(key, length);
+      }
+    }
 
     var getKeypath = function (index) {
       var keypath = join$1(stack[index], key);
