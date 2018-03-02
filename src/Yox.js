@@ -394,62 +394,6 @@ export default class Yox {
   }
 
   /**
-   * 向上查找数据
-   *
-   * @param {string} key
-   * @param {Array.<string>} stack
-   * @param {?Object} localVars
-   * @param {?Object} defaultVars
-   * @return {?*}
-   */
-  lookup(key, stack, localVars, defaultVars) {
-
-    let instance = this, index = stack[ env.RAW_LENGTH ] - 1, lookup, value
-
-    if (index > 0) {
-      let length = keypathUtil.startsWith(key, env.RAW_THIS)
-      if (length === env.FALSE) {
-        lookup = env.TRUE
-      }
-      else {
-        key = string.slice(key, length)
-      }
-    }
-
-    let getKeypath = function (index) {
-      let keypath = keypathUtil.join(stack[ index ], key)
-      if (localVars && object.has(localVars, keypath)) {
-        value = localVars[ keypath ]
-        return keypath
-      }
-      value = instance.get(keypath, getKeypath)
-      if (value === getKeypath) {
-        if (lookup && index > 0) {
-          return getKeypath(index - 1)
-        }
-      }
-      else {
-        return keypath
-      }
-    }
-
-    let keypath = getKeypath(index)
-
-    if (localVars) {
-      if (keypath != env.NULL) {
-        return value
-      }
-      if (defaultVars) {
-        return defaultVars[ key ]
-      }
-    }
-    else {
-      return keypath
-    }
-
-  }
-
-  /**
    * 对于某些特殊场景，修改了数据，但是模板的依赖中并没有这一项
    * 而你非常确定需要更新模板，强制刷新正是你需要的
    */
@@ -486,10 +430,49 @@ console.time('render')
 
       let filters = object.extend({ }, registry.filter, instance.$filters)
 
-      let getValue = function (key, keypathStack) {
-        return key === config.SPECIAL_KEYPATH
-          ? array.last(keypathStack)
-          : instance.lookup(key, keypathStack, instance.$vars, filters)
+      let getValue = function (key, expr, keypathStack) {
+        console.log(key)
+        if (keypathStack) {
+
+          if (key === config.SPECIAL_KEYPATH) {
+            return array.last(keypathStack)
+          }
+
+          let value,
+          localVars = instance.$vars,
+          lookup = expr.lookup !== env.FALSE,
+          index = keypathStack[ env.RAW_LENGTH ] - 1,
+          getKeypath = function () {
+            let keypath = keypathUtil.join(keypathStack[ index ], key)
+            if (localVars && object.has(localVars, keypath)) {
+              value = localVars[ keypath ]
+              return keypath
+            }
+            value = instance.get(keypath, getKeypath)
+            if (value === getKeypath) {
+              if (lookup && index > 0) {
+                index--
+                return getKeypath()
+              }
+            }
+            else {
+              return keypath
+            }
+          },
+          keypath = getKeypath()
+
+          if (isDef(keypath)) {
+            expr.actualKeypath = keypath
+            return value
+          }
+          if (filters) {
+            return filters[ key ]
+          }
+
+        }
+        else {
+          return instance.get(key)
+        }
       }
 
       $getter =
@@ -499,13 +482,13 @@ console.time('render')
           Observer.computed = env.NULL
         }
         if (is.string(expr)) {
-          value = getValue(expr, keypathStack)
+          value = getValue(expr)
         }
         else {
           value = expressionCompiler.execute(
             expr,
-            function (key) {
-              return getValue(key, keypathStack)
+            function (key, node) {
+              return getValue(key, node, keypathStack)
             },
             instance
           )

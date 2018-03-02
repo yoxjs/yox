@@ -1,31 +1,23 @@
 
-import * as is from 'yox-common/util/is'
 import * as env from 'yox-common/util/env'
-import * as array from 'yox-common/util/array'
 import * as nextTask from 'yox-common/util/nextTask'
-import * as keypathUtil from 'yox-common/util/keypath'
 
 import api from '../platform/web/api'
 
 export default function ({ el, node, instance, component }) {
 
-  let keypath = instance.lookup(node.value, node.keypathStack)
+  let keypath = node.value
 
   // 比如写了个 <div>{{name}}</div>
   // 删了数据却忘了删模板，无视之
   if (keypath) {
     let set = function (value) {
       let name = node.modifier
-      if (node.prop) {
-        api.setProp(el, name, value)
+      if (component) {
+        component.set(name, value)
       }
       else {
-        if (component) {
-          component.set(name, value)
-        }
-        else {
-          api.setAttr(el, name, value)
-        }
+        api[ node.prop ? 'setProp' : 'setAttr' ](el, name, value)
       }
     }
 

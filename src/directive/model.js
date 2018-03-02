@@ -125,85 +125,79 @@ const specialControls = {
 
 export default function ({ el, node, instance, directives, attrs, component }) {
 
-  let { value, keypathStack } = node
-  if (string.falsy(value)) {
-    return
-  }
+  let keypath = node.value
+  if (keypath) {
 
-  let keypath = instance.lookup(value, keypathStack)
-  if (!keypath) {
-    logger.warn(`"${value}" is not defined on the instance but using for model.`)
-    keypath = value
-  }
-
-  let set = function () {
-    if (control) {
-      control.set(target, keypath, instance)
-    }
-  }
-  let sync = function () {
-    control.sync(target, keypath, instance)
-  }
-
-  let target, control, unbindTarget, unbindInstance
-  if (component) {
-
-    target = component
-    control = componentControl
-
-    let field = component.$model = component.$options.model || VALUE
-
-    if (!object.has(attrs, field)) {
-      set()
-    }
-    component.watch(field, sync)
-    unbindTarget = function () {
-      component.unwatch(field, sync)
-      delete component.$model
-    }
-
-  }
-  else {
-
-    target = el
-    control = specialControls[ el.type ] || specialControls[ api.tag(el) ]
-
-    let type = event.CHANGE
-    if (!control) {
-      control = inputControl
-      type = event.INPUT
-    }
-
-    if (!control.attr || !object.has(attrs, control.attr)) {
-      set()
-    }
-
-    unbindTarget = bindEvent({
-      el,
-      node,
-      instance,
-      directives,
-      type,
-      listener: sync,
-    })
-
-  }
-
-  nextTask.prepend(
-    function () {
-      if (set) {
-        instance.watch(keypath, set)
-        unbindInstance = function () {
-          instance.unwatch(keypath, set)
-        }
+    let set = function () {
+      if (control) {
+        control.set(target, keypath, instance)
       }
     }
-  )
+    let sync = function () {
+      control.sync(target, keypath, instance)
+    }
 
-  return function () {
-    unbindTarget && unbindTarget()
-    unbindInstance && unbindInstance()
-    set = env.NULL
+    let target, control, unbindTarget, unbindInstance
+    if (component) {
+
+      target = component
+      control = componentControl
+
+      let field = component.$model = component.$options.model || VALUE
+
+      if (!object.has(attrs, field)) {
+        set()
+      }
+      component.watch(field, sync)
+      unbindTarget = function () {
+        component.unwatch(field, sync)
+        delete component.$model
+      }
+
+    }
+    else {
+
+      target = el
+      control = specialControls[ el.type ] || specialControls[ api.tag(el) ]
+
+      let type = event.CHANGE
+      if (!control) {
+        control = inputControl
+        type = event.INPUT
+      }
+
+      if (!control.attr || !object.has(attrs, control.attr)) {
+        set()
+      }
+
+      unbindTarget = bindEvent({
+        el,
+        node,
+        instance,
+        directives,
+        type,
+        listener: sync,
+      })
+
+    }
+
+    nextTask.prepend(
+      function () {
+        if (set) {
+          instance.watch(keypath, set)
+          unbindInstance = function () {
+            instance.unwatch(keypath, set)
+          }
+        }
+      }
+    )
+
+    return function () {
+      unbindTarget && unbindTarget()
+      unbindInstance && unbindInstance()
+      set = env.NULL
+    }
+
   }
 
 }

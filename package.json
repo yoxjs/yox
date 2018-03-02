@@ -15,12 +15,12 @@
     "rollup-plugin-commonjs": "^6.0.1",
     "rollup-plugin-node-resolve": "^2.0.0",
     "uglify-js": "^3.0.9",
-    "yox-common": "^0.14.3",
+    "yox-common": "^0.14.4",
     "yox-config": "0.0.4",
-    "yox-expression-compiler": "^0.13.6",
-    "yox-observer": "^0.15.7",
+    "yox-expression-compiler": "^0.14.2",
+    "yox-observer": "^0.15.8",
     "yox-snabbdom": "^0.15.0",
-    "yox-template-compiler": "^0.22.5"
+    "yox-template-compiler": "^0.22.7"
   },
   "scripts": {
     "source": "rollup -c",
