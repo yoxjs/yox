@@ -909,7 +909,11 @@ var Emitter = function () {
         }
       });
 
-      if (!list[RAW_LENGTH]) {
+      // 这里可能出现 listeners[ name ] !== list 的情况
+      // 比如在 fire 过程中，先 off 了，导致 delete listeners[ name ]
+      // 然后又 on 一次，因此新创建了一个数组
+      list = listeners[name];
+      if (list && !list[RAW_LENGTH]) {
         delete listeners[name];
       }
     }
