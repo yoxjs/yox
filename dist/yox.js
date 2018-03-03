@@ -3517,7 +3517,7 @@ function compile$$1(content) {
     if (target) {
       var _target = target,
           tag = _target.tag,
-          _name = _target.name,
+          name = _target.name,
           divider = _target.divider,
           children = _target.children,
           component = _target.component;
@@ -3582,14 +3582,14 @@ function compile$$1(content) {
           // <div ref="xx">
           // <slot name="xx">
           var element = last(htmlStack);
-          if (_name === 'key' || _name === 'ref' || element.tag === 'template' && _name === 'slot' || element.tag === 'slot' && _name === 'name') {
+          if (name === 'key' || name === 'ref' || element.tag === 'template' && name === 'slot' || element.tag === 'slot' && name === 'name') {
             // 把数据从属性中提出来，减少渲染时的遍历
             remove(element.children, target);
             if (!element.children[RAW_LENGTH]) {
               delete element.children;
             }
             if (children[RAW_LENGTH]) {
-              element[_name] = children;
+              element[name] = children;
             }
             return;
           }
@@ -3731,17 +3731,17 @@ function compile$$1(content) {
     if (htmlStack[RAW_LENGTH] === 1) {
       var _match2 = content.match(attributePattern);
       if (_match2) {
-        var _name2 = _match2[1];
-        if (builtInDirectives[_name2]) {
-          addChild(new Directive(camelCase(_name2)));
-        } else if (startsWith(_name2, DIRECTIVE_EVENT_PREFIX)) {
-          _name2 = slice(_name2, DIRECTIVE_EVENT_PREFIX[RAW_LENGTH]);
-          addChild(new Directive(DIRECTIVE_EVENT, camelCase(_name2)));
-        } else if (startsWith(_name2, DIRECTIVE_CUSTOM_PREFIX)) {
-          _name2 = slice(_name2, DIRECTIVE_CUSTOM_PREFIX[RAW_LENGTH]);
-          addChild(new Directive(camelCase(_name2)));
+        var name = _match2[1];
+        if (builtInDirectives[name]) {
+          addChild(new Directive(camelCase(name)));
+        } else if (startsWith(name, DIRECTIVE_EVENT_PREFIX)) {
+          name = slice(name, DIRECTIVE_EVENT_PREFIX[RAW_LENGTH]);
+          addChild(new Directive(DIRECTIVE_EVENT, camelCase(name)));
+        } else if (startsWith(name, DIRECTIVE_CUSTOM_PREFIX)) {
+          name = slice(name, DIRECTIVE_CUSTOM_PREFIX[RAW_LENGTH]);
+          addChild(new Directive(camelCase(name)));
         } else {
-          addChild(new Attribute(htmlStack[0].component ? camelCase(_name2) : _name2));
+          addChild(new Attribute(htmlStack[0].component ? camelCase(name) : name));
         }
         currentQuote = _match2[2];
         if (!currentQuote) {
@@ -3856,8 +3856,8 @@ function compile$$1(content) {
   var parseDelimiter = function (content, all) {
     if (content) {
       if (charAt(content) === CHAR_SLASH) {
-        var _name3 = slice(content, 1),
-            type = name2Type[_name3];
+        var name = slice(content, 1),
+            type = name2Type[name];
         if (ifTypes[type]) {
           var node = pop(ifStack);
           if (node) {
@@ -4030,31 +4030,33 @@ function render(render, getter, setter, instance) {
     if (isDef(node)) {
       if (func(node)) {
         node();
-      } else if (node.type === ATTRIBUTE) {
-        var value;
-        if (has$1(node, 'value')) {
-          value = node.value;
-        } else if (node.expr) {
-          var expr = node.expr;
-
-          value = o(expr, expr.staticKeypath);
-          if (expr.staticKeypath) {
-            addDirective(DIRECTIVE_BINDING, name, expr.actualKeypath);
-          }
-        } else if (node.children) {
-          value = getValue(node.children);
-        } else {
-          value = currentElement.component ? TRUE : node.name;
-        }
-        addAttr(node.name, value);
       } else {
-        var _expr = node.expr;
+        var name = node.name,
+            expr = node.expr;
 
-        if (_expr) {
-          // 求值会给 expr 加上 actualKeypath
-          o(_expr);
+        if (node.type === ATTRIBUTE) {
+          var value;
+          if (has$1(node, 'value')) {
+            value = node.value;
+          } else if (expr) {
+            value = o(expr, expr.staticKeypath);
+            if (expr.staticKeypath) {
+              addDirective(DIRECTIVE_BINDING, name, expr.actualKeypath);
+            }
+          } else if (node.children) {
+            value = getValue(node.children);
+          } else {
+            value = currentElement.component ? TRUE : name;
+          }
+          addAttr(name, value);
+        } else {
+
+          if (expr) {
+            // 求值会给 expr 加上 actualKeypath
+            o(expr);
+          }
+          addDirective(name, node.modifier, name === DIRECTIVE_MODEL ? expr.actualKeypath : node.value).expr = expr;
         }
-        addDirective(node.name, node.modifier, node.name === DIRECTIVE_MODEL ? _expr.actualKeypath : node.value).expr = _expr;
       }
     }
   },
@@ -6136,7 +6138,7 @@ var Yox = function () {
       var filters = extend({}, registry.filter, instance.$filters);
 
       var getValue = function (key, expr, keypathStack) {
-        console.log(key);
+
         if (keypathStack) {
 
           if (key === SPECIAL_KEYPATH) {

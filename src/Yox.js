@@ -431,7 +431,7 @@ console.time('render')
       let filters = object.extend({ }, registry.filter, instance.$filters)
 
       let getValue = function (key, expr, keypathStack) {
-        console.log(key)
+
         if (keypathStack) {
 
           if (key === config.SPECIAL_KEYPATH) {
