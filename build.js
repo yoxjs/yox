@@ -91,10 +91,10 @@ function optimize(source) {
    * 我们全都转成匿名函数
    */
    source = source.replace(
-     /var ([\w$]+) = function ([\w$]+)/g,
-     function ($0, $1, $2) {
-       if ($1 === $2) {
-         return `var ${$1} = function `
+     /(\b)([\w$]+) = function ([\w$]+)/g,
+     function ($0, $1, $2, $3) {
+       if ($2 === $3) {
+         return `${$1}${$2} = function `
        }
        throw new Error(`${$1} is not equals to ${$2}`)
      }

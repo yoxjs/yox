@@ -170,9 +170,6 @@ export function find(selector, context) {
 
 export function setProp(element, name, value) {
   try {
-    if (name === 'textContent' && !object.has(element, name)) {
-      name = 'innerText'
-    }
     object.set(element, name, value)
   }
   catch (e) {

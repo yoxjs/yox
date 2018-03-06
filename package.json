@@ -20,7 +20,7 @@
     "yox-expression-compiler": "^0.14.2",
     "yox-observer": "^0.15.8",
     "yox-snabbdom": "^0.15.0",
-    "yox-template-compiler": "^0.22.9"
+    "yox-template-compiler": "^0.23.0"
   },
   "scripts": {
     "source": "rollup -c",

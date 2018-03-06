@@ -1134,14 +1134,14 @@ if (typeof setImmediate === RAW_FUNCTION) {
 // 用 MessageChannel 去做 setImmediate 的 polyfill
 // 原理是将新的 message 事件加入到原有的 dom events 之后
 else if (typeof MessageChannel === RAW_FUNCTION) {
-    nextTick = function nextTick(fn) {
+    nextTick = function (fn) {
       var channel = new MessageChannel();
       var port = channel.port2;
       channel.port1.onmessage = fn;
       port.postMessage(1);
     };
   } else if (typeof Promise === RAW_FUNCTION && isNative(Promise)) {
-    nextTick = function nextTick(fn) {
+    nextTick = function (fn) {
       Promise.resolve().then(fn);
     };
   } else {
@@ -3550,7 +3550,7 @@ function compile$$1(content) {
           // 子节点是纯文本
           if (singleChild.type === TEXT) {
             target.props = [{
-              name: 'textContent',
+              name: 'innerText',
               value: singleChild.text
             }];
             pop(children);
@@ -3563,7 +3563,7 @@ function compile$$1(content) {
               });
             } else {
               push(props, {
-                name: 'textContent',
+                name: 'innerText',
                 value: singleChild.expr
               });
             }
@@ -3946,7 +3946,7 @@ function render(render, getter, setter, instance) {
   var keypath = CHAR_BLANK,
       keypaths = [],
       keypathStack = [keypath],
-      pushKeypath = function pushKeypath(newKeypath) {
+      pushKeypath = function (newKeypath) {
     push(keypaths, newKeypath);
     newKeypath = join(keypaths, KEYPATH_SEPARATOR);
     if (newKeypath !== keypath) {
@@ -3955,7 +3955,7 @@ function render(render, getter, setter, instance) {
       push(keypathStack, keypath);
     }
   },
-      popKeypath = function popKeypath(lastKeypath, lastKeypathStack) {
+      popKeypath = function (lastKeypath, lastKeypathStack) {
     keypaths.pop();
     keypath = lastKeypath;
     keypathStack = lastKeypathStack;
@@ -3963,29 +3963,29 @@ function render(render, getter, setter, instance) {
       values,
       currentElement,
       elementStack = [],
-      pushElement = function pushElement(element) {
+      pushElement = function (element) {
     currentElement = element;
     push(elementStack, element);
   },
-      popElement = function popElement(lastElement) {
+      popElement = function (lastElement) {
     currentElement = lastElement;
     pop(elementStack);
   },
       currentComponent,
       componentStack = [],
-      pushComponent = function pushComponent(component) {
+      pushComponent = function (component) {
     currentComponent = component;
     push(componentStack, component);
   },
-      popComponent = function popComponent(lastComponent) {
+      popComponent = function (lastComponent) {
     currentComponent = lastComponent;
     pop(componentStack);
   },
-      addAttr = function addAttr(name, value) {
+      addAttr = function (name, value) {
     var attrs = currentElement.attrs || (currentElement.attrs = {});
     attrs[name] = value;
   },
-      addDirective = function addDirective(name, modifier, value) {
+      addDirective = function (name, modifier, value) {
     var directives = currentElement.directives || (currentElement.directives = {});
     return directives[join$1(name, modifier)] = {
       name: name,
@@ -3995,7 +3995,7 @@ function render(render, getter, setter, instance) {
       keypathStack: keypathStack
     };
   },
-      addChild = function addChild(node) {
+      addChild = function (node) {
     var _currentElement = currentElement,
         lastChild = _currentElement.lastChild,
         children = _currentElement.children;
@@ -4018,7 +4018,7 @@ function render(render, getter, setter, instance) {
       push(children, currentElement.lastChild = createTextVnode(node));
     }
   },
-      addSlot = function addSlot(name, slot) {
+      addSlot = function (name, slot) {
     var slots = currentComponent.slots || (currentComponent.slots = {});
     if (slots[name]) {
       push(slots[name], slot);
@@ -4026,7 +4026,7 @@ function render(render, getter, setter, instance) {
       slots[name] = slot;
     }
   },
-      attrHandler = function attrHandler(node) {
+      attrHandler = function (node) {
     if (isDef(node)) {
       if (func(node)) {
         node();
@@ -4055,7 +4055,7 @@ function render(render, getter, setter, instance) {
       }
     }
   },
-      childHandler = function childHandler(node) {
+      childHandler = function (node) {
     if (isDef(node)) {
       if (func(node)) {
         node();
@@ -4073,7 +4073,7 @@ function render(render, getter, setter, instance) {
       }
     }
   },
-      getValue = function getValue(generate) {
+      getValue = function (generate) {
     values = [];
     generate();
     var value = values[RAW_LENGTH] > 1 ? join(values, '') : values[0];
@@ -4083,19 +4083,19 @@ function render(render, getter, setter, instance) {
 
 
   // 处理 children
-  x = function x() {
+  x = function () {
     each(arguments, childHandler);
   },
 
 
   // 处理元素 attribute
-  y = function y() {
+  y = function () {
     each(arguments, attrHandler);
   },
 
 
   // 处理 properties
-  z = function z() {
+  z = function () {
     each$1(arguments, function (item) {
       var name = item.name,
           value = item.value;
@@ -4114,7 +4114,7 @@ function render(render, getter, setter, instance) {
 
 
   // template
-  a = function a(name, childs) {
+  a = function (name, childs) {
 
     if (currentComponent && (name = getValue(name))) {
 
@@ -4133,7 +4133,7 @@ function render(render, getter, setter, instance) {
   },
 
   // slot
-  b = function b(name) {
+  b = function (name) {
     name = getValue(name);
     if (name) {
       var result = getter(SLOT_PREFIX + name);
@@ -4143,7 +4143,7 @@ function render(render, getter, setter, instance) {
 
 
   // create
-  c = function c(component, tag, props, attrs, childs, ref, key) {
+  c = function (component, tag, props, attrs, childs, ref, key) {
 
     var lastElement = currentElement,
         lastComponent = currentComponent;
@@ -4200,7 +4200,7 @@ function render(render, getter, setter, instance) {
   m = createCommentVnode,
 
   // each
-  e = function e(expr, generate, index) {
+  e = function (expr, generate, index) {
 
     var value = o(expr),
         each$$1;
@@ -4245,12 +4245,12 @@ function render(render, getter, setter, instance) {
   },
 
   // output（e 被 each 占了..)
-  o = function o(expr, binding) {
+  o = function (expr, binding) {
     return getter(expr, keypathStack, binding);
   },
 
   // spread
-  s = function s(expr) {
+  s = function (expr) {
     var staticKeypath = expr.staticKeypath,
         value;
     // 只能作用于 attribute 层级
@@ -4268,12 +4268,12 @@ function render(render, getter, setter, instance) {
       localPartials = {},
 
   // partial
-  p = function p(name, children) {
+  p = function (name, children) {
     localPartials[name] = children;
   },
 
   // import
-  i = function i(name) {
+  i = function (name) {
     if (localPartials[name]) {
       localPartials[name]();
       return;
@@ -4285,7 +4285,7 @@ function render(render, getter, setter, instance) {
     }
     fatal('"' + name + '" partial is not found.');
   },
-      executeRender = function executeRender(render) {
+      executeRender = function (render) {
     return render(a, b, c, e, i, m, o, p, s, x, y, z);
   };
 
@@ -5652,7 +5652,7 @@ var model = function (_ref) {
         set$$1();
       }
       component.watch(field, sync);
-      unbindTarget = function unbindTarget() {
+      unbindTarget = function () {
         component.unwatch(field, sync);
         delete component.$model;
       };
@@ -5684,7 +5684,7 @@ var model = function (_ref) {
     prepend(function () {
       if (set$$1) {
         instance.watch(keypath, set$$1);
-        unbindInstance = function unbindInstance() {
+        unbindInstance = function () {
           instance.unwatch(keypath, set$$1);
         };
       }
@@ -6144,7 +6144,7 @@ var Yox = function () {
               localVars = instance.$vars,
               lookup = expr.lookup !== FALSE,
               index = keypathStack[RAW_LENGTH] - 1,
-              getKeypath = function getKeypath() {
+              getKeypath = function () {
             var keypath = join$1(keypathStack[index], key);
             if (localVars && has$1(localVars, keypath)) {
               value = localVars[keypath];
