@@ -3234,16 +3234,16 @@ var Element = function (_Node) {
         addArray(ref);
       }
 
-      if (children[RAW_LENGTH] || params[RAW_LENGTH]) {
-        addArray(children);
+      if (props && props[RAW_LENGTH] || params[RAW_LENGTH]) {
+        addArray(props, 'z');
       }
 
       if (attrs[RAW_LENGTH] || params[RAW_LENGTH]) {
         addArray(attrs, 'y');
       }
 
-      if (props && props[RAW_LENGTH] || params[RAW_LENGTH]) {
-        addArray(props, 'z');
+      if (children[RAW_LENGTH] || params[RAW_LENGTH]) {
+        addArray(children);
       }
 
       unshift(params, me.stringifyString(tag));
@@ -3482,7 +3482,7 @@ var openingTagPattern = /<(\/)?([a-z][-a-z0-9]*)/i;
 var closingTagPattern = /^\s*(\/)?>/;
 var attributePattern = /^\s*([-:\w]+)(?:=(['"]))?/;
 var componentNamePattern = /[-A-Z]/;
-var selfClosingTagNames = ['area', 'base', 'embed', 'track', 'source', 'param', 'input', 'col', 'img', 'br', 'hr'];
+var selfClosingTagNames = ['area', 'base', 'embed', 'track', 'source', 'param', 'input', 'slot', 'col', 'img', 'br', 'hr'];
 
 // 缓存编译结果
 var compileCache = {};
@@ -4056,9 +4056,6 @@ function render(render, getter, setter, instance) {
         lastChild = _currentElement.lastChild,
         children = _currentElement.children;
 
-    if (!children) {
-      children = currentElement.children = [];
-    }
 
     if (isVnode(node)) {
       if (node.component) {
@@ -4117,7 +4114,7 @@ function render(render, getter, setter, instance) {
         node();
       } else if (values) {
         values[values[RAW_LENGTH]] = node;
-      } else if (currentElement.opened === TRUE) {
+      } else if (currentElement.children) {
 
         if (array(node)) {
           each(node, addChild);
@@ -4174,15 +4171,16 @@ function render(render, getter, setter, instance) {
 
     if (currentComponent && (name = getValue(name))) {
 
-      var lastElement = currentElement;
+      var lastElement = currentElement,
+          children = [];
 
       pushElement({
-        opened: TRUE
+        children: children
       });
 
       childs();
 
-      addSlot(SLOT_PREFIX + name, currentElement.children);
+      addSlot(SLOT_PREFIX + name, children);
 
       popElement(lastElement);
     }
@@ -4199,7 +4197,7 @@ function render(render, getter, setter, instance) {
 
 
   // create
-  c = function (component, tag, props, attrs, childs, ref, key) {
+  c = function (component, tag, childs, attrs, props, ref, key) {
 
     var lastElement = currentElement,
         lastComponent = currentComponent;
@@ -4230,14 +4228,11 @@ function render(render, getter, setter, instance) {
 
     var children;
     if (childs) {
-      currentElement.opened = TRUE;
+      children = currentElement.children = [];
       childs();
-      children = currentElement.children;
       if (component) {
-        addSlot(SLOT_PREFIX + 'children', children || []);
-        if (children) {
-          children = UNDEFINED;
-        }
+        addSlot(SLOT_PREFIX + 'children', children);
+        children = UNDEFINED;
       }
     }
 
@@ -4310,7 +4305,7 @@ function render(render, getter, setter, instance) {
     var staticKeypath = expr.staticKeypath,
         value;
     // 只能作用于 attribute 层级
-    if (currentElement.opened !== TRUE && (value = o(expr, staticKeypath)) && object(value)) {
+    if (!currentElement.children && (value = o(expr, staticKeypath)) && object(value)) {
       var actualKeypath = expr.actualKeypath;
 
       each$1(value, function (value, key) {
