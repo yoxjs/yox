@@ -1256,17 +1256,13 @@ function normalize(str) {
           if (code === CODE_SQUOTE || code === CODE_DQUOTE) {
             $1 = slice($1, 1, -1);
           }
-          return '' + KEYPATH_SEPARATOR + $1;
+          return KEYPATH_SEPARATOR + $1;
         });
       }
       return normalizeCache[str];
     }
   }
   return str;
-}
-
-function filter(term) {
-  return term !== CHAR_BLANK && term !== RAW_THIS;
 }
 
 function startsWith$1(keypath, prefix) {
@@ -1280,20 +1276,19 @@ function startsWith$1(keypath, prefix) {
   }
 }
 
+function isValidTerm(term) {
+  return number(term) || string(term);
+}
+
 function join$1(keypath1, keypath2) {
-  // keypath 可以是两种形式
-  // 1. 非空字符串
-  // 2. 数字
-  var result = [];
-  if (!falsy$1(keypath1) || number(keypath1)) {
-    push(result, keypath1);
+
+  var keypath = keypath1 === CHAR_BLANK || isValidTerm(keypath1) ? keypath1 : CHAR_BLANK;
+
+  if (keypath2 !== CHAR_BLANK && isValidTerm(keypath2)) {
+    return keypath === CHAR_BLANK ? keypath2 : keypath + KEYPATH_SEPARATOR + keypath2;
   }
-  if (number(keypath2)) {
-    push(result, keypath2);
-  } else if (string(keypath2) && filter(keypath2)) {
-    push(result, keypath2);
-  }
-  return join(result, KEYPATH_SEPARATOR);
+
+  return keypath;
 }
 
 function createAttrs(vnode) {
@@ -2810,19 +2805,22 @@ executor[IDENTIFIER] = function (node, getter) {
 executor[MEMBER] = function (node, getter, context) {
   var keypath = node.staticKeypath;
   if (!keypath) {
-    keypath = node.dynamicKeypath = join(node.props.map(function (node, index) {
-      var type = node.type;
-
+    keypath = CHAR_BLANK;
+    each(node.props, function (node, index) {
+      var type = node.type,
+          next = CHAR_BLANK;
       if (type !== LITERAL) {
         if (index > 0) {
-          return execute$1(node, getter, context);
+          next = execute$1(node, getter, context);
         } else if (type === IDENTIFIER) {
-          return node.name;
+          next = node.name;
         }
       } else {
-        return node.value;
+        next = node.value;
       }
-    }), KEYPATH_SEPARATOR);
+      keypath = join$1(keypath, next);
+    });
+    node.dynamicKeypath = keypath;
   }
   return getter(keypath, node);
 };
