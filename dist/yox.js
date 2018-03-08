@@ -4405,7 +4405,7 @@ var Computed = function () {
     instance.observer = observer;
     instance.deps = [];
 
-    instance.update = function (newValue, oldValue, key, globalChanges) {
+    instance.update = function (oldValue, key, globalChanges) {
 
       var value = instance.value,
           changes = instance.changes || (instance.changes = {});
@@ -4416,16 +4416,15 @@ var Computed = function () {
       }
 
       // 把依赖和计算属性自身注册到下次可能的变化中
-      observer.onChange(newValue, oldValue, key);
+      observer.onChange(oldValue, key);
       // newValue 用不上，只是占位
-      observer.onChange(newValue, value, keypath);
+      observer.onChange(value, keypath);
 
       // 当前计算属性是否是其他计算属性的依赖
       each$1(observer.computed, function (computed) {
         if (computed.hasDep(keypath)) {
-          var _newValue = instance.get();
-          if (_newValue !== value) {
-            globalChanges.push(keypath, _newValue, value, keypath);
+          if (instance.get() !== value) {
+            globalChanges.push(keypath, value, keypath);
             return FALSE;
           }
         }
@@ -4521,10 +4520,10 @@ var Observer = function () {
     }
   }
 
-  Observer.prototype.onChange = function (newValue, oldValue, keypath) {
+  Observer.prototype.onChange = function (oldValue, keypath) {
 
     var instance = this,
-        changes = startsWith(keypath, '$') ? this.$changes || (this.$changes = {}) : this.changes || (this.changes = {});
+        changes = startsWith(keypath, '$') ? instance.$changes || (instance.$changes = {}) : instance.changes || (instance.changes = {});
 
     if (!has$1(changes, keypath)) {
       changes[keypath] = oldValue;
@@ -4535,12 +4534,11 @@ var Observer = function () {
       instance.nextTick(function () {
         if (instance.pending) {
           var _changes = instance.changes,
-              $changes = instance.$changes;
+              $changes = instance.$changes,
+              asyncEmitter = instance.asyncEmitter;
 
 
           instance.pending = instance.changes = instance.$changes = NULL;
-
-          var asyncEmitter = instance.asyncEmitter;
 
           var listenerKeys = keys(asyncEmitter.listeners);
 
@@ -4670,7 +4668,7 @@ var Observer = function () {
       each(listenKeys, function (listenKey) {
         if (isFuzzyKeypath(listenKey)) {
           if (matchKeypath(keypath, listenKey)) {
-            changes.push(listenKey, newValue, oldValue, keypath);
+            changes.push(listenKey, oldValue, keypath);
           } else {
             push(fuzzyKeypaths, listenKey);
           }
@@ -4678,7 +4676,7 @@ var Observer = function () {
           var listenNewValue = getNewValue(listenKey),
               listenOldValue = instance.get(listenKey);
           if (listenNewValue !== listenOldValue) {
-            changes.push(listenKey, listenNewValue, listenOldValue, listenKey);
+            changes.push(listenKey, listenOldValue, listenKey);
           }
         }
       });
@@ -4693,7 +4691,7 @@ var Observer = function () {
 
             each(fuzzyKeypaths, function (fuzzyKeypath) {
               if (matchKeypath(key, fuzzyKeypath)) {
-                changes.push(fuzzyKeypath, newValue, oldValue, key);
+                changes.push(fuzzyKeypath, oldValue, key);
               }
             });
 
@@ -4757,8 +4755,8 @@ var Observer = function () {
       each$1(keypath, setValue);
     }
 
-    for (var i = 0; i < changes[RAW_LENGTH]; i += 4) {
-      emitter.fire(changes[i], [changes[i + 1], changes[i + 2], changes[i + 3], changes]);
+    for (var i = 0; i < changes[RAW_LENGTH]; i += 3) {
+      emitter.fire(changes[i], [changes[i + 1], changes[i + 2], changes]);
     }
   };
 
