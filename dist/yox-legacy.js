@@ -4351,29 +4351,6 @@ var toNumber = function (str, defaultValue) {
 var guid = 0;
 
 /**
- * 记录对比值
- *
- * @param {?Object} changes
- * @param {*} newValue
- * @param {*} oldValue
- * @param {string} keypath
- */
-function updateValue(changes, newValue, oldValue, keypath) {
-  if (!changes) {
-    changes = {};
-  }
-  if (changes[keypath]) {
-    changes[keypath].newValue = newValue;
-  } else {
-    changes[keypath] = {
-      newValue: newValue,
-      oldValue: oldValue
-    };
-  }
-  return changes;
-}
-
-/**
  * 对比新旧对象
  *
  * @param {?Object} newObject
@@ -4484,20 +4461,27 @@ var Computed = function () {
     instance.observer = observer;
     instance.deps = [];
 
-    instance.update = function (newValue, oldValue, key, changes) {
-      var value = instance.value;
+    instance.update = function (newValue, oldValue, key, globalChanges) {
 
+      var value = instance.value,
+          changes = instance.changes || (instance.changes = {});
 
-      instance.changes = updateValue(instance.changes, newValue, oldValue, key);
+      // 当前计算属性的依赖发生变化
+      if (!has$1(changes, key)) {
+        changes[key] = oldValue;
+      }
 
-      observer.onChange(newValue, oldValue, key, instance, value);
+      // 把依赖和计算属性自身注册到下次可能的变化中
+      observer.onChange(newValue, oldValue, key);
+      // newValue 用不上，只是占位
+      observer.onChange(newValue, value, keypath);
 
       // 当前计算属性是否是其他计算属性的依赖
-      each$1(observer.computed, function (computed, key) {
+      each$1(observer.computed, function (computed) {
         if (computed.hasDep(keypath)) {
           var _newValue = instance.get();
           if (_newValue !== value) {
-            changes.push(keypath, _newValue, value, keypath);
+            globalChanges.push(keypath, _newValue, value, keypath);
             return FALSE;
           }
         }
@@ -4549,21 +4533,19 @@ var Computed = function () {
   };
 
   Computed.prototype.isDirty = function () {
-    var changes = this.changes,
+    var observer = this.observer,
+        changes = this.changes,
         result;
-    if (isDef(changes)) {
-      if (changes) {
-        each$1(changes, function (item, keypath) {
-          if (item.newValue !== item.oldValue) {
-            result = TRUE;
-            return FALSE;
-          }
-        });
+
+    if (changes) {
+      for (var key in changes) {
+        if (changes[key] !== observer.get(key)) {
+          return TRUE;
+        }
       }
-    } else {
-      result = TRUE;
     }
-    return result;
+    // undefined 表示第一次执行，要返回 true
+    return !isDef(changes);
   };
 
   return Computed;
@@ -4595,41 +4577,31 @@ var Observer = function () {
     }
   }
 
-  Observer.prototype.onChange = function (newValue, oldValue, keypath, computed, computedValue) {
+  Observer.prototype.onChange = function (newValue, oldValue, keypath) {
 
     var instance = this,
-        changes = instance.changes || (instance.changes = {});
+        changes = startsWith(keypath, '$') ? this.$changes || (this.$changes = {}) : this.changes || (this.changes = {});
 
-    changes = updateValue(changes, newValue, oldValue, keypath);
-
-    if (computed.keypath && !changes[computed.keypath]) {
-      changes[computed.keypath] = {
-        computed: computed,
-        oldValue: computedValue
-      };
+    if (!has$1(changes, keypath)) {
+      changes[keypath] = oldValue;
     }
 
     if (!instance.pending) {
       instance.pending = TRUE;
       instance.nextTick(function () {
         if (instance.pending) {
-          var _changes = instance.changes;
+          var _changes = instance.changes,
+              $changes = instance.$changes;
 
 
-          instance.pending = instance.changes = NULL;
+          instance.pending = instance.changes = instance.$changes = NULL;
 
           var asyncEmitter = instance.asyncEmitter;
 
           var listenerKeys = keys(asyncEmitter.listeners);
 
-          each$1(_changes, function (item, keypath) {
-            var newValue = item.newValue,
-                oldValue = item.oldValue,
-                computed = item.computed;
-
-            if (computed) {
-              newValue = computed.get();
-            }
+          var eachChange = function (oldValue, keypath) {
+            var newValue = instance.get(keypath);
             if (newValue !== oldValue) {
               var args = [newValue, oldValue, keypath];
               asyncEmitter.fire(keypath, args);
@@ -4639,7 +4611,10 @@ var Observer = function () {
                 }
               });
             }
-          });
+          };
+
+          $changes && each$1($changes, eachChange);
+          _changes && each$1(_changes, eachChange);
         }
       });
     }
@@ -4664,7 +4639,7 @@ var Observer = function () {
         result;
 
     // 传入 '' 获取整个 data
-    if (keypath === '') {
+    if (keypath === CHAR_BLANK) {
       return instance.data;
     }
 
