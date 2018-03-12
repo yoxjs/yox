@@ -765,16 +765,14 @@ function eachKeypath(keypath, callback) {
 }
 
 function getValue(object$$1, key) {
-  if (object$$1 != NULL) {
+  if (object$$1 != NULL && has$1(object$$1, key)) {
     var value = object$$1[key];
-    if (value != NULL) {
-      if (object(value) && value.get) {
-        value = value.get();
-      }
-      return {
-        value: value
-      };
+    if (object(value) && value.get) {
+      value = value.get();
     }
+    return {
+      value: value
+    };
   }
 }
 
@@ -5855,9 +5853,7 @@ var Yox = function () {
       }
       instance.$template = template[0];
 
-      instance.$renderCount = 0;
-      instance.$renderComputed = instance.$observer.addComputed(TEMPLATE_COMPUTED, function () {
-        instance.$renderCount++;
+      instance.$observer.addComputed(TEMPLATE_COMPUTED, function () {
         return instance.render();
       });
       if (watchers) {
@@ -6067,13 +6063,11 @@ var Yox = function () {
   Yox.prototype.forceUpdate = function () {
 
     if (this.$node) {
-      var $renderCount = this.$renderCount;
-
-
-      this.$observer.nextRun();
-
-      if (this.$renderCount === $renderCount) {
-        this.updateView(this.$renderComputed.get(TRUE), this.$node);
+      var computed = this.$observer.computed[TEMPLATE_COMPUTED];
+      if (computed.isDirty()) {
+        this.$observer.nextRun();
+      } else {
+        this.updateView(computed.get(TRUE), this.$node);
       }
     }
   };

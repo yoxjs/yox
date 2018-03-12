@@ -198,11 +198,9 @@ export default class Yox {
       }
       instance.$template = template[ 0 ]
 
-      instance.$renderCount = 0
-      instance.$renderComputed = instance.$observer.addComputed(
+      instance.$observer.addComputed(
         TEMPLATE_COMPUTED,
         function () {
-          instance.$renderCount++
           return instance.render()
         }
       )
@@ -400,14 +398,13 @@ export default class Yox {
   forceUpdate() {
 
     if (this.$node) {
-
-      let { $renderCount } = this
-
-      this.$observer.nextRun()
-
-      if (this.$renderCount === $renderCount) {
+      let computed = this.$observer.computed[ TEMPLATE_COMPUTED ]
+      if (computed.isDirty()) {
+        this.$observer.nextRun()
+      }
+      else {
         this.updateView(
-          this.$renderComputed.get(env.TRUE),
+          computed.get(env.TRUE),
           this.$node
         )
       }
