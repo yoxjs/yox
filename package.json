@@ -19,8 +19,8 @@
     "yox-config": "0.0.4",
     "yox-expression-compiler": "^0.14.3",
     "yox-observer": "^0.16.2",
-    "yox-snabbdom": "^0.15.0",
-    "yox-template-compiler": "^0.23.2"
+    "yox-snabbdom": "^0.15.1",
+    "yox-template-compiler": "^0.23.3"
   },
   "scripts": {
     "source": "rollup -c",

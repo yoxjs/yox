@@ -3516,6 +3516,8 @@ function trimBreakline(content) {
   return content.replace(/^\s*[\n\r]\s*|\s*[\n\r]\s*$/g, CHAR_BLANK);
 }
 
+var textProp = win && win.SVGElement ? 'textContent' : 'innerText';
+
 /**
  * 把模板编译为抽象语法树
  *
@@ -3602,7 +3604,7 @@ function compile$$1(content) {
           // 子节点是纯文本
           if (singleChild.type === TEXT) {
             target.props = [{
-              name: 'innerText',
+              name: textProp,
               value: singleChild.text
             }];
             pop(children);
@@ -3615,7 +3617,7 @@ function compile$$1(content) {
               });
             } else {
               push(props, {
-                name: 'innerText',
+                name: textProp,
                 value: singleChild.expr
               });
             }
@@ -5159,10 +5161,15 @@ attr2Prop['defaultchecked'] = 'defaultChecked';
 attr2Prop['defaultmuted'] = 'defaultMuted';
 attr2Prop['defaultselected'] = 'defaultSelected';
 
+var namespaces = {
+  svg: 'http://www.w3.org/2000/svg',
+  xlink: 'http://www.w3.org/1999/xlink'
+};
+
 function createElement(tagName, parentNode) {
   var SVGElement = win.SVGElement;
 
-  return tagName === 'svg' || parentNode && SVGElement && parentNode instanceof SVGElement ? doc.createElementNS('http://www.w3.org/2000/svg', tagName) : doc.createElement(tagName);
+  return tagName === 'svg' || parentNode && SVGElement && parentNode instanceof SVGElement ? doc.createElementNS(namespaces.svg, tagName) : doc.createElement(tagName);
 }
 
 function createText(text) {
@@ -5198,9 +5205,14 @@ function setAttr(node, name, value) {
   // 比如 readonly
   if (propName || isBoolean) {
     setProp(node, propName || name, value);
-  } else {
-    node.setAttribute(name, value);
+  } else if (has$2(name, CHAR_COLON)) {
+    var ns = namespaces[name.split(CHAR_COLON)[0]];
+    if (ns) {
+      node.setAttributeNS(ns, name, value);
+      return;
+    }
   }
+  node.setAttribute(name, value);
 }
 
 function removeAttr(node, name) {
