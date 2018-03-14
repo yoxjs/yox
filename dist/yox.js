@@ -5149,6 +5149,7 @@ function setAttr(node, name, value) {
   // 比如 readonly
   if (propName || isBoolean) {
     setProp(node, propName || name, value);
+    return;
   } else if (has$2(name, CHAR_COLON)) {
     var ns = namespaces[name.split(CHAR_COLON)[0]];
     if (ns) {
