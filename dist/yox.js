@@ -1619,7 +1619,7 @@ function init(api) {
     }
 
     // 不管是组件还是元素，必须先有一个元素
-    el = vnode.el = api.createElement(component$$1 ? 'i' : tag, parentNode);
+    el = vnode.el = api.createElement(component$$1 ? 'i' : tag);
 
     if (component$$1) {
 
@@ -5105,15 +5105,15 @@ attr2Prop['defaultchecked'] = 'defaultChecked';
 attr2Prop['defaultmuted'] = 'defaultMuted';
 attr2Prop['defaultselected'] = 'defaultSelected';
 
+var svgTags = toObject(('svg,g,defs,desc,metadata,symbol,use,' + 'image,path,rect,circle,line,ellipse,polyline,polygon,' + 'text,tspan,tref,textpath,' + 'marker,pattern,clippath,mask,filter,cursor,view,animate,' + 'font,font-face,glyph,missing-glyph').split(','));
+
 var namespaces = {
   svg: 'http://www.w3.org/2000/svg',
   xlink: 'http://www.w3.org/1999/xlink'
 };
 
-function createElement(tagName, parentNode) {
-  var SVGElement = win.SVGElement;
-
-  return tagName === 'svg' || parentNode && SVGElement && parentNode instanceof SVGElement ? doc.createElementNS(namespaces.svg, tagName) : doc.createElement(tagName);
+function createElement(tagName) {
+  return svgTags[tagName] ? doc.createElementNS(namespaces.svg, tagName) : doc.createElement(tagName);
 }
 
 function createText(text) {
