@@ -418,7 +418,7 @@ export default class Yox {
    * @return {Object}
    */
   render() {
-console.time('render')
+
     let instance = this
 
     let { $template, $getter, $setter } = instance
@@ -514,7 +514,6 @@ console.time('render')
       instance
     )
 
-    console.timeEnd('render')
     return result
   }
 
@@ -793,7 +792,7 @@ console.time('render')
  *
  * @type {string}
  */
-Yox.version = '0.56.0'
+Yox.version = '0.56.1'
 
 /**
  * 工具，便于扩展、插件使用

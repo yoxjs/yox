@@ -4405,7 +4405,7 @@ var Computed = function () {
     instance.observer = observer;
     instance.deps = [];
 
-    instance.update = function (oldValue, key, globalChanges) {
+    instance.update = function (oldValue, key, addChange) {
 
       var value = instance.value,
           changes = instance.changes || (instance.changes = {});
@@ -4417,14 +4417,14 @@ var Computed = function () {
 
       // 把依赖和计算属性自身注册到下次可能的变化中
       observer.onChange(oldValue, key);
-      // newValue 用不上，只是占位
       observer.onChange(value, keypath);
 
       // 当前计算属性是否是其他计算属性的依赖
       each$1(observer.computed, function (computed) {
         if (computed.hasDep(keypath)) {
-          if (instance.get() !== value) {
-            globalChanges.push(keypath, value, keypath);
+          var newValue = instance.get();
+          if (newValue !== value) {
+            addChange(newValue, value, keypath);
             return FALSE;
           }
         }
@@ -4642,26 +4642,53 @@ var Observer = function () {
 
     var changes = [];
 
-    var setValue = function (value, keypath) {
+    var addFuzzyChange = function (fuzzyKeypaths, newValue, oldValue, key) {
+      if (newValue !== oldValue) {
 
-      keypath = normalize(keypath);
+        each(fuzzyKeypaths, function (fuzzyKeypath) {
+          if (matchKeypath(key, fuzzyKeypath)) {
+            changes.push(fuzzyKeypath, oldValue, key);
+          }
+        });
 
-      var newValue = value,
-          oldValue = instance.get(keypath);
+        // 我们认为 $ 开头的变量是不可递归的
+        // 比如浏览器中常见的 $0 表示当前选中元素
+        // DOM 元素是不能递归的
+        if (startsWith(key, '$')) {
+          return;
+        }
 
-      if (newValue === oldValue) {
-        return;
+        var newIs = string(newValue),
+            oldIs = string(oldValue);
+        if (newIs || oldIs) {
+          addFuzzyChange(fuzzyKeypaths, newIs ? newValue[RAW_LENGTH] : UNDEFINED, oldIs ? oldValue[RAW_LENGTH] : UNDEFINED, join$1(key, RAW_LENGTH));
+        } else {
+          newIs = object(newValue), oldIs = object(oldValue);
+          if (newIs || oldIs) {
+            diffObject(newIs && newValue, oldIs && oldValue, function (newValue, oldValue, prop) {
+              addFuzzyChange(fuzzyKeypaths, newValue, oldValue, join$1(key, prop));
+            });
+          } else {
+            diffArray(array(newValue) && newValue, array(oldValue) && oldValue, function (newValue, oldValue, index) {
+              addFuzzyChange(fuzzyKeypaths, newValue, oldValue, join$1(key, index));
+            });
+          }
+        }
       }
+    };
 
-      var getNewValue = function (key) {
-        if (key === keypath || value == NULL) {
-          return value;
+    var getValue = function (value, key) {
+      if (value == NULL) {
+        return value;
+      } else {
+        var result = get$1(value, key);
+        if (result) {
+          return result.value;
         }
-        key = get$1(value, slice(key, startsWith$1(key, keypath)));
-        if (key) {
-          return key.value;
-        }
-      };
+      }
+    };
+
+    var addChange = function (newValue, oldValue, keypath) {
 
       var fuzzyKeypaths = [];
 
@@ -4672,11 +4699,24 @@ var Observer = function () {
           } else {
             push(fuzzyKeypaths, listenKey);
           }
-        } else if (startsWith$1(listenKey, keypath)) {
-          var listenNewValue = getNewValue(listenKey),
-              listenOldValue = instance.get(listenKey);
-          if (listenNewValue !== listenOldValue) {
-            changes.push(listenKey, listenOldValue, listenKey);
+        } else {
+          var length = startsWith$1(listenKey, keypath);
+          if (length) {
+
+            var listenNewValue,
+                listenOldValue;
+            if (listenKey === keypath) {
+              listenNewValue = newValue;
+              listenOldValue = oldValue;
+            } else {
+              var propName = slice(listenKey, length);
+              listenNewValue = getValue(newValue, propName);
+              listenOldValue = getValue(oldValue, propName);
+            }
+
+            if (listenNewValue !== listenOldValue) {
+              changes.push(listenKey, listenOldValue, listenKey);
+            }
           }
         }
       });
@@ -4685,52 +4725,31 @@ var Observer = function () {
       // 必须对数据进行递归
       // 性能确实会慢一些，但是很好用啊，几乎可以监听所有的数据
       if (fuzzyKeypaths[RAW_LENGTH]) {
-
-        var addChange = function (newValue, oldValue, key) {
-          if (newValue !== oldValue) {
-
-            each(fuzzyKeypaths, function (fuzzyKeypath) {
-              if (matchKeypath(key, fuzzyKeypath)) {
-                changes.push(fuzzyKeypath, oldValue, key);
-              }
-            });
-
-            // 我们认为 $ 开头的变量是不可递归的
-            // 比如浏览器中常见的 $0 表示当前选中元素
-            // DOM 元素是不能递归的
-            if (startsWith(key, '$')) {
-              return;
-            }
-
-            var newIs = string(newValue),
-                oldIs = string(oldValue);
-            if (newIs || oldIs) {
-              addChange(newIs ? newValue[RAW_LENGTH] : UNDEFINED, oldIs ? oldValue[RAW_LENGTH] : UNDEFINED, join$1(key, RAW_LENGTH));
-            } else {
-              newIs = object(newValue), oldIs = object(oldValue);
-              if (newIs || oldIs) {
-                diffObject(newIs && newValue, oldIs && oldValue, function (newValue, oldValue, prop) {
-                  addChange(newValue, oldValue, join$1(key, prop));
-                });
-              } else {
-                diffArray(array(newValue) && newValue, array(oldValue) && oldValue, function (newValue, oldValue, index) {
-                  addChange(newValue, oldValue, join$1(key, index));
-                });
-              }
-            }
-          }
-        };
-
-        addChange(value, instance.get(keypath), keypath);
+        addFuzzyChange(fuzzyKeypaths, newValue, oldValue, keypath);
       }
+    };
+
+    var setValue = function (value, keypath) {
+
+      keypath = normalize(keypath);
+
+      var oldValue = instance.get(keypath);
+      if (value === oldValue) {
+        return;
+      }
+
+      addChange(value, oldValue, keypath);
 
       var computed = instance.computed,
           reversedComputedKeys = instance.reversedComputedKeys;
 
       if (computed) {
         var target = computed[keypath];
-        if (target && target.set) {
-          target.set(value);
+        if (target) {
+          // 如果强制给没有 set 方法的计算属性设值，忽略
+          if (target.set) {
+            target.set(value);
+          }
           return;
         }
 
@@ -4756,7 +4775,7 @@ var Observer = function () {
     }
 
     for (var i = 0; i < changes[RAW_LENGTH]; i += 3) {
-      emitter.fire(changes[i], [changes[i + 1], changes[i + 2], changes]);
+      emitter.fire(changes[i], [changes[i + 1], changes[i + 2], addChange]);
     }
   };
 
@@ -6103,7 +6122,7 @@ var Yox = function () {
 
 
   Yox.prototype.render = function () {
-    console.time('render');
+
     var instance = this;
 
     var $template = instance.$template,
@@ -6188,7 +6207,6 @@ var Yox = function () {
 
     var result = render($template, $getter, $setter, instance);
 
-    console.timeEnd('render');
     return result;
   };
 
@@ -6487,7 +6505,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.56.0';
+Yox.version = '0.56.1';
 
 /**
  * 工具，便于扩展、插件使用
