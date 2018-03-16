@@ -5149,15 +5149,17 @@ function setAttr(node, name, value) {
   // 比如 readonly
   if (propName || isBoolean) {
     setProp(node, propName || name, value);
-    return;
-  } else if (has$2(name, CHAR_COLON)) {
-    var ns = namespaces[name.split(CHAR_COLON)[0]];
-    if (ns) {
-      node.setAttributeNS(ns, name, value);
-      return;
+  } else {
+    if (has$2(name, CHAR_COLON)) {
+      var parts = name.split(CHAR_COLON),
+          ns = namespaces[parts[0]];
+      if (ns) {
+        node.setAttributeNS(ns, parts[1], value);
+        return;
+      }
     }
+    node.setAttribute(name, value);
   }
-  node.setAttribute(name, value);
 }
 
 function removeAttr(node, name) {
@@ -5166,6 +5168,14 @@ function removeAttr(node, name) {
   } else if (boolean(node[name])) {
     removeProp(node, name);
   } else {
+    if (has$2(name, CHAR_COLON)) {
+      var parts = name.split(CHAR_COLON),
+          ns = namespaces[parts[0]];
+      if (ns) {
+        node.removeAttributeNS(ns, parts[1]);
+        return;
+      }
+    }
     node.removeAttribute(name);
   }
 }
