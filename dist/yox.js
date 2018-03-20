@@ -4429,12 +4429,16 @@ var Computed = function () {
       };
 
       each$1(observer.computed, function (computed) {
-        if (computed.hasDep(keypath)) {
-          return diff();
-        } else {
-          for (var i = 0, len = computed.deps.length; i < len; i++) {
-            if (startsWith$1(computed.deps[i], keypath)) {
-              return diff();
+        if (computed.keypath !== keypath) {
+          var deps = computed.deps;
+
+          if (has(deps, keypath)) {
+            return diff();
+          } else {
+            for (var i = 0, len = deps.length; i < len; i++) {
+              if (startsWith$1(deps[i], keypath)) {
+                return diff();
+              }
             }
           }
         }
@@ -6515,7 +6519,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.56.2';
+Yox.version = '0.56.3';
 
 /**
  * 工具，便于扩展、插件使用
