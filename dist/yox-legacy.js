@@ -4476,12 +4476,22 @@ var Computed = function () {
       observer.onChange(value, keypath);
 
       // 当前计算属性是否是其他计算属性的依赖
+      var diff = function () {
+        var newValue = instance.get();
+        if (newValue !== value) {
+          addChange(newValue, value, keypath);
+          return FALSE;
+        }
+      };
+
       each$1(observer.computed, function (computed) {
         if (computed.hasDep(keypath)) {
-          var newValue = instance.get();
-          if (newValue !== value) {
-            addChange(newValue, value, keypath);
-            return FALSE;
+          return diff();
+        } else {
+          for (var i = 0, len = computed.deps.length; i < len; i++) {
+            if (startsWith$1(computed.deps[i], keypath)) {
+              return diff();
+            }
           }
         }
       });
@@ -6667,7 +6677,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.56.1';
+Yox.version = '0.56.2';
 
 /**
  * 工具，便于扩展、插件使用
