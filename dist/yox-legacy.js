@@ -6319,14 +6319,14 @@ var Yox = function () {
           }
 
           var value,
-              originalKeypath,
+              actualKeypath,
               localVars = instance.$vars,
               lookup = expr.lookup !== FALSE,
               index = keypathStack[RAW_LENGTH] - 1,
               getKeypath = function () {
             var keypath = join$1(keypathStack[index], key);
-            if (!originalKeypath) {
-              originalKeypath = keypath;
+            if (!actualKeypath) {
+              actualKeypath = keypath;
             }
             if (localVars && has$1(localVars, keypath)) {
               value = localVars[keypath];
@@ -6345,14 +6345,12 @@ var Yox = function () {
               keypath = getKeypath();
 
           if (isDef(keypath)) {
-            expr.actualKeypath = keypath;
-          } else {
-            if (filters) {
-              value = filters[key];
-            } else {
-              expr.actualKeypath = originalKeypath;
-            }
+            actualKeypath = keypath;
+          } else if (filters) {
+            value = filters[key];
           }
+
+          expr.actualKeypath = actualKeypath;
 
           return value;
         } else {
@@ -6689,7 +6687,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.56.4';
+Yox.version = '0.56.5';
 
 /**
  * 工具，便于扩展、插件使用
