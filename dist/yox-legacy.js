@@ -6319,11 +6319,15 @@ var Yox = function () {
           }
 
           var value,
+              originalKeypath,
               localVars = instance.$vars,
               lookup = expr.lookup !== FALSE,
               index = keypathStack[RAW_LENGTH] - 1,
               getKeypath = function () {
             var keypath = join$1(keypathStack[index], key);
+            if (!originalKeypath) {
+              originalKeypath = keypath;
+            }
             if (localVars && has$1(localVars, keypath)) {
               value = localVars[keypath];
               return keypath;
@@ -6342,11 +6346,15 @@ var Yox = function () {
 
           if (isDef(keypath)) {
             expr.actualKeypath = keypath;
-            return value;
+          } else {
+            if (filters) {
+              value = filters[key];
+            } else {
+              expr.actualKeypath = originalKeypath;
+            }
           }
-          if (filters) {
-            return filters[key];
-          }
+
+          return value;
         } else {
           return instance.get(key);
         }
@@ -6681,7 +6689,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.56.3';
+Yox.version = '0.56.4';
 
 /**
  * 工具，便于扩展、插件使用

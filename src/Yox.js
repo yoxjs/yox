@@ -435,12 +435,15 @@ export default class Yox {
             return array.last(keypathStack)
           }
 
-          let value,
+          let value, originalKeypath,
           localVars = instance.$vars,
           lookup = expr.lookup !== env.FALSE,
           index = keypathStack[ env.RAW_LENGTH ] - 1,
           getKeypath = function () {
             let keypath = keypathUtil.join(keypathStack[ index ], key)
+            if (!originalKeypath) {
+              originalKeypath = keypath
+            }
             if (localVars && object.has(localVars, keypath)) {
               value = localVars[ keypath ]
               return keypath
@@ -460,11 +463,17 @@ export default class Yox {
 
           if (isDef(keypath)) {
             expr.actualKeypath = keypath
-            return value
           }
-          if (filters) {
-            return filters[ key ]
+          else {
+            if (filters) {
+              value = filters[ key ]
+            }
+            else {
+              expr.actualKeypath = originalKeypath
+            }
           }
+
+          return value
 
         }
         else {
@@ -792,7 +801,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.56.3'
+Yox.version = '0.56.4'
 
 /**
  * 工具，便于扩展、插件使用
