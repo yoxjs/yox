@@ -5234,6 +5234,8 @@ function setAttr(node, name, value) {
   var isBoolean = boolean(node[propName || name]);
   if (isBoolean) {
     value = value === TRUE || value === RAW_TRUE || value === name;
+  } else if (value == NULL) {
+    value = CHAR_BLANK;
   }
   // 比如 readonly
   if (propName || isBoolean) {
@@ -6687,7 +6689,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.56.5';
+Yox.version = '0.56.6';
 
 /**
  * 工具，便于扩展、插件使用
