@@ -1472,7 +1472,7 @@ function setRef(instance, ref, value) {
     // 任何有类似需求的地方，可以往这个对象存一些标识
     var refs = instance.$refs || (instance.$refs = {});
     refs[ref] = value;
-    instance.$flags[ref] = env.TRUE;
+    instance.$flags[ref] = TRUE;
   }
 }
 
@@ -6535,7 +6535,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.56.7';
+Yox.version = '0.56.8';
 
 /**
  * 工具，便于扩展、插件使用
