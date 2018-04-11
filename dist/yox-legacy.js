@@ -1522,13 +1522,19 @@ var HOOK_AFTER_DESTROY = 'afterDestroy';
 
 function setRef(instance, ref, value) {
   if (ref) {
+    // 为了避免相同的组件，因为切换位置
+    // 出现在前面创建，却在后面删除的情况
+    // 这里我们设计了一种机制，即在更新视图前，给 instance 设置了一个全新的对象 $flags
+    // 任何有类似需求的地方，可以往这个对象存一些标识
     var refs = instance.$refs || (instance.$refs = {});
     refs[ref] = value;
+    instance.$flags[ref] = env.TRUE;
   }
 }
 
 function removeRef(instance, ref) {
-  if (ref) {
+  // 不是本次更新视图新增的
+  if (ref && !instance.$flags[ref]) {
     delete instance.$refs[ref];
   }
 }
@@ -6411,6 +6417,8 @@ var Yox = function () {
         $options = instance.$options;
 
 
+    instance.$flags = {};
+
     if ($node) {
       execute($options[HOOK_BEFORE_UPDATE], instance);
       instance.$node = patch(oldNode, newNode);
@@ -6689,7 +6697,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.56.6';
+Yox.version = '0.56.7';
 
 /**
  * 工具，便于扩展、插件使用

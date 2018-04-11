@@ -538,6 +538,8 @@ export default class Yox {
       $options,
     } = instance
 
+    instance.$flags = { }
+
     if ($node) {
       execute($options[ config.HOOK_BEFORE_UPDATE ], instance)
       instance.$node = patch(oldNode, newNode)
@@ -798,7 +800,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.56.6'
+Yox.version = '0.56.7'
 
 /**
  * 工具，便于扩展、插件使用
