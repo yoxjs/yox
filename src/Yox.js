@@ -800,7 +800,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.56.8'
+Yox.version = '0.57.0'
 
 /**
  * 工具，便于扩展、插件使用
@@ -1022,3 +1022,8 @@ import binding from './directive/binding'
 
 // 全局注册内置指令
 Yox.directive({ event, model, binding })
+
+import hasSlot from './filter/hasSlot'
+
+// 全局注册内置过滤器
+Yox.filter({ hasSlot })

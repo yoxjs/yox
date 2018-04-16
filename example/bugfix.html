@@ -50,10 +50,10 @@
                           <template slot="haha">
                               <div>11</div>
                           </template>
-                          <template slot="haha">
+                          <template slot="haha2">
                               <div>22</div>
                           </template>
-                          <template slot="haha">
+                          <template slot="haha2">
                               <div>33</div>
                           </template>
                       </Button>
@@ -80,7 +80,13 @@
                       }
                     },
                   template: `
-                      <div><slot name="haha" /></div>
+                      <div>
+                          {{#if hasSlot('haha')}}
+                              <slot name="haha" />
+                          {{else}}
+                              haha is not found.
+                          {{/if}}
+                      </div>
                     `,
                     methods: {
                       click: function () {

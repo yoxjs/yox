@@ -81,6 +81,7 @@ var RAW_UNDEFINED = 'undefined';
 
 var RAW_THIS = 'this';
 var RAW_LENGTH = 'length';
+var RAW_CHILDREN = 'children';
 var RAW_FUNCTION = 'function';
 
 var KEYPATH_SEPARATOR = '.';
@@ -1446,6 +1447,8 @@ var SYNTAX_COMMENT = /^!\s/;
 
 var SPECIAL_EVENT = '$event';
 var SPECIAL_KEYPATH = '$keypath';
+
+var SLOT_DATA_PREFIX = '$slot_';
 
 var DIRECTIVE_CUSTOM_PREFIX = 'o-';
 var DIRECTIVE_EVENT_PREFIX = 'on-';
@@ -3096,7 +3099,7 @@ var Each = function (_Node) {
   }
 
   Each.prototype.stringify = function () {
-    var generate = this.stringifyArray(this.children, 'x');
+    var generate = this.stringifyArray(this[RAW_CHILDREN], 'x');
     if (generate) {
       var params = [this.stringifyObject(this.expr), this.stringifyFunction(generate)];
       if (this.index) {
@@ -3148,8 +3151,8 @@ var Element = function (_Node) {
         attrs = [],
         children = [];
 
-    if (me.children) {
-      each(me.children, function (child, index) {
+    if (me[RAW_CHILDREN]) {
+      each(me[RAW_CHILDREN], function (child, index) {
         push(index < divider ? attrs : children, child.stringify());
       });
     }
@@ -3289,7 +3292,7 @@ var If = function (_Node) {
 
     var stringify = function (node) {
       var expr = node.stringifyExpression(node.expr);
-      var children = node.stringifyArray(node.children, 'x');
+      var children = node.stringifyArray(node[RAW_CHILDREN], 'x');
       var next = node.next;
       if (next) {
         next = stringify(next);
@@ -3365,7 +3368,7 @@ var Partial = function (_Node) {
   }
 
   Partial.prototype.stringify = function () {
-    return this.stringifyCall('p', [this.stringifyString(this.name), this.stringifyFunction(this.stringifyArray(this.children, 'x'))]);
+    return this.stringifyCall('p', [this.stringifyString(this.name), this.stringifyFunction(this.stringifyArray(this[RAW_CHILDREN], 'x'))]);
   };
 
   return Partial;
@@ -3538,7 +3541,7 @@ function compile$$1(content) {
       // 避免在渲染阶段增加计算量
       if (children && !children[RAW_LENGTH]) {
         children = NULL;
-        delete target.children;
+        delete target[RAW_CHILDREN];
       }
 
       if (!children) {
@@ -3576,7 +3579,7 @@ function compile$$1(content) {
           }
 
           if (!children[RAW_LENGTH]) {
-            delete target.children;
+            delete target[RAW_CHILDREN];
           }
         }
       } else {
@@ -3588,9 +3591,9 @@ function compile$$1(content) {
           var element = last(htmlStack);
           if (name === 'key' || name === 'ref' || element.tag === 'template' && name === 'slot' || element.tag === 'slot' && name === 'name') {
             // 把数据从属性中提出来，减少渲染时的遍历
-            remove(element.children, target);
-            if (!element.children[RAW_LENGTH]) {
-              delete element.children;
+            remove(element[RAW_CHILDREN], target);
+            if (!element[RAW_CHILDREN][RAW_LENGTH]) {
+              delete element[RAW_CHILDREN];
             }
             if (children[RAW_LENGTH]) {
               element[name] = children;
@@ -3608,13 +3611,13 @@ function compile$$1(content) {
             if (type === DIRECTIVE) {
               target.expr = compile$1(text);
               target.value = text;
-              delete target.children;
+              delete target[RAW_CHILDREN];
             }
             // 属性的值如果是纯文本，直接获取文本值
             // 减少渲染时的遍历
             else if (type === ATTRIBUTE) {
                 target.value = text;
-                delete target.children;
+                delete target[RAW_CHILDREN];
               }
           }
           // <div class="{{className}}">
@@ -3623,7 +3626,7 @@ function compile$$1(content) {
               var expr = _singleChild.expr;
 
               target.expr = expr;
-              delete target.children;
+              delete target[RAW_CHILDREN];
             }
         }
       }
@@ -3679,7 +3682,7 @@ function compile$$1(content) {
           prevNode = children[children[RAW_LENGTH] - 1];
         }
       } else {
-        children = currentNode.children = [];
+        children = currentNode[RAW_CHILDREN] = [];
       }
       push(children, node);
     } else {
@@ -3723,7 +3726,7 @@ function compile$$1(content) {
     if (match) {
       if (htmlStack[RAW_LENGTH] === 1) {
         var element = last(htmlStack);
-        element.divider = element.children ? element.children[RAW_LENGTH] : 0;
+        element.divider = element[RAW_CHILDREN] ? element[RAW_CHILDREN][RAW_LENGTH] : 0;
         if (match[1] === CHAR_SLASH) {
           popStack(ELEMENT);
         }
@@ -3774,7 +3777,7 @@ function compile$$1(content) {
       if (closed) {
         text += currentQuote;
         closed = pop(htmlStack);
-        if (!closed.children) {
+        if (!closed[RAW_CHILDREN]) {
           closed.value = CHAR_BLANK;
         }
         popStack(closed.type);
@@ -3922,8 +3925,6 @@ function convert(ast) {
   });
 }
 
-var SLOT_PREFIX = '$slot_';
-
 /**
  * 渲染抽象语法树
  *
@@ -4044,8 +4045,8 @@ function render(render, getter, setter, instance) {
             if (expr.staticKeypath) {
               addDirective(DIRECTIVE_BINDING, name, expr.actualKeypath);
             }
-          } else if (node.children) {
-            value = getValue(node.children);
+          } else if (node[RAW_CHILDREN]) {
+            value = getValue(node[RAW_CHILDREN]);
           } else {
             value = currentElement.component ? TRUE : name;
           }
@@ -4062,7 +4063,7 @@ function render(render, getter, setter, instance) {
         node();
       } else if (values) {
         values[values[RAW_LENGTH]] = node;
-      } else if (currentElement.children) {
+      } else if (currentElement[RAW_CHILDREN]) {
 
         if (array(node)) {
           each(node, addChild);
@@ -4128,7 +4129,7 @@ function render(render, getter, setter, instance) {
 
       childs();
 
-      addSlot(SLOT_PREFIX + name, children);
+      addSlot(SLOT_DATA_PREFIX + name, children);
 
       popElement(lastElement);
     }
@@ -4138,7 +4139,7 @@ function render(render, getter, setter, instance) {
   b = function (name) {
     name = getValue(name);
     if (name) {
-      var result = getter(SLOT_PREFIX + name);
+      var result = getter(SLOT_DATA_PREFIX + name);
       return array(result) && result.length === 1 ? result[0] : result;
     }
   },
@@ -4176,10 +4177,10 @@ function render(render, getter, setter, instance) {
 
     var children;
     if (childs) {
-      children = currentElement.children = [];
+      children = currentElement[RAW_CHILDREN] = [];
       childs();
       if (component) {
-        addSlot(SLOT_PREFIX + 'children', children);
+        addSlot(SLOT_DATA_PREFIX + 'children', children);
         children = UNDEFINED;
       }
     }
@@ -4253,7 +4254,7 @@ function render(render, getter, setter, instance) {
     var staticKeypath = expr.staticKeypath,
         value;
     // 只能作用于 attribute 层级
-    if (!currentElement.children && (value = o(expr, staticKeypath)) && object(value)) {
+    if (!currentElement[RAW_CHILDREN] && (value = o(expr, staticKeypath)) && object(value)) {
       var actualKeypath = expr.actualKeypath;
 
       each$1(value, function (value, key) {
@@ -5763,6 +5764,11 @@ var binding = function (_ref) {
   }
 };
 
+// 组件是否存在某个 slot
+var hasSlot = function (name) {
+  return this.get(SLOT_DATA_PREFIX + name, UNDEFINED) !== UNDEFINED;
+};
+
 var patch = init(api);
 
 var TEMPLATE = 'template';
@@ -6535,7 +6541,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.56.8';
+Yox.version = '0.57.0';
 
 /**
  * 工具，便于扩展、插件使用
@@ -6713,6 +6719,9 @@ Yox.use = function (plugin) {
 
 // 全局注册内置指令
 Yox.directive({ event: bindEvent, model: model, binding: binding });
+
+// 全局注册内置过滤器
+Yox.filter({ hasSlot: hasSlot });
 
 return Yox;
 
