@@ -465,7 +465,10 @@ export default class Yox {
             actualKeypath = keypath
           }
           else if (filters) {
-            value = filters[ key ]
+            let result = object.get(filters, key)
+            if (result) {
+              value = result.value
+            }
           }
 
           expr.actualKeypath = actualKeypath
@@ -800,7 +803,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.57.0'
+Yox.version = '0.57.1'
 
 /**
  * 工具，便于扩展、插件使用
