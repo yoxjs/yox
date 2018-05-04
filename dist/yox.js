@@ -86,6 +86,7 @@ var RAW_FUNCTION = 'function';
 
 var KEYPATH_SEPARATOR = '.';
 
+
 /**
  * 浏览器环境下的 window 对象
  *
@@ -1135,9 +1136,8 @@ if (typeof setImmediate === RAW_FUNCTION) {
 else if (typeof MessageChannel === RAW_FUNCTION) {
     nextTick = function (fn) {
       var channel = new MessageChannel();
-      var port = channel.port2;
       channel.port1.onmessage = fn;
-      port.postMessage(1);
+      channel.port2.postMessage(1);
     };
   } else if (typeof Promise === RAW_FUNCTION && isNative(Promise)) {
     nextTick = function (fn) {
@@ -3949,11 +3949,8 @@ function render(render, getter, setter, instance) {
    */
 
   var keypath = CHAR_BLANK,
-      keypaths = [],
       keypathStack = [keypath],
       pushKeypath = function (newKeypath) {
-    push(keypaths, newKeypath);
-    newKeypath = join(keypaths, KEYPATH_SEPARATOR);
     if (newKeypath !== keypath) {
       keypath = newKeypath;
       keypathStack = copy(keypathStack);
@@ -3961,7 +3958,6 @@ function render(render, getter, setter, instance) {
     }
   },
       popKeypath = function (lastKeypath, lastKeypathStack) {
-    keypaths.pop();
     keypath = lastKeypath;
     keypathStack = lastKeypathStack;
   },
@@ -4043,7 +4039,7 @@ function render(render, getter, setter, instance) {
           } else if (expr) {
             value = o(expr, expr.staticKeypath);
             if (expr.staticKeypath) {
-              addDirective(DIRECTIVE_BINDING, name, expr.actualKeypath);
+              addDirective(DIRECTIVE_BINDING, name, expr.absoluteKeypath);
             }
           } else if (node[RAW_CHILDREN]) {
             value = getValue(node[RAW_CHILDREN]);
@@ -4052,7 +4048,7 @@ function render(render, getter, setter, instance) {
           }
           addAttr(name, value);
         } else {
-          addDirective(name, node.modifier, name === DIRECTIVE_MODEL ? (o(expr), expr.actualKeypath) : node.value).expr = expr;
+          addDirective(name, node.modifier, name === DIRECTIVE_MODEL ? (o(expr), expr.absoluteKeypath) : node.value).expr = expr;
         }
       }
     }
@@ -4106,7 +4102,7 @@ function render(render, getter, setter, instance) {
         var expr = value;
         value = o(expr, expr.staticKeypath);
         if (expr.staticKeypath) {
-          addDirective(DIRECTIVE_BINDING, name, expr.actualKeypath).prop = TRUE;
+          addDirective(DIRECTIVE_BINDING, name, expr.absoluteKeypath).prop = TRUE;
         }
       }
       var props = currentElement.props || (currentElement.props = {});
@@ -4215,7 +4211,7 @@ function render(render, getter, setter, instance) {
       var lastKeypath = keypath,
           lastKeypathStack = keypathStack;
 
-      var eachKeypath = expr.staticKeypath || expr.dynamicKeypath;
+      var eachKeypath = expr.absoluteKeypath;
       if (eachKeypath) {
         pushKeypath(eachKeypath);
       }
@@ -4225,7 +4221,7 @@ function render(render, getter, setter, instance) {
         var lastKeypath = keypath,
             lastKeypathStack = keypathStack;
 
-        pushKeypath(key);
+        pushKeypath(keypath + KEYPATH_SEPARATOR + key);
 
         setter(keypath, RAW_THIS, item);
 
@@ -4255,12 +4251,12 @@ function render(render, getter, setter, instance) {
         value;
     // 只能作用于 attribute 层级
     if (!currentElement[RAW_CHILDREN] && (value = o(expr, staticKeypath)) && object(value)) {
-      var actualKeypath = expr.actualKeypath;
+      var absoluteKeypath = expr.absoluteKeypath;
 
       each$1(value, function (value, key) {
         addAttr(key, value);
         if (isDef(staticKeypath)) {
-          addDirective(DIRECTIVE_BINDING, key, actualKeypath ? actualKeypath + KEYPATH_SEPARATOR + key : key);
+          addDirective(DIRECTIVE_BINDING, key, absoluteKeypath ? absoluteKeypath + KEYPATH_SEPARATOR + key : key);
         }
       });
     }
@@ -6171,14 +6167,14 @@ var Yox = function () {
           }
 
           var value,
-              actualKeypath,
+              absoluteKeypath,
               localVars = instance.$vars,
               lookup = expr.lookup !== FALSE,
               index = keypathStack[RAW_LENGTH] - 1,
               getKeypath = function () {
             var keypath = join$1(keypathStack[index], key);
-            if (!actualKeypath) {
-              actualKeypath = keypath;
+            if (!absoluteKeypath) {
+              absoluteKeypath = keypath;
             }
             if (localVars && has$1(localVars, keypath)) {
               value = localVars[keypath];
@@ -6197,7 +6193,7 @@ var Yox = function () {
               keypath = getKeypath();
 
           if (isDef(keypath)) {
-            actualKeypath = keypath;
+            absoluteKeypath = keypath;
           } else {
             value = UNDEFINED;
             if (filters) {
@@ -6208,7 +6204,7 @@ var Yox = function () {
             }
           }
 
-          expr.actualKeypath = actualKeypath;
+          expr.absoluteKeypath = absoluteKeypath;
 
           return value;
         } else {
@@ -6547,7 +6543,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.57.2';
+Yox.version = '0.57.3';
 
 /**
  * 工具，便于扩展、插件使用
