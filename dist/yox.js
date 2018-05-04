@@ -86,6 +86,11 @@ var RAW_FUNCTION = 'function';
 
 var KEYPATH_SEPARATOR = '.';
 
+var KEYPATH_PUBLIC_PARENT = '..';
+var KEYPATH_PRIVATE_PARENT = '$parent';
+
+var KEYPATH_PUBLIC_CURRENT = RAW_THIS;
+var KEYPATH_PRIVATE_CURRENT = '$this';
 
 /**
  * 浏览器环境下的 window 对象
@@ -639,6 +644,85 @@ var string$1 = {
 	falsy: falsy$1
 };
 
+var normalizeCache = {};
+
+function normalize(str) {
+  if (!falsy$1(str)) {
+    var start = indexOf$1(str, CHAR_OBRACK);
+    if (start > 0 && indexOf$1(str, CHAR_CBRACK) > start) {
+      if (!normalizeCache[str]) {
+        normalizeCache[str] = str.replace(/\[\s*?([^\]]+)\s*?\]/g, function ($0, $1) {
+          var code = codeAt($1);
+          if (code === CODE_SQUOTE || code === CODE_DQUOTE) {
+            $1 = slice($1, 1, -1);
+          }
+          return KEYPATH_SEPARATOR + $1;
+        });
+      }
+      return normalizeCache[str];
+    }
+  }
+  return str;
+}
+
+function startsWith$1(keypath, prefix) {
+  var temp;
+  if (keypath === prefix) {
+    return prefix[RAW_LENGTH];
+  } else if (startsWith(keypath, temp = prefix + KEYPATH_SEPARATOR)) {
+    return temp[RAW_LENGTH];
+  } else {
+    return FALSE;
+  }
+}
+
+function each$2(keypath, callback) {
+  if (falsy$1(keypath)) {
+    callback(keypath, TRUE);
+  } else {
+    var startIndex = 0,
+        endIndex = 0;
+    while (TRUE) {
+      endIndex = indexOf$1(keypath, KEYPATH_SEPARATOR, startIndex);
+      if (endIndex > 0) {
+        callback(slice(keypath, startIndex, endIndex));
+        startIndex = endIndex + 1;
+      } else {
+        callback(slice(keypath, startIndex), TRUE);
+        break;
+      }
+    }
+  }
+}
+
+function join$1(keypath1, keypath2) {
+
+  var keypath = number(keypath1) || string(keypath1) ? keypath1 : CHAR_BLANK;
+
+  var isNumber,
+      isString;
+
+  if ((isNumber = number(keypath2)) || (isString = string(keypath2))) {
+    if (keypath === CHAR_BLANK) {
+      return keypath2;
+    }
+    if (isNumber || !has$2(keypath2, KEYPATH_PRIVATE_CURRENT) && !has$2(keypath2, KEYPATH_PRIVATE_PARENT)) {
+      return keypath + KEYPATH_SEPARATOR + keypath2;
+    }
+    var result = keypath.split(KEYPATH_SEPARATOR);
+    each$2(keypath2, function (key) {
+      if (key === KEYPATH_PRIVATE_PARENT) {
+        pop(result);
+      } else if (key !== KEYPATH_PRIVATE_CURRENT) {
+        push(result, key);
+      }
+    });
+    return join(result, KEYPATH_SEPARATOR);
+  }
+
+  return keypath;
+}
+
 /**
  * 获取对象的 key 的数组
  *
@@ -747,25 +831,6 @@ function copy(object$$1, deep) {
   return result;
 }
 
-function eachKeypath(keypath, callback) {
-  if (falsy$1(keypath)) {
-    callback(keypath, TRUE);
-  } else {
-    var startIndex = 0,
-        endIndex = 0;
-    while (TRUE) {
-      endIndex = indexOf$1(keypath, KEYPATH_SEPARATOR, startIndex);
-      if (endIndex > 0) {
-        callback(slice(keypath, startIndex, endIndex));
-        startIndex = endIndex + 1;
-      } else {
-        callback(slice(keypath, startIndex), TRUE);
-        break;
-      }
-    }
-  }
-}
-
 function getValue(object$$1, key) {
   if (object$$1 != NULL && has$1(object$$1, key)) {
     var value = object$$1[key];
@@ -794,7 +859,7 @@ function get$1(object$$1, keypath) {
     return getValue(object$$1, keypath);
   }
 
-  eachKeypath(keypath, function (key, isLast) {
+  each$2(keypath, function (key, isLast) {
     object$$1 = getValue(object$$1, key);
     if (!isLast) {
       if (object$$1) {
@@ -817,7 +882,7 @@ function get$1(object$$1, keypath) {
  * @param {?boolean} autofill 是否自动填充不存在的对象，默认自动填充
  */
 function set$1(object$$1, keypath, value, autofill) {
-  eachKeypath(keypath, function (key, isLast) {
+  each$2(keypath, function (key, isLast) {
     if (isLast) {
       object$$1[key] = value;
     } else {
@@ -1185,53 +1250,6 @@ function run() {
   each(currentTasks, function (task) {
     task();
   });
-}
-
-var normalizeCache = {};
-
-function normalize(str) {
-  if (!falsy$1(str)) {
-    var start = indexOf$1(str, CHAR_OBRACK);
-    if (start > 0 && indexOf$1(str, CHAR_CBRACK) > start) {
-      if (!normalizeCache[str]) {
-        normalizeCache[str] = str.replace(/\[\s*?([^\]]+)\s*?\]/g, function ($0, $1) {
-          var code = codeAt($1);
-          if (code === CODE_SQUOTE || code === CODE_DQUOTE) {
-            $1 = slice($1, 1, -1);
-          }
-          return KEYPATH_SEPARATOR + $1;
-        });
-      }
-      return normalizeCache[str];
-    }
-  }
-  return str;
-}
-
-function startsWith$1(keypath, prefix) {
-  var temp;
-  if (keypath === prefix) {
-    return prefix[RAW_LENGTH];
-  } else if (startsWith(keypath, temp = prefix + KEYPATH_SEPARATOR)) {
-    return temp[RAW_LENGTH];
-  } else {
-    return FALSE;
-  }
-}
-
-function isValidTerm(term) {
-  return number(term) || string(term);
-}
-
-function join$1(keypath1, keypath2) {
-
-  var keypath = keypath1 === CHAR_BLANK || isValidTerm(keypath1) ? keypath1 : CHAR_BLANK;
-
-  if (keypath2 !== CHAR_BLANK && isValidTerm(keypath2)) {
-    return keypath === CHAR_BLANK ? keypath2 : keypath + KEYPATH_SEPARATOR + keypath2;
-  }
-
-  return keypath;
 }
 
 function createAttrs(vnode) {
@@ -2233,6 +2251,10 @@ var Ternary = function (_Node) {
   return Ternary;
 }(Node);
 
+var names = {};
+names[KEYPATH_PUBLIC_CURRENT] = KEYPATH_PRIVATE_CURRENT;
+names[KEYPATH_PUBLIC_PARENT] = KEYPATH_PRIVATE_PARENT;
+
 /**
  * Identifier 节点
  *
@@ -2248,8 +2270,8 @@ var Identifier = function (_Node) {
 
     var _this = possibleConstructorReturn(this, _Node.call(this, IDENTIFIER, raw));
 
-    if (name === RAW_THIS) {
-      name = CHAR_BLANK;
+    if (has$1(names, name)) {
+      name = names[name];
       _this.lookup = FALSE;
     }
     _this.name = _this.staticKeypath = name;
@@ -2303,9 +2325,9 @@ var Member = function (_Node) {
 
     push(props, prop);
 
-    if (props[0].raw === RAW_THIS) {
+    var firstRaw = props[0].raw;
+    if (firstRaw === KEYPATH_PUBLIC_CURRENT || firstRaw === KEYPATH_PUBLIC_PARENT) {
       _this.lookup = FALSE;
-      props.shift();
     }
 
     _this.props = props;
@@ -2415,6 +2437,10 @@ function compile$1(content) {
 
   var getCharCode = function () {
     return codeAt(content, index);
+  };
+
+  var getNextCharCode = function () {
+    return codeAt(content, index + 1);
   };
 
   var cutString = function (start, end) {
@@ -2580,11 +2606,15 @@ function compile$1(content) {
     }
   };
 
-  var parseVariable = function () {
+  var parseVariable = function (prevStart, prevNode) {
 
     var start = index,
         node = parseIdentifier(TRUE),
         temp;
+
+    if (prevNode) {
+      node = new Member(cutString(prevStart), prevNode, new Literal(node.raw, node.name));
+    }
 
     while (index < length) {
       // a(x)
@@ -2611,6 +2641,49 @@ function compile$1(content) {
     return node;
   };
 
+  var parseNumber = function (start) {
+    skipNumber();
+    var temp = cutString(start);
+    return new Literal(temp, parseFloat(temp));
+  };
+
+  var parsePath = function (start, prevNode) {
+
+    // 跳过第一个点号
+    index++;
+    charCode = getCharCode();
+
+    var node;
+
+    // ./
+    if (charCode === CODE_SLASH) {
+      index++;
+      node = new Identifier(KEYPATH_PUBLIC_CURRENT, KEYPATH_PUBLIC_CURRENT);
+    }
+    // ../
+    else if (charCode === CODE_DOT) {
+        index++;
+        if (getCharCode() === CODE_SLASH) {
+          index++;
+          node = new Identifier(KEYPATH_PUBLIC_PARENT, KEYPATH_PUBLIC_PARENT);
+        }
+      }
+
+    if (node) {
+      if (prevNode) {
+        node = new Member(cutString(start), prevNode, new Literal(node.raw, node.name));
+      }
+      charCode = getCharCode();
+      if (charCode === CODE_DOT) {
+        return parsePath(start, node);
+      } else if (isIdentifierStart(charCode)) {
+        return parseVariable(start, node);
+      }
+    }
+
+    throwError();
+  };
+
   var parseToken = function () {
 
     skipWhitespace();
@@ -2627,28 +2700,30 @@ function compile$1(content) {
       temp = cutString(start);
       return new Literal(temp, slice(temp, 1, -1));
     }
-    // 1.1 或 .1
-    else if (isDigit(charCode) || charCode === CODE_DOT) {
-        skipNumber();
-        temp = cutString(start);
-        return new Literal(temp, parseFloat(temp));
+    // 1.1
+    else if (isDigit(charCode)) {
+        return parseNumber(start);
       }
-      // [xx, xx]
-      else if (charCode === CODE_OBRACK) {
-          temp = parseTuple(CODE_CBRACK);
-          return new Array$1(cutString(start), temp);
-        } else if (charCode === CODE_OBRACE) {
-          temp = parseObject();
-          return new Object$1(cutString(start), temp.keys, temp.values);
+      // .1  ./  ../
+      else if (charCode === CODE_DOT) {
+          return isDigit(getNextCharCode()) ? parseNumber(start) : parsePath(start);
         }
-        // (xx)
-        else if (charCode === CODE_OPAREN) {
-            return parseExpression(CODE_CPAREN);
+        // [xx, xx]
+        else if (charCode === CODE_OBRACK) {
+            temp = parseTuple(CODE_CBRACK);
+            return new Array$1(cutString(start), temp);
+          } else if (charCode === CODE_OBRACE) {
+            temp = parseObject();
+            return new Object$1(cutString(start), temp.keys, temp.values);
           }
-          // 变量
-          else if (isIdentifierStart(charCode)) {
-              return parseVariable();
+          // (xx)
+          else if (charCode === CODE_OPAREN) {
+              return parseExpression(CODE_CPAREN);
             }
+            // 变量
+            else if (isIdentifierStart(charCode)) {
+                return parseVariable();
+              }
     // 一元操作
     var action = parseOperator(unaryList);
     if (action) {
@@ -2771,7 +2846,6 @@ executor[MEMBER] = function (node, getter, context) {
       }
       keypath = join$1(keypath, next);
     });
-    node.dynamicKeypath = keypath;
   }
   return getter(keypath, node);
 };
@@ -3957,10 +4031,6 @@ function render(render, getter, setter, instance) {
       push(keypathStack, keypath);
     }
   },
-      popKeypath = function (lastKeypath, lastKeypathStack) {
-    keypath = lastKeypath;
-    keypathStack = lastKeypathStack;
-  },
       values,
       currentElement,
       elementStack = [],
@@ -4231,11 +4301,13 @@ function render(render, getter, setter, instance) {
 
         generate();
 
-        popKeypath(lastKeypath, lastKeypathStack);
+        keypath = lastKeypath;
+        keypathStack = lastKeypathStack;
       });
 
       if (eachKeypath) {
-        popKeypath(lastKeypath, lastKeypathStack);
+        keypath = lastKeypath;
+        keypathStack = lastKeypathStack;
       }
     }
   },
@@ -6543,7 +6615,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.57.5';
+Yox.version = '0.57.6';
 
 /**
  * 工具，便于扩展、插件使用
