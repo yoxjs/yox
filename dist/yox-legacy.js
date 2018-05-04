@@ -3987,11 +3987,10 @@ function convert(ast) {
  * @param {Function} render 编译出来的渲染函数
  * @param {Function} getter 表达式求值函数
  * @param {Function} setter 设值函数，用于存储模板渲染过程中的临时变量
- * @param {Function} remove 删除函数，用于删除模板渲染过程中的临时变量
  * @param {Yox} instance 组件实例
  * @return {Object}
  */
-function render(render, getter, setter, remove$$1, instance) {
+function render(render, getter, setter, instance) {
 
   /**
    *
@@ -4287,12 +4286,6 @@ function render(render, getter, setter, remove$$1, instance) {
         }
 
         generate();
-
-        remove$$1(keypath, RAW_THIS);
-
-        if (index) {
-          remove$$1(keypath, index);
-        }
 
         popKeypath(lastKeypath, lastKeypathStack);
       });
@@ -6320,8 +6313,7 @@ var Yox = function () {
 
     var $template = instance.$template,
         $getter = instance.$getter,
-        $setter = instance.$setter,
-        $remove = instance.$remove;
+        $setter = instance.$setter;
 
 
     if (!$getter) {
@@ -6408,16 +6400,10 @@ var Yox = function () {
       };
     }
 
-    if (!$remove) {
-      $remove = instance.$remove = function (currentKeypath, key) {
-        delete instance.$vars[join$1(currentKeypath, key)];
-      };
-    }
-
     // 渲染模板过程中产生的临时变量
     instance.$vars = {};
 
-    var result = render($template, $getter, $setter, $remove, instance);
+    var result = render($template, $getter, $setter, instance);
 
     return result;
   };
@@ -6719,7 +6705,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.57.4';
+Yox.version = '0.57.5';
 
 /**
  * 工具，便于扩展、插件使用
