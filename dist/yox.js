@@ -6198,10 +6198,13 @@ var Yox = function () {
 
           if (isDef(keypath)) {
             actualKeypath = keypath;
-          } else if (filters) {
-            var _result = get$1(filters, key);
-            if (_result) {
-              value = _result.value;
+          } else {
+            value = UNDEFINED;
+            if (filters) {
+              var _result = get$1(filters, key);
+              if (_result) {
+                value = _result.value;
+              }
             }
           }
 
@@ -6544,7 +6547,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.57.1';
+Yox.version = '0.57.2';
 
 /**
  * 工具，便于扩展、插件使用

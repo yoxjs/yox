@@ -464,10 +464,13 @@ export default class Yox {
           if (isDef(keypath)) {
             actualKeypath = keypath
           }
-          else if (filters) {
-            let result = object.get(filters, key)
-            if (result) {
-              value = result.value
+          else {
+            value = env.UNDEFINED
+            if (filters) {
+              let result = object.get(filters, key)
+              if (result) {
+                value = result.value
+              }
             }
           }
 
@@ -803,7 +806,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.57.1'
+Yox.version = '0.57.2'
 
 /**
  * 工具，便于扩展、插件使用
