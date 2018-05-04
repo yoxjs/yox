@@ -421,7 +421,7 @@ export default class Yox {
 
     let instance = this
 
-    let { $template, $getter, $setter } = instance
+    let { $template, $getter, $setter, $remove } = instance
 
     if (!$getter) {
 
@@ -516,6 +516,13 @@ export default class Yox {
       }
     }
 
+    if (!$remove) {
+      $remove =
+      instance.$remove = function (currentKeypath, key) {
+        delete instance.$vars[ keypathUtil.join(currentKeypath, key) ]
+      }
+    }
+
     // 渲染模板过程中产生的临时变量
     instance.$vars = { }
 
@@ -523,6 +530,7 @@ export default class Yox {
       $template,
       $getter,
       $setter,
+      $remove,
       instance
     )
 
@@ -806,7 +814,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.57.3'
+Yox.version = '0.57.4'
 
 /**
  * 工具，便于扩展、插件使用
