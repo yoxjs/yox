@@ -762,18 +762,9 @@ function join$1(keypath1, keypath2) {
     if (keypath === CHAR_BLANK) {
       return keypath2;
     }
-    if (isNumber || !has$2(keypath2, KEYPATH_PRIVATE_CURRENT) && !has$2(keypath2, KEYPATH_PRIVATE_PARENT)) {
+    if (isNumber || keypath2 !== CHAR_BLANK) {
       return keypath + KEYPATH_SEPARATOR + keypath2;
     }
-    var result = keypath.split(KEYPATH_SEPARATOR);
-    each$2(keypath2, function (key) {
-      if (key === KEYPATH_PRIVATE_PARENT) {
-        pop(result);
-      } else if (key !== KEYPATH_PRIVATE_CURRENT) {
-        push(result, key);
-      }
-    });
-    return join(result, KEYPATH_SEPARATOR);
   }
 
   return keypath;
@@ -4080,13 +4071,6 @@ function render(render, getter, setter, instance) {
 
   var keypath = CHAR_BLANK,
       keypathStack = [keypath],
-      pushKeypath = function (newKeypath) {
-    if (newKeypath !== keypath) {
-      keypath = newKeypath;
-      keypathStack = copy(keypathStack);
-      push(keypathStack, keypath);
-    }
-  },
       values,
       currentElement,
       elementStack = [],
@@ -4334,22 +4318,21 @@ function render(render, getter, setter, instance) {
     }
 
     if (each$$1) {
-      var lastKeypath = keypath,
-          lastKeypathStack = keypathStack;
 
       var eachKeypath = expr.absoluteKeypath;
-      if (eachKeypath) {
-        pushKeypath(eachKeypath);
-      }
 
       each$$1(value, function (item, key) {
 
         var lastKeypath = keypath,
             lastKeypathStack = keypathStack;
 
-        pushKeypath(keypath + KEYPATH_SEPARATOR + key);
+        if (eachKeypath) {
+          keypath = join$1(eachKeypath, key);
+          keypathStack = copy(keypathStack);
+          push(keypathStack, keypath);
+        }
 
-        setter(keypath, RAW_THIS, item);
+        setter(keypath, UNDEFINED, item);
 
         if (index) {
           setter(keypath, index, key);
@@ -4357,14 +4340,11 @@ function render(render, getter, setter, instance) {
 
         generate();
 
-        keypath = lastKeypath;
-        keypathStack = lastKeypathStack;
+        if (eachKeypath) {
+          keypath = lastKeypath;
+          keypathStack = lastKeypathStack;
+        }
       });
-
-      if (eachKeypath) {
-        keypath = lastKeypath;
-        keypathStack = lastKeypathStack;
-      }
     }
   },
 
@@ -6406,7 +6386,23 @@ var Yox = function () {
               lookup = expr.lookup !== FALSE,
               index = keypathStack[RAW_LENGTH] - 1,
               getKeypath = function () {
-            var keypath = join$1(keypathStack[index], key);
+
+            var parentKeypath = keypathStack[index];
+
+            if (has$2(key, KEYPATH_PRIVATE_CURRENT) || has$2(key, KEYPATH_PRIVATE_PARENT)) {
+              var currentIndex = index,
+                  keys$$1 = [];
+              each$2(key, function (key) {
+                if (key === KEYPATH_PRIVATE_PARENT) {
+                  parentKeypath = keypathStack[--currentIndex];
+                } else if (key !== KEYPATH_PRIVATE_CURRENT) {
+                  push(keys$$1, key);
+                }
+              });
+              key = join(keys$$1, KEYPATH_SEPARATOR);
+            }
+
+            var keypath = join$1(parentKeypath, key);
             if (!absoluteKeypath) {
               absoluteKeypath = keypath;
             }
@@ -6627,7 +6623,7 @@ var Yox = function () {
     }
 
     if ($node) {
-      patch($node, { text: CHAR_BLANK });
+      patch($node, createTextVnode(CHAR_BLANK));
     }
 
     $emitter.off();
@@ -6777,7 +6773,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.57.6';
+Yox.version = '0.57.7';
 
 /**
  * 工具，便于扩展、插件使用

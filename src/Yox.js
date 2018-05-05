@@ -440,7 +440,28 @@ export default class Yox {
           lookup = expr.lookup !== env.FALSE,
           index = keypathStack[ env.RAW_LENGTH ] - 1,
           getKeypath = function () {
-            let keypath = keypathUtil.join(keypathStack[ index ], key)
+
+            let parentKeypath = keypathStack[ index ]
+
+            if (string.has(key, env.KEYPATH_PRIVATE_CURRENT)
+              || string.has(key, env.KEYPATH_PRIVATE_PARENT)
+            ) {
+              let currentIndex = index, keys = [ ]
+              keypathUtil.each(
+                key,
+                function (key) {
+                  if (key === env.KEYPATH_PRIVATE_PARENT) {
+                    parentKeypath = keypathStack[ --currentIndex ]
+                  }
+                  else if (key !== env.KEYPATH_PRIVATE_CURRENT) {
+                    array.push(keys, key)
+                  }
+                }
+              )
+              key = array.join(keys, env.KEYPATH_SEPARATOR)
+            }
+
+            let keypath = keypathUtil.join(parentKeypath, key)
             if (!absoluteKeypath) {
               absoluteKeypath = keypath
             }
@@ -670,7 +691,7 @@ export default class Yox {
     }
 
     if ($node) {
-      patch($node, { text: char.CHAR_BLANK })
+      patch($node, snabbdom.createTextVnode(char.CHAR_BLANK))
     }
 
     $emitter.off()
@@ -806,7 +827,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.57.6'
+Yox.version = '0.57.7'
 
 /**
  * 工具，便于扩展、插件使用
