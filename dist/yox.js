@@ -3995,11 +3995,10 @@ function convert(ast) {
  *
  * @param {Function} render 编译出来的渲染函数
  * @param {Function} getter 表达式求值函数
- * @param {Function} setter 设值函数，用于存储模板渲染过程中的临时变量
  * @param {Yox} instance 组件实例
  * @return {Object}
  */
-function render(render, getter, setter, instance) {
+function render(render, getter, instance) {
 
   /**
    *
@@ -4013,8 +4012,9 @@ function render(render, getter, setter, instance) {
    *
    */
 
-  var keypath = CHAR_BLANK,
-      keypathStack = [keypath],
+  var scope = {},
+      keypath = CHAR_BLANK,
+      keypathStack = [keypath, scope],
       values,
       currentElement,
       elementStack = [],
@@ -4267,24 +4267,28 @@ function render(render, getter, setter, instance) {
 
       each$$1(value, function (item, key) {
 
-        var lastKeypath = keypath,
+        var lastScope = scope,
+            lastKeypath = keypath,
             lastKeypathStack = keypathStack;
 
         if (eachKeypath) {
+          scope = {};
           keypath = join$1(eachKeypath, key);
           keypathStack = copy(keypathStack);
           push(keypathStack, keypath);
+          push(keypathStack, scope);
         }
 
-        setter(keypath, UNDEFINED, item);
+        scope[SPECIAL_KEYPATH] = keypath;
 
         if (index) {
-          setter(keypath, index, key);
+          scope[index] = key;
         }
 
         generate();
 
         if (eachKeypath) {
+          scope = lastScope;
           keypath = lastKeypath;
           keypathStack = lastKeypathStack;
         }
@@ -4336,6 +4340,8 @@ function render(render, getter, setter, instance) {
       executeRender = function (render) {
     return render(a, b, c, e, i, m, o, p, s, x, y, z);
   };
+
+  scope[SPECIAL_KEYPATH] = keypath;
 
   return executeRender(render);
 }
@@ -6202,8 +6208,7 @@ var Yox = function () {
     var instance = this;
 
     var $template = instance.$template,
-        $getter = instance.$getter,
-        $setter = instance.$setter;
+        $getter = instance.$getter;
 
 
     if (!$getter) {
@@ -6214,25 +6219,21 @@ var Yox = function () {
 
         if (keypathStack) {
 
-          if (key === SPECIAL_KEYPATH) {
-            return last(keypathStack);
-          }
-
           var value,
               absoluteKeypath,
-              localVars = instance.$vars,
               lookup = expr.lookup !== FALSE,
-              index = keypathStack[RAW_LENGTH] - 1,
+
+          // keypathStack 的结构是 keypath, scope 作为一组
+          index = keypathStack[RAW_LENGTH] - 2,
               getKeypath = function () {
 
-            var parentKeypath = keypathStack[index];
+            var keypathIndex = index;
 
-            if (has$2(key, KEYPATH_PRIVATE_CURRENT) || has$2(key, KEYPATH_PRIVATE_PARENT)) {
-              var currentIndex = index,
-                  keys$$1 = [];
+            if (!lookup) {
+              var keys$$1 = [];
               each$2(key, function (key) {
                 if (key === KEYPATH_PRIVATE_PARENT) {
-                  parentKeypath = keypathStack[--currentIndex];
+                  keypathIndex -= 2;
                 } else if (key !== KEYPATH_PRIVATE_CURRENT) {
                   push(keys$$1, key);
                 }
@@ -6240,12 +6241,13 @@ var Yox = function () {
               key = join(keys$$1, KEYPATH_SEPARATOR);
             }
 
-            var keypath = join$1(parentKeypath, key);
+            var keypath = join$1(keypathStack[keypathIndex], key);
             if (!absoluteKeypath) {
               absoluteKeypath = keypath;
             }
-            if (localVars && has$1(localVars, keypath)) {
-              value = localVars[keypath];
+            var scope = keypathStack[keypathIndex + 1];
+            if (has$1(scope, key)) {
+              value = scope[key];
               return keypath;
             }
             value = instance.get(keypath, getKeypath);
@@ -6265,9 +6267,9 @@ var Yox = function () {
           } else {
             value = UNDEFINED;
             if (filters) {
-              var _result = get$1(filters, key);
-              if (_result) {
-                value = _result.value;
+              var result = get$1(filters, key);
+              if (result) {
+                value = result.value;
               }
             }
           }
@@ -6300,18 +6302,7 @@ var Yox = function () {
       };
     }
 
-    if (!$setter) {
-      $setter = instance.$setter = function (currentKeypath, key, value) {
-        instance.$vars[join$1(currentKeypath, key)] = value;
-      };
-    }
-
-    // 渲染模板过程中产生的临时变量
-    instance.$vars = {};
-
-    var result = render($template, $getter, $setter, instance);
-
-    return result;
+    return render($template, $getter, instance);
   };
 
   /**
@@ -6414,7 +6405,7 @@ var Yox = function () {
               result;
           if (args && args[RAW_LENGTH]) {
             if (isEvent) {
-              instance.$setter(keypath, SPECIAL_EVENT, event);
+              last(keypathStack)[SPECIAL_EVENT] = event;
             }
             result = execute(method, instance, args.map(getValue));
           } else {
@@ -6611,7 +6602,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.57.7';
+Yox.version = '0.57.8';
 
 /**
  * 工具，便于扩展、插件使用

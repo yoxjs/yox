@@ -421,7 +421,7 @@ export default class Yox {
 
     let instance = this
 
-    let { $template, $getter, $setter } = instance
+    let { $template, $getter } = instance
 
     if (!$getter) {
 
@@ -431,27 +431,21 @@ export default class Yox {
 
         if (keypathStack) {
 
-          if (key === config.SPECIAL_KEYPATH) {
-            return array.last(keypathStack)
-          }
-
           let value, absoluteKeypath,
-          localVars = instance.$vars,
           lookup = expr.lookup !== env.FALSE,
-          index = keypathStack[ env.RAW_LENGTH ] - 1,
+          // keypathStack 的结构是 keypath, scope 作为一组
+          index = keypathStack[ env.RAW_LENGTH ] - 2,
           getKeypath = function () {
 
-            let parentKeypath = keypathStack[ index ]
+            let keypathIndex = index
 
-            if (string.has(key, env.KEYPATH_PRIVATE_CURRENT)
-              || string.has(key, env.KEYPATH_PRIVATE_PARENT)
-            ) {
-              let currentIndex = index, keys = [ ]
+            if (!lookup) {
+              let keys = [ ]
               keypathUtil.each(
                 key,
                 function (key) {
                   if (key === env.KEYPATH_PRIVATE_PARENT) {
-                    parentKeypath = keypathStack[ --currentIndex ]
+                    keypathIndex -= 2
                   }
                   else if (key !== env.KEYPATH_PRIVATE_CURRENT) {
                     array.push(keys, key)
@@ -461,12 +455,13 @@ export default class Yox {
               key = array.join(keys, env.KEYPATH_SEPARATOR)
             }
 
-            let keypath = keypathUtil.join(parentKeypath, key)
+            let keypath = keypathUtil.join(keypathStack[ keypathIndex ], key)
             if (!absoluteKeypath) {
               absoluteKeypath = keypath
             }
-            if (localVars && object.has(localVars, keypath)) {
-              value = localVars[ keypath ]
+            let scope = keypathStack[ keypathIndex + 1 ]
+            if (object.has(scope, key)) {
+              value = scope[ key ]
               return keypath
             }
             value = instance.get(keypath, getKeypath)
@@ -530,24 +525,12 @@ export default class Yox {
       }
     }
 
-    if (!$setter) {
-      $setter =
-      instance.$setter = function (currentKeypath, key, value) {
-        instance.$vars[ keypathUtil.join(currentKeypath, key) ] = value
-      }
-    }
-
-    // 渲染模板过程中产生的临时变量
-    instance.$vars = { }
-
-    let result = templateCompiler.render(
+    return templateCompiler.render(
       $template,
       $getter,
-      $setter,
       instance
     )
 
-    return result
   }
 
   /**
@@ -643,7 +626,7 @@ export default class Yox {
           let isEvent = Event.is(event), result
           if (args && args[ env.RAW_LENGTH ]) {
             if (isEvent) {
-              instance.$setter(keypath, config.SPECIAL_EVENT, event)
+              array.last(keypathStack)[ config.SPECIAL_EVENT ] = event
             }
             result = execute(method, instance, args.map(getValue))
           }
@@ -827,7 +810,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.57.7'
+Yox.version = '0.57.8'
 
 /**
  * 工具，便于扩展、插件使用
