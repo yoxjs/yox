@@ -4382,14 +4382,21 @@ function render(render, getter, instance) {
 
   // import
   i = function (name) {
+    var lastElement = currentElement;
+    pushElement({});
     if (localPartials[name]) {
+      currentElement[RAW_CHILDREN] = [];
       localPartials[name]();
-      return;
+    } else {
+      var partial = instance.importPartial(name);
+      if (partial) {
+        currentElement[RAW_CHILDREN] = partial.map(executeRender);
+      }
     }
-    var partial = instance.importPartial(name);
-    if (partial) {
-      each(partial, executeRender);
-      return;
+    if (currentElement[RAW_CHILDREN]) {
+      var result = currentElement[RAW_CHILDREN];
+      popElement(lastElement);
+      return result;
     }
     fatal('"' + name + '" partial is not found.');
   },
@@ -6764,7 +6771,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.57.8';
+Yox.version = '0.58.0';
 
 /**
  * 工具，便于扩展、插件使用
