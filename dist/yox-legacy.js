@@ -4204,7 +4204,7 @@ function render(render, getter, instance) {
 
   // 处理 properties
   z = function () {
-    each$1(arguments, function (item) {
+    each(arguments, function (item) {
       var name = item.name,
           value = item.value;
 
@@ -6771,7 +6771,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.58.0';
+Yox.version = '0.58.1';
 
 /**
  * 工具，便于扩展、插件使用
