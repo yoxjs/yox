@@ -60,6 +60,7 @@ export default class Yox {
       replace,
       computed,
       template,
+      transitions,
       components,
       directives,
       partials,
@@ -76,7 +77,7 @@ export default class Yox {
 
     let source
     if (is.object(propTypes)) {
-      source = Yox.validate(props || { }, propTypes)
+      source = instance.validate(props || { }, propTypes)
     }
     else {
       source = props || { }
@@ -182,6 +183,7 @@ export default class Yox {
       }
     }
 
+    smartSet('transition', transitions)
     smartSet('component', components)
     smartSet('directive', directives)
     smartSet('partial', partials)
@@ -234,6 +236,10 @@ export default class Yox {
       )
     }
 
+  }
+
+  validate(props, propTypes) {
+    return Yox.validate(props, propTypes)
   }
 
   /**
@@ -810,7 +816,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.58.2'
+Yox.version = '0.58.3'
 
 /**
  * 工具，便于扩展、插件使用
@@ -880,7 +886,7 @@ function setResource(data, name, value) {
  * @param {?Object} value
  */
 array.each(
-  [ COMPONENT, 'directive', 'partial', 'filter' ],
+  [ COMPONENT, 'transition', 'directive', 'partial', 'filter' ],
   function (type) {
     prototype[ type ] = function (name, value) {
       let instance = this, prop = `$${type}s`, data = instance[ prop ]
@@ -967,10 +973,14 @@ Yox.validate = function (props, propTypes) {
         || (is.func(required) && required(props))
 
       if (isDef(props[ key ])) {
+        let target = props[ key ]
+        if (is.func(rule)) {
+          result[ key ] = rule(target)
+        }
         // 如果不写 type 或 type 不是 字符串 或 数组
         // 就当做此规则无效，和没写一样
-        if (type) {
-          let target = props[ key ], matched
+        else if (type) {
+          let matched
           // 比较类型
           if (!string.falsy(type)) {
             matched = is.is(target, type)

@@ -1436,7 +1436,7 @@ function bindDirective(vnode, key, api) {
 }
 
 function unbindDirective(vnode, key) {
-  var unbinds = vnode.unbinds;
+  var unbinds = vnode.data.unbinds;
 
   if (unbinds && unbinds[key]) {
     unbinds[key]();
@@ -1481,22 +1481,19 @@ function updateDirectives(vnode, oldVnode) {
     }
   });
 
-  var oldUnbinds = oldVnode && oldVnode.unbinds;
-  if (oldUnbinds) {
-    if (newUnbinds) {
-      extend(newUnbinds, oldUnbinds);
-    } else {
-      newUnbinds = oldUnbinds;
-    }
-  }
-
   if (newUnbinds) {
-    vnode.unbinds = newUnbinds;
+    var data = vnode.data;
+
+    if (data.unbinds) {
+      extend(data.unbinds, newUnbinds);
+    } else {
+      data.unbinds = newUnbinds;
+    }
   }
 }
 
 function destroyDirectives(vnode) {
-  var unbinds = vnode.unbinds;
+  var unbinds = vnode.data.unbinds;
 
   if (unbinds) {
     each$1(unbinds, function (unbind) {
@@ -1578,12 +1575,15 @@ function updateComponent(vnode, oldVnode) {
       component = vnode.component,
       children = vnode.children,
       instance = vnode.instance,
-      ref = vnode.ref;
+      ref = vnode.ref,
+      attrs = vnode.attrs;
 
 
   if (component) {
     el = this.component(el);
-    el.set(vnode.attrs);
+    if (attrs) {
+      el.set(el.validate(attrs));
+    }
     el.set(vnode.slots);
   }
 
@@ -1652,7 +1652,7 @@ function createTextVnode(text) {
   };
 }
 
-function createElementVnode(tag, attrs$$1, props$$1, directives$$1, children, slots, ref, key, instance) {
+function createElementVnode(tag, attrs$$1, props$$1, directives$$1, children, slots, ref, key, instance, hooks) {
   return {
     tag: tag,
     attrs: attrs$$1,
@@ -1663,12 +1663,13 @@ function createElementVnode(tag, attrs$$1, props$$1, directives$$1, children, sl
     ref: ref,
     key: key,
     instance: instance,
-    text: UNDEFINED
+    text: UNDEFINED,
+    hooks: hooks
   };
 }
 
-function createComponentVnode(tag, attrs$$1, props$$1, directives$$1, children, slots, ref, key, instance) {
-  var vnode = createElementVnode(tag, attrs$$1, props$$1, directives$$1, children, slots, ref, key, instance);
+function createComponentVnode(tag, attrs$$1, props$$1, directives$$1, children, slots, ref, key, instance, hooks) {
+  var vnode = createElementVnode(tag, attrs$$1, props$$1, directives$$1, children, slots, ref, key, instance, hooks);
   vnode.component = TRUE;
   return vnode;
 }
@@ -1693,6 +1694,8 @@ function init(api) {
         text = _vnode.text,
         instance = _vnode.instance;
 
+
+    vnode.data = {};
 
     if (falsy$1(tag)) {
       return vnode.el = api.createText(text);
@@ -1733,6 +1736,8 @@ function init(api) {
           vnode.el = el;
           api.component(el, component$$1);
 
+          enterVnode(vnode);
+
           moduleEmitter.fire(HOOK_CREATE, vnode, api);
         }
       });
@@ -1761,6 +1766,7 @@ function init(api) {
     var el = createElement(parentNode, vnode);
     if (el) {
       api.before(parentNode, el, before);
+      enterVnode(vnode);
     }
   };
 
@@ -1781,9 +1787,11 @@ function init(api) {
         component$$1 = vnode.component;
 
     if (tag) {
-      if (!destroyVnode(vnode)) {
-        api.remove(parentNode, el);
-      }
+      leaveVnode(vnode, function () {
+        if (!destroyVnode(vnode)) {
+          api.remove(parentNode, el);
+        }
+      });
     } else if (el) {
       api.remove(parentNode, el);
     }
@@ -1800,7 +1808,7 @@ function init(api) {
         moduleEmitter.fire(HOOK_DESTROY, vnode, api);
         api.component(el, NULL);
         component$$1.destroy();
-        return true;
+        return TRUE;
       }
       api.component(el, NULL);
     } else if (children) {
@@ -1813,7 +1821,41 @@ function init(api) {
 
   var replaceVnode = function (parentNode, oldVnode, vnode) {
     api.before(parentNode, vnode.el, oldVnode.el);
+    enterVnode(vnode);
     removeVnode(parentNode, oldVnode);
+  };
+
+  var enterVnode = function (vnode) {
+    var el = vnode.el,
+        hooks = vnode.hooks,
+        data = vnode.data;
+
+    if (hooks) {
+      if (data.leaving) {
+        data.leaving();
+      }
+      if (hooks.enter) {
+        hooks.enter(el, noop);
+      }
+    }
+  };
+
+  var leaveVnode = function (vnode, done) {
+    var el = vnode.el,
+        hooks = vnode.hooks,
+        data = vnode.data;
+
+    if (hooks && hooks.leave) {
+      data.leaving = function () {
+        if (done) {
+          done();
+          done = NULL;
+        }
+      };
+      hooks.leave(el, data.leaving);
+    } else {
+      done();
+    }
   };
 
   var updateChildren = function (parentNode, oldChildren, newChildren) {
@@ -1899,7 +1941,9 @@ function init(api) {
                     }
 
                   if (activeVnode) {
+                    activeVnode.data = oldStartVnode.data;
                     api.before(parentNode, activeVnode.el, oldStartVnode.el);
+                    enterVnode(activeVnode);
                   }
 
                   newStartVnode = newChildren[++newStartIndex];
@@ -1921,9 +1965,12 @@ function init(api) {
     }
 
     var el = oldVnode.el,
-        component$$1 = oldVnode.component;
+        component$$1 = oldVnode.component,
+        data = oldVnode.data;
+
 
     vnode.el = el;
+    vnode.data = data;
 
     if (!isPatchable(oldVnode, vnode)) {
       var parentNode = api.parent(el);
@@ -3275,7 +3322,8 @@ var Element = function (_Node) {
         slot = me.slot,
         name = me.name,
         key = me.key,
-        ref = me.ref;
+        ref = me.ref,
+        transition = me.transition;
 
 
     var params = [],
@@ -3308,6 +3356,10 @@ var Element = function (_Node) {
 
       if (key) {
         addArray(key);
+      }
+
+      if (transition || params[RAW_LENGTH]) {
+        addArray(transition);
       }
 
       if (ref || params[RAW_LENGTH]) {
@@ -3718,9 +3770,11 @@ function compile$$1(content) {
         if (type === ATTRIBUTE) {
           // <div key="xx">
           // <div ref="xx">
+          // <div transition="xx">
           // <slot name="xx">
+          // <template slot="xx">
           var element = last(htmlStack);
-          if (name === 'key' || name === 'ref' || element.tag === 'template' && name === 'slot' || element.tag === 'slot' && name === 'name') {
+          if (name === 'key' || name === 'ref' || name === 'transition' || element.tag === 'template' && name === 'slot' || element.tag === 'slot' && name === 'name') {
             // 把数据从属性中提出来，减少渲染时的遍历
             remove(element[RAW_CHILDREN], target);
             if (!element[RAW_CHILDREN][RAW_LENGTH]) {
@@ -3821,13 +3875,12 @@ function compile$$1(content) {
       push(nodeList, node);
     }
 
-    // 上一个 if 节点没有 else 分支
-    // 在渲染时，如果这种 if 分支为 false，需要加上注释节点
-    if (prevNode && ifTypes[prevNode.type] && !htmlStack[RAW_LENGTH]) {
-      prevNode.stump = TRUE;
-    }
-
     if (ifTypes[type]) {
+      // 只要是 if 节点，并且处于 element 层级，就加 stump
+      // 方便 virtual dom 进行对比
+      if (!htmlStack[RAW_LENGTH]) {
+        node.stump = TRUE;
+      }
       push(ifStack, node);
     } else if (htmlTypes[type]) {
       push(htmlStack, node);
@@ -4262,7 +4315,7 @@ function render(render, getter, instance) {
 
 
   // create
-  c = function (component, tag, childs, attrs, props, ref, key) {
+  c = function (component, tag, childs, attrs, props, ref, transition, key) {
 
     var lastElement = currentElement,
         lastComponent = currentComponent;
@@ -4277,6 +4330,10 @@ function render(render, getter, instance) {
 
     if (key) {
       key = getValue(key);
+    }
+
+    if (transition) {
+      transition = getValue(transition);
     }
 
     if (ref) {
@@ -4301,7 +4358,7 @@ function render(render, getter, instance) {
       }
     }
 
-    var result = snabbdom[component ? 'createComponentVnode' : 'createElementVnode'](tag, currentElement.attrs, currentElement.props, currentElement.directives, children, currentElement.slots, ref, key, instance);
+    var result = snabbdom[component ? 'createComponentVnode' : 'createElementVnode'](tag, currentElement.attrs, currentElement.props, currentElement.directives, children, currentElement.slots, ref, key, instance, instance.transition(transition));
 
     popElement(lastElement);
 
@@ -6031,6 +6088,7 @@ var Yox = function () {
         replace = _options.replace,
         computed = _options.computed,
         template = _options.template,
+        transitions = _options.transitions,
         components = _options.components,
         directives = _options.directives,
         partials = _options.partials,
@@ -6047,7 +6105,7 @@ var Yox = function () {
 
     var source;
     if (object(propTypes)) {
-      source = Yox.validate(props || {}, propTypes);
+      source = instance.validate(props || {}, propTypes);
     } else {
       source = props || {};
     }
@@ -6140,6 +6198,7 @@ var Yox = function () {
       }
     };
 
+    smartSet('transition', transitions);
     smartSet('component', components);
     smartSet('directive', directives);
     smartSet('partial', partials);
@@ -6183,6 +6242,10 @@ var Yox = function () {
       });
     }
   }
+
+  Yox.prototype.validate = function (props, propTypes) {
+    return Yox.validate(props, propTypes);
+  };
 
   /**
    * 添加计算属性
@@ -6781,7 +6844,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.58.2';
+Yox.version = '0.58.3';
 
 /**
  * 工具，便于扩展、插件使用
@@ -6841,7 +6904,7 @@ function setResource(data, name, value) {
  * @param {Object|string} name
  * @param {?Object} value
  */
-each([COMPONENT, 'directive', 'partial', 'filter'], function (type) {
+each([COMPONENT, 'transition', 'directive', 'partial', 'filter'], function (type) {
   prototype[type] = function (name, value) {
     var instance = this,
         prop = '$' + type + 's',
@@ -6907,32 +6970,35 @@ Yox.validate = function (props, propTypes) {
     required = required === TRUE || func(required) && required(props);
 
     if (isDef(props[key])) {
+      var target = props[key];
+      if (func(rule)) {
+        result[key] = rule(target);
+      }
       // 如果不写 type 或 type 不是 字符串 或 数组
       // 就当做此规则无效，和没写一样
-      if (type) {
-        var target = props[key],
-            matched;
-        // 比较类型
-        if (!falsy$1(type)) {
-          matched = is(target, type);
-        } else if (!falsy(type)) {
-          each(type, function (t) {
-            if (is(target, t)) {
-              matched = TRUE;
-              return FALSE;
-            }
-          });
-        } else if (func(type)) {
-          // 有时候做判断需要参考其他数据
-          // 比如当 a 有值时，b 可以为空之类的
-          matched = type(target, props);
+      else if (type) {
+          var matched;
+          // 比较类型
+          if (!falsy$1(type)) {
+            matched = is(target, type);
+          } else if (!falsy(type)) {
+            each(type, function (t) {
+              if (is(target, t)) {
+                matched = TRUE;
+                return FALSE;
+              }
+            });
+          } else if (func(type)) {
+            // 有时候做判断需要参考其他数据
+            // 比如当 a 有值时，b 可以为空之类的
+            matched = type(target, props);
+          }
+          if (matched === TRUE) {
+            result[key] = target;
+          } else {
+            warn('"' + key + '" prop\'s type is not matched.');
+          }
         }
-        if (matched === TRUE) {
-          result[key] = target;
-        } else {
-          warn('"' + key + '" prop\'s type is not matched.');
-        }
-      }
     } else if (required) {
       warn('"' + key + '" prop is not found.');
     } else if (has$1(rule, 'value')) {
