@@ -1828,31 +1828,31 @@ function init(api) {
   var enterVnode = function (vnode) {
     var el = vnode.el,
         hooks = vnode.hooks,
-        data = vnode.data;
+        data = vnode.data,
+        instance = vnode.instance;
 
     if (hooks) {
       if (data.leaving) {
         data.leaving();
       }
-      if (hooks.enter) {
-        hooks.enter(el, noop);
-      }
+      execute(hooks.enter, instance, [el, noop]);
     }
   };
 
   var leaveVnode = function (vnode, done) {
     var el = vnode.el,
         hooks = vnode.hooks,
-        data = vnode.data;
+        data = vnode.data,
+        instance = vnode.instance;
 
-    if (hooks && hooks.leave) {
+    if (hooks) {
       data.leaving = function () {
         if (done) {
           done();
           done = NULL;
         }
       };
-      hooks.leave(el, data.leaving);
+      execute(hooks.leave, instance, [el, data.leaving]);
     } else {
       done();
     }
@@ -2032,7 +2032,8 @@ function init(api) {
 
     patchVnode(api.isElement(oldVnode) ? {
       el: oldVnode,
-      tag: api.tag(oldVnode)
+      tag: api.tag(oldVnode),
+      data: {}
     } : oldVnode, vnode);
 
     return vnode;
@@ -6105,6 +6106,7 @@ var Yox = function () {
 
     var source;
     if (object(propTypes)) {
+      instance.$propTypes = propTypes;
       source = instance.validate(props || {}, propTypes);
     } else {
       source = props || {};
@@ -6243,8 +6245,10 @@ var Yox = function () {
     }
   }
 
-  Yox.prototype.validate = function (props, propTypes) {
-    return Yox.validate(props, propTypes);
+  Yox.prototype.validate = function (props) {
+    var $propTypes = this.$propTypes;
+
+    return $propTypes ? Yox.validate(props, $propTypes) : props;
   };
 
   /**
@@ -6844,7 +6848,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.58.3';
+Yox.version = '0.58.4';
 
 /**
  * 工具，便于扩展、插件使用
