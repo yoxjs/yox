@@ -1628,7 +1628,7 @@ function isTextVnode(vnode) {
 
 function init(api) {
 
-  var createElement = function (vnode) {
+  var createElement = function (vnode, data) {
     var _vnode = vnode,
         el = _vnode.el,
         tag = _vnode.tag,
@@ -1639,7 +1639,7 @@ function init(api) {
         instance = _vnode.instance;
 
 
-    vnode.data = {};
+    vnode.data = data || {};
 
     if (falsy$1(tag)) {
       return vnode.el = api.createText(text);
@@ -1700,15 +1700,13 @@ function init(api) {
   };
 
   var addVnodes = function (parentNode, vnodes, startIndex, endIndex, before) {
+    var vnode;
     while (startIndex <= endIndex) {
-      addVnode(parentNode, vnodes[startIndex], before);
+      vnode = vnodes[startIndex];
+      if (createElement(vnode)) {
+        insertVnode(parentNode, vnode, before);
+      }
       startIndex++;
-    }
-  };
-
-  var addVnode = function (parentNode, vnode, before) {
-    if (createElement(vnode)) {
-      insertVnode(parentNode, vnode, before);
     }
   };
 
@@ -1878,15 +1876,11 @@ function init(api) {
                     oldChildren[oldIndex] = NULL;
                   }
                   // 新元素
-                  else {
-                      activeVnode = createElement(parentNode, newStartVnode);
-                      if (activeVnode) {
-                        activeVnode = newStartVnode;
-                      }
+                  else if (createElement(newStartVnode, oldStartVnode.data)) {
+                      activeVnode = newStartVnode;
                     }
 
                   if (activeVnode) {
-                    activeVnode.data = oldStartVnode.data;
                     insertVnode(parentNode, activeVnode, oldStartVnode);
                   }
 
@@ -6687,7 +6681,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.58.5';
+Yox.version = '0.58.6';
 
 /**
  * 工具，便于扩展、插件使用
