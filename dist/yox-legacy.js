@@ -1684,7 +1684,7 @@ function isTextVnode(vnode) {
 
 function init(api) {
 
-  var createElement = function (parentNode, vnode) {
+  var createElement = function (vnode) {
     var _vnode = vnode,
         el = _vnode.el,
         tag = _vnode.tag,
@@ -1763,10 +1763,8 @@ function init(api) {
   };
 
   var addVnode = function (parentNode, vnode, before) {
-    var el = createElement(parentNode, vnode);
-    if (el) {
-      api.before(parentNode, el, before);
-      enterVnode(vnode);
+    if (createElement(vnode)) {
+      insertVnode(parentNode, vnode, before);
     }
   };
 
@@ -1819,10 +1817,13 @@ function init(api) {
     moduleEmitter.fire(HOOK_DESTROY, vnode, api);
   };
 
-  var replaceVnode = function (parentNode, oldVnode, vnode) {
-    api.before(parentNode, vnode.el, oldVnode.el);
-    enterVnode(vnode);
-    removeVnode(parentNode, oldVnode);
+  var insertVnode = function (parentNode, vnode, oldVnode) {
+    var el = vnode.el,
+        hasParent = api.parent(el);
+    api.before(parentNode, el, oldVnode ? oldVnode.el : NULL);
+    if (!hasParent) {
+      enterVnode(vnode);
+    }
   };
 
   var enterVnode = function (vnode) {
@@ -1942,8 +1943,7 @@ function init(api) {
 
                   if (activeVnode) {
                     activeVnode.data = oldStartVnode.data;
-                    api.before(parentNode, activeVnode.el, oldStartVnode.el);
-                    enterVnode(activeVnode);
+                    insertVnode(parentNode, activeVnode, oldStartVnode);
                   }
 
                   newStartVnode = newChildren[++newStartIndex];
@@ -1952,7 +1952,7 @@ function init(api) {
 
     if (oldStartIndex > oldEndIndex) {
       activeVnode = newChildren[newEndIndex + 1];
-      addVnodes(parentNode, newChildren, newStartIndex, newEndIndex, activeVnode ? activeVnode.el : NULL);
+      addVnodes(parentNode, newChildren, newStartIndex, newEndIndex, activeVnode);
     } else if (newStartIndex > newEndIndex) {
       removeVnodes(parentNode, oldChildren, oldStartIndex, oldEndIndex);
     }
@@ -1974,8 +1974,9 @@ function init(api) {
 
     if (!isPatchable(oldVnode, vnode)) {
       var parentNode = api.parent(el);
-      if (createElement(parentNode, vnode)) {
-        parentNode && replaceVnode(parentNode, oldVnode, vnode);
+      if (createElement(vnode) && parentNode) {
+        insertVnode(parentNode, vnode, oldVnode);
+        removeVnode(parentNode, oldVnode);
       }
       return;
     }
@@ -6848,7 +6849,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.58.4';
+Yox.version = '0.58.5';
 
 /**
  * 工具，便于扩展、插件使用

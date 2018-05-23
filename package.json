@@ -1,6 +1,6 @@
 {
   "name": "yox",
-  "version": "0.58.4",
+  "version": "0.58.5",
   "description": "A lightweight mvvm framework",
   "main": "dist/yox.js",
   "directories": {
@@ -19,7 +19,7 @@
     "yox-config": "0.0.7",
     "yox-expression-compiler": "^0.14.6",
     "yox-observer": "^0.16.5",
-    "yox-snabbdom": "^0.16.4",
+    "yox-snabbdom": "^0.16.5",
     "yox-template-compiler": "^0.24.7"
   },
   "scripts": {
