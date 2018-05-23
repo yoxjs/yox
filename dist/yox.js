@@ -1889,8 +1889,7 @@ function init(api) {
     }
 
     if (oldStartIndex > oldEndIndex) {
-      activeVnode = newChildren[newEndIndex + 1];
-      addVnodes(parentNode, newChildren, newStartIndex, newEndIndex, activeVnode);
+      addVnodes(parentNode, newChildren, newStartIndex, newEndIndex, newChildren[newEndIndex + 1]);
     } else if (newStartIndex > newEndIndex) {
       removeVnodes(parentNode, oldChildren, oldStartIndex, oldEndIndex);
     }
@@ -5408,6 +5407,34 @@ function off(element, type, listener) {
   element.removeEventListener(type, listener, FALSE);
 }
 
+function addClass(element, className) {
+  var classList = element.classList;
+
+  if (classList) {
+    classList.add(className);
+  } else {
+    classList = element.className.split(CHAR_WHITESPACE);
+    if (!has(classList, className)) {
+      push(classList, className);
+      element.className = join(classList, CHAR_WHITESPACE);
+    }
+  }
+}
+
+function removeClass(element, className) {
+  var classList = element.classList;
+
+  if (classList) {
+    classList.remove(className);
+  } else {
+    classList = element.className.split(CHAR_WHITESPACE);
+    if (has(classList, className)) {
+      remove(classList, className);
+      element.className = join(classList, CHAR_WHITESPACE);
+    }
+  }
+}
+
 var domApi = {
 	createElement: createElement,
 	createText: createText,
@@ -5431,7 +5458,9 @@ var domApi = {
 	component: component$1,
 	find: find,
 	on: on$1,
-	off: off
+	off: off,
+	addClass: addClass,
+	removeClass: removeClass
 };
 
 /**
@@ -6681,7 +6710,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.58.6';
+Yox.version = '0.58.7';
 
 /**
  * 工具，便于扩展、插件使用
