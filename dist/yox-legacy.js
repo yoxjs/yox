@@ -1575,15 +1575,12 @@ function updateComponent(vnode, oldVnode) {
       component = vnode.component,
       children = vnode.children,
       instance = vnode.instance,
-      ref = vnode.ref,
-      attrs = vnode.attrs;
+      ref = vnode.ref;
 
 
   if (component) {
     el = this.component(el);
-    if (attrs) {
-      el.set(el.validate(attrs));
-    }
+    el.set(node.attrs);
     el.set(vnode.slots);
   }
 
@@ -5185,7 +5182,15 @@ var Observer = function () {
   };
 
   Observer.prototype.nextTick = function (fn) {
-    append(fn);
+    if (func(fn)) {
+      var instance = this;
+      append(function () {
+        // 确保没销毁
+        if (instance.data) {
+          fn();
+        }
+      });
+    }
   };
 
   Observer.prototype.nextRun = function () {
@@ -6872,7 +6877,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.58.7';
+Yox.version = '0.59.0';
 
 /**
  * 工具，便于扩展、插件使用
