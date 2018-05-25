@@ -4,75 +4,70 @@
     <meta charset="UTF-8">
     <title>计算属性</title>
     <link rel="stylesheet" href="./style.css">
-    <link rel="stylesheet" href="https://daneden.github.io/animate.css/animate.min.css">
 </head>
 <body>
     <div id="app"></div>
     <script id="template" type="plain/text">
 
-        <div id="body">
-            {{name}}
-
-            <input type="text" model="temp"><input type="button" value="+" on-click="add()">
-
-            <ul>
-                {{#each list:index}}
-                <li class="animated" key="x{{name}}" transition="fade">
-                    {{index}}：{{name}}  <span on-click="del(index)">删除</span>
-                </li>
-                {{/each}}
-            </ul>
-
+        <div>
+            <label>
+              <input type="checkbox" model="allChecked">
+              全选
+            </label>
+            {{#each list}}
+                <div>
+                    {{this.status}}
+                    <input type="checkbox" model="checked">
+                </div>
+            {{/each}}
         </div>
 
     </script>
     <script src="../dist/yox.js"></script>
     <script>
-        window.page = new Yox({
+        var instance = new Yox({
             el: '#app',
             template: '#template',
             data: {
-                name: 'page_example',
                 list: [
-                    {name: 'reborn'},
-                    {name: 'hying'},
-                    {name: 'hyingreborn'}
+                    { id: 1 },
+                    { id: 2 }
                 ]
             },
-            methods: {
-                add: function(){
-                    var item = this.get('temp');
-                    this.prepend('list', {
-                        name: item
-                    })
-                },
-                del: function(i){
-                    this.removeAt('list', i)
-                }
-            },
-            transitions: {
-                fade: {
-                    enter: function(el, done){
-                        Yox.dom.addClass(el, 'fadeInUp')
-                        done()
+            computed: {
+                allChecked: {
+                    deps: [ 'list.*.checked' ],
+                    get: function () {
+                        var list = this.get('list');
+                        for (var i = 0, len = list.length; i < len; i++) {
+                            if (!this.get('list.' + i + '.checked')) {
+                                return false;
+                            }
+                        }
+                        return len > 0;
                     },
-                    leave: function(el, done){
-                        Yox.dom.removeClass(el, 'fadeOutDown')
-
-                        setTimeout(() => {
-                            done()
-                        }, 2000);
+                    set: function (allChecked) {
+                        var list = this.get('list');
+                        var data = {};
+                        for (var i = 0, len = list.length; i < len; i++) {
+                            data['list.' + i + '.checked'] = allChecked;
+                        }
+                        this.set(data);
                     }
-                },
-                countup: {
-
                 }
             },
-            afterMount: function(){
-                var self = this;
-
+            watchers: {
+              '**': function () {
+                  console.log('anything change', arguments);
+              },
+              'list.*.checked': function () {
+                  console.log('item checked change', arguments);
+              },
+              allChecked: function () {
+                  console.log('all checked change', arguments);
+              }
             }
-        })
+        });
 
     </script>
 </body>

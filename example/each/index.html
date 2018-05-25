@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>each index</title>
+</head>
+<body>
+    <div id="app"></div>
+    <script id="template" type="plain/text">
+
+        <div id="body">
+            {{#each createArray():index}}
+                <button on-click="click($event, index)">
+                    {{index}}: {{$keypath}}
+                </button>
+            {{/each}}
+        </div>
+
+    </script>
+    <script src="../../dist/yox.js"></script>
+    <script>
+        new Yox({
+            el: '#app',
+            template: '#template',
+            data: {
+                list: [
+                    1,
+                    2,
+                    3
+                ]
+            },
+            filters: {
+                createArray: function () {
+                    return [
+                        1,
+                        2,
+                        3
+                    ];
+                }
+            },
+            methods: {
+                click: function (event, index) {
+                    console.log(event, index);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

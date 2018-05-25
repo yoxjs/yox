@@ -4322,7 +4322,7 @@ function render(render, getter, instance) {
 
     if (each$$1) {
 
-      var eachKeypath = expr.absoluteKeypath;
+      var eachKeypath = expr.absoluteKeypath || join$1(keypath, expr.raw);
 
       each$$1(value, function (item, key) {
 
@@ -4330,13 +4330,11 @@ function render(render, getter, instance) {
             lastKeypath = keypath,
             lastKeypathStack = keypathStack;
 
-        if (eachKeypath) {
-          scope = {};
-          keypath = join$1(eachKeypath, key);
-          keypathStack = copy(keypathStack);
-          push(keypathStack, keypath);
-          push(keypathStack, scope);
-        }
+        scope = {};
+        keypath = join$1(eachKeypath, key);
+        keypathStack = copy(keypathStack);
+        push(keypathStack, keypath);
+        push(keypathStack, scope);
 
         scope[SPECIAL_KEYPATH] = keypath;
 
@@ -4346,11 +4344,9 @@ function render(render, getter, instance) {
 
         generate();
 
-        if (eachKeypath) {
-          scope = lastScope;
-          keypath = lastKeypath;
-          keypathStack = lastKeypathStack;
-        }
+        scope = lastScope;
+        keypath = lastKeypath;
+        keypathStack = lastKeypathStack;
       });
     }
   },
@@ -6715,7 +6711,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.59.1';
+Yox.version = '0.59.2';
 
 /**
  * 工具，便于扩展、插件使用
