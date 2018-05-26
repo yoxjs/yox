@@ -1,5 +1,6 @@
 
 import isDef from 'yox-common/function/isDef'
+import execute from 'yox-common/function/execute'
 import toString from 'yox-common/function/toString'
 
 import * as is from 'yox-common/util/is'
@@ -146,8 +147,9 @@ export default function ({ el, node, instance, directives, attrs, component }) {
       let field = component.$model = component.$options.model || VALUE
 
       if (!object.has(attrs, field)) {
-        set()
+        instance.nextTick(set)
       }
+
       component.watch(field, sync)
       unbindTarget = function () {
         component.unwatch(field, sync)
@@ -193,8 +195,8 @@ export default function ({ el, node, instance, directives, attrs, component }) {
     )
 
     return function () {
-      unbindTarget && unbindTarget()
-      unbindInstance && unbindInstance()
+      execute(unbindTarget)
+      execute(unbindInstance)
       set = env.NULL
     }
 

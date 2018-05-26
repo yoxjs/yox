@@ -5832,8 +5832,9 @@ var model = function (_ref) {
       var field = component.$model = component.$options.model || VALUE;
 
       if (!has$1(attrs, field)) {
-        set$$1();
+        instance.nextTick(set$$1);
       }
+
       component.watch(field, sync);
       unbindTarget = function () {
         component.unwatch(field, sync);
@@ -5874,8 +5875,8 @@ var model = function (_ref) {
     });
 
     return function () {
-      unbindTarget && unbindTarget();
-      unbindInstance && unbindInstance();
+      execute(unbindTarget);
+      execute(unbindInstance);
       set$$1 = NULL;
     };
   }
@@ -6711,7 +6712,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.59.2';
+Yox.version = '0.59.3';
 
 /**
  * 工具，便于扩展、插件使用
