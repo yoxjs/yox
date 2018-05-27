@@ -1741,13 +1741,17 @@ function init(api) {
 
     if (component$$1) {
       component$$1 = api.component(el);
-      if (component$$1.set) {
-        moduleEmitter.fire(HOOK_DESTROY, vnode, api);
+      if (vnode.parent === vnode.instance) {
+        if (component$$1.set) {
+          moduleEmitter.fire(HOOK_DESTROY, vnode, api);
+          api.component(el, NULL);
+          component$$1.destroy();
+          return TRUE;
+        }
         api.component(el, NULL);
-        component$$1.destroy();
-        return TRUE;
+      } else {
+        return;
       }
-      api.component(el, NULL);
     } else if (children) {
       each(children, function (child) {
         destroyVnode(child);
@@ -6712,7 +6716,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.59.3';
+Yox.version = '0.59.4';
 
 /**
  * 工具，便于扩展、插件使用
