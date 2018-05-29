@@ -1435,15 +1435,6 @@ function bindDirective(vnode, key, api) {
   }
 }
 
-function unbindDirective(vnode, key) {
-  var unbinds = vnode.data.unbinds;
-
-  if (unbinds && unbinds[key]) {
-    unbinds[key]();
-    delete unbinds[key];
-  }
-}
-
 function updateDirectives(vnode, oldVnode) {
 
   var newDirectives = vnode.directives;
@@ -1457,6 +1448,8 @@ function updateDirectives(vnode, oldVnode) {
   oldDirectives = oldDirectives || {};
 
   var api = this,
+      data = vnode.data,
+      oldUnbinds = data.unbinds,
       newUnbinds;
 
   each$1(newDirectives, function (directive, key) {
@@ -1464,7 +1457,10 @@ function updateDirectives(vnode, oldVnode) {
     if (has$1(oldDirectives, key)) {
       var oldDirective = oldDirectives[key];
       if (directive.value !== oldDirective.value || directive.keypath !== oldDirective.keypath) {
-        unbindDirective(oldVnode, key);
+        if (oldUnbinds && oldUnbinds[key]) {
+          oldUnbinds[key]();
+          delete oldUnbinds[key];
+        }
         unbind = bindDirective(vnode, key, api);
       }
     } else {
@@ -1476,16 +1472,15 @@ function updateDirectives(vnode, oldVnode) {
   });
 
   each$1(oldDirectives, function (directive, key) {
-    if (!has$1(newDirectives, key)) {
-      unbindDirective(oldVnode, key);
+    if (!has$1(newDirectives, key) && oldUnbinds && oldUnbinds[key]) {
+      oldUnbinds[key]();
+      delete oldUnbinds[key];
     }
   });
 
   if (newUnbinds) {
-    var data = vnode.data;
-
-    if (data.unbinds) {
-      extend(data.unbinds, newUnbinds);
+    if (oldUnbinds) {
+      extend(oldUnbinds, newUnbinds);
     } else {
       data.unbinds = newUnbinds;
     }
@@ -1496,8 +1491,9 @@ function destroyDirectives(vnode) {
   var unbinds = vnode.data.unbinds;
 
   if (unbinds) {
-    each$1(unbinds, function (unbind) {
+    each$1(unbinds, function (unbind, key) {
       unbind();
+      delete unbinds[key];
     });
   }
 }
@@ -6878,7 +6874,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.59.4';
+Yox.version = '0.59.5';
 
 /**
  * 工具，便于扩展、插件使用
