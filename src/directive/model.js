@@ -19,6 +19,10 @@ import * as event from '../config/event'
 
 const VALUE = 'value'
 
+function getOptionValue(option) {
+  return isDef(option.value) ? option.value : option.text
+}
+
 const inputControl = {
   set(el, keypath, instance) {
     let value = toString(instance.get(keypath))
@@ -35,32 +39,21 @@ const inputControl = {
 const selectControl = {
   set(el, keypath, instance) {
     let value = toString(instance.get(keypath))
-    let { options, selectedIndex } = el
-    if (selectedIndex >= 0) {
-      let selectedOption = options[ selectedIndex ]
-      if (selectedOption) {
-        let newValue = isDef(selectedOption.value) ? selectedOption.value : selectedOption.text
-        if (value !== newValue) {
-          array.each(
-            options,
-            function (option, index) {
-              let optionValue = isDef(option.value) ? option.value : option.text
-              if (optionValue === newValue) {
-                el.selectedIndex = index
-                return env.FALSE
-              }
-            }
-          )
+    let { options } = el
+    if (options) {
+      array.each(
+        options,
+        function (option, index) {
+          if (getOptionValue(option) === value) {
+            el.selectedIndex = index
+            return env.FALSE
+          }
         }
-      }
+      )
     }
   },
   sync(el, keypath, instance) {
-    let selectedOption = el.options[ el.selectedIndex ]
-    instance.set(
-      keypath,
-      isDef(selectedOption.value) ? selectedOption.value : selectedOption.text
-    )
+    instance.set(keypath, getOptionValue(el.options[ el.selectedIndex ]))
   },
 }
 

@@ -2793,8 +2793,8 @@ function compile$1(content) {
     if (charCode === CODE_SQUOTE || charCode === CODE_DQUOTE) {
       // 截出的字符串包含引号
       skipString();
-      temp = cutString(start);
-      return new Literal(temp, slice(temp, 1, -1));
+      temp = slice(cutString(start), 1, -1);
+      return new Literal(temp, temp);
     }
     // 1.1
     else if (isDigit(charCode)) {
@@ -2995,6 +2995,10 @@ function execute$1(node, getter, context) {
   return executor[node.type](node, getter, context);
 }
 
+var stringifyJSON = function (target) {
+  return JSON.stringify(target);
+};
+
 /**
  * 元素 节点
  *
@@ -3104,6 +3108,71 @@ each$1(name2Type, function (type, name) {
   type2Name[type] = name;
 });
 
+function stringifyObject(obj) {
+  if (obj) {
+    var keys$$1 = keys(obj);
+    if (keys$$1[RAW_LENGTH]) {
+      var result = [];
+      each(keys$$1, function (key) {
+        var value = obj[key];
+        if (string(value)) {
+          value = stringifyJSON(value);
+        } else if (array(value)) {
+          if (key === RAW_CHILDREN) {
+            value = stringifyArray(value, 'x');
+            if (value) {
+              value = stringifyFunction(value);
+            }
+          } else {
+            value = stringifyArray(value);
+          }
+        } else if (object(value)) {
+          value = stringifyObject(value);
+        }
+        if (value == NULL) {
+          return;
+        }
+        push(result, key + ':' + value);
+      });
+      if (result[RAW_LENGTH]) {
+        return '{' + join(result, CHAR_COMMA) + '}';
+      }
+    }
+  }
+}
+
+function stringifyArray(arr, name) {
+  if (arr && arr[RAW_LENGTH]) {
+    var result = arr.map(function (item) {
+      if (item.stringify) {
+        return item.stringify();
+      }
+      if (string(item)) {
+        return stringifyJSON(item);
+      }
+      if (object(item)) {
+        return stringifyObject(item);
+      }
+      return item;
+    });
+    return name ? stringifyCall(name, result) : '[' + join(result, CHAR_COMMA) + ']';
+  }
+}
+
+function stringifyExpression(expr) {
+  if (expr) {
+    return stringifyCall('o', stringifyJSON(expr));
+  }
+}
+
+function stringifyCall(name, params) {
+  return name + '(' + (array(params) ? join(params, CHAR_COMMA) : params) + ')';
+}
+
+function stringifyFunction(str) {
+  return 'function(){' + (str || CHAR_BLANK) + '}';
+}
+
 /**
  * 节点基类
  */
@@ -3116,83 +3185,7 @@ var Node$2 = function () {
   }
 
   Node.prototype.stringify = function () {
-    return this.stringifyObject(this);
-  };
-
-  Node.prototype.stringifyObject = function (obj) {
-    if (obj) {
-      var keys$$1 = keys(obj);
-      if (keys$$1[RAW_LENGTH]) {
-        var me = this,
-            result;
-        each(keys$$1, function (key) {
-          var value = obj[key];
-          if (value == NULL) {
-            return;
-          }
-          if (string(value)) {
-            value = me.stringifyString(value);
-          } else {
-            if (array(value)) {
-              if (key === 'children') {
-                value = me.stringifyArray(value, 'x');
-                if (value) {
-                  value = me.stringifyFunction(value);
-                }
-              } else {
-                value = me.stringifyArray(value);
-              }
-            } else if (object(value)) {
-              value = me.stringifyObject(value);
-            }
-            if (value == NULL) {
-              return;
-            }
-          }
-          if (!result) {
-            result = [];
-          }
-          push(result, key + ':' + value);
-        });
-        if (result) {
-          return '{' + join(result, ',') + '}';
-        }
-      }
-    }
-  };
-
-  Node.prototype.stringifyArray = function (arr, name) {
-    if (arr && arr[RAW_LENGTH]) {
-      var me = this,
-          result = [];
-      each(arr, function (item) {
-        if (item.stringify) {
-          item = item.stringify();
-        } else if (object(item)) {
-          item = me.stringifyObject(item);
-        }
-        push(result, item);
-      });
-      return name ? me.stringifyCall(name, result) : '[' + join(result, ',') + ']';
-    }
-  };
-
-  Node.prototype.stringifyExpression = function (expr, safe) {
-    if (expr) {
-      return this.stringifyCall('o', this.stringifyObject(expr));
-    }
-  };
-
-  Node.prototype.stringifyCall = function (name, params) {
-    return name + '(' + (array(params) ? join(params, ',') : params) + ')';
-  };
-
-  Node.prototype.stringifyString = function (str) {
-    return '"' + str.replace(/"/g, '\\"').replace(/\s*\n+\s*/g, ' ') + '"';
-  };
-
-  Node.prototype.stringifyFunction = function (str) {
-    return 'function(){' + (str || '') + '}';
+    return stringifyObject(this);
   };
 
   return Node;
@@ -3269,13 +3262,13 @@ var Each = function (_Node) {
   }
 
   Each.prototype.stringify = function () {
-    var generate = this.stringifyArray(this[RAW_CHILDREN], 'x');
+    var generate = stringifyArray(this[RAW_CHILDREN], 'x');
     if (generate) {
-      var params = [this.stringifyObject(this.expr), this.stringifyFunction(generate)];
+      var params = [stringifyJSON(this.expr), stringifyFunction(generate)];
       if (this.index) {
-        push(params, this.stringifyString(this.index));
+        push(params, stringifyJSON(this.index));
       }
-      return this.stringifyFunction(this.stringifyCall('e', params));
+      return stringifyFunction(stringifyCall('e', params));
     }
   };
 
@@ -3324,56 +3317,56 @@ var Element = function (_Node) {
 
     if (me[RAW_CHILDREN]) {
       each(me[RAW_CHILDREN], function (child, index) {
-        push(index < divider ? attrs : children, child.stringify());
+        push(index < divider ? attrs : children, child);
       });
     }
 
-    var addArray = function (arr, name) {
-      arr = me.stringifyArray(arr, name || 'x');
-      unshift(params, arr ? me.stringifyFunction(arr) : RAW_UNDEFINED);
+    var addParam = function (arr, name) {
+      arr = stringifyArray(arr, name || 'x');
+      unshift(params, arr ? stringifyFunction(arr) : RAW_UNDEFINED);
     };
 
     if (tag === 'template') {
       if (slot && children[RAW_LENGTH]) {
-        addArray(children);
-        addArray(slot);
-        return this.stringifyCall('a', params);
+        addParam(children);
+        addParam(slot);
+        return stringifyCall('a', params);
       }
     } else if (tag === 'slot') {
       if (name) {
-        addArray(name);
-        return this.stringifyCall('b', params);
+        addParam(name);
+        return stringifyCall('b', params);
       }
     } else {
 
       if (key) {
-        addArray(key);
+        addParam(key);
       }
 
       if (transition || params[RAW_LENGTH]) {
-        addArray(transition);
+        addParam(transition);
       }
 
       if (ref || params[RAW_LENGTH]) {
-        addArray(ref);
+        addParam(ref);
       }
 
       if (props && props[RAW_LENGTH] || params[RAW_LENGTH]) {
-        addArray(props, 'z');
+        addParam(props, 'z');
       }
 
       if (attrs[RAW_LENGTH] || params[RAW_LENGTH]) {
-        addArray(attrs, 'y');
+        addParam(attrs, 'y');
       }
 
       if (children[RAW_LENGTH] || params[RAW_LENGTH]) {
-        addArray(children);
+        addParam(children);
       }
 
-      unshift(params, me.stringifyString(tag));
+      unshift(params, stringifyJSON(tag));
       unshift(params, component ? 1 : 0);
 
-      return this.stringifyCall('c', params);
+      return stringifyCall('c', params);
     }
   };
 
@@ -3437,7 +3430,7 @@ var Expression = function (_Node) {
   }
 
   Expression.prototype.stringify = function () {
-    return this.stringifyExpression(this.expr);
+    return stringifyExpression(this.expr);
   };
 
   return Expression;
@@ -3466,8 +3459,8 @@ var If = function (_Node) {
 
 
     var stringify = function (node) {
-      var expr = node.stringifyExpression(node.expr);
-      var children = node.stringifyArray(node[RAW_CHILDREN], 'x');
+      var expr = stringifyExpression(node.expr);
+      var children = stringifyArray(node[RAW_CHILDREN], 'x');
       var next = node.next;
       if (next) {
         next = stringify(next);
@@ -3476,14 +3469,9 @@ var If = function (_Node) {
       }
       if (expr) {
         if (children) {
-          if (next) {
-            return expr + '?' + children + ':' + next;
-          }
-          return expr + '&&' + children;
-        } else {
-          if (next) {
-            return '!' + expr + '&&' + next;
-          }
+          return next ? expr + '?' + children + ':' + next : expr + '&&' + children;
+        } else if (next) {
+          return '!' + expr + '&&' + next;
         }
       } else if (children) {
         return children;
@@ -3492,7 +3480,7 @@ var If = function (_Node) {
 
     var str = stringify(this);
     if (str) {
-      return this.stringifyFunction(str);
+      return stringifyFunction(str);
     }
   };
 
@@ -3518,7 +3506,7 @@ var Import = function (_Node) {
   }
 
   Import.prototype.stringify = function () {
-    return this.stringifyCall('i', this.stringifyString(this.name));
+    return stringifyCall('i', stringifyJSON(this.name));
   };
 
   return Import;
@@ -3543,7 +3531,7 @@ var Partial = function (_Node) {
   }
 
   Partial.prototype.stringify = function () {
-    return this.stringifyCall('p', [this.stringifyString(this.name), this.stringifyFunction(this.stringifyArray(this[RAW_CHILDREN], 'x'))]);
+    return stringifyCall('p', [stringifyJSON(this.name), stringifyFunction(stringifyArray(this[RAW_CHILDREN], 'x'))]);
   };
 
   return Partial;
@@ -3568,9 +3556,7 @@ var Spread = function (_Node) {
   }
 
   Spread.prototype.stringify = function () {
-    var expr = this.expr;
-
-    return this.stringifyCall('s', this.stringifyObject(expr));
+    return stringifyCall('s', stringifyJSON(this.expr));
   };
 
   return Spread;
@@ -3595,7 +3581,7 @@ var Text = function (_Node) {
   }
 
   Text.prototype.stringify = function () {
-    return this.stringifyString(this.text);
+    return stringifyJSON(this.text);
   };
 
   return Text;
@@ -5870,6 +5856,10 @@ var bindEvent = function (_ref) {
 
 var VALUE = 'value';
 
+function getOptionValue(option) {
+  return isDef(option.value) ? option.value : option.text;
+}
+
 var inputControl = {
   set: function set$$1(el, keypath, instance) {
     var value = toString(instance.get(keypath));
@@ -5887,28 +5877,19 @@ var inputControl = {
 var selectControl = {
   set: function set$$1(el, keypath, instance) {
     var value = toString(instance.get(keypath));
-    var options = el.options,
-        selectedIndex = el.selectedIndex;
+    var options = el.options;
 
-    if (selectedIndex >= 0) {
-      var selectedOption = options[selectedIndex];
-      if (selectedOption) {
-        var newValue = isDef(selectedOption.value) ? selectedOption.value : selectedOption.text;
-        if (value !== newValue) {
-          each(options, function (option, index) {
-            var optionValue = isDef(option.value) ? option.value : option.text;
-            if (optionValue === newValue) {
-              el.selectedIndex = index;
-              return FALSE;
-            }
-          });
+    if (options) {
+      each(options, function (option, index) {
+        if (getOptionValue(option) === value) {
+          el.selectedIndex = index;
+          return FALSE;
         }
-      }
+      });
     }
   },
   sync: function sync(el, keypath, instance) {
-    var selectedOption = el.options[el.selectedIndex];
-    instance.set(keypath, isDef(selectedOption.value) ? selectedOption.value : selectedOption.text);
+    instance.set(keypath, getOptionValue(el.options[el.selectedIndex]));
   }
 };
 
@@ -6874,7 +6855,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.59.5';
+Yox.version = '0.59.6';
 
 /**
  * 工具，便于扩展、插件使用
