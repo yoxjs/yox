@@ -4,9 +4,7 @@ Just like Vue, but it is more lightweight and easy than Vue.
 
 The key is that yox supports IE6.
 
-**可用于生产环境，没有 Vue 使用经验不建议使用，谢谢**。
-
-> QQ 群 232021930
+> QQ 群 232021930，**可用于生产环境，没有 Vue 使用经验不建议使用，谢谢**。
 
 ```js
 {
@@ -49,13 +47,30 @@ The key is that yox supports IE6.
   data: function () { return {}; },
 
   // 计算属性
-  computed: {},
+  computed: {
+    field1: function () {
+
+    },
+    field2: {
+      deps: [ 'dep1', 'dep2' ],
+      get: function () {
+
+      }
+    }
+  },
   // 监听事件
   // 包括组件自身的事件，和子组件冒泡上来的事件
-  events: {},
+  events: {
+    eventName: function (event, data) {
+    }
+  },
 
   // 监听数据变化
-  watchers: {},
+  watchers: {
+    keypath: function (newValue, oldValue, keypath) {
+
+    }
+  },
 
   // 组件用到的子组件
   // 如果已全局注册，可无需再注册
@@ -109,11 +124,11 @@ CDN
 
 ## Example
 
-* [Hello World](http://code.hcharts.cn/musicode/h5h0Q7)
-* [Data Binding](http://code.hcharts.cn/musicode/94B0Qo)
-* [Render List](http://code.hcharts.cn/musicode/hMt0Qb)
-* [Event Handle](http://code.hcharts.cn/musicode/hMd0Lr)
-* [Custom Component](https://jsfiddle.net/musicode/3jx6x8e1/4/)
+* [Hello World](https://jsfiddle.net/musicode/coLxry2w/)
+* [Data Binding](https://jsfiddle.net/musicode/u1kj5vyL/)
+* [Render List](https://jsfiddle.net/musicode/1kewyatu/)
+* [Event Handle](https://jsfiddle.net/musicode/2hpLnoz5/)
+* [Custom Component](https://jsfiddle.net/musicode/3jx6x8e1/)
 
 ## Document
 
