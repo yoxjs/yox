@@ -1514,6 +1514,7 @@ var SYNTAX_SPREAD = '...';
 var SYNTAX_COMMENT = /^!\s/;
 
 var SPECIAL_EVENT = '$event';
+var SPECIAL_DATA = '$data';
 var SPECIAL_KEYPATH = '$keypath';
 
 var SLOT_DATA_PREFIX = '$slot_';
@@ -6653,18 +6654,18 @@ var Yox = function () {
         var getValue = function (node) {
           return instance.$getter(node, keypathStack);
         };
-        return function (event) {
+        return function (event, data) {
           var isEvent = Event.is(event),
               result;
           if (args && args[RAW_LENGTH]) {
+            var scope = last(keypathStack);
             if (isEvent) {
-              last(keypathStack)[SPECIAL_EVENT] = event;
+              scope[SPECIAL_EVENT] = event;
             }
+            scope[SPECIAL_DATA] = data;
             result = execute(method, instance, args.map(getValue));
-          } else {
-            if (isEvent) {
-              result = execute(method, instance, event);
-            }
+          } else if (isEvent) {
+            result = execute(method, instance, data ? [event, data] : event);
           }
           if (result === FALSE && isEvent) {
             event.prevent().stop();
@@ -6855,7 +6856,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.59.6';
+Yox.version = '0.59.7';
 
 /**
  * 工具，便于扩展、插件使用

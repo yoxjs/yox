@@ -632,18 +632,18 @@ export default class Yox {
         let getValue = function (node) {
           return instance.$getter(node, keypathStack)
         }
-        return function (event) {
+        return function (event, data) {
           let isEvent = Event.is(event), result
           if (args && args[ env.RAW_LENGTH ]) {
+            let scope = array.last(keypathStack)
             if (isEvent) {
-              array.last(keypathStack)[ config.SPECIAL_EVENT ] = event
+              scope[ config.SPECIAL_EVENT ] = event
             }
+            scope[ config.SPECIAL_DATA ] = data
             result = execute(method, instance, args.map(getValue))
           }
-          else {
-            if (isEvent) {
-              result = execute(method, instance, event)
-            }
+          else if (isEvent) {
+            result = execute(method, instance, data ? [ event, data ] : event)
           }
           if (result === env.FALSE && isEvent) {
             event.prevent().stop()
@@ -820,7 +820,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.59.6'
+Yox.version = '0.59.7'
 
 /**
  * 工具，便于扩展、插件使用
