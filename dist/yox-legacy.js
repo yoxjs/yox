@@ -6240,14 +6240,15 @@ var Yox = function () {
       instance.updateView(instance.get(TEMPLATE_COMPUTED), el || api.createElement('div'));
     }
 
+    if (events) {
+      instance.on(events);
+    }
+
     // 确保早于 AFTER_MOUNT 执行
-    if (watchers || events) {
+    if (watchers) {
       prepend(function () {
-        if (watchers && instance.$observer) {
+        if (instance.$observer) {
           instance.watch(watchers);
-        }
-        if (events && instance.$emitter) {
-          instance.on(events);
         }
       });
     }
@@ -6856,7 +6857,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.59.8';
+Yox.version = '0.59.9';
 
 /**
  * 工具，便于扩展、插件使用

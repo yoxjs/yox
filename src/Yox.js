@@ -223,15 +223,16 @@ export default class Yox {
       )
     }
 
+    if (events) {
+      instance.on(events)
+    }
+
     // 确保早于 AFTER_MOUNT 执行
-    if (watchers || events) {
+    if (watchers) {
       nextTask.prepend(
         function () {
-          if (watchers && instance.$observer) {
+          if (instance.$observer) {
             instance.watch(watchers)
-          }
-          if (events && instance.$emitter) {
-            instance.on(events)
           }
         }
       )
@@ -820,7 +821,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.59.8'
+Yox.version = '0.59.9'
 
 /**
  * 工具，便于扩展、插件使用
