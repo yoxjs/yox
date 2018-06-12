@@ -1633,7 +1633,7 @@ function init(api) {
         instance = _vnode.instance;
 
 
-    vnode.data = data || {};
+    vnode.data = {};
 
     if (falsy$1(tag)) {
       return vnode.el = api.createText(text);
@@ -1874,7 +1874,7 @@ function init(api) {
                     oldChildren[oldIndex] = NULL;
                   }
                   // 新元素
-                  else if (createElement(newStartVnode, oldStartVnode.data)) {
+                  else if (createElement(newStartVnode)) {
                       activeVnode = newStartVnode;
                     }
 
@@ -6694,7 +6694,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.59.7';
+Yox.version = '0.59.8';
 
 /**
  * 工具，便于扩展、插件使用
