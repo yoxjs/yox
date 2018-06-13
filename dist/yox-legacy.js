@@ -4169,11 +4169,13 @@ function render(render, getter, instance) {
     }
   },
       addSlot = function (name, slot) {
-    var slots = currentComponent.slots || (currentComponent.slots = {});
-    if (slots[name]) {
-      push(slots[name], slot);
-    } else {
-      slots[name] = slot;
+    if (slot[RAW_LENGTH]) {
+      var slots = currentComponent.slots || (currentComponent.slots = {});
+      if (slots[name]) {
+        push(slots[name], slot);
+      } else {
+        slots[name] = slot;
+      }
     }
   },
       attrHandler = function (node) {
@@ -4288,7 +4290,7 @@ function render(render, getter, instance) {
     name = getValue(name);
     if (name) {
       var result = getter(SLOT_DATA_PREFIX + name);
-      return array(result) && result.length === 1 ? result[0] : result;
+      return array(result) && result[RAW_LENGTH] === 1 ? result[0] : result;
     }
   },
 
@@ -4601,7 +4603,7 @@ var Computed = function () {
           if (has(deps, keypath)) {
             return diff();
           } else {
-            for (var i = 0, len = deps.length; i < len; i++) {
+            for (var i = 0, len = deps[RAW_LENGTH]; i < len; i++) {
               if (startsWith$1(deps[i], keypath)) {
                 return diff();
               }
@@ -6065,7 +6067,7 @@ var binding = function (_ref) {
 
 // 组件是否存在某个 slot
 var hasSlot = function (name) {
-  return this.get(SLOT_DATA_PREFIX + name, UNDEFINED) !== UNDEFINED;
+  return isDef(this.get(SLOT_DATA_PREFIX + name));
 };
 
 var patch = init(api);
@@ -6857,7 +6859,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.59.9';
+Yox.version = '0.60.0';
 
 /**
  * 工具，便于扩展、插件使用
