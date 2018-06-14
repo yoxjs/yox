@@ -8,7 +8,7 @@ The key is that yox supports IE6.
 
 > 关于未来版本的重要提示：
 > 1. 模板将不再兼容类似 `list[0].name` 的数组语法，必须写成 `list.0.name`
-> 2. legacy 版本将不再提供补丁函，数的支持必须自行引入 `es5-shim.js/es5-sham.js/json.js`
+> 2. legacy 版本将不再提供补丁函数的支持，必须自行引入 `es5-shim.js/es5-sham.js/json.js`
 
 ```js
 {
