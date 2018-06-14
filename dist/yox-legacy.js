@@ -18,7 +18,7 @@ if (!Object.keys) {
     proto = new Class();
     var constructor = descriptor && descriptor.constructor;
     if (constructor) {
-      proto.constructor = constructor.value;
+      proto.constructor = constructor[RAW_VALUE];
     }
     return proto;
   };
@@ -136,6 +136,7 @@ var RAW_NULL = 'null';
 var RAW_UNDEFINED = 'undefined';
 
 var RAW_THIS = 'this';
+var RAW_VALUE = 'value';
 var RAW_LENGTH = 'length';
 var RAW_CHILDREN = 'children';
 var RAW_FUNCTION = 'function';
@@ -900,7 +901,7 @@ function get$1(object$$1, keypath) {
     object$$1 = getValue(object$$1, key);
     if (!isLast) {
       if (object$$1) {
-        object$$1 = object$$1.value;
+        object$$1 = object$$1[RAW_VALUE];
       } else {
         return FALSE;
       }
@@ -1446,7 +1447,7 @@ function updateDirectives(vnode, oldVnode) {
     var unbind;
     if (has$1(oldDirectives, key)) {
       var oldDirective = oldDirectives[key];
-      if (directive.value !== oldDirective.value || directive.keypath !== oldDirective.keypath) {
+      if (directive[RAW_VALUE] !== oldDirective[RAW_VALUE] || directive.keypath !== oldDirective.keypath) {
         if (oldUnbinds && oldUnbinds[key]) {
           oldUnbinds[key]();
           delete oldUnbinds[key];
@@ -1673,7 +1674,9 @@ function init(api) {
         el = _vnode.el,
         tag = _vnode.tag,
         component$$1 = _vnode.component,
+        attrs$$1 = _vnode.attrs,
         slots = _vnode.slots,
+        directives$$1 = _vnode.directives,
         children = _vnode.children,
         text = _vnode.text,
         instance = _vnode.instance;
@@ -1706,11 +1709,29 @@ function init(api) {
 
         if (vnode && tag === vnode.tag) {
 
-          component$$1 = (vnode.parent || vnode.instance).create(options, {
+          var host = vnode.parent || instance,
+              extensions;
+
+          var modelKeypath = directives$$1 && directives$$1.model && directives$$1.model[RAW_VALUE];
+          if (modelKeypath) {
+            if (!attrs$$1) {
+              attrs$$1 = vnode.attrs = {};
+            }
+            var field = options.model || RAW_VALUE;
+            if (!has$1(attrs$$1, field)) {
+              attrs$$1[field] = host.get(modelKeypath);
+            }
+            extensions = {
+              $model: field
+            };
+          }
+
+          component$$1 = host.create(options, {
             el: el,
             slots: slots,
-            props: vnode.attrs,
-            replace: TRUE
+            props: attrs$$1,
+            replace: TRUE,
+            extensions: extensions
           });
           el = component$$1.$el;
           if (!el) {
@@ -2383,7 +2404,7 @@ var Literal = function (_Node) {
 
     var _this = possibleConstructorReturn(this, _Node.call(this, LITERAL, raw));
 
-    _this.value = value;
+    _this[RAW_VALUE] = value;
     return _this;
   }
 
@@ -2423,7 +2444,7 @@ var Member = function (_Node) {
 
 
     if (isDef(staticKeypath) && prop.type === LITERAL) {
-      _this.staticKeypath = staticKeypath ? staticKeypath + KEYPATH_SEPARATOR + prop.value : prop.value;
+      _this.staticKeypath = staticKeypath ? staticKeypath + KEYPATH_SEPARATOR + prop[RAW_VALUE] : prop[RAW_VALUE];
     }
 
     return _this;
@@ -2649,7 +2670,7 @@ function compile$1(content) {
             if (item.type === IDENTIFIER) {
               return item.name;
             } else if (item.type === LITERAL) {
-              return item.value;
+              return item[RAW_VALUE];
             } else {
               throwError();
             }
@@ -2908,7 +2929,7 @@ function compile$1(content) {
 var executor = {};
 
 executor[LITERAL] = function (node) {
-  return node.value;
+  return node[RAW_VALUE];
 };
 
 executor[IDENTIFIER] = function (node, getter) {
@@ -2929,7 +2950,7 @@ executor[MEMBER] = function (node, getter, context) {
           next = node.name;
         }
       } else {
-        next = node.value;
+        next = node[RAW_VALUE];
       }
       keypath = join$1(keypath, next);
     });
@@ -3764,13 +3785,13 @@ function compile$$1(content) {
 
             if (type === DIRECTIVE) {
               target.expr = compile$1(text);
-              target.value = text;
+              target[RAW_VALUE] = text;
               delete target[RAW_CHILDREN];
             }
             // 属性的值如果是纯文本，直接获取文本值
             // 减少渲染时的遍历
             else if (type === ATTRIBUTE) {
-                target.value = text;
+                target[RAW_VALUE] = text;
                 delete target[RAW_CHILDREN];
               }
           }
@@ -3931,7 +3952,7 @@ function compile$$1(content) {
         text += currentQuote;
         closed = pop(htmlStack);
         if (!closed[RAW_CHILDREN]) {
-          closed.value = CHAR_BLANK;
+          closed[RAW_VALUE] = CHAR_BLANK;
         }
         popStack(closed.type);
       }
@@ -4179,7 +4200,7 @@ function render(render, getter, instance) {
         if (node.type === ATTRIBUTE) {
           var value;
           if (has$1(node, 'value')) {
-            value = node.value;
+            value = node[RAW_VALUE];
           } else if (expr) {
             value = o(expr, expr.staticKeypath);
             if (expr.staticKeypath) {
@@ -4192,7 +4213,7 @@ function render(render, getter, instance) {
           }
           addAttr(name, value);
         } else {
-          addDirective(name, node.modifier, name === DIRECTIVE_MODEL ? (o(expr), expr.absoluteKeypath) : node.value).expr = expr;
+          addDirective(name, node.modifier, name === DIRECTIVE_MODEL ? (o(expr), expr.absoluteKeypath) : node[RAW_VALUE]).expr = expr;
         }
       }
     }
@@ -4565,7 +4586,7 @@ var Computed = function () {
 
     instance.update = function (oldValue, key, addChange) {
 
-      var value = instance.value,
+      var value = instance[RAW_VALUE],
           changes = instance.changes || (instance.changes = {});
 
       // 当前计算属性的依赖发生变化
@@ -4609,13 +4630,13 @@ var Computed = function () {
         cache = this.cache;
 
     if (cache === FALSE) {
-      value = this.value = this.getter();
+      value = this[RAW_VALUE] = this.getter();
     }
     // 减少取值频率，尤其是处理复杂的计算规则
     else if (force || this.isDirty()) {
         var lastComputed = Observer.computed;
         Observer.computed = this;
-        value = this.value = this.getter();
+        value = this[RAW_VALUE] = this.getter();
         Observer.computed = lastComputed;
         this.changes = NULL;
       }
@@ -4792,7 +4813,7 @@ var Observer = function () {
       result = get$1(instance.data, keypath);
     }
 
-    return result ? result.value : defaultValue;
+    return result ? result[RAW_VALUE] : defaultValue;
   };
 
   /**
@@ -4855,7 +4876,7 @@ var Observer = function () {
       } else {
         var result = get$1(value, key);
         if (result) {
-          return result.value;
+          return result[RAW_VALUE];
         }
       }
     };
@@ -5824,8 +5845,7 @@ var bindEvent = function (_ref) {
     var lazy = directives.lazy;
 
     if (lazy) {
-      var value = lazy.value;
-
+      var value = lazy[RAW_VALUE];
       if (numeric(value) && value >= 0) {
         listener = debounce(listener, value, has(syncTypes, type));
       } else if (type === INPUT) {
@@ -5847,24 +5867,22 @@ var bindEvent = function (_ref) {
   }
 };
 
-var VALUE = 'value';
-
 function getOptionValue(option) {
-  return isDef(option.value) ? option.value : option.text;
+  return isDef(option[RAW_VALUE]) ? option[RAW_VALUE] : option.text;
 }
 
 var inputControl = {
   set: function set$$1(el, keypath, instance) {
     var value = toString(instance.get(keypath));
-    if (value !== el.value) {
-      el.value = value;
+    if (value !== el[RAW_VALUE]) {
+      el[RAW_VALUE] = value;
     }
   },
   sync: function sync(el, keypath, instance) {
-    instance.set(keypath, el.value);
+    instance.set(keypath, el[RAW_VALUE]);
   },
 
-  attr: VALUE
+  attr: RAW_VALUE
 };
 
 var selectControl = {
@@ -5888,11 +5906,11 @@ var selectControl = {
 
 var radioControl = {
   set: function set$$1(el, keypath, instance) {
-    el.checked = el.value === toString(instance.get(keypath));
+    el.checked = el[RAW_VALUE] === toString(instance.get(keypath));
   },
   sync: function sync(el, keypath, instance) {
     if (el.checked) {
-      instance.set(keypath, el.value);
+      instance.set(keypath, el[RAW_VALUE]);
     }
   },
 
@@ -5902,15 +5920,15 @@ var radioControl = {
 var checkboxControl = {
   set: function set$$1(el, keypath, instance) {
     var value = instance.get(keypath);
-    el.checked = array(value) ? has(value, el.value, FALSE) : boolean(value) ? value : !!value;
+    el.checked = array(value) ? has(value, el[RAW_VALUE], FALSE) : boolean(value) ? value : !!value;
   },
   sync: function sync(el, keypath, instance) {
     var value = instance.get(keypath);
     if (array(value)) {
       if (el.checked) {
-        instance.append(keypath, el.value);
+        instance.append(keypath, el[RAW_VALUE]);
       } else {
-        instance.removeAt(keypath, indexOf(value, el.value, FALSE));
+        instance.removeAt(keypath, indexOf(value, el[RAW_VALUE], FALSE));
       }
     } else {
       instance.set(keypath, el.checked);
@@ -5944,7 +5962,7 @@ var model = function (_ref) {
       component = _ref.component;
 
 
-  var keypath = node.value;
+  var keypath = node[RAW_VALUE];
   if (keypath) {
 
     var set$$1 = function () {
@@ -5965,16 +5983,11 @@ var model = function (_ref) {
       target = component;
       control = componentControl;
 
-      var field = component.$model = component.$options.model || VALUE;
-
-      if (!has$1(attrs, field)) {
-        instance.nextTick(set$$1);
-      }
+      var field = component.$model;
 
       component.watch(field, sync);
       unbindTarget = function () {
         component.unwatch(field, sync);
-        delete component.$model;
       };
     } else {
 
@@ -6025,7 +6038,7 @@ var binding = function (_ref) {
       component = _ref.component;
 
 
-  var keypath = node.value;
+  var keypath = node[RAW_VALUE];
 
   // 比如写了个 <div>{{name}}</div>
   // 删了数据却忘了删模板，无视之
@@ -6516,7 +6529,7 @@ var Yox = function () {
             if (filters) {
               var result = get$1(filters, key);
               if (result) {
-                value = result.value;
+                value = result[RAW_VALUE];
               }
             }
           }
@@ -6849,7 +6862,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.60.1';
+Yox.version = '0.60.2';
 
 /**
  * 工具，便于扩展、插件使用

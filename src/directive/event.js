@@ -25,7 +25,7 @@ export default function ({ el, node, instance, component, directives, type, list
   if (type && listener) {
     let { lazy } = directives
     if (lazy) {
-      let { value } = lazy
+      let value = lazy[ env.RAW_VALUE ]
       if (is.numeric(value) && value >= 0) {
         listener = debounce(listener, value, array.has(syncTypes, type))
       }

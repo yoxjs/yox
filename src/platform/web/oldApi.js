@@ -25,7 +25,7 @@ if (!Object.keys) {
     proto = new Class()
     let constructor = descriptor && descriptor.constructor
     if (constructor) {
-      proto.constructor = constructor.value
+      proto.constructor = constructor[ env.RAW_VALUE ]
     }
     return proto
   }

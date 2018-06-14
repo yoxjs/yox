@@ -6,7 +6,7 @@ import api from '../platform/web/api'
 
 export default function ({ el, node, instance, component }) {
 
-  let keypath = node.value
+  let keypath = node[ env.RAW_VALUE ]
 
   // 比如写了个 <div>{{name}}</div>
   // 删了数据却忘了删模板，无视之

@@ -496,7 +496,7 @@ export default class Yox {
             if (filters) {
               let result = object.get(filters, key)
               if (result) {
-                value = result.value
+                value = result[ env.RAW_VALUE ]
               }
             }
           }
@@ -821,7 +821,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.60.1'
+Yox.version = '0.60.2'
 
 /**
  * 工具，便于扩展、插件使用

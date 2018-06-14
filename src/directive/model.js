@@ -17,23 +17,21 @@ import bindEvent from './event'
 import api from '../platform/web/api'
 import * as event from '../config/event'
 
-const VALUE = 'value'
-
 function getOptionValue(option) {
-  return isDef(option.value) ? option.value : option.text
+  return isDef(option[ env.RAW_VALUE ]) ? option[ env.RAW_VALUE ] : option.text
 }
 
 const inputControl = {
   set(el, keypath, instance) {
     let value = toString(instance.get(keypath))
-    if (value !== el.value) {
-      el.value = value
+    if (value !== el[ env.RAW_VALUE ]) {
+      el[ env.RAW_VALUE ] = value
     }
   },
   sync(el, keypath, instance) {
-    instance.set(keypath, el.value)
+    instance.set(keypath, el[ env.RAW_VALUE ])
   },
-  attr: VALUE,
+  attr: env.RAW_VALUE,
 }
 
 const selectControl = {
@@ -59,11 +57,11 @@ const selectControl = {
 
 const radioControl = {
   set(el, keypath, instance) {
-    el.checked = el.value === toString(instance.get(keypath))
+    el.checked = el[ env.RAW_VALUE ] === toString(instance.get(keypath))
   },
   sync(el, keypath, instance) {
     if (el.checked) {
-      instance.set(keypath, el.value)
+      instance.set(keypath, el[ env.RAW_VALUE ])
     }
   },
   attr: 'checked'
@@ -73,19 +71,19 @@ const checkboxControl = {
   set(el, keypath, instance) {
     let value = instance.get(keypath)
     el.checked = is.array(value)
-      ? array.has(value, el.value, env.FALSE)
+      ? array.has(value, el[ env.RAW_VALUE ], env.FALSE)
       : (is.boolean(value) ? value : !!value)
   },
   sync(el, keypath, instance) {
     let value = instance.get(keypath)
     if (is.array(value)) {
       if (el.checked) {
-        instance.append(keypath, el.value)
+        instance.append(keypath, el[ env.RAW_VALUE ])
       }
       else {
         instance.removeAt(
           keypath,
-          array.indexOf(value, el.value, env.FALSE)
+          array.indexOf(value, el[ env.RAW_VALUE ], env.FALSE)
         )
       }
     }
@@ -119,7 +117,7 @@ const specialControls = {
 
 export default function ({ el, node, instance, directives, attrs, component }) {
 
-  let keypath = node.value
+  let keypath = node[ env.RAW_VALUE ]
   if (keypath) {
 
     let set = function () {
@@ -137,16 +135,11 @@ export default function ({ el, node, instance, directives, attrs, component }) {
       target = component
       control = componentControl
 
-      let field = component.$model = component.$options.model || VALUE
-
-      if (!object.has(attrs, field)) {
-        instance.nextTick(set)
-      }
+      let field = component.$model
 
       component.watch(field, sync)
       unbindTarget = function () {
         component.unwatch(field, sync)
-        delete component.$model
       }
 
     }
