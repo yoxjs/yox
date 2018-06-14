@@ -6,6 +6,10 @@ The key is that yox supports IE6.
 
 > QQ 群 232021930，**可用于生产环境，没有 Vue 使用经验不建议使用，谢谢**。
 
+> 关于未来版本的重要提示：
+> 1. 模板将不再兼容类似 `list[0].name` 的数组语法，必须写成 `list.0.name`
+> 2. legacy 版本将不再提供补丁函，数的支持必须自行引入 `es5-shim.js/es5-sham.js/json.js`
+
 ```js
 {
   // 通常只有根组件需要配置 el，支持元素节点和选择器
