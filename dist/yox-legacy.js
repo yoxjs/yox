@@ -700,22 +700,12 @@ var string$1 = {
 	falsy: falsy$1
 };
 
-var normalizeCache = {};
-
 function normalize(str) {
   if (!falsy$1(str)) {
     var start = indexOf$1(str, CHAR_OBRACK);
     if (start > 0 && indexOf$1(str, CHAR_CBRACK) > start) {
-      if (!normalizeCache[str]) {
-        normalizeCache[str] = str.replace(/\[\s*?([^\]]+)\s*?\]/g, function ($0, $1) {
-          var code = codeAt($1);
-          if (code === CODE_SQUOTE || code === CODE_DQUOTE) {
-            $1 = slice($1, 1, -1);
-          }
-          return KEYPATH_SEPARATOR + $1;
-        });
-      }
-      return normalizeCache[str];
+      // 临时代码，提醒一段时间就删掉
+      console.error('不支持 "${str}" 写法');
     }
   }
   return str;
@@ -6859,7 +6849,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.60.0';
+Yox.version = '0.60.1';
 
 /**
  * 工具，便于扩展、插件使用
