@@ -136,6 +136,7 @@ var RAW_NULL = 'null';
 var RAW_UNDEFINED = 'undefined';
 
 var RAW_THIS = 'this';
+var RAW_NAME = 'name';
 var RAW_VALUE = 'value';
 var RAW_LENGTH = 'length';
 var RAW_CHILDREN = 'children';
@@ -701,17 +702,6 @@ var string$1 = {
 	falsy: falsy$1
 };
 
-function normalize(str) {
-  if (!falsy$1(str)) {
-    var start = indexOf$1(str, CHAR_OBRACK);
-    if (start > 0 && indexOf$1(str, CHAR_CBRACK) > start) {
-      // 临时代码，提醒一段时间就删掉
-      console.error('不支持 "${str}" 写法');
-    }
-  }
-  return str;
-}
-
 function startsWith$1(keypath, prefix) {
   var temp;
   if (keypath === prefix) {
@@ -961,17 +951,15 @@ var Emitter = function () {
   }
 
   Emitter.prototype.fire = function (type, data, context) {
+    var instance = this,
+        namespace = instance.namespace,
+        listeners = instance.listeners,
+        target = parseType(type, namespace),
+        list = listeners[target[RAW_NAME]],
+        space = target.space,
+        isComplete = TRUE;
 
-    var instance = this;
-    var namespace = instance.namespace,
-        listeners = instance.listeners;
 
-    var _parseType = parseType(type, namespace),
-        name = _parseType.name,
-        space = _parseType.space;
-
-    var isComplete = TRUE,
-        list = listeners[name];
     if (list) {
 
       var event = array(data) ? data[0] : data,
@@ -1031,10 +1019,11 @@ var Emitter = function () {
   Emitter.prototype.has = function (type, listener) {
     var namespace = this.namespace,
         listeners = this.listeners,
-        _parseType2 = parseType(type, namespace),
-        name = _parseType2.name,
-        space = _parseType2.space,
+        target = parseType(type, namespace),
+        name = target[RAW_NAME],
+        space = target.space,
         result = TRUE;
+
 
     var each$$1 = function (list) {
       each(list, function (item, index) {
@@ -1069,9 +1058,10 @@ extend(Emitter.prototype, {
         listeners = instance.listeners;
 
     if (type) {
-      var _parseType3 = parseType(type, instance.namespace),
-          name = _parseType3.name,
-          space = _parseType3.space;
+
+      var target = parseType(type, instance.namespace),
+          _name = target[RAW_NAME],
+          space = target.space;
 
       var each$$1 = function (list, name) {
         if (object(listener)) {
@@ -1091,9 +1081,9 @@ extend(Emitter.prototype, {
         }
       };
 
-      if (name) {
-        if (listeners[name]) {
-          each$$1(listeners[name], name);
+      if (_name) {
+        if (listeners[_name]) {
+          each$$1(listeners[_name], _name);
         }
       } else if (space) {
         each$1(listeners, each$$1);
@@ -1119,13 +1109,10 @@ function on(data) {
         if (data) {
           extend(item, data);
         }
-
-        var _parseType4 = parseType(type, namespace),
-            name = _parseType4.name,
-            space = _parseType4.space;
-
-        item.space = space;
-        push(listeners[name] || (listeners[name] = []), item);
+        var target = parseType(type, namespace),
+            _name2 = target[RAW_NAME];
+        item.space = target.space;
+        push(listeners[_name2] || (listeners[_name2] = []), item);
       }
     };
 
@@ -1145,7 +1132,7 @@ function parseType(type, namespace) {
   if (namespace) {
     var index = indexOf$1(type, CHAR_DOT);
     if (index >= 0) {
-      result.name = slice(type, 0, index);
+      result[RAW_NAME] = slice(type, 0, index);
       result.space = slice(type, index + 1);
     }
   }
@@ -1418,7 +1405,7 @@ function bindDirective(vnode, key, api) {
     options.component = api.component(el);
   }
 
-  var bind = instance.directive(node.name),
+  var bind = instance.directive(node[RAW_NAME]),
       unbind = bind && bind(options);
 
   if (func(unbind)) {
@@ -2382,7 +2369,7 @@ var Identifier = function (_Node) {
       name = names[name];
       _this.lookup = FALSE;
     }
-    _this.name = _this.staticKeypath = name;
+    _this[RAW_NAME] = _this.staticKeypath = name;
     return _this;
   }
 
@@ -2668,7 +2655,7 @@ function compile$1(content) {
         return {
           keys: keys$$1.map(function (item) {
             if (item.type === IDENTIFIER) {
-              return item.name;
+              return item[RAW_NAME];
             } else if (item.type === LITERAL) {
               return item[RAW_VALUE];
             } else {
@@ -2721,7 +2708,7 @@ function compile$1(content) {
         temp;
 
     if (prevNode) {
-      node = new Member(cutString(prevStart), prevNode, new Literal(node.raw, node.name));
+      node = new Member(cutString(prevStart), prevNode, new Literal(node.raw, node[RAW_NAME]));
     }
 
     while (index < length) {
@@ -2735,7 +2722,7 @@ function compile$1(content) {
       else if (charCode === CODE_DOT) {
           index++;
           temp = parseIdentifier();
-          node = new Member(cutString(start), node, new Literal(temp.raw, temp.name));
+          node = new Member(cutString(start), node, new Literal(temp.raw, temp[RAW_NAME]));
         }
         // a[x]
         else if (charCode === CODE_OBRACK) {
@@ -2779,7 +2766,7 @@ function compile$1(content) {
 
     if (node) {
       if (prevNode) {
-        node = new Member(cutString(start), prevNode, new Literal(node.raw, node.name));
+        node = new Member(cutString(start), prevNode, new Literal(node.raw, node[RAW_NAME]));
       }
       charCode = getCharCode();
       if (charCode === CODE_DOT) {
@@ -2933,7 +2920,7 @@ executor[LITERAL] = function (node) {
 };
 
 executor[IDENTIFIER] = function (node, getter) {
-  return getter(node.name, node);
+  return getter(node[RAW_NAME], node);
 };
 
 executor[MEMBER] = function (node, getter, context) {
@@ -2947,7 +2934,7 @@ executor[MEMBER] = function (node, getter, context) {
         if (index > 0) {
           next = execute$1(node, getter, context);
         } else if (type === IDENTIFIER) {
-          next = node.name;
+          next = node[RAW_NAME];
         }
       } else {
         next = node[RAW_VALUE];
@@ -3217,7 +3204,7 @@ var Attribute = function (_Node) {
 
     var _this = possibleConstructorReturn(this, _Node.call(this, ATTRIBUTE));
 
-    _this.name = name;
+    _this[RAW_NAME] = name;
     return _this;
   }
 
@@ -3241,7 +3228,7 @@ var Directive = function (_Node) {
 
     var _this = possibleConstructorReturn(this, _Node.call(this, DIRECTIVE));
 
-    _this.name = name;
+    _this[RAW_NAME] = name;
     if (modifier) {
       _this.modifier = modifier;
     }
@@ -3513,12 +3500,12 @@ var Import = function (_Node) {
 
     var _this = possibleConstructorReturn(this, _Node.call(this, IMPORT));
 
-    _this.name = name;
+    _this[RAW_NAME] = name;
     return _this;
   }
 
   Import.prototype.stringify = function () {
-    return stringifyCall('i', stringifyJSON(this.name));
+    return stringifyCall('i', stringifyJSON(this[RAW_NAME]));
   };
 
   return Import;
@@ -3538,12 +3525,12 @@ var Partial = function (_Node) {
 
     var _this = possibleConstructorReturn(this, _Node.call(this, PARTIAL));
 
-    _this.name = name;
+    _this[RAW_NAME] = name;
     return _this;
   }
 
   Partial.prototype.stringify = function () {
-    return stringifyCall('p', [stringifyJSON(this.name), stringifyFunction(stringifyArray(this[RAW_CHILDREN], 'x'))]);
+    return stringifyCall('p', [stringifyJSON(this[RAW_NAME]), stringifyFunction(stringifyArray(this[RAW_CHILDREN], 'x'))]);
   };
 
   return Partial;
@@ -4563,7 +4550,7 @@ function matchBest(sorted, keypath) {
   each(sorted, function (prefix) {
     var length = startsWith$1(keypath, prefix);
     if (length !== FALSE) {
-      result.name = prefix;
+      result[RAW_NAME] = prefix;
       result.prop = slice(keypath, length);
       return FALSE;
     }
@@ -4778,8 +4765,6 @@ var Observer = function () {
       return instance.data;
     }
 
-    keypath = normalize(keypath);
-
     // 调用 get 时，外面想要获取依赖必须设置是谁在收集依赖
     // 如果没设置，则跳过依赖收集
     if (Observer.computed) {
@@ -4794,11 +4779,9 @@ var Observer = function () {
       if (target) {
         return target.get();
       }
-
-      var _matchBest = matchBest(reversedComputedKeys, keypath),
-          name = _matchBest.name,
-          prop = _matchBest.prop;
-
+      var match = matchBest(reversedComputedKeys, keypath),
+          name = match[RAW_NAME],
+          prop = match.prop;
       if (name && prop) {
         target = instance.computed[name].get();
         if (has$1(target, prop)) {
@@ -4924,8 +4907,6 @@ var Observer = function () {
 
     var setValue = function (value, keypath) {
 
-      keypath = normalize(keypath);
-
       var oldValue = instance.get(keypath);
       if (value === oldValue) {
         return;
@@ -4945,11 +4926,9 @@ var Observer = function () {
           }
           return;
         }
-
-        var _matchBest2 = matchBest(reversedComputedKeys, keypath),
-            name = _matchBest2.name,
-            prop = _matchBest2.prop;
-
+        var match = matchBest(reversedComputedKeys, keypath),
+            name = match[RAW_NAME],
+            prop = match.prop;
         if (name && prop) {
           target = computed[name].get();
           if (!primitive(target)) {
@@ -6654,7 +6633,7 @@ var Yox = function () {
     if (expr && expr.type === CALL) {
       var callee = expr.callee,
           args = expr.args,
-          method = instance[callee.name];
+          method = instance[callee[RAW_NAME]];
 
       if (method) {
         var getValue = function (node) {
@@ -6862,7 +6841,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.60.2';
+Yox.version = '0.60.3';
 
 /**
  * 工具，便于扩展、插件使用

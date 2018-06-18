@@ -628,7 +628,7 @@ export default class Yox {
     let { value, expr, keypath, keypathStack } = directive
 
     if (expr && expr.type === expressionNodeType.CALL) {
-      let { callee, args } = expr, method = instance[ callee.name ]
+      let { callee, args } = expr, method = instance[ callee[ env.RAW_NAME ] ]
       if (method) {
         let getValue = function (node) {
           return instance.$getter(node, keypathStack)
@@ -821,7 +821,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.60.2'
+Yox.version = '0.60.3'
 
 /**
  * 工具，便于扩展、插件使用
