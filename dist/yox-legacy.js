@@ -955,8 +955,9 @@ var Emitter = function () {
         namespace = instance.namespace,
         listeners = instance.listeners,
         target = parseType(type, namespace),
-        list = listeners[target[RAW_NAME]],
+        name = target[RAW_NAME],
         space = target.space,
+        list = listeners[name],
         isComplete = TRUE;
 
 
@@ -1060,7 +1061,7 @@ extend(Emitter.prototype, {
     if (type) {
 
       var target = parseType(type, instance.namespace),
-          _name = target[RAW_NAME],
+          name = target[RAW_NAME],
           space = target.space;
 
       var each$$1 = function (list, name) {
@@ -1081,9 +1082,9 @@ extend(Emitter.prototype, {
         }
       };
 
-      if (_name) {
-        if (listeners[_name]) {
-          each$$1(listeners[_name], _name);
+      if (name) {
+        if (listeners[name]) {
+          each$$1(listeners[name], name);
         }
       } else if (space) {
         each$1(listeners, each$$1);
@@ -1110,9 +1111,9 @@ function on(data) {
           extend(item, data);
         }
         var target = parseType(type, namespace),
-            _name2 = target[RAW_NAME];
+            name = target[RAW_NAME];
         item.space = target.space;
-        push(listeners[_name2] || (listeners[_name2] = []), item);
+        push(listeners[name] || (listeners[name] = []), item);
       }
     };
 
@@ -6841,7 +6842,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.60.3';
+Yox.version = '0.60.4';
 
 /**
  * 工具，便于扩展、插件使用
