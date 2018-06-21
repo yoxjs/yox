@@ -71,9 +71,9 @@ api.on = function (element, type, listener, context) {
         e = new Event(api.createEvent(e, element))
       }
       if (type) {
-        e.type = type
+        e[ env.RAW_TYPE ] = type
       }
-      emitter.fire(e.type, e, context)
+      emitter.fire(e[ env.RAW_TYPE ], e, context)
     }
     emitter[ type ] = nativeListener
     let special = api.specialEvents[ type ]

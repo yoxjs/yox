@@ -146,7 +146,7 @@ export default function ({ el, node, instance, directives, attrs, component }) {
     else {
 
       target = el
-      control = specialControls[ el.type ] || specialControls[ api.tag(el) ]
+      control = specialControls[ el[ env.RAW_TYPE ] ] || specialControls[ api.tag(el) ]
 
       let type = event.CHANGE
       if (!control) {

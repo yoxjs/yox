@@ -343,7 +343,7 @@ export default class Yox {
     }
 
     let { $parent, $children, $emitter } = instance
-    let isComplete = $emitter.fire(event.type, args, instance)
+    let isComplete = $emitter.fire(event[ env.RAW_TYPE ], args, instance)
     if (isComplete) {
       if (downward) {
         if ($children) {
@@ -627,7 +627,7 @@ export default class Yox {
     let instance = this
     let { value, expr, keypath, keypathStack } = directive
 
-    if (expr && expr.type === expressionNodeType.CALL) {
+    if (expr && expr[ env.RAW_TYPE ] === expressionNodeType.CALL) {
       let { callee, args } = expr, method = instance[ callee[ env.RAW_NAME ] ]
       if (method) {
         let getValue = function (node) {
@@ -654,9 +654,9 @@ export default class Yox {
     }
     else if (value) {
       return function (event, data) {
-        if (event.type !== value) {
+        if (event[ env.RAW_TYPE ] !== value) {
           event = new Event(event)
-          event.type = value
+          event[ env.RAW_TYPE ] = value
         }
         instance.fire(event, data)
       }
@@ -821,7 +821,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.60.4'
+Yox.version = '0.60.5'
 
 /**
  * 工具，便于扩展、插件使用

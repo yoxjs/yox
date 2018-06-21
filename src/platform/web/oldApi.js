@@ -102,7 +102,7 @@ function addInputListener(element, listener) {
   listener.$listener = function (e) {
     if (e.propertyName === 'value') {
       e = new Event(e)
-      e.type = event.INPUT
+      e[ env.RAW_TYPE ] = event.INPUT
       listener.call(this, e)
     }
   }
@@ -117,7 +117,7 @@ function removeInputListener(element, listener) {
 function addChangeListener(element, listener) {
   listener.$listener = function (e) {
     e = new Event(e)
-    e.type = event.CHANGE
+    e[ env.RAW_TYPE ] = event.CHANGE
     listener.call(this, e)
   }
   on(element, event.CLICK, listener.$listener)
@@ -130,7 +130,7 @@ function removeChangeListener(element, listener) {
 
 function isBox(element) {
   return element.tagName === 'INPUT'
-    && (element.type === 'radio' || element.type === 'checkbox')
+    && (element[ env.RAW_TYPE ] === 'radio' || element[ env.RAW_TYPE ] === 'checkbox')
 }
 
 export function on(element, type, listener) {

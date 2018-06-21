@@ -136,6 +136,7 @@ var RAW_NULL = 'null';
 var RAW_UNDEFINED = 'undefined';
 
 var RAW_THIS = 'this';
+var RAW_TYPE = 'type';
 var RAW_NAME = 'name';
 var RAW_VALUE = 'value';
 var RAW_LENGTH = 'length';
@@ -248,11 +249,11 @@ var Event = function () {
   function Event(event) {
     classCallCheck(this, Event);
 
-    if (event.type) {
-      this.type = event.type;
+    if (event[RAW_TYPE]) {
+      this[RAW_TYPE] = event[RAW_TYPE];
       this.originalEvent = event;
     } else {
-      this.type = event;
+      this[RAW_TYPE] = event;
     }
   }
 
@@ -2221,7 +2222,7 @@ binary[MODULO] = function (a, b) {
 var Node = function (type, raw) {
   classCallCheck(this, Node);
 
-  this.type = type;
+  this[RAW_TYPE] = type;
   this.raw = trim(raw);
 };
 
@@ -2417,7 +2418,7 @@ var Member = function (_Node) {
 
     var props = [];
 
-    push(props, object.type === MEMBER ? object.props : object);
+    push(props, object[RAW_TYPE] === MEMBER ? object.props : object);
 
     push(props, prop);
 
@@ -2431,7 +2432,7 @@ var Member = function (_Node) {
     var staticKeypath = object.staticKeypath;
 
 
-    if (isDef(staticKeypath) && prop.type === LITERAL) {
+    if (isDef(staticKeypath) && prop[RAW_TYPE] === LITERAL) {
       _this.staticKeypath = staticKeypath ? staticKeypath + KEYPATH_SEPARATOR + prop[RAW_VALUE] : prop[RAW_VALUE];
     }
 
@@ -2655,9 +2656,9 @@ function compile$1(content) {
         }
         return {
           keys: keys$$1.map(function (item) {
-            if (item.type === IDENTIFIER) {
+            if (item[RAW_TYPE] === IDENTIFIER) {
               return item[RAW_NAME];
-            } else if (item.type === LITERAL) {
+            } else if (item[RAW_TYPE] === LITERAL) {
               return item[RAW_VALUE];
             } else {
               throwError();
@@ -2929,7 +2930,7 @@ executor[MEMBER] = function (node, getter, context) {
   if (!keypath) {
     keypath = CHAR_BLANK;
     each(node.props, function (node, index) {
-      var type = node.type,
+      var type = node[RAW_TYPE],
           next = CHAR_BLANK;
       if (type !== LITERAL) {
         if (index > 0) {
@@ -2992,7 +2993,7 @@ executor[CALL] = function (node, getter, context) {
  * @return {*}
  */
 function execute$1(node, getter, context) {
-  return executor[node.type](node, getter, context);
+  return executor[node[RAW_TYPE]](node, getter, context);
 }
 
 var stringifyJSON = function (target) {
@@ -3181,7 +3182,7 @@ var Node$2 = function () {
   function Node(type) {
     classCallCheck(this, Node);
 
-    this.type = type;
+    this[RAW_TYPE] = type;
   }
 
   Node.prototype.stringify = function () {
@@ -3657,7 +3658,7 @@ function compile$$1(content) {
 
   var popSelfClosingElementIfNeeded = function (popingTagName) {
     var lastNode = last(nodeStack);
-    if (lastNode && lastNode.type === ELEMENT && lastNode.tag !== popingTagName && has(selfClosingTagNames, lastNode.tag)) {
+    if (lastNode && lastNode[RAW_TYPE] === ELEMENT && lastNode.tag !== popingTagName && has(selfClosingTagNames, lastNode.tag)) {
       popStack(ELEMENT, lastNode.tag);
     }
   };
@@ -3676,7 +3677,7 @@ function compile$$1(content) {
     var target;
 
     each(nodeStack, function (node, i) {
-      if (node.type === type) {
+      if (node[RAW_TYPE] === type) {
         target = nodeStack.splice(i, 1)[0];
         return FALSE;
       }
@@ -3716,13 +3717,13 @@ function compile$$1(content) {
           var singleChild = last(children);
 
           // 子节点是纯文本
-          if (singleChild.type === TEXT) {
+          if (singleChild[RAW_TYPE] === TEXT) {
             target.props = [{
               name: textProp,
               value: singleChild.text
             }];
             pop(children);
-          } else if (singleChild.type === EXPRESSION) {
+          } else if (singleChild[RAW_TYPE] === EXPRESSION) {
             var props = [];
             if (singleChild.safe === FALSE) {
               push(props, {
@@ -3767,7 +3768,7 @@ function compile$$1(content) {
 
         var _singleChild = children[RAW_LENGTH] === 1 && children[0];
         if (_singleChild) {
-          if (_singleChild.type === TEXT) {
+          if (_singleChild[RAW_TYPE] === TEXT) {
             // 指令的值如果是纯文本，可以预编译表达式，提升性能
             var text = _singleChild.text;
 
@@ -3785,7 +3786,7 @@ function compile$$1(content) {
           }
           // <div class="{{className}}">
           // 把 Attribute 转成 单向绑定 指令，可实现精确更新视图
-          else if (type === ATTRIBUTE && _singleChild.type === EXPRESSION) {
+          else if (type === ATTRIBUTE && _singleChild[RAW_TYPE] === EXPRESSION) {
               var expr = _singleChild.expr;
 
               target.expr = expr;
@@ -3799,9 +3800,9 @@ function compile$$1(content) {
   };
 
   var addChild = function (node) {
-    var type = node.type,
-        text = node.text;
 
+    var type = node[RAW_TYPE],
+        text = node.text;
 
     if (type === TEXT) {
       if (isBreakline(text) || !(text = trimBreakline(text))) {
@@ -3827,7 +3828,7 @@ function compile$$1(content) {
     if (elseTypes[type]) {
       var ifNode = pop(ifStack);
       ifNode.next = node;
-      popStack(ifNode.type);
+      popStack(ifNode[RAW_TYPE]);
       push(ifStack, node);
       push(nodeStack, node);
       return;
@@ -3914,7 +3915,7 @@ function compile$$1(content) {
         }
         currentQuote = _match2[2];
         if (!currentQuote) {
-          popStack(pop(htmlStack).type);
+          popStack(pop(htmlStack)[RAW_TYPE]);
         }
         return _match2[0];
       }
@@ -3942,7 +3943,7 @@ function compile$$1(content) {
         if (!closed[RAW_CHILDREN]) {
           closed[RAW_VALUE] = CHAR_BLANK;
         }
-        popStack(closed.type);
+        popStack(closed[RAW_TYPE]);
       }
       return text;
     } else {
@@ -4030,7 +4031,7 @@ function compile$$1(content) {
         if (ifTypes[type]) {
           var node = pop(ifStack);
           if (node) {
-            type = node.type;
+            type = node[RAW_TYPE];
           } else {
             throwError('if is not begined.');
           }
@@ -4185,7 +4186,7 @@ function render(render, getter, instance) {
         var name = node.name,
             expr = node.expr;
 
-        if (node.type === ATTRIBUTE) {
+        if (node[RAW_TYPE] === ATTRIBUTE) {
           var value;
           if (has$1(node, 'value')) {
             value = node[RAW_VALUE];
@@ -5582,7 +5583,7 @@ function addInputListener(element, listener) {
   listener.$listener = function (e) {
     if (e.propertyName === 'value') {
       e = new Event(e);
-      e.type = INPUT;
+      e[RAW_TYPE] = INPUT;
       listener.call(this, e);
     }
   };
@@ -5597,7 +5598,7 @@ function removeInputListener(element, listener) {
 function addChangeListener(element, listener) {
   listener.$listener = function (e) {
     e = new Event(e);
-    e.type = CHANGE;
+    e[RAW_TYPE] = CHANGE;
     listener.call(this, e);
   };
   on$2(element, CLICK, listener.$listener);
@@ -5609,7 +5610,7 @@ function removeChangeListener(element, listener) {
 }
 
 function isBox(element) {
-  return element.tagName === 'INPUT' && (element.type === 'radio' || element.type === 'checkbox');
+  return element.tagName === 'INPUT' && (element[RAW_TYPE] === 'radio' || element[RAW_TYPE] === 'checkbox');
 }
 
 function on$2(element, type, listener) {
@@ -5721,9 +5722,9 @@ api.on = function (element, type, listener, context) {
         e = new Event(api.createEvent(e, element));
       }
       if (type) {
-        e.type = type;
+        e[RAW_TYPE] = type;
       }
-      emitter.fire(e.type, e, context);
+      emitter.fire(e[RAW_TYPE], e, context);
     };
     emitter[type] = nativeListener;
     var special = api.specialEvents[type];
@@ -5972,7 +5973,7 @@ var model = function (_ref) {
     } else {
 
       target = el;
-      control = specialControls[el.type] || specialControls[api.tag(el)];
+      control = specialControls[el[RAW_TYPE]] || specialControls[api.tag(el)];
 
       var type = CHANGE;
       if (!control) {
@@ -6358,7 +6359,7 @@ var Yox = function () {
         $children = instance.$children,
         $emitter = instance.$emitter;
 
-    var isComplete = $emitter.fire(event.type, args, instance);
+    var isComplete = $emitter.fire(event[RAW_TYPE], args, instance);
     if (isComplete) {
       if (downward) {
         if ($children) {
@@ -6631,7 +6632,7 @@ var Yox = function () {
         keypathStack = directive.keypathStack;
 
 
-    if (expr && expr.type === CALL) {
+    if (expr && expr[RAW_TYPE] === CALL) {
       var callee = expr.callee,
           args = expr.args,
           method = instance[callee[RAW_NAME]];
@@ -6660,9 +6661,9 @@ var Yox = function () {
       }
     } else if (value) {
       return function (event, data) {
-        if (event.type !== value) {
+        if (event[RAW_TYPE] !== value) {
           event = new Event(event);
-          event.type = value;
+          event[RAW_TYPE] = value;
         }
         instance.fire(event, data);
       };
@@ -6842,7 +6843,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.60.4';
+Yox.version = '0.60.5';
 
 /**
  * 工具，便于扩展、插件使用
