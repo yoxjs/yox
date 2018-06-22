@@ -137,11 +137,17 @@ var RAW_UNDEFINED = 'undefined';
 
 var RAW_THIS = 'this';
 var RAW_TYPE = 'type';
+var RAW_TEXT = 'text';
+var RAW_EXPR = 'expr';
 var RAW_NAME = 'name';
 var RAW_VALUE = 'value';
 var RAW_LENGTH = 'length';
 var RAW_CHILDREN = 'children';
 var RAW_FUNCTION = 'function';
+
+var RAW_KEYPATH = 'keypath';
+var RAW_STATIC_KEYPATH = 'staticKeypath';
+var RAW_ABSOLUTE_KEYPATH = 'absoluteKeypath';
 
 var KEYPATH_SEPARATOR = '.';
 
@@ -1436,7 +1442,7 @@ function updateDirectives(vnode, oldVnode) {
     var unbind;
     if (has$1(oldDirectives, key)) {
       var oldDirective = oldDirectives[key];
-      if (directive[RAW_VALUE] !== oldDirective[RAW_VALUE] || directive.keypath !== oldDirective.keypath) {
+      if (directive[RAW_VALUE] !== oldDirective[RAW_VALUE] || directive[RAW_KEYPATH] !== oldDirective[RAW_KEYPATH]) {
         if (oldUnbinds && oldUnbinds[key]) {
           oldUnbinds[key]();
           delete oldUnbinds[key];
@@ -1649,7 +1655,7 @@ function createComponentVnode(tag, attrs$$1, props$$1, directives$$1, children, 
 }
 
 function isVnode(vnode) {
-  return vnode && has$1(vnode, 'text');
+  return vnode && has$1(vnode, RAW_TEXT);
 }
 
 function isTextVnode(vnode) {
@@ -1983,15 +1989,15 @@ function init(api) {
     var args = [vnode, oldVnode];
     moduleEmitter.fire(HOOK_UPDATE, args, api);
 
-    var newText = vnode.text;
-    var newChildren = vnode.children;
+    var newText = vnode[RAW_TEXT];
+    var newChildren = vnode[RAW_CHILDREN];
 
-    var oldText = oldVnode.text;
-    var oldChildren = oldVnode.children;
+    var oldText = oldVnode[RAW_TEXT];
+    var oldChildren = oldVnode[RAW_CHILDREN];
 
     if (string(newText)) {
       if (newText !== oldText) {
-        api.text(el, newText);
+        api[RAW_TEXT](el, newText);
       }
     } else {
       // 两个都有需要 diff
@@ -2003,7 +2009,7 @@ function init(api) {
       // 有新的没旧的 - 新增节点
       else if (newChildren) {
           if (string(oldText)) {
-            api.text(el, CHAR_BLANK);
+            api[RAW_TEXT](el, CHAR_BLANK);
           }
           addVnodes(el, newChildren, 0, newChildren[RAW_LENGTH] - 1);
         }
@@ -2013,7 +2019,7 @@ function init(api) {
           }
           // 有旧的 text 没有新的 text
           else if (string(oldText)) {
-              api.text(el, CHAR_BLANK);
+              api[RAW_TEXT](el, CHAR_BLANK);
             }
     }
 
@@ -2371,7 +2377,7 @@ var Identifier = function (_Node) {
       name = names[name];
       _this.lookup = FALSE;
     }
-    _this[RAW_NAME] = _this.staticKeypath = name;
+    _this[RAW_NAME] = _this[RAW_STATIC_KEYPATH] = name;
     return _this;
   }
 
@@ -2429,11 +2435,10 @@ var Member = function (_Node) {
 
     _this.props = props;
 
-    var staticKeypath = object.staticKeypath;
-
+    var staticKeypath = object[RAW_STATIC_KEYPATH];
 
     if (isDef(staticKeypath) && prop[RAW_TYPE] === LITERAL) {
-      _this.staticKeypath = staticKeypath ? staticKeypath + KEYPATH_SEPARATOR + prop[RAW_VALUE] : prop[RAW_VALUE];
+      _this[RAW_STATIC_KEYPATH] = staticKeypath ? staticKeypath + KEYPATH_SEPARATOR + prop[RAW_VALUE] : prop[RAW_VALUE];
     }
 
     return _this;
@@ -2926,7 +2931,7 @@ executor[IDENTIFIER] = function (node, getter) {
 };
 
 executor[MEMBER] = function (node, getter, context) {
-  var keypath = node.staticKeypath;
+  var keypath = node[RAW_STATIC_KEYPATH];
   if (!keypath) {
     keypath = CHAR_BLANK;
     each(node.props, function (node, index) {
@@ -3255,7 +3260,7 @@ var Each = function (_Node) {
 
     var _this = possibleConstructorReturn(this, _Node.call(this, EACH));
 
-    _this.expr = expr;
+    _this[RAW_EXPR] = expr;
     if (index) {
       _this.index = index;
     }
@@ -3265,7 +3270,7 @@ var Each = function (_Node) {
   Each.prototype.stringify = function () {
     var generate = stringifyArray(this[RAW_CHILDREN], 'x');
     if (generate) {
-      var params = [stringifyJSON(this.expr), stringifyFunction(generate)];
+      var params = [stringifyJSON(this[RAW_EXPR]), stringifyFunction(generate)];
       if (this.index) {
         push(params, stringifyJSON(this.index));
       }
@@ -3403,7 +3408,7 @@ var ElseIf = function (_Node) {
 
     var _this = possibleConstructorReturn(this, _Node.call(this, ELSE_IF));
 
-    _this.expr = expr;
+    _this[RAW_EXPR] = expr;
     return _this;
   }
 
@@ -3425,13 +3430,13 @@ var Expression = function (_Node) {
 
     var _this = possibleConstructorReturn(this, _Node.call(this, EXPRESSION));
 
-    _this.expr = expr;
+    _this[RAW_EXPR] = expr;
     _this.safe = safe;
     return _this;
   }
 
   Expression.prototype.stringify = function () {
-    return stringifyExpression(this.expr);
+    return stringifyExpression(this[RAW_EXPR]);
   };
 
   return Expression;
@@ -3451,7 +3456,7 @@ var If = function (_Node) {
 
     var _this = possibleConstructorReturn(this, _Node.call(this, IF));
 
-    _this.expr = expr;
+    _this[RAW_EXPR] = expr;
     return _this;
   }
 
@@ -3460,7 +3465,7 @@ var If = function (_Node) {
 
 
     var stringify = function (node) {
-      var expr = stringifyExpression(node.expr);
+      var expr = stringifyExpression(node[RAW_EXPR]);
       var children = stringifyArray(node[RAW_CHILDREN], 'x');
       var next = node.next;
       if (next) {
@@ -3552,12 +3557,12 @@ var Spread = function (_Node) {
 
     var _this = possibleConstructorReturn(this, _Node.call(this, SPREAD));
 
-    _this.expr = expr;
+    _this[RAW_EXPR] = expr;
     return _this;
   }
 
   Spread.prototype.stringify = function () {
-    return stringifyCall('s', stringifyJSON(this.expr));
+    return stringifyCall('s', stringifyJSON(this[RAW_EXPR]));
   };
 
   return Spread;
@@ -3577,12 +3582,12 @@ var Text = function (_Node) {
 
     var _this = possibleConstructorReturn(this, _Node.call(this, TEXT));
 
-    _this.text = text;
+    _this[RAW_TEXT] = text;
     return _this;
   }
 
   Text.prototype.stringify = function () {
-    return stringifyJSON(this.text);
+    return stringifyJSON(this[RAW_TEXT]);
   };
 
   return Text;
@@ -3720,7 +3725,7 @@ function compile$$1(content) {
           if (singleChild[RAW_TYPE] === TEXT) {
             target.props = [{
               name: textProp,
-              value: singleChild.text
+              value: singleChild[RAW_TEXT]
             }];
             pop(children);
           } else if (singleChild[RAW_TYPE] === EXPRESSION) {
@@ -3728,12 +3733,12 @@ function compile$$1(content) {
             if (singleChild.safe === FALSE) {
               push(props, {
                 name: 'innerHTML',
-                value: singleChild.expr
+                value: singleChild[RAW_EXPR]
               });
             } else {
               push(props, {
                 name: textProp,
-                value: singleChild.expr
+                value: singleChild[RAW_EXPR]
               });
             }
             target.props = props;
@@ -3770,10 +3775,9 @@ function compile$$1(content) {
         if (_singleChild) {
           if (_singleChild[RAW_TYPE] === TEXT) {
             // 指令的值如果是纯文本，可以预编译表达式，提升性能
-            var text = _singleChild.text;
-
+            var text = _singleChild[RAW_TEXT];
             if (type === DIRECTIVE) {
-              target.expr = compile$1(text);
+              target[RAW_EXPR] = compile$1(text);
               target[RAW_VALUE] = text;
               delete target[RAW_CHILDREN];
             }
@@ -3787,9 +3791,7 @@ function compile$$1(content) {
           // <div class="{{className}}">
           // 把 Attribute 转成 单向绑定 指令，可实现精确更新视图
           else if (type === ATTRIBUTE && _singleChild[RAW_TYPE] === EXPRESSION) {
-              var expr = _singleChild.expr;
-
-              target.expr = expr;
+              target[RAW_EXPR] = _singleChild[RAW_EXPR];
               delete target[RAW_CHILDREN];
             }
         }
@@ -3802,13 +3804,13 @@ function compile$$1(content) {
   var addChild = function (node) {
 
     var type = node[RAW_TYPE],
-        text = node.text;
+        text = node[RAW_TEXT];
 
     if (type === TEXT) {
       if (isBreakline(text) || !(text = trimBreakline(text))) {
         return;
       }
-      node.text = text;
+      node[RAW_TEXT] = text;
     }
 
     /**
@@ -3838,9 +3840,8 @@ function compile$$1(content) {
 
     var currentNode = last(nodeStack);
     if (currentNode) {
-      var children = currentNode.children,
+      var children = currentNode[RAW_CHILDREN],
           divider = currentNode.divider;
-
       if (children) {
         if (children[RAW_LENGTH] !== divider) {
           prevNode = children[children[RAW_LENGTH] - 1];
@@ -4149,10 +4150,9 @@ function render(render, getter, instance) {
     };
   },
       addChild = function (node) {
-    var _currentElement = currentElement,
-        lastChild = _currentElement.lastChild,
-        children = _currentElement.children;
 
+    var children = currentElement[RAW_CHILDREN],
+        lastChild = currentElement.lastChild;
 
     if (isVnode(node)) {
       if (node.component) {
@@ -4163,7 +4163,7 @@ function render(render, getter, instance) {
         currentElement.lastChild = NULL;
       }
     } else if (isTextVnode(lastChild)) {
-      lastChild.text += toString(node);
+      lastChild[RAW_TEXT] += toString(node);
     } else {
       push(children, currentElement.lastChild = createTextVnode(node));
     }
@@ -4183,17 +4183,16 @@ function render(render, getter, instance) {
       if (func(node)) {
         node();
       } else {
-        var name = node.name,
-            expr = node.expr;
-
+        var name = node[RAW_NAME],
+            expr = node[RAW_EXPR];
         if (node[RAW_TYPE] === ATTRIBUTE) {
           var value;
           if (has$1(node, 'value')) {
             value = node[RAW_VALUE];
           } else if (expr) {
-            value = o(expr, expr.staticKeypath);
-            if (expr.staticKeypath) {
-              addDirective(DIRECTIVE_BINDING, name, expr.absoluteKeypath);
+            value = o(expr, expr[RAW_STATIC_KEYPATH]);
+            if (expr[RAW_STATIC_KEYPATH]) {
+              addDirective(DIRECTIVE_BINDING, name, expr[RAW_ABSOLUTE_KEYPATH]);
             }
           } else if (node[RAW_CHILDREN]) {
             value = getValue(node[RAW_CHILDREN]);
@@ -4202,7 +4201,7 @@ function render(render, getter, instance) {
           }
           addAttr(name, value);
         } else {
-          addDirective(name, node.modifier, name === DIRECTIVE_MODEL ? (o(expr), expr.absoluteKeypath) : node[RAW_VALUE]).expr = expr;
+          addDirective(name, node.modifier, name === DIRECTIVE_MODEL ? (o(expr), expr[RAW_ABSOLUTE_KEYPATH]) : node[RAW_VALUE])[RAW_EXPR] = expr;
         }
       }
     }
@@ -4249,14 +4248,13 @@ function render(render, getter, instance) {
   // 处理 properties
   z = function () {
     each(arguments, function (item) {
-      var name = item.name,
-          value = item.value;
-
+      var name = item[RAW_NAME],
+          value = item[RAW_VALUE];
       if (object(value)) {
         var expr = value;
-        value = o(expr, expr.staticKeypath);
-        if (expr.staticKeypath) {
-          addDirective(DIRECTIVE_BINDING, name, expr.absoluteKeypath).prop = TRUE;
+        value = o(expr, expr[RAW_STATIC_KEYPATH]);
+        if (expr[RAW_STATIC_KEYPATH]) {
+          addDirective(DIRECTIVE_BINDING, name, expr[RAW_ABSOLUTE_KEYPATH]).prop = TRUE;
         }
       }
       var props = currentElement.props || (currentElement.props = {});
@@ -4334,7 +4332,7 @@ function render(render, getter, instance) {
       children = currentElement[RAW_CHILDREN] = [];
       childs();
       if (component) {
-        addSlot(SLOT_DATA_PREFIX + 'children', children);
+        addSlot(SLOT_DATA_PREFIX + RAW_CHILDREN, children);
         children = UNDEFINED;
       }
     }
@@ -4367,7 +4365,7 @@ function render(render, getter, instance) {
 
     if (each$$1) {
 
-      var eachKeypath = expr.absoluteKeypath || join$1(keypath, expr.raw);
+      var eachKeypath = expr[RAW_ABSOLUTE_KEYPATH] || join$1(keypath, expr.raw);
 
       each$$1(value, function (item, key) {
 
@@ -4403,12 +4401,11 @@ function render(render, getter, instance) {
 
   // spread
   s = function (expr) {
-    var staticKeypath = expr.staticKeypath,
+    var staticKeypath = expr[RAW_STATIC_KEYPATH],
         value;
     // 只能作用于 attribute 层级
     if (!currentElement[RAW_CHILDREN] && (value = o(expr, staticKeypath)) && object(value)) {
-      var absoluteKeypath = expr.absoluteKeypath;
-
+      var absoluteKeypath = expr[RAW_ABSOLUTE_KEYPATH];
       each$1(value, function (value, key) {
         addAttr(key, value);
         if (isDef(staticKeypath)) {
@@ -4569,7 +4566,7 @@ var Computed = function () {
     var instance = this;
 
     instance.id = ++guid;
-    instance.keypath = keypath;
+    instance[RAW_KEYPATH] = keypath;
     instance.observer = observer;
     instance.deps = [];
 
@@ -4597,7 +4594,7 @@ var Computed = function () {
       };
 
       each$1(observer.computed, function (computed) {
-        if (computed.keypath !== keypath) {
+        if (computed[RAW_KEYPATH] !== keypath) {
           var deps = computed.deps;
 
           if (has(deps, keypath)) {
@@ -4615,9 +4612,8 @@ var Computed = function () {
   }
 
   Computed.prototype.get = function (force) {
-    var value = this.value,
+    var value = this[RAW_VALUE],
         cache = this.cache;
-
     if (cache === FALSE) {
       value = this[RAW_VALUE] = this.getter();
     }
@@ -5849,7 +5845,7 @@ var bindEvent = function (_ref) {
 };
 
 function getOptionValue(option) {
-  return isDef(option[RAW_VALUE]) ? option[RAW_VALUE] : option.text;
+  return isDef(option[RAW_VALUE]) ? option[RAW_VALUE] : option[RAW_TEXT];
 }
 
 var inputControl = {
@@ -6515,7 +6511,7 @@ var Yox = function () {
             }
           }
 
-          expr.absoluteKeypath = absoluteKeypath;
+          expr[RAW_ABSOLUTE_KEYPATH] = absoluteKeypath;
 
           return value;
         } else {
@@ -6625,12 +6621,11 @@ var Yox = function () {
 
   Yox.prototype.compileDirective = function (directive) {
 
-    var instance = this;
-    var value = directive.value,
-        expr = directive.expr,
-        keypath = directive.keypath,
+    var instance = this,
+        expr = directive[RAW_EXPR],
+        value = directive[RAW_VALUE],
+        keypath = directive[RAW_KEYPATH],
         keypathStack = directive.keypathStack;
-
 
     if (expr && expr[RAW_TYPE] === CALL) {
       var callee = expr.callee,
@@ -6843,7 +6838,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.60.5';
+Yox.version = '0.60.6';
 
 /**
  * 工具，便于扩展、插件使用

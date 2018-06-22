@@ -501,7 +501,7 @@ export default class Yox {
             }
           }
 
-          expr.absoluteKeypath = absoluteKeypath
+          expr[ env.RAW_ABSOLUTE_KEYPATH ] = absoluteKeypath
 
           return value
 
@@ -624,8 +624,11 @@ export default class Yox {
    */
   compileDirective(directive) {
 
-    let instance = this
-    let { value, expr, keypath, keypathStack } = directive
+    let instance = this,
+    expr = directive[ env.RAW_EXPR ],
+    value = directive[ env.RAW_VALUE ],
+    keypath = directive[ env.RAW_KEYPATH ],
+    keypathStack = directive.keypathStack
 
     if (expr && expr[ env.RAW_TYPE ] === expressionNodeType.CALL) {
       let { callee, args } = expr, method = instance[ callee[ env.RAW_NAME ] ]
@@ -821,7 +824,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.60.5'
+Yox.version = '0.60.6'
 
 /**
  * 工具，便于扩展、插件使用

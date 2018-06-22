@@ -18,7 +18,7 @@ import api from '../platform/web/api'
 import * as event from '../config/event'
 
 function getOptionValue(option) {
-  return isDef(option[ env.RAW_VALUE ]) ? option[ env.RAW_VALUE ] : option.text
+  return isDef(option[ env.RAW_VALUE ]) ? option[ env.RAW_VALUE ] : option[ env.RAW_TEXT ]
 }
 
 const inputControl = {
