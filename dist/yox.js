@@ -888,10 +888,11 @@ var object$1 = {
 	set: set$1
 };
 
+var RAW_SPACE = 'space';
+
 var Emitter = function () {
 
   /**
-   *
    * @param {boolean} namespace 是否需要命名空间
    */
   function Emitter(namespace) {
@@ -907,7 +908,7 @@ var Emitter = function () {
         listeners = instance.listeners,
         target = parseType(type, namespace),
         name = target[RAW_NAME],
-        space = target.space,
+        space = target[RAW_SPACE],
         list = listeners[name],
         isComplete = TRUE;
 
@@ -919,10 +920,8 @@ var Emitter = function () {
 
       each(copy(list), function (item) {
 
-        var index = indexOf(list, item);
-
         // 在 fire 过程中被移除了
-        if (index < 0 || space && item.space && space !== item.space) {
+        if (!has(list, item) || space && item[RAW_SPACE] && space !== item[RAW_SPACE]) {
           return;
         }
 
@@ -939,11 +938,7 @@ var Emitter = function () {
         var result = execute(item.func, isDef(context) ? context : item.context, data);
 
         // 执行次数
-        if (item.count > 0) {
-          item.count++;
-        } else {
-          item.count = 1;
-        }
+        item.count = item.count > 0 ? item.count + 1 : 1;
 
         // 注册的 listener 可以指定最大执行次数
         if (item.count === item.max) {
@@ -973,13 +968,13 @@ var Emitter = function () {
         listeners = this.listeners,
         target = parseType(type, namespace),
         name = target[RAW_NAME],
-        space = target.space,
+        space = target[RAW_SPACE],
         result = TRUE;
 
 
     var each$$1 = function (list) {
       each(list, function (item, index) {
-        if ((!space || space === item.space) && (!listener || listener === item.func)) {
+        if ((!space || space === item[RAW_SPACE]) && (!listener || listener === item.func)) {
           return result = FALSE;
         }
       });
@@ -1013,7 +1008,7 @@ extend(Emitter.prototype, {
 
       var target = parseType(type, instance.namespace),
           name = target[RAW_NAME],
-          space = target.space;
+          space = target[RAW_SPACE];
 
       var each$$1 = function (list, name) {
         if (object(listener)) {
@@ -1023,7 +1018,7 @@ extend(Emitter.prototype, {
           }
         } else {
           each(list, function (item, index) {
-            if ((!space || space === item.space) && (!listener || listener === item.func)) {
+            if ((!space || space === item[RAW_SPACE]) && (!listener || listener === item.func)) {
               list.splice(index, 1);
             }
           }, TRUE);
@@ -1063,7 +1058,7 @@ function on(data) {
         }
         var target = parseType(type, namespace),
             name = target[RAW_NAME];
-        item.space = target.space;
+        item[RAW_SPACE] = target[RAW_SPACE];
         push(listeners[name] || (listeners[name] = []), item);
       }
     };
@@ -1077,15 +1072,14 @@ function on(data) {
 }
 
 function parseType(type, namespace) {
-  var result = {
-    name: type,
-    space: CHAR_BLANK
-  };
+  var result = {};
+  result[RAW_NAME] = type;
+  result[RAW_SPACE] = CHAR_BLANK;
   if (namespace) {
     var index = indexOf$1(type, CHAR_DOT);
     if (index >= 0) {
       result[RAW_NAME] = slice(type, 0, index);
-      result.space = slice(type, index + 1);
+      result[RAW_SPACE] = slice(type, index + 1);
     }
   }
   return result;
@@ -6676,7 +6670,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.60.6';
+Yox.version = '0.60.7';
 
 /**
  * 工具，便于扩展、插件使用
