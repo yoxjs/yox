@@ -150,7 +150,7 @@ export default class Yox {
       if (api.isElement(el)) {
         if (!replace) {
           api.html(el, '<div></div>')
-          el = api.children(el)[ 0 ]
+          el = api[ env.RAW_CHILDREN ](el)[ 0 ]
         }
       }
       else {
@@ -824,7 +824,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.60.7'
+Yox.version = '0.60.8'
 
 /**
  * 工具，便于扩展、插件使用

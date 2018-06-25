@@ -1222,28 +1222,20 @@ var logger = {
 	fatal: fatal
 };
 
-var isNative = function (fn) {
-  if (func(fn)) {
-    return has$2(fn.toString(), '[native code]');
-  }
-};
-
 var nextTick;
 
+// IE (10+) 和 node
 if (typeof setImmediate === RAW_FUNCTION) {
   nextTick = setImmediate;
 }
 // 用 MessageChannel 去做 setImmediate 的 polyfill
 // 原理是将新的 message 事件加入到原有的 dom events 之后
+// 兼容性 IE10+ 和其他标准浏览器
 else if (typeof MessageChannel === RAW_FUNCTION) {
     nextTick = function (fn) {
       var channel = new MessageChannel();
       channel.port1.onmessage = fn;
       channel.port2.postMessage(1);
-    };
-  } else if (typeof Promise === RAW_FUNCTION && isNative(Promise)) {
-    nextTick = function (fn) {
-      Promise.resolve().then(fn);
     };
   } else {
     nextTick = setTimeout;
@@ -6155,7 +6147,7 @@ var Yox = function () {
       if (api.isElement(el)) {
         if (!replace) {
           api.html(el, '<div></div>');
-          el = api.children(el)[0];
+          el = api[RAW_CHILDREN](el)[0];
         }
       } else {
         error$1('"el" option expected to be a html element.');
@@ -6832,7 +6824,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.60.7';
+Yox.version = '0.60.8';
 
 /**
  * 工具，便于扩展、插件使用
