@@ -824,7 +824,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.60.8'
+Yox.version = '0.60.9'
 
 /**
  * 工具，便于扩展、插件使用
@@ -975,7 +975,9 @@ Yox.validate = function (props, propTypes) {
     propTypes,
     function (rule, key) {
 
-      let { type, value, required } = rule
+      let type = rule[ env.RAW_TYPE ],
+      value = rule[ env.RAW_VALUE ],
+      required = rule.required
 
       required = required === env.TRUE
         || (is.func(required) && required(props))

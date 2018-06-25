@@ -50,6 +50,31 @@ function optimize(source) {
   )
 
   /**
+   * 改写继承函数
+   */
+  source = source.replace(
+    /var inherits = function[\s\S]+?};/,
+    `
+var inherits = function (subClass, superClass) {
+  subClass.prototype = extend({}, superClass.prototype, subClass.prototype);
+};
+    `
+  )
+
+  /**
+   * 把 classCallCheck 去掉
+   */
+  source = source
+    .replace(
+     /var classCallCheck = function[\s\S]+?};/g,
+     ''
+    )
+    .replace(
+     /classCallCheck\(this, \w+\);/g,
+     ''
+    )
+
+  /**
    * 类属性 value: function has$$1
    * 转成 value: function
    */

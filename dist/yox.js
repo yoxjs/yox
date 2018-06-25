@@ -16,11 +16,8 @@
 
 
 
-var classCallCheck = function (instance, Constructor) {
-  if (!(instance instanceof Constructor)) {
-    throw new Error("Cannot call a class as a function");
-  }
-};
+
+
 
 
 
@@ -33,20 +30,9 @@ var classCallCheck = function (instance, Constructor) {
 
 
 var inherits = function (subClass, superClass) {
-  if (typeof superClass !== "function" && superClass !== null) {
-    throw new Error("Super expression must either be null or a function, not " + typeof superClass);
-  }
-
-  subClass.prototype = Object.create(superClass && superClass.prototype, {
-    constructor: {
-      value: subClass,
-      enumerable: false,
-      writable: true,
-      configurable: true
-    }
-  });
-  if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+  subClass.prototype = extend({}, superClass.prototype, subClass.prototype);
 };
+    
 
 
 
@@ -197,7 +183,7 @@ var execute = function (fn, context, args) {
 
 var Event = function () {
   function Event(event) {
-    classCallCheck(this, Event);
+    
 
     if (event[RAW_TYPE]) {
       this[RAW_TYPE] = event[RAW_TYPE];
@@ -896,7 +882,7 @@ var Emitter = function () {
    * @param {boolean} namespace 是否需要命名空间
    */
   function Emitter(namespace) {
-    classCallCheck(this, Emitter);
+    
 
     this.namespace = namespace;
     this.listeners = {};
@@ -2156,7 +2142,7 @@ binary[MODULO] = function (a, b) {
  */
 
 var Node = function (type, raw) {
-  classCallCheck(this, Node);
+  
 
   this[RAW_TYPE] = type;
   this.raw = trim(raw);
@@ -2173,7 +2159,7 @@ var Array$1 = function (_Node) {
   inherits(Array, _Node);
 
   function Array(raw, elements) {
-    classCallCheck(this, Array);
+    
 
     var _this = possibleConstructorReturn(this, _Node.call(this, ARRAY, raw));
 
@@ -2196,7 +2182,7 @@ var Object$1 = function (_Node) {
   inherits(Object, _Node);
 
   function Object(raw, keys, values) {
-    classCallCheck(this, Object);
+    
 
     var _this = possibleConstructorReturn(this, _Node.call(this, OBJECT, raw));
 
@@ -2221,7 +2207,7 @@ var Binary = function (_Node) {
   inherits(Binary, _Node);
 
   function Binary(raw, left, operator, right) {
-    classCallCheck(this, Binary);
+    
 
     var _this = possibleConstructorReturn(this, _Node.call(this, BINARY, raw));
 
@@ -2246,7 +2232,7 @@ var Call = function (_Node) {
   inherits(Call, _Node);
 
   function Call(raw, callee, args) {
-    classCallCheck(this, Call);
+    
 
     var _this = possibleConstructorReturn(this, _Node.call(this, CALL, raw));
 
@@ -2271,7 +2257,7 @@ var Ternary = function (_Node) {
   inherits(Ternary, _Node);
 
   function Ternary(raw, test, yes, no) {
-    classCallCheck(this, Ternary);
+    
 
     var _this = possibleConstructorReturn(this, _Node.call(this, TERNARY, raw));
 
@@ -2299,7 +2285,7 @@ var Identifier = function (_Node) {
   inherits(Identifier, _Node);
 
   function Identifier(raw, name) {
-    classCallCheck(this, Identifier);
+    
 
     var _this = possibleConstructorReturn(this, _Node.call(this, IDENTIFIER, raw));
 
@@ -2325,7 +2311,7 @@ var Literal = function (_Node) {
   inherits(Literal, _Node);
 
   function Literal(raw, value) {
-    classCallCheck(this, Literal);
+    
 
     var _this = possibleConstructorReturn(this, _Node.call(this, LITERAL, raw));
 
@@ -2348,7 +2334,7 @@ var Member = function (_Node) {
   inherits(Member, _Node);
 
   function Member(raw, object, prop) {
-    classCallCheck(this, Member);
+    
 
     var _this = possibleConstructorReturn(this, _Node.call(this, MEMBER, raw));
 
@@ -2389,7 +2375,7 @@ var Unary = function (_Node) {
   inherits(Unary, _Node);
 
   function Unary(raw, operator, arg) {
-    classCallCheck(this, Unary);
+    
 
     var _this = possibleConstructorReturn(this, _Node.call(this, UNARY, raw));
 
@@ -3115,7 +3101,7 @@ function stringifyFunction(str) {
 
 var Node$2 = function () {
   function Node(type) {
-    classCallCheck(this, Node);
+    
 
     this[RAW_TYPE] = type;
   }
@@ -3137,7 +3123,7 @@ var Attribute = function (_Node) {
   inherits(Attribute, _Node);
 
   function Attribute(name) {
-    classCallCheck(this, Attribute);
+    
 
     var _this = possibleConstructorReturn(this, _Node.call(this, ATTRIBUTE));
 
@@ -3161,7 +3147,7 @@ var Directive = function (_Node) {
   inherits(Directive, _Node);
 
   function Directive(name, modifier) {
-    classCallCheck(this, Directive);
+    
 
     var _this = possibleConstructorReturn(this, _Node.call(this, DIRECTIVE));
 
@@ -3186,7 +3172,7 @@ var Each = function (_Node) {
   inherits(Each, _Node);
 
   function Each(expr, index) {
-    classCallCheck(this, Each);
+    
 
     var _this = possibleConstructorReturn(this, _Node.call(this, EACH));
 
@@ -3222,7 +3208,7 @@ var Element = function (_Node) {
   inherits(Element, _Node);
 
   function Element(tag, component) {
-    classCallCheck(this, Element);
+    
 
     var _this = possibleConstructorReturn(this, _Node.call(this, ELEMENT));
 
@@ -3317,7 +3303,7 @@ var Else = function (_Node) {
   inherits(Else, _Node);
 
   function Else() {
-    classCallCheck(this, Else);
+    
     return possibleConstructorReturn(this, _Node.call(this, ELSE));
   }
 
@@ -3334,7 +3320,7 @@ var ElseIf = function (_Node) {
   inherits(ElseIf, _Node);
 
   function ElseIf(expr, then) {
-    classCallCheck(this, ElseIf);
+    
 
     var _this = possibleConstructorReturn(this, _Node.call(this, ELSE_IF));
 
@@ -3356,7 +3342,7 @@ var Expression = function (_Node) {
   inherits(Expression, _Node);
 
   function Expression(expr, safe) {
-    classCallCheck(this, Expression);
+    
 
     var _this = possibleConstructorReturn(this, _Node.call(this, EXPRESSION));
 
@@ -3382,7 +3368,7 @@ var If = function (_Node) {
   inherits(If, _Node);
 
   function If(expr) {
-    classCallCheck(this, If);
+    
 
     var _this = possibleConstructorReturn(this, _Node.call(this, IF));
 
@@ -3433,7 +3419,7 @@ var Import = function (_Node) {
   inherits(Import, _Node);
 
   function Import(name) {
-    classCallCheck(this, Import);
+    
 
     var _this = possibleConstructorReturn(this, _Node.call(this, IMPORT));
 
@@ -3458,7 +3444,7 @@ var Partial = function (_Node) {
   inherits(Partial, _Node);
 
   function Partial(name) {
-    classCallCheck(this, Partial);
+    
 
     var _this = possibleConstructorReturn(this, _Node.call(this, PARTIAL));
 
@@ -3483,7 +3469,7 @@ var Spread = function (_Node) {
   inherits(Spread, _Node);
 
   function Spread(expr) {
-    classCallCheck(this, Spread);
+    
 
     var _this = possibleConstructorReturn(this, _Node.call(this, SPREAD));
 
@@ -3508,7 +3494,7 @@ var Text = function (_Node) {
   inherits(Text, _Node);
 
   function Text(text) {
-    classCallCheck(this, Text);
+    
 
     var _this = possibleConstructorReturn(this, _Node.call(this, TEXT));
 
@@ -4490,7 +4476,7 @@ function matchBest(sorted, keypath) {
 
 var Computed = function () {
   function Computed(keypath, observer) {
-    classCallCheck(this, Computed);
+    
 
 
     var instance = this;
@@ -4611,7 +4597,7 @@ var Observer = function () {
    * @property {?*} options.context 执行 watcher 函数的 this 指向
    */
   function Observer(options) {
-    classCallCheck(this, Observer);
+    
 
 
     var instance = this;
@@ -5881,7 +5867,7 @@ var TEMPLATE_COMPUTED = '$' + TEMPLATE;
 
 var Yox = function () {
   function Yox(options) {
-    classCallCheck(this, Yox);
+    
 
 
     var instance = this;
@@ -6662,7 +6648,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.60.8';
+Yox.version = '0.60.9';
 
 /**
  * 工具，便于扩展、插件使用
@@ -6780,10 +6766,10 @@ Yox.compile = function (template) {
 Yox.validate = function (props, propTypes) {
   var result = {};
   each$1(propTypes, function (rule, key) {
-    var type = rule.type,
-        value = rule.value,
-        required = rule.required;
 
+    var type = rule[RAW_TYPE],
+        value = rule[RAW_VALUE],
+        required = rule.required;
 
     required = required === TRUE || func(required) && required(props);
 

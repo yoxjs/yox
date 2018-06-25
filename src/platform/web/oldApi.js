@@ -19,16 +19,6 @@ if (!Object.keys) {
     }
     return result
   }
-  Object.create = function (proto, descriptor) {
-    function Class() { }
-    Class.prototype = proto
-    proto = new Class()
-    let constructor = descriptor && descriptor.constructor
-    if (constructor) {
-      proto.constructor = constructor[ env.RAW_VALUE ]
-    }
-    return proto
-  }
 }
 if (!String.prototype.trim) {
   String.prototype.trim = function () {
