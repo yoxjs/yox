@@ -62,6 +62,18 @@ var inherits = function (subClass, superClass) {
   )
 
   /**
+   * 改写 possibleConstructorReturn 函数
+   */
+  source = source.replace(
+    /var possibleConstructorReturn = function[\s\S]+?};/,
+    `
+var possibleConstructorReturn = function (self, call) {
+  return self
+};
+    `
+  )
+
+  /**
    * 把 classCallCheck 去掉
    */
   source = source

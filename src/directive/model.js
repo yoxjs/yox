@@ -124,12 +124,15 @@ export default function ({ el, node, instance, directives, attrs, component }) {
       if (control) {
         control.set(target, keypath, instance)
       }
-    }
-    let sync = function () {
+    },
+    sync = function () {
       control.sync(target, keypath, instance)
-    }
+    },
+    target,
+    control,
+    unbindTarget,
+    unbindInstance
 
-    let target, control, unbindTarget, unbindInstance
     if (component) {
 
       target = component

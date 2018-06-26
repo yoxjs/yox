@@ -2,3 +2,5 @@ rollup.config.js
 test
 .babelrc
 edp-*
+*.sketch
+package-lock.json

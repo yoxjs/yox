@@ -53,7 +53,7 @@ api.specialEvents = {
   }
 }
 
-const EMITTER_KEY = '_emitter'
+const EMITTER_KEY = '$emitter'
 
 /**
  * 绑定事件
@@ -96,8 +96,8 @@ api.on = function (element, type, listener, context) {
  *
  */
 api.off = function (element, type, listener) {
-  let emitter = element[ EMITTER_KEY ]
-  let types = object.keys(emitter.listeners)
+  let emitter = element[ EMITTER_KEY ],
+  types = object.keys(emitter.listeners)
   // emitter 会根据 type 和 listener 参数进行适当的删除
   emitter.off(type, listener)
   // 根据 emitter 的删除结果来操作这里的事件 listener
@@ -105,8 +105,8 @@ api.off = function (element, type, listener) {
     types,
     function (type, index) {
       if (emitter[ type ] && !emitter.has(type)) {
-        let nativeListener = emitter[ type ]
-        let special = api.specialEvents[ type ]
+        let nativeListener = emitter[ type ],
+        special = api.specialEvents[ type ]
         if (special) {
           special.off(element, nativeListener)
         }

@@ -44,13 +44,11 @@ var inherits = function (subClass, superClass) {
 
 
 
-var possibleConstructorReturn = function (self, call) {
-  if (!self) {
-    throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
-  }
 
-  return call && (typeof call === "object" || typeof call === "function") ? call : self;
+var possibleConstructorReturn = function (self, call) {
+  return self
 };
+    
 
 /**
  * 为了压缩，定义的常量
@@ -640,14 +638,14 @@ var string$1 = {
 };
 
 function startsWith$1(keypath, prefix) {
-  var temp;
   if (keypath === prefix) {
     return prefix[RAW_LENGTH];
-  } else if (startsWith(keypath, temp = prefix + KEYPATH_SEPARATOR)) {
-    return temp[RAW_LENGTH];
-  } else {
-    return FALSE;
   }
+  var temp;
+  if (startsWith(keypath, temp = prefix + KEYPATH_SEPARATOR)) {
+    return temp[RAW_LENGTH];
+  }
+  return FALSE;
 }
 
 function each$2(keypath, callback) {
@@ -671,9 +669,8 @@ function each$2(keypath, callback) {
 
 function join$1(keypath1, keypath2) {
 
-  var keypath = number(keypath1) || string(keypath1) ? keypath1 : CHAR_BLANK;
-
-  var isNumber,
+  var keypath = number(keypath1) || string(keypath1) ? keypath1 : CHAR_BLANK,
+      isNumber,
       isString;
 
   if ((isNumber = number(keypath2)) || (isString = string(keypath2))) {
@@ -875,6 +872,8 @@ var object$1 = {
 };
 
 var RAW_SPACE = 'space';
+var RAW_NAMESPACE = 'namespace';
+var RAW_LISTENERS = 'listeners';
 
 var Emitter = function () {
 
@@ -884,20 +883,20 @@ var Emitter = function () {
   function Emitter(namespace) {
     
 
-    this.namespace = namespace;
-    this.listeners = {};
+    this[RAW_NAMESPACE] = namespace;
+    this[RAW_LISTENERS] = {};
   }
 
   Emitter.prototype.fire = function (type, data, context) {
+
     var instance = this,
-        namespace = instance.namespace,
-        listeners = instance.listeners,
+        namespace = instance[RAW_NAMESPACE],
+        listeners = instance[RAW_LISTENERS],
         target = parseType(type, namespace),
         name = target[RAW_NAME],
         space = target[RAW_SPACE],
         list = listeners[name],
         isComplete = TRUE;
-
 
     if (list) {
 
@@ -950,13 +949,13 @@ var Emitter = function () {
   };
 
   Emitter.prototype.has = function (type, listener) {
-    var namespace = this.namespace,
-        listeners = this.listeners,
+
+    var namespace = this[RAW_NAMESPACE],
+        listeners = this[RAW_LISTENERS],
         target = parseType(type, namespace),
         name = target[RAW_NAME],
         space = target[RAW_SPACE],
         result = TRUE;
-
 
     var each$$1 = function (list) {
       each(list, function (item, index) {
@@ -988,15 +987,14 @@ extend(Emitter.prototype, {
   off: function off(type, listener) {
 
     var instance = this,
-        listeners = instance.listeners;
+        listeners = instance[RAW_LISTENERS];
 
     if (type) {
 
-      var target = parseType(type, instance.namespace),
+      var target = parseType(type, instance[RAW_NAMESPACE]),
           name = target[RAW_NAME],
-          space = target[RAW_SPACE];
-
-      var each$$1 = function (list, name) {
+          space = target[RAW_SPACE],
+          each$$1 = function (list, name) {
         if (object(listener)) {
           var index = indexOf(list, listener);
           if (index >= 0) {
@@ -1023,18 +1021,17 @@ extend(Emitter.prototype, {
       }
     } else {
       // 清空
-      instance.listeners = {};
+      instance[RAW_LISTENERS] = {};
     }
   }
 });
 
 function on(data) {
   return function (type, listener) {
-    var namespace = this.namespace,
-        listeners = this.listeners;
 
-
-    var addListener = function (item, type) {
+    var namespace = this[RAW_NAMESPACE],
+        listeners = this[RAW_LISTENERS],
+        addListener = function (item, type) {
       if (func(item)) {
         item = { func: item };
       }
@@ -5510,7 +5507,7 @@ api.specialEvents = {
   }
 };
 
-var EMITTER_KEY = '_emitter';
+var EMITTER_KEY = '$emitter';
 
 /**
  * 绑定事件
@@ -5552,15 +5549,15 @@ api.on = function (element, type, listener, context) {
  *
  */
 api.off = function (element, type, listener) {
-  var emitter = element[EMITTER_KEY];
-  var types = keys(emitter.listeners);
+  var emitter = element[EMITTER_KEY],
+      types = keys(emitter.listeners);
   // emitter 会根据 type 和 listener 参数进行适当的删除
   emitter.off(type, listener);
   // 根据 emitter 的删除结果来操作这里的事件 listener
   each(types, function (type, index) {
     if (emitter[type] && !emitter.has(type)) {
-      var nativeListener = emitter[type];
-      var special = api.specialEvents[type];
+      var nativeListener = emitter[type],
+          special = api.specialEvents[type];
       if (special) {
         special.off(element, nativeListener);
       } else {
@@ -5756,15 +5753,15 @@ var model = function (_ref) {
       if (control) {
         control.set(target, keypath, instance);
       }
-    };
-    var sync = function () {
+    },
+        sync = function () {
       control.sync(target, keypath, instance);
-    };
-
-    var target,
+    },
+        target,
         control,
         unbindTarget,
         unbindInstance;
+
     if (component) {
 
       target = component;
@@ -6648,7 +6645,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.60.9';
+Yox.version = '0.61.0';
 
 /**
  * 工具，便于扩展、插件使用

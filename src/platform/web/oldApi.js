@@ -1,6 +1,4 @@
 
-import execute from 'yox-common/function/execute'
-
 import * as is from 'yox-common/util/is'
 import * as env from 'yox-common/util/env'
 import * as array from 'yox-common/util/array'
@@ -163,7 +161,7 @@ export function setProp(element, name, value) {
     object.set(element, name, value)
   }
   catch (e) {
-    if (element.tagName === 'STYLE' && (name === 'innerHTML' || name === 'innerText')) {
+    if (element.tagName === 'STYLE' && (name === 'innerHTML' || name === 'innerText' || name === 'textContent')) {
       element.setAttribute('type', 'text/css')
       element.styleSheet.cssText = value
     }
