@@ -21,11 +21,10 @@ function optimize(source) {
    *
    */
 
-  let startIndex = source.indexOf('var _typeof = typeof Symbol')
-  let endCode = 'Symbol.prototype ? "symbol" : typeof obj;'
-  let endIndex = source.indexOf(endCode) + endCode.length + 3 // 包括换行符加 };
-
-  source = source.substr(0, startIndex) + source.substr(endIndex)
+  source = source.replace(
+    /var _typeof = typeof Symbol [\s\S]+?};/,
+    ''
+  )
 
   /**
    * Babel 会把 typeof a === x 编译成 ((typeof a === 'undefined' ? 'undefined' : _typeof(a))) === x

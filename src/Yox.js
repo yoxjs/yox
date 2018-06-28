@@ -34,7 +34,7 @@ import api from './platform/web/api'
 
 const patch = snabbdom.init(api)
 
-const TEMPLATE = 'template'
+const TEMPLATE = env.RAW_TEMPLATE
 const TEMPLATE_COMPUTED = '$' + TEMPLATE
 
 export default class Yox {
@@ -185,7 +185,7 @@ export default class Yox {
     }
 
     smartSet('transition', transitions)
-    smartSet('component', components)
+    smartSet(env.RAW_COMPONENT, components)
     smartSet('directive', directives)
     smartSet('partial', partials)
     smartSet('filter', filters)
@@ -824,7 +824,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.61.0'
+Yox.version = '0.61.1'
 
 /**
  * 工具，便于扩展、插件使用
@@ -842,8 +842,6 @@ let { prototype } = Yox
 
 // 全局注册
 let registry = { }
-
-const COMPONENT = 'component'
 
 function getResourceAsync(data, name, callback) {
   let value = data[ name ]
@@ -894,7 +892,7 @@ function setResource(data, name, value) {
  * @param {?Object} value
  */
 array.each(
-  [ COMPONENT, 'transition', 'directive', 'partial', 'filter' ],
+  [ env.RAW_COMPONENT, 'transition', 'directive', 'partial', 'filter' ],
   function (type) {
     prototype[ type ] = function (name, value) {
       let instance = this, prop = `$${type}s`, data = instance[ prop ]
@@ -905,7 +903,7 @@ array.each(
             ? data[ name ]
             : Yox[ type ](name)
         }
-        else if (length === 2 && type === COMPONENT && is.func(value)) {
+        else if (length === 2 && type === env.RAW_COMPONENT && is.func(value)) {
           return hasValue
             ? getResourceAsync(data, name, value)
             : Yox[ type ](name, value)
@@ -926,7 +924,7 @@ array.each(
             ? data[ name ]
             : env.UNDEFINED
         }
-        else if (length === 2 && type === COMPONENT && is.func(value)) {
+        else if (length === 2 && type === env.RAW_COMPONENT && is.func(value)) {
           return hasValue
             ? getResourceAsync(data, name, value)
             : value()

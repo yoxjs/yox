@@ -13,7 +13,7 @@ import * as event from '../../config/event'
 let api = object.copy(domApi)
 
 // import * as oldApi from './oldApi'
-//
+
 // if (env.doc && !env.doc.addEventListener) {
 //   object.extend(api, oldApi)
 // }
@@ -53,7 +53,7 @@ api.specialEvents = {
   }
 }
 
-const EMITTER_KEY = '$emitter'
+const RAW_EMITTER = '$emitter'
 
 /**
  * 绑定事件
@@ -64,7 +64,7 @@ const EMITTER_KEY = '$emitter'
  * @param {?*} context
  */
 api.on = function (element, type, listener, context) {
-  let emitter = element[ EMITTER_KEY ] || (element[ EMITTER_KEY ] = new Emitter())
+  let emitter = element[ RAW_EMITTER ] || (element[ RAW_EMITTER ] = new Emitter())
   if (!emitter.has(type)) {
     let nativeListener = function (e, type) {
       if (!Event.is(e)) {
@@ -96,7 +96,7 @@ api.on = function (element, type, listener, context) {
  *
  */
 api.off = function (element, type, listener) {
-  let emitter = element[ EMITTER_KEY ],
+  let emitter = element[ RAW_EMITTER ],
   types = object.keys(emitter.listeners)
   // emitter 会根据 type 和 listener 参数进行适当的删除
   emitter.off(type, listener)
@@ -120,7 +120,7 @@ api.off = function (element, type, listener) {
     env.TRUE
   )
   if (!types[ env.RAW_LENGTH ]) {
-    api.removeProp(element, EMITTER_KEY)
+    api.removeProp(element, RAW_EMITTER)
   }
 }
 
