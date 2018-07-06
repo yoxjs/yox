@@ -88,7 +88,7 @@ class IEEvent {
 
 function addInputListener(element, listener) {
   listener.$listener = function (e) {
-    if (e.propertyName === 'value') {
+    if (e.propertyName === env.RAW_VALUE) {
       e = new Event(e)
       e[ env.RAW_TYPE ] = event.INPUT
       listener.call(this, e)
@@ -162,7 +162,7 @@ export function setProp(element, name, value) {
   }
   catch (e) {
     if (element.tagName === 'STYLE' && (name === 'innerHTML' || name === 'innerText' || name === 'textContent')) {
-      element.setAttribute('type', 'text/css')
+      element.setAttribute(env.RAW_TYPE, 'text/css')
       element.styleSheet.cssText = value
     }
   }

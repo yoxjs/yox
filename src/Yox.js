@@ -430,9 +430,7 @@ export default class Yox {
    */
   render() {
 
-    let instance = this
-
-    let { $template, $getter } = instance
+    let instance = this, { $template, $getter } = instance
 
     if (!$getter) {
 
@@ -552,12 +550,7 @@ export default class Yox {
    */
   updateView(newNode, oldNode) {
 
-    let instance = this, afterHook
-
-    let {
-      $node,
-      $options,
-    } = instance
+    let instance = this, { $node, $options } = instance, afterHook
 
     instance.$flags = { }
 
@@ -824,7 +817,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.61.1'
+Yox.version = '0.61.2'
 
 /**
  * 工具，便于扩展、插件使用
@@ -1020,7 +1013,7 @@ Yox.validate = function (props, propTypes) {
       else if (required) {
         logger.warn(`"${key}" prop is not found.`)
       }
-      else if (object.has(rule, 'value')) {
+      else if (object.has(rule, env.RAW_VALUE)) {
         if (type === env.RAW_FUNCTION) {
           result[ key ] = value
         }

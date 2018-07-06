@@ -3570,6 +3570,8 @@ function trimBreakline(content) {
 
 var textProp = win && win.SVGElement ? 'textContent' : 'innerText';
 
+var RAW_INVALID = 'invalid';
+
 /**
  * 把模板编译为抽象语法树
  *
@@ -3626,7 +3628,7 @@ function compile$$1(content) {
           component = _target.component;
 
       if (type === ELEMENT && expectedTagName && tag !== expectedTagName) {
-        throwError('end tag expected </' + tag + '> to be </' + expectedTagName + '>.');
+        throwError('end ' + RAW_TAG + ' expected </' + tag + '> to be </' + expectedTagName + '>.');
       }
 
       // ==========================================
@@ -3893,27 +3895,27 @@ function compile$$1(content) {
       if (terms[0]) {
         return new Each(compile$1(trim(terms[0])), trim(terms[1]));
       }
-      throwError('invalid each: ' + all);
+      throwError(RAW_INVALID + ' each: ' + all);
     }
   }, function (source, all) {
     if (startsWith(source, SYNTAX_IMPORT)) {
       source = slicePrefix(source, SYNTAX_IMPORT);
-      return source ? new Import(source) : throwError('invalid import: ' + all);
+      return source ? new Import(source) : throwError(RAW_INVALID + ' import: ' + all);
     }
   }, function (source, all) {
     if (startsWith(source, SYNTAX_PARTIAL)) {
       source = slicePrefix(source, SYNTAX_PARTIAL);
-      return source ? new Partial(source) : throwError('invalid partial: ' + all);
+      return source ? new Partial(source) : throwError(RAW_INVALID + ' partial: ' + all);
     }
   }, function (source, all) {
     if (startsWith(source, SYNTAX_IF)) {
       source = slicePrefix(source, SYNTAX_IF);
-      return source ? new If(compile$1(source)) : throwError('invalid if: ' + all);
+      return source ? new If(compile$1(source)) : throwError(RAW_INVALID + ' if: ' + all);
     }
   }, function (source, all) {
     if (startsWith(source, SYNTAX_ELSE_IF)) {
       source = slicePrefix(source, SYNTAX_ELSE_IF);
-      return source ? new ElseIf(compile$1(source)) : throwError('invalid else if: ' + all);
+      return source ? new ElseIf(compile$1(source)) : throwError(RAW_INVALID + ' else if: ' + all);
     }
   }, function (source) {
     if (startsWith(source, SYNTAX_ELSE)) {
@@ -3922,12 +3924,12 @@ function compile$$1(content) {
   }, function (source, all) {
     if (startsWith(source, SYNTAX_SPREAD)) {
       source = slicePrefix(source, SYNTAX_SPREAD);
-      return source ? new Spread(compile$1(source)) : throwError('invalid spread: ' + all);
+      return source ? new Spread(compile$1(source)) : throwError(RAW_INVALID + ' spread: ' + all);
     }
   }, function (source, all) {
     if (!SYNTAX_COMMENT.test(source)) {
       source = trim(source);
-      return source ? new Expression(compile$1(source), !endsWith(all, '}}}')) : throwError('invalid expression: ' + all);
+      return source ? new Expression(compile$1(source), !endsWith(all, '}}}')) : throwError(RAW_INVALID + ' expression: ' + all);
     }
   }],
       parseHtml = function (content) {
@@ -3989,7 +3991,7 @@ function compile$$1(content) {
       if (match[1][RAW_LENGTH] === match[3][RAW_LENGTH]) {
         parseDelimiter(match[2], match[0]);
       } else {
-        throwError('invalid syntax: ' + match[0]);
+        throwError(RAW_INVALID + ' syntax: ' + match[0]);
       }
     } else {
       parseHtml(str);
@@ -4109,7 +4111,7 @@ function render(render, getter, instance) {
             expr = node[RAW_EXPR];
         if (node[RAW_TYPE] === ATTRIBUTE) {
           var value;
-          if (has$1(node, 'value')) {
+          if (has$1(node, RAW_VALUE)) {
             value = node[RAW_VALUE];
           } else if (expr) {
             value = o(expr, expr[RAW_STATIC_KEYPATH]);
@@ -5224,11 +5226,12 @@ attr2Prop['defaultchecked'] = 'defaultChecked';
 attr2Prop['defaultmuted'] = 'defaultMuted';
 attr2Prop['defaultselected'] = 'defaultSelected';
 
-var svgTags = toObject(('svg,g,defs,desc,metadata,symbol,use,' + 'image,path,rect,circle,line,ellipse,polyline,polygon,' + 'text,tspan,tref,textpath,' + 'marker,pattern,clippath,mask,filter,cursor,view,animate,' + 'font,font-face,glyph,missing-glyph').split(','));
+var svgTags = toObject('svg,g,defs,desc,metadata,symbol,use,image,path,rect,circle,line,ellipse,polyline,polygon,text,tspan,tref,textpath,marker,pattern,clippath,mask,filter,cursor,view,animate,font,font-face,glyph,missing-glyph'.split(CHAR_COMMA));
 
+var domain = 'http://www.w3.org/';
 var namespaces = {
-  svg: 'http://www.w3.org/2000/svg',
-  xlink: 'http://www.w3.org/1999/xlink'
+  svg: domain + '2000/svg',
+  xlink: domain + '1999/xlink'
 };
 
 function createElement(tagName) {
@@ -5499,7 +5502,7 @@ var IEEvent = function () {
 
 function addInputListener(element, listener) {
   listener.$listener = function (e) {
-    if (e.propertyName === 'value') {
+    if (e.propertyName === RAW_VALUE) {
       e = new Event(e);
       e[RAW_TYPE] = INPUT;
       listener.call(this, e);
@@ -5565,7 +5568,7 @@ function setProp$1(element, name, value) {
     set$1(element, name, value);
   } catch (e) {
     if (element.tagName === 'STYLE' && (name === 'innerHTML' || name === 'innerText' || name === 'textContent')) {
-      element.setAttribute('type', 'text/css');
+      element.setAttribute(RAW_TYPE, 'text/css');
       element.styleSheet.cssText = value;
     }
   }
@@ -6365,12 +6368,9 @@ var Yox = function () {
 
 
   Yox.prototype.render = function () {
-
-    var instance = this;
-
-    var $template = instance.$template,
+    var instance = this,
+        $template = instance.$template,
         $getter = instance.$getter;
-
 
     if (!$getter) {
 
@@ -6475,13 +6475,10 @@ var Yox = function () {
 
 
   Yox.prototype.updateView = function (newNode, oldNode) {
-
     var instance = this,
+        $node = instance.$node,
+        $options = instance.$options,
         afterHook;
-
-    var $node = instance.$node,
-        $options = instance.$options;
-
 
     instance.$flags = {};
 
@@ -6762,7 +6759,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.61.1';
+Yox.version = '0.61.2';
 
 /**
  * 工具，便于扩展、插件使用
@@ -6917,7 +6914,7 @@ Yox.validate = function (props, propTypes) {
         }
     } else if (required) {
       warn('"' + key + '" prop is not found.');
-    } else if (has$1(rule, 'value')) {
+    } else if (has$1(rule, RAW_VALUE)) {
       if (type === RAW_FUNCTION) {
         result[key] = value;
       } else {
