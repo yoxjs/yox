@@ -1,5 +1,7 @@
 rollup.config.js
+build.js
 test
+example
 .babelrc
 edp-*
 *.sketch

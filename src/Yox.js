@@ -78,7 +78,7 @@ export default class Yox {
     let source
     if (is.object(propTypes)) {
       instance.$propTypes = propTypes
-      source = instance.validate(props || { }, propTypes)
+      source = Yox.validate(props || { }, propTypes)
     }
     else {
       source = props || { }
@@ -238,13 +238,6 @@ export default class Yox {
       )
     }
 
-  }
-
-  validate(props) {
-    let { $propTypes } = this
-    return $propTypes
-      ? Yox.validate(props, $propTypes)
-      : props
   }
 
   /**
@@ -817,7 +810,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.61.2'
+Yox.version = '0.61.3'
 
 /**
  * 工具，便于扩展、插件使用

@@ -120,10 +120,13 @@ var isDef = function (target) {
   return target !== UNDEFINED;
 };
 
+var toString = Object.prototype.toString;
+
+
 function is(value, type) {
   return type === 'numeric' ? numeric(value)
   // 这个函数比较慢，所以下面都不用它
-  : Object.prototype.toString.call(value).toLowerCase() === '[object ' + type + ']';
+  : toString.call(value).toLowerCase() === '[object ' + type + ']';
 }
 
 function func(value) {
@@ -649,9 +652,9 @@ function startsWith$1(keypath, prefix) {
   if (keypath === prefix) {
     return prefix[RAW_LENGTH];
   }
-  var temp;
-  if (startsWith(keypath, temp = prefix + KEYPATH_SEPARATOR)) {
-    return temp[RAW_LENGTH];
+  prefix += KEYPATH_SEPARATOR;
+  if (startsWith(keypath, prefix)) {
+    return prefix[RAW_LENGTH];
   }
   return FALSE;
 }
@@ -677,9 +680,9 @@ function each$2(keypath, callback) {
 
 function join$1(keypath1, keypath2) {
 
-  var keypath = number(keypath1) || string(keypath1) ? keypath1 : CHAR_BLANK,
-      isNumber,
-      isString;
+  var isNumber,
+      isString,
+      keypath = number(keypath1) || string(keypath1) ? keypath1 : CHAR_BLANK;
 
   if ((isNumber = number(keypath2)) || (isString = string(keypath2))) {
     if (keypath === CHAR_BLANK) {
@@ -1076,7 +1079,7 @@ function parseType(type, namespace) {
   return result;
 }
 
-var toString = function (str, defaultValue) {
+var toString$1 = function (str, defaultValue) {
   if (str != NULL && str.toString) {
     return str.toString();
   }
@@ -1090,7 +1093,7 @@ var toString = function (str, defaultValue) {
  */
 var Console = typeof console !== RAW_UNDEFINED ? console : NULL;
 
-var debug = /yox/.test(toString(noop));
+var debug = /yox/.test(toString$1(noop));
 
 // 全局可覆盖
 // 比如开发环境，开了 debug 模式，但是有时候觉得看着一堆日志特烦，想强制关掉
@@ -1531,13 +1534,13 @@ function createKeyToIndex(vnodes, startIndex, endIndex) {
 function createCommentVnode(text) {
   return {
     tag: TAG_COMMENT,
-    text: toString(text)
+    text: toString$1(text)
   };
 }
 
 function createTextVnode(text) {
   return {
-    text: toString(text)
+    text: toString$1(text)
   };
 }
 
@@ -3483,7 +3486,8 @@ var delimiterPattern = /(\{?\{\{)\s*([^\}]+?)\s*(\}\}\}?)/;
 var openingTagPattern = /<(\/)?([a-z][-a-z0-9]*)/i;
 var closingTagPattern = /^\s*(\/)?>/;
 var attributePattern = /^\s*([-:\w]+)(?:=(['"]))?/;
-var componentNamePattern = /[-A-Z]/;
+// 首字母大写，或中间包含 -
+var componentNamePattern = /^[A-Z]|-/;
 var selfClosingTagNames = ['area', 'base', 'embed', 'track', 'source', 'param', 'input', RAW_SLOT, 'col', 'img', 'br', 'hr'];
 
 // 缓存编译结果
@@ -4041,7 +4045,7 @@ function render(render, getter, instance) {
         currentElement.lastChild = NULL;
       }
     } else if (isTextVnode(lastChild)) {
-      lastChild[RAW_TEXT] += toString(node);
+      lastChild[RAW_TEXT] += toString$1(node);
     } else {
       push(children, currentElement.lastChild = createTextVnode(node));
     }
@@ -5180,7 +5184,7 @@ attr2Prop['defaultchecked'] = 'defaultChecked';
 attr2Prop['defaultmuted'] = 'defaultMuted';
 attr2Prop['defaultselected'] = 'defaultSelected';
 
-var svgTags = toObject('svg,g,defs,desc,metadata,symbol,use,image,path,rect,circle,line,ellipse,polyline,polygon,text,tspan,tref,textpath,marker,pattern,clippath,mask,filter,cursor,view,animate,font,font-face,glyph,missing-glyph'.split(CHAR_COMMA));
+var svgTags = toObject('svg,g,defs,desc,metadata,symbol,use,image,path,rect,circle,line,ellipse,polyline,polygon,text,tspan,tref,textpath,marker,pattern,clippath,mask,filter,cursor,view,animate,font,font-face,glyph,missing-glyph,foreignObject'.split(CHAR_COMMA));
 
 var domain = 'http://www.w3.org/';
 var namespaces = {
@@ -5625,7 +5629,7 @@ function getOptionValue(option) {
 
 var inputControl = {
   set: function set$$1(el, keypath, instance) {
-    var value = toString(instance.get(keypath));
+    var value = toString$1(instance.get(keypath));
     if (value !== el[RAW_VALUE]) {
       el[RAW_VALUE] = value;
     }
@@ -5639,7 +5643,7 @@ var inputControl = {
 
 var selectControl = {
   set: function set$$1(el, keypath, instance) {
-    var value = toString(instance.get(keypath));
+    var value = toString$1(instance.get(keypath));
     var options = el.options;
 
     if (options) {
@@ -5658,7 +5662,7 @@ var selectControl = {
 
 var radioControl = {
   set: function set$$1(el, keypath, instance) {
-    el[RAW_CHECKED] = el[RAW_VALUE] === toString(instance.get(keypath));
+    el[RAW_CHECKED] = el[RAW_VALUE] === toString$1(instance.get(keypath));
   },
   sync: function sync(el, keypath, instance) {
     if (el[RAW_CHECKED]) {
@@ -5872,7 +5876,7 @@ var Yox = function () {
     var source;
     if (object(propTypes)) {
       instance.$propTypes = propTypes;
-      source = instance.validate(props || {}, propTypes);
+      source = Yox.validate(props || {}, propTypes);
     } else {
       source = props || {};
     }
@@ -6010,12 +6014,6 @@ var Yox = function () {
       });
     }
   }
-
-  Yox.prototype.validate = function (props) {
-    var $propTypes = this.$propTypes;
-
-    return $propTypes ? Yox.validate(props, $propTypes) : props;
-  };
 
   /**
    * 添加计算属性
@@ -6607,7 +6605,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.61.2';
+Yox.version = '0.61.3';
 
 /**
  * 工具，便于扩展、插件使用
