@@ -4303,7 +4303,7 @@ function render(render, getter, instance) {
     if (array(value)) {
       each(value, eachHandler);
     } else if (object(value)) {
-      each(value, eachHandler);
+      each$1(value, eachHandler);
     } else if (func(value)) {
       value(eachHandler);
     }
@@ -6662,7 +6662,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.61.4';
+Yox.version = '0.61.5';
 
 /**
  * 工具，便于扩展、插件使用
