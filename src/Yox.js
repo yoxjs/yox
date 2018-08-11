@@ -462,10 +462,34 @@ export default class Yox {
               absoluteKeypath = keypath
             }
             let scope = keypathStack[ keypathIndex + 1 ]
+
+            // #each 时，scope 存储是当前循环的数据，如 keypath、index 等
+            // scope 无法直接拿到当前数组项，它存在于 scope[ 'this' ] 上
+            // 为什么这样设计呢？
+            // 因为 {{this}} 的存在，经过上面的处理，key 会是 ''
+            // 而 {{this.length}} 会变成 'length'
+
+            // 如果取的是 scope 上直接有的数据，如 keypath
             if (object.has(scope, key)) {
               value = scope[ key ]
               return keypath
             }
+            // 如果取的是数组项，则要更进一步
+            else if (object.has(scope, env.RAW_THIS)) {
+              scope = scope[ env.RAW_THIS ]
+              // 取 this
+              if (key === char.CHAR_BLANK) {
+                value = scope
+                return keypath
+              }
+              // 取 this.xx
+              else if (object.has(scope, key)) {
+                value = scope[ key ]
+                return keypath
+              }
+            }
+
+            // 正常取数据
             value = instance.get(keypath, getKeypath)
             if (value === getKeypath) {
               if (lookup && index > 0) {
@@ -476,6 +500,7 @@ export default class Yox {
             else {
               return keypath
             }
+
           },
           keypath = getKeypath()
 
@@ -810,7 +835,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.61.3'
+Yox.version = '0.61.4'
 
 /**
  * 工具，便于扩展、插件使用

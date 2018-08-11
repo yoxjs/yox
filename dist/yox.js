@@ -1581,8 +1581,6 @@ function init(api) {
         el = _vnode.el,
         tag = _vnode.tag,
         component$$1 = _vnode.component,
-        attrs$$1 = _vnode.attrs,
-        slots = _vnode.slots,
         directives$$1 = _vnode.directives,
         children = _vnode.children,
         text = _vnode.text,
@@ -1615,18 +1613,21 @@ function init(api) {
         vnode = api[RAW_COMPONENT](el);
 
         if (vnode && tag === vnode[RAW_TAG]) {
+          var _vnode2 = vnode,
+              _attrs = _vnode2.attrs,
+              slots = _vnode2.slots;
 
           var host = vnode.parent || instance,
               extensions;
 
           var modelKeypath = directives$$1 && directives$$1.model && directives$$1.model[RAW_VALUE];
           if (modelKeypath) {
-            if (!attrs$$1) {
-              attrs$$1 = vnode.attrs = {};
+            if (!_attrs) {
+              _attrs = vnode.attrs = {};
             }
             var field = options.model || RAW_VALUE;
-            if (!has$1(attrs$$1, field)) {
-              attrs$$1[field] = host.get(modelKeypath);
+            if (!has$1(_attrs, field)) {
+              _attrs[field] = host.get(modelKeypath);
             }
             extensions = {
               $model: field
@@ -1636,7 +1637,7 @@ function init(api) {
           component$$1 = host.create(options, {
             el: el,
             slots: slots,
-            props: attrs$$1,
+            props: _attrs,
             replace: TRUE,
             extensions: extensions
           });
@@ -1977,6 +1978,9 @@ var LTE = '<=';
 var GT = '>';
 var GTE = '>=';
 
+var TO = '=>';
+var UNTIL = '->';
+
 var unaryMap = {};
 
 unaryMap[PLUS] = unaryMap[MINUS] = unaryMap[NOT] = unaryMap[WAVE] = unaryMap[BOOLEAN] = TRUE;
@@ -1986,17 +1990,19 @@ var unaryList = sort(unaryMap, TRUE);
 // 操作符和对应的优先级，数字越大优先级越高
 var binaryMap = {};
 
-binaryMap[OR] = 1;
+binaryMap[TO] = binaryMap[UNTIL] = 1;
 
-binaryMap[AND] = 2;
+binaryMap[OR] = 2;
 
-binaryMap[LE] = binaryMap[LNE] = binaryMap[SE] = binaryMap[SNE] = 3;
+binaryMap[AND] = 3;
 
-binaryMap[LT] = binaryMap[LTE] = binaryMap[GT] = binaryMap[GTE] = 4;
+binaryMap[LE] = binaryMap[LNE] = binaryMap[SE] = binaryMap[SNE] = 4;
 
-binaryMap[PLUS] = binaryMap[MINUS] = 5;
+binaryMap[LT] = binaryMap[LTE] = binaryMap[GT] = binaryMap[GTE] = 5;
 
-binaryMap[MULTIPLY] = binaryMap[DIVIDE] = binaryMap[MODULO] = 6;
+binaryMap[PLUS] = binaryMap[MINUS] = 6;
+
+binaryMap[MULTIPLY] = binaryMap[DIVIDE] = binaryMap[MODULO] = 7;
 
 var binaryList = sort(binaryMap, TRUE);
 
@@ -2127,6 +2133,28 @@ binary[DIVIDE] = function (a, b) {
 };
 binary[MODULO] = function (a, b) {
   return a % b;
+};
+binary[TO] = function (a, b) {
+  return a > b ? function (callback) {
+    for (var i = a, index = 0; i >= b; i--) {
+      callback(i, index++);
+    }
+  } : function (callback) {
+    for (var i = a, index = 0; i <= b; i++) {
+      callback(i, index++);
+    }
+  };
+};
+binary[UNTIL] = function (a, b) {
+  return a > b ? function (callback) {
+    for (var i = a, index = 0; i > b; i--) {
+      callback(i, index++);
+    }
+  } : function (callback) {
+    for (var i = a, index = 0; i < b; i++) {
+      callback(i, index++);
+    }
+  };
 };
 
 /**
@@ -4237,42 +4265,47 @@ function render(render, getter, instance) {
   e = function (expr, generate, index) {
 
     var value = o(expr),
-        each$$1;
+        absoluteKeypath = expr[RAW_ABSOLUTE_KEYPATH],
+        eachKeypath = absoluteKeypath || join$1(keypath, expr.raw),
+        eachHandler = function (item, key) {
+
+      var lastScope = scope,
+          lastKeypath = keypath,
+          lastKeypathStack = keypathStack;
+
+      scope = {};
+      keypath = join$1(eachKeypath, key);
+      keypathStack = copy(keypathStack);
+      push(keypathStack, keypath);
+      push(keypathStack, scope);
+
+      // 从下面这几句赋值可以看出
+      // scope 至少会有 'keypath' 'this' 'index' 等几个值
+      scope[SPECIAL_KEYPATH] = keypath;
+
+      // 类似 {{#each 1 -> 10}} 这样的临时循环，需要在 scope 上加上当前项
+      // 因为通过 instance.get() 无法获取数据
+      if (!absoluteKeypath) {
+        scope[RAW_THIS] = item;
+      }
+
+      if (index) {
+        scope[index] = key;
+      }
+
+      generate();
+
+      scope = lastScope;
+      keypath = lastKeypath;
+      keypathStack = lastKeypathStack;
+    };
 
     if (array(value)) {
-      each$$1 = each;
+      each(value, eachHandler);
     } else if (object(value)) {
-      each$$1 = each$1;
-    }
-
-    if (each$$1) {
-
-      var eachKeypath = expr[RAW_ABSOLUTE_KEYPATH] || join$1(keypath, expr.raw);
-
-      each$$1(value, function (item, key) {
-
-        var lastScope = scope,
-            lastKeypath = keypath,
-            lastKeypathStack = keypathStack;
-
-        scope = {};
-        keypath = join$1(eachKeypath, key);
-        keypathStack = copy(keypathStack);
-        push(keypathStack, keypath);
-        push(keypathStack, scope);
-
-        scope[SPECIAL_KEYPATH] = keypath;
-
-        if (index) {
-          scope[index] = key;
-        }
-
-        generate();
-
-        scope = lastScope;
-        keypath = lastKeypath;
-        keypathStack = lastKeypathStack;
-      });
+      each(value, eachHandler);
+    } else if (func(value)) {
+      value(eachHandler);
     }
   },
 
@@ -6253,10 +6286,34 @@ var Yox = function () {
               absoluteKeypath = keypath;
             }
             var scope = keypathStack[keypathIndex + 1];
+
+            // #each 时，scope 存储是当前循环的数据，如 keypath、index 等
+            // scope 无法直接拿到当前数组项，它存在于 scope[ 'this' ] 上
+            // 为什么这样设计呢？
+            // 因为 {{this}} 的存在，经过上面的处理，key 会是 ''
+            // 而 {{this.length}} 会变成 'length'
+
+            // 如果取的是 scope 上直接有的数据，如 keypath
             if (has$1(scope, key)) {
               value = scope[key];
               return keypath;
             }
+            // 如果取的是数组项，则要更进一步
+            else if (has$1(scope, RAW_THIS)) {
+                scope = scope[RAW_THIS];
+                // 取 this
+                if (key === CHAR_BLANK) {
+                  value = scope;
+                  return keypath;
+                }
+                // 取 this.xx
+                else if (has$1(scope, key)) {
+                    value = scope[key];
+                    return keypath;
+                  }
+              }
+
+            // 正常取数据
             value = instance.get(keypath, getKeypath);
             if (value === getKeypath) {
               if (lookup && index > 0) {
@@ -6605,7 +6662,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.61.3';
+Yox.version = '0.61.4';
 
 /**
  * 工具，便于扩展、插件使用

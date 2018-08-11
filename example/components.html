@@ -12,7 +12,7 @@
         var List = {
             template: `
                 <ul>
-                    {{$children}}
+                    <slot name="children"/>
                 </ul>
             `
         };
@@ -20,7 +20,7 @@
         var Item = {
             template: `
                 <li on-click="click()">
-                    {{$children}}
+                    <slot name="children"/>
                 </li>
             `,
             propTypes: {
