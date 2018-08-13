@@ -6301,13 +6301,17 @@ var Yox = function () {
             // 如果取的是数组项，则要更进一步
             else if (has$1(scope, RAW_THIS)) {
                 scope = scope[RAW_THIS];
+
+                // 到这里 scope 可能为空
+                // 比如 new Array(10) 然后遍历这个数组，每一项肯定是空
+
                 // 取 this
                 if (key === CHAR_BLANK) {
                   value = scope;
                   return keypath;
                 }
                 // 取 this.xx
-                else if (has$1(scope, key)) {
+                else if (scope && has$1(scope, key)) {
                     value = scope[key];
                     return keypath;
                   }
@@ -6662,7 +6666,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.61.5';
+Yox.version = '0.61.6';
 
 /**
  * 工具，便于扩展、插件使用

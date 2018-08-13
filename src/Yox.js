@@ -477,13 +477,17 @@ export default class Yox {
             // 如果取的是数组项，则要更进一步
             else if (object.has(scope, env.RAW_THIS)) {
               scope = scope[ env.RAW_THIS ]
+
+              // 到这里 scope 可能为空
+              // 比如 new Array(10) 然后遍历这个数组，每一项肯定是空
+
               // 取 this
               if (key === char.CHAR_BLANK) {
                 value = scope
                 return keypath
               }
               // 取 this.xx
-              else if (object.has(scope, key)) {
+              else if (scope && object.has(scope, key)) {
                 value = scope[ key ]
                 return keypath
               }
@@ -835,7 +839,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.61.5'
+Yox.version = '0.61.6'
 
 /**
  * 工具，便于扩展、插件使用
