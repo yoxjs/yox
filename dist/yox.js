@@ -4094,9 +4094,9 @@ function render(render, getter, instance) {
         node();
       } else {
         var name = node[RAW_NAME],
-            expr = node[RAW_EXPR];
+            expr = node[RAW_EXPR],
+            value;
         if (node[RAW_TYPE] === ATTRIBUTE) {
-          var value;
           if (has$1(node, RAW_VALUE)) {
             value = node[RAW_VALUE];
           } else if (expr) {
@@ -4111,7 +4111,14 @@ function render(render, getter, instance) {
           }
           addAttr(name, value);
         } else {
-          addDirective(name, node.modifier, name === DIRECTIVE_MODEL ? (o(expr), expr[RAW_ABSOLUTE_KEYPATH]) : node[RAW_VALUE])[RAW_EXPR] = expr;
+          if (name === DIRECTIVE_MODEL) {
+            value = (o(expr), expr[RAW_ABSOLUTE_KEYPATH]);
+          } else if (has$1(node, RAW_VALUE)) {
+            value = node[RAW_VALUE];
+          } else if (has$1(node, RAW_CHILDREN)) {
+            value = getValue(node[RAW_CHILDREN]);
+          }
+          addDirective(name, node.modifier, value)[RAW_EXPR] = expr;
         }
       }
     }
@@ -6666,7 +6673,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.61.6';
+Yox.version = '0.61.7';
 
 /**
  * 工具，便于扩展、插件使用

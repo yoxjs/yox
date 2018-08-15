@@ -10,13 +10,7 @@
     <script id="template" type="plain/text">
 
         <div>
-            <button o-click1="english"{{#if !disabled}} on-click="haha" on-mousenter="heihei" title="{{name}}"{{/if}}>
-                11
-            </button>
-            <button o-click2="'中文'">
-                22
-            </button>
-            <button o-click3="{{name}}">
+            <button o-click3="{name: {{name}} }">
                 33
             </button>
         </div>
