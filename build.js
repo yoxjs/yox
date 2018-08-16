@@ -154,6 +154,27 @@ var possibleConstructorReturn = function (self, call) {
      }
    )
 
+   /**
+    * 处理 legacy 版本
+    */
+   if (/shim start/.test(source)) {
+      let shim = ''
+      source = source
+        .replace(
+          /\/\/ shim start([\s\S]+?)\/\/ shim end/,
+          function ($0, $1) {
+            shim = $1
+            return ''
+          }
+        )
+        .replace(
+          /'use strict';/,
+          function ($0) {
+            return $0 + shim
+          }
+        )
+   }
+
    return source
 
 }
