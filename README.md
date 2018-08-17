@@ -138,3 +138,15 @@ CDN
 ## Document
 
 [技术预览版](https://musicode.gitbooks.io/yox)
+
+## Donation
+
+If you think Yox is very helpful to you, please give me some encouragement.
+
+Wechat Pay
+
+<img src="https://user-images.githubusercontent.com/2732303/44254903-ce6d3f80-a236-11e8-86dd-f6b27a7f94df.png" width="200">
+
+Ali Pay
+
+<img src="https://https://user-images.githubusercontent.com/2732303/44254929-e5139680-a236-11e8-95e2-f5a864246f83.png" width="200">
