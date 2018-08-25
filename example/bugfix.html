@@ -23,85 +23,55 @@
 
     <script src="../dist/yox.js"></script>
     <script>
-        var instance = new Yox({
-          el: '#app',
-            data: {
-              disabled: false,
-              submiting: false,
-              onClick: function () {
-                  instance.set({
-                      disabled: true,
-                        submiting: true
-                    });
-                    setTimeout(
-                      function () {
-                          instance.set({
-                                disabled: false,
-                                submiting: false
-                            });
-                        },
-                        1000
-                    );
-                }
-            },
-            template: `
-                <div>
-                      <Button type="info" status="1">
-                          <template slot="haha">
-                              <div>11</div>
-                          </template>
-                          <template slot="haha2">
-                              <div>22</div>
-                          </template>
-                          <template slot="haha2">
-                              <div>33</div>
-                          </template>
-                      </Button>
-
-                </div>
-            `,
-            components: {
-              Button: {
-                  propTypes: {
-                      disabled: {
-                        type: 'boolean',
-                        value: false,
-                      },
-                      status: {
-                        type: 'numeric',
-                        value: 100
-                      },
-                      type: {
-                        type: 'string',
-                        value: false,
-                      },
-                      onClick: {
-                        type: 'function'
-                      }
-                    },
+        Yox.component({
+              Button1: {
                   template: `
-                      <div>
-                          {{#if hasSlot('haha')}}
-                              <slot name="haha" />
-                          {{else}}
-                              haha is not found.
-                          {{/if}}
-                      </div>
-                    `,
-                    methods: {
-                      click: function () {
-                          var onClick = this.get('onClick');
-                            if (Yox.is.func(onClick)) {
-                              onClick();
-                            }
-                        }
-                    },
-                    afterMount: function () {
-                        console.log('after mount')
-                    }
+                      <Button2 {{...this}} />
+                  `
+                },
+                Button2: {
+                     template: `
+                      <Button3 {{...this}} />
+                      `
+                },
+                Button3: {
+                    template: `
+                      <button disabled="{{disabled}}" on-click="click">
+                          <slot name="children" />
+                      </button>
+                    `
                 }
-            }
-        });
+          })
+        var instance = new Yox({
+            el: '#app',
+              data: {
+                  disabled: false,
+                  submiting: false
+              },
+              template: `
+                  <Button1 disabled="{{disabled}}" on-click="clickButton()">
+                      123{{submiting ? 'Submiting' : 'Submit'}}
+                  </Button1>
+              `,
+              methods: {
+                clickButton: function () {
+                    instance.set({
+                        disabled: true,
+                          submiting: true
+                      });
+                      setTimeout(
+                        function () {
+                            instance.set({
+                                  disabled: false,
+                                  submiting: false
+                              });
+                          },
+                          1000
+                      );
+                  }
+              }
+          });
+
     </script>
 </body>
 </html>

@@ -3,7 +3,6 @@
 	typeof define === 'function' && define.amd ? define(factory) :
 	(global.Yox = factory());
 }(this, (function () { 'use strict';
-
 if (!Object.keys) {
   Object.keys = function (obj) {
     var result = [];
@@ -49,6 +48,7 @@ if (!Array.prototype.map) {
     return result;
   };
 }
+
 
 
 
@@ -1357,24 +1357,21 @@ var props = {
 };
 
 function bindDirective(vnode, key, api) {
-  var el = vnode.el,
-      tag = vnode.tag,
-      attrs = vnode.attrs,
-      directives = vnode.directives,
+  var directives = vnode.directives,
       instance = vnode.instance;
 
 
   var node = directives[key],
       options = {
-    el: el,
+    el: vnode.el,
     node: node,
     instance: instance,
     directives: directives,
-    attrs: attrs || {}
+    attrs: vnode.attrs || {}
   };
 
   if (vnode[RAW_COMPONENT]) {
-    options[RAW_COMPONENT] = api[RAW_COMPONENT](el);
+    options[RAW_COMPONENT] = api[RAW_COMPONENT](vnode.data.id);
   }
 
   var bind = instance.directive(node[RAW_NAME]),
@@ -1508,7 +1505,7 @@ function removeRef(instance, ref) {
 function createComponent(vnode) {
   var el = vnode.el;
   if (vnode[RAW_COMPONENT]) {
-    el = this[RAW_COMPONENT](el);
+    el = this[RAW_COMPONENT](vnode.data.id);
   }
   setRef(vnode.instance, vnode[RAW_REF], el);
 }
@@ -1520,7 +1517,7 @@ function updateComponent(vnode, oldVnode) {
       ref = vnode[RAW_REF];
 
   if (vnode[RAW_COMPONENT]) {
-    el = this[RAW_COMPONENT](el);
+    el = this[RAW_COMPONENT](vnode.data.id);
     el.set(vnode.attrs);
     el.set(vnode.slots);
   }
@@ -1620,6 +1617,8 @@ function isTextVnode(vnode) {
   return isVnode(vnode) && !has$1(vnode, RAW_TAG);
 }
 
+var guid = 0;
+
 function init(api) {
 
   var createElement = function (vnode, data) {
@@ -1633,7 +1632,9 @@ function init(api) {
         instance = _vnode.instance;
 
 
-    vnode.data = {};
+    var id = ++guid;
+
+    vnode.data = { id: id };
 
     if (falsy$1(tag)) {
       return vnode.el = api.createText(text);
@@ -1648,7 +1649,7 @@ function init(api) {
 
     if (component$$1) {
 
-      api[RAW_COMPONENT](el, vnode);
+      api[RAW_COMPONENT](id, vnode);
 
       instance[RAW_COMPONENT](tag, function (options) {
 
@@ -1656,7 +1657,7 @@ function init(api) {
           fatal('"' + tag + '" ' + RAW_COMPONENT + ' is not found.');
         }
 
-        vnode = api[RAW_COMPONENT](el);
+        vnode = api[RAW_COMPONENT](id);
 
         if (vnode && tag === vnode[RAW_TAG]) {
           var _vnode2 = vnode,
@@ -1693,7 +1694,7 @@ function init(api) {
           }
 
           vnode.el = el;
-          api[RAW_COMPONENT](el, component$$1);
+          api[RAW_COMPONENT](id, component$$1);
 
           enterVnode(vnode);
 
@@ -1756,15 +1757,17 @@ function init(api) {
         component$$1 = vnode[RAW_COMPONENT];
 
     if (component$$1) {
-      component$$1 = api[RAW_COMPONENT](el);
+      var id = vnode.data.id;
+
+      component$$1 = api[RAW_COMPONENT](id);
       if (vnode.parent === vnode.instance) {
         if (component$$1.set) {
           moduleEmitter.fire(HOOK_DESTROY, vnode, api);
-          api[RAW_COMPONENT](el, NULL);
+          api[RAW_COMPONENT](id, NULL);
           component$$1.destroy();
           return TRUE;
         }
-        api[RAW_COMPONENT](el, NULL);
+        api[RAW_COMPONENT](id, NULL);
       } else {
         return;
       }
@@ -1934,9 +1937,11 @@ function init(api) {
     }
 
     if (component$$1) {
-      component$$1 = api[RAW_COMPONENT](el);
+      var id = vnode.data.id;
+
+      component$$1 = api[RAW_COMPONENT](id);
       if (!component$$1.set) {
-        api[RAW_COMPONENT](el, vnode);
+        api[RAW_COMPONENT](id, vnode);
         return;
       }
     }
@@ -4425,7 +4430,7 @@ var toNumber = function (str, defaultValue) {
   return arguments[RAW_LENGTH] === 1 ? 0 : defaultValue;
 };
 
-var guid = 0;
+var guid$1 = 0;
 
 /**
  * 对比新旧对象
@@ -4533,7 +4538,7 @@ var Computed = function () {
 
     var instance = this;
 
-    instance.id = ++guid;
+    instance.id = ++guid$1;
     instance[RAW_KEYPATH] = keypath;
     instance.observer = observer;
     instance.deps = [];
@@ -5394,10 +5399,6 @@ function html(node, content) {
   return content == NULL ? node.innerHTML : node.innerHTML = content;
 }
 
-function component$1(element, component) {
-  return isDef(component) ? element[RAW_COMPONENT] = component : element[RAW_COMPONENT];
-}
-
 function find(selector, context) {
   return (context || doc).querySelector(selector);
 }
@@ -5438,6 +5439,12 @@ function removeClass(element, className) {
   }
 }
 
+var components = {};
+
+function component$1(id, component) {
+  return isDef(component) ? components[id] = component : components[id];
+}
+
 var domApi = {
 	createElement: createElement,
 	createText: createText,
@@ -5458,12 +5465,12 @@ var domApi = {
 	children: children,
 	text: text,
 	html: html,
-	component: component$1,
 	find: find,
 	on: on$1,
 	off: off,
 	addClass: addClass,
-	removeClass: removeClass
+	removeClass: removeClass,
+	component: component$1
 };
 
 /**
@@ -5520,6 +5527,8 @@ var COMPOSITION_END = 'compositionend';
  * @type {string}
  */
 var PROPERTY_CHANGE = 'propertychange';
+
+
 
 var IEEvent = function () {
   function IEEvent(event, element) {
@@ -6825,7 +6834,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.61.7';
+Yox.version = '0.61.8';
 
 /**
  * 工具，便于扩展、插件使用

@@ -9,6 +9,7 @@ import Event from 'yox-common/util/Event'
 
 import * as event from '../../config/event'
 
+// shim start
 if (!Object.keys) {
   Object.keys = function (obj) {
     let result = [ ]
@@ -63,6 +64,7 @@ if (!Array.prototype.map) {
     return result
   }
 }
+// shim end
 
 class IEEvent {
 
