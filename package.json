@@ -19,7 +19,7 @@
     "yox-config": "0.0.8",
     "yox-expression-compiler": "^0.15.8",
     "yox-observer": "^0.17.2",
-    "yox-snabbdom": "^0.18.9",
+    "yox-snabbdom": "^0.19.0",
     "yox-template-compiler": "^0.26.3"
   },
   "scripts": {

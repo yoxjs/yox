@@ -1660,28 +1660,31 @@ function init(api) {
         vnode = api[RAW_COMPONENT](id);
 
         if (vnode && tag === vnode[RAW_TAG]) {
-          var _vnode2 = vnode,
+          var extensions,
+              _vnode2 = vnode,
               _attrs = _vnode2.attrs,
-              slots = _vnode2.slots;
+              slots = _vnode2.slots,
+              modelKeypath = directives$$1 && directives$$1.model && directives$$1.model[RAW_VALUE];
 
-          var host = vnode.parent || instance,
-              extensions;
 
-          var modelKeypath = directives$$1 && directives$$1.model && directives$$1.model[RAW_VALUE];
           if (modelKeypath) {
             if (!_attrs) {
               _attrs = vnode.attrs = {};
             }
             var field = options.model || RAW_VALUE;
             if (!has$1(_attrs, field)) {
-              _attrs[field] = host.get(modelKeypath);
+              // 这里必须用 instance.get
+              // 因为必须从定义这段模板的组件实例获取数据
+              _attrs[field] = instance.get(modelKeypath);
             }
             extensions = {
               $model: field
             };
           }
 
-          component$$1 = host.create(options, {
+          // 这里优先用 vnode.parent
+          // 因为要实现正确的父子关系
+          component$$1 = (vnode.parent || instance).create(options, {
             el: el,
             slots: slots,
             props: _attrs,
@@ -6834,7 +6837,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.61.8';
+Yox.version = '0.61.9';
 
 /**
  * 工具，便于扩展、插件使用
