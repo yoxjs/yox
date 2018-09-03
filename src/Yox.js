@@ -75,14 +75,7 @@ export default class Yox {
 
     extensions && object.extend(instance, extensions)
 
-    let source
-    if (is.object(propTypes)) {
-      instance.$propTypes = propTypes
-      source = Yox.validate(props || { }, propTypes)
-    }
-    else {
-      source = props || { }
-    }
+    let source = this.checkPropTypes(props || { })
 
     if (slots) {
       object.extend(source, slots)
@@ -602,20 +595,63 @@ export default class Yox {
   }
 
   /**
+   * 校验组件参数
+   *
+   * @param {Object} props
+   * @return {?Object}
+   */
+  checkPropTypes(props) {
+    let { propTypes } = this.$options
+    return propTypes
+      ? Yox.checkPropTypes(props, tpropTypes)
+      : props
+  }
+
+  /**
    * 创建子组件
    *
    * @param {Object} options 组件配置
-   * @param {?Object} extra 添加进组件配置，但不修改配置的数据，比如 el、props 等
+   * @param {?Object} vnode 虚拟节点
+   * @param {?HTMLElement} el DOM 元素
    * @return {Yox} 子组件实例
    */
-  create(options, extra) {
-    options = object.extend({ }, options, extra)
+  create(options, vnode, el) {
+
+    options = object.copy(options)
     options.parent = this
+
+    if (vnode && el) {
+
+      options.el = el
+      options.replace = env.TRUE
+      options.slots = vnode.slots
+
+      let { attrs, directives } = vnode,
+      modelKeypath = directives && directives.model && directives.model[ env.RAW_VALUE ]
+
+      if (modelKeypath) {
+        if (!attrs) {
+          attrs = vnode.attrs = { }
+        }
+        let field = options.model || env.RAW_VALUE
+        if (!object.has(attrs, field)) {
+          attrs[ field ] = vnode.instance.get(modelKeypath)
+        }
+        options.extensions = {
+          $model: field,
+        }
+      }
+
+      options.props = attrs
+
+    }
+
     let child = new Yox(options)
     array.push(
       this.$children || (this.$children = [ ]),
       child
     )
+
     return child
   }
 
@@ -839,7 +875,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.61.9'
+Yox.version = '0.62.0'
 
 /**
  * 工具，便于扩展、插件使用
@@ -982,19 +1018,23 @@ Yox.compile = function (template) {
  * @param {Object} propTypes 数据格式
  * @return {Object} 验证通过的数据
  */
-Yox.validate = function (props, propTypes) {
-  let result = { }
+Yox.checkPropTypes = function (props, propTypes) {
+  let result = object.copy(props)
   object.each(
     propTypes,
     function (rule, key) {
 
+      // 类型
       let type = rule[ env.RAW_TYPE ],
+      // 默认值
       value = rule[ env.RAW_VALUE ],
+      // 是否必传
       required = rule.required
 
       required = required === env.TRUE
         || (is.func(required) && required(props))
 
+      // 传了数据
       if (isDef(props[ key ])) {
         let target = props[ key ]
         if (is.func(rule)) {
@@ -1024,24 +1064,18 @@ Yox.validate = function (props, propTypes) {
             // 比如当 a 有值时，b 可以为空之类的
             matched = type(target, props)
           }
-          if (matched === env.TRUE) {
-            result[ key ] = target
-          }
-          else {
-            logger.warn(`"${key}" prop's type is not matched.`)
+          if (matched !== env.TRUE) {
+            logger.warn(`The prop "${key}" ${env.RAW_TYPE} is not matched.`)
           }
         }
       }
       else if (required) {
-        logger.warn(`"${key}" prop is not found.`)
+        logger.warn(`The prop "${key}" is marked as required, but its ${env.RAW_VALUE} is "${env.RAW_UNDEFINED}".`)
       }
       else if (object.has(rule, env.RAW_VALUE)) {
-        if (type === env.RAW_FUNCTION) {
-          result[ key ] = value
-        }
-        else {
-          result[ key ] = is.func(value) ? value(props) : value
-        }
+        result[ key ] = type === env.RAW_FUNCTION
+          ? value
+          : (is.func(value) ? value(props) : value)
       }
     }
   )

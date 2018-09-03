@@ -1513,12 +1513,15 @@ function createComponent(vnode) {
 function updateComponent(vnode, oldVnode) {
 
   var el = vnode.el,
+      attrs = vnode.attrs,
       instance = vnode.instance,
       ref = vnode[RAW_REF];
 
   if (vnode[RAW_COMPONENT]) {
     el = this[RAW_COMPONENT](vnode.data.id);
-    el.set(vnode.attrs);
+    if (attrs) {
+      el.set(el.checkPropTypes(attrs));
+    }
     el.set(vnode.slots);
   }
 
@@ -1626,7 +1629,6 @@ function init(api) {
         el = _vnode.el,
         tag = _vnode.tag,
         component$$1 = _vnode.component,
-        directives$$1 = _vnode.directives,
         children = _vnode.children,
         text = _vnode.text,
         instance = _vnode.instance;
@@ -1660,37 +1662,11 @@ function init(api) {
         vnode = api[RAW_COMPONENT](id);
 
         if (vnode && tag === vnode[RAW_TAG]) {
-          var extensions,
-              _vnode2 = vnode,
-              _attrs = _vnode2.attrs,
-              slots = _vnode2.slots,
-              modelKeypath = directives$$1 && directives$$1.model && directives$$1.model[RAW_VALUE];
-
-
-          if (modelKeypath) {
-            if (!_attrs) {
-              _attrs = vnode.attrs = {};
-            }
-            var field = options.model || RAW_VALUE;
-            if (!has$1(_attrs, field)) {
-              // 这里必须用 instance.get
-              // 因为必须从定义这段模板的组件实例获取数据
-              _attrs[field] = instance.get(modelKeypath);
-            }
-            extensions = {
-              $model: field
-            };
-          }
 
           // 这里优先用 vnode.parent
           // 因为要实现正确的父子关系
-          component$$1 = (vnode.parent || instance).create(options, {
-            el: el,
-            slots: slots,
-            props: _attrs,
-            replace: TRUE,
-            extensions: extensions
-          });
+          component$$1 = (vnode.parent || instance).create(options, vnode, el);
+
           el = component$$1.$el;
           if (!el) {
             fatal('"' + tag + '" ' + RAW_COMPONENT + ' must have a root element.');
@@ -6077,13 +6053,7 @@ var Yox = function () {
 
     extensions && extend(instance, extensions);
 
-    var source;
-    if (object(propTypes)) {
-      instance.$propTypes = propTypes;
-      source = Yox.validate(props || {}, propTypes);
-    } else {
-      source = props || {};
-    }
+    var source = this.checkPropTypes(props || {});
 
     if (slots) {
       extend(source, slots);
@@ -6582,19 +6552,64 @@ var Yox = function () {
   };
 
   /**
+   * 校验组件参数
+   *
+   * @param {Object} props
+   * @return {?Object}
+   */
+
+
+  Yox.prototype.checkPropTypes = function (props) {
+    var propTypes = this.$options.propTypes;
+
+    return propTypes ? Yox.checkPropTypes(props, tpropTypes) : props;
+  };
+
+  /**
    * 创建子组件
    *
    * @param {Object} options 组件配置
-   * @param {?Object} extra 添加进组件配置，但不修改配置的数据，比如 el、props 等
+   * @param {?Object} vnode 虚拟节点
+   * @param {?HTMLElement} el DOM 元素
    * @return {Yox} 子组件实例
    */
 
 
-  Yox.prototype.create = function (options, extra) {
-    options = extend({}, options, extra);
+  Yox.prototype.create = function (options, vnode, el) {
+
+    options = copy(options);
     options.parent = this;
+
+    if (vnode && el) {
+
+      options.el = el;
+      options.replace = TRUE;
+      options.slots = vnode.slots;
+
+      var attrs = vnode.attrs,
+          directives = vnode.directives,
+          modelKeypath = directives && directives.model && directives.model[RAW_VALUE];
+
+
+      if (modelKeypath) {
+        if (!attrs) {
+          attrs = vnode.attrs = {};
+        }
+        var field = options.model || RAW_VALUE;
+        if (!has$1(attrs, field)) {
+          attrs[field] = vnode.instance.get(modelKeypath);
+        }
+        options.extensions = {
+          $model: field
+        };
+      }
+
+      options.props = attrs;
+    }
+
     var child = new Yox(options);
     push(this.$children || (this.$children = []), child);
+
     return child;
   };
 
@@ -6837,7 +6852,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.61.9';
+Yox.version = '0.62.0';
 
 /**
  * 工具，便于扩展、插件使用
@@ -6950,16 +6965,22 @@ Yox.compile = function (template) {
  * @param {Object} propTypes 数据格式
  * @return {Object} 验证通过的数据
  */
-Yox.validate = function (props, propTypes) {
-  var result = {};
+Yox.checkPropTypes = function (props, propTypes) {
+  var result = copy(props);
   each$1(propTypes, function (rule, key) {
 
+    // 类型
     var type = rule[RAW_TYPE],
-        value = rule[RAW_VALUE],
-        required = rule.required;
+
+    // 默认值
+    value = rule[RAW_VALUE],
+
+    // 是否必传
+    required = rule.required;
 
     required = required === TRUE || func(required) && required(props);
 
+    // 传了数据
     if (isDef(props[key])) {
       var target = props[key];
       if (func(rule)) {
@@ -6984,20 +7005,14 @@ Yox.validate = function (props, propTypes) {
             // 比如当 a 有值时，b 可以为空之类的
             matched = type(target, props);
           }
-          if (matched === TRUE) {
-            result[key] = target;
-          } else {
-            warn('"' + key + '" prop\'s type is not matched.');
+          if (matched !== TRUE) {
+            warn('The prop "' + key + '" ' + RAW_TYPE + ' is not matched.');
           }
         }
     } else if (required) {
-      warn('"' + key + '" prop is not found.');
+      warn('The prop "' + key + '" is marked as required, but its ' + RAW_VALUE + ' is "' + RAW_UNDEFINED + '".');
     } else if (has$1(rule, RAW_VALUE)) {
-      if (type === RAW_FUNCTION) {
-        result[key] = value;
-      } else {
-        result[key] = func(value) ? value(props) : value;
-      }
+      result[key] = type === RAW_FUNCTION ? value : func(value) ? value(props) : value;
     }
   });
   return result;
