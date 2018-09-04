@@ -603,7 +603,7 @@ export default class Yox {
   checkPropTypes(props) {
     let { propTypes } = this.$options
     return propTypes
-      ? Yox.checkPropTypes(props, tpropTypes)
+      ? Yox.checkPropTypes(props, propTypes)
       : props
   }
 
@@ -875,7 +875,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.62.0'
+Yox.version = '0.62.1'
 
 /**
  * 工具，便于扩展、插件使用

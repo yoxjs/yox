@@ -6408,7 +6408,7 @@ var Yox = function () {
   Yox.prototype.checkPropTypes = function (props) {
     var propTypes = this.$options.propTypes;
 
-    return propTypes ? Yox.checkPropTypes(props, tpropTypes) : props;
+    return propTypes ? Yox.checkPropTypes(props, propTypes) : props;
   };
 
   /**
@@ -6698,7 +6698,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.62.0';
+Yox.version = '0.62.1';
 
 /**
  * 工具，便于扩展、插件使用
