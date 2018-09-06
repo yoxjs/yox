@@ -4096,7 +4096,7 @@ function render(render, getter, instance) {
           addAttr(name, value);
         } else {
           if (name === DIRECTIVE_MODEL) {
-            value = (o(expr), expr[RAW_ABSOLUTE_KEYPATH]);
+            value = (o(expr, expr[RAW_STATIC_KEYPATH]), expr[RAW_ABSOLUTE_KEYPATH]);
           } else if (has$1(node, RAW_VALUE)) {
             value = node[RAW_VALUE];
           } else if (has$1(node, RAW_CHILDREN)) {
@@ -6698,7 +6698,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.62.1';
+Yox.version = '0.62.2';
 
 /**
  * 工具，便于扩展、插件使用
