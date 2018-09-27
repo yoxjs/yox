@@ -6599,7 +6599,10 @@ var Yox = function () {
       var attrs = vnode.attrs;
 
 
-      if (attrs && vnode.model) {
+      if (vnode.model) {
+        if (!attrs) {
+          attrs = {};
+        }
         var field = options.model || RAW_VALUE;
         if (!has$1(attrs, field)) {
           attrs[field] = vnode.instance.get(vnode.model);
@@ -6857,7 +6860,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.62.4';
+Yox.version = '0.62.5';
 
 /**
  * 工具，便于扩展、插件使用
