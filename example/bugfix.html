@@ -25,8 +25,19 @@
     <script>
         Yox.component({
               Button1: {
+                  propTypes: {
+                    value: {
+                      type: 'string',
+                      value: 'xx'
+                    }
+                  },
                   template: `
+                    <div>
                       <Button2 {{...this}} />
+                      <span>
+                        {{value}}
+                      </span>
+                    </div>
                   `
                 },
                 Button2: {
@@ -46,12 +57,20 @@
             el: '#app',
               data: {
                   disabled: false,
-                  submiting: false
+                  submiting: false,
+                  a: {
+                    b: [
+                      { name: '12312' }
+                    ]
+                  },
+                  title: '123123'
               },
               template: `
-                  <Button1 disabled="{{disabled}}" on-click="clickButton()">
-                      123{{submiting ? 'Submiting' : 'Submit'}}
-                  </Button1>
+                  <div>
+                    <Button1 disabled="{{disabled}}" on-click="clickButton()" model="title">
+                        123{{submiting ? 'Submiting' : 'Submit'}}
+                    </Button1>
+                  </div>
               `,
               methods: {
                 clickButton: function () {

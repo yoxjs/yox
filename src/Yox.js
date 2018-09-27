@@ -261,7 +261,9 @@ export default class Yox {
    * @param {?*} value
    */
   set(keypath, value) {
-    this.$observer.set(keypath, value)
+    // 组件经常有各种异步改值，为了避免组件销毁后依然调用 set
+    // 这里判断一下，至于其他方法的异步调用就算了，业务自己控制吧
+    this.$observer && this.$observer.set(keypath, value)
   }
 
   /**
@@ -626,16 +628,12 @@ export default class Yox {
       options.replace = env.TRUE
       options.slots = vnode.slots
 
-      let { attrs, directives } = vnode,
-      modelKeypath = directives && directives.model && directives.model[ env.RAW_VALUE ]
+      let { attrs } = vnode
 
-      if (modelKeypath) {
-        if (!attrs) {
-          attrs = vnode.attrs = { }
-        }
+      if (attrs && attrs.$model) {
         let field = options.model || env.RAW_VALUE
         if (!object.has(attrs, field)) {
-          attrs[ field ] = vnode.instance.get(modelKeypath)
+          attrs[ field ] = vnode.instance.get(attrs.$model)
         }
         options.extensions = {
           $model: field,
@@ -875,7 +873,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.62.2'
+Yox.version = '0.62.3'
 
 /**
  * 工具，便于扩展、插件使用

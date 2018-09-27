@@ -1520,6 +1520,11 @@ function updateComponent(vnode, oldVnode) {
   if (vnode[RAW_COMPONENT]) {
     el = this[RAW_COMPONENT](vnode.data.id);
     if (attrs) {
+      // 如果有双向绑定，要把它的值取出来放进 attrs
+      var modelField = el.$model;
+      if (attrs.$model && modelField && !has$1(attrs, modelField)) {
+        attrs[modelField] = instance.get(attrs.$model);
+      }
       el.set(el.checkPropTypes(attrs));
     }
     el.set(vnode.slots);
@@ -4143,6 +4148,7 @@ function render(render, getter, instance) {
         } else {
           if (name === DIRECTIVE_MODEL) {
             value = (o(expr, expr[RAW_STATIC_KEYPATH]), expr[RAW_ABSOLUTE_KEYPATH]);
+            addAttr('$model', value);
           } else if (has$1(node, RAW_VALUE)) {
             value = node[RAW_VALUE];
           } else if (has$1(node, RAW_CHILDREN)) {
@@ -6223,7 +6229,9 @@ var Yox = function () {
 
 
   Yox.prototype.set = function (keypath, value) {
-    this.$observer.set(keypath, value);
+    // 组件经常有各种异步改值，为了避免组件销毁后依然调用 set
+    // 这里判断一下，至于其他方法的异步调用就算了，业务自己控制吧
+    this.$observer && this.$observer.set(keypath, value);
   };
 
   /**
@@ -6586,18 +6594,13 @@ var Yox = function () {
       options.replace = TRUE;
       options.slots = vnode.slots;
 
-      var attrs = vnode.attrs,
-          directives = vnode.directives,
-          modelKeypath = directives && directives.model && directives.model[RAW_VALUE];
+      var attrs = vnode.attrs;
 
 
-      if (modelKeypath) {
-        if (!attrs) {
-          attrs = vnode.attrs = {};
-        }
+      if (attrs && attrs.$model) {
         var field = options.model || RAW_VALUE;
         if (!has$1(attrs, field)) {
-          attrs[field] = vnode.instance.get(modelKeypath);
+          attrs[field] = vnode.instance.get(attrs.$model);
         }
         options.extensions = {
           $model: field
@@ -6852,7 +6855,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.62.2';
+Yox.version = '0.62.3';
 
 /**
  * 工具，便于扩展、插件使用
