@@ -1514,6 +1514,7 @@ function updateComponent(vnode, oldVnode) {
 
   var el = vnode.el,
       attrs = vnode.attrs,
+      model = vnode.model,
       instance = vnode.instance,
       ref = vnode[RAW_REF];
 
@@ -1522,8 +1523,8 @@ function updateComponent(vnode, oldVnode) {
     if (attrs) {
       // 如果有双向绑定，要把它的值取出来放进 attrs
       var modelField = el.$model;
-      if (attrs.$model && modelField && !has$1(attrs, modelField)) {
-        attrs[modelField] = instance.get(attrs.$model);
+      if (model && modelField && !has$1(attrs, modelField)) {
+        attrs[modelField] = instance.get(model);
       }
       el.set(el.checkPropTypes(attrs));
     }
@@ -1595,7 +1596,7 @@ function createTextVnode(text) {
   };
 }
 
-function createElementVnode(tag, attrs$$1, props$$1, directives$$1, children, slots, ref, key, instance, hooks) {
+function createElementVnode(tag, attrs$$1, props$$1, directives$$1, children, slots, model, ref, key, instance, hooks) {
   return {
     tag: tag,
     attrs: attrs$$1,
@@ -1603,6 +1604,7 @@ function createElementVnode(tag, attrs$$1, props$$1, directives$$1, children, sl
     directives: directives$$1,
     children: children,
     slots: slots,
+    model: model,
     ref: ref,
     key: key,
     instance: instance,
@@ -1611,8 +1613,8 @@ function createElementVnode(tag, attrs$$1, props$$1, directives$$1, children, sl
   };
 }
 
-function createComponentVnode(tag, attrs$$1, props$$1, directives$$1, children, slots, ref, key, instance, hooks) {
-  var vnode = createElementVnode(tag, attrs$$1, props$$1, directives$$1, children, slots, ref, key, instance, hooks);
+function createComponentVnode(tag, attrs$$1, props$$1, directives$$1, children, slots, model, ref, key, instance, hooks) {
+  var vnode = createElementVnode(tag, attrs$$1, props$$1, directives$$1, children, slots, model, ref, key, instance, hooks);
   vnode[RAW_COMPONENT] = TRUE;
   return vnode;
 }
@@ -4148,7 +4150,7 @@ function render(render, getter, instance) {
         } else {
           if (name === DIRECTIVE_MODEL) {
             value = (o(expr, expr[RAW_STATIC_KEYPATH]), expr[RAW_ABSOLUTE_KEYPATH]);
-            addAttr('$model', value);
+            currentElement.model = value;
           } else if (has$1(node, RAW_VALUE)) {
             value = node[RAW_VALUE];
           } else if (has$1(node, RAW_CHILDREN)) {
@@ -4290,7 +4292,7 @@ function render(render, getter, instance) {
       }
     }
 
-    var result = snabbdom[component ? 'createComponentVnode' : 'createElementVnode'](tag, currentElement.attrs, currentElement.props, currentElement.directives, children, currentElement.slots, ref, key, instance, instance.transition(transition));
+    var result = snabbdom[component ? 'createComponentVnode' : 'createElementVnode'](tag, currentElement.attrs, currentElement.props, currentElement.directives, children, currentElement.slots, currentElement.model, ref, key, instance, instance.transition(transition));
 
     popElement(lastElement);
 
@@ -6597,10 +6599,10 @@ var Yox = function () {
       var attrs = vnode.attrs;
 
 
-      if (attrs && attrs.$model) {
+      if (attrs && vnode.model) {
         var field = options.model || RAW_VALUE;
         if (!has$1(attrs, field)) {
-          attrs[field] = vnode.instance.get(attrs.$model);
+          attrs[field] = vnode.instance.get(vnode.model);
         }
         options.extensions = {
           $model: field
@@ -6855,7 +6857,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.62.3';
+Yox.version = '0.62.4';
 
 /**
  * 工具，便于扩展、插件使用

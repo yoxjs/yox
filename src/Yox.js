@@ -630,10 +630,10 @@ export default class Yox {
 
       let { attrs } = vnode
 
-      if (attrs && attrs.$model) {
+      if (attrs && vnode.model) {
         let field = options.model || env.RAW_VALUE
         if (!object.has(attrs, field)) {
-          attrs[ field ] = vnode.instance.get(attrs.$model)
+          attrs[ field ] = vnode.instance.get(vnode.model)
         }
         options.extensions = {
           $model: field,
@@ -873,7 +873,7 @@ export default class Yox {
  *
  * @type {string}
  */
-Yox.version = '0.62.3'
+Yox.version = '0.62.4'
 
 /**
  * 工具，便于扩展、插件使用
