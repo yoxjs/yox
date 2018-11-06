@@ -5129,11 +5129,11 @@ extend(Observer.prototype, {
         asyncEmitter = this.asyncEmitter;
 
     if (string(keypath)) {
-      emitter.off(keypath, watcher);
+      emitter.off(keypath, watcher.link || watcher);
       asyncEmitter.off(keypath, watcher);
     } else if (object(keypath)) {
       each$1(keypath, function (watcher, keypath) {
-        emitter.off(keypath, watcher);
+        emitter.off(keypath, watcher.link || watcher);
         asyncEmitter.off(keypath, watcher);
       });
     }
@@ -5146,18 +5146,29 @@ function createWatch(action) {
   var watch = function (instance, keypath, func$$1, sync, computed) {
     var context = instance.context;
 
+    // 同步回调
 
-    instance.emitter[action](keypath, {
-      func: computed ? func$$1 : instance.onChange,
-      context: computed ? computed : instance
-    });
+    var syncFunc;
 
     if (!computed) {
+      // 不用直接引用 instance.onChange
+      // 避免 onChange 被多处引用，解绑会出问题
+      syncFunc = function (oldValue, keypath) {
+        instance.onChange(oldValue, keypath);
+      };
+      func$$1.link = syncFunc;
+
+      // 设置异步回调
       instance.asyncEmitter[action](keypath, {
         func: func$$1,
         context: context
       });
     }
+
+    instance.emitter[action](keypath, {
+      func: syncFunc || func$$1,
+      context: computed || instance
+    });
 
     if (sync) {
       execute(func$$1, context, [instance.get(keypath), UNDEFINED, keypath]);
@@ -6706,7 +6717,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.62.5';
+Yox.version = '0.62.6';
 
 /**
  * 工具，便于扩展、插件使用
