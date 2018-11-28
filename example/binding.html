@@ -190,7 +190,7 @@
 
                 <div class="field">
                     <label class="title">
-                        select
+                        single select
                     </label>
                 </div>
                 <div class="field">
@@ -204,6 +204,25 @@
                 </div>
                 <div class="ui message">
                     选中的用户：{{selectedUser}}
+                </div>
+
+
+                <div class="field">
+                    <label class="title">
+                        multi select
+                    </label>
+                </div>
+                <div class="field">
+                    <select multiple="multiple" model="selectedNames">
+                    {{#each users}}
+                        <option>
+                            {{name}}
+                        </option>
+                    {{/each}}
+                    </select>
+                </div>
+                <div class="ui message">
+                    选中的用户：{{formatSelectedNames(selectedNames)}}
                 </div>
 
             </form>

@@ -5688,20 +5688,38 @@ var inputControl = {
 
 var selectControl = {
   set: function set$$1(el, keypath, instance) {
-    var value = toString$1(instance.get(keypath));
-    var options = el.options;
-
+    var value = instance.get(keypath),
+        options = el.options,
+        task;
     if (options) {
-      each(options, function (option, index) {
-        if (getOptionValue(option) === value) {
-          el.selectedIndex = index;
-          return FALSE;
-        }
-      });
+      if (el.multiple) {
+        task = function (option) {
+          option.selected = has(value, getOptionValue(option), false);
+        };
+      } else {
+        task = function (option, index) {
+          if (getOptionValue(option) == value) {
+            el.selectedIndex = index;
+            return FALSE;
+          }
+        };
+      }
+      each(options, task);
     }
   },
   sync: function sync(el, keypath, instance) {
-    instance.set(keypath, getOptionValue(el.options[el.selectedIndex]));
+    var values = [];
+    each(el.selectedOptions, function (option) {
+      push(values, getOptionValue(option));
+    });
+    if (el.multiple) {
+      // 如果新旧值都是 []，set 没有意义
+      if (!falsy(values) || !falsy(instance.get(keypath))) {
+        instance.set(keypath, values);
+      }
+    } else {
+      instance.set(keypath, values[0]);
+    }
   }
 };
 
@@ -6717,7 +6735,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.62.6';
+Yox.version = '0.62.7';
 
 /**
  * 工具，便于扩展、插件使用

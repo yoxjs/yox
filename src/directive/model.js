@@ -38,22 +38,44 @@ const inputControl = {
 
 const selectControl = {
   set(el, keypath, instance) {
-    let value = toString(instance.get(keypath))
-    let { options } = el
+    let value = instance.get(keypath), options = el.options, task
     if (options) {
-      array.each(
-        options,
-        function (option, index) {
-          if (getOptionValue(option) === value) {
+      if (el.multiple) {
+        task = function (option) {
+          option.selected = array.has(value, getOptionValue(option), false)
+        }
+      }
+      else {
+        task = function (option, index) {
+          if (getOptionValue(option) == value) {
             el.selectedIndex = index
             return env.FALSE
           }
         }
-      )
+      }
+      array.each(options, task)
     }
   },
   sync(el, keypath, instance) {
-    instance.set(keypath, getOptionValue(el.options[ el.selectedIndex ]))
+    let values = [ ]
+    array.each(
+      el.selectedOptions,
+      function (option) {
+        array.push(
+          values,
+          getOptionValue(option)
+        )
+      }
+    )
+    if (el.multiple) {
+      // 如果新旧值都是 []，set 没有意义
+      if (!array.falsy(values) || !array.falsy(instance.get(keypath))) {
+        instance.set(keypath, values)
+      }
+    }
+    else {
+      instance.set(keypath, values[ 0 ])
+    }
   },
 }
 
