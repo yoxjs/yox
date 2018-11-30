@@ -42,7 +42,7 @@ const selectControl = {
     if (options) {
       if (el.multiple) {
         task = function (option) {
-          option.selected = array.has(value, getOptionValue(option), false)
+          option.selected = array.has(value, getOptionValue(option), env.FALSE)
         }
       }
       else {
@@ -57,24 +57,32 @@ const selectControl = {
     }
   },
   sync(el, keypath, instance) {
-    let values = [ ]
-    array.each(
-      el.selectedOptions,
-      function (option) {
-        array.push(
-          values,
-          getOptionValue(option)
-        )
-      }
-    )
+    let options = el.options
     if (el.multiple) {
+      let values = [ ]
+      array.each(
+        options,
+        function (option) {
+          if (option.selected) {
+            array.push(
+              values,
+              getOptionValue(option)
+            )
+          }
+        }
+      )
       // 如果新旧值都是 []，set 没有意义
       if (!array.falsy(values) || !array.falsy(instance.get(keypath))) {
         instance.set(keypath, values)
       }
     }
     else {
-      instance.set(keypath, values[ 0 ])
+      instance.set(
+        keypath,
+        getOptionValue(
+          options[el.selectedIndex]
+        )
+      )
     }
   },
 }

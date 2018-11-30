@@ -5848,7 +5848,7 @@ var selectControl = {
     if (options) {
       if (el.multiple) {
         task = function (option) {
-          option.selected = has(value, getOptionValue(option), false);
+          option.selected = has(value, getOptionValue(option), FALSE);
         };
       } else {
         task = function (option, index) {
@@ -5862,17 +5862,20 @@ var selectControl = {
     }
   },
   sync: function sync(el, keypath, instance) {
-    var values = [];
-    each(el.selectedOptions, function (option) {
-      push(values, getOptionValue(option));
-    });
+    var options = el.options;
     if (el.multiple) {
+      var values = [];
+      each(options, function (option) {
+        if (option.selected) {
+          push(values, getOptionValue(option));
+        }
+      });
       // 如果新旧值都是 []，set 没有意义
       if (!falsy(values) || !falsy(instance.get(keypath))) {
         instance.set(keypath, values);
       }
     } else {
-      instance.set(keypath, values[0]);
+      instance.set(keypath, getOptionValue(options[el.selectedIndex]));
     }
   }
 };
@@ -6889,7 +6892,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.62.7';
+Yox.version = '0.62.8';
 
 /**
  * 工具，便于扩展、插件使用
