@@ -3502,11 +3502,11 @@ var Text = function (_Node) {
 }(Node$2);
 
 var delimiterPattern = /(\{?\{\{)\s*([^\}]+?)\s*(\}\}\}?)/;
-var openingTagPattern = /<(\/)?([a-z][-a-z0-9]*)/i;
+var openingTagPattern = /<(\/)?([$a-z][-a-z0-9]*)/i;
 var closingTagPattern = /^\s*(\/)?>/;
 var attributePattern = /^\s*([-:\w]+)(?:=(['"]))?/;
 // 首字母大写，或中间包含 -
-var componentNamePattern = /^[A-Z]|-/;
+var componentNamePattern = /^[$A-Z]|-/;
 var selfClosingTagNames = ['area', 'base', 'embed', 'track', 'source', 'param', 'input', RAW_SLOT, 'col', 'img', 'br', 'hr'];
 
 // 缓存编译结果
@@ -4244,6 +4244,11 @@ function render(render, getter, instance) {
         addSlot(SLOT_DATA_PREFIX + RAW_CHILDREN, children);
         children = UNDEFINED;
       }
+    }
+
+    if (startsWith(tag, '$')) {
+      var name = slice(tag, 1);
+      tag = o(new Identifier(name, name));
     }
 
     var result = snabbdom[component ? 'createComponentVnode' : 'createElementVnode'](tag, currentElement.attrs, currentElement.props, currentElement.directives, children, currentElement.slots, currentElement.model, ref, key, instance, instance.transition(transition));
@@ -6738,7 +6743,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.62.8';
+Yox.version = '0.62.9';
 
 /**
  * 工具，便于扩展、插件使用
