@@ -4029,7 +4029,6 @@ function render(render, getter, instance) {
       currentComponent,
       componentStack = [],
       pushComponent = function (component) {
-    component.slots = {};
     currentComponent = component;
     push(componentStack, component);
   },
@@ -4071,16 +4070,18 @@ function render(render, getter, instance) {
     }
   },
       addSlot = function (name, slot) {
+    var slots = currentComponent.slots || (currentComponent.slots = {});
     if (slot[RAW_LENGTH]) {
-      var _currentComponent = currentComponent,
-          slots = _currentComponent.slots;
-
       if (slots[name]) {
         push(slots[name], slot);
       } else {
         slots[name] = slot;
       }
     }
+    // slot 即使是空也必须覆盖组件旧值
+    else {
+        slots[name] = UNDEFINED;
+      }
   },
       attrHandler = function (node) {
     if (isDef(node)) {
@@ -4239,20 +4240,15 @@ function render(render, getter, instance) {
       props();
     }
 
-    var childrenSlotName = SLOT_DATA_PREFIX + RAW_CHILDREN,
-        children;
+    var children;
     if (childs) {
       children = currentElement[RAW_CHILDREN] = [];
       childs();
       if (component) {
-        addSlot(childrenSlotName, children);
+        addSlot(SLOT_DATA_PREFIX + RAW_CHILDREN, children);
         children = UNDEFINED;
       }
     }
-    // slot children 即使是空也必须覆盖组件旧值
-    else if (component) {
-        currentComponent.slots[childrenSlotName] = UNDEFINED;
-      }
 
     if (startsWith(tag, '$')) {
       var name = slice(tag, 1);
