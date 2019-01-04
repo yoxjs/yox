@@ -4075,6 +4075,7 @@ function render(render, getter, instance) {
       currentComponent,
       componentStack = [],
       pushComponent = function (component) {
+    component.slots = {};
     currentComponent = component;
     push(componentStack, component);
   },
@@ -4117,7 +4118,9 @@ function render(render, getter, instance) {
   },
       addSlot = function (name, slot) {
     if (slot[RAW_LENGTH]) {
-      var slots = currentComponent.slots || (currentComponent.slots = {});
+      var _currentComponent = currentComponent,
+          slots = _currentComponent.slots;
+
       if (slots[name]) {
         push(slots[name], slot);
       } else {
@@ -4282,15 +4285,20 @@ function render(render, getter, instance) {
       props();
     }
 
-    var children;
+    var childrenSlotName = SLOT_DATA_PREFIX + RAW_CHILDREN,
+        children;
     if (childs) {
       children = currentElement[RAW_CHILDREN] = [];
       childs();
       if (component) {
-        addSlot(SLOT_DATA_PREFIX + RAW_CHILDREN, children);
+        addSlot(childrenSlotName, children);
         children = UNDEFINED;
       }
     }
+    // slot children 即使是空也必须覆盖组件旧值
+    else if (component) {
+        currentComponent.slots[childrenSlotName] = UNDEFINED;
+      }
 
     if (startsWith(tag, '$')) {
       var name = slice(tag, 1);
@@ -6897,7 +6905,7 @@ var Yox = function () {
   return Yox;
 }();
 
-Yox.version = '0.62.9';
+Yox.version = '0.63.0';
 
 /**
  * 工具，便于扩展、插件使用
