@@ -4,6 +4,12 @@ Just like Vue, but it is more lightweight and easy than Vue.
 
 The key is that yox supports IE6.
 
+watch 改成如下格式：
+
+```
+instance.watch('keypath', function () {}, true)
+```
+
 > QQ 群 232021930，**可用于生产环境，没有 Vue 使用经验不建议使用，谢谢**。
 
 > 关于未来版本的重要提示：

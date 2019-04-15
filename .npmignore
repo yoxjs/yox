@@ -6,3 +6,4 @@ example
 edp-*
 *.sketch
 package-lock.json
+yarn.lock
