@@ -1,6 +1,5 @@
-
 import isDef from 'yox-common/function/isDef'
-import * as env from 'yox-common/util/env'
+import * as keypathUtil from 'yox-common/util/keypath'
 
 import VNode from 'yox-template-compiler/src/vnode/VNode'
 import Binding from 'yox-template-compiler/src/vnode/Binding'
@@ -11,24 +10,28 @@ import Yox from '../Yox'
 export default {
   bind(el: HTMLElement | Yox, node: Binding, vnode: VNode) {
 
-    const { binding } = node
+    // binding 可能是模糊匹配
+    // 比如延展属性 {{...obj}}，这里 binding 会是 `obj.*`
+    const { binding } = node, isFuzzy = keypathUtil.isFuzzy(binding)
 
     let set = function (newValue: any, oldValue: any, keypath: string) {
-      let name = node.name
-      if (el instanceof Yox) {
-        el.set(name, value)
+
+      const name = isFuzzy
+        ? keypathUtil.matchFuzzy(keypath, binding)
+        : node.name
+
+      if (vnode.isComponent) {
+        el.set(name, newValue)
       }
       else if (isDef(node.hint)) {
-        api.setProp(el, name, value)
+        api.prop(el, name, newValue)
       }
       else {
-        // namespace 怎么办
-        api.setAttr(el, name, value)
+        api.attr(el, name, newValue)
       }
+
     }
 
-    // keypath 可能是模糊匹配
-    // 比如延展属性 {{...obj}}，这里 keypath 会是 `obj.*`
     instance.watch(binding, set)
 
   },

@@ -259,6 +259,9 @@
             watchers: {
                 '**': function () {
                     console.log(arguments);
+                },
+                '*.length': function () {
+                    console.log(arguments);
                 }
             },
             filters: {

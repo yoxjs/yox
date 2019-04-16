@@ -37,10 +37,10 @@
   },
   "homepage": "https://github.com/yoxjs/yox#readme",
   "dependencies": {
-    "yox-common": "0.17.9",
+    "yox-common": "0.18.1",
     "yox-config": "0.1.3",
     "yox-expression-compiler": "0.16.2",
-    "yox-observer": "0.17.7",
-    "yox-template-compiler": "0.27.3"
+    "yox-observer": "0.17.9",
+    "yox-template-compiler": "0.27.5"
   }
 }

@@ -11,17 +11,14 @@ import * as array from 'yox-common/util/array'
 import * as object from 'yox-common/util/object'
 import * as string from 'yox-common/util/string'
 import * as logger from 'yox-common/util/logger'
-import * as keypathUtil from 'yox-common/util/keypath'
 
 // import * as snabbdom from 'yox-snabbdom'
 
 import * as templateCompiler from 'yox-template-compiler/src/compiler'
 import * as templateStringify from 'yox-template-compiler/src/stringify'
 import * as templateRender from 'yox-template-compiler/src/renderer'
-import * as Node from 'yox-template-compiler/src/node/Node'
-
-import * as expressionCompiler from 'yox-expression-compiler'
-import * as expressionNodeType from 'yox-expression-compiler/src/nodeType'
+import VNode from 'yox-template-compiler/src/vnode/VNode'
+import Node from 'yox-template-compiler/src/node/Node'
 
 import Computed from 'yox-observer/src/Computed'
 import Observer from 'yox-observer/src/Observer'
@@ -55,13 +52,17 @@ export default class Yox {
 
   $emitter: Emitter
 
-  $template: Function
+  $template: Function | undefined
 
-  $refs: Record<string, Yox | HTMLElement>
+  $refs: Record<string, Yox | HTMLElement> | undefined
 
   $parent: Yox | undefined
 
   $children: Yox[] | undefined
+
+  $vnode: VNode | undefined
+
+  $el: HTMLElement | undefined
 
   /**
    * 安装插件
@@ -75,14 +76,17 @@ export default class Yox {
   /**
    * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
    */
-  public static nextTick(fn: Function) {
-    NextTask.getInstance().append(fn)
+  public static nextTick(task: Function) {
+    NextTask.getInstance().append(task)
   }
 
   /**
    * 编译模板，暴露出来是为了打包阶段的模板预编译
    */
-  public static compile(template: string): Function[] {
+  public static compile(template: string): Function {
+    if (template.length > 1) {
+      logger.fatal(`"template" option expected to have just one root element.`)
+    }
     return is.string(template)
       ? templateCompiler.compile(template).map(
           function (node: Node) {
@@ -217,7 +221,16 @@ export default class Yox {
 
     // 先放 props
     // 当 data 是函数时，可以通过 this.get() 获取到外部数据
-    instance.$observer = new Observer(source, instance)
+    const observer = instance.$observer = new Observer(source, instance)
+
+    if (computed) {
+      object.each(
+        computed,
+        function (options: Function | Record<string, any>, keypath: string) {
+          observer.addComputed(keypath, options)
+        }
+      )
+    }
 
     // 后放 data
     const extend = is.func(data) ? execute(data, instance, options) : data
@@ -239,8 +252,6 @@ export default class Yox {
     // 支持命名空间
     instance.$emitter = new Emitter(env.TRUE)
 
-    let templateError = `"template" option expected to have just one root element.`
-
     // 检查 template
     if (is.string(template)) {
       if (pattern.selector.test(template)) {
@@ -248,13 +259,9 @@ export default class Yox {
           api.find(template)
         )
       }
-      // 如果是根组件，必须有一个根元素
-      if (!pattern.tag.test(template) && !parent) {
-        logger.error(templateError)
-      }
     }
     else {
-      template = env.NULL
+      template = env.UNDEFINED
     }
 
     // 检查 el
@@ -309,31 +316,42 @@ export default class Yox {
 
     execute(options[ config.HOOK_AFTER_CREATE ], instance)
 
+    // 当存在模板和计算属性时
+    // 因为这里把模板当做一种特殊的计算属性
+    // 因此模板这个计算属性的优先级应该最高，举个例子：
+    // 当某个数据变化时，如果它是模板的依赖，并且是
     if (template) {
 
-      // 确保组件根元素有且只有一个
-      template = Yox.compile(template)
-      if (template[ env.RAW_LENGTH ] > 1) {
-        logger.fatal(templateError)
-      }
-      instance.$template = template[ 0 ]
+      // 编译模板
+      // 在开发阶段，template 是原始的 html 模板
+      // 在产品阶段，template 是编译后且经过 stringify 的字符串
+      // 当然，这个需要外部自己控制传入的 template 是什么
+      // Yox.compile 会自动判断 template 是否经过编译
+      instance.$template = Yox.compile(template)
 
-      instance.$observer.addComputed(
+      // 当模板的依赖变了，则重新创建 virtual dom
+      observer.addComputed(
         TEMPLATE_COMPUTED,
-        function () {
-          return instance.render()
+        {
+          // 当模板依赖变化时，异步通知模板更新
+          sync: env.FALSE,
+          get: function () {
+            return instance.render()
+          }
         }
       )
-      if (watchers) {
-        watchers = object.copy(watchers)
-      }
-      else {
-        watchers = { }
-      }
-      watchers[ TEMPLATE_COMPUTED ] = function (newNode) {
-        instance.updateView(newNode, instance.$node)
+
+      // 拷贝一份，避免影响外部定义的 watchers
+      watchers = watchers
+        ? object.copy(watchers)
+        : { }
+
+      // 当 virtual dom 变了，则更新视图
+      watchers[ TEMPLATE_COMPUTED ] = function (vnode: VNode) {
+        instance.updateView(vnode, instance.$vnode)
       }
 
+      // 第一次渲染视图
       instance.updateView(
         instance.get(TEMPLATE_COMPUTED),
         el || api.createElement('div')
@@ -347,7 +365,7 @@ export default class Yox {
 
     // 确保早于 AFTER_MOUNT 执行
     if (watchers) {
-      nextTask.prepend(
+      observer.nextTask.prepend(
         function () {
           if (instance.$observer) {
             instance.watch(watchers)
@@ -490,18 +508,28 @@ export default class Yox {
    */
   forceUpdate() {
 
-    // if (this.$node) {
-    //   let computed = this.$observer.computed[ TEMPLATE_COMPUTED ]
-    //   if (computed.isDirty()) {
-    //     this.$observer.nextRun()
-    //   }
-    //   else {
-    //     this.updateView(
-    //       computed.get(env.TRUE),
-    //       this.$node
-    //     )
-    //   }
-    // }
+    const instance = this,
+
+    { $vnode, $observer } = instance
+
+    if ($vnode) {
+
+      const computed: Computed = $observer.computed[ TEMPLATE_COMPUTED ],
+
+      oldValue = computed.get()
+
+      // 当前可能正在进行下一轮更新
+      $observer.nextTask.run()
+
+      // 没有更新模板，强制刷新
+      if (oldValue === computed.get()) {
+        instance.updateView(
+          computed.get(env.TRUE),
+          $vnode
+        )
+      }
+
+    }
 
   }
 
@@ -509,63 +537,62 @@ export default class Yox {
    * 把模板抽象语法树渲染成 virtual dom
    */
   render() {
+    return templateRender.render(this, this.$template)
+  }
 
-    const instance = this
+  /**
+   * 更新 virtual dom
+   *
+   * @param vnode
+   * @param oldVnode
+   */
+  updateView(vnode: VNode, oldVnode: HTMLElement | VNode) {
+
+    let instance = this,
+
+    { $vnode, $options } = instance,
+
+    hook: Function | void
 
     // 每次渲染重置 refs
     // 在渲染过程中收集最新的 ref
     // 这样可避免更新时，新的 ref，在前面创建，老的 ref 却在后面删除的情况
     instance.$refs = {}
 
-    return templateRender.render(instance, instance.$template)
-
-  }
-
-  /**
-   * 更新 virtual dom
-   *
-   * @param {Vnode} newNode
-   * @param {HTMLElement|Vnode} oldNode
-   */
-  updateView(newNode, oldNode) {
-
-    let instance = this, { $node, $options } = instance, afterHook
-
-    instance.$flags = { }
-
-    if ($node) {
+    if ($vnode) {
       execute($options[ config.HOOK_BEFORE_UPDATE ], instance)
-      // instance.$node = patch(oldNode, newNode)
-      afterHook = config.HOOK_AFTER_UPDATE
+      // instance.$vnode = patch(oldVnode, vnode)
+      hook = $options[config.HOOK_AFTER_UPDATE]
     }
     else {
       execute($options[ config.HOOK_BEFORE_MOUNT ], instance)
-      // $node = patch(oldNode, newNode)
-      instance.$el = $node.el
-      instance.$node = $node
-      afterHook = config.HOOK_AFTER_MOUNT
+      // $vnode = patch(oldVnode, vnode)
+      instance.$el = $vnode.el as HTMLElement
+      instance.$vnode = $vnode
+      hook = $options[config.HOOK_AFTER_MOUNT]
     }
 
     // 跟 nextTask 保持一个节奏
     // 这样可以预留一些优化的余地
-    nextTask.append(
-      function () {
-        if (instance.$node) {
-          execute($options[ afterHook ], instance)
+    if (hook) {
+      instance.nextTick(
+        function () {
+          if (instance.$vnode) {
+            execute(hook, instance)
+          }
         }
-      }
-    )
+      )
+    }
 
   }
 
   /**
    * 校验组件参数
    *
-   * @param {Object} props
-   * @return {?Object}
+   * @param props
    */
-  checkPropTypes(props) {
-    let { propTypes } = this.$options
+  checkPropTypes(props: Record<string, any>): Record<string, any> {
+    const { propTypes } = this.$options
     return propTypes
       ? Yox.checkPropTypes(props, propTypes)
       : props
@@ -574,12 +601,11 @@ export default class Yox {
   /**
    * 创建子组件
    *
-   * @param {Object} options 组件配置
-   * @param {?Object} vnode 虚拟节点
-   * @param {?HTMLElement} el DOM 元素
-   * @return {Yox} 子组件实例
+   * @param options 组件配置
+   * @param vnode 虚拟节点
+   * @param el DOM 元素
    */
-  create(options, vnode, el) {
+  create(options: Record<string, any>, vnode?: VNode, el?: HTMLElement): Yox {
 
     options = object.copy(options)
     options.parent = this
@@ -590,26 +616,26 @@ export default class Yox {
       options.replace = env.TRUE
       options.slots = vnode.slots
 
-      let { attrs } = vnode
+      let { props, model } = vnode
 
-      if (vnode.model) {
-        if (!attrs) {
-          attrs = { }
+      if (model) {
+        if (!props) {
+          props = { }
         }
-        let field = options.model || env.RAW_VALUE
-        if (!object.has(attrs, field)) {
-          attrs[ field ] = vnode.instance.get(vnode.model)
+        let name = options.model || env.RAW_VALUE
+        if (!object.has(props, name)) {
+          props[ name ] = model.value
         }
         options.extensions = {
-          $model: field,
+          $model: name,
         }
       }
 
-      options.props = attrs
+      options.props = props
 
     }
 
-    let child = new Yox(options)
+    const child = new Yox(options)
     array.push(
       this.$children || (this.$children = [ ]),
       child
@@ -623,11 +649,11 @@ export default class Yox {
    */
   destroy() {
 
-    let instance = this
+    const instance = this,
 
-    let {
+    {
       $options,
-      $node,
+      $vnode,
       $parent,
       $emitter,
       $observer,
@@ -639,8 +665,8 @@ export default class Yox {
       array.remove($parent.$children, instance)
     }
 
-    if ($node) {
-      // patch($node, snabbdom.createTextVnode(env.EMPTY_STRING))
+    if ($vnode) {
+      // patch($vnode, snabbdom.createTextVnode(env.EMPTY_STRING))
     }
 
     $emitter.off()
@@ -655,8 +681,8 @@ export default class Yox {
   /**
    * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
    */
-  nextTick(fn: Function) {
-    this.$observer.nextTick(fn)
+  nextTick(task: Function) {
+    this.$observer.nextTask.append(task)
   }
 
   /**
@@ -692,17 +718,6 @@ export default class Yox {
    */
   decrease(keypath: string, step = 1, min?: number): number | void {
     return this.$observer.decrease(keypath, step, min)
-  }
-
-  /**
-   * 拷贝任意数据，支持深拷贝
-   *
-   * @param {*} data
-   * @param {?boolean} deep 是否深拷贝
-   * @return {*}
-   */
-  copy(data, deep) {
-    return object.copy(data, deep)
   }
 
   /**
@@ -755,6 +770,17 @@ export default class Yox {
   remove(keypath: string, item: any): boolean | void {
     return this.$observer.remove(keypath, item)
   }
+
+  /**
+   * 拷贝任意数据，支持深拷贝
+   *
+   * @param data
+   * @param deep
+   */
+  copy<T>(data: T, deep?: boolean): T {
+    return this.$observer.copy(data, deep)
+  }
+
 
 }
 
