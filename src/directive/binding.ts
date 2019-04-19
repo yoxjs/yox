@@ -1,50 +1,63 @@
 import isDef from 'yox-common/function/isDef'
+import execute from 'yox-common/function/execute'
+
 import * as keypathUtil from 'yox-common/util/keypath'
 
-import VNode from 'yox-template-compiler/src/vnode/VNode'
-import Binding from 'yox-template-compiler/src/vnode/Binding'
+import VNode from 'yox-type/src/vnode/VNode'
+import Directive from 'yox-type/src/vnode/Directive'
+import DirectiveHook from 'yox-type/src/hook/Directive'
+import Yox from 'yox-type/src/Yox'
 
-import api from '../platform/web/api'
-import Yox from '../Yox'
+import api from 'yox-dom'
 
-export default {
-  bind(el: HTMLElement | Yox, node: Binding, vnode: VNode) {
+const directive: DirectiveHook = {
+
+  bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
 
     // binding 可能是模糊匹配
     // 比如延展属性 {{...obj}}，这里 binding 会是 `obj.*`
-    const { binding } = node, isFuzzy = keypathUtil.isFuzzy(binding)
+    const { binding } = directive
 
-    let set = function (newValue: any, oldValue: any, keypath: string) {
+    if (binding) {
 
-      const name = isFuzzy
-        ? keypathUtil.matchFuzzy(keypath, binding)
-        : node.name
+      const isFuzzy = keypathUtil.isFuzzy(binding),
 
-      if (vnode.isComponent) {
-        el.set(name, newValue)
+      watcher = function (newValue: any, oldValue: any, keypath: string) {
+
+        const name = isFuzzy
+          ? keypathUtil.matchFuzzy(keypath, binding) as string
+          : directive.name
+
+        if (vnode.isComponent) {
+          (node as Yox).set(name, newValue)
+        }
+        else if (isDef(directive.hint)) {
+          api.prop(node as HTMLElement, name, newValue)
+        }
+        else {
+          api.attr(node as HTMLElement, name, newValue)
+        }
+
       }
-      else if (isDef(node.hint)) {
-        api.prop(el, name, newValue)
-      }
-      else {
-        api.attr(el, name, newValue)
+
+      vnode.instance.watch(binding, watcher)
+
+      vnode.data[directive.key] = function () {
+        vnode.instance.unwatch(binding, watcher)
       }
 
     }
 
-    instance.watch(binding, set)
+  },
+
+  update(node: HTMLElement | Yox, directive: Directive, vnode: VNode, oldVnode: VNode) {
 
   },
 
-  update(el: HTMLElement | Yox, node: Binding, vnode: VNode, oldVnode?: VNode) {
-
-  },
-
-  unbind(el: HTMLElement | Yox, node: Binding, vnode: VNode) {
-
-    const { binding } = node
-
-    instance.unwatch(binding, set)
-
+  unbind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
+    execute(vnode.data[directive.key])
   }
+
 }
+
+export default directive

@@ -12,64 +12,82 @@ import * as object from 'yox-common/util/object'
 import * as string from 'yox-common/util/string'
 import * as logger from 'yox-common/util/logger'
 
-// import * as snabbdom from 'yox-snabbdom'
+import * as config from 'yox-config'
+import * as snabbdom from 'yox-snabbdom'
 
 import * as templateCompiler from 'yox-template-compiler/src/compiler'
 import * as templateStringify from 'yox-template-compiler/src/stringify'
 import * as templateRender from 'yox-template-compiler/src/renderer'
-import VNode from 'yox-template-compiler/src/vnode/VNode'
-import Node from 'yox-template-compiler/src/node/Node'
+import VNode from 'yox-type/src/vnode/VNode'
+import YoxInterface from 'yox-type/src/Yox'
+import YoxOptions from 'yox-type/src/options/Yox'
+import YoxPlugin from 'yox-type/src/YoxPlugin'
+import ComputedOptions from 'yox-type/src/options/Computed'
+import WatcherOptions from 'yox-type/src/options/Watcher'
+import DirectiveHooks from 'yox-type/src/hooks/Directive'
+import TransitionHooks from 'yox-type/src/hooks/Transition'
+import PropRule from 'yox-type/src/PropRule'
+import * as signature from 'yox-type/src/type'
 
 import Computed from 'yox-observer/src/Computed'
 import Observer from 'yox-observer/src/Observer'
 
-import * as config from 'yox-config'
+import domApi from 'yox-dom'
 
-import * as pattern from './config/pattern'
+const globalDirectives = {},
 
-import api from './platform/web/api'
+globalComponents = {},
 
-// const patch = snabbdom.init(api)
+globalTransitions = {},
 
-const TEMPLATE = env.RAW_TEMPLATE
-const TEMPLATE_COMPUTED = '$' + TEMPLATE
+globalPartials = {},
 
-interface Plugin {
-  install: Function
-}
+globalFilters = {},
 
-interface PropRule {
-  type: string | string[]
-  value: any | Function
-  required: boolean | Function
-}
+TEMPLATE = env.RAW_TEMPLATE,
 
-export default class Yox {
+TEMPLATE_COMPUTED = '$' + TEMPLATE,
 
-  $options: Record<string, any>
+selectorPattern = /^[#.][-\w+]+$/
+
+export default class Yox implements YoxInterface {
+
+  $options: YoxOptions
 
   $observer: Observer
 
   $emitter: Emitter
 
-  $template: Function | undefined
+  $template?: Function
 
-  $refs: Record<string, Yox | HTMLElement> | undefined
+  $refs: Record<string, YoxInterface | HTMLElement>
 
-  $parent: Yox | undefined
+  $parent?: YoxInterface
 
-  $children: Yox[] | undefined
+  $children?: YoxInterface[]
 
   $vnode: VNode | undefined
 
-  $el: HTMLElement | undefined
+  $el?: HTMLElement
+
+  $model?: string
+
+  $directives?: Record<string, DirectiveHooks>
+
+  $components?: Record<string, YoxOptions>
+
+  $transitions?: Record<string, TransitionHooks>
+
+  $partials?: Record<string, Function>
+
+  $filters?: Record<string, Function | Record<string, Function>>
 
   /**
    * 安装插件
    *
    * 插件必须暴露 install 方法
    */
-  public static use(plugin: Plugin) {
+  public static use(plugin: YoxPlugin) {
     plugin.install(Yox)
   }
 
@@ -84,18 +102,61 @@ export default class Yox {
    * 编译模板，暴露出来是为了打包阶段的模板预编译
    */
   public static compile(template: string): Function {
-    if (template.length > 1) {
-      logger.fatal(`"template" option expected to have just one root element.`)
+    // 已编译，常出现在线上阶段
+    if (!string.startsWith(template, templateStringify.prefix)) {
+      // 未编译，常出现在开发阶段
+      const nodes = templateCompiler.compile(template)
+      if (nodes.length !== 1) {
+        logger.fatal(`"template" expected to have just one root element.`)
+      }
+      template = templateStringify.stringify(nodes[0])
     }
-    return is.string(template)
-      ? templateCompiler.compile(template).map(
-          function (node: Node) {
-            return templateStringify.parse(
-              templateStringify.stringify(node)
-            )
-          }
-        )
-      ? template
+    return new Function(`return ${template}`)()
+  }
+
+  public static directive(name: string | Record<string, DirectiveHooks>, directive?: DirectiveHooks): DirectiveHooks | void {
+    if (is.string(name) && !directive) {
+      return getResource(globalDirectives, name as string)
+    }
+    setResource(globalDirectives, name, directive)
+  }
+
+  public static component(name: string | Record<string, YoxOptions>, component?: YoxOptions | signature.asyncComponent): YoxOptions | void {
+    if (is.string(name)) {
+      // 同步取值
+      if (!component) {
+        return getResource(globalComponents, name as string)
+      }
+      else if (is.func(component)) {
+        getComponentAsync(globalComponents, name as string, component as signature.asyncComponent)
+        return
+      }
+    }
+    setResource(globalComponents, name, component)
+  }
+
+  public static transition(name: string | Record<string, TransitionHooks>, transition?: TransitionHooks): TransitionHooks | void {
+    if (is.string(name) && !transition) {
+      return getResource(globalTransitions, name as string)
+    }
+    setResource(globalTransitions, name, transition)
+  }
+
+  public static partial(name: string | Record<string, string>, partial?: string): Function | void {
+    if (is.string(name) && !partial) {
+      return getResource(globalPartials, name as string)
+    }
+    setResource(globalPartials, name, partial, Yox.compile)
+  }
+
+  public static filter(
+    name: string | Record<string, Function | Record<string, Function>>,
+    filter?: Function | Record<string, Function>
+  ): Function | Record<string, Function> | void {
+    if (is.string(name) && !filter) {
+      return getResource(globalFilters, name as string)
+    }
+    setResource(globalFilters, name, filter)
   }
 
   /**
@@ -127,32 +188,32 @@ export default class Yox {
 
           // 如果不写 type 或 type 不是 字符串 或 数组
           // 就当做此规则无效，和没写一样
-          if (type) {
-            let matched
-            // 比较类型
-            if (!string.falsy(type)) {
-              matched = is.is(target, type)
-            }
-            else if (!array.falsy(type)) {
-              array.each(
-                type,
-                function (t) {
-                  if (is.is(target, t)) {
-                    matched = env.TRUE
-                    return env.FALSE
-                  }
-                }
-              )
-            }
-            else if (is.func(type)) {
-              // 有时候做判断需要参考其他数据
-              // 比如当 a 有值时，b 可以为空之类的
-              matched = type(target, props)
-            }
-            if (matched !== env.TRUE) {
-              logger.warn(`The prop "${key}" ${env.RAW_TYPE} is not matched.`)
-            }
-          }
+          // if (type) {
+          //   let matched
+          //   // 比较类型
+          //   if (!string.falsy(type)) {
+          //     matched = is.is(target, type)
+          //   }
+          //   else if (!array.falsy(type)) {
+          //     array.each(
+          //       type,
+          //       function (t) {
+          //         if (is.is(target, t)) {
+          //           matched = env.TRUE
+          //           return env.FALSE
+          //         }
+          //       }
+          //     )
+          //   }
+          //   else if (is.func(type)) {
+          //     // 有时候做判断需要参考其他数据
+          //     // 比如当 a 有值时，b 可以为空之类的
+          //     matched = type(target, props)
+          //   }
+          //   if (matched !== env.TRUE) {
+          //     logger.warn(`The prop "${key}" ${env.RAW_TYPE} is not matched.`)
+          //   }
+          // }
         }
         else if (required) {
           logger.warn(`The prop "${key}" is marked as required, but its value is not found.`)
@@ -167,9 +228,7 @@ export default class Yox {
     return result
   }
 
-
-
-  constructor(options: Record<string, any>) {
+  constructor(options: YoxOptions) {
 
     const instance = this
 
@@ -207,7 +266,9 @@ export default class Yox {
     }
 
     // 数据源
-    const source = instance.checkPropTypes(props || env.EMPTY_OBJECT)
+    const source = props
+      ? instance.checkPropTypes(props)
+      : {}
 
     // 把 slots 放进数据里，方便 get
     if (slots) {
@@ -226,7 +287,7 @@ export default class Yox {
     if (computed) {
       object.each(
         computed,
-        function (options: Function | Record<string, any>, keypath: string) {
+        function (options: signature.computedGetter | ComputedOptions, keypath: string) {
           observer.addComputed(keypath, options)
         }
       )
@@ -242,7 +303,7 @@ export default class Yox {
             logger.warn(`"${key}" is already defined as a prop. Use prop default value instead.`)
           }
           else {
-            source[ key ] = value
+            source[key] = value
           }
         }
       )
@@ -252,33 +313,53 @@ export default class Yox {
     // 支持命名空间
     instance.$emitter = new Emitter(env.TRUE)
 
+    let holder: HTMLElement | void
+
     // 检查 template
     if (is.string(template)) {
-      if (pattern.selector.test(template)) {
-        template = api.html(
-          api.find(template)
-        )
+      // 传了选择器，则取对应元素的 html
+      if (selectorPattern.test(template)) {
+        holder = domApi.find(template)
+        if (holder) {
+          template = domApi.html(holder) as string
+        }
+        else {
+          logger.fatal(`"${template}" 选择器找不到对应的元素`)
+        }
       }
     }
     else {
       template = env.UNDEFINED
     }
 
-    // 检查 el
-    if (is.string(el) && pattern.selector.test(el)) {
-      el = api.find(el)
-    }
 
-    // 可以不传 el，比如用作纯数据对象
-    if (el) {
-      if (api.isElement(el)) {
-        if (!replace) {
-          api.html(el, '<div></div>')
-          el = api[ env.RAW_CHILDREN ](el)[ 0 ]
+    // 检查 el
+    if (is.string(el)) {
+      const selector = el as string
+      if (selectorPattern.test(selector)) {
+        holder = domApi.find(selector)
+        if (holder) {
+          el = holder
+        }
+        else {
+          logger.fatal(`"${selector}" 选择器找不到对应的元素`)
         }
       }
       else {
-        logger.error('"el" option expected to be a html element.')
+        logger.fatal(`"el" option 格式错误`)
+      }
+    }
+
+    let placeholder: Node | void
+    if (el) {
+      if (replace) {
+        placeholder = el as Node
+      }
+      // 如果不是替换占位元素
+      // 则在该元素下新建一个注释节点，等会用新组件替换掉
+      else {
+        placeholder = domApi.createComment(env.EMPTY_STRING)
+        domApi.append(el as Node, placeholder)
       }
     }
 
@@ -293,7 +374,7 @@ export default class Yox {
           if (instance[name]) {
             logger.fatal(`"${name}" method is conflicted with built-in methods.`)
           }
-          instance[ name ] = method
+          instance[name] = method
         }
       )
     }
@@ -301,10 +382,10 @@ export default class Yox {
     // 聪明的 set...
     let smartSet = function (key: string, value: Function | Record<string, any>) {
       if (is.func(value)) {
-        instance[ key ](execute(value, instance))
+        instance[key](execute(value, instance))
       }
       else if (is.object(value)) {
-        instance[ key ](value)
+        instance[key](value)
       }
     }
 
@@ -318,8 +399,7 @@ export default class Yox {
 
     // 当存在模板和计算属性时
     // 因为这里把模板当做一种特殊的计算属性
-    // 因此模板这个计算属性的优先级应该最高，举个例子：
-    // 当某个数据变化时，如果它是模板的依赖，并且是
+    // 因此模板这个计算属性的优先级应该最高
     if (template) {
 
       // 编译模板
@@ -347,16 +427,22 @@ export default class Yox {
         : { }
 
       // 当 virtual dom 变了，则更新视图
-      watchers[ TEMPLATE_COMPUTED ] = function (vnode: VNode) {
-        instance.updateView(vnode, instance.$vnode)
+      watchers[TEMPLATE_COMPUTED] = function (vnode: VNode) {
+        instance.update(vnode, instance.$vnode)
       }
 
       // 第一次渲染视图
-      instance.updateView(
+      instance.update(
         instance.get(TEMPLATE_COMPUTED),
-        el || api.createElement('div')
+        snabbdom.create(
+          domApi,
+          placeholder || domApi.createComment(env.EMPTY_STRING)
+        )
       )
 
+    }
+    else if (el) {
+      logger.fatal('有 el 没 template 是几个意思？')
     }
 
     if (events) {
@@ -379,8 +465,15 @@ export default class Yox {
   /**
    * 添加计算属性
    */
-  addComputed(keypath: string, computed: Function | Record<string, any>): Computed | void {
+  addComputed(keypath: string, computed: signature.computedGetter | ComputedOptions): Computed | void {
     return this.$observer.addComputed(keypath, computed)
+  }
+
+  /**
+   * 删除计算属性
+   */
+  removeComputed(keypath: string): void {
+    this.$observer.removeComputed(keypath)
   }
 
   /**
@@ -393,7 +486,7 @@ export default class Yox {
   /**
    * 设值
    */
-  set(keypath: string | Record<string, any>, value?: any) {
+  set(keypath: string | Record<string, any>, value?: any): void {
     // 组件经常有各种异步改值，为了避免组件销毁后依然调用 set
     // 这里判断一下，至于其他方法的异步调用就算了，业务自己控制吧
     const { $observer } = this
@@ -405,7 +498,7 @@ export default class Yox {
   /**
    * 监听事件
    */
-  on(type: string | Record<string, Function>, listener?: Function): Yox {
+  on(type: string | Record<string, signature.eventListener>, listener?: signature.eventListener): YoxInterface {
     this.$emitter.on(type, listener)
     return this
   }
@@ -413,7 +506,7 @@ export default class Yox {
   /**
    * 监听一次事件
    */
-  once(type: string | Record<string, Function>, listener?: Function): Yox {
+  once(type: string | Record<string, signature.eventListener>, listener?: signature.eventListener): YoxInterface {
     this.$emitter.once(type, listener)
     return this
   }
@@ -421,7 +514,7 @@ export default class Yox {
   /**
    * 取消监听事件
    */
-  off(type: string, listener?: Function): Yox {
+  off(type: string, listener?: signature.eventListener): YoxInterface {
     this.$emitter.off(type, listener)
     return this
   }
@@ -429,35 +522,34 @@ export default class Yox {
   /**
    * 触发事件
    */
-  fire(type: string | Event, data: Record<string, any> | boolean | void, downward?: boolean): boolean {
+  fire(bullet: string | Event, data?: signature.eventData | boolean, downward?: boolean): boolean {
 
     // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
     // 内部为了保持格式统一
     // 需要转成 Event，这样还能知道 target 是哪个组件
 
-    const instance = this,
+    let instance = this,
 
-    event = is.string(type)
-      ? new Event(type)
-      : type as Event,
+    event = bullet instanceof Event ? bullet : new Event(bullet),
 
-    args: any[] = [ event ]
+    eventData: signature.eventData | void,
+
+    isComplete: boolean | void
 
     // 告诉外部是谁发出的事件
     if (!event.target) {
       event.target = instance
     }
 
-    // 有事件数据
-    if (is.object(data)) {
-      array.push(args, data)
-    }
     // 比如 fire('name', true) 直接向下发事件
+    if (is.object(data)) {
+      eventData = data as Record<string, any>
+    }
     else if (data === env.TRUE) {
       downward = env.TRUE
     }
 
-    let isComplete = instance.$emitter.fire(event.type, args, instance)
+    isComplete = instance.$emitter.fire(event, eventData)
     if (isComplete) {
       if (downward) {
         if (instance.$children) {
@@ -481,7 +573,11 @@ export default class Yox {
   /**
    * 监听数据变化
    */
-  watch(keypath: string | Record<string, any>, watcher?: Function | Record<string, any> | boolean, options?: boolean | Record<string, any>): Yox {
+  watch(
+    keypath: string | Record<string, signature.watcher | WatcherOptions>,
+    watcher?: signature.watcher,
+    options?: WatcherOptions | boolean
+  ): YoxInterface {
     this.$observer.watch(keypath, watcher, options)
     return this
   }
@@ -489,7 +585,11 @@ export default class Yox {
   /**
    * 监听一次数据变化
    */
-  watchOnce(keypath: string | Record<string, any>, watcher?: Function | Record<string, any>, options?: Record<string, any>): Yox {
+  watchOnce(
+    keypath: string,
+    watcher: signature.watcher,
+    options?: WatcherOptions
+  ): YoxInterface {
     this.$observer.watchOnce(keypath, watcher, options)
     return this
   }
@@ -497,16 +597,92 @@ export default class Yox {
   /**
    * 取消监听数据变化
    */
-  unwatch(keypath: string, watcher: Function | Record<string, any>): Yox {
+  unwatch(
+    keypath: string,
+    watcher?: signature.watcher
+  ): YoxInterface {
     this.$observer.unwatch(keypath, watcher)
     return this
+  }
+
+  directive(name: string | Record<string, DirectiveHooks>, directive?: DirectiveHooks): DirectiveHooks | void {
+    const instance = this, { $directives } = instance
+    if (is.string(name) && !directive) {
+      return getResource($directives, name as string, Yox.directive)
+    }
+    setResource(
+      $directives || (instance.$directives = {}),
+      name,
+      directive
+    )
+  }
+
+  component(name: string | Record<string, YoxOptions>, component?: YoxOptions | signature.asyncComponent): YoxOptions | void {
+    const instance = this, { $components } = instance
+    if (is.string(name)) {
+      // 同步取值
+      if (!component) {
+        return getResource($components, name as string, Yox.component)
+      }
+      else if (is.func(component)) {
+        if (!getComponentAsync($components, name as string, component as signature.asyncComponent)) {
+          getComponentAsync(globalComponents, name as string, component as signature.asyncComponent)
+        }
+        return
+      }
+    }
+    setResource(
+      $components || (instance.$components = {}),
+      name,
+      component
+    )
+  }
+
+  transition(name: string | Record<string, TransitionHooks>, transition?: TransitionHooks): TransitionHooks | void {
+    const instance = this, { $transitions } = instance
+    if (is.string(name) && !transition) {
+      return getResource($transitions, name as string, Yox.transition)
+    }
+    setResource(
+      $transitions || (instance.$transitions = {}),
+      name,
+      transition
+    )
+  }
+
+  partial(name: string | Record<string, string>, partial?: string): Function | void {
+    const instance = this, { $partials } = instance
+    if (is.string(name) && !partial) {
+      return getResource($partials, name as string, Yox.partial)
+    }
+    setResource(
+      $partials || (instance.$partials = {}),
+      name,
+      partial,
+      Yox.compile
+    )
+  }
+
+  filter(
+    name: string | Record<string, Function | Record<string, Function>>,
+    filter?: Function | Record<string, Function>
+  ): Function | Record<string, Function> | void {
+    const instance = this, { $filters } = instance
+    if (is.string(name) && !filter) {
+      return getResource($filters, name as string, Yox.filter)
+    }
+    setResource(
+      $filters || (instance.$filters = {}),
+      name,
+      filter
+    )
   }
 
   /**
    * 对于某些特殊场景，修改了数据，但是模板的依赖中并没有这一项
    * 而你非常确定需要更新模板，强制刷新正是你需要的
    */
-  forceUpdate() {
+  forceUpdate(): void {
 
     const instance = this,
 
@@ -523,7 +699,7 @@ export default class Yox {
 
       // 没有更新模板，强制刷新
       if (oldValue === computed.get()) {
-        instance.updateView(
+        instance.update(
           computed.get(env.TRUE),
           $vnode
         )
@@ -546,7 +722,7 @@ export default class Yox {
    * @param vnode
    * @param oldVnode
    */
-  updateView(vnode: VNode, oldVnode: HTMLElement | VNode) {
+  update(vnode: VNode, oldVnode: VNode) {
 
     let instance = this,
 
@@ -561,13 +737,13 @@ export default class Yox {
 
     if ($vnode) {
       execute($options[ config.HOOK_BEFORE_UPDATE ], instance)
-      // instance.$vnode = patch(oldVnode, vnode)
+      snabbdom.patch(domApi, vnode, oldVnode)
       hook = $options[config.HOOK_AFTER_UPDATE]
     }
     else {
       execute($options[ config.HOOK_BEFORE_MOUNT ], instance)
-      // $vnode = patch(oldVnode, vnode)
-      instance.$el = $vnode.el as HTMLElement
+      snabbdom.patch(domApi, vnode, oldVnode)
+      instance.$el = $vnode.node as HTMLElement
       instance.$vnode = $vnode
       hook = $options[config.HOOK_AFTER_MOUNT]
     }
@@ -603,28 +779,31 @@ export default class Yox {
    *
    * @param options 组件配置
    * @param vnode 虚拟节点
-   * @param el DOM 元素
+   * @param node DOM 元素
    */
-  create(options: Record<string, any>, vnode?: VNode, el?: HTMLElement): Yox {
+  create(options: YoxOptions, vnode?: VNode, node?: Node): YoxInterface {
 
     options = object.copy(options)
     options.parent = this
 
-    if (vnode && el) {
+    if (vnode) {
 
-      options.el = el
-      options.replace = env.TRUE
+      // 如果传了 node，表示有一个占位元素，新创建的 child 需要把它替换掉
+      if (node) {
+        options.el = node
+        options.replace = env.TRUE
+      }
       options.slots = vnode.slots
 
       let { props, model } = vnode
 
-      if (model) {
+      if (isDef(model)) {
         if (!props) {
           props = { }
         }
-        let name = options.model || env.RAW_VALUE
+        const name = options.model || env.RAW_VALUE
         if (!object.has(props, name)) {
-          props[ name ] = model.value
+          props[ name ] = model
         }
         options.extensions = {
           $model: name,
@@ -647,7 +826,7 @@ export default class Yox {
   /**
    * 销毁组件
    */
-  destroy() {
+  destroy(): void {
 
     const instance = this,
 
@@ -666,7 +845,7 @@ export default class Yox {
     }
 
     if ($vnode) {
-      // patch($vnode, snabbdom.createTextVnode(env.EMPTY_STRING))
+      snabbdom.destroy(domApi, $vnode)
     }
 
     $emitter.off()
@@ -681,7 +860,7 @@ export default class Yox {
   /**
    * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
    */
-  nextTick(task: Function) {
+  nextTick(task: Function): void {
     this.$observer.nextTask.append(task)
   }
 
@@ -703,7 +882,7 @@ export default class Yox {
    * @param step 步进值，默认是 1
    * @param max 可以递增到的最大值，默认不限制
    */
-  increase(keypath: string, step = 1, max?: number): number | void {
+  increase(keypath: string, step?: number, max?: number): number | void {
     return this.$observer.increase(keypath, step, max)
   }
 
@@ -716,7 +895,7 @@ export default class Yox {
    * @param step 步进值，默认是 1
    * @param min 可以递减到的最小值，默认不限制
    */
-  decrease(keypath: string, step = 1, min?: number): number | void {
+  decrease(keypath: string, step?: number, min?: number): number | void {
     return this.$observer.decrease(keypath, step, min)
   }
 
@@ -738,7 +917,7 @@ export default class Yox {
    * @param item
    */
   append(keypath: string, item: any): boolean | void {
-    return this.$observer.insert(keypath, item, env.TRUE)
+    return this.$observer.append(keypath, item)
   }
 
   /**
@@ -748,7 +927,7 @@ export default class Yox {
    * @param item
    */
   prepend(keypath: string, item: any): boolean | void {
-    return this.$observer.insert(keypath, item, env.FALSE)
+    return this.$observer.prepend(keypath, item)
   }
 
   /**
@@ -804,120 +983,75 @@ Yox.logger = logger
 Yox.Event = Event
 Yox.Emitter = Emitter
 
-let { prototype } = Yox
+var a = Yox
 
-// 全局注册
-let registry = { }
+function getComponentAsync(data: Record<string, any> | void, name: string, callback: signature.asyncComponent): boolean | void {
+  if (data && object.has(data, name)) {
+    const value = data[ name ]
+    // 注册的是异步加载函数
+    if (is.func(value)) {
+      let { $pending } = value
+      if (!$pending) {
+        $pending = value.$pending = [ callback ]
+        value(
+          function (replacement: any) {
 
-function getResourceAsync(data, name, callback) {
-  let value = data[ name ]
-  if (is.func(value)) {
-    let { $pending } = value
-    if (!$pending) {
-      $pending = value.$pending = [ callback ]
-      value(
-        function (replacement) {
-          delete value.$pending
-          data[ name ] = replacement
-          array.each(
-            $pending,
-            function (callback) {
-              callback(replacement)
-            }
-          )
-        }
-      )
+            value.$pending = env.UNDEFINED
+
+            data[ name ] = replacement
+            array.each(
+              $pending,
+              function (callback) {
+                callback(replacement)
+              }
+            )
+
+          }
+        )
+      }
+      else {
+        array.push($pending, callback)
+      }
     }
+    // 不是异步加载函数，直接同步返回
     else {
-      array.push($pending, callback)
+      callback(value)
     }
-  }
-  else {
-    callback(value)
+    return env.TRUE
   }
 }
 
-function setResource(data, name, value) {
-  if (is.object(name)) {
+function getResource(data: Record<string, any> | void, name: string, findInGlobal?: Function) {
+  if (data && data[name]) {
+    return data[name]
+  }
+  else if (findInGlobal) {
+    return findInGlobal(name)
+  }
+}
+
+function setResource(data: Record<string, any>, name: string | Record<string, any>, value?: any, formatValue?: (value: any) => any) {
+  if (is.string(name)) {
+    data[name as string] = formatValue ? formatValue(value) : value
+  }
+  else {
     object.each(
       name,
       function (value, key) {
-        data[ key ] = value
+        data[key] = formatValue ? formatValue(value) : value
       }
     )
   }
-  else {
-    data[ name ] = value
-  }
 }
-
-/**
- * 全局/本地注册
- *
- * // filter 为了支持类似 loadsh 这个的函数库，如 loadsh.trim
-      // 这种过滤器就不是单纯的函数了，而是用 . 访问
- *
- * @param {Object|string} name
- * @param {?Object} value
- */
-array.each(
-  [ env.RAW_COMPONENT, env.RAW_TRANSITION, env.RAW_DIRECTIVE, env.RAW_PARTIAL, env.RAW_FILTER ],
-  function (type) {
-    prototype[ type ] = function (name, value) {
-      let instance = this, prop = `$${type}s`, data = instance[ prop ]
-      if (is.string(name)) {
-        let length = arguments[ env.RAW_LENGTH ], hasValue = data && object.has(data, name)
-        if (length === 1) {
-          return hasValue
-            ? data[ name ]
-            : Yox[ type ](name)
-        }
-        else if (length === 2 && type === env.RAW_COMPONENT && is.func(value)) {
-          return hasValue
-            ? getResourceAsync(data, name, value)
-            : Yox[ type ](name, value)
-        }
-      }
-      setResource(
-        data || (instance[ prop ] = { }),
-        name,
-        value
-      )
-    }
-    Yox[ type ] = function (name, value) {
-      let data = registry[ type ]
-      if (is.string(name)) {
-        let length = arguments[ env.RAW_LENGTH ], hasValue = data && object.has(data, name)
-        if (length === 1) {
-          return hasValue
-            ? data[ name ]
-            : env.UNDEFINED
-        }
-        else if (length === 2 && type === env.RAW_COMPONENT && is.func(value)) {
-          return hasValue
-            ? getResourceAsync(data, name, value)
-            : value()
-        }
-      }
-      setResource(
-        data || (registry[ type ] = { }),
-        name,
-        value
-      )
-    }
-  }
-)
-
-
 
 
 
 import event from './directive/event'
-import model from './directive/model'
+// import model from './directive/model'
 import binding from './directive/binding'
 
 // 全局注册内置指令
-Yox.directive({ event, model, binding })
+Yox.directive({ event, binding })
 
 import hasSlot from './filter/hasSlot'
 

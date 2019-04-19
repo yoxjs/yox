@@ -26,15 +26,7 @@ export const INPUT = 'input'
  */
 export const CHANGE = 'change'
 
-/**
- * 跟输入事件配套使用的事件
- */
-export const COMPOSITION_START = 'compositionstart'
 
-/**
- * 跟输入事件配套使用的事件
- */
-export const COMPOSITION_END = 'compositionend'
 
 /**
  * IE 模拟输入事件的特殊事件
