@@ -124,6 +124,19 @@ NPM
 
 ```shell
 npm install yox
+
+## 安装 rollup.js 基础模块
+npm i --save-dev rollup rollup-plugin-buble
+
+## 安装 rollup.js 编译本地开发服务插件
+npm i --save-dev rollup-plugin-serve
+
+## 安装 rollup.js 编译代码混淆插件
+npm i --save-dev rollup-plugin-uglify
+
+## 安装 rollup.js 编译 Typescript 代码的插件模块
+npm i --save-dev rollup-plugin-typescript typescript tslib
+
 ```
 
 CDN

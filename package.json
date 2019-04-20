@@ -9,8 +9,8 @@
   },
   "devDependencies": {},
   "scripts": {
-    "source": "rollup -c",
-    "release": "NODE_ENV=release rollup -c"
+    "dev": "node_modules/.bin/rollup -c ./build/config.dev.js",
+    "prod": "node_modules/.bin/rollup -c ./build/config.prod.js"
   },
   "repository": {
     "type": "git",
@@ -31,6 +31,13 @@
   },
   "homepage": "https://github.com/yoxjs/yox#readme",
   "dependencies": {
+    "rollup": "^1.10.1",
+    "rollup-plugin-buble": "^0.19.6",
+    "rollup-plugin-serve": "^1.0.1",
+    "rollup-plugin-typescript": "^1.0.1",
+    "rollup-plugin-uglify": "^6.0.2",
+    "tslib": "^1.9.3",
+    "typescript": "^3.4.4",
     "yox-common": "^0.18.11",
     "yox-config": "^0.1.6",
     "yox-dom": "^0.0.9",
