@@ -44,9 +44,7 @@ globalPartials = {},
 
 globalFilters = {},
 
-TEMPLATE = env.RAW_TEMPLATE,
-
-TEMPLATE_COMPUTED = '$' + TEMPLATE,
+TEMPLATE_COMPUTED = '$' + env.RAW_TEMPLATE,
 
 selectorPattern = /^[#.][-\w+]+$/
 
@@ -690,7 +688,7 @@ export default class Yox implements YoxInterface {
 
     if ($vnode) {
 
-      const computed: Computed = $observer.computed[ TEMPLATE_COMPUTED ],
+      const computed: Computed = $observer.computed[TEMPLATE_COMPUTED],
 
       oldValue = computed.get()
 
@@ -743,8 +741,8 @@ export default class Yox implements YoxInterface {
     else {
       execute($options[ config.HOOK_BEFORE_MOUNT ], instance)
       snabbdom.patch(domApi, vnode, oldVnode)
-      instance.$el = $vnode.node as HTMLElement
-      instance.$vnode = $vnode
+      instance.$el = vnode.node as HTMLElement
+      instance.$vnode = vnode
       hook = $options[config.HOOK_AFTER_MOUNT]
     }
 
@@ -964,26 +962,24 @@ export default class Yox implements YoxInterface {
 }
 
 
-/**
- * 版本
- *
- * @type {string}
- */
-Yox.version = '0.63.0'
+// /**
+//  * 版本
+//  *
+//  * @type {string}
+//  */
+// Yox.version = '0.63.0'
 
-/**
- * 工具，便于扩展、插件使用
- */
-Yox.is = is
-Yox.dom = api
-Yox.array = array
-Yox.object = object
-Yox.string = string
-Yox.logger = logger
-Yox.Event = Event
-Yox.Emitter = Emitter
-
-var a = Yox
+// /**
+//  * 工具，便于扩展、插件使用
+//  */
+// Yox.is = is
+// Yox.dom = api
+// Yox.array = array
+// Yox.object = object
+// Yox.string = string
+// Yox.logger = logger
+// Yox.Event = Event
+// Yox.Emitter = Emitter
 
 function getComponentAsync(data: Record<string, any> | void, name: string, callback: signature.asyncComponent): boolean | void {
   if (data && object.has(data, name)) {

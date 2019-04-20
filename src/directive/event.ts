@@ -9,7 +9,7 @@ import * as event from '../config/event'
 
 import VNode from 'yox-type/src/vnode/VNode'
 import Directive from 'yox-type/src/vnode/Directive'
-import DirectiveHook from 'yox-type/src/hook/Directive'
+import DirectiveHooks from 'yox-type/src/hooks/Directive'
 import Yox from 'yox-type/src/Yox'
 import * as type from 'yox-type/src/type'
 
@@ -17,7 +17,7 @@ import * as type from 'yox-type/src/type'
 // 移动端的 tap 事件可自行在业务层打补丁实现
 const syncTypes = array.toObject([event.CLICK, event.TAP]),
 
-directive: DirectiveHook = {
+directive: DirectiveHooks = {
   bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
 
     let { key, name, lazy, handler } = directive, { data } = vnode

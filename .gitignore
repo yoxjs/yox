@@ -3,7 +3,5 @@ node_modules
 *update.js
 .edp*
 edp-*
-
-
 package-lock.json
 yarn.lock

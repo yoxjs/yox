@@ -5,12 +5,12 @@ import * as keypathUtil from 'yox-common/util/keypath'
 
 import VNode from 'yox-type/src/vnode/VNode'
 import Directive from 'yox-type/src/vnode/Directive'
-import DirectiveHook from 'yox-type/src/hook/Directive'
+import DirectiveHooks from 'yox-type/src/hooks/Directive'
 import Yox from 'yox-type/src/Yox'
 
 import api from 'yox-dom'
 
-const directive: DirectiveHook = {
+const directive: DirectiveHooks = {
 
   bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
 

@@ -8,11 +8,7 @@
     "test": "test"
   },
   "devDependencies": {
-    "@babel/core": "^7.4.3",
-    "@babel/preset-env": "^7.4.3",
-    "@babel/preset-typescript": "^7.3.3",
-    "babel-jest": "^24.7.1",
-    "uglify-js": "^3.5.4"
+
   },
   "scripts": {
     "source": "rollup -c",
@@ -40,10 +36,10 @@
     "yox-common": "^0.18.8",
     "yox-config": "^0.1.5",
     "yox-dom": "^0.0.5",
-    "yox-expression-compiler": "^0.16.6",
+    "yox-expression-compiler": "0.16.7",
     "yox-observer": "^0.17.13",
-    "yox-snabbdom": "^0.19.13",
-    "yox-template-compiler": "^0.27.17",
+    "yox-snabbdom": "0.19.14",
+    "yox-template-compiler": "0.27.18",
     "yox-type": "^0.0.24"
   }
 }
