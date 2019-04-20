@@ -5,3 +5,4 @@ node_modules
 edp-*
 package-lock.json
 yarn.lock
+dist
