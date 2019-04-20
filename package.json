@@ -7,9 +7,7 @@
     "example": "example",
     "test": "test"
   },
-  "devDependencies": {
-
-  },
+  "devDependencies": {},
   "scripts": {
     "source": "rollup -c",
     "release": "NODE_ENV=release rollup -c"
@@ -33,13 +31,13 @@
   },
   "homepage": "https://github.com/yoxjs/yox#readme",
   "dependencies": {
-    "yox-common": "^0.18.8",
-    "yox-config": "^0.1.5",
-    "yox-dom": "^0.0.5",
-    "yox-expression-compiler": "0.16.7",
-    "yox-observer": "^0.17.13",
-    "yox-snabbdom": "0.19.14",
-    "yox-template-compiler": "0.27.18",
-    "yox-type": "^0.0.24"
+    "yox-common": "^0.18.11",
+    "yox-config": "^0.1.6",
+    "yox-dom": "^0.0.9",
+    "yox-expression-compiler": "^0.16.10",
+    "yox-observer": "^0.17.14",
+    "yox-snabbdom": "^0.19.15",
+    "yox-template-compiler": "^0.27.19",
+    "yox-type": "^0.0.28"
   }
 }

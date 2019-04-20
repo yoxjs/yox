@@ -1,6 +1,6 @@
-import * as config from 'yox-config'
+import * as config from 'yox-config/index'
 
-import isDef from 'yox-common/function/isDef'
+import isDef from 'yox-common/src/function/isDef'
 
 /**
  * 组件是否存在某个 slot

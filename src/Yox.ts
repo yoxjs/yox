@@ -1,19 +1,19 @@
-import isDef from 'yox-common/function/isDef'
-import execute from 'yox-common/function/execute'
+import isDef from 'yox-common/src/function/isDef'
+import execute from 'yox-common/src/function/execute'
 
-import Event from 'yox-common/util/Event'
-import Emitter from 'yox-common/util/Emitter'
-import NextTask from 'yox-common/util/NextTask'
+import Event from 'yox-common/src/util/Event'
+import Emitter from 'yox-common/src/util/Emitter'
+import NextTask from 'yox-common/src/util/NextTask'
 
-import * as is from 'yox-common/util/is'
-import * as env from 'yox-common/util/env'
-import * as array from 'yox-common/util/array'
-import * as object from 'yox-common/util/object'
-import * as string from 'yox-common/util/string'
-import * as logger from 'yox-common/util/logger'
+import * as is from 'yox-common/src/util/is'
+import * as env from 'yox-common/src/util/env'
+import * as array from 'yox-common/src/util/array'
+import * as object from 'yox-common/src/util/object'
+import * as string from 'yox-common/src/util/string'
+import * as logger from 'yox-common/src/util/logger'
 
-import * as config from 'yox-config'
-import * as snabbdom from 'yox-snabbdom'
+import * as config from 'yox-config/index'
+import * as snabbdom from 'yox-snabbdom/index'
 
 import * as templateCompiler from 'yox-template-compiler/src/compiler'
 import * as templateStringify from 'yox-template-compiler/src/stringify'
@@ -27,12 +27,12 @@ import WatcherOptions from 'yox-type/src/options/Watcher'
 import DirectiveHooks from 'yox-type/src/hooks/Directive'
 import TransitionHooks from 'yox-type/src/hooks/Transition'
 import PropRule from 'yox-type/src/PropRule'
-import * as signature from 'yox-type/src/type'
+import * as signature from 'yox-type/index'
 
 import Computed from 'yox-observer/src/Computed'
 import Observer from 'yox-observer/src/Observer'
 
-import domApi from 'yox-dom'
+import domApi from 'yox-dom/index'
 
 const globalDirectives = {},
 
@@ -93,7 +93,7 @@ export default class Yox implements YoxInterface {
    * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
    */
   public static nextTick(task: Function) {
-    NextTask.getInstance().append(task)
+    NextTask.shared().append(task)
   }
 
   /**
@@ -434,7 +434,8 @@ export default class Yox implements YoxInterface {
         instance.get(TEMPLATE_COMPUTED),
         snabbdom.create(
           domApi,
-          placeholder || domApi.createComment(env.EMPTY_STRING)
+          placeholder || domApi.createComment(env.EMPTY_STRING),
+          instance
         )
       )
 

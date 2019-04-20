@@ -1,14 +1,14 @@
-import isDef from 'yox-common/function/isDef'
-import execute from 'yox-common/function/execute'
+import isDef from 'yox-common/src/function/isDef'
+import execute from 'yox-common/src/function/execute'
 
-import * as keypathUtil from 'yox-common/util/keypath'
+import * as keypathUtil from 'yox-common/src/util/keypath'
 
 import VNode from 'yox-type/src/vnode/VNode'
 import Directive from 'yox-type/src/vnode/Directive'
 import DirectiveHooks from 'yox-type/src/hooks/Directive'
 import Yox from 'yox-type/src/Yox'
 
-import api from 'yox-dom'
+import api from 'yox-dom/index'
 
 const directive: DirectiveHooks = {
 
