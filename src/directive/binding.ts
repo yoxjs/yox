@@ -40,10 +40,10 @@ const directive: DirectiveHooks = {
 
       }
 
-      vnode.instance.watch(binding, watcher)
+      vnode.context.watch(binding, watcher)
 
       vnode.data[directive.key] = function () {
-        vnode.instance.unwatch(binding, watcher)
+        vnode.context.unwatch(binding, watcher)
       }
 
     }

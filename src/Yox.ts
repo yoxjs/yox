@@ -9,7 +9,6 @@ import * as is from 'yox-common/src/util/is'
 import * as env from 'yox-common/src/util/env'
 import * as array from 'yox-common/src/util/array'
 import * as object from 'yox-common/src/util/object'
-import * as string from 'yox-common/src/util/string'
 import * as logger from 'yox-common/src/util/logger'
 
 import * as config from 'yox-config/index'
@@ -31,6 +30,7 @@ import * as signature from 'yox-type/index'
 
 import Computed from 'yox-observer/src/Computed'
 import Observer from 'yox-observer/src/Observer'
+import formatWatcherOptions from 'yox-observer/src/function/formatWatcherOptions'
 
 import domApi from 'yox-dom/index'
 
@@ -101,13 +101,15 @@ export default class Yox implements YoxInterface {
    */
   public static compile(template: string): Function {
     // 已编译，常出现在线上阶段
-    if (!string.startsWith(template, templateStringify.prefix)) {
+    if (!templateStringify.hasStringify(template)) {
       // 未编译，常出现在开发阶段
       const nodes = templateCompiler.compile(template)
       if (nodes.length !== 1) {
         logger.fatal(`"template" expected to have just one root element.`)
       }
+      console.log(nodes[0])
       template = templateStringify.stringify(nodes[0])
+      console.log(template)
     }
     return new Function(`return ${template}`)()
   }
@@ -435,7 +437,8 @@ export default class Yox implements YoxInterface {
         snabbdom.create(
           domApi,
           placeholder || domApi.createComment(env.EMPTY_STRING),
-          instance
+          instance,
+          env.EMPTY_STRING
         )
       )
 
@@ -498,7 +501,7 @@ export default class Yox implements YoxInterface {
    * 监听事件
    */
   on(type: string | Record<string, signature.eventListener>, listener?: signature.eventListener): YoxInterface {
-    this.$emitter.on(type, listener)
+    this.$emitter.on(type, listener, { ctx: this })
     return this
   }
 
@@ -506,7 +509,7 @@ export default class Yox implements YoxInterface {
    * 监听一次事件
    */
   once(type: string | Record<string, signature.eventListener>, listener?: signature.eventListener): YoxInterface {
-    this.$emitter.once(type, listener)
+    this.$emitter.on(type, listener, { ctx: this, max: 1 })
     return this
   }
 
@@ -589,7 +592,9 @@ export default class Yox implements YoxInterface {
     watcher: signature.watcher,
     options?: WatcherOptions
   ): YoxInterface {
-    this.$observer.watchOnce(keypath, watcher, options)
+    const watcherOptions = formatWatcherOptions(options)
+    watcherOptions.once = env.TRUE
+    this.$observer.watch(keypath, watcher, watcherOptions)
     return this
   }
 
@@ -722,7 +727,7 @@ export default class Yox implements YoxInterface {
    * @param oldVnode
    */
   update(vnode: VNode, oldVnode: VNode) {
-
+console.log(vnode, oldVnode)
     let instance = this,
 
     { $vnode, $options } = instance,
