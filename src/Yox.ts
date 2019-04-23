@@ -748,9 +748,10 @@ console.log(vnode, oldVnode)
       execute($options[ config.HOOK_BEFORE_MOUNT ], instance)
       snabbdom.patch(domApi, vnode, oldVnode)
       instance.$el = vnode.node as HTMLElement
-      instance.$vnode = vnode
       hook = $options[config.HOOK_AFTER_MOUNT]
     }
+
+    instance.$vnode = vnode
 
     // 跟 nextTask 保持一个节奏
     // 这样可以预留一些优化的余地

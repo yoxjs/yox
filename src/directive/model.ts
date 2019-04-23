@@ -36,6 +36,8 @@ interface Control {
 
 const RAW_CHECKED = 'checked',
 
+syncWatcherOptions = { sync: env.TRUE },
+
 inputControl: Control = {
   set(input: HTMLInputElement, keypath: string, context: Yox) {
     input[env.RAW_VALUE] = toString(context.get(keypath))
@@ -214,8 +216,8 @@ directive: DirectiveHooks = {
         }
       }
 
-      // 如果模板里 attribute 没写对应的属性，则这里先设值
-      if (!object.has(vnode.nativeAttrs, control.name || env.RAW_VALUE)) {
+      // 如果模板里没写对应的属性，则这里先设值
+      if (!object.has(vnode.nativeProps, control.name || env.RAW_VALUE)) {
         set()
       }
 
@@ -226,7 +228,7 @@ directive: DirectiveHooks = {
 
     // 监听数据，修改界面
     // 这里使用同步监听，这样才能使 isSyncing 生效
-    context.watch(binding as string, set, { sync: env.TRUE })
+    context.watch(binding as string, set, syncWatcherOptions)
 
     vnode.data[directive.key] = function () {
       if (vnode.isComponent) {
