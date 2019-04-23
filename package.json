@@ -41,10 +41,10 @@
     "yox-common": "^0.18.16",
     "yox-config": "^0.1.6",
     "yox-dom": "^0.0.12",
-    "yox-expression-compiler": "^0.16.15",
+    "yox-expression-compiler": "^0.16.16",
     "yox-observer": "^0.17.18",
     "yox-snabbdom": "^0.19.18",
-    "yox-template-compiler": "0.27.27",
+    "yox-template-compiler": "0.27.28",
     "yox-type": "^0.0.31"
   }
 }

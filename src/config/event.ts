@@ -26,8 +26,6 @@ export const INPUT = 'input'
  */
 export const CHANGE = 'change'
 
-
-
 /**
  * IE 模拟输入事件的特殊事件
  */

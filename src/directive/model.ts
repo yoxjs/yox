@@ -1,4 +1,5 @@
 import isDef from 'yox-common/src/function/isDef'
+import debounce from 'yox-common/src/function/debounce'
 import execute from 'yox-common/src/function/execute'
 import toString from 'yox-common/src/function/toString'
 
@@ -6,10 +7,8 @@ import * as is from 'yox-common/src/util/is'
 import * as env from 'yox-common/src/util/env'
 import * as array from 'yox-common/src/util/array'
 import * as object from 'yox-common/src/util/object'
-import * as string from 'yox-common/src/util/string'
-import * as logger from 'yox-common/src/util/logger'
-import * as nextTask from 'yox-common/src/util/nextTask'
 
+import * as config from 'yox-config/index'
 import api from 'yox-dom/index'
 
 import * as event from '../config/event'
@@ -27,49 +26,46 @@ function getOptionValue(option: HTMLOptionElement) {
 
 interface Control {
 
-  set(el: HTMLElement | Yox, keypath: string, context: Yox): void
+  set(node: HTMLElement | Yox, keypath: string, context: Yox): void
 
-  sync(el: HTMLElement | Yox, keypath: string, context: Yox): void
+  sync(node: HTMLElement | Yox, keypath: string, context: Yox): void
 
-  attr?: string
+  name?: string
 
 }
 
 const RAW_CHECKED = 'checked',
 
 inputControl: Control = {
-  set(el: HTMLInputElement, keypath: string, context: Yox) {
-    const value = toString(context.get(keypath))
-    if (value !== el[ env.RAW_VALUE ]) {
-      el[ env.RAW_VALUE ] = value
-    }
+  set(input: HTMLInputElement, keypath: string, context: Yox) {
+    input[env.RAW_VALUE] = toString(context.get(keypath))
   },
-  sync(el: HTMLInputElement, keypath: string, context: Yox) {
-    context.set(keypath, el[ env.RAW_VALUE ])
+  sync(input: HTMLInputElement, keypath: string, context: Yox) {
+    context.set(keypath, input[ env.RAW_VALUE ])
   },
-  attr: env.RAW_VALUE,
+  name: env.RAW_VALUE,
 },
 
 selectControl: Control = {
-  set(el: HTMLSelectElement, keypath: string, context: Yox) {
+  set(select: HTMLSelectElement, keypath: string, context: Yox) {
     const value = context.get(keypath)
     array.each(
-      array.toArray(el.options),
-      el.multiple
+      array.toArray(select.options),
+      select.multiple
         ? function (option: HTMLOptionElement) {
           option.selected = array.has(value, getOptionValue(option), env.FALSE)
         }
         : function (option: HTMLOptionElement, index: number) {
           if (getOptionValue(option) == value) {
-            el.selectedIndex = index
+            select.selectedIndex = index
             return env.FALSE
           }
         }
     )
   },
-  sync(el: HTMLSelectElement, keypath: string, context: Yox) {
-    const options = array.toArray(el.options)
-    if (el.multiple) {
+  sync(select: HTMLSelectElement, keypath: string, context: Yox) {
+    const options = array.toArray(select.options)
+    if (select.multiple) {
       const values = []
       array.each(
         options,
@@ -91,7 +87,7 @@ selectControl: Control = {
       context.set(
         keypath,
         getOptionValue(
-          options[el.selectedIndex]
+          options[select.selectedIndex]
         )
       )
     }
@@ -99,42 +95,42 @@ selectControl: Control = {
 },
 
 radioControl: Control = {
-  set(el: HTMLInputElement, keypath: string, context: Yox) {
-    el[ RAW_CHECKED ] = el[ env.RAW_VALUE ] === toString(context.get(keypath))
+  set(radio: HTMLInputElement, keypath: string, context: Yox) {
+    radio[ RAW_CHECKED ] = radio[ env.RAW_VALUE ] === toString(context.get(keypath))
   },
-  sync(el: HTMLInputElement, keypath: string, context: Yox) {
-    if (el[ RAW_CHECKED ]) {
-      context.set(keypath, el[ env.RAW_VALUE ])
+  sync(radio: HTMLInputElement, keypath: string, context: Yox) {
+    if (radio[ RAW_CHECKED ]) {
+      context.set(keypath, radio[ env.RAW_VALUE ])
     }
   },
-  attr: RAW_CHECKED
+  name: RAW_CHECKED
 },
 
 checkboxControl: Control = {
-  set(el: HTMLInputElement, keypath: string, context: Yox) {
+  set(checkbox: HTMLInputElement, keypath: string, context: Yox) {
     const value = context.get(keypath)
-    el[ RAW_CHECKED ] = is.array(value)
-      ? array.has(value, el[ env.RAW_VALUE ], env.FALSE)
+    checkbox[ RAW_CHECKED ] = is.array(value)
+      ? array.has(value, checkbox[ env.RAW_VALUE ], env.FALSE)
       : (is.boolean(value) ? value : !!value)
   },
-  sync(el: HTMLInputElement, keypath: string, context: Yox) {
+  sync(checkbox: HTMLInputElement, keypath: string, context: Yox) {
     const value = context.get(keypath)
     if (is.array(value)) {
-      if (el[ RAW_CHECKED ]) {
-        context.append(keypath, el[ env.RAW_VALUE ])
+      if (checkbox[ RAW_CHECKED ]) {
+        context.append(keypath, checkbox[ env.RAW_VALUE ])
       }
       else {
         context.removeAt(
           keypath,
-          array.indexOf(value, el[ env.RAW_VALUE ], env.FALSE)
+          array.indexOf(value, checkbox[ env.RAW_VALUE ], env.FALSE)
         )
       }
     }
     else {
-      context.set(keypath, el[ RAW_CHECKED ])
+      context.set(keypath, checkbox[ RAW_CHECKED ])
     }
   },
-  attr: RAW_CHECKED
+  name: RAW_CHECKED
 },
 
 componentControl: Control = {
@@ -165,54 +161,87 @@ directive: DirectiveHooks = {
 
     { context } = vnode,
 
+    lazy = vnode.lazy[config.DIRECTIVE_MODEL] || vnode.lazy[env.EMPTY_STRING],
+
     set = function () {
-      control.set(target, binding as string, context)
+      if (!isSyncing) {
+        control.set(component || element, binding as string, context)
+      }
     },
 
     sync = function () {
-      control.sync(target, binding as string, context)
+      isSyncing = env.TRUE
+      control.sync(component || element, binding as string, context)
+      isSyncing = env.FALSE
     },
 
-    target: HTMLElement | Yox,
+    isSyncing = env.FALSE,
+
+    component: Yox,
+
+    element: HTMLElement,
 
     control: Control,
 
-    name: string
+    type: string
+
+    if (lazy && lazy !== env.TRUE) {
+      sync = debounce(sync, lazy)
+    }
 
     if (vnode.isComponent) {
 
-      target = node as Yox
+      component = node as Yox
       control = componentControl
 
-      name = target.$model
-
-      target.watch(name, sync)
+      // 监听交互，修改数据
+      component.watch(component.$model, sync)
 
     }
     else {
 
-      target = node as HTMLElement
-      control = specialControls[target[env.RAW_TYPE]] || specialControls[api.tag(target) as string]
+      element = node as HTMLElement
+      control = specialControls[element[env.RAW_TYPE]] || specialControls[api.tag(element) as string]
 
-      let type = event.CHANGE
+      // checkbox,radio,select 监听的是 change 事件
+      type = event.CHANGE
+
+      // 如果是输入框，则切换成 input 事件
       if (!control) {
         control = inputControl
-        type = event.INPUT
+        if (lazy !== env.TRUE) {
+          type = event.INPUT
+        }
       }
 
-      name = control.attr || env.RAW_VALUE
-
-      if (!object.has(vnode.nativeAttrs, name)) {
+      // 如果模板里 attribute 没写对应的属性，则这里先设值
+      if (!object.has(vnode.nativeAttrs, control.name || env.RAW_VALUE)) {
         set()
       }
 
+      // 监听交互，修改数据
+      api.on(element, type, sync)
 
+    }
+
+    // 监听数据，修改界面
+    // 这里使用同步监听，这样才能使 isSyncing 生效
+    context.watch(binding as string, set, { sync: env.TRUE })
+
+    vnode.data[directive.key] = function () {
+      if (vnode.isComponent) {
+        component.unwatch(component.$model, sync)
+      }
+      else {
+        api.off(element, type, sync)
+      }
+      context.unwatch(binding as string, set)
     }
 
   },
 
   unbind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
-
+    execute(vnode.data[directive.key])
   }
 }
 
