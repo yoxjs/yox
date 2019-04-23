@@ -717,7 +717,15 @@ export default class Yox implements YoxInterface {
    * 把模板抽象语法树渲染成 virtual dom
    */
   render() {
-    return templateRender.render(this, this.$template)
+    const instance = this
+    return templateRender.render(
+      instance,
+      mergeResource(instance.$filters, globalFilters),
+      mergeResource(instance.$partials, globalPartials),
+      mergeResource(instance.$directives, globalDirectives),
+      mergeResource(instance.$transitions, globalTransitions),
+      instance.$template
+    )
   }
 
   /**
@@ -727,7 +735,7 @@ export default class Yox implements YoxInterface {
    * @param oldVnode
    */
   update(vnode: VNode, oldVnode: VNode) {
-console.log(vnode, oldVnode)
+
     let instance = this,
 
     { $vnode, $options } = instance,
@@ -1047,7 +1055,11 @@ function setResource(data: Record<string, any>, name: string | Record<string, an
   }
 }
 
-
+function mergeResource(locals: Record<string, any> | void, globals: Record<string, any>): Record<string, any> {
+  return locals && globals
+    ? object.extend({}, globals, locals)
+    : locals || globals
+}
 
 import event from './directive/event'
 import model from './directive/model'
