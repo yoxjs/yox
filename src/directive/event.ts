@@ -20,39 +20,47 @@ const syncTypes = array.toObject([event.CLICK, event.TAP]),
 directive: DirectiveHooks = {
   bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
 
-    let { key, name, handler } = directive, { data, lazy } = vnode
+    let { name, handler } = directive,
+
+    lazy = vnode.lazy[name] || vnode.lazy[env.EMPTY_STRING]
 
     if (!handler) {
       return
     }
 
-    const lazyValue = lazy[name] || lazy[env.EMPTY_STRING]
-
-    if (lazyValue) {
-      // 编译模板时能保证不是 true 就是数字
-      if (lazyValue === env.TRUE) {
+    if (lazy) {
+      // 编译模板时能保证不是 true 就是大于 0 数字
+      if (lazy === env.TRUE) {
         name = event.CHANGE
       }
       else {
         handler = debounce(
           handler,
-          lazyValue,
+          lazy,
           syncTypes[name]
         )
       }
     }
 
     if (vnode.isComponent) {
-      (node as Yox).on(name, handler)
-      data[key] = function () {
-        (node as Yox).off(name, handler as type.eventListener)
+
+      const component = node as Yox
+
+      component.on(name, handler)
+      vnode.data[directive.key] = function () {
+        component.off(name, handler as type.eventListener)
       }
+
     }
     else {
-      api.on(node as HTMLElement, name, handler)
-      data[key] = function () {
-        api.off(node as HTMLElement, name, handler as type.eventListener)
+
+      const el = node as HTMLElement
+
+      api.on(el, name, handler)
+      vnode.data[directive.key] = function () {
+        api.off(el, name, handler as type.eventListener)
       }
+
     }
 
   },

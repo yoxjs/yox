@@ -1049,11 +1049,11 @@ function setResource(data: Record<string, any>, name: string | Record<string, an
 
 
 import event from './directive/event'
-// import model from './directive/model'
+import model from './directive/model'
 import binding from './directive/binding'
 
 // 全局注册内置指令
-Yox.directive({ event, binding })
+Yox.directive({ event, model, binding })
 
 import hasSlot from './filter/hasSlot'
 
