@@ -20,21 +20,23 @@ const syncTypes = array.toObject([event.CLICK, event.TAP]),
 directive: DirectiveHooks = {
   bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
 
-    let { key, name, lazy, handler } = directive, { data } = vnode
+    let { key, name, handler } = directive, { data, lazy } = vnode
 
     if (!handler) {
       return
     }
 
-    if (lazy) {
+    const lazyValue = lazy[name] || lazy[env.EMPTY_STRING]
+
+    if (lazyValue) {
       // 编译模板时能保证不是 true 就是数字
-      if (lazy === env.TRUE) {
+      if (lazyValue === env.TRUE) {
         name = event.CHANGE
       }
       else {
         handler = debounce(
           handler,
-          lazy,
+          lazyValue,
           syncTypes[name]
         )
       }
