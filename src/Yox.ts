@@ -8,6 +8,7 @@ import NextTask from 'yox-common/src/util/NextTask'
 import * as is from 'yox-common/src/util/is'
 import * as env from 'yox-common/src/util/env'
 import * as array from 'yox-common/src/util/array'
+import * as string from 'yox-common/src/util/string'
 import * as object from 'yox-common/src/util/object'
 import * as logger from 'yox-common/src/util/logger'
 
@@ -79,6 +80,23 @@ export default class Yox implements YoxInterface {
   $partials?: Record<string, Function>
 
   $filters?: Record<string, Function | Record<string, Function>>
+
+  /**
+   * core 版本
+   */
+  public static version = '1.0.0-alpha'
+
+  /**
+   * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
+   */
+  public static is = is
+  public static dom = domApi
+  public static array = array
+  public static object = object
+  public static string = string
+  public static logger = logger
+  public static Event = Event
+  public static Emitter = Emitter
 
   /**
    * 安装插件
@@ -1013,28 +1031,7 @@ export default class Yox implements YoxInterface {
     return this.$observer.copy(data, deep)
   }
 
-
 }
-
-
-// /**
-//  * 版本
-//  *
-//  * @type {string}
-//  */
-// Yox.version = '0.63.0'
-
-// /**
-//  * 工具，便于扩展、插件使用
-//  */
-// Yox.is = is
-// Yox.dom = api
-// Yox.array = array
-// Yox.object = object
-// Yox.string = string
-// Yox.logger = logger
-// Yox.Event = Event
-// Yox.Emitter = Emitter
 
 function getComponentAsync(data: Record<string, any> | void, name: string, callback: signature.asyncComponent): boolean | void {
   if (data && object.has(data, name)) {

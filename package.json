@@ -38,13 +38,13 @@
     "rollup-plugin-uglify": "^6.0.2",
     "tslib": "^1.9.3",
     "typescript": "^3.4.4",
-    "yox-common": "^0.18.20",
+    "yox-common": "^0.18.21",
     "yox-config": "^0.1.6",
-    "yox-dom": "^0.0.16",
-    "yox-expression-compiler": "^0.16.19",
-    "yox-observer": "^0.17.21",
-    "yox-snabbdom": "^0.19.21",
-    "yox-template-compiler": "^0.27.32",
-    "yox-type": "^0.0.35"
+    "yox-dom": "^0.0.17",
+    "yox-expression-compiler": "^0.16.20",
+    "yox-observer": "^0.17.22",
+    "yox-snabbdom": "^0.19.22",
+    "yox-template-compiler": "^0.27.33",
+    "yox-type": "^0.0.36"
   }
 }
