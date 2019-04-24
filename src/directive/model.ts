@@ -7,6 +7,7 @@ import * as is from 'yox-common/src/util/is'
 import * as env from 'yox-common/src/util/env'
 import * as array from 'yox-common/src/util/array'
 import * as object from 'yox-common/src/util/object'
+import * as logger from 'yox-common/src/util/logger'
 
 import * as config from 'yox-config/index'
 import api from 'yox-dom/index'
@@ -30,7 +31,7 @@ interface Control {
 
   sync(node: HTMLElement | Yox, keypath: string, context: Yox): void
 
-  name?: string
+  name: string
 
 }
 
@@ -43,6 +44,7 @@ inputControl: Control = {
   sync(input: HTMLInputElement, keypath: string, context: Yox) {
     context.set(keypath, input.value)
   },
+  name: 'value'
 },
 
 selectControl: Control = {
@@ -91,6 +93,7 @@ selectControl: Control = {
       )
     }
   },
+  name: 'value'
 },
 
 radioControl: Control = {
@@ -145,6 +148,7 @@ componentControl: Control = {
       component.get(component.$model)
     )
   },
+  name: 'value'
 },
 
 specialControls = {
@@ -158,7 +162,7 @@ directive: DirectiveHooks = {
 
     let { binding } = directive,
 
-    { context } = vnode,
+    { context, nativeProps } = vnode,
 
     lazy = vnode.lazy[config.DIRECTIVE_MODEL] || vnode.lazy[env.EMPTY_STRING],
 
@@ -214,7 +218,7 @@ directive: DirectiveHooks = {
       }
 
       // 如果模板里没写对应的属性，则这里先设值
-      if (!object.has(vnode.nativeProps, control.name || 'value')) {
+      if (!nativeProps || !object.has(nativeProps, control.name)) {
         set()
       }
 

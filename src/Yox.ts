@@ -175,67 +175,67 @@ export default class Yox implements YoxInterface {
    */
   public static checkPropTypes(props: Record<string, any>, propTypes: Record<string, PropRule>) {
     let result = object.copy(props)
-    object.each(
-      propTypes,
-      function (rule: PropRule, key: string) {
+    // object.each(
+    //   propTypes,
+    //   function (rule: PropRule, key: string) {
 
-        // 类型
-        let type = rule.type,
+    //     // 类型
+    //     let type = rule.type,
 
-        // 默认值
-        value = rule.value,
+    //     // 默认值
+    //     value = rule.value,
 
-        // 是否必传
-        required = rule.required,
+    //     // 是否必传
+    //     required = rule.required,
 
-        target = props[key]
+    //     target = props[key]
 
-        if (is.func(required)) {
-          required = execute(required, env.UNDEFINED, props)
-        }
+    //     if (is.func(required)) {
+    //       required = execute(required, env.UNDEFINED, props)
+    //     }
 
-        // 传了数据
-        if (isDef(target)) {
+    //     // 传了数据
+    //     if (isDef(target)) {
 
-          // 如果不写 type 或 type 不是 字符串 或 数组
-          // 就当做此规则无效，和没写一样
-          // if (type) {
-          //   let matched
-          //   // 比较类型
-          //   if (!string.falsy(type)) {
-          //     matched = is.is(target, type)
-          //   }
-          //   else if (!array.falsy(type)) {
-          //     array.each(
-          //       type,
-          //       function (t) {
-          //         if (is.is(target, t)) {
-          //           matched = env.TRUE
-          //           return env.FALSE
-          //         }
-          //       }
-          //     )
-          //   }
-          //   else if (is.func(type)) {
-          //     // 有时候做判断需要参考其他数据
-          //     // 比如当 a 有值时，b 可以为空之类的
-          //     matched = type(target, props)
-          //   }
-          //   if (matched !== env.TRUE) {
-          //     logger.warn(`The prop "${key}" ${env.RAW_TYPE} is not matched.`)
-          //   }
-          // }
-        }
-        else if (required) {
-          logger.warn(`The prop "${key}" is marked as required, but its value is not found.`)
-        }
-        else if (object.has(rule, 'value')) {
-          result[key] = type === env.RAW_FUNCTION
-            ? value
-            : (is.func(value) ? value(props) : value)
-        }
-      }
-    )
+    //       // 如果不写 type 或 type 不是 字符串 或 数组
+    //       // 就当做此规则无效，和没写一样
+    //       // if (type) {
+    //       //   let matched
+    //       //   // 比较类型
+    //       //   if (!string.falsy(type)) {
+    //       //     matched = is.is(target, type)
+    //       //   }
+    //       //   else if (!array.falsy(type)) {
+    //       //     array.each(
+    //       //       type,
+    //       //       function (t) {
+    //       //         if (is.is(target, t)) {
+    //       //           matched = env.TRUE
+    //       //           return env.FALSE
+    //       //         }
+    //       //       }
+    //       //     )
+    //       //   }
+    //       //   else if (is.func(type)) {
+    //       //     // 有时候做判断需要参考其他数据
+    //       //     // 比如当 a 有值时，b 可以为空之类的
+    //       //     matched = type(target, props)
+    //       //   }
+    //       //   if (matched !== env.TRUE) {
+    //       //     logger.warn(`The prop "${key}" ${env.RAW_TYPE} is not matched.`)
+    //       //   }
+    //       // }
+    //     }
+    //     else if (required) {
+    //       logger.warn(`The prop "${key}" is marked as required, but its value is not found.`)
+    //     }
+    //     else if (object.has(rule, 'value')) {
+    //       result[key] = type === env.RAW_FUNCTION
+    //         ? value
+    //         : (is.func(value) ? value(props) : value)
+    //     }
+    //   }
+    // )
     return result
   }
 
@@ -256,6 +256,7 @@ export default class Yox implements YoxInterface {
       el,
       data,
       props,
+      model,
       parent,
       replace,
       computed,
@@ -274,6 +275,10 @@ export default class Yox implements YoxInterface {
 
     if (extensions) {
       object.extend(instance, extensions)
+    }
+
+    if (model) {
+      instance.$model = model
     }
 
     // 数据源
@@ -324,15 +329,18 @@ export default class Yox implements YoxInterface {
     // 支持命名空间
     instance.$emitter = new Emitter(env.TRUE)
 
-    let holder: HTMLElement | void
+    let placeholder: Node | void,
+
+    isComment = env.FALSE
 
     // 检查 template
     if (is.string(template)) {
       // 传了选择器，则取对应元素的 html
       if (selectorPattern.test(template)) {
-        holder = domApi.find(template)
-        if (holder) {
-          template = domApi.html(holder) as string
+        placeholder = domApi.find(template)
+        if (placeholder) {
+          template = domApi.html(placeholder as Element) as string
+          placeholder = env.UNDEFINED
         }
         else {
           logger.fatal(`"${template}" 选择器找不到对应的元素`)
@@ -343,35 +351,34 @@ export default class Yox implements YoxInterface {
       template = env.UNDEFINED
     }
 
-
     // 检查 el
-    if (is.string(el)) {
-      const selector = el as string
-      if (selectorPattern.test(selector)) {
-        holder = domApi.find(selector)
-        if (holder) {
-          el = holder
+    if (el) {
+      if (is.string(el)) {
+        const selector = el as string
+        if (selectorPattern.test(selector)) {
+          placeholder = domApi.find(selector)
+          if (!placeholder) {
+            logger.fatal(`"${selector}" 选择器找不到对应的元素`)
+          }
         }
         else {
-          logger.fatal(`"${selector}" 选择器找不到对应的元素`)
+          logger.fatal(`"el" option 格式错误`)
         }
       }
       else {
-        logger.fatal(`"el" option 格式错误`)
+        placeholder = el as Node
       }
     }
 
-    let placeholder: Node | void
-    if (el) {
-      if (replace) {
-        placeholder = el as Node
-      }
+
+    if (placeholder && !replace) {
       // 如果不是替换占位元素
       // 则在该元素下新建一个注释节点，等会用新组件替换掉
-      else {
+      isComment = env.TRUE
+      domApi.append(
+        placeholder as Node,
         placeholder = domApi.createComment(env.EMPTY_STRING)
-        domApi.append(el as Node, placeholder)
-      }
+      )
     }
 
     if (parent) {
@@ -391,7 +398,7 @@ export default class Yox implements YoxInterface {
     }
 
     // 聪明的 set...
-    let smartSet = function (key: string, value: Function | Record<string, any>) {
+    const smartSet = function (key: string, value: Function | Record<string, any>) {
       if (is.func(value)) {
         instance[key](execute(value, instance))
       }
@@ -435,7 +442,7 @@ export default class Yox implements YoxInterface {
       // 拷贝一份，避免影响外部定义的 watchers
       watchers = watchers
         ? object.copy(watchers)
-        : { }
+        : {}
 
       // 当 virtual dom 变了，则更新视图
       watchers[TEMPLATE_COMPUTED] = function (vnode: VNode) {
@@ -443,11 +450,17 @@ export default class Yox implements YoxInterface {
       }
 
       // 第一次渲染视图
+      if (!placeholder) {
+        isComment = env.TRUE
+        placeholder = domApi.createComment(env.EMPTY_STRING)
+      }
+
       instance.update(
         instance.get(TEMPLATE_COMPUTED),
         snabbdom.create(
           domApi,
-          placeholder || domApi.createComment(env.EMPTY_STRING),
+          placeholder,
+          isComment,
           instance,
           env.EMPTY_STRING
         )
@@ -833,20 +846,18 @@ export default class Yox implements YoxInterface {
 
       let { props, model } = vnode
 
+      // 把 model 的值设置给 props 的逻辑只能写到这
+      // 不然子组件会报数据找不到的警告
       if (isDef(model)) {
         if (!props) {
-          props = { }
+          props = options.props = {}
         }
         const name = options.model || 'value'
         if (!object.has(props, name)) {
-          props[ name ] = model
+          props[name] = model
         }
-        options.extensions = {
-          $model: name,
-        }
+        options.model = name
       }
-
-      options.props = props
 
     }
 
