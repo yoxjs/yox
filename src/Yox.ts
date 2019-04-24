@@ -107,21 +107,36 @@ export default class Yox implements YoxInterface {
       if (nodes.length !== 1) {
         logger.fatal(`"template" expected to have just one root element.`)
       }
-      console.log(nodes[0])
       template = templateStringify.stringify(nodes[0])
       console.log(template)
     }
     return new Function(`return ${template}`)()
   }
 
-  public static directive(name: string | Record<string, DirectiveHooks>, directive?: DirectiveHooks): DirectiveHooks | void {
+  public static directive(
+    name: string | Record<string, DirectiveHooks>,
+    directive?: DirectiveHooks
+  ): DirectiveHooks | void {
     if (is.string(name) && !directive) {
       return getResource(globalDirectives, name as string)
     }
     setResource(globalDirectives, name, directive)
   }
 
-  public static component(name: string | Record<string, YoxOptions>, component?: YoxOptions | signature.asyncComponent): YoxOptions | void {
+  public static transition(
+    name: string | Record<string, TransitionHooks>,
+    transition?: TransitionHooks
+  ): TransitionHooks | void {
+    if (is.string(name) && !transition) {
+      return getResource(globalTransitions, name as string)
+    }
+    setResource(globalTransitions, name, transition)
+  }
+
+  public static component(
+    name: string | Record<string, YoxOptions>,
+    component?: YoxOptions | signature.asyncComponent
+  ): YoxOptions | void {
     if (is.string(name)) {
       // 同步取值
       if (!component) {
@@ -135,14 +150,10 @@ export default class Yox implements YoxInterface {
     setResource(globalComponents, name, component)
   }
 
-  public static transition(name: string | Record<string, TransitionHooks>, transition?: TransitionHooks): TransitionHooks | void {
-    if (is.string(name) && !transition) {
-      return getResource(globalTransitions, name as string)
-    }
-    setResource(globalTransitions, name, transition)
-  }
-
-  public static partial(name: string | Record<string, string>, partial?: string): Function | void {
+  public static partial(
+    name: string | Record<string, string>,
+    partial?: string
+  ): Function | void {
     if (is.string(name) && !partial) {
       return getResource(globalPartials, name as string)
     }
@@ -151,7 +162,7 @@ export default class Yox implements YoxInterface {
 
   public static filter(
     name: string | Record<string, Function | Record<string, Function>>,
-    filter?: Function | Record<string, Function>
+    filter?: Function | Record<string, Function | Record<string, Function>>
   ): Function | Record<string, Function> | void {
     if (is.string(name) && !filter) {
       return getResource(globalFilters, name as string)
@@ -218,7 +229,7 @@ export default class Yox implements YoxInterface {
         else if (required) {
           logger.warn(`The prop "${key}" is marked as required, but its value is not found.`)
         }
-        else if (object.has(rule, env.RAW_VALUE)) {
+        else if (object.has(rule, 'value')) {
           result[key] = type === env.RAW_FUNCTION
             ? value
             : (is.func(value) ? value(props) : value)
@@ -609,7 +620,10 @@ export default class Yox implements YoxInterface {
     return this
   }
 
-  directive(name: string | Record<string, DirectiveHooks>, directive?: DirectiveHooks): DirectiveHooks | void {
+  directive(
+    name: string | Record<string, DirectiveHooks>,
+    directive?: DirectiveHooks
+  ): DirectiveHooks | void {
     const instance = this, { $directives } = instance
     if (is.string(name) && !directive) {
       return getResource($directives, name as string, Yox.directive)
@@ -621,7 +635,25 @@ export default class Yox implements YoxInterface {
     )
   }
 
-  component(name: string | Record<string, YoxOptions>, component?: YoxOptions | signature.asyncComponent): YoxOptions | void {
+  transition(
+    name: string | Record<string, TransitionHooks>,
+    transition?: TransitionHooks
+  ): TransitionHooks | void {
+    const instance = this, { $transitions } = instance
+    if (is.string(name) && !transition) {
+      return getResource($transitions, name as string, Yox.transition)
+    }
+    setResource(
+      $transitions || (instance.$transitions = {}),
+      name,
+      transition
+    )
+  }
+
+  component(
+    name: string | Record<string, YoxOptions>,
+    component?: YoxOptions | signature.asyncComponent
+  ): YoxOptions | void {
     const instance = this, { $components } = instance
     if (is.string(name)) {
       // 同步取值
@@ -642,19 +674,10 @@ export default class Yox implements YoxInterface {
     )
   }
 
-  transition(name: string | Record<string, TransitionHooks>, transition?: TransitionHooks): TransitionHooks | void {
-    const instance = this, { $transitions } = instance
-    if (is.string(name) && !transition) {
-      return getResource($transitions, name as string, Yox.transition)
-    }
-    setResource(
-      $transitions || (instance.$transitions = {}),
-      name,
-      transition
-    )
-  }
-
-  partial(name: string | Record<string, string>, partial?: string): Function | void {
+  partial(
+    name: string | Record<string, string>,
+    partial?: string
+  ): Function | void {
     const instance = this, { $partials } = instance
     if (is.string(name) && !partial) {
       return getResource($partials, name as string, Yox.partial)
@@ -669,7 +692,7 @@ export default class Yox implements YoxInterface {
 
   filter(
     name: string | Record<string, Function | Record<string, Function>>,
-    filter?: Function | Record<string, Function>
+    filter?: Function | Record<string, Function | Record<string, Function>>
   ): Function | Record<string, Function> | void {
     const instance = this, { $filters } = instance
     if (is.string(name) && !filter) {
@@ -814,7 +837,7 @@ export default class Yox implements YoxInterface {
         if (!props) {
           props = { }
         }
-        const name = options.model || env.RAW_VALUE
+        const name = options.model || 'value'
         if (!object.has(props, name)) {
           props[ name ] = model
         }
@@ -858,7 +881,7 @@ export default class Yox implements YoxInterface {
     }
 
     if ($vnode) {
-      snabbdom.destroy(domApi, $vnode)
+      snabbdom.destroy(domApi, $vnode, !$parent)
     }
 
     $emitter.off()
@@ -873,8 +896,14 @@ export default class Yox implements YoxInterface {
   /**
    * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
    */
-  nextTick(task: Function): void {
-    this.$observer.nextTask.append(task)
+  nextTick(task: Function, prepend?: boolean): void {
+    const { nextTask } = this.$observer
+    if (prepend) {
+      nextTask.prepend(task)
+    }
+    else {
+      nextTask.append(task)
+    }
   }
 
   /**

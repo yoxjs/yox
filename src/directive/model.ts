@@ -19,9 +19,9 @@ import Directive from 'yox-type/src/vnode/Directive'
 import DirectiveHooks from 'yox-type/src/hooks/Directive'
 
 function getOptionValue(option: HTMLOptionElement) {
-  return isDef(option[ env.RAW_VALUE ])
-    ? option[ env.RAW_VALUE ]
-    : option[ env.RAW_TEXT ]
+  return isDef(option.value)
+    ? option.value
+    : option.text
 }
 
 interface Control {
@@ -34,18 +34,15 @@ interface Control {
 
 }
 
-const RAW_CHECKED = 'checked',
-
-syncWatcherOptions = { sync: env.TRUE },
+const syncWatcherOptions = { sync: env.TRUE },
 
 inputControl: Control = {
   set(input: HTMLInputElement, keypath: string, context: Yox) {
-    input[env.RAW_VALUE] = toString(context.get(keypath))
+    input.value = toString(context.get(keypath))
   },
   sync(input: HTMLInputElement, keypath: string, context: Yox) {
-    context.set(keypath, input[ env.RAW_VALUE ])
+    context.set(keypath, input.value)
   },
-  name: env.RAW_VALUE,
 },
 
 selectControl: Control = {
@@ -98,41 +95,41 @@ selectControl: Control = {
 
 radioControl: Control = {
   set(radio: HTMLInputElement, keypath: string, context: Yox) {
-    radio[ RAW_CHECKED ] = radio[ env.RAW_VALUE ] === toString(context.get(keypath))
+    radio.checked = radio.value === toString(context.get(keypath))
   },
   sync(radio: HTMLInputElement, keypath: string, context: Yox) {
-    if (radio[ RAW_CHECKED ]) {
-      context.set(keypath, radio[ env.RAW_VALUE ])
+    if (radio.checked) {
+      context.set(keypath, radio.value)
     }
   },
-  name: RAW_CHECKED
+  name: 'checked'
 },
 
 checkboxControl: Control = {
   set(checkbox: HTMLInputElement, keypath: string, context: Yox) {
     const value = context.get(keypath)
-    checkbox[ RAW_CHECKED ] = is.array(value)
-      ? array.has(value, checkbox[ env.RAW_VALUE ], env.FALSE)
+    checkbox.checked = is.array(value)
+      ? array.has(value, checkbox.value, env.FALSE)
       : (is.boolean(value) ? value : !!value)
   },
   sync(checkbox: HTMLInputElement, keypath: string, context: Yox) {
     const value = context.get(keypath)
     if (is.array(value)) {
-      if (checkbox[ RAW_CHECKED ]) {
-        context.append(keypath, checkbox[ env.RAW_VALUE ])
+      if (checkbox.checked) {
+        context.append(keypath, checkbox.value)
       }
       else {
         context.removeAt(
           keypath,
-          array.indexOf(value, checkbox[ env.RAW_VALUE ], env.FALSE)
+          array.indexOf(value, checkbox.value, env.FALSE)
         )
       }
     }
     else {
-      context.set(keypath, checkbox[ RAW_CHECKED ])
+      context.set(keypath, checkbox.checked)
     }
   },
-  name: RAW_CHECKED
+  name: 'checked'
 },
 
 componentControl: Control = {
@@ -203,7 +200,7 @@ directive: DirectiveHooks = {
     else {
 
       element = node as HTMLElement
-      control = specialControls[element[env.RAW_TYPE]] || specialControls[api.tag(element) as string]
+      control = specialControls[element['type']] || specialControls[api.tag(element) as string]
 
       // checkbox,radio,select 监听的是 change 事件
       type = event.CHANGE
@@ -217,7 +214,7 @@ directive: DirectiveHooks = {
       }
 
       // 如果模板里没写对应的属性，则这里先设值
-      if (!object.has(vnode.nativeProps, control.name || env.RAW_VALUE)) {
+      if (!object.has(vnode.nativeProps, control.name || 'value')) {
         set()
       }
 

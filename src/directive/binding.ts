@@ -50,10 +50,6 @@ const directive: DirectiveHooks = {
 
   },
 
-  update(node: HTMLElement | Yox, directive: Directive, vnode: VNode, oldVnode: VNode) {
-
-  },
-
   unbind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
     execute(vnode.data[directive.key])
   }
