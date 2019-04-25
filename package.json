@@ -9,7 +9,9 @@
   },
   "scripts": {
     "dev": "node_modules/.bin/rollup -c ./build/config.dev.js",
-    "prod": "node_modules/.bin/rollup -c ./build/config.prod.js"
+    "prod": "node_modules/.bin/rollup -c ./build/config.prod.js",
+    "pure": "node_modules/.bin/rollup -c ./build/config.pure.js",
+    "runtime": "node_modules/.bin/rollup -c ./build/config.runtime.js"
   },
   "repository": {
     "type": "git",

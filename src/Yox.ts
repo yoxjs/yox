@@ -35,6 +35,11 @@ import formatWatcherOptions from 'yox-observer/src/function/formatWatcherOptions
 
 import domApi from 'yox-dom/index'
 
+import event from './directive/event'
+import model from './directive/model'
+import binding from './directive/binding'
+import hasSlot from './filter/hasSlot'
+
 const globalDirectives = {},
 
 globalTransitions = {},
@@ -90,7 +95,7 @@ export default class Yox implements YoxInterface {
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
   public static is = is
-  public static dom = domApi
+
   public static array = array
   public static object = object
   public static string = string
@@ -118,77 +123,89 @@ export default class Yox implements YoxInterface {
    * 编译模板，暴露出来是为了打包阶段的模板预编译
    */
   public static compile(template: string, stringify?: boolean): Function | string {
-    if (process.env.NODE_ENV !== 'production') {
-      if (!templateStringify.hasStringify(template)) {
-        // 未编译，常出现在开发阶段
-        const nodes = templateCompiler.compile(template)
-        if (nodes.length !== 1) {
-          logger.fatal(`"template" expected to have just one root element.`)
-        }
-        template = templateStringify.stringify(nodes[0])
-        if (stringify) {
-          return template
+    if (process.env.NODE_ENV !== 'pure') {
+      if (process.env.NODE_ENV !== 'runtime') {
+        if (!templateStringify.hasStringify(template)) {
+          // 未编译，常出现在开发阶段
+          const nodes = templateCompiler.compile(template)
+          if (nodes.length !== 1) {
+            logger.fatal(`"template" expected to have just one root element.`)
+          }
+          template = templateStringify.stringify(nodes[0])
+          if (stringify) {
+            return template
+          }
         }
       }
+      return new Function(`return ${template}`)()
     }
-    return new Function(`return ${template}`)()
   }
 
   public static directive(
     name: string | Record<string, DirectiveHooks>,
     directive?: DirectiveHooks
   ): DirectiveHooks | void {
-    if (is.string(name) && !directive) {
-      return getResource(globalDirectives, name as string)
+    if (process.env.NODE_ENV !== 'pure') {
+      if (is.string(name) && !directive) {
+        return getResource(globalDirectives, name as string)
+      }
+      setResource(globalDirectives, name, directive)
     }
-    setResource(globalDirectives, name, directive)
   }
 
   public static transition(
     name: string | Record<string, TransitionHooks>,
     transition?: TransitionHooks
   ): TransitionHooks | void {
-    if (is.string(name) && !transition) {
-      return getResource(globalTransitions, name as string)
+    if (process.env.NODE_ENV !== 'pure') {
+      if (is.string(name) && !transition) {
+        return getResource(globalTransitions, name as string)
+      }
+      setResource(globalTransitions, name, transition)
     }
-    setResource(globalTransitions, name, transition)
   }
 
   public static component(
     name: string | Record<string, YoxOptions>,
     component?: YoxOptions | signature.asyncComponent
   ): YoxOptions | void {
-    if (is.string(name)) {
-      // 同步取值
-      if (!component) {
-        return getResource(globalComponents, name as string)
+    if (process.env.NODE_ENV !== 'pure') {
+      if (is.string(name)) {
+        // 同步取值
+        if (!component) {
+          return getResource(globalComponents, name as string)
+        }
+        else if (is.func(component)) {
+          getComponentAsync(globalComponents, name as string, component as signature.asyncComponent)
+          return
+        }
       }
-      else if (is.func(component)) {
-        getComponentAsync(globalComponents, name as string, component as signature.asyncComponent)
-        return
-      }
+      setResource(globalComponents, name, component)
     }
-    setResource(globalComponents, name, component)
   }
 
   public static partial(
     name: string | Record<string, string>,
     partial?: string
   ): Function | void {
-    if (is.string(name) && !partial) {
-      return getResource(globalPartials, name as string)
+    if (process.env.NODE_ENV !== 'pure') {
+      if (is.string(name) && !partial) {
+        return getResource(globalPartials, name as string)
+      }
+      setResource(globalPartials, name, partial, Yox.compile)
     }
-    setResource(globalPartials, name, partial, Yox.compile)
   }
 
   public static filter(
     name: string | Record<string, Function | Record<string, Function>>,
     filter?: Function | Record<string, Function | Record<string, Function>>
   ): Function | Record<string, Function> | void {
-    if (is.string(name) && !filter) {
-      return getResource(globalFilters, name as string)
+    if (process.env.NODE_ENV !== 'pure') {
+      if (is.string(name) && !filter) {
+        return getResource(globalFilters, name as string)
+      }
+      setResource(globalFilters, name, filter)
     }
-    setResource(globalFilters, name, filter)
   }
 
   /**
@@ -357,56 +374,66 @@ export default class Yox implements YoxInterface {
 
     isComment = env.FALSE
 
-    // 检查 template
-    if (is.string(template)) {
-      // 传了选择器，则取对应元素的 html
-      if (selectorPattern.test(template)) {
-        placeholder = domApi.find(template)
-        if (placeholder) {
-          template = domApi.html(placeholder as Element) as string
-          placeholder = env.UNDEFINED
-        }
-        else {
-          logger.fatal(`"${template}" 选择器找不到对应的元素`)
-        }
-      }
-    }
-    else {
-      template = env.UNDEFINED
-    }
+    if (process.env.NODE_ENV !== 'pure') {
 
-    // 检查 el
-    if (el) {
-      if (is.string(el)) {
-        const selector = el as string
-        if (selectorPattern.test(selector)) {
-          placeholder = domApi.find(selector)
-          if (!placeholder) {
-            logger.fatal(`"${selector}" 选择器找不到对应的元素`)
+      // 检查 template
+      if (is.string(template)) {
+        // 传了选择器，则取对应元素的 html
+        if (selectorPattern.test(template)) {
+          placeholder = domApi.find(template)
+          if (placeholder) {
+            template = domApi.html(placeholder as Element) as string
+            placeholder = env.UNDEFINED
           }
-        }
-        else {
-          logger.fatal(`"el" option 格式错误`)
+          else {
+            logger.fatal(`"${template}" 选择器找不到对应的元素`)
+          }
         }
       }
       else {
-        placeholder = el as Node
+        template = env.UNDEFINED
       }
-    }
+
+      // 检查 el
+      if (el) {
+        if (is.string(el)) {
+          const selector = el as string
+          if (selectorPattern.test(selector)) {
+            placeholder = domApi.find(selector)
+            if (!placeholder) {
+              logger.fatal(`"${selector}" 选择器找不到对应的元素`)
+            }
+          }
+          else {
+            logger.fatal(`"el" option 格式错误`)
+          }
+        }
+        else {
+          placeholder = el as Node
+        }
+      }
 
 
-    if (placeholder && !replace) {
-      // 如果不是替换占位元素
-      // 则在该元素下新建一个注释节点，等会用新组件替换掉
-      isComment = env.TRUE
-      domApi.append(
-        placeholder as Node,
-        placeholder = domApi.createComment(env.EMPTY_STRING)
-      )
-    }
+      if (placeholder && !replace) {
+        // 如果不是替换占位元素
+        // 则在该元素下新建一个注释节点，等会用新组件替换掉
+        isComment = env.TRUE
+        domApi.append(
+          placeholder as Node,
+          placeholder = domApi.createComment(env.EMPTY_STRING)
+        )
+      }
 
-    if (parent) {
-      instance.$parent = parent
+      if (parent) {
+        instance.$parent = parent
+      }
+
+      setFlexibleOptions(instance, env.RAW_TRANSITION, transitions)
+      setFlexibleOptions(instance, env.RAW_COMPONENT, components)
+      setFlexibleOptions(instance, env.RAW_DIRECTIVE, directives)
+      setFlexibleOptions(instance, env.RAW_PARTIAL, partials)
+      setFlexibleOptions(instance, env.RAW_FILTER, filters)
+
     }
 
     if (methods) {
@@ -421,68 +448,65 @@ export default class Yox implements YoxInterface {
       )
     }
 
-    setFlexibleOptions(instance, env.RAW_TRANSITION, transitions)
-    setFlexibleOptions(instance, env.RAW_COMPONENT, components)
-    setFlexibleOptions(instance, env.RAW_DIRECTIVE, directives)
-    setFlexibleOptions(instance, env.RAW_PARTIAL, partials)
-    setFlexibleOptions(instance, env.RAW_FILTER, filters)
-
     execute(options[ config.HOOK_AFTER_CREATE ], instance)
 
-    // 当存在模板和计算属性时
-    // 因为这里把模板当做一种特殊的计算属性
-    // 因此模板这个计算属性的优先级应该最高
-    if (template) {
+    if (process.env.NODE_ENV !== 'pure') {
 
-      // 编译模板
-      // 在开发阶段，template 是原始的 html 模板
-      // 在产品阶段，template 是编译后且经过 stringify 的字符串
-      // 当然，这个需要外部自己控制传入的 template 是什么
-      // Yox.compile 会自动判断 template 是否经过编译
-      instance.$template = Yox.compile(template) as Function
+      // 当存在模板和计算属性时
+      // 因为这里把模板当做一种特殊的计算属性
+      // 因此模板这个计算属性的优先级应该最高
+      if (template) {
 
-      // 当模板的依赖变了，则重新创建 virtual dom
-      observer.addComputed(
-        TEMPLATE_COMPUTED,
-        {
-          // 当模板依赖变化时，异步通知模板更新
-          sync: env.FALSE,
-          get: function () {
-            return instance.render()
+        // 编译模板
+        // 在开发阶段，template 是原始的 html 模板
+        // 在产品阶段，template 是编译后且经过 stringify 的字符串
+        // 当然，这个需要外部自己控制传入的 template 是什么
+        // Yox.compile 会自动判断 template 是否经过编译
+        instance.$template = Yox.compile(template) as Function
+
+        // 当模板的依赖变了，则重新创建 virtual dom
+        observer.addComputed(
+          TEMPLATE_COMPUTED,
+          {
+            // 当模板依赖变化时，异步通知模板更新
+            sync: env.FALSE,
+            get: function () {
+              return instance.render()
+            }
           }
-        }
-      )
-
-      // 拷贝一份，避免影响外部定义的 watchers
-      watchers = watchers
-        ? object.copy(watchers)
-        : {}
-
-      // 当 virtual dom 变了，则更新视图
-      watchers[TEMPLATE_COMPUTED] = function (vnode: VNode) {
-        instance.update(vnode, instance.$vnode)
-      }
-
-      // 第一次渲染视图
-      if (!placeholder) {
-        isComment = env.TRUE
-        placeholder = domApi.createComment(env.EMPTY_STRING)
-      }
-
-      instance.update(
-        instance.get(TEMPLATE_COMPUTED),
-        snabbdom.create(
-          domApi,
-          placeholder,
-          isComment,
-          instance,
-          env.EMPTY_STRING
         )
-      )
 
-    }
-    else if (placeholder) {
-      logger.fatal('有 el 没 template 是几个意思？')
+        // 拷贝一份，避免影响外部定义的 watchers
+        watchers = watchers
+          ? object.copy(watchers)
+          : {}
+
+        // 当 virtual dom 变了，则更新视图
+        watchers[TEMPLATE_COMPUTED] = function (vnode: VNode) {
+          instance.update(vnode, instance.$vnode)
+        }
+
+        // 第一次渲染视图
+        if (!placeholder) {
+          isComment = env.TRUE
+          placeholder = domApi.createComment(env.EMPTY_STRING)
+        }
+
+        instance.update(
+          instance.get(TEMPLATE_COMPUTED),
+          snabbdom.create(
+            domApi,
+            placeholder,
+            isComment,
+            instance,
+            env.EMPTY_STRING
+          )
+        )
+
+      }
+      else if (placeholder) {
+        logger.fatal('有 el 没 template 是几个意思？')
+      }
     }
 
     if (events) {
@@ -676,85 +700,95 @@ export default class Yox implements YoxInterface {
     name: string | Record<string, DirectiveHooks>,
     directive?: DirectiveHooks
   ): DirectiveHooks | void {
-    const instance = this, { $directives } = instance
-    if (is.string(name) && !directive) {
-      return getResource($directives, name as string, Yox.directive)
+    if (process.env.NODE_ENV !== 'pure') {
+      const instance = this, { $directives } = instance
+      if (is.string(name) && !directive) {
+        return getResource($directives, name as string, Yox.directive)
+      }
+      setResource(
+        $directives || (instance.$directives = {}),
+        name,
+        directive
+      )
     }
-    setResource(
-      $directives || (instance.$directives = {}),
-      name,
-      directive
-    )
   }
 
   transition(
     name: string | Record<string, TransitionHooks>,
     transition?: TransitionHooks
   ): TransitionHooks | void {
-    const instance = this, { $transitions } = instance
-    if (is.string(name) && !transition) {
-      return getResource($transitions, name as string, Yox.transition)
+    if (process.env.NODE_ENV !== 'pure') {
+      const instance = this, { $transitions } = instance
+      if (is.string(name) && !transition) {
+        return getResource($transitions, name as string, Yox.transition)
+      }
+      setResource(
+        $transitions || (instance.$transitions = {}),
+        name,
+        transition
+      )
     }
-    setResource(
-      $transitions || (instance.$transitions = {}),
-      name,
-      transition
-    )
   }
 
   component(
     name: string | Record<string, YoxOptions>,
     component?: YoxOptions | signature.asyncComponent
   ): YoxOptions | void {
-    const instance = this, { $components } = instance
-    if (is.string(name)) {
-      // 同步取值
-      if (!component) {
-        return getResource($components, name as string, Yox.component)
-      }
-      else if (is.func(component)) {
-        if (!getComponentAsync($components, name as string, component as signature.asyncComponent)) {
-          getComponentAsync(globalComponents, name as string, component as signature.asyncComponent)
+    if (process.env.NODE_ENV !== 'pure') {
+      const instance = this, { $components } = instance
+      if (is.string(name)) {
+        // 同步取值
+        if (!component) {
+          return getResource($components, name as string, Yox.component)
         }
-        return
+        else if (is.func(component)) {
+          if (!getComponentAsync($components, name as string, component as signature.asyncComponent)) {
+            getComponentAsync(globalComponents, name as string, component as signature.asyncComponent)
+          }
+          return
+        }
       }
+      setResource(
+        $components || (instance.$components = {}),
+        name,
+        component
+      )
     }
-    setResource(
-      $components || (instance.$components = {}),
-      name,
-      component
-    )
   }
 
   partial(
     name: string | Record<string, string>,
     partial?: string
   ): Function | void {
-    const instance = this, { $partials } = instance
-    if (is.string(name) && !partial) {
-      return getResource($partials, name as string, Yox.partial)
+    if (process.env.NODE_ENV !== 'pure') {
+      const instance = this, { $partials } = instance
+      if (is.string(name) && !partial) {
+        return getResource($partials, name as string, Yox.partial)
+      }
+      setResource(
+        $partials || (instance.$partials = {}),
+        name,
+        partial,
+        Yox.compile
+      )
     }
-    setResource(
-      $partials || (instance.$partials = {}),
-      name,
-      partial,
-      Yox.compile
-    )
   }
 
   filter(
     name: string | Record<string, Function | Record<string, Function>>,
     filter?: Function | Record<string, Function | Record<string, Function>>
   ): Function | Record<string, Function> | void {
-    const instance = this, { $filters } = instance
-    if (is.string(name) && !filter) {
-      return getResource($filters, name as string, Yox.filter)
+    if (process.env.NODE_ENV !== 'pure') {
+      const instance = this, { $filters } = instance
+      if (is.string(name) && !filter) {
+        return getResource($filters, name as string, Yox.filter)
+      }
+      setResource(
+        $filters || (instance.$filters = {}),
+        name,
+        filter
+      )
     }
-    setResource(
-      $filters || (instance.$filters = {}),
-      name,
-      filter
-    )
   }
 
   /**
@@ -762,26 +796,28 @@ export default class Yox implements YoxInterface {
    * 而你非常确定需要更新模板，强制刷新正是你需要的
    */
   forceUpdate(): void {
+    if (process.env.NODE_ENV !== 'pure') {
 
-    const instance = this,
+      const instance = this,
 
-    { $vnode, $observer } = instance
+      { $vnode, $observer } = instance
 
-    if ($vnode) {
+      if ($vnode) {
 
-      const computed: Computed = $observer.computed[TEMPLATE_COMPUTED],
+        const computed: Computed = $observer.computed[TEMPLATE_COMPUTED],
 
-      oldValue = computed.get()
+        oldValue = computed.get()
 
-      // 当前可能正在进行下一轮更新
-      $observer.nextTask.run()
+        // 当前可能正在进行下一轮更新
+        $observer.nextTask.run()
 
-      // 没有更新模板，强制刷新
-      if (oldValue === computed.get()) {
-        instance.update(
-          computed.get(env.TRUE),
-          $vnode
-        )
+        // 没有更新模板，强制刷新
+        if (oldValue === computed.get()) {
+          instance.update(
+            computed.get(env.TRUE),
+            $vnode
+          )
+        }
       }
     }
   }
@@ -790,15 +826,17 @@ export default class Yox implements YoxInterface {
    * 把模板抽象语法树渲染成 virtual dom
    */
   render() {
-    const instance = this
-    return templateRender.render(
-      instance,
-      mergeResource(instance.$filters, globalFilters),
-      mergeResource(instance.$partials, globalPartials),
-      mergeResource(instance.$directives, globalDirectives),
-      mergeResource(instance.$transitions, globalTransitions),
-      instance.$template
-    )
+    if (process.env.NODE_ENV !== 'pure') {
+      const instance = this
+      return templateRender.render(
+        instance,
+        mergeResource(instance.$filters, globalFilters),
+        mergeResource(instance.$partials, globalPartials),
+        mergeResource(instance.$directives, globalDirectives),
+        mergeResource(instance.$transitions, globalTransitions),
+        instance.$template
+      )
+    }
   }
 
   /**
@@ -808,44 +846,44 @@ export default class Yox implements YoxInterface {
    * @param oldVnode
    */
   update(vnode: VNode, oldVnode: VNode) {
+    if (process.env.NODE_ENV !== 'pure') {
+      let instance = this,
 
-    let instance = this,
+      { $vnode, $options } = instance,
 
-    { $vnode, $options } = instance,
+      hook: Function | void
 
-    hook: Function | void
+      // 每次渲染重置 refs
+      // 在渲染过程中收集最新的 ref
+      // 这样可避免更新时，新的 ref，在前面创建，老的 ref 却在后面删除的情况
+      instance.$refs = {}
 
-    // 每次渲染重置 refs
-    // 在渲染过程中收集最新的 ref
-    // 这样可避免更新时，新的 ref，在前面创建，老的 ref 却在后面删除的情况
-    instance.$refs = {}
+      if ($vnode) {
+        execute($options[ config.HOOK_BEFORE_UPDATE ], instance)
+        snabbdom.patch(domApi, vnode, oldVnode)
+        hook = $options[config.HOOK_AFTER_UPDATE]
+      }
+      else {
+        execute($options[ config.HOOK_BEFORE_MOUNT ], instance)
+        snabbdom.patch(domApi, vnode, oldVnode)
+        instance.$el = vnode.node as HTMLElement
+        hook = $options[config.HOOK_AFTER_MOUNT]
+      }
 
-    if ($vnode) {
-      execute($options[ config.HOOK_BEFORE_UPDATE ], instance)
-      snabbdom.patch(domApi, vnode, oldVnode)
-      hook = $options[config.HOOK_AFTER_UPDATE]
-    }
-    else {
-      execute($options[ config.HOOK_BEFORE_MOUNT ], instance)
-      snabbdom.patch(domApi, vnode, oldVnode)
-      instance.$el = vnode.node as HTMLElement
-      hook = $options[config.HOOK_AFTER_MOUNT]
-    }
+      instance.$vnode = vnode
 
-    instance.$vnode = vnode
-
-    // 跟 nextTask 保持一个节奏
-    // 这样可以预留一些优化的余地
-    if (hook) {
-      instance.nextTick(
-        function () {
-          if (instance.$vnode) {
-            execute(hook, instance)
+      // 跟 nextTask 保持一个节奏
+      // 这样可以预留一些优化的余地
+      if (hook) {
+        instance.nextTick(
+          function () {
+            if (instance.$vnode) {
+              execute(hook, instance)
+            }
           }
-        }
-      )
+        )
+      }
     }
-
   }
 
   /**
@@ -868,48 +906,49 @@ export default class Yox implements YoxInterface {
    * @param node DOM 元素
    */
   create(options: YoxOptions, vnode?: VNode, node?: Node): YoxInterface {
+    if (process.env.NODE_ENV !== 'pure') {
+      options = object.copy(options)
+      options.parent = this
 
-    options = object.copy(options)
-    options.parent = this
+      if (vnode) {
 
-    if (vnode) {
-
-      // 如果传了 node，表示有一个占位元素，新创建的 child 需要把它替换掉
-      if (node) {
-        options.el = node
-        options.replace = env.TRUE
-      }
-
-      let { slots, props, model } = vnode
-
-      if (slots) {
-        options.slots = slots
-      }
-
-      // 把 model 的值设置给 props 的逻辑只能写到这
-      // 不然子组件会报数据找不到的警告
-      if (isDef(model)) {
-        if (!props) {
-          props = {}
+        // 如果传了 node，表示有一个占位元素，新创建的 child 需要把它替换掉
+        if (node) {
+          options.el = node
+          options.replace = env.TRUE
         }
-        const name = options.model || 'value'
-        if (!object.has(props, name)) {
-          props[name] = model
+
+        let { slots, props, model } = vnode
+
+        if (slots) {
+          options.slots = slots
         }
-        options.model = name
+
+        // 把 model 的值设置给 props 的逻辑只能写到这
+        // 不然子组件会报数据找不到的警告
+        if (isDef(model)) {
+          if (!props) {
+            props = {}
+          }
+          const name = options.model || 'value'
+          if (!object.has(props, name)) {
+            props[name] = model
+          }
+          options.model = name
+        }
+
+        options.props = props
+
       }
 
-      options.props = props
+      const child = new Yox(options)
+      array.push(
+        this.$children || (this.$children = [ ]),
+        child
+      )
 
+      return child
     }
-
-    const child = new Yox(options)
-    array.push(
-      this.$children || (this.$children = [ ]),
-      child
-    )
-
-    return child
   }
 
   /**
@@ -919,22 +958,22 @@ export default class Yox implements YoxInterface {
 
     const instance = this,
 
-    {
-      $options,
-      $vnode,
-      $parent,
-      $emitter,
-      $observer,
-    } = instance
+    { $options, $emitter, $observer } = instance
 
     execute($options[ config.HOOK_BEFORE_DESTROY ], instance)
 
-    if ($parent && $parent.$children) {
-      array.remove($parent.$children, instance)
-    }
+    if (process.env.NODE_ENV !== 'pure') {
 
-    if ($vnode) {
-      snabbdom.destroy(domApi, $vnode, !$parent)
+      const { $vnode, $parent } = instance
+
+      if ($parent && $parent.$children) {
+        array.remove($parent.$children, instance)
+      }
+
+      if ($vnode) {
+        snabbdom.destroy(domApi, $vnode, !$parent)
+      }
+
     }
 
     $emitter.off()
@@ -1057,89 +1096,85 @@ export default class Yox implements YoxInterface {
 
 }
 
-function setFlexibleOptions(instance: Yox, key: string, value: Function | Record<string, any>) {
-  if (is.func(value)) {
-    instance[key](execute(value, instance))
+if (process.env.NODE_ENV !== 'pure') {
+  function setFlexibleOptions(instance: Yox, key: string, value: Function | Record<string, any>) {
+    if (is.func(value)) {
+      instance[key](execute(value, instance))
+    }
+    else if (is.object(value)) {
+      instance[key](value)
+    }
   }
-  else if (is.object(value)) {
-    instance[key](value)
-  }
-}
 
-function getComponentAsync(data: Record<string, any> | void, name: string, callback: signature.asyncComponent): boolean | void {
-  if (data && object.has(data, name)) {
-    const component = data[name]
-    // 注册的是异步加载函数
-    if (is.func(component)) {
-      let { $queue } = component
-      if (!$queue) {
-        $queue = component.$queue = [callback]
-        component(
-          function (replacement: any) {
+  function getComponentAsync(data: Record<string, any> | void, name: string, callback: signature.asyncComponent): boolean | void {
+    if (data && object.has(data, name)) {
+      const component = data[name]
+      // 注册的是异步加载函数
+      if (is.func(component)) {
+        let { $queue } = component
+        if (!$queue) {
+          $queue = component.$queue = [callback]
+          component(
+            function (replacement: any) {
 
-            component.$queue = env.UNDEFINED
+              component.$queue = env.UNDEFINED
 
-            data[name] = replacement
+              data[name] = replacement
 
-            array.each(
-              $queue,
-              function (callback) {
-                callback(replacement)
-              }
-            )
+              array.each(
+                $queue,
+                function (callback) {
+                  callback(replacement)
+                }
+              )
 
-          }
-        )
+            }
+          )
+        }
+        else {
+          array.push($queue, callback)
+        }
       }
+      // 不是异步加载函数，直接同步返回
       else {
-        array.push($queue, callback)
+        callback(component)
       }
+      return env.TRUE
     }
-    // 不是异步加载函数，直接同步返回
+  }
+
+  function getResource(data: Record<string, any> | void, name: string, lookup?: Function) {
+    if (data && data[name]) {
+      return data[name]
+    }
+    else if (lookup) {
+      return lookup(name)
+    }
+  }
+
+  function setResource(data: Record<string, any>, name: string | Record<string, any>, value?: any, formatValue?: (value: any) => any) {
+    if (is.string(name)) {
+      data[name as string] = formatValue ? formatValue(value) : value
+    }
     else {
-      callback(component)
+      object.each(
+        name,
+        function (value, key) {
+          data[key] = formatValue ? formatValue(value) : value
+        }
+      )
     }
-    return env.TRUE
   }
+
+  function mergeResource(locals: Record<string, any> | void, globals: Record<string, any>): Record<string, any> {
+    return locals && globals
+      ? object.extend({}, globals, locals)
+      : locals || globals
+  }
+
+  // 全局注册内置指令
+  Yox.directive({ event, model, binding })
+
+  // 全局注册内置过滤器
+  Yox.filter({ hasSlot })
 }
-
-function getResource(data: Record<string, any> | void, name: string, lookup?: Function) {
-  if (data && data[name]) {
-    return data[name]
-  }
-  else if (lookup) {
-    return lookup(name)
-  }
-}
-
-function setResource(data: Record<string, any>, name: string | Record<string, any>, value?: any, formatValue?: (value: any) => any) {
-  if (is.string(name)) {
-    data[name as string] = formatValue ? formatValue(value) : value
-  }
-  else {
-    object.each(
-      name,
-      function (value, key) {
-        data[key] = formatValue ? formatValue(value) : value
-      }
-    )
-  }
-}
-
-function mergeResource(locals: Record<string, any> | void, globals: Record<string, any>): Record<string, any> {
-  return locals && globals
-    ? object.extend({}, globals, locals)
-    : locals || globals
-}
-
-import event from './directive/event'
-import model from './directive/model'
-import binding from './directive/binding'
-
-// 全局注册内置指令
-Yox.directive({ event, model, binding })
-
-import hasSlot from './filter/hasSlot'
-
-// 全局注册内置过滤器
-Yox.filter({ hasSlot })
