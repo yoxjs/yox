@@ -1108,7 +1108,9 @@ Emitter.prototype.off = function (type, listener) {
         // 在开发阶段进行警告，比如传了 type 进来，type 是个空值
         // 但你不知道它是空值
         {
-            warn("绑定的事件已被全部移除");
+            if (arguments.length > 0) {
+                warn("绑定的事件已被全部移除");
+            }
         }
     }
 };

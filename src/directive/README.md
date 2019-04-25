@@ -4,8 +4,6 @@
 
 ## 规范
 
-指令是一个函数，调用时会传入一个对象，结构如下：
-
 ```js
 {
     bind: function (node, directive, vnode) {
