@@ -1,16 +1,3 @@
-process.env.NODE_ENV = 'production'
+import createConfig from './config.base'
 
-import uglify from 'rollup-plugin-uglify'
-import * as common from './config'
-
-common.configList.map(config => {
-
-  config.output.sourcemap = false
-
-  config.plugins.push(
-    uglify.uglify()
-  )
-
-})
-
-export default common.configList
+export default createConfig('production', false, false, 0)

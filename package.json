@@ -7,7 +7,6 @@
     "example": "example",
     "test": "test"
   },
-  "devDependencies": {},
   "scripts": {
     "dev": "node_modules/.bin/rollup -c ./build/config.dev.js",
     "prod": "node_modules/.bin/rollup -c ./build/config.prod.js"
@@ -30,14 +29,18 @@
     "url": "https://github.com/yoxjs/yox/issues"
   },
   "homepage": "https://github.com/yoxjs/yox#readme",
-  "dependencies": {
+  "devDependencies": {
     "rollup": "^1.10.1",
-    "rollup-plugin-buble": "^0.19.6",
+    "rollup-plugin-replace": "^2.2.0",
     "rollup-plugin-serve": "^1.0.1",
     "rollup-plugin-typescript": "^1.0.1",
     "rollup-plugin-uglify": "^6.0.2",
     "tslib": "^1.9.3",
-    "typescript": "^3.4.4",
+    "typescript": "^3.4.4"
+  },
+  "dependencies": {
+    "rollup-plugin-buble": "^0.19.6",
+    "rollup-plugin-filesize": "^6.0.1",
     "yox-common": "^0.18.22",
     "yox-config": "^0.1.6",
     "yox-dom": "^0.0.19",

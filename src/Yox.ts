@@ -118,14 +118,15 @@ export default class Yox implements YoxInterface {
    * 编译模板，暴露出来是为了打包阶段的模板预编译
    */
   public static compile(template: string): Function {
-    // 已编译，常出现在线上阶段
-    if (!templateStringify.hasStringify(template)) {
-      // 未编译，常出现在开发阶段
-      const nodes = templateCompiler.compile(template)
-      if (nodes.length !== 1) {
-        logger.fatal(`"template" expected to have just one root element.`)
+    if (process.env.NODE_ENV !== 'production') {
+      if (!templateStringify.hasStringify(template)) {
+        // 未编译，常出现在开发阶段
+        const nodes = templateCompiler.compile(template)
+        if (nodes.length !== 1) {
+          logger.fatal(`"template" expected to have just one root element.`)
+        }
+        template = templateStringify.stringify(nodes[0])
       }
-      template = templateStringify.stringify(nodes[0])
     }
     return new Function(`return ${template}`)()
   }
