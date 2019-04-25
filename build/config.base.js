@@ -5,12 +5,14 @@ import replace from 'rollup-plugin-replace'
 import filesize from 'rollup-plugin-filesize'
 // 压缩
 import uglify from 'rollup-plugin-uglify'
-// ES6 => ES5
+// 将 ES6+ 代码编译为 ES2015
 import buble from 'rollup-plugin-buble'
 // 本地服务器
 import serve from 'rollup-plugin-serve'
 
 import { name, version, author, license } from '../package.json'
+
+import optimize from './optimize'
 
 const banner =
   `${'/**\n' + ' * '}${name}.js v${version}\n` +
@@ -27,7 +29,13 @@ export default function (env = 'production', minify = false, sourcemap = false, 
       'process.env.NODE_ENV': JSON.stringify(env)
     }),
     typescript(),
-    buble()
+    buble(),
+    {
+      name: 'optimize',
+      renderChunk(code) {
+        return optimize(code)
+      },
+    }
   ]
 
   if (minify) {
