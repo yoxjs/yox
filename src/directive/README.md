@@ -8,13 +8,29 @@
 
 ```js
 {
-  el: 'DOM 元素',
-  node: '指令对应的语法树节点',
-  instance: '指令所属组件实例，和 component 不是一个概念',
-  directives: 'DOM 元素上绑定的其他指令，有时需要用到其他指令的数据',
-  attrs: 'DOM 元素上声明的属性',
-  component: '如果是作用于组件的指令，会传入该组件的实例'
+    bind: function (node, directive, vnode) {
+
+      // 当指令写在组件上，isComponent 为 true
+      // 比如 <Dog o-x="x" />
+      if (vnode.isComponent) {
+        // node 是一个 Yox 实例
+      }
+      else {
+        // node 是一个 DOM 元素
+      }
+
+      // 如果指令需要销毁，比如绑定了事件
+      // 你要在 vnode.data[directive.key] 属性上绑定销毁需要用到的数据
+
+      vnode.data[directive.key] = function () {
+        // 销毁逻辑
+      }
+
+    },
+    unbind: function (node, directive, vnode) {
+      // 销毁它
+      vnode.data[directive.key]()
+    }
+  }
 }
 ```
-
-如有需要，指令函数应返回一个销毁函数。
