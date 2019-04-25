@@ -1618,26 +1618,29 @@ function removeVnode(api, parentNode, vnode) {
     }
 }
 function destroyVnode(api, vnode) {
+    /**
+     * 如果一个子组件的模板是这样写的：
+     *
+     * <div>
+     *   {{#if visible}}
+     *      <slot name="children"/>
+     *   {{/if}}
+     * </div>
+     *
+     * 当 visible 从 true 变为 false 时，不能销毁 slot 导入的任何 vnode
+     * 不论是组件或是元素，都不能销毁，只能简单的 remove，
+     * 否则子组件下一次展现它们时，会出问题
+     */
+    if (vnode.context !== vnode.parent) {
+        return;
+    }
     var data = vnode.data;
     var children = vnode.children;
     if (vnode.isComponent) {
         var component = data[COMPONENT];
         if (component) {
-            /**
-             * 如果一个子组件的模板是这样写的：
-             *
-             * <div>
-             *   {{#if visible}}
-             *      <slot name="children"/>
-             *   {{/if}}
-             * </div>
-             *
-             * 当 visible 从 true 变为 false 时，不能销毁 slot 导入的组件
-             */
-            if (vnode.context === vnode.parent) {
-                remove$1(vnode);
-                component.destroy();
-            }
+            remove$1(vnode);
+            component.destroy();
         }
         else
             { [
@@ -4755,9 +4758,7 @@ function render(context, filters, partials, directives, transitions, template) {
         if (vnodes) {
             each(vnodes, function (vnode) {
                 push(vnodeList, vnode);
-                if (vnode.isComponent) {
-                    vnode.parent = context;
-                }
+                vnode.parent = context;
             });
         }
         else if (defaultRender) {
