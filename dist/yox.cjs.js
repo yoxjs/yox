@@ -6107,6 +6107,9 @@ var directive$2 = {
  * @param name
  */
 function hasSlot (name) {
+    {
+        warn('hasSlot 过滤器已不建议使用');
+    }
     return isDef(this.get(SLOT_DATA_PREFIX + name));
 }
 
