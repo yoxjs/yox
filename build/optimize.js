@@ -11,6 +11,23 @@ export default function (source) {
   )
 
   /**
+   * 去掉自动生成的 #__PURE__ 注释代码
+   */
+  source = source.replace(
+    /\/\*#__PURE__\*\//g,
+    ''
+  )
+
+  /**
+   * 去掉 var env = { ... }
+   * 我怀疑是 rollup 的 bug，这个没用到，居然没被 tree shake 掉
+   */
+  source = source.replace(
+    /var env = \{[^\}]+\}/g,
+    ''
+  )
+
+  /**
    * 类属性 value: function has$$1
    * 转成 value: function
    */

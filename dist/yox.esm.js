@@ -59,39 +59,7 @@ var EMPTY_ARRAY = [];
  */
 var EMPTY_STRING = '';
 
-var env = /*#__PURE__*/{
-  TRUE: TRUE,
-  FALSE: FALSE,
-  NULL: NULL,
-  UNDEFINED: UNDEFINED,
-  RAW_TRUE: RAW_TRUE,
-  RAW_FALSE: RAW_FALSE,
-  RAW_NULL: RAW_NULL,
-  RAW_UNDEFINED: RAW_UNDEFINED,
-  RAW_KEY: RAW_KEY,
-  RAW_REF: RAW_REF,
-  RAW_TAG: RAW_TAG,
-  RAW_SLOT: RAW_SLOT,
-  RAW_NAME: RAW_NAME,
-  RAW_FILTER: RAW_FILTER,
-  RAW_PARTIAL: RAW_PARTIAL,
-  RAW_COMPONENT: RAW_COMPONENT,
-  RAW_DIRECTIVE: RAW_DIRECTIVE,
-  RAW_TRANSITION: RAW_TRANSITION,
-  RAW_THIS: RAW_THIS,
-  RAW_FUNCTION: RAW_FUNCTION,
-  RAW_TEMPLATE: RAW_TEMPLATE,
-  RAW_STATIC_KEYPATH: RAW_STATIC_KEYPATH,
-  RAW_ABSOLUTE_KEYPATH: RAW_ABSOLUTE_KEYPATH,
-  KEYPATH_PARENT: KEYPATH_PARENT,
-  KEYPATH_CURRENT: KEYPATH_CURRENT,
-  win: win,
-  doc: doc,
-  EMPTY_FUNCTION: EMPTY_FUNCTION,
-  EMPTY_OBJECT: EMPTY_OBJECT,
-  EMPTY_ARRAY: EMPTY_ARRAY,
-  EMPTY_STRING: EMPTY_STRING
-};
+;
 
 function isDef (target) {
     return target !== UNDEFINED;
@@ -171,7 +139,7 @@ function numeric(value) {
         || (string(value) && !isNaN(parseFloat(value)) && isFinite(value));
 }
 
-var is$1 = /*#__PURE__*/{
+var is$1 = {
   is: is,
   func: func,
   array: array,
@@ -424,7 +392,7 @@ function falsy(array$1) {
     return !array(array$1) || !array$1.length;
 }
 
-var array$1 = /*#__PURE__*/{
+var array$1 = {
   each: each,
   join: join,
   push: push,
@@ -569,7 +537,7 @@ function falsy$1(str) {
     return !string(str) || !str.length;
 }
 
-var string$1 = /*#__PURE__*/{
+var string$1 = {
   camelize: camelize,
   hyphenate: hyphenate,
   trim: trim,
@@ -887,7 +855,7 @@ function set(object, keypath, value, autofill) {
     });
 }
 
-var object$1 = /*#__PURE__*/{
+var object$1 = {
   keys: keys,
   falsy: falsy$2,
   sort: sort,
@@ -962,7 +930,7 @@ function fatal(msg) {
     throw new Error(("[Yox fatal]: " + msg));
 }
 
-var logger = /*#__PURE__*/{
+var logger = {
   log: log,
   warn: warn,
   error: error,
@@ -2933,7 +2901,7 @@ name2Type['if'] = IF;
 name2Type['each'] = EACH;
 name2Type['partial'] = PARTIAL;
 
-var helper = /*#__PURE__*/{
+var helper = {
   specialTags: specialTags,
   specialAttrs: specialAttrs,
   name2Type: name2Type
@@ -6760,65 +6728,65 @@ Yox.string = string$1;
 Yox.logger = logger;
 Yox.Event = CustomEvent;
 Yox.Emitter = Emitter;
-{
-    function setFlexibleOptions(instance, key, value) {
-        if (func(value)) {
-            instance[key](execute(value, instance));
-        }
-        else if (object(value)) {
-            instance[key](value);
-        }
+function setFlexibleOptions(instance, key, value) {
+    if (func(value)) {
+        instance[key](execute(value, instance));
     }
-    function getComponentAsync(data, name, callback) {
-        if (data && has$2(data, name)) {
-            var component = data[name];
-            // 注册的是异步加载函数
-            if (func(component)) {
-                var $queue = component.$queue;
-                if (!$queue) {
-                    $queue = component.$queue = [callback];
-                    component(function (replacement) {
-                        component.$queue = UNDEFINED;
-                        data[name] = replacement;
-                        each($queue, function (callback) {
-                            callback(replacement);
-                        });
+    else if (object(value)) {
+        instance[key](value);
+    }
+}
+function getComponentAsync(data, name, callback) {
+    if (data && has$2(data, name)) {
+        var component = data[name];
+        // 注册的是异步加载函数
+        if (func(component)) {
+            var $queue = component.$queue;
+            if (!$queue) {
+                $queue = component.$queue = [callback];
+                component(function (replacement) {
+                    component.$queue = UNDEFINED;
+                    data[name] = replacement;
+                    each($queue, function (callback) {
+                        callback(replacement);
                     });
-                }
-                else {
-                    push($queue, callback);
-                }
+                });
             }
-            // 不是异步加载函数，直接同步返回
             else {
-                callback(component);
+                push($queue, callback);
             }
-            return TRUE;
         }
-    }
-    function getResource(data, name, lookup) {
-        if (data && data[name]) {
-            return data[name];
-        }
-        else if (lookup) {
-            return lookup(name);
-        }
-    }
-    function setResource(data, name, value, formatValue) {
-        if (string(name)) {
-            data[name] = formatValue ? formatValue(value) : value;
-        }
+        // 不是异步加载函数，直接同步返回
         else {
-            each$2(name, function (value, key) {
-                data[key] = formatValue ? formatValue(value) : value;
-            });
+            callback(component);
         }
+        return TRUE;
     }
-    function mergeResource(locals, globals) {
-        return locals && globals
-            ? extend({}, globals, locals)
-            : locals || globals;
+}
+function getResource(data, name, lookup) {
+    if (data && data[name]) {
+        return data[name];
     }
+    else if (lookup) {
+        return lookup(name);
+    }
+}
+function setResource(data, name, value, formatValue) {
+    if (string(name)) {
+        data[name] = formatValue ? formatValue(value) : value;
+    }
+    else {
+        each$2(name, function (value, key) {
+            data[key] = formatValue ? formatValue(value) : value;
+        });
+    }
+}
+function mergeResource(locals, globals) {
+    return locals && globals
+        ? extend({}, globals, locals)
+        : locals || globals;
+}
+{
     // 全局注册内置指令
     Yox.directive({ event: directive, model: directive$1, binding: directive$2 });
     // 全局注册内置过滤器

@@ -1096,85 +1096,84 @@ export default class Yox implements YoxInterface {
 
 }
 
-if (process.env.NODE_ENV !== 'pure') {
-  function setFlexibleOptions(instance: Yox, key: string, value: Function | Record<string, any>) {
-    if (is.func(value)) {
-      instance[key](execute(value, instance))
-    }
-    else if (is.object(value)) {
-      instance[key](value)
-    }
+function setFlexibleOptions(instance: Yox, key: string, value: Function | Record<string, any>) {
+  if (is.func(value)) {
+    instance[key](execute(value, instance))
   }
+  else if (is.object(value)) {
+    instance[key](value)
+  }
+}
 
-  function getComponentAsync(data: Record<string, any> | void, name: string, callback: signature.asyncComponent): boolean | void {
-    if (data && object.has(data, name)) {
-      const component = data[name]
-      // 注册的是异步加载函数
-      if (is.func(component)) {
-        let { $queue } = component
-        if (!$queue) {
-          $queue = component.$queue = [callback]
-          component(
-            function (replacement: any) {
+function getComponentAsync(data: Record<string, any> | void, name: string, callback: signature.asyncComponent): boolean | void {
+  if (data && object.has(data, name)) {
+    const component = data[name]
+    // 注册的是异步加载函数
+    if (is.func(component)) {
+      let { $queue } = component
+      if (!$queue) {
+        $queue = component.$queue = [callback]
+        component(
+          function (replacement: any) {
 
-              component.$queue = env.UNDEFINED
+            component.$queue = env.UNDEFINED
 
-              data[name] = replacement
+            data[name] = replacement
 
-              array.each(
-                $queue,
-                function (callback) {
-                  callback(replacement)
-                }
-              )
+            array.each(
+              $queue,
+              function (callback) {
+                callback(replacement)
+              }
+            )
 
-            }
-          )
-        }
-        else {
-          array.push($queue, callback)
-        }
+          }
+        )
       }
-      // 不是异步加载函数，直接同步返回
       else {
-        callback(component)
+        array.push($queue, callback)
       }
-      return env.TRUE
     }
-  }
-
-  function getResource(data: Record<string, any> | void, name: string, lookup?: Function) {
-    if (data && data[name]) {
-      return data[name]
-    }
-    else if (lookup) {
-      return lookup(name)
-    }
-  }
-
-  function setResource(data: Record<string, any>, name: string | Record<string, any>, value?: any, formatValue?: (value: any) => any) {
-    if (is.string(name)) {
-      data[name as string] = formatValue ? formatValue(value) : value
-    }
+    // 不是异步加载函数，直接同步返回
     else {
-      object.each(
-        name,
-        function (value, key) {
-          data[key] = formatValue ? formatValue(value) : value
-        }
-      )
+      callback(component)
     }
+    return env.TRUE
   }
+}
 
-  function mergeResource(locals: Record<string, any> | void, globals: Record<string, any>): Record<string, any> {
-    return locals && globals
-      ? object.extend({}, globals, locals)
-      : locals || globals
+function getResource(data: Record<string, any> | void, name: string, lookup?: Function) {
+  if (data && data[name]) {
+    return data[name]
   }
+  else if (lookup) {
+    return lookup(name)
+  }
+}
 
+function setResource(data: Record<string, any>, name: string | Record<string, any>, value?: any, formatValue?: (value: any) => any) {
+  if (is.string(name)) {
+    data[name as string] = formatValue ? formatValue(value) : value
+  }
+  else {
+    object.each(
+      name,
+      function (value, key) {
+        data[key] = formatValue ? formatValue(value) : value
+      }
+    )
+  }
+}
+
+function mergeResource(locals: Record<string, any> | void, globals: Record<string, any>): Record<string, any> {
+  return locals && globals
+    ? object.extend({}, globals, locals)
+    : locals || globals
+}
+
+if (process.env.NODE_ENV !== 'pure') {
   // 全局注册内置指令
   Yox.directive({ event, model, binding })
-
   // 全局注册内置过滤器
   Yox.filter({ hasSlot })
 }
