@@ -37,9 +37,9 @@ import domApi from 'yox-dom/index'
 
 const globalDirectives = {},
 
-globalComponents = {},
-
 globalTransitions = {},
+
+globalComponents = {},
 
 globalPartials = {},
 
@@ -126,7 +126,6 @@ export default class Yox implements YoxInterface {
         logger.fatal(`"template" expected to have just one root element.`)
       }
       template = templateStringify.stringify(nodes[0])
-      console.log(template)
     }
     return new Function(`return ${template}`)()
   }
@@ -415,21 +414,11 @@ export default class Yox implements YoxInterface {
       )
     }
 
-    // 聪明的 set...
-    const smartSet = function (key: string, value: Function | Record<string, any>) {
-      if (is.func(value)) {
-        instance[key](execute(value, instance))
-      }
-      else if (is.object(value)) {
-        instance[key](value)
-      }
-    }
-
-    smartSet(env.RAW_TRANSITION, transitions)
-    smartSet(env.RAW_COMPONENT, components)
-    smartSet(env.RAW_DIRECTIVE, directives)
-    smartSet(env.RAW_PARTIAL, partials)
-    smartSet(env.RAW_FILTER, filters)
+    setOptions(instance, env.RAW_TRANSITION, transitions)
+    setOptions(instance, env.RAW_COMPONENT, components)
+    setOptions(instance, env.RAW_DIRECTIVE, directives)
+    setOptions(instance, env.RAW_PARTIAL, partials)
+    setOptions(instance, env.RAW_FILTER, filters)
 
     execute(options[ config.HOOK_AFTER_CREATE ], instance)
 
@@ -1033,22 +1022,32 @@ export default class Yox implements YoxInterface {
 
 }
 
+function setOptions(instance: Yox, key: string, value: Function | Record<string, any>) {
+  if (is.func(value)) {
+    instance[key](execute(value, instance))
+  }
+  else if (is.object(value)) {
+    instance[key](value)
+  }
+}
+
 function getComponentAsync(data: Record<string, any> | void, name: string, callback: signature.asyncComponent): boolean | void {
   if (data && object.has(data, name)) {
-    const value = data[ name ]
+    const component = data[name]
     // 注册的是异步加载函数
-    if (is.func(value)) {
-      let { $pending } = value
-      if (!$pending) {
-        $pending = value.$pending = [ callback ]
-        value(
+    if (is.func(component)) {
+      let { $queue } = component
+      if (!$queue) {
+        $queue = component.$queue = [callback]
+        component(
           function (replacement: any) {
 
-            value.$pending = env.UNDEFINED
+            component.$queue = env.UNDEFINED
 
-            data[ name ] = replacement
+            data[name] = replacement
+
             array.each(
-              $pending,
+              $queue,
               function (callback) {
                 callback(replacement)
               }
@@ -1058,23 +1057,23 @@ function getComponentAsync(data: Record<string, any> | void, name: string, callb
         )
       }
       else {
-        array.push($pending, callback)
+        array.push($queue, callback)
       }
     }
     // 不是异步加载函数，直接同步返回
     else {
-      callback(value)
+      callback(component)
     }
     return env.TRUE
   }
 }
 
-function getResource(data: Record<string, any> | void, name: string, findInGlobal?: Function) {
+function getResource(data: Record<string, any> | void, name: string, lookup?: Function) {
   if (data && data[name]) {
     return data[name]
   }
-  else if (findInGlobal) {
-    return findInGlobal(name)
+  else if (lookup) {
+    return lookup(name)
   }
 }
 
