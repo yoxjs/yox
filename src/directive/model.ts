@@ -7,7 +7,6 @@ import * as is from 'yox-common/src/util/is'
 import * as env from 'yox-common/src/util/env'
 import * as array from 'yox-common/src/util/array'
 import * as object from 'yox-common/src/util/object'
-import * as logger from 'yox-common/src/util/logger'
 
 import * as config from 'yox-config/index'
 import api from 'yox-dom/index'

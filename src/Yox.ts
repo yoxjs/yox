@@ -192,67 +192,70 @@ export default class Yox implements YoxInterface {
    */
   public static checkPropTypes(props: Record<string, any>, propTypes: Record<string, PropRule>) {
     let result = object.copy(props)
-    // object.each(
-    //   propTypes,
-    //   function (rule: PropRule, key: string) {
+    object.each(
+      propTypes,
+      function (rule: PropRule, key: string) {
 
-    //     // 类型
-    //     let type = rule.type,
+        // 类型
+        let type = rule.type,
 
-    //     // 默认值
-    //     value = rule.value,
+        // 默认值
+        value = rule.value,
 
-    //     // 是否必传
-    //     required = rule.required,
+        // 是否必传
+        required = rule.required,
 
-    //     target = props[key]
+        // 实际的值
+        actual = props[key]
 
-    //     if (is.func(required)) {
-    //       required = execute(required, env.UNDEFINED, props)
-    //     }
+        // 动态化获取是否必填
+        if (is.func(required)) {
+          required = (required as Function)(props)
+        }
 
-    //     // 传了数据
-    //     if (isDef(target)) {
+        // 传了数据
+        if (isDef(actual)) {
 
-    //       // 如果不写 type 或 type 不是 字符串 或 数组
-    //       // 就当做此规则无效，和没写一样
-    //       // if (type) {
-    //       //   let matched
-    //       //   // 比较类型
-    //       //   if (!string.falsy(type)) {
-    //       //     matched = is.is(target, type)
-    //       //   }
-    //       //   else if (!array.falsy(type)) {
-    //       //     array.each(
-    //       //       type,
-    //       //       function (t) {
-    //       //         if (is.is(target, t)) {
-    //       //           matched = env.TRUE
-    //       //           return env.FALSE
-    //       //         }
-    //       //       }
-    //       //     )
-    //       //   }
-    //       //   else if (is.func(type)) {
-    //       //     // 有时候做判断需要参考其他数据
-    //       //     // 比如当 a 有值时，b 可以为空之类的
-    //       //     matched = type(target, props)
-    //       //   }
-    //       //   if (matched !== env.TRUE) {
-    //       //     logger.warn(`The prop "${key}" ${env.RAW_TYPE} is not matched.`)
-    //       //   }
-    //       // }
-    //     }
-    //     else if (required) {
-    //       logger.warn(`The prop "${key}" is marked as required, but its value is not found.`)
-    //     }
-    //     else if (object.has(rule, 'value')) {
-    //       result[key] = type === env.RAW_FUNCTION
-    //         ? value
-    //         : (is.func(value) ? value(props) : value)
-    //     }
-    //   }
-    // )
+          // 如果不写 type 或 type 不是 字符串 或 数组
+          // 就当做此规则无效，和没写一样
+          if (type) {
+            let matched: boolean | void
+            // 比较类型
+            if (!string.falsy(type)) {
+              matched = is.is(actual, type as string)
+            }
+            else if (!array.falsy(type)) {
+              array.each(
+                type as string[],
+                function (t) {
+                  if (is.is(actual, t)) {
+                    matched = env.TRUE
+                    return env.FALSE
+                  }
+                }
+              )
+            }
+            if (matched !== env.TRUE) {
+              logger.warn(`The prop "${key}" type is not matched.`)
+            }
+          }
+          else {
+            logger.warn(`The prop "${key}" in propTypes has no type.`)
+          }
+
+        }
+        // 没传值但此项是必传项
+        else if (required) {
+          logger.warn(`The prop "${key}" is marked as required, but its value is not found.`)
+        }
+        // 没传值但是配置了默认值
+        else if (isDef(value)) {
+          result[key] = type === env.RAW_FUNCTION
+            ? value
+            : (is.func(value) ? value(props) : value)
+        }
+      }
+    )
     return result
   }
 
@@ -414,11 +417,11 @@ export default class Yox implements YoxInterface {
       )
     }
 
-    setOptions(instance, env.RAW_TRANSITION, transitions)
-    setOptions(instance, env.RAW_COMPONENT, components)
-    setOptions(instance, env.RAW_DIRECTIVE, directives)
-    setOptions(instance, env.RAW_PARTIAL, partials)
-    setOptions(instance, env.RAW_FILTER, filters)
+    setFlexibleOptions(instance, env.RAW_TRANSITION, transitions)
+    setFlexibleOptions(instance, env.RAW_COMPONENT, components)
+    setFlexibleOptions(instance, env.RAW_DIRECTIVE, directives)
+    setFlexibleOptions(instance, env.RAW_PARTIAL, partials)
+    setFlexibleOptions(instance, env.RAW_FILTER, filters)
 
     execute(options[ config.HOOK_AFTER_CREATE ], instance)
 
@@ -498,28 +501,40 @@ export default class Yox implements YoxInterface {
   /**
    * 添加计算属性
    */
-  addComputed(keypath: string, computed: signature.computedGetter | ComputedOptions): Computed | void {
+  addComputed(
+    keypath: string,
+    computed: signature.computedGetter | ComputedOptions
+  ): Computed | void {
     return this.$observer.addComputed(keypath, computed)
   }
 
   /**
    * 删除计算属性
    */
-  removeComputed(keypath: string): void {
+  removeComputed(
+    keypath: string
+  ): void {
     this.$observer.removeComputed(keypath)
   }
 
   /**
    * 取值
    */
-  get(keypath: string, defaultValue?: any, depIgnore?: boolean): any {
+  get(
+    keypath: string,
+    defaultValue?: any,
+    depIgnore?: boolean
+  ): any {
     return this.$observer.get(keypath, defaultValue, depIgnore)
   }
 
   /**
    * 设值
    */
-  set(keypath: string | Record<string, any>, value?: any): void {
+  set(
+    keypath: string | Record<string, any>,
+    value?: any
+  ): void {
     // 组件经常有各种异步改值，为了避免组件销毁后依然调用 set
     // 这里判断一下，至于其他方法的异步调用就算了，业务自己控制吧
     const { $observer } = this
@@ -531,7 +546,10 @@ export default class Yox implements YoxInterface {
   /**
    * 监听事件
    */
-  on(type: string | Record<string, signature.eventListener>, listener?: signature.eventListener): YoxInterface {
+  on(
+    type: string | Record<string, signature.eventListener>,
+    listener?: signature.eventListener
+  ): YoxInterface {
     this.$emitter.on(type, listener, { ctx: this })
     return this
   }
@@ -539,7 +557,10 @@ export default class Yox implements YoxInterface {
   /**
    * 监听一次事件
    */
-  once(type: string | Record<string, signature.eventListener>, listener?: signature.eventListener): YoxInterface {
+  once(
+    type: string | Record<string, signature.eventListener>,
+    listener?: signature.eventListener
+  ): YoxInterface {
     this.$emitter.on(type, listener, { ctx: this, max: 1 })
     return this
   }
@@ -547,7 +568,10 @@ export default class Yox implements YoxInterface {
   /**
    * 取消监听事件
    */
-  off(type: string, listener?: signature.eventListener): YoxInterface {
+  off(
+    type: string,
+    listener?: signature.eventListener
+  ): YoxInterface {
     this.$emitter.off(type, listener)
     return this
   }
@@ -555,7 +579,11 @@ export default class Yox implements YoxInterface {
   /**
    * 触发事件
    */
-  fire(bullet: string | Event, data?: signature.eventData | boolean, downward?: boolean): boolean {
+  fire(
+    bullet: string | Event,
+    data?: signature.eventData | boolean,
+    downward?: boolean
+  ): boolean {
 
     // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
     // 内部为了保持格式统一
@@ -847,15 +875,18 @@ export default class Yox implements YoxInterface {
         options.el = node
         options.replace = env.TRUE
       }
-      options.slots = vnode.slots
 
-      let { props, model } = vnode
+      let { slots, props, model } = vnode
+
+      if (slots) {
+        options.slots = slots
+      }
 
       // 把 model 的值设置给 props 的逻辑只能写到这
       // 不然子组件会报数据找不到的警告
       if (isDef(model)) {
         if (!props) {
-          props = options.props = {}
+          props = {}
         }
         const name = options.model || 'value'
         if (!object.has(props, name)) {
@@ -863,6 +894,8 @@ export default class Yox implements YoxInterface {
         }
         options.model = name
       }
+
+      options.props = props
 
     }
 
@@ -1020,7 +1053,7 @@ export default class Yox implements YoxInterface {
 
 }
 
-function setOptions(instance: Yox, key: string, value: Function | Record<string, any>) {
+function setFlexibleOptions(instance: Yox, key: string, value: Function | Record<string, any>) {
   if (is.func(value)) {
     instance[key](execute(value, instance))
   }
