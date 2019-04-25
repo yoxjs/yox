@@ -34,13 +34,13 @@
     "rollup-plugin-replace": "^2.2.0",
     "rollup-plugin-serve": "^1.0.1",
     "rollup-plugin-typescript": "^1.0.1",
-    "rollup-plugin-uglify": "^6.0.2",
+    "rollup-plugin-buble": "^0.19.6",
+    "rollup-plugin-filesize": "^6.0.1",
+    "rollup-plugin-terser": "^4.0.4",
     "tslib": "^1.9.3",
     "typescript": "^3.4.4"
   },
   "dependencies": {
-    "rollup-plugin-buble": "^0.19.6",
-    "rollup-plugin-filesize": "^6.0.1",
     "yox-common": "^0.18.22",
     "yox-config": "^0.1.6",
     "yox-dom": "^0.0.19",

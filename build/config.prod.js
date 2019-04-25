@@ -1,3 +1,3 @@
 import createConfig from './config.base'
 
-export default createConfig('production', false, false, 0)
+export default createConfig('.min.js', 'production', true, false, 0)

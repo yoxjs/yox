@@ -4,7 +4,7 @@ import replace from 'rollup-plugin-replace'
 // 输出打包后的文件大小
 import filesize from 'rollup-plugin-filesize'
 // 压缩
-import uglify from 'rollup-plugin-uglify'
+import { terser } from 'rollup-plugin-terser'
 // 将 ES6+ 代码编译为 ES2015
 import buble from 'rollup-plugin-buble'
 // 本地服务器
@@ -20,9 +20,7 @@ const banner =
   ` * Released under the ${license} License.\n` +
   ` */\n`;
 
-export default function (env = 'production', minify = false, sourcemap = false, port = 0) {
-
-  let suffix = minify ? '.min.js' : '.js'
+export default function (suffix, env, minify = false, sourcemap = false, port = 0) {
 
   let plugins = [
     replace({
@@ -40,7 +38,7 @@ export default function (env = 'production', minify = false, sourcemap = false, 
 
   if (minify) {
     plugins.push(
-      uglify.uglify()
+      terser()
     )
   }
 

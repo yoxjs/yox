@@ -1,3 +1,3 @@
 import createConfig from './config.base'
 
-export default createConfig('development', false, true, 8080)
+export default createConfig('.dev.js', 'development', false, true, 8080)
