@@ -1,8 +1,6 @@
-rollup.config.js
 test
 example
-.babelrc
-edp-*
 *.sketch
+node_modules
 package-lock.json
 yarn.lock
