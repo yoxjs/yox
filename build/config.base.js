@@ -27,13 +27,7 @@ export default function (suffix, env, minify = false, sourcemap = false, port = 
       'process.env.NODE_ENV': JSON.stringify(env)
     }),
     typescript(),
-    buble(),
-    {
-      name: 'optimize',
-      renderChunk(code) {
-        return optimize(code)
-      },
-    }
+    buble()
   ]
 
   if (minify) {

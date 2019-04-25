@@ -59,7 +59,39 @@ var EMPTY_ARRAY = [];
  */
 var EMPTY_STRING = '';
 
-;
+var env = /*#__PURE__*/Object.freeze({
+  TRUE: TRUE,
+  FALSE: FALSE,
+  NULL: NULL,
+  UNDEFINED: UNDEFINED,
+  RAW_TRUE: RAW_TRUE,
+  RAW_FALSE: RAW_FALSE,
+  RAW_NULL: RAW_NULL,
+  RAW_UNDEFINED: RAW_UNDEFINED,
+  RAW_KEY: RAW_KEY,
+  RAW_REF: RAW_REF,
+  RAW_TAG: RAW_TAG,
+  RAW_SLOT: RAW_SLOT,
+  RAW_NAME: RAW_NAME,
+  RAW_FILTER: RAW_FILTER,
+  RAW_PARTIAL: RAW_PARTIAL,
+  RAW_COMPONENT: RAW_COMPONENT,
+  RAW_DIRECTIVE: RAW_DIRECTIVE,
+  RAW_TRANSITION: RAW_TRANSITION,
+  RAW_THIS: RAW_THIS,
+  RAW_FUNCTION: RAW_FUNCTION,
+  RAW_TEMPLATE: RAW_TEMPLATE,
+  RAW_STATIC_KEYPATH: RAW_STATIC_KEYPATH,
+  RAW_ABSOLUTE_KEYPATH: RAW_ABSOLUTE_KEYPATH,
+  KEYPATH_PARENT: KEYPATH_PARENT,
+  KEYPATH_CURRENT: KEYPATH_CURRENT,
+  win: win,
+  doc: doc,
+  EMPTY_FUNCTION: EMPTY_FUNCTION,
+  EMPTY_OBJECT: EMPTY_OBJECT,
+  EMPTY_ARRAY: EMPTY_ARRAY,
+  EMPTY_STRING: EMPTY_STRING
+});
 
 function isDef (target) {
     return target !== UNDEFINED;
@@ -138,7 +170,7 @@ function numeric(value) {
         || (string(value) && !isNaN(parseFloat(value)) && isFinite(value));
 }
 
-var is$1 = {
+var is$1 = /*#__PURE__*/Object.freeze({
   is: is,
   func: func,
   array: array,
@@ -147,7 +179,7 @@ var is$1 = {
   number: number,
   boolean: boolean,
   numeric: numeric
-};
+});
 
 /**
  * 任性地执行一个函数，不管它有没有、是不是
@@ -176,7 +208,7 @@ var CustomEvent = function CustomEvent(type, originalEvent) {
 /**
  * 阻止事件的默认行为
  */
-CustomEvent.prototype.preventDefault = function () {
+CustomEvent.prototype.preventDefault = function preventDefault () {
     var instance = this;
     if (!instance.isPrevented) {
         var originalEvent = instance.originalEvent;
@@ -190,7 +222,7 @@ CustomEvent.prototype.preventDefault = function () {
 /**
  * 停止事件广播
  */
-CustomEvent.prototype.stopPropagation = function () {
+CustomEvent.prototype.stopPropagation = function stopPropagation () {
     var instance = this;
     if (!instance.isStoped) {
         var originalEvent = instance.originalEvent;
@@ -201,10 +233,10 @@ CustomEvent.prototype.stopPropagation = function () {
     }
     return instance;
 };
-CustomEvent.prototype.prevent = function () {
+CustomEvent.prototype.prevent = function prevent () {
     return this.preventDefault();
 };
-CustomEvent.prototype.stop = function () {
+CustomEvent.prototype.stop = function stop () {
     return this.stopPropagation();
 };
 
@@ -391,7 +423,7 @@ function falsy(array$1) {
     return !array(array$1) || !array$1.length;
 }
 
-var array$1 = {
+var array$1 = /*#__PURE__*/Object.freeze({
   each: each,
   join: join,
   push: push,
@@ -404,7 +436,7 @@ var array$1 = {
   pop: pop,
   remove: remove,
   falsy: falsy
-};
+});
 
 var camelizePattern = /-([a-z])/gi, hyphenatePattern = /\B([A-Z])/g, camelizeCache = {}, hyphenateCache = {};
 /**
@@ -536,7 +568,7 @@ function falsy$1(str) {
     return !string(str) || !str.length;
 }
 
-var string$1 = {
+var string$1 = /*#__PURE__*/Object.freeze({
   camelize: camelize,
   hyphenate: hyphenate,
   trim: trim,
@@ -549,7 +581,7 @@ var string$1 = {
   charAt: charAt,
   codeAt: codeAt,
   falsy: falsy$1
-};
+});
 
 function toString$1 (target, defaultValue) {
     if ( defaultValue === void 0 ) defaultValue = EMPTY_STRING;
@@ -856,7 +888,7 @@ function set(object, keypath, value, autofill) {
     });
 }
 
-var object$1 = {
+var object$1 = /*#__PURE__*/Object.freeze({
   keys: keys,
   falsy: falsy$2,
   sort: sort,
@@ -867,7 +899,7 @@ var object$1 = {
   copy: copy,
   get: get,
   set: set
-};
+});
 
 /**
  * 是否有原生的日志特性，没有必要单独实现
@@ -931,12 +963,12 @@ function fatal(msg) {
     throw new Error(("[Yox fatal]: " + msg));
 }
 
-var logger = {
+var logger = /*#__PURE__*/Object.freeze({
   log: log,
   warn: warn,
   error: error,
   fatal: fatal
-};
+});
 
 var Emitter = function Emitter(ns) {
     this.ns = ns || FALSE;
@@ -948,7 +980,7 @@ var Emitter = function Emitter(ns) {
  * @param bullet 事件或事件名称
  * @param data 事件数据
  */
-Emitter.prototype.fire = function (bullet, data, filter) {
+Emitter.prototype.fire = function fire (bullet, data, filter) {
     var event, type, args;
     if (bullet instanceof CustomEvent) {
         event = bullet;
@@ -1012,7 +1044,7 @@ Emitter.prototype.fire = function (bullet, data, filter) {
  * @param type
  * @param listener
  */
-Emitter.prototype.has = function (type, listener) {
+Emitter.prototype.has = function has (type, listener) {
     var instance = this, listeners = instance.listeners;
         var ref = parseNamespace(instance.ns, type);
         var name = ref.name;
@@ -1042,7 +1074,7 @@ Emitter.prototype.has = function (type, listener) {
  * @param listener
  * @param data
  */
-Emitter.prototype.on = function (type, listener, data) {
+Emitter.prototype.on = function on (type, listener, data) {
     var instance = this, listeners = instance.listeners, addListener = function (item, type) {
         if (item) {
             var options = func(item) ? { fn: item } : item;
@@ -1075,7 +1107,7 @@ Emitter.prototype.on = function (type, listener, data) {
  * @param type
  * @param listener
  */
-Emitter.prototype.off = function (type, listener) {
+Emitter.prototype.off = function off (type, listener) {
     var instance = this, listeners = instance.listeners;
     if (type) {
         var ref = parseNamespace(instance.ns, type);
@@ -1201,28 +1233,28 @@ var NextTask = function NextTask() {
 /**
  * 在队尾添加异步任务
  */
-NextTask.shared = function () {
+NextTask.shared = function shared$1 () {
     if (!shared) {
         shared = new NextTask();
     }
     return shared;
 };
 
-NextTask.prototype.append = function (task) {
+NextTask.prototype.append = function append (task) {
     push(this.nextTasks, task);
     this.start();
 };
 /**
  * 在队首添加异步任务
  */
-NextTask.prototype.prepend = function (task) {
+NextTask.prototype.prepend = function prepend (task) {
     unshift(this.nextTasks, task);
     this.start();
 };
 /**
  * 启动下一轮任务
  */
-NextTask.prototype.start = function () {
+NextTask.prototype.start = function start () {
     var instance = this;
     if (instance.nextTasks.length === 1) {
         nextTick$1(function () {
@@ -1233,13 +1265,13 @@ NextTask.prototype.start = function () {
 /**
  * 清空异步队列
  */
-NextTask.prototype.clear = function () {
+NextTask.prototype.clear = function clear () {
     this.nextTasks.length = 0;
 };
 /**
  * 立即执行异步任务，并清空队列
  */
-NextTask.prototype.run = function () {
+NextTask.prototype.run = function run () {
     var ref = this;
         var nextTasks = ref.nextTasks;
     if (nextTasks.length) {
@@ -1631,7 +1663,7 @@ function destroyVnode(api, vnode) {
      * 不论是组件或是元素，都不能销毁，只能简单的 remove，
      * 否则子组件下一次展现它们时，会出问题
      */
-    if (vnode.context !== vnode.parent) {
+    if (vnode.parent && vnode.parent !== vnode.context) {
         return;
     }
     var data = vnode.data;
@@ -2179,7 +2211,7 @@ var Parser = function Parser(content) {
 /**
  * 移动一个字符
  */
-Parser.prototype.go = function (step) {
+Parser.prototype.go = function go (step) {
     var instance = this;
         var index = instance.index;
         var end = instance.end;
@@ -2196,7 +2228,7 @@ Parser.prototype.go = function (step) {
 /**
  * 跳过空白符
  */
-Parser.prototype.skip = function (step) {
+Parser.prototype.skip = function skip (step) {
     var instance = this;
     // 走一步
     if (instance.code === CODE_EOF) {
@@ -2219,7 +2251,7 @@ Parser.prototype.skip = function (step) {
 /**
  * 判断当前字符
  */
-Parser.prototype.is = function (code) {
+Parser.prototype.is = function is (code) {
     return this.code === code;
 };
 /**
@@ -2227,13 +2259,13 @@ Parser.prototype.is = function (code) {
  *
  * @param startIndex
  */
-Parser.prototype.pick = function (startIndex, endIndex) {
+Parser.prototype.pick = function pick (startIndex, endIndex) {
     return slice(this.content, startIndex, isDef(endIndex) ? endIndex : this.index);
 };
 /**
  * 尝试解析下一个 token
  */
-Parser.prototype.scanToken = function () {
+Parser.prototype.scanToken = function scanToken () {
     var instance = this;
         var code = instance.code;
         var index = instance.index;
@@ -2303,7 +2335,7 @@ Parser.prototype.scanToken = function () {
  * @param startIndex
  * @return
  */
-Parser.prototype.scanNumber = function (startIndex) {
+Parser.prototype.scanNumber = function scanNumber (startIndex) {
     var instance = this;
     while (isNumber(instance.code)) {
         instance.go();
@@ -2325,7 +2357,7 @@ Parser.prototype.scanNumber = function (startIndex) {
  * @param startIndex
  * @param endCode
  */
-Parser.prototype.scanString = function (startIndex, endCode) {
+Parser.prototype.scanString = function scanString (startIndex, endCode) {
     var instance = this;
     loop: while (TRUE) {
         // 这句有两个作用：
@@ -2356,7 +2388,7 @@ Parser.prototype.scanString = function (startIndex, endCode) {
  *
  * @param startIndex
  */
-Parser.prototype.scanObject = function (startIndex) {
+Parser.prototype.scanObject = function scanObject (startIndex) {
     var instance = this, keys = [], values = [], isKey = TRUE, node;
     // 跳过 {
     instance.go();
@@ -2428,7 +2460,7 @@ Parser.prototype.scanObject = function (startIndex) {
  * @param startIndex
  * @param endCode 元组的结束字符编码
  */
-Parser.prototype.scanTuple = function (startIndex, endCode) {
+Parser.prototype.scanTuple = function scanTuple (startIndex, endCode) {
     var instance = this, nodes = [], node;
     // 跳过开始字符，如 [ 和 (
     instance.go();
@@ -2469,7 +2501,7 @@ Parser.prototype.scanTuple = function (startIndex, endCode) {
  * @param startIndex
  * @param prevNode
  */
-Parser.prototype.scanPath = function (startIndex) {
+Parser.prototype.scanPath = function scanPath (startIndex) {
     var instance = this, nodes = [], name;
     // 进入此函数时，已确定前一个 code 是 CODE_DOT
     // 此时只需判断接下来是 ./ 还是 / 就行了
@@ -2515,7 +2547,7 @@ Parser.prototype.scanPath = function (startIndex) {
 /**
  * 扫描变量
  */
-Parser.prototype.scanTail = function (startIndex, nodes) {
+Parser.prototype.scanTail = function scanTail (startIndex, nodes) {
     var instance = this, node;
     /**
      * 标识符后面紧着的字符，可以是 ( . [，此外还存在各种组合，感受一下：
@@ -2576,7 +2608,7 @@ Parser.prototype.scanTail = function (startIndex, nodes) {
  * @param isProp 是否是对象的属性
  * @return
  */
-Parser.prototype.scanIdentifier = function (startIndex, isProp) {
+Parser.prototype.scanIdentifier = function scanIdentifier (startIndex, isProp) {
     var instance = this;
     while (isIdentifierPart(instance.code)) {
         instance.go();
@@ -2591,7 +2623,7 @@ Parser.prototype.scanIdentifier = function (startIndex, isProp) {
  *
  * @param startIndex
  */
-Parser.prototype.scanOperator = function (startIndex) {
+Parser.prototype.scanOperator = function scanOperator (startIndex) {
     var instance = this;
     switch (instance.code) {
         // +、/、%、~、^
@@ -2688,7 +2720,7 @@ Parser.prototype.scanOperator = function (startIndex) {
 /**
  * 扫描二元运算
  */
-Parser.prototype.scanBinary = function () {
+Parser.prototype.scanBinary = function scanBinary () {
     // 二元运算，如 a + b * c / d，这里涉及运算符的优先级
     // 算法参考 https://en.wikipedia.org/wiki/Shunting-yard_algorithm
     var instance = this, 
@@ -2739,7 +2771,7 @@ Parser.prototype.scanBinary = function () {
  *
  * @param endCode
  */
-Parser.prototype.scanTernary = function (endCode) {
+Parser.prototype.scanTernary = function scanTernary (endCode) {
     /**
      * https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Operators/Operator_Precedence
      *
@@ -2784,7 +2816,7 @@ Parser.prototype.scanTernary = function (endCode) {
     }
     return test;
 };
-Parser.prototype.fatal = function (start, message) {
+Parser.prototype.fatal = function fatal$1 (start, message) {
     {
         fatal(("Error compiling expression:\n" + (this.content) + "\n- " + message));
     }
@@ -2940,11 +2972,11 @@ name2Type['if'] = IF;
 name2Type['each'] = EACH;
 name2Type['partial'] = PARTIAL;
 
-var helper = {
+var helper = /*#__PURE__*/Object.freeze({
   specialTags: specialTags,
   specialAttrs: specialAttrs,
   name2Type: name2Type
-};
+});
 
 function createAttribute(name) {
     return {
@@ -4870,7 +4902,7 @@ var Computed = function Computed(keypath, sync, cache, deps, observer, getter, s
  *
  * @param force 是否强制刷新缓存
  */
-Computed.build = function (keypath, observer, options) {
+Computed.build = function build (keypath, observer, options) {
     var cache = TRUE, sync = TRUE, deps = EMPTY_ARRAY, getter, setter;
     if (func(options)) {
         getter = options;
@@ -4897,7 +4929,7 @@ Computed.build = function (keypath, observer, options) {
     }
 };
 
-Computed.prototype.get = function (force) {
+Computed.prototype.get = function get (force) {
     var instance = this;
         var getter = instance.getter;
         var context = instance.context;
@@ -4925,7 +4957,7 @@ Computed.prototype.get = function (force) {
     }
     return instance.value;
 };
-Computed.prototype.set = function (value) {
+Computed.prototype.set = function set (value) {
     var ref = this;
         var setter = ref.setter;
         var context = ref.context;
@@ -4940,13 +4972,13 @@ Computed.prototype.set = function (value) {
  *
  * @param dep
  */
-Computed.prototype.add = function (dep) {
+Computed.prototype.add = function add (dep) {
     this.unique[dep] = TRUE;
 };
 /**
  * 绑定依赖
  */
-Computed.prototype.bind = function () {
+Computed.prototype.bind = function bind () {
     var ref = this;
         var unique = ref.unique;
         var deps = ref.deps;
@@ -4964,7 +4996,7 @@ Computed.prototype.bind = function () {
 /**
  * 解绑依赖
  */
-Computed.prototype.unbind = function () {
+Computed.prototype.unbind = function unbind () {
     var ref = this;
         var deps = ref.deps;
         var observer = ref.observer;
@@ -5186,7 +5218,7 @@ var Observer = function Observer(data, context) {
  * @param depIgnore
  * @return
  */
-Observer.prototype.get = function (keypath, defaultValue, depIgnore) {
+Observer.prototype.get = function get$1 (keypath, defaultValue, depIgnore) {
     var instance = this, currentComputed = Computed.current;
         var data = instance.data;
         var computed = instance.computed;
@@ -5224,7 +5256,7 @@ Observer.prototype.get = function (keypath, defaultValue, depIgnore) {
  * @param keypath
  * @param value
  */
-Observer.prototype.set = function (keypath, value) {
+Observer.prototype.set = function set$1 (keypath, value) {
     var instance = this;
         var data = instance.data;
         var computed = instance.computed;
@@ -5272,7 +5304,7 @@ Observer.prototype.set = function (keypath, value) {
  * @param newValue
  * @param oldValue
  */
-Observer.prototype.diff = function (keypath, newValue, oldValue) {
+Observer.prototype.diff = function diff (keypath, newValue, oldValue) {
     var instance = this;
         var syncEmitter = instance.syncEmitter;
         var asyncEmitter = instance.asyncEmitter;
@@ -5315,7 +5347,7 @@ Observer.prototype.diff = function (keypath, newValue, oldValue) {
 /**
  * 异步触发的 diff
  */
-Observer.prototype.diffAsync = function () {
+Observer.prototype.diffAsync = function diffAsync () {
     var instance = this;
         var asyncEmitter = instance.asyncEmitter;
         var asyncChanges = instance.asyncChanges;
@@ -5335,7 +5367,7 @@ Observer.prototype.diffAsync = function () {
  * @param keypath
  * @param computed
  */
-Observer.prototype.addComputed = function (keypath, options) {
+Observer.prototype.addComputed = function addComputed (keypath, options) {
     var instance = this, computed = Computed.build(keypath, instance, options);
     if (computed) {
         if (!instance.computed) {
@@ -5351,7 +5383,7 @@ Observer.prototype.addComputed = function (keypath, options) {
  *
  * @param keypath
  */
-Observer.prototype.removeComputed = function (keypath) {
+Observer.prototype.removeComputed = function removeComputed (keypath) {
     var instance = this;
         var computed = instance.computed;
     if (computed && has$2(computed, keypath)) {
@@ -5369,7 +5401,7 @@ Observer.prototype.removeComputed = function (keypath) {
  * @param options.sync 是否同步响应，默认是异步
  * @param options.once 是否监听一次
  */
-Observer.prototype.watch = function (keypath, watcher, options) {
+Observer.prototype.watch = function watch (keypath, watcher, options) {
     var instance = this;
         var context = instance.context;
         var syncEmitter = instance.syncEmitter;
@@ -5435,7 +5467,7 @@ Observer.prototype.watch = function (keypath, watcher, options) {
  * @param keypath
  * @param watcher
  */
-Observer.prototype.unwatch = function (keypath, watcher) {
+Observer.prototype.unwatch = function unwatch (keypath, watcher) {
     this.syncEmitter.off(keypath, watcher);
     this.asyncEmitter.off(keypath, watcher);
 };
@@ -5447,7 +5479,7 @@ Observer.prototype.unwatch = function (keypath, watcher) {
  * @param keypath
  * @return 取反后的布尔值
  */
-Observer.prototype.toggle = function (keypath) {
+Observer.prototype.toggle = function toggle (keypath) {
     var value = !this.get(keypath);
     this.set(keypath, value);
     return value;
@@ -5461,7 +5493,7 @@ Observer.prototype.toggle = function (keypath) {
  * @param step 步进值，默认是 1
  * @param max 可以递增到的最大值，默认不限制
  */
-Observer.prototype.increase = function (keypath, step, max) {
+Observer.prototype.increase = function increase (keypath, step, max) {
     var value = toNumber(this.get(keypath), 0) + (step || 1);
     if (!number(max) || value <= max) {
         this.set(keypath, value);
@@ -5477,7 +5509,7 @@ Observer.prototype.increase = function (keypath, step, max) {
  * @param step 步进值，默认是 1
  * @param min 可以递减到的最小值，默认不限制
  */
-Observer.prototype.decrease = function (keypath, step, min) {
+Observer.prototype.decrease = function decrease (keypath, step, min) {
     var value = toNumber(this.get(keypath), 0) - (step || 1);
     if (!number(min) || value >= min) {
         this.set(keypath, value);
@@ -5491,7 +5523,7 @@ Observer.prototype.decrease = function (keypath, step, min) {
  * @param item
  * @param index
  */
-Observer.prototype.insert = function (keypath, item, index) {
+Observer.prototype.insert = function insert (keypath, item, index) {
     var list = this.get(keypath);
     list = !array(list) ? [] : copy(list);
     var length = list.length;
@@ -5516,7 +5548,7 @@ Observer.prototype.insert = function (keypath, item, index) {
  * @param keypath
  * @param item
  */
-Observer.prototype.append = function (keypath, item) {
+Observer.prototype.append = function append (keypath, item) {
     return this.insert(keypath, item, TRUE);
 };
 /**
@@ -5525,7 +5557,7 @@ Observer.prototype.append = function (keypath, item) {
  * @param keypath
  * @param item
  */
-Observer.prototype.prepend = function (keypath, item) {
+Observer.prototype.prepend = function prepend (keypath, item) {
     return this.insert(keypath, item, FALSE);
 };
 /**
@@ -5534,7 +5566,7 @@ Observer.prototype.prepend = function (keypath, item) {
  * @param keypath
  * @param index
  */
-Observer.prototype.removeAt = function (keypath, index) {
+Observer.prototype.removeAt = function removeAt (keypath, index) {
     var list = this.get(keypath);
     if (array(list)
         && index >= 0
@@ -5551,7 +5583,7 @@ Observer.prototype.removeAt = function (keypath, index) {
  * @param keypath
  * @param item
  */
-Observer.prototype.remove = function (keypath, item) {
+Observer.prototype.remove = function remove$1 (keypath, item) {
     var list = this.get(keypath);
     if (array(list)) {
         list = copy(list);
@@ -5567,13 +5599,13 @@ Observer.prototype.remove = function (keypath, item) {
  * @param data
  * @param deep
  */
-Observer.prototype.copy = function (data, deep) {
+Observer.prototype.copy = function copy$1 (data, deep) {
     return copy(data, deep);
 };
 /**
  * 销毁
  */
-Observer.prototype.destroy = function () {
+Observer.prototype.destroy = function destroy () {
     var instance = this;
     instance.syncEmitter.off();
     instance.asyncEmitter.off();
@@ -6310,19 +6342,19 @@ var Yox = function Yox(options) {
  *
  * 插件必须暴露 install 方法
  */
-Yox.use = function (plugin) {
+Yox.use = function use (plugin) {
     plugin.install(Yox);
 };
 /**
  * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
  */
-Yox.nextTick = function (task) {
+Yox.nextTick = function nextTick (task) {
     NextTask.shared().append(task);
 };
 /**
  * 编译模板，暴露出来是为了打包阶段的模板预编译
  */
-Yox.compile = function (template, stringify$1) {
+Yox.compile = function compile (template, stringify$1) {
     {
         {
             if (!hasStringify(template)) {
@@ -6342,7 +6374,7 @@ Yox.compile = function (template, stringify$1) {
         return new Function(("return " + template))();
     }
 };
-Yox.directive = function (name, directive$1) {
+Yox.directive = function directive (name, directive$1) {
     {
         if (string(name) && !directive$1) {
             return getResource(globalDirectives, name);
@@ -6350,7 +6382,7 @@ Yox.directive = function (name, directive$1) {
         setResource(globalDirectives, name, directive$1);
     }
 };
-Yox.transition = function (name, transition$1) {
+Yox.transition = function transition (name, transition$1) {
     {
         if (string(name) && !transition$1) {
             return getResource(globalTransitions, name);
@@ -6358,7 +6390,7 @@ Yox.transition = function (name, transition$1) {
         setResource(globalTransitions, name, transition$1);
     }
 };
-Yox.component = function (name, component$1) {
+Yox.component = function component (name, component$1) {
     {
         if (string(name)) {
             // 同步取值
@@ -6373,7 +6405,7 @@ Yox.component = function (name, component$1) {
         setResource(globalComponents, name, component$1);
     }
 };
-Yox.partial = function (name, partial$1) {
+Yox.partial = function partial (name, partial$1) {
     {
         if (string(name) && !partial$1) {
             return getResource(globalPartials, name);
@@ -6381,7 +6413,7 @@ Yox.partial = function (name, partial$1) {
         setResource(globalPartials, name, partial$1, Yox.compile);
     }
 };
-Yox.filter = function (name, filter$1) {
+Yox.filter = function filter (name, filter$1) {
     {
         if (string(name) && !filter$1) {
             return getResource(globalFilters, name);
@@ -6392,7 +6424,7 @@ Yox.filter = function (name, filter$1) {
 /**
  * 验证 props，无爱请重写
  */
-Yox.checkPropTypes = function (props, propTypes) {
+Yox.checkPropTypes = function checkPropTypes (props, propTypes) {
     var result = copy(props);
     each$2(propTypes, function (rule, key) {
         // 类型
@@ -6449,25 +6481,25 @@ Yox.checkPropTypes = function (props, propTypes) {
 /**
  * 添加计算属性
  */
-Yox.prototype.addComputed = function (keypath, computed) {
+Yox.prototype.addComputed = function addComputed (keypath, computed) {
     return this.$observer.addComputed(keypath, computed);
 };
 /**
  * 删除计算属性
  */
-Yox.prototype.removeComputed = function (keypath) {
+Yox.prototype.removeComputed = function removeComputed (keypath) {
     this.$observer.removeComputed(keypath);
 };
 /**
  * 取值
  */
-Yox.prototype.get = function (keypath, defaultValue, depIgnore) {
+Yox.prototype.get = function get (keypath, defaultValue, depIgnore) {
     return this.$observer.get(keypath, defaultValue, depIgnore);
 };
 /**
  * 设值
  */
-Yox.prototype.set = function (keypath, value) {
+Yox.prototype.set = function set (keypath, value) {
     // 组件经常有各种异步改值，为了避免组件销毁后依然调用 set
     // 这里判断一下，至于其他方法的异步调用就算了，业务自己控制吧
     var ref = this;
@@ -6479,28 +6511,28 @@ Yox.prototype.set = function (keypath, value) {
 /**
  * 监听事件
  */
-Yox.prototype.on = function (type, listener) {
+Yox.prototype.on = function on (type, listener) {
     this.$emitter.on(type, listener, { ctx: this });
     return this;
 };
 /**
  * 监听一次事件
  */
-Yox.prototype.once = function (type, listener) {
+Yox.prototype.once = function once (type, listener) {
     this.$emitter.on(type, listener, { ctx: this, max: 1 });
     return this;
 };
 /**
  * 取消监听事件
  */
-Yox.prototype.off = function (type, listener) {
+Yox.prototype.off = function off (type, listener) {
     this.$emitter.off(type, listener);
     return this;
 };
 /**
  * 触发事件
  */
-Yox.prototype.fire = function (bullet, data, downward) {
+Yox.prototype.fire = function fire (bullet, data, downward) {
     // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
     // 内部为了保持格式统一
     // 需要转成 Event，这样还能知道 target 是哪个组件
@@ -6534,14 +6566,14 @@ Yox.prototype.fire = function (bullet, data, downward) {
 /**
  * 监听数据变化
  */
-Yox.prototype.watch = function (keypath, watcher, options) {
+Yox.prototype.watch = function watch (keypath, watcher, options) {
     this.$observer.watch(keypath, watcher, options);
     return this;
 };
 /**
  * 监听一次数据变化
  */
-Yox.prototype.watchOnce = function (keypath, watcher, options) {
+Yox.prototype.watchOnce = function watchOnce (keypath, watcher, options) {
     var watcherOptions = formatWatcherOptions(options);
     watcherOptions.once = TRUE;
     this.$observer.watch(keypath, watcher, watcherOptions);
@@ -6550,11 +6582,11 @@ Yox.prototype.watchOnce = function (keypath, watcher, options) {
 /**
  * 取消监听数据变化
  */
-Yox.prototype.unwatch = function (keypath, watcher) {
+Yox.prototype.unwatch = function unwatch (keypath, watcher) {
     this.$observer.unwatch(keypath, watcher);
     return this;
 };
-Yox.prototype.directive = function (name, directive$1) {
+Yox.prototype.directive = function directive (name, directive$1) {
     {
         var instance = this;
             var $directives = instance.$directives;
@@ -6564,7 +6596,7 @@ Yox.prototype.directive = function (name, directive$1) {
         setResource($directives || (instance.$directives = {}), name, directive$1);
     }
 };
-Yox.prototype.transition = function (name, transition$1) {
+Yox.prototype.transition = function transition (name, transition$1) {
     {
         var instance = this;
             var $transitions = instance.$transitions;
@@ -6574,7 +6606,7 @@ Yox.prototype.transition = function (name, transition$1) {
         setResource($transitions || (instance.$transitions = {}), name, transition$1);
     }
 };
-Yox.prototype.component = function (name, component$1) {
+Yox.prototype.component = function component (name, component$1) {
     {
         var instance = this;
             var $components = instance.$components;
@@ -6593,7 +6625,7 @@ Yox.prototype.component = function (name, component$1) {
         setResource($components || (instance.$components = {}), name, component$1);
     }
 };
-Yox.prototype.partial = function (name, partial$1) {
+Yox.prototype.partial = function partial (name, partial$1) {
     {
         var instance = this;
             var $partials = instance.$partials;
@@ -6603,7 +6635,7 @@ Yox.prototype.partial = function (name, partial$1) {
         setResource($partials || (instance.$partials = {}), name, partial$1, Yox.compile);
     }
 };
-Yox.prototype.filter = function (name, filter$1) {
+Yox.prototype.filter = function filter (name, filter$1) {
     {
         var instance = this;
             var $filters = instance.$filters;
@@ -6617,7 +6649,7 @@ Yox.prototype.filter = function (name, filter$1) {
  * 对于某些特殊场景，修改了数据，但是模板的依赖中并没有这一项
  * 而你非常确定需要更新模板，强制刷新正是你需要的
  */
-Yox.prototype.forceUpdate = function () {
+Yox.prototype.forceUpdate = function forceUpdate () {
     {
         var instance = this;
             var $vnode = instance.$vnode;
@@ -6636,7 +6668,7 @@ Yox.prototype.forceUpdate = function () {
 /**
  * 把模板抽象语法树渲染成 virtual dom
  */
-Yox.prototype.render = function () {
+Yox.prototype.render = function render$1 () {
     {
         var instance = this;
         return render(instance, mergeResource(instance.$filters, globalFilters), mergeResource(instance.$partials, globalPartials), mergeResource(instance.$directives, globalDirectives), mergeResource(instance.$transitions, globalTransitions), instance.$template);
@@ -6648,7 +6680,7 @@ Yox.prototype.render = function () {
  * @param vnode
  * @param oldVnode
  */
-Yox.prototype.update = function (vnode, oldVnode) {
+Yox.prototype.update = function update (vnode, oldVnode) {
     {
         var instance = this;
             var $vnode = instance.$vnode;
@@ -6686,7 +6718,7 @@ Yox.prototype.update = function (vnode, oldVnode) {
  *
  * @param props
  */
-Yox.prototype.checkPropTypes = function (props) {
+Yox.prototype.checkPropTypes = function checkPropTypes (props) {
     var ref = this.$options;
         var propTypes = ref.propTypes;
     return propTypes
@@ -6700,7 +6732,7 @@ Yox.prototype.checkPropTypes = function (props) {
  * @param vnode 虚拟节点
  * @param node DOM 元素
  */
-Yox.prototype.create = function (options, vnode, node) {
+Yox.prototype.create = function create (options, vnode, node) {
     {
         options = copy(options);
         options.parent = this;
@@ -6738,7 +6770,7 @@ Yox.prototype.create = function (options, vnode, node) {
 /**
  * 销毁组件
  */
-Yox.prototype.destroy = function () {
+Yox.prototype.destroy = function destroy$1 () {
     var instance = this;
         var $options = instance.$options;
         var $emitter = instance.$emitter;
@@ -6762,7 +6794,7 @@ Yox.prototype.destroy = function () {
 /**
  * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
  */
-Yox.prototype.nextTick = function (task, prepend) {
+Yox.prototype.nextTick = function nextTick (task, prepend) {
     var ref = this.$observer;
         var nextTask = ref.nextTask;
     if (prepend) {
@@ -6777,7 +6809,7 @@ Yox.prototype.nextTick = function (task, prepend) {
  *
  * 不管 keypath 对应的数据是什么类型，操作后都是布尔型
  */
-Yox.prototype.toggle = function (keypath) {
+Yox.prototype.toggle = function toggle (keypath) {
     return this.$observer.toggle(keypath);
 };
 /**
@@ -6789,7 +6821,7 @@ Yox.prototype.toggle = function (keypath) {
  * @param step 步进值，默认是 1
  * @param max 可以递增到的最大值，默认不限制
  */
-Yox.prototype.increase = function (keypath, step, max) {
+Yox.prototype.increase = function increase (keypath, step, max) {
     return this.$observer.increase(keypath, step, max);
 };
 /**
@@ -6801,7 +6833,7 @@ Yox.prototype.increase = function (keypath, step, max) {
  * @param step 步进值，默认是 1
  * @param min 可以递减到的最小值，默认不限制
  */
-Yox.prototype.decrease = function (keypath, step, min) {
+Yox.prototype.decrease = function decrease (keypath, step, min) {
     return this.$observer.decrease(keypath, step, min);
 };
 /**
@@ -6811,7 +6843,7 @@ Yox.prototype.decrease = function (keypath, step, min) {
  * @param item
  * @param index
  */
-Yox.prototype.insert = function (keypath, item, index) {
+Yox.prototype.insert = function insert (keypath, item, index) {
     return this.$observer.insert(keypath, item, index);
 };
 /**
@@ -6820,7 +6852,7 @@ Yox.prototype.insert = function (keypath, item, index) {
  * @param keypath
  * @param item
  */
-Yox.prototype.append = function (keypath, item) {
+Yox.prototype.append = function append (keypath, item) {
     return this.$observer.append(keypath, item);
 };
 /**
@@ -6829,7 +6861,7 @@ Yox.prototype.append = function (keypath, item) {
  * @param keypath
  * @param item
  */
-Yox.prototype.prepend = function (keypath, item) {
+Yox.prototype.prepend = function prepend (keypath, item) {
     return this.$observer.prepend(keypath, item);
 };
 /**
@@ -6838,7 +6870,7 @@ Yox.prototype.prepend = function (keypath, item) {
  * @param keypath
  * @param index
  */
-Yox.prototype.removeAt = function (keypath, index) {
+Yox.prototype.removeAt = function removeAt (keypath, index) {
     return this.$observer.removeAt(keypath, index);
 };
 /**
@@ -6847,7 +6879,7 @@ Yox.prototype.removeAt = function (keypath, index) {
  * @param keypath
  * @param item
  */
-Yox.prototype.remove = function (keypath, item) {
+Yox.prototype.remove = function remove (keypath, item) {
     return this.$observer.remove(keypath, item);
 };
 /**
@@ -6856,7 +6888,7 @@ Yox.prototype.remove = function (keypath, item) {
  * @param data
  * @param deep
  */
-Yox.prototype.copy = function (data, deep) {
+Yox.prototype.copy = function copy (data, deep) {
     return this.$observer.copy(data, deep);
 };
 /**
