@@ -15,7 +15,7 @@ import * as type from 'yox-type/index'
 
 // 避免连续多次点击，主要用于提交表单场景
 // 移动端的 tap 事件可自行在业务层打补丁实现
-const syncTypes = array.toObject([event.CLICK, event.TAP]),
+const immediateTypes = array.toObject([event.CLICK, event.TAP]),
 
 directive: DirectiveHooks = {
   bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
@@ -37,7 +37,7 @@ directive: DirectiveHooks = {
         handler = debounce(
           handler,
           lazy,
-          syncTypes[name]
+          immediateTypes[name]
         )
       }
     }

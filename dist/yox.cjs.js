@@ -12,7 +12,7 @@
 var TRUE = true;
 var FALSE = false;
 var NULL = null;
-var UNDEFINED = undefined;
+var UNDEFINED = void 0;
 var RAW_TRUE = 'true';
 var RAW_FALSE = 'false';
 var RAW_NULL = 'null';
@@ -67,8 +67,7 @@ function isDef (target) {
     return target !== UNDEFINED;
 }
 
-var ref = Object.prototype;
-var toString = ref.toString;
+var toString = Object.prototype.toString;
 // 这个函数比较慢，所以下面都不用它，主要是给外部用
 function is(value, type) {
     return type === 'numeric'
@@ -555,7 +554,7 @@ var string$1 = {
 };
 
 function toString$1 (target, defaultValue) {
-    if ( defaultValue === UNDEFINED ) defaultValue = EMPTY_STRING;
+    if ( defaultValue === void 0 ) defaultValue = EMPTY_STRING;
 
     return target != NULL && target.toString
         ? target.toString()
@@ -715,7 +714,9 @@ function each$2(object, callback) {
  */
 function has$2(object, key) {
     // 优先不要用 hasOwnProperty，性能差
-    return isDef(object[key]) || object.hasOwnProperty(key);
+    return isDef(object[key])
+        // 没辙，那就用吧
+        || object.hasOwnProperty(key);
 }
 /**
  * 清空对象所有的键值对
@@ -873,11 +874,11 @@ var object$1 = {
 /**
  * 是否有原生的日志特性，没有必要单独实现
  */
-var nativeConsole = typeof console !== RAW_UNDEFINED ? console : NULL;
+var nativeConsole = typeof console !== RAW_UNDEFINED ? console : NULL, 
 /**
  * 当前是否是源码调试，如果开启了代码压缩，empty function 里的注释会被干掉
  */
-var useSource = /yox/.test(toString$1(EMPTY_FUNCTION));
+useSource = /yox/.test(toString$1(EMPTY_FUNCTION));
 /**
  * 全局调试开关
  *
@@ -1059,7 +1060,9 @@ Emitter.prototype.on = function (type, listener, data) {
                 return;
             }
         }
-        fatal(("注册 " + type + " 事件失败"));
+        {
+            fatal(("注册 " + type + " 事件失败"));
+        }
     };
     if (string(type)) {
         addListener(listener, type);
@@ -1102,6 +1105,11 @@ Emitter.prototype.off = function (type, listener) {
     else {
         // 清空
         instance.listeners = {};
+        // 在开发阶段进行警告，比如传了 type 进来，type 是个空值
+        // 但你不知道它是空值
+        {
+            warn("绑定的事件已被全部移除");
+        }
     }
 };
 /**
@@ -1435,7 +1443,9 @@ function insertBefore(api, parentNode, node, referenceNode) {
 }
 function createComponent(vnode, options) {
     if (!options) {
-        fatal(("component [" + (vnode.tag) + "] is not found."));
+        {
+            fatal(("component [" + (vnode.tag) + "] is not found."));
+        }
         return;
     }
     // 渲染同步加载的组件时，vnode.node 为空
@@ -1447,7 +1457,9 @@ function createComponent(vnode, options) {
         vnode.node = node;
     }
     else {
-        fatal('子组件没有创建元素，那还玩个毛啊');
+        {
+            fatal(("the root element of component [" + (vnode.tag) + "] is not found."));
+        }
     }
     vnode.data[COMPONENT] = child;
     vnode.data[LOADING] = FALSE;
@@ -1855,7 +1867,9 @@ function destroy(api, vnode, isRemove) {
             removeVnode(api, parentNode, vnode);
         }
         else {
-            fatal('没有 parentNode 无法销毁 vnode');
+            {
+                fatal("destroy vnode is not work without parent node.");
+            }
         }
     }
     else {
@@ -1864,7 +1878,7 @@ function destroy(api, vnode, isRemove) {
 }
 
 function toNumber (target, defaultValue) {
-    if ( defaultValue === UNDEFINED ) defaultValue = 0;
+    if ( defaultValue === void 0 ) defaultValue = 0;
 
     return numeric(target)
         ? +target
@@ -2273,7 +2287,9 @@ Parser.prototype.scanToken = function () {
             instance.skip(-1);
             return createUnary(operator, node, instance.pick(index));
         }
-        instance.fatal(index, '一元运算只有操作符没有表达式？');
+        {
+            instance.fatal(index, "一元运算只有操作符没有表达式？");
+        }
     }
 };
 /**
@@ -2291,9 +2307,12 @@ Parser.prototype.scanNumber = function (startIndex) {
     }
     var raw = instance.pick(startIndex);
     // 尝试转型，如果转型失败，则确定是个错误的数字
-    return numeric(raw)
-        ? createLiteral(+raw, raw)
-        : instance.fatal(startIndex, "数字写错了知道吗？");
+    if (numeric(raw)) {
+        return createLiteral(+raw, raw);
+    }
+    {
+        instance.fatal(startIndex, "数字写错了知道吗？");
+    }
 };
 /**
  * 扫描字符串
@@ -2304,7 +2323,7 @@ Parser.prototype.scanNumber = function (startIndex) {
  * @param endCode
  */
 Parser.prototype.scanString = function (startIndex, endCode) {
-    var instance = this, error = EMPTY_STRING;
+    var instance = this;
     loop: while (TRUE) {
         // 这句有两个作用：
         // 1. 跳过开始的引号
@@ -2319,12 +2338,11 @@ Parser.prototype.scanString = function (startIndex, endCode) {
                 instance.go();
                 break loop;
             case CODE_EOF:
-                error = '到头了，字符串还没解析完呢？';
+                {
+                    instance.fatal(startIndex, "到头了，字符串还没解析完呢？");
+                }
                 break loop;
         }
-    }
-    if (error) {
-        return instance.fatal(startIndex, error);
     }
     // new Function 处理字符转义
     var raw = instance.pick(startIndex);
@@ -2336,19 +2354,23 @@ Parser.prototype.scanString = function (startIndex, endCode) {
  * @param startIndex
  */
 Parser.prototype.scanObject = function (startIndex) {
-    var instance = this, keys = [], values = [], isKey = TRUE, error = EMPTY_STRING, node;
+    var instance = this, keys = [], values = [], isKey = TRUE, node;
     // 跳过 {
     instance.go();
     loop: while (TRUE) {
         switch (instance.code) {
             case CODE_CBRACE:
                 instance.go();
-                if (keys.length !== values.length) {
-                    error = '对象的 keys 和 values 的长度不一致';
+                {
+                    if (keys.length !== values.length) {
+                        instance.fatal(startIndex, "对象的 keys 和 values 的长度不一致");
+                    }
                 }
                 break loop;
             case CODE_EOF:
-                error = '到头了，对象还没解析完呢？';
+                {
+                    instance.fatal(startIndex, "到头了，对象还没解析完呢？");
+                }
                 break loop;
             // :
             case CODE_COLON:
@@ -2375,7 +2397,9 @@ Parser.prototype.scanObject = function (startIndex) {
                             push(keys, node.value);
                         }
                         else {
-                            error = '对象的 key 类型不匹配';
+                            {
+                                instance.fatal(startIndex, "对象的 key 必须是字面量或标识符");
+                            }
                             break loop;
                         }
                     }
@@ -2386,14 +2410,14 @@ Parser.prototype.scanObject = function (startIndex) {
                     push(values, node);
                 }
                 else {
-                    error = '对象的值没找到';
+                    {
+                        instance.fatal(startIndex, "对象的值没找到");
+                    }
                     break loop;
                 }
         }
     }
-    return error
-        ? instance.fatal(startIndex, error)
-        : createObject(keys, values, instance.pick(startIndex));
+    return createObject(keys, values, instance.pick(startIndex));
 };
 /**
  * 扫描元组，即 `a, b, c` 这种格式，可以是参数列表，也可以是数组
@@ -2402,7 +2426,7 @@ Parser.prototype.scanObject = function (startIndex) {
  * @param endCode 元组的结束字符编码
  */
 Parser.prototype.scanTuple = function (startIndex, endCode) {
-    var instance = this, nodes = [], error = EMPTY_STRING, node;
+    var instance = this, nodes = [], node;
     // 跳过开始字符，如 [ 和 (
     instance.go();
     loop: while (TRUE) {
@@ -2411,7 +2435,9 @@ Parser.prototype.scanTuple = function (startIndex, endCode) {
                 instance.go();
                 break loop;
             case CODE_EOF:
-                error = '到头了，tuple 还没解析完呢？';
+                {
+                    instance.fatal(startIndex, "到头了，tuple 还没解析完呢？");
+                }
                 break loop;
             case CODE_COMMA:
                 instance.go();
@@ -2430,9 +2456,7 @@ Parser.prototype.scanTuple = function (startIndex, endCode) {
                 }
         }
     }
-    return error
-        ? instance.fatal(startIndex, error)
-        : nodes;
+    return nodes;
 };
 /**
  * 扫描路径，如 `./` 和 `../`
@@ -2443,7 +2467,7 @@ Parser.prototype.scanTuple = function (startIndex, endCode) {
  * @param prevNode
  */
 Parser.prototype.scanPath = function (startIndex) {
-    var instance = this, nodes = [], error = EMPTY_STRING, name;
+    var instance = this, nodes = [], name;
     // 进入此函数时，已确定前一个 code 是 CODE_DOT
     // 此时只需判断接下来是 ./ 还是 / 就行了
     while (TRUE) {
@@ -2470,7 +2494,9 @@ Parser.prototype.scanPath = function (startIndex) {
             }
             else {
                 // 类似 ./ 或 ../ 这样后面不跟标识符是想干嘛？报错可好？
-                error = 'path 写法错误';
+                {
+                    instance.fatal(startIndex, "path 写法错误");
+                }
                 break;
             }
         }
@@ -2482,13 +2508,12 @@ Parser.prototype.scanPath = function (startIndex) {
             break;
         }
     }
-    return instance.fatal(startIndex, error);
 };
 /**
  * 扫描变量
  */
 Parser.prototype.scanTail = function (startIndex, nodes) {
-    var instance = this, error = EMPTY_STRING, index, node;
+    var instance = this, node;
     /**
      * 标识符后面紧着的字符，可以是 ( . [，此外还存在各种组合，感受一下：
      *
@@ -2515,12 +2540,13 @@ Parser.prototype.scanTail = function (startIndex, nodes) {
                     break;
                 }
                 else {
-                    error = '. 后面跟的都是啥玩意啊';
+                    {
+                        instance.fatal(startIndex, ". 后面跟的都是啥玩意啊");
+                    }
                     break loop;
                 }
             // a[]
             case CODE_OBRACK:
-                index = instance.index;
                 // 过掉 [
                 instance.go();
                 node = instance.scanTernary(CODE_CBRACK);
@@ -2529,16 +2555,16 @@ Parser.prototype.scanTail = function (startIndex, nodes) {
                     break;
                 }
                 else {
-                    error = '[] 内部不能为空';
+                    {
+                        instance.fatal(startIndex, "[] 内部不能为空");
+                    }
                     break loop;
                 }
             default:
                 break loop;
         }
     }
-    return error
-        ? instance.fatal(startIndex, error)
-        : createMemberIfNeeded(instance.pick(startIndex), nodes);
+    return createMemberIfNeeded(instance.pick(startIndex), nodes);
 };
 /**
  * 扫描标识符
@@ -2625,7 +2651,9 @@ Parser.prototype.scanOperator = function (startIndex) {
             }
             else {
                 // 一个等号要报错
-                instance.fatal(startIndex, '不支持一个等号这种赋值写法');
+                {
+                    instance.fatal(startIndex, "不支持一个等号这种赋值写法");
+                }
             }
             break;
         // <、<=、<<
@@ -2733,7 +2761,9 @@ Parser.prototype.scanTernary = function (endCode) {
             test = createTernary(test, yes, no, instance.pick(index));
         }
         else {
-            instance.fatal(index, '三元表达式谁教你这样写的？');
+            {
+                instance.fatal(index, "三元表达式谁教你这样写的？");
+            }
         }
     }
     // 过掉结束字符
@@ -2744,13 +2774,17 @@ Parser.prototype.scanTernary = function (endCode) {
         }
         // 没匹配到结束字符要报错
         else {
-            instance.fatal(index, '大兄弟，我怀疑你表达式写错了吧？');
+            {
+                instance.fatal(index, "大兄弟，我怀疑你表达式写错了吧？");
+            }
         }
     }
     return test;
 };
 Parser.prototype.fatal = function (start, message) {
-    return fatal(("Error compiling expression:\n" + (this.content) + "\n- " + message));
+    {
+        fatal(("Error compiling expression:\n" + (this.content) + "\n- " + message));
+    }
 };
 var cache = {}, CODE_EOF = 0, //
 CODE_DOT = 46, // .
@@ -3081,7 +3115,9 @@ function compile$1(content) {
     ifStack = [], currentElement, currentAttribute, 
     // 干掉 html 注释
     str = content.replace(/<!--[\s\S]*?-->/g, EMPTY_STRING), startQuote, length, isSafeBlock = FALSE, nextIsBlock = FALSE, match, fatal$1 = function (msg) {
-        fatal(("Error compiling " + (RAW_TEMPLATE) + ":\n" + content + "\n- " + msg));
+        {
+            fatal(("Error compiling " + (RAW_TEMPLATE) + ":\n" + content + "\n- " + msg));
+        }
     }, 
     /**
      * 常见的两种情况：
@@ -3117,10 +3153,12 @@ function compile$1(content) {
                     currentBranch.isComplex = TRUE;
                 }
             }
-            if (isElement) {
-                var element = node;
-                if (tagName && element.tag !== tagName) {
-                    fatal$1(("结束标签是" + tagName + "，开始标签却是" + (element.tag)));
+            {
+                if (isElement) {
+                    var element = node;
+                    if (tagName && element.tag !== tagName) {
+                        fatal$1(("结束标签是" + tagName + "，开始标签却是" + (element.tag)));
+                    }
                 }
             }
             // 除了 helper.specialAttrs 里指定的特殊属性，attrs 里的任何节点都不能单独拎出来赋给 element
@@ -3163,8 +3201,10 @@ function compile$1(content) {
                 // 1. 很难做性能优化
                 // 2. 全局搜索不到事件名，不利于代码维护
                 // 3. 不利于编译成静态函数
-                if (isDirective) {
-                    fatal$1("指令的值不能用插值或 if 语法");
+                {
+                    if (isDirective) {
+                        fatal$1("指令的值不能用插值或 if 语法");
+                    }
                 }
             }
             // 0 个子节点
@@ -3194,7 +3234,9 @@ function compile$1(content) {
             return node;
         }
         else {
-            fatal$1("出栈节点类型不匹配");
+            {
+                fatal$1("出栈节点类型不匹配");
+            }
         }
     }, processElementSingleExpression = function (element, child) {
         if (!element.isComponent && !element.slot && !child.safe) {
@@ -3233,7 +3275,9 @@ function compile$1(content) {
     }, processAttributeEmptyChildren = function (element, attr) {
         var name = attr.name;
         if (isSpecialAttr(element, attr)) {
-            fatal$1((name + " 忘了写值吧？"));
+            {
+                fatal$1((name + " 忘了写值吧？"));
+            }
         }
         // 比如 <Dog isLive>
         else if (element.isComponent) {
@@ -3270,11 +3314,15 @@ function compile$1(content) {
                     directive.value = value;
                 }
                 else {
-                    fatal$1(("lazy 指令的值 [" + text + "] 必须大于 0"));
+                    {
+                        fatal$1(("lazy 指令的值 [" + text + "] 必须大于 0"));
+                    }
                 }
             }
             else {
-                fatal$1(("lazy 指令的值 [" + text + "] 必须是数字"));
+                {
+                    fatal$1(("lazy 指令的值 [" + text + "] 必须是数字"));
+                }
             }
         }
         else {
@@ -3285,30 +3333,38 @@ function compile$1(content) {
             // on-click="xx" on-click="method()" 值只能是标识符或函数调用
             isEvent = directive.name === DIRECTIVE_EVENT;
             if (expr) {
-                // 如果指令表达式是函数调用，则只能调用方法（难道还有别的好调用的吗？）
-                if (expr.type === CALL) {
-                    var callee = expr.callee;
-                    if (callee.type !== IDENTIFIER) {
-                        fatal$1('指令表达式的类型如果是函数调用，则只能调用方法');
+                {
+                    // 如果指令表达式是函数调用，则只能调用方法（难道还有别的好调用的吗？）
+                    if (expr.type === CALL) {
+                        var callee = expr.callee;
+                        if (callee.type !== IDENTIFIER) {
+                            fatal$1('指令表达式的类型如果是函数调用，则只能调用方法');
+                        }
                     }
-                }
-                // 上面检测过方法调用，接下来事件指令只需要判断是否是标识符
-                else if (isEvent && expr.type !== IDENTIFIER) {
-                    fatal$1('事件指令的表达式只能是 标识符 或 函数调用');
-                }
-                if (isModel && !expr[RAW_STATIC_KEYPATH]) {
-                    fatal$1(("model 指令的值格式错误: [" + (expr.raw) + "]"));
+                    // 上面检测过方法调用，接下来事件指令只需要判断是否是标识符
+                    else if (isEvent && expr.type !== IDENTIFIER) {
+                        fatal$1('事件指令的表达式只能是 标识符 或 函数调用');
+                    }
+                    if (isModel && !expr[RAW_STATIC_KEYPATH]) {
+                        fatal$1(("model 指令的值格式错误: [" + (expr.raw) + "]"));
+                    }
                 }
                 directive.expr = expr;
             }
-            else if (isModel || isEvent) {
-                fatal$1(((directive.name) + " 指令的表达式错误: [" + text + "]"));
+            else {
+                {
+                    if (isModel || isEvent) {
+                        fatal$1(((directive.name) + " 指令的表达式错误: [" + text + "]"));
+                    }
+                }
             }
             directive.value = text;
         }
         directive.children = UNDEFINED;
     }, processDirectiveSingleExpression = function (directive, child) {
-        fatal$1("指令的表达式不能用插值语法");
+        {
+            fatal$1("指令的表达式不能用插值语法");
+        }
     }, checkCondition = function (condition) {
         var currentNode = condition, prevNode, hasChildren, hasNext;
         // 变成一维数组，方便遍历
@@ -3347,42 +3403,45 @@ function compile$1(content) {
             replaceChild(partial);
         }
     }, checkElement = function (element) {
-        var isTemplate = element.tag === RAW_TEMPLATE;
-        if (element.slot) {
-            if (!isTemplate) {
-                fatal$1("slot 属性只能用于 <template>");
+        {
+            var isTemplate = element.tag === RAW_TEMPLATE;
+            if (element.slot) {
+                if (!isTemplate) {
+                    fatal$1("slot 属性只能用于 <template>");
+                }
+                else if (element.key) {
+                    fatal$1("<template> 不支持 key");
+                }
+                else if (element.ref) {
+                    fatal$1("<template> 不支持 ref");
+                }
+                else if (element.attrs) {
+                    fatal$1("<template> 不支持属性或指令");
+                }
             }
-            else if (element.key) {
-                fatal$1("<template> 不支持 key");
+            else if (isTemplate) {
+                fatal$1("<template> 不写 slot 属性是几个意思？");
             }
-            else if (element.ref) {
-                fatal$1("<template> 不支持 ref");
+            else if (element.tag === RAW_SLOT && !element.name) {
+                fatal$1("<slot> 不写 name 属性是几个意思？");
             }
-            else if (element.attrs) {
-                fatal$1("<template> 不支持属性或指令");
-            }
-        }
-        else if (isTemplate) {
-            fatal$1("<template> 不写 slot 属性是几个意思？");
-        }
-        else if (element.tag === RAW_SLOT && !element.name) {
-            fatal$1("<slot> 不写 name 属性是几个意思？");
         }
     }, bindSpecialAttr = function (element, attr) {
         var name = attr.name;
         var value = attr.value;
-        // 因为要拎出来给 element，所以不能用 if
-        if (last(nodeStack) !== element) {
-            fatal$1((name + " 不能写在 if 内"));
-        }
-        // 这三个属性值要求是字符串
         var isStringValueRequired = name === RAW_NAME || name === RAW_SLOT;
-        // 对于所有特殊属性来说，空字符串是肯定不行的，没有任何意义
-        if (value === EMPTY_STRING) {
-            fatal$1((name + " 的值不能是空字符串"));
-        }
-        else if (isStringValueRequired && falsy$1(value)) {
-            fatal$1((name + " 的值只能是字符串字面量"));
+        {
+            // 因为要拎出来给 element，所以不能用 if
+            if (last(nodeStack) !== element) {
+                fatal$1((name + " 不能写在 if 内"));
+            }
+            // 对于所有特殊属性来说，空字符串是肯定不行的，没有任何意义
+            if (value === EMPTY_STRING) {
+                fatal$1((name + " 的值不能是空字符串"));
+            }
+            else if (isStringValueRequired && falsy$1(value)) {
+                fatal$1((name + " 的值只能是字符串字面量"));
+            }
         }
         element[name] = isStringValueRequired ? value : attr;
         replaceChild(attr);
@@ -3447,14 +3506,20 @@ function compile$1(content) {
                     push(ifStack, node);
                 }
                 else if (type === ELSE_IF) {
-                    fatal$1('大哥，else 后面不能跟 else if 啊');
+                    {
+                        fatal$1('大哥，else 后面不能跟 else if 啊');
+                    }
                 }
                 else {
-                    fatal$1('大哥，只能写一个 else 啊！！');
+                    {
+                        fatal$1('大哥，只能写一个 else 啊！！');
+                    }
                 }
             }
             else {
-                fatal$1('不写 if 是几个意思？？');
+                {
+                    fatal$1('不写 if 是几个意思？？');
+                }
             }
         }
         else {
@@ -3540,10 +3605,12 @@ function compile$1(content) {
                          *   </template>
                          * </Component>
                          */
-                        if (tag === RAW_TEMPLATE) {
-                            var lastNode = last(nodeStack);
-                            if (!lastNode || !lastNode.isComponent) {
-                                fatal$1('<template> 只能写在组件标签内');
+                        {
+                            if (tag === RAW_TEMPLATE) {
+                                var lastNode = last(nodeStack);
+                                if (!lastNode || !lastNode.isComponent) {
+                                    fatal$1('<template> 只能写在组件标签内');
+                                }
                             }
                         }
                         var node = createElement(tag, has(svgTagNames, tag), componentNamePattern.test(tag));
@@ -3578,8 +3645,10 @@ function compile$1(content) {
                 if (match) {
                     // <div class="11 name="xxx"></div>
                     // 这里会匹配上 xxx"，match[2] 就是那个引号
-                    if (match[2]) {
-                        fatal$1('上一个属性似乎没有正常结束');
+                    {
+                        if (match[2]) {
+                            fatal$1("上一个属性似乎没有正常结束");
+                        }
                     }
                     var node, name = match[1];
                     if (name === DIRECTIVE_MODEL || name === RAW_TRANSITION) {
@@ -3588,8 +3657,10 @@ function compile$1(content) {
                     // 这里要用 on- 判断前缀，否则 on 太容易重名了
                     else if (startsWith(name, DIRECTIVE_ON + directiveSeparator)) {
                         var event = slicePrefix(name, DIRECTIVE_ON + directiveSeparator);
-                        if (!event) {
-                            fatal$1('缺少事件名称');
+                        {
+                            if (!event) {
+                                fatal$1('缺少事件名称');
+                            }
                         }
                         node = createDirective(DIRECTIVE_EVENT, camelize(event));
                     }
@@ -3606,8 +3677,10 @@ function compile$1(content) {
                     // 这里要用 o- 判断前缀，否则 o 太容易重名了
                     else if (startsWith(name, DIRECTIVE_CUSTOM + directiveSeparator)) {
                         var custom = slicePrefix(name, DIRECTIVE_CUSTOM + directiveSeparator);
-                        if (!custom) {
-                            fatal$1('缺少自定义指令名称');
+                        {
+                            if (!custom) {
+                                fatal$1('缺少自定义指令名称');
+                            }
                         }
                         node = createDirective(DIRECTIVE_CUSTOM, camelize(custom));
                     }
@@ -3680,7 +3753,9 @@ function compile$1(content) {
                     addTextChild(text);
                 }
                 else {
-                    fatal$1(((currentAttribute.name) + " 没有找到结束引号"));
+                    {
+                        fatal$1(((currentAttribute.name) + " 没有找到结束引号"));
+                    }
                 }
             }
             // 如果不加判断，类似 <div {{...obj}}> 这样写，会把空格当做一个属性
@@ -3695,8 +3770,10 @@ function compile$1(content) {
                 addTextChild(text);
             }
             else {
-                if (trim(content)) {
-                    fatal$1(("<" + (currentElement.tag) + "> 属性里不要写乱七八糟的字符"));
+                {
+                    if (trim(content)) {
+                        fatal$1(("<" + (currentElement.tag) + "> 属性里不要写乱七八糟的字符"));
+                    }
                 }
                 text = content;
             }
@@ -3714,13 +3791,17 @@ function compile$1(content) {
                             return createEach(expr, trim(terms[1]));
                         }
                         else {
-                            fatal$1(currentAttribute
-                                ? "each 不能写在属性的值里"
-                                : "each 不能写在属性层级");
+                            {
+                                fatal$1(currentAttribute
+                                    ? "each 不能写在属性的值里"
+                                    : "each 不能写在属性层级");
+                            }
                         }
                     }
                 }
-                fatal$1("无效的 each");
+                {
+                    fatal$1("无效的 each");
+                }
             }
         },
         // {{#import name}}
@@ -3732,12 +3813,16 @@ function compile$1(content) {
                         return createImport(source);
                     }
                     else {
-                        fatal$1(currentAttribute
-                            ? "import 不能写在属性的值里"
-                            : "import 不能写在属性层级");
+                        {
+                            fatal$1(currentAttribute
+                                ? "import 不能写在属性的值里"
+                                : "import 不能写在属性层级");
+                        }
                     }
                 }
-                fatal$1("无效的 import");
+                {
+                    fatal$1("无效的 import");
+                }
             }
         },
         // {{#partial name}}
@@ -3749,12 +3834,16 @@ function compile$1(content) {
                         return createPartial(source);
                     }
                     else {
-                        fatal$1(currentAttribute
-                            ? "partial 不能写在属性的值里"
-                            : "partial 不能写在属性层级");
+                        {
+                            fatal$1(currentAttribute
+                                ? "partial 不能写在属性的值里"
+                                : "partial 不能写在属性层级");
+                        }
                     }
                 }
-                fatal$1("无效的 partial");
+                {
+                    fatal$1("无效的 partial");
+                }
             }
         },
         // {{#if expr}}
@@ -3765,7 +3854,9 @@ function compile$1(content) {
                 if (expr) {
                     return createIf(expr);
                 }
-                fatal$1("无效的 if");
+                {
+                    fatal$1("无效的 if");
+                }
             }
         },
         // {{else if expr}}
@@ -3776,7 +3867,9 @@ function compile$1(content) {
                 if (expr) {
                     return createElseIf(expr);
                 }
-                fatal$1("无效的 else if");
+                {
+                    fatal$1("无效的 else if");
+                }
             }
         },
         // {{else}}
@@ -3786,7 +3879,9 @@ function compile$1(content) {
                 if (!trim(source)) {
                     return createElse();
                 }
-                fatal$1("else 后面不要写乱七八糟的东西");
+                {
+                    fatal$1("else 后面不要写乱七八糟的东西");
+                }
             }
         },
         // {{...obj}}
@@ -3801,10 +3896,14 @@ function compile$1(content) {
                             : FALSE);
                     }
                     else {
-                        fatal$1("延展属性只能用于组件属性");
+                        {
+                            fatal$1("延展属性只能用于组件属性");
+                        }
                     }
                 }
-                fatal$1("无效的 spread");
+                {
+                    fatal$1("无效的 spread");
+                }
             }
         },
         // {{expr}}
@@ -3815,7 +3914,9 @@ function compile$1(content) {
                 if (expr) {
                     return createExpression(expr, isSafeBlock);
                 }
-                fatal$1("无效的 expression");
+                {
+                    fatal$1("无效的 expression");
+                }
             }
         } ], parseHtml = function (content) {
         var tpl = content;
@@ -3851,7 +3952,9 @@ function compile$1(content) {
                         isCondition = TRUE;
                     }
                     else {
-                        fatal$1("if 还没开始就结束了？");
+                        {
+                            fatal$1("if 还没开始就结束了？");
+                        }
                     }
                 }
                 var node$1 = popStack(type);
@@ -3889,7 +3992,9 @@ function compile$1(content) {
                 parseBlock(match[2], match[0]);
             }
             else {
-                fatal$1(((match[1]) + " and " + (match[3]) + " is not a pair."));
+                {
+                    fatal$1(((match[1]) + " and " + (match[3]) + " is not a pair."));
+                }
             }
         }
         else {
@@ -3898,6 +4003,10 @@ function compile$1(content) {
         }
     }
     return compileCache[content] = nodeList;
+}
+
+function isUndef (target) {
+    return target === UNDEFINED;
 }
 
 function toJSON (target) {
@@ -4179,8 +4288,11 @@ nodeStringify[DIRECTIVE] = function (node) {
     var result = {
         // renderer 遍历 attrs 要用 type
         type: type,
-        name: toJSON(name),
-        modifier: toJSON(node.modifier),
+        // 换种说法
+        // name 变成命名空间
+        ns: toJSON(name),
+        // modifier 变成命名空间下的名称
+        name: toJSON(node.modifier),
     };
     // 尽可能把表达式编译成函数，这样对外界最友好
     //
@@ -4205,17 +4317,26 @@ nodeStringify[DIRECTIVE] = function (node) {
             // compiler 保证了这里只能是标识符
             result.event = toJSON(expr.name);
         }
+        // <input model="id">
+        else if (name === DIRECTIVE_MODEL) {
+            result.expr = toJSON(expr);
+        }
         else if (name === DIRECTIVE_CUSTOM) {
+            // 如果表达式是字面量，直接取值
+            // 比如 o-log="1" 取出来就是数字 1
+            if (expr.type === LITERAL) {
+                result.value = toJSON(expr.value);
+            }
             // 取值函数
             // getter 函数在触发事件时调用，调用时会传入它的作用域，因此这里要加一个参数
-            result.getter = stringifyFunction(CODE_RETURN + stringifyExpressionArg(expr), ARG_CONTEXT);
+            else {
+                result.getter = stringifyFunction(CODE_RETURN + stringifyExpressionArg(expr), ARG_CONTEXT);
+            }
         }
     }
-    // <input model="id">
-    if (name === DIRECTIVE_MODEL) {
-        result.expr = toJSON(expr);
-    }
-    else {
+    // 比如写了一个 o-x="x"
+    // 外部可能是想从数据读取 x 的值，也可能只是想直接取字面量 x
+    if (isUndef(result.value) && isDef(value)) {
         result.value = toJSON(value);
     }
     return stringifyObject(result);
@@ -4267,10 +4388,6 @@ function stringify(node) {
 }
 function hasStringify(code) {
     return startsWith(code, CODE_PREFIX);
-}
-
-function isUndef (target) {
-    return target === UNDEFINED;
 }
 
 var nodeExecutor = {};
@@ -4418,7 +4535,7 @@ function render(context, filters, partials, directives, transitions, template) {
         var value = getValue(expr, TRUE), key = join$1(DIRECTIVE_BINDING, attr.name), hooks = directives[DIRECTIVE_BINDING];
         if (hooks) {
             setPair(vnode, 'directives', key, {
-                type: DIRECTIVE_BINDING,
+                ns: DIRECTIVE_BINDING,
                 name: attr.name,
                 key: key,
                 hooks: hooks,
@@ -4440,7 +4557,7 @@ function render(context, filters, partials, directives, transitions, template) {
                 var key = join$1(DIRECTIVE_BINDING, absoluteKeypath), hooks = directives[DIRECTIVE_BINDING];
                 if (hooks) {
                     setPair(vnode, 'directives', key, {
-                        type: DIRECTIVE_BINDING,
+                        ns: DIRECTIVE_BINDING,
                         name: EMPTY_STRING,
                         key: key,
                         hooks: hooks,
@@ -4453,11 +4570,11 @@ function render(context, filters, partials, directives, transitions, template) {
             warn(("[" + (expr.raw) + "] 不是对象，延展个毛啊"));
         }
     }, addDirective = function (vnode, attr) {
+        var ns = attr.ns;
         var name = attr.name;
-        var modifier = attr.modifier;
         var value = attr.value;
-        var key = join$1(name, modifier), binding, hooks, getter, handler, transition;
-        switch (name) {
+        var key = join$1(ns, name), binding, hooks, getter, handler, transition;
+        switch (ns) {
             case DIRECTIVE_EVENT:
                 hooks = directives[DIRECTIVE_EVENT];
                 handler = attr.event
@@ -4470,7 +4587,9 @@ function render(context, filters, partials, directives, transitions, template) {
                     vnode.transition = transition;
                 }
                 else {
-                    fatal(("transition [" + value + "] is not found."));
+                    {
+                        fatal(("transition [" + value + "] is not found."));
+                    }
                 }
                 return;
             case DIRECTIVE_MODEL:
@@ -4479,22 +4598,22 @@ function render(context, filters, partials, directives, transitions, template) {
                 binding = attr.expr.absoluteKeypath;
                 break;
             case DIRECTIVE_LAZY:
-                setPair(vnode, 'lazy', modifier, value);
+                setPair(vnode, 'lazy', name, value);
                 return;
             default:
-                hooks = directives[modifier];
+                hooks = directives[name];
                 if (attr.method) {
                     handler = createMethodListener(attr.method, attr.args, $stack);
                 }
-                else {
+                else if (attr.getter) {
                     getter = createGetter(attr.getter, $stack);
                 }
                 break;
         }
         if (hooks) {
             setPair(vnode, 'directives', key, {
-                type: name,
-                name: modifier,
+                ns: ns,
+                name: name,
                 key: key,
                 value: value,
                 binding: binding,
@@ -4504,7 +4623,9 @@ function render(context, filters, partials, directives, transitions, template) {
             });
         }
         else {
-            fatal(("directive [" + key + "] is not found."));
+            {
+                fatal(("directive [" + key + "] is not found."));
+            }
         }
     }, createEventListener = function (type) {
         return function (event, data) {
@@ -4662,7 +4783,9 @@ function render(context, filters, partials, directives, transitions, template) {
                 return;
             }
         }
-        fatal(("partial \"" + name + "\" is not found."));
+        {
+            fatal(("partial [" + name + "] is not found."));
+        }
     }, renderEach = function (expr, index, handler) {
         var eachIndex, eachHandler;
         if (func(index)) {
@@ -4876,11 +4999,9 @@ function readValue (source, keypath) {
     if (source == NULL || keypath === EMPTY_STRING) {
         return source;
     }
-    else {
-        var result = get(source, keypath);
-        if (result) {
-            return result.value;
-        }
+    var result = get(source, keypath);
+    if (result) {
+        return result.value;
     }
 }
 
@@ -5280,7 +5401,9 @@ Observer.prototype.watch = function (keypath, watcher, options) {
             emitter.on(keypath, listener);
         }
         else {
-            fatal('watcher should be a function.');
+            {
+                fatal(("watcher for \"" + keypath + "\" should be a function."));
+            }
         }
         if (options.immediate) {
             execute(watcher, context, [
@@ -5295,7 +5418,9 @@ Observer.prototype.watch = function (keypath, watcher, options) {
             bind(keypath, watcher, formatWatcherOptions(options));
         }
         else {
-            fatal('watcher should be a function or object.');
+            {
+                fatal(("watcher for \"" + keypath + "\" should be a function or object."));
+            }
         }
         return;
     }
@@ -5711,21 +5836,21 @@ specialEvents[INPUT] = {
  *
  * @param fn 需要节制调用的函数
  * @param delay 调用的时间间隔，单位毫秒
- * @param sync 是否立即触发
+ * @param immediate 是否立即触发
  * @return 节流函数
  */
-function debounce (fn, delay, sync) {
+function debounce (fn, delay, immediate) {
     var timer;
     return function () {
         if (!timer) {
             var args = toArray(arguments);
-            if (sync) {
-                execute(fn, NULL, args);
+            if (immediate) {
+                execute(fn, UNDEFINED, args);
             }
             timer = setTimeout(function () {
                 timer = 0;
-                if (!sync) {
-                    execute(fn, NULL, args);
+                if (!immediate) {
+                    execute(fn, UNDEFINED, args);
                 }
             }, delay);
         }
@@ -5758,7 +5883,7 @@ var CHANGE = 'change';
 
 // 避免连续多次点击，主要用于提交表单场景
 // 移动端的 tap 事件可自行在业务层打补丁实现
-var syncTypes = toObject([CLICK, TAP]), directive = {
+var immediateTypes = toObject([CLICK, TAP]), directive = {
     bind: function bind(node, directive, vnode) {
         var name = directive.name;
         var handler = directive.handler;
@@ -5772,7 +5897,7 @@ var syncTypes = toObject([CLICK, TAP]), directive = {
                 name = CHANGE;
             }
             else {
-                handler = debounce(handler, lazy, syncTypes[name]);
+                handler = debounce(handler, lazy, immediateTypes[name]);
             }
         }
         if (vnode.isComponent) {
@@ -6065,7 +6190,9 @@ var Yox = function Yox(options) {
                     placeholder = UNDEFINED;
                 }
                 else {
-                    fatal(("\"" + template + "\" 选择器找不到对应的元素"));
+                    {
+                        fatal(("\"" + template + "\" 选择器找不到对应的元素"));
+                    }
                 }
             }
         }
@@ -6078,12 +6205,16 @@ var Yox = function Yox(options) {
                 var selector = el;
                 if (selectorPattern.test(selector)) {
                     placeholder = domApi.find(selector);
-                    if (!placeholder) {
-                        fatal(("\"" + selector + "\" 选择器找不到对应的元素"));
+                    {
+                        if (!placeholder) {
+                            fatal(("\"" + selector + "\" 选择器找不到对应的元素"));
+                        }
                     }
                 }
                 else {
-                    fatal("\"el\" option 格式错误");
+                    {
+                        fatal("\"el\" option 格式错误");
+                    }
                 }
             }
             else {
@@ -6107,8 +6238,10 @@ var Yox = function Yox(options) {
     }
     if (methods) {
         each$2(methods, function (method, name) {
-            if (instance[name]) {
-                fatal(("\"" + name + "\" method is conflicted with built-in methods."));
+            {
+                if (instance[name]) {
+                    fatal(("\"" + name + "\" method is conflicted with built-in methods."));
+                }
             }
             instance[name] = method;
         });
@@ -6148,8 +6281,12 @@ var Yox = function Yox(options) {
             }
             instance.update(instance.get(TEMPLATE_COMPUTED), create(domApi, placeholder, isComment, instance, EMPTY_STRING));
         }
-        else if (placeholder) {
-            fatal('有 el 没 template 是几个意思？');
+        else {
+            {
+                if (placeholder) {
+                    fatal('有 el 没 template 是几个意思？');
+                }
+            }
         }
     }
     if (events) {
@@ -6187,8 +6324,10 @@ Yox.compile = function (template, stringify$1) {
             if (!hasStringify(template)) {
                 // 未编译，常出现在开发阶段
                 var nodes = compile$1(template);
-                if (nodes.length !== 1) {
-                    fatal("\"template\" expected to have just one root element.");
+                {
+                    if (nodes.length !== 1) {
+                        fatal("\"template\" should have just one root element.");
+                    }
                 }
                 template = stringify(nodes[0]);
                 if (stringify$1) {
@@ -6789,6 +6928,7 @@ function mergeResource(locals, globals) {
         : locals || globals;
 }
 {
+    Yox['dom'] = domApi;
     // 全局注册内置指令
     Yox.directive({ event: directive, model: directive$1, binding: directive$2 });
     // 全局注册内置过滤器

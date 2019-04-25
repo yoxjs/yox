@@ -95,7 +95,6 @@ export default class Yox implements YoxInterface {
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
   public static is = is
-
   public static array = array
   public static object = object
   public static string = string
@@ -128,8 +127,10 @@ export default class Yox implements YoxInterface {
         if (!templateStringify.hasStringify(template)) {
           // 未编译，常出现在开发阶段
           const nodes = templateCompiler.compile(template)
-          if (nodes.length !== 1) {
-            logger.fatal(`"template" expected to have just one root element.`)
+          if (process.env.NODE_ENV === 'dev') {
+            if (nodes.length !== 1) {
+              logger.fatal(`"template" should have just one root element.`)
+            }
           }
           template = templateStringify.stringify(nodes[0])
           if (stringify) {
@@ -386,7 +387,9 @@ export default class Yox implements YoxInterface {
             placeholder = env.UNDEFINED
           }
           else {
-            logger.fatal(`"${template}" 选择器找不到对应的元素`)
+            if (process.env.NODE_ENV === 'dev') {
+              logger.fatal(`"${template}" 选择器找不到对应的元素`)
+            }
           }
         }
       }
@@ -400,12 +403,16 @@ export default class Yox implements YoxInterface {
           const selector = el as string
           if (selectorPattern.test(selector)) {
             placeholder = domApi.find(selector)
-            if (!placeholder) {
-              logger.fatal(`"${selector}" 选择器找不到对应的元素`)
+            if (process.env.NODE_ENV === 'dev') {
+              if (!placeholder) {
+                logger.fatal(`"${selector}" 选择器找不到对应的元素`)
+              }
             }
           }
           else {
-            logger.fatal(`"el" option 格式错误`)
+            if (process.env.NODE_ENV === 'dev') {
+              logger.fatal(`"el" option 格式错误`)
+            }
           }
         }
         else {
@@ -440,8 +447,10 @@ export default class Yox implements YoxInterface {
       object.each(
         methods,
         function (method: Function, name: string) {
-          if (instance[name]) {
-            logger.fatal(`"${name}" method is conflicted with built-in methods.`)
+          if (process.env.NODE_ENV === 'dev') {
+            if (instance[name]) {
+              logger.fatal(`"${name}" method is conflicted with built-in methods.`)
+            }
           }
           instance[name] = method
         }
@@ -504,8 +513,12 @@ export default class Yox implements YoxInterface {
         )
 
       }
-      else if (placeholder) {
-        logger.fatal('有 el 没 template 是几个意思？')
+      else {
+        if (process.env.NODE_ENV === 'dev') {
+          if (placeholder) {
+            logger.fatal('有 el 没 template 是几个意思？')
+          }
+        }
       }
     }
 
@@ -1172,6 +1185,7 @@ function mergeResource(locals: Record<string, any> | void, globals: Record<strin
 }
 
 if (process.env.NODE_ENV !== 'pure') {
+  Yox['dom'] = domApi
   // 全局注册内置指令
   Yox.directive({ event, model, binding })
   // 全局注册内置过滤器

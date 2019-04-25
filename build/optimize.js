@@ -49,15 +49,15 @@ export default function (source) {
     }
   )
 
-  /**
-   * 把 void 0 转成 UNDEFINED
-   */
-  source = source.replace(
-    /void 0/g,
-    function ($0, $1, $2) {
-      return `UNDEFINED`
-    }
-  )
+  // /**
+  //  * 把 void 0 转成 UNDEFINED
+  //  */
+  // source = source.replace(
+  //   /void 0/g,
+  //   function ($0, $1, $2) {
+  //     return `UNDEFINED`
+  //   }
+  // )
 
   /**
    * 处理 legacy 版本
