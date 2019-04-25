@@ -6090,49 +6090,56 @@
       // 支持命名空间
       instance.$emitter = new Emitter(TRUE);
       var placeholder, isComment = FALSE;
-      // 检查 template
-      if (string(template)) {
-          // 传了选择器，则取对应元素的 html
-          if (selectorPattern.test(template)) {
-              placeholder = domApi.find(template);
-              if (placeholder) {
-                  template = domApi.html(placeholder);
-                  placeholder = UNDEFINED;
-              }
-              else {
-                  fatal(("\"" + template + "\" 选择器找不到对应的元素"));
-              }
-          }
-      }
-      else {
-          template = UNDEFINED;
-      }
-      // 检查 el
-      if (el) {
-          if (string(el)) {
-              var selector = el;
-              if (selectorPattern.test(selector)) {
-                  placeholder = domApi.find(selector);
-                  if (!placeholder) {
-                      fatal(("\"" + selector + "\" 选择器找不到对应的元素"));
+      {
+          // 检查 template
+          if (string(template)) {
+              // 传了选择器，则取对应元素的 html
+              if (selectorPattern.test(template)) {
+                  placeholder = domApi.find(template);
+                  if (placeholder) {
+                      template = domApi.html(placeholder);
+                      placeholder = UNDEFINED;
                   }
-              }
-              else {
-                  fatal("\"el\" option 格式错误");
+                  else {
+                      fatal(("\"" + template + "\" 选择器找不到对应的元素"));
+                  }
               }
           }
           else {
-              placeholder = el;
+              template = UNDEFINED;
           }
-      }
-      if (placeholder && !replace) {
-          // 如果不是替换占位元素
-          // 则在该元素下新建一个注释节点，等会用新组件替换掉
-          isComment = TRUE;
-          domApi.append(placeholder, placeholder = domApi.createComment(EMPTY_STRING));
-      }
-      if (parent) {
-          instance.$parent = parent;
+          // 检查 el
+          if (el) {
+              if (string(el)) {
+                  var selector = el;
+                  if (selectorPattern.test(selector)) {
+                      placeholder = domApi.find(selector);
+                      if (!placeholder) {
+                          fatal(("\"" + selector + "\" 选择器找不到对应的元素"));
+                      }
+                  }
+                  else {
+                      fatal("\"el\" option 格式错误");
+                  }
+              }
+              else {
+                  placeholder = el;
+              }
+          }
+          if (placeholder && !replace) {
+              // 如果不是替换占位元素
+              // 则在该元素下新建一个注释节点，等会用新组件替换掉
+              isComment = TRUE;
+              domApi.append(placeholder, placeholder = domApi.createComment(EMPTY_STRING));
+          }
+          if (parent) {
+              instance.$parent = parent;
+          }
+          setFlexibleOptions(instance, RAW_TRANSITION, transitions);
+          setFlexibleOptions(instance, RAW_COMPONENT, components);
+          setFlexibleOptions(instance, RAW_DIRECTIVE, directives);
+          setFlexibleOptions(instance, RAW_PARTIAL, partials);
+          setFlexibleOptions(instance, RAW_FILTER, filters);
       }
       if (methods) {
           each$2(methods, function (method, name) {
@@ -6142,47 +6149,44 @@
               instance[name] = method;
           });
       }
-      setFlexibleOptions(instance, RAW_TRANSITION, transitions);
-      setFlexibleOptions(instance, RAW_COMPONENT, components);
-      setFlexibleOptions(instance, RAW_DIRECTIVE, directives);
-      setFlexibleOptions(instance, RAW_PARTIAL, partials);
-      setFlexibleOptions(instance, RAW_FILTER, filters);
       execute(options[HOOK_AFTER_CREATE], instance);
-      // 当存在模板和计算属性时
-      // 因为这里把模板当做一种特殊的计算属性
-      // 因此模板这个计算属性的优先级应该最高
-      if (template) {
-          // 编译模板
-          // 在开发阶段，template 是原始的 html 模板
-          // 在产品阶段，template 是编译后且经过 stringify 的字符串
-          // 当然，这个需要外部自己控制传入的 template 是什么
-          // Yox.compile 会自动判断 template 是否经过编译
-          instance.$template = Yox.compile(template);
-          // 当模板的依赖变了，则重新创建 virtual dom
-          observer.addComputed(TEMPLATE_COMPUTED, {
-              // 当模板依赖变化时，异步通知模板更新
-              sync: FALSE,
-              get: function () {
-                  return instance.render();
+      {
+          // 当存在模板和计算属性时
+          // 因为这里把模板当做一种特殊的计算属性
+          // 因此模板这个计算属性的优先级应该最高
+          if (template) {
+              // 编译模板
+              // 在开发阶段，template 是原始的 html 模板
+              // 在产品阶段，template 是编译后且经过 stringify 的字符串
+              // 当然，这个需要外部自己控制传入的 template 是什么
+              // Yox.compile 会自动判断 template 是否经过编译
+              instance.$template = Yox.compile(template);
+              // 当模板的依赖变了，则重新创建 virtual dom
+              observer.addComputed(TEMPLATE_COMPUTED, {
+                  // 当模板依赖变化时，异步通知模板更新
+                  sync: FALSE,
+                  get: function () {
+                      return instance.render();
+                  }
+              });
+              // 拷贝一份，避免影响外部定义的 watchers
+              watchers = watchers
+                  ? copy(watchers)
+                  : {};
+              // 当 virtual dom 变了，则更新视图
+              watchers[TEMPLATE_COMPUTED] = function (vnode) {
+                  instance.update(vnode, instance.$vnode);
+              };
+              // 第一次渲染视图
+              if (!placeholder) {
+                  isComment = TRUE;
+                  placeholder = domApi.createComment(EMPTY_STRING);
               }
-          });
-          // 拷贝一份，避免影响外部定义的 watchers
-          watchers = watchers
-              ? copy(watchers)
-              : {};
-          // 当 virtual dom 变了，则更新视图
-          watchers[TEMPLATE_COMPUTED] = function (vnode) {
-              instance.update(vnode, instance.$vnode);
-          };
-          // 第一次渲染视图
-          if (!placeholder) {
-              isComment = TRUE;
-              placeholder = domApi.createComment(EMPTY_STRING);
+              instance.update(instance.get(TEMPLATE_COMPUTED), create(domApi, placeholder, isComment, instance, EMPTY_STRING));
           }
-          instance.update(instance.get(TEMPLATE_COMPUTED), create(domApi, placeholder, isComment, instance, EMPTY_STRING));
-      }
-      else if (placeholder) {
-          fatal('有 el 没 template 是几个意思？');
+          else if (placeholder) {
+              fatal('有 el 没 template 是几个意思？');
+          }
       }
       if (events) {
           instance.on(events);
@@ -6215,56 +6219,68 @@
    */
   Yox.compile = function (template, stringify$1) {
       {
-          if (!hasStringify(template)) {
-              // 未编译，常出现在开发阶段
-              var nodes = compile$1(template);
-              if (nodes.length !== 1) {
-                  fatal("\"template\" expected to have just one root element.");
-              }
-              template = stringify(nodes[0]);
-              if (stringify$1) {
-                  return template;
+          {
+              if (!hasStringify(template)) {
+                  // 未编译，常出现在开发阶段
+                  var nodes = compile$1(template);
+                  if (nodes.length !== 1) {
+                      fatal("\"template\" expected to have just one root element.");
+                  }
+                  template = stringify(nodes[0]);
+                  if (stringify$1) {
+                      return template;
+                  }
               }
           }
+          return new Function(("return " + template))();
       }
-      return new Function(("return " + template))();
   };
   Yox.directive = function (name, directive$1) {
-      if (string(name) && !directive$1) {
-          return getResource(globalDirectives, name);
+      {
+          if (string(name) && !directive$1) {
+              return getResource(globalDirectives, name);
+          }
+          setResource(globalDirectives, name, directive$1);
       }
-      setResource(globalDirectives, name, directive$1);
   };
   Yox.transition = function (name, transition$1) {
-      if (string(name) && !transition$1) {
-          return getResource(globalTransitions, name);
+      {
+          if (string(name) && !transition$1) {
+              return getResource(globalTransitions, name);
+          }
+          setResource(globalTransitions, name, transition$1);
       }
-      setResource(globalTransitions, name, transition$1);
   };
   Yox.component = function (name, component$1) {
-      if (string(name)) {
-          // 同步取值
-          if (!component$1) {
-              return getResource(globalComponents, name);
+      {
+          if (string(name)) {
+              // 同步取值
+              if (!component$1) {
+                  return getResource(globalComponents, name);
+              }
+              else if (func(component$1)) {
+                  getComponentAsync(globalComponents, name, component$1);
+                  return;
+              }
           }
-          else if (func(component$1)) {
-              getComponentAsync(globalComponents, name, component$1);
-              return;
-          }
+          setResource(globalComponents, name, component$1);
       }
-      setResource(globalComponents, name, component$1);
   };
   Yox.partial = function (name, partial$1) {
-      if (string(name) && !partial$1) {
-          return getResource(globalPartials, name);
+      {
+          if (string(name) && !partial$1) {
+              return getResource(globalPartials, name);
+          }
+          setResource(globalPartials, name, partial$1, Yox.compile);
       }
-      setResource(globalPartials, name, partial$1, Yox.compile);
   };
   Yox.filter = function (name, filter$1) {
-      if (string(name) && !filter$1) {
-          return getResource(globalFilters, name);
+      {
+          if (string(name) && !filter$1) {
+              return getResource(globalFilters, name);
+          }
+          setResource(globalFilters, name, filter$1);
       }
-      setResource(globalFilters, name, filter$1);
   };
   /**
    * 验证 props，无爱请重写
@@ -6432,69 +6448,81 @@
       return this;
   };
   Yox.prototype.directive = function (name, directive$1) {
-      var instance = this;
-          var $directives = instance.$directives;
-      if (string(name) && !directive$1) {
-          return getResource($directives, name, Yox.directive);
+      {
+          var instance = this;
+              var $directives = instance.$directives;
+          if (string(name) && !directive$1) {
+              return getResource($directives, name, Yox.directive);
+          }
+          setResource($directives || (instance.$directives = {}), name, directive$1);
       }
-      setResource($directives || (instance.$directives = {}), name, directive$1);
   };
   Yox.prototype.transition = function (name, transition$1) {
-      var instance = this;
-          var $transitions = instance.$transitions;
-      if (string(name) && !transition$1) {
-          return getResource($transitions, name, Yox.transition);
+      {
+          var instance = this;
+              var $transitions = instance.$transitions;
+          if (string(name) && !transition$1) {
+              return getResource($transitions, name, Yox.transition);
+          }
+          setResource($transitions || (instance.$transitions = {}), name, transition$1);
       }
-      setResource($transitions || (instance.$transitions = {}), name, transition$1);
   };
   Yox.prototype.component = function (name, component$1) {
-      var instance = this;
-          var $components = instance.$components;
-      if (string(name)) {
-          // 同步取值
-          if (!component$1) {
-              return getResource($components, name, Yox.component);
-          }
-          else if (func(component$1)) {
-              if (!getComponentAsync($components, name, component$1)) {
-                  getComponentAsync(globalComponents, name, component$1);
+      {
+          var instance = this;
+              var $components = instance.$components;
+          if (string(name)) {
+              // 同步取值
+              if (!component$1) {
+                  return getResource($components, name, Yox.component);
               }
-              return;
+              else if (func(component$1)) {
+                  if (!getComponentAsync($components, name, component$1)) {
+                      getComponentAsync(globalComponents, name, component$1);
+                  }
+                  return;
+              }
           }
+          setResource($components || (instance.$components = {}), name, component$1);
       }
-      setResource($components || (instance.$components = {}), name, component$1);
   };
   Yox.prototype.partial = function (name, partial$1) {
-      var instance = this;
-          var $partials = instance.$partials;
-      if (string(name) && !partial$1) {
-          return getResource($partials, name, Yox.partial);
+      {
+          var instance = this;
+              var $partials = instance.$partials;
+          if (string(name) && !partial$1) {
+              return getResource($partials, name, Yox.partial);
+          }
+          setResource($partials || (instance.$partials = {}), name, partial$1, Yox.compile);
       }
-      setResource($partials || (instance.$partials = {}), name, partial$1, Yox.compile);
   };
   Yox.prototype.filter = function (name, filter$1) {
-      var instance = this;
-          var $filters = instance.$filters;
-      if (string(name) && !filter$1) {
-          return getResource($filters, name, Yox.filter);
+      {
+          var instance = this;
+              var $filters = instance.$filters;
+          if (string(name) && !filter$1) {
+              return getResource($filters, name, Yox.filter);
+          }
+          setResource($filters || (instance.$filters = {}), name, filter$1);
       }
-      setResource($filters || (instance.$filters = {}), name, filter$1);
   };
   /**
    * 对于某些特殊场景，修改了数据，但是模板的依赖中并没有这一项
    * 而你非常确定需要更新模板，强制刷新正是你需要的
    */
   Yox.prototype.forceUpdate = function () {
-      var instance = this;
-          var $vnode = instance.$vnode;
-          var $observer = instance.$observer;
-      if ($vnode) {
-          var computed = $observer.computed[TEMPLATE_COMPUTED], oldValue = computed.get();
-          // 当前可能正在进行下一轮更新
-          $observer.nextTask.run();
-          // 没有更新模板，强制刷新
-          if (oldValue === computed.get()) {
-              instance.update(computed.get(TRUE), $vnode);
+      {
+          var instance = this;
+              var $vnode = instance.$vnode;
+              var $observer = instance.$observer;
+          if ($vnode) {
+              var computed = $observer.computed[TEMPLATE_COMPUTED], oldValue = computed.get();
+              // 当前可能正在进行下一轮更新
+              $observer.nextTask.run();
+              // 没有更新模板，强制刷新
+              if (oldValue === computed.get()) {
+                  instance.update(computed.get(TRUE), $vnode);
+              }
           }
       }
   };
@@ -6502,8 +6530,10 @@
    * 把模板抽象语法树渲染成 virtual dom
    */
   Yox.prototype.render = function () {
-      var instance = this;
-      return render(instance, mergeResource(instance.$filters, globalFilters), mergeResource(instance.$partials, globalPartials), mergeResource(instance.$directives, globalDirectives), mergeResource(instance.$transitions, globalTransitions), instance.$template);
+      {
+          var instance = this;
+          return render(instance, mergeResource(instance.$filters, globalFilters), mergeResource(instance.$partials, globalPartials), mergeResource(instance.$directives, globalDirectives), mergeResource(instance.$transitions, globalTransitions), instance.$template);
+      }
   };
   /**
    * 更新 virtual dom
@@ -6512,34 +6542,36 @@
    * @param oldVnode
    */
   Yox.prototype.update = function (vnode, oldVnode) {
-      var instance = this;
-          var $vnode = instance.$vnode;
-          var $options = instance.$options;
-          var hook;
-      // 每次渲染重置 refs
-      // 在渲染过程中收集最新的 ref
-      // 这样可避免更新时，新的 ref，在前面创建，老的 ref 却在后面删除的情况
-      instance.$refs = {};
-      if ($vnode) {
-          execute($options[HOOK_BEFORE_UPDATE], instance);
-          patch(domApi, vnode, oldVnode);
-          hook = $options[HOOK_AFTER_UPDATE];
-      }
-      else {
-          execute($options[HOOK_BEFORE_MOUNT], instance);
-          patch(domApi, vnode, oldVnode);
-          instance.$el = vnode.node;
-          hook = $options[HOOK_AFTER_MOUNT];
-      }
-      instance.$vnode = vnode;
-      // 跟 nextTask 保持一个节奏
-      // 这样可以预留一些优化的余地
-      if (hook) {
-          instance.nextTick(function () {
-              if (instance.$vnode) {
-                  execute(hook, instance);
-              }
-          });
+      {
+          var instance = this;
+              var $vnode = instance.$vnode;
+              var $options = instance.$options;
+              var hook;
+          // 每次渲染重置 refs
+          // 在渲染过程中收集最新的 ref
+          // 这样可避免更新时，新的 ref，在前面创建，老的 ref 却在后面删除的情况
+          instance.$refs = {};
+          if ($vnode) {
+              execute($options[HOOK_BEFORE_UPDATE], instance);
+              patch(domApi, vnode, oldVnode);
+              hook = $options[HOOK_AFTER_UPDATE];
+          }
+          else {
+              execute($options[HOOK_BEFORE_MOUNT], instance);
+              patch(domApi, vnode, oldVnode);
+              instance.$el = vnode.node;
+              hook = $options[HOOK_AFTER_MOUNT];
+          }
+          instance.$vnode = vnode;
+          // 跟 nextTask 保持一个节奏
+          // 这样可以预留一些优化的余地
+          if (hook) {
+              instance.nextTick(function () {
+                  if (instance.$vnode) {
+                      execute(hook, instance);
+                  }
+              });
+          }
       }
   };
   /**
@@ -6562,37 +6594,39 @@
    * @param node DOM 元素
    */
   Yox.prototype.create = function (options, vnode, node) {
-      options = copy(options);
-      options.parent = this;
-      if (vnode) {
-          // 如果传了 node，表示有一个占位元素，新创建的 child 需要把它替换掉
-          if (node) {
-              options.el = node;
-              options.replace = TRUE;
-          }
-          var slots = vnode.slots;
-              var props = vnode.props;
-              var model = vnode.model;
-          if (slots) {
-              options.slots = slots;
-          }
-          // 把 model 的值设置给 props 的逻辑只能写到这
-          // 不然子组件会报数据找不到的警告
-          if (isDef(model)) {
-              if (!props) {
-                  props = {};
+      {
+          options = copy(options);
+          options.parent = this;
+          if (vnode) {
+              // 如果传了 node，表示有一个占位元素，新创建的 child 需要把它替换掉
+              if (node) {
+                  options.el = node;
+                  options.replace = TRUE;
               }
-              var name = options.model || 'value';
-              if (!has$2(props, name)) {
-                  props[name] = model;
+              var slots = vnode.slots;
+                  var props = vnode.props;
+                  var model = vnode.model;
+              if (slots) {
+                  options.slots = slots;
               }
-              options.model = name;
+              // 把 model 的值设置给 props 的逻辑只能写到这
+              // 不然子组件会报数据找不到的警告
+              if (isDef(model)) {
+                  if (!props) {
+                      props = {};
+                  }
+                  var name = options.model || 'value';
+                  if (!has$2(props, name)) {
+                      props[name] = model;
+                  }
+                  options.model = name;
+              }
+              options.props = props;
           }
-          options.props = props;
+          var child = new Yox(options);
+          push(this.$children || (this.$children = []), child);
+          return child;
       }
-      var child = new Yox(options);
-      push(this.$children || (this.$children = []), child);
-      return child;
   };
   /**
    * 销毁组件
@@ -6600,16 +6634,18 @@
   Yox.prototype.destroy = function () {
       var instance = this;
           var $options = instance.$options;
-          var $vnode = instance.$vnode;
-          var $parent = instance.$parent;
           var $emitter = instance.$emitter;
           var $observer = instance.$observer;
       execute($options[HOOK_BEFORE_DESTROY], instance);
-      if ($parent && $parent.$children) {
-          remove($parent.$children, instance);
-      }
-      if ($vnode) {
-          destroy(domApi, $vnode, !$parent);
+      {
+          var $vnode = instance.$vnode;
+              var $parent = instance.$parent;
+          if ($parent && $parent.$children) {
+              remove($parent.$children, instance);
+          }
+          if ($vnode) {
+              destroy(domApi, $vnode, !$parent);
+          }
       }
       $emitter.off();
       $observer.destroy();
@@ -6724,77 +6760,78 @@
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
   Yox.is = is$1;
-  Yox.dom = domApi;
   Yox.array = array$1;
   Yox.object = object$1;
   Yox.string = string$1;
   Yox.logger = logger;
   Yox.Event = CustomEvent;
   Yox.Emitter = Emitter;
-  function setFlexibleOptions(instance, key, value) {
-      if (func(value)) {
-          instance[key](execute(value, instance));
+  {
+      function setFlexibleOptions(instance, key, value) {
+          if (func(value)) {
+              instance[key](execute(value, instance));
+          }
+          else if (object(value)) {
+              instance[key](value);
+          }
       }
-      else if (object(value)) {
-          instance[key](value);
-      }
-  }
-  function getComponentAsync(data, name, callback) {
-      if (data && has$2(data, name)) {
-          var component = data[name];
-          // 注册的是异步加载函数
-          if (func(component)) {
-              var $queue = component.$queue;
-              if (!$queue) {
-                  $queue = component.$queue = [callback];
-                  component(function (replacement) {
-                      component.$queue = UNDEFINED;
-                      data[name] = replacement;
-                      each($queue, function (callback) {
-                          callback(replacement);
+      function getComponentAsync(data, name, callback) {
+          if (data && has$2(data, name)) {
+              var component = data[name];
+              // 注册的是异步加载函数
+              if (func(component)) {
+                  var $queue = component.$queue;
+                  if (!$queue) {
+                      $queue = component.$queue = [callback];
+                      component(function (replacement) {
+                          component.$queue = UNDEFINED;
+                          data[name] = replacement;
+                          each($queue, function (callback) {
+                              callback(replacement);
+                          });
                       });
-                  });
+                  }
+                  else {
+                      push($queue, callback);
+                  }
               }
+              // 不是异步加载函数，直接同步返回
               else {
-                  push($queue, callback);
+                  callback(component);
               }
+              return TRUE;
           }
-          // 不是异步加载函数，直接同步返回
+      }
+      function getResource(data, name, lookup) {
+          if (data && data[name]) {
+              return data[name];
+          }
+          else if (lookup) {
+              return lookup(name);
+          }
+      }
+      function setResource(data, name, value, formatValue) {
+          if (string(name)) {
+              data[name] = formatValue ? formatValue(value) : value;
+          }
           else {
-              callback(component);
+              each$2(name, function (value, key) {
+                  data[key] = formatValue ? formatValue(value) : value;
+              });
           }
-          return TRUE;
       }
+      function mergeResource(locals, globals) {
+          return locals && globals
+              ? extend({}, globals, locals)
+              : locals || globals;
+      }
+      // 全局注册内置指令
+      Yox.directive({ event: directive, model: directive$1, binding: directive$2 });
+      // 全局注册内置过滤器
+      Yox.filter({ hasSlot: hasSlot });
   }
-  function getResource(data, name, lookup) {
-      if (data && data[name]) {
-          return data[name];
-      }
-      else if (lookup) {
-          return lookup(name);
-      }
-  }
-  function setResource(data, name, value, formatValue) {
-      if (string(name)) {
-          data[name] = formatValue ? formatValue(value) : value;
-      }
-      else {
-          each$2(name, function (value, key) {
-              data[key] = formatValue ? formatValue(value) : value;
-          });
-      }
-  }
-  function mergeResource(locals, globals) {
-      return locals && globals
-          ? extend({}, globals, locals)
-          : locals || globals;
-  }
-  // 全局注册内置指令
-  Yox.directive({ event: directive, model: directive$1, binding: directive$2 });
-  // 全局注册内置过滤器
-  Yox.filter({ hasSlot: hasSlot });
 
   return Yox;
 
 }));
-//# sourceMappingURL=yox.dev.js.map
+//# sourceMappingURL=yox.js.map

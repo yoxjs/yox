@@ -1,3 +1,4 @@
-import createConfig from './config.base'
+import create from './config.base'
 
-export default createConfig('.min.js', 'production', true, false, 0)
+// 包含所有功能的压缩版本
+export default create('.min.js', 'prod', true, false, 0)
