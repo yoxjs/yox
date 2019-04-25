@@ -41,10 +41,9 @@
     "yox-common": "^0.18.22",
     "yox-config": "^0.1.6",
     "yox-dom": "^0.0.19",
-    "yox-expression-compiler": "^0.16.21",
     "yox-observer": "^0.17.23",
     "yox-snabbdom": "0.19.24",
-    "yox-template-compiler": "^0.27.34",
+    "yox-template-compiler": "^0.27.35",
     "yox-type": "^0.0.37"
   }
 }
