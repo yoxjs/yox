@@ -1638,10 +1638,16 @@ function destroyVnode(api, vnode) {
      * 不论是组件或是元素，都不能销毁，只能简单的 remove，
      * 否则子组件下一次展现它们时，会出问题
      */
-    if (vnode.parent && vnode.parent !== vnode.context) {
+    var data = vnode.data, children = vnode.children, parent = vnode.parent, context = vnode.context;
+    if (parent
+        // 如果宿主组件正在销毁，$vnode 属性会在调 destroy() 之前被删除
+        // 这里表示的是宿主组件还没被销毁
+        // 如果宿主组件被销毁了，则它的一切都要进行销毁
+        && parent.$vnode
+        // 是从外部传入到组件内的
+        && parent !== vnode.context) {
         return;
     }
-    var data = vnode.data, children = vnode.children;
     if (vnode.isComponent) {
         var component_3 = data[COMPONENT];
         if (component_3) {
@@ -6669,6 +6675,8 @@ var Yox = /** @class */ (function () {
                 remove($parent.$children, instance);
             }
             if ($vnode) {
+                // virtual dom 通过判断 parent.$vnode 知道宿主组件是否正在销毁
+                delete instance.$vnode;
                 destroy(domApi, $vnode, !$parent);
             }
         }
