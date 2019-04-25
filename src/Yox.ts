@@ -474,7 +474,7 @@ export default class Yox implements YoxInterface {
       )
 
     }
-    else if (el) {
+    else if (placeholder) {
       logger.fatal('有 el 没 template 是几个意思？')
     }
 
@@ -512,8 +512,8 @@ export default class Yox implements YoxInterface {
   /**
    * 取值
    */
-  get(keypath: string, defaultValue?: any): any {
-    return this.$observer.get(keypath, defaultValue)
+  get(keypath: string, defaultValue?: any, depIgnore?: boolean): any {
+    return this.$observer.get(keypath, defaultValue, depIgnore)
   }
 
   /**
@@ -751,9 +751,7 @@ export default class Yox implements YoxInterface {
           $vnode
         )
       }
-
     }
-
   }
 
   /**
