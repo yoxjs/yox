@@ -5,14 +5,10 @@ import replace from 'rollup-plugin-replace'
 import filesize from 'rollup-plugin-filesize'
 // 压缩
 import { terser } from 'rollup-plugin-terser'
-// 将 ES6+ 代码编译为 ES2015
-import buble from 'rollup-plugin-buble'
 // 本地服务器
 import serve from 'rollup-plugin-serve'
 
 import { name, version, author, license } from '../package.json'
-
-import optimize from './optimize'
 
 const banner =
   `${'/**\n' + ' * '}${name}.js v${version}\n` +
@@ -20,14 +16,15 @@ const banner =
   ` * Released under the ${license} License.\n` +
   ` */\n`;
 
-export default function (suffix, env, minify = false, sourcemap = false, port = 0) {
+export default function (suffix, version, minify = false, sourcemap = false, port = 0) {
 
   let plugins = [
     replace({
-      'process.env.NODE_ENV': JSON.stringify(env)
+      'process.env.NODE_ENV': JSON.stringify(version)
     }),
-    typescript(),
-    buble()
+    typescript({
+      target: 'es5'
+    })
   ]
 
   if (minify) {

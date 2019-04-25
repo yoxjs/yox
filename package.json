@@ -34,7 +34,6 @@
   "homepage": "https://github.com/yoxjs/yox#readme",
   "devDependencies": {
     "rollup": "^1.10.1",
-    "rollup-plugin-buble": "^0.19.6",
     "rollup-plugin-filesize": "^6.0.1",
     "rollup-plugin-replace": "^2.2.0",
     "rollup-plugin-serve": "^1.0.1",
