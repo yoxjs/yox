@@ -18,7 +18,7 @@ const banner =
   `${'/**\n' + ' * '}${name}.js v${version}\n` +
   ` * (c) 2016-${new Date().getFullYear()} ${author}\n` +
   ` * Released under the ${license} License.\n` +
-  ` */`;
+  ` */\n`;
 
 export default function (env = 'production', minify = false, sourcemap = false, port = 0) {
 
@@ -44,6 +44,10 @@ export default function (env = 'production', minify = false, sourcemap = false, 
     )
   }
 
+  plugins.push(
+    filesize()
+  )
+
   if (port) {
     plugins.push(
       serve({
@@ -52,10 +56,6 @@ export default function (env = 'production', minify = false, sourcemap = false, 
       })
     )
   }
-
-  plugins.push(
-    filesize()
-  )
 
   return [
     {

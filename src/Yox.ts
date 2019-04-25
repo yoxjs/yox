@@ -117,7 +117,7 @@ export default class Yox implements YoxInterface {
   /**
    * 编译模板，暴露出来是为了打包阶段的模板预编译
    */
-  public static compile(template: string): Function {
+  public static compile(template: string, stringify?: boolean): Function | string {
     if (process.env.NODE_ENV !== 'production') {
       if (!templateStringify.hasStringify(template)) {
         // 未编译，常出现在开发阶段
@@ -126,6 +126,9 @@ export default class Yox implements YoxInterface {
           logger.fatal(`"template" expected to have just one root element.`)
         }
         template = templateStringify.stringify(nodes[0])
+        if (stringify) {
+          return template
+        }
       }
     }
     return new Function(`return ${template}`)()
@@ -436,7 +439,7 @@ export default class Yox implements YoxInterface {
       // 在产品阶段，template 是编译后且经过 stringify 的字符串
       // 当然，这个需要外部自己控制传入的 template 是什么
       // Yox.compile 会自动判断 template 是否经过编译
-      instance.$template = Yox.compile(template)
+      instance.$template = Yox.compile(template) as Function
 
       // 当模板的依赖变了，则重新创建 virtual dom
       observer.addComputed(

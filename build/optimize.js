@@ -26,7 +26,7 @@ export default function (source) {
    * 我们全都转成匿名函数
    */
   source = source.replace(
-    /(\b)([\w$]+) = function ([\w$]+)/g,
+    /(\b)([\w$]+) = function ([\w$]+) /g,
     function ($0, $1, $2, $3) {
       return `${$1}${$2} = function `
     }
