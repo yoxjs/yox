@@ -43,12 +43,13 @@
     "typescript": "^3.4.4"
   },
   "dependencies": {
-    "yox-common": "^0.18.23",
+    "buble": "^0.19.7",
+    "yox-common": "^0.18.27",
     "yox-config": "^0.1.6",
-    "yox-dom": "^0.0.20",
-    "yox-observer": "^0.17.24",
-    "yox-snabbdom": "^0.19.25",
-    "yox-template-compiler": "0.27.37",
-    "yox-type": "^0.0.38"
+    "yox-dom": "^0.0.24",
+    "yox-observer": "^0.17.26",
+    "yox-snabbdom": "^0.19.27",
+    "yox-template-compiler": "^0.27.40",
+    "yox-type": "^0.0.40"
   }
 }

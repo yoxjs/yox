@@ -11,8 +11,6 @@ import * as object from 'yox-common/src/util/object'
 import * as config from 'yox-config/index'
 import api from 'yox-dom/index'
 
-import * as event from '../config/event'
-
 import Yox from 'yox-type/src/Yox'
 import VNode from 'yox-type/src/vnode/VNode'
 import Directive from 'yox-type/src/vnode/Directive'
@@ -43,7 +41,7 @@ inputControl: Control = {
   sync(input: HTMLInputElement, keypath: string, context: Yox) {
     context.set(keypath, input.value)
   },
-  name: 'value'
+  name: env.RAW_VALUE
 },
 
 selectControl: Control = {
@@ -92,7 +90,7 @@ selectControl: Control = {
       )
     }
   },
-  name: 'value'
+  name: env.RAW_VALUE
 },
 
 radioControl: Control = {
@@ -147,7 +145,7 @@ componentControl: Control = {
       component.get(component.$model)
     )
   },
-  name: 'value'
+  name: env.RAW_VALUE
 },
 
 specialControls = {
@@ -203,16 +201,16 @@ directive: DirectiveHooks = {
     else {
 
       element = node as HTMLElement
-      control = specialControls[element['type']] || specialControls[api.tag(element) as string]
+      control = specialControls[element[env.RAW_TYPE]] || specialControls[api.tag(element) as string]
 
       // checkbox,radio,select 监听的是 change 事件
-      type = event.CHANGE
+      type = env.EVENT_CHANGE
 
       // 如果是输入框，则切换成 input 事件
       if (!control) {
         control = inputControl
         if (lazy !== env.TRUE) {
-          type = event.INPUT
+          type = env.EVENT_INPUT
         }
       }
 

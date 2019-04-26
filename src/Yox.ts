@@ -943,7 +943,7 @@ export default class Yox implements YoxInterface {
           if (!props) {
             props = {}
           }
-          const name = options.model || 'value'
+          const name = options.model || env.RAW_VALUE
           if (!object.has(props, name)) {
             props[name] = model
           }
