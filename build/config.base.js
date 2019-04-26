@@ -18,18 +18,24 @@ const banner =
   ` * Released under the ${license} License.\n` +
   ` */\n`;
 
-export default function (suffix, env, minify = false, sourcemap = false, port = 0) {
+const sourcemap = true
+
+const suffix = '.js'
+
+export default function (env, minify = false, legacy = false, port = 0) {
 
   let plugins = [
     replace({
       'process.env.NODE_ENV': JSON.stringify(env),
       'process.env.NODE_VERSION': JSON.stringify(version),
-      'process.env.NODE_LEGACY': false
+      'process.env.NODE_LEGACY': legacy
     }),
     typescript(),
     // buble 比 typescript 直接转 ES3 效果更好
     buble()
   ]
+
+  let dir = (legacy ? 'legacy' : 'standard') + '/' + env
 
   if (minify) {
     plugins.push(
@@ -56,7 +62,7 @@ export default function (suffix, env, minify = false, sourcemap = false, port = 
       output: [
         // umd
         {
-          file: `dist/${name}${suffix}`,
+          file: `dist/${dir}/${name}${suffix}`,
           format: 'umd',
           name: 'Yox',
           banner,
@@ -64,14 +70,14 @@ export default function (suffix, env, minify = false, sourcemap = false, port = 
         },
         // cjs
         {
-          file: `dist/${name}.cjs${suffix}`,
+          file: `dist/${dir}/${name}.cjs${suffix}`,
           format: 'cjs',
           banner,
           sourcemap,
         },
         // esm
         {
-          file: `dist/${name}.esm${suffix}`,
+          file: `dist/${dir}/${name}.esm${suffix}`,
           format: 'es',
           banner,
           sourcemap,

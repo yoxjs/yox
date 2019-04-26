@@ -10,9 +10,15 @@
   "scripts": {
     "dev": "node_modules/.bin/rollup -c ./build/config.dev.js",
     "prod": "node_modules/.bin/rollup -c ./build/config.prod.js",
-    "pure": "node_modules/.bin/rollup -c ./build/config.pure.js",
     "runtime": "node_modules/.bin/rollup -c ./build/config.runtime.js",
-    "build": "npm run pure && npm run runtime && npm run prod && npm run dev"
+    "pure": "node_modules/.bin/rollup -c ./build/config.pure.js",
+    "build": "npm run pure && npm run runtime && npm run prod && npm run dev",
+
+    "dev-legacy": "node_modules/.bin/rollup -c ./build/config.dev.legacy.js",
+    "prod-legacy": "node_modules/.bin/rollup -c ./build/config.prod.legacy.js",
+    "runtime-legacy": "node_modules/.bin/rollup -c ./build/config.runtime.legacy.js",
+    "pure-legacy": "node_modules/.bin/rollup -c ./build/config.pure.legacy.js",
+    "build-legacy": "npm run pure-legacy && npm run runtime-legacy && npm run prod-legacy && npm run dev-legacy"
   },
   "repository": {
     "type": "git",
