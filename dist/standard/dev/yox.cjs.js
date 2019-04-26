@@ -6207,9 +6207,7 @@ var Yox = function Yox(options) {
                     placeholder = UNDEFINED;
                 }
                 else {
-                    {
-                        fatal(("\"" + template + "\" 选择器找不到对应的元素"));
-                    }
+                    fatal(("\"" + template + "\" 选择器找不到对应的元素"));
                 }
             }
         }
@@ -6229,9 +6227,7 @@ var Yox = function Yox(options) {
                     }
                 }
                 else {
-                    {
-                        fatal("\"el\" option 格式错误");
-                    }
+                    fatal("\"el\" option 格式错误");
                 }
             }
             else {
@@ -6257,7 +6253,7 @@ var Yox = function Yox(options) {
         each$2(methods, function (method, name) {
             {
                 if (instance[name]) {
-                    fatal(("\"" + name + "\" method is conflicted with built-in methods."));
+                    fatal(("method [" + name + "] is conflicted with built-in methods."));
                 }
             }
             instance[name] = method;
@@ -6299,10 +6295,8 @@ var Yox = function Yox(options) {
             instance.update(instance.get(TEMPLATE_COMPUTED), create(domApi, placeholder, isComment, instance, EMPTY_STRING));
         }
         else {
-            {
-                if (placeholder) {
-                    fatal('有 el 没 template 是几个意思？');
-                }
+            if (placeholder) {
+                fatal('有 el 没 template 是几个意思？');
             }
         }
     }

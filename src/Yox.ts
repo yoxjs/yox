@@ -292,7 +292,7 @@ export default class Yox implements YoxInterface {
     // 如果不绑着，其他方法调不到钩子
     instance.$options = options
 
-    execute(options[ config.HOOK_BEFORE_CREATE ], instance, options)
+    execute(options[config.HOOK_BEFORE_CREATE], instance, options)
 
     let {
       el,
@@ -386,10 +386,8 @@ export default class Yox implements YoxInterface {
             template = domApi.html(placeholder as Element) as string
             placeholder = env.UNDEFINED
           }
-          else {
-            if (process.env.NODE_ENV === 'dev') {
-              logger.fatal(`"${template}" 选择器找不到对应的元素`)
-            }
+          else if (process.env.NODE_ENV === 'dev') {
+            logger.fatal(`"${template}" 选择器找不到对应的元素`)
           }
         }
       }
@@ -409,10 +407,8 @@ export default class Yox implements YoxInterface {
               }
             }
           }
-          else {
-            if (process.env.NODE_ENV === 'dev') {
-              logger.fatal(`"el" option 格式错误`)
-            }
+          else if (process.env.NODE_ENV === 'dev') {
+            logger.fatal(`"el" option 格式错误`)
           }
         }
         else {
@@ -449,7 +445,7 @@ export default class Yox implements YoxInterface {
         function (method: Function, name: string) {
           if (process.env.NODE_ENV === 'dev') {
             if (instance[name]) {
-              logger.fatal(`"${name}" method is conflicted with built-in methods.`)
+              logger.fatal(`method [${name}] is conflicted with built-in methods.`)
             }
           }
           instance[name] = method
@@ -457,7 +453,7 @@ export default class Yox implements YoxInterface {
       )
     }
 
-    execute(options[ config.HOOK_AFTER_CREATE ], instance)
+    execute(options[config.HOOK_AFTER_CREATE], instance)
 
     if (process.env.NODE_ENV !== 'pure') {
 
@@ -513,11 +509,9 @@ export default class Yox implements YoxInterface {
         )
 
       }
-      else {
-        if (process.env.NODE_ENV === 'dev') {
-          if (placeholder) {
-            logger.fatal('有 el 没 template 是几个意思？')
-          }
+      else if (process.env.NODE_ENV === 'dev') {
+        if (placeholder) {
+          logger.fatal('有 el 没 template 是几个意思？')
         }
       }
     }
@@ -872,12 +866,12 @@ export default class Yox implements YoxInterface {
       instance.$refs = {}
 
       if ($vnode) {
-        execute($options[ config.HOOK_BEFORE_UPDATE ], instance)
+        execute($options[config.HOOK_BEFORE_UPDATE], instance)
         snabbdom.patch(domApi, vnode, oldVnode)
         hook = $options[config.HOOK_AFTER_UPDATE]
       }
       else {
-        execute($options[ config.HOOK_BEFORE_MOUNT ], instance)
+        execute($options[config.HOOK_BEFORE_MOUNT], instance)
         snabbdom.patch(domApi, vnode, oldVnode)
         instance.$el = vnode.node as HTMLElement
         hook = $options[config.HOOK_AFTER_MOUNT]
@@ -973,7 +967,7 @@ export default class Yox implements YoxInterface {
 
     { $options, $emitter, $observer } = instance
 
-    execute($options[ config.HOOK_BEFORE_DESTROY ], instance)
+    execute($options[config.HOOK_BEFORE_DESTROY], instance)
 
     if (process.env.NODE_ENV !== 'pure') {
 
@@ -996,7 +990,7 @@ export default class Yox implements YoxInterface {
 
     object.clear(instance)
 
-    execute($options[ config.HOOK_AFTER_DESTROY ], instance)
+    execute($options[config.HOOK_AFTER_DESTROY], instance)
 
   }
 
