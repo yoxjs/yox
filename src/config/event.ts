@@ -25,8 +25,3 @@ export const INPUT = 'input'
  * 表单控件的修改事件
  */
 export const CHANGE = 'change'
-
-/**
- * IE 模拟输入事件的特殊事件
- */
-export const PROPERTY_CHANGE = 'propertychange'
