@@ -13,7 +13,6 @@
     "runtime": "node_modules/.bin/rollup -c ./build/config.runtime.js",
     "pure": "node_modules/.bin/rollup -c ./build/config.pure.js",
     "build": "npm run pure && npm run runtime && npm run prod && npm run dev",
-
     "dev-legacy": "node_modules/.bin/rollup -c ./build/config.dev.legacy.js",
     "prod-legacy": "node_modules/.bin/rollup -c ./build/config.prod.legacy.js",
     "runtime-legacy": "node_modules/.bin/rollup -c ./build/config.runtime.legacy.js",
@@ -40,22 +39,22 @@
   "homepage": "https://github.com/yoxjs/yox#readme",
   "devDependencies": {
     "rollup": "^1.10.1",
+    "rollup-plugin-buble": "^0.19.6",
     "rollup-plugin-filesize": "^6.0.1",
     "rollup-plugin-replace": "^2.2.0",
     "rollup-plugin-serve": "^1.0.1",
     "rollup-plugin-terser": "^4.0.4",
     "rollup-plugin-typescript": "^1.0.1",
-    "rollup-plugin-buble": "^0.19.6",
     "tslib": "^1.9.3",
     "typescript": "^3.4.4"
   },
   "dependencies": {
-    "yox-common": "^0.18.27",
+    "yox-common": "^0.18.28",
     "yox-config": "^0.1.6",
-    "yox-dom": "^0.0.24",
-    "yox-observer": "^0.17.26",
-    "yox-snabbdom": "^0.19.27",
-    "yox-template-compiler": "^0.27.40",
+    "yox-dom": "^0.0.25",
+    "yox-observer": "^0.17.27",
+    "yox-snabbdom": "^0.19.28",
+    "yox-template-compiler": "^0.27.41",
     "yox-type": "^0.0.40"
   }
 }

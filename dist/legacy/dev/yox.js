@@ -622,13 +622,7 @@
     falsy: falsy$1
   });
 
-  function toString$1 (target, defaultValue) {
-      return target != NULL && target.toString
-          ? target.toString()
-          : isDef(defaultValue) ? defaultValue : EMPTY_STRING;
-  }
-
-  var SEPARATOR = '.', patternCache = {};
+  var SEPARATOR = '.', splitCache = {}, patternCache = {};
   /**
    * 判断 keypath 是否以 prefix 开头，如果是，返回匹配上的前缀长度，否则返回 -1
    *
@@ -652,32 +646,16 @@
    * @param callback 返回 false 可中断遍历
    */
   function each$1(keypath, callback) {
-      if (falsy$1(keypath)) {
-          callback(keypath, TRUE);
-      }
-      else {
-          var startIndex = 0, endIndex = 0;
-          while (TRUE) {
-              endIndex = indexOf$1(keypath, SEPARATOR, startIndex);
-              if (endIndex > 0) {
-                  if (callback(slice(keypath, startIndex, endIndex), FALSE) === FALSE) {
-                      break;
-                  }
-                  startIndex = endIndex + 1;
-              }
-              else {
-                  callback(slice(keypath, startIndex), TRUE);
-                  break;
-              }
+      // 判断字符串是因为 keypath 有可能是 toString
+      // 而 splitCache.toString 是个函数
+      var list = string(splitCache[keypath])
+          ? splitCache[keypath]
+          : (splitCache[keypath] = keypath.split(SEPARATOR));
+      for (var i = 0, lastIndex = list.length - 1; i <= lastIndex; i++) {
+          if (callback(list[i], i === lastIndex) === FALSE) {
+              break;
           }
       }
-  }
-  function formatKeypath(keypath) {
-      return string(keypath)
-          ? keypath
-          : number(keypath)
-              ? toString$1(keypath)
-              : EMPTY_STRING;
   }
   /**
    * 遍历 keypath 的每个部分
@@ -686,13 +664,9 @@
    * @param keypath2
    */
   function join$1(keypath1, keypath2) {
-      keypath1 = formatKeypath(keypath1);
-      keypath2 = formatKeypath(keypath2);
-      return keypath1 === EMPTY_STRING
-          ? keypath2
-          : keypath2 !== EMPTY_STRING
-              ? keypath1 + SEPARATOR + keypath2
-              : keypath1;
+      return keypath1 && keypath2
+          ? keypath1 + SEPARATOR + keypath2
+          : keypath1 || keypath2;
   }
   /**
    * 是否模糊匹配
@@ -937,6 +911,14 @@
     get: get,
     set: set
   });
+
+  function toString$1 (target, defaultValue) {
+      return target != NULL && target.toString
+          ? target.toString()
+          : isDef(defaultValue)
+              ? defaultValue
+              : EMPTY_STRING;
+  }
 
   /**
    * 是否有原生的日志特性，没有必要单独实现
@@ -1962,7 +1944,9 @@
   function toNumber (target, defaultValue) {
       return numeric(target)
           ? +target
-          : isDef(defaultValue) ? defaultValue : 0;
+          : isDef(defaultValue)
+              ? defaultValue
+              : 0;
   }
 
   /**
@@ -2146,7 +2130,7 @@
                       }
                       if (isDef(staticKeypath)
                           && literal.raw !== KEYPATH_CURRENT) {
-                          staticKeypath = join$1(staticKeypath, literal.value);
+                          staticKeypath = join$1(staticKeypath, toString$1(literal.value));
                       }
                   }
                   else {
@@ -3135,7 +3119,7 @@
   var compileCache = {}, 
   // 缓存编译正则
   patternCache$1 = {}, 
-  // 指令分隔符，如 on-click 和  lazy-click
+  // 指令分隔符，如 on-click 和 lazy-click
   directiveSeparator = '-', 
   // 分割符，即 {{ xx }} 和 {{{ xx }}}
   blockPattern = /(\{?\{\{)\s*([^\}]+?)\s*(\}\}\}?)/, 
@@ -4520,6 +4504,7 @@
               staticKeypath = first.name;
           }
           else {
+              staticKeypath = EMPTY_STRING;
               data = execute$1(first, getter, context);
           }
           for (var i = 1, len = props.length; i < len; i++) {
@@ -4888,7 +4873,7 @@
           }
           var value = getValue(expr), exprKeypath = expr[RAW_ABSOLUTE_KEYPATH], eachKeypath = exprKeypath || join$1($keypath, expr.raw), callback = function (item, key) {
               var lastKeypath = $keypath, lastScope = $scope, lastKeypathStack = $stack;
-              $keypath = join$1(eachKeypath, key);
+              $keypath = join$1(eachKeypath, toString$1(key));
               $scope = {};
               $stack = copy($stack);
               push($stack, $keypath);
@@ -5123,7 +5108,7 @@
           var newLength = newIsArray ? newValue.length : UNDEFINED, oldLength = oldIsArray ? oldValue.length : UNDEFINED;
           callback(RAW_LENGTH, newLength, oldLength);
           for (var i = 0, length = Math.max(newLength || 0, oldLength || 0); i < length; i++) {
-              callback(i, newValue ? newValue[i] : UNDEFINED, oldValue ? oldValue[i] : UNDEFINED);
+              callback(("" + i), newValue ? newValue[i] : UNDEFINED, oldValue ? oldValue[i] : UNDEFINED);
           }
           return TRUE;
       }
@@ -5706,7 +5691,6 @@
               }
           };
       }
-      // 在 NODE_ENV 之外再搞一个环境变量，布尔类型
       // 为 IE9 以下浏览器打补丁
       {
           if (!doc$1.addEventListener) {
@@ -5998,7 +5982,7 @@
                   execute(fn, UNDEFINED, args);
               }
               timer = setTimeout(function () {
-                  timer = 0;
+                  timer = UNDEFINED;
                   if (!immediate) {
                       execute(fn, UNDEFINED, args);
                   }
