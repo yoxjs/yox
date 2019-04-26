@@ -1,6 +1,6 @@
 {
   "name": "yox",
-  "version": "0.63.0",
+  "version": "1.0.0-alpha",
   "description": "A lightweight mvvm framework",
   "main": "dist/yox.js",
   "directories": {
@@ -39,11 +39,11 @@
     "rollup-plugin-serve": "^1.0.1",
     "rollup-plugin-terser": "^4.0.4",
     "rollup-plugin-typescript": "^1.0.1",
+    "rollup-plugin-buble": "^0.19.6",
     "tslib": "^1.9.3",
     "typescript": "^3.4.4"
   },
   "dependencies": {
-    "buble": "^0.19.7",
     "yox-common": "^0.18.27",
     "yox-config": "^0.1.6",
     "yox-dom": "^0.0.24",

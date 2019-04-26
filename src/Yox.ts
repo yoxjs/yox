@@ -89,7 +89,7 @@ export default class Yox implements YoxInterface {
   /**
    * core 版本
    */
-  public static version = '1.0.0-alpha'
+  public static version = process.env.NODE_VERSION
 
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
