@@ -8,6 +8,8 @@ import { terser } from 'rollup-plugin-terser'
 // 本地服务器
 import serve from 'rollup-plugin-serve'
 
+import buble from 'buble'
+
 import { name, version, author, license } from '../package.json'
 
 const banner =
@@ -20,11 +22,29 @@ export default function (suffix, version, minify = false, sourcemap = false, por
 
   let plugins = [
     replace({
-      'process.env.NODE_ENV': JSON.stringify(version)
+      'process.env.NODE_ENV': JSON.stringify(version),
+      'process.env.NODE_LEGACY': false
     }),
-    typescript({
-      target: 'es5'
-    })
+    typescript(),
+    {
+      name: 'buble',
+      transform: function (code, id) {
+        try {
+          return buble.transform(code, {
+            transforms: {
+              modules: false
+            }
+          })
+        }
+        catch (e) {
+          e.plugin = 'buble'
+          if (!e.loc) e.loc = {}
+          e.loc.file = id
+          e.frame = e.snippet
+          throw e
+        }
+      }
+    }
   ]
 
   if (minify) {
