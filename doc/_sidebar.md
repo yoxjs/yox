@@ -4,3 +4,4 @@
 * [表达式](expression)
 * [模板](template)
 * [数据](data)
+* [计算属性](computed)
