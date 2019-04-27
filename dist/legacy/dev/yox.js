@@ -1993,20 +1993,20 @@
           nodes: nodes,
       };
   }
-  function createBinary(left, op, right, raw) {
+  function createBinary(a, op, b, raw) {
       return {
           type: BINARY,
           raw: raw,
-          left: left,
+          a: a,
           op: op,
-          right: right,
+          b: b,
       };
   }
-  function createCall(callee, args, raw) {
+  function createCall(name, args, raw) {
       return {
           type: CALL,
           raw: raw,
-          callee: callee,
+          name: name,
           args: args,
       };
   }
@@ -2071,12 +2071,12 @@
           no: no,
       };
   }
-  function createUnary(op, arg, raw) {
+  function createUnary(op, a, raw) {
       return {
           type: UNARY,
           raw: raw,
           op: op,
-          arg: arg,
+          a: a,
       };
   }
   function getLiteralNode(nodes, index) {
@@ -2655,8 +2655,7 @@
   Parser.prototype.scanOperator = function scanOperator (startIndex) {
       var instance = this;
       switch (instance.code) {
-          // +、/、%、~、^
-          case CODE_PLUS:
+          // /、%、~、^
           case CODE_DIVIDE:
           case CODE_MODULO:
           case CODE_WAVE:
@@ -2667,11 +2666,27 @@
           case CODE_MULTIPLY:
               instance.go();
               break;
+          // +
+          case CODE_PLUS:
+              instance.go();
+              {
+                  // ++
+                  if (instance.is(CODE_PLUS)) {
+                      instance.fatal(startIndex, "不支持该语法");
+                  }
+              }
+              break;
           // -、->
           case CODE_MINUS:
               instance.go();
               if (instance.is(CODE_GREAT)) {
                   instance.go();
+              }
+              else {
+                  // --
+                  if (instance.is(CODE_MINUS)) {
+                      instance.fatal(startIndex, "不支持该语法");
+                  }
               }
               break;
           // !、!!、!=、!==
@@ -2747,7 +2762,7 @@
   /**
    * 扫描二元运算
    */
-  Parser.prototype.scanBinary = function scanBinary () {
+  Parser.prototype.scanBinary = function scanBinary (startIndex) {
       // 二元运算，如 a + b * c / d，这里涉及运算符的优先级
       // 算法参考 https://en.wikipedia.org/wiki/Shunting-yard_algorithm
       var instance = this, 
@@ -2775,6 +2790,15 @@
                   }
                   push(output, operator);
                   continue;
+              }
+              else {
+                  operator = UNDEFINED;
+              }
+          }
+          // 比如不支持的表达式，a++ 之类的
+          else {
+              if (operator) {
+                  instance.fatal(startIndex, '表达式错误');
               }
           }
           // 没匹配到 token 或 operator 则跳出循环
@@ -2807,15 +2831,15 @@
        */
       var instance = this;
       instance.skip();
-      var index = instance.index, test = instance.scanBinary(), yes, no;
+      var index = instance.index, test = instance.scanBinary(index), yes, no;
       if (instance.is(CODE_QUESTION)) {
           // 跳过 ?
           instance.go();
-          yes = instance.scanBinary();
+          yes = instance.scanBinary(index);
           if (instance.is(CODE_COLON)) {
               // 跳过 :
               instance.go();
-              no = instance.scanBinary();
+              no = instance.scanBinary(index);
           }
           if (test && yes && no) {
               // 类似 ' a ? 1 : 0 ' 这样的右侧有空格，需要撤回来
@@ -3124,7 +3148,7 @@
   // 标签
   tagPattern = /<(\/)?([$a-z][-a-z0-9]*)/i, 
   // 注释
-  commentPattern = /<!--[\s\S]*?-->/, 
+  commentPattern = /<!--[\s\S]*?-->/g, 
   // 属性的 name
   attributePattern = /^\s*([-:\w]+)(['"])?(?:=(['"]))?/, 
   // 首字母大写，或中间包含 -
@@ -3403,8 +3427,7 @@
                   {
                       // 如果指令表达式是函数调用，则只能调用方法（难道还有别的好调用的吗？）
                       if (expr.type === CALL) {
-                          var callee = expr.callee;
-                          if (callee.type !== IDENTIFIER) {
+                          if (expr.name.type !== IDENTIFIER) {
                               fatal$1('指令表达式的类型如果是函数调用，则只能调用方法');
                           }
                       }
@@ -4406,14 +4429,12 @@
       if (expr) {
           // 如果表达式明确是在调用方法，则序列化成 method + args 的形式
           if (expr.type === CALL) {
-              var callee = expr.callee;
-              var args = expr.args;
-              // compiler 保证了函数调用的 callee 是标识符
-              result.method = toJSON(callee.name);
+              // compiler 保证了函数调用的 name 是标识符
+              result.method = toJSON(expr.name.name);
               // 为了实现运行时动态收集参数，这里序列化成函数
-              if (!falsy(args)) {
+              if (!falsy(expr.args)) {
                   // args 函数在触发事件时调用，调用时会传入它的作用域，因此这里要加一个参数
-                  result.args = stringifyFunction(CODE_RETURN + stringifyArray(args.map(stringifyExpressionArg)), ARG_CONTEXT);
+                  result.args = stringifyFunction(CODE_RETURN + stringifyArray(expr.args.map(stringifyExpressionArg)), ARG_CONTEXT);
               }
           }
           else if (name === DIRECTIVE_EVENT) {
@@ -4547,10 +4568,10 @@
       }
   };
   nodeExecutor[UNARY] = function (node, getter, context) {
-      return unary[node.op].exec(execute$1(node.arg, getter, context));
+      return unary[node.op].exec(execute$1(node.a, getter, context));
   };
   nodeExecutor[BINARY] = function (node, getter, context) {
-      return binary[node.op].exec(execute$1(node.left, getter, context), execute$1(node.right, getter, context));
+      return binary[node.op].exec(execute$1(node.a, getter, context), execute$1(node.b, getter, context));
   };
   nodeExecutor[TERNARY] = function (node, getter, context) {
       return execute$1(node.test, getter, context)
@@ -4570,7 +4591,7 @@
       return result;
   };
   nodeExecutor[CALL] = function (node, getter, context) {
-      return execute(execute$1(node.callee, getter, context), context, node.args.map(function (node) {
+      return execute(execute$1(node.name, getter, context), context, node.args.map(function (node) {
           return execute$1(node, getter, context);
       }));
   };
