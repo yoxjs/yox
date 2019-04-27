@@ -31,7 +31,6 @@ import * as signature from 'yox-type/index'
 
 import Computed from 'yox-observer/src/Computed'
 import Observer from 'yox-observer/src/Observer'
-import formatWatcherOptions from 'yox-observer/src/function/formatWatcherOptions'
 
 import domApi from 'yox-dom/index'
 
@@ -671,24 +670,10 @@ export default class Yox implements YoxInterface {
    */
   watch(
     keypath: string | Record<string, signature.watcher | WatcherOptions>,
-    watcher?: signature.watcher,
-    options?: WatcherOptions | boolean
+    watcher?: signature.watcher | WatcherOptions,
+    immediate?: boolean
   ): YoxInterface {
-    this.$observer.watch(keypath, watcher, options)
-    return this
-  }
-
-  /**
-   * 监听一次数据变化
-   */
-  watchOnce(
-    keypath: string,
-    watcher: signature.watcher,
-    options?: WatcherOptions
-  ): YoxInterface {
-    const watcherOptions = formatWatcherOptions(options)
-    watcherOptions.once = env.TRUE
-    this.$observer.watch(keypath, watcher, watcherOptions)
+    this.$observer.watch(keypath, watcher, immediate)
     return this
   }
 

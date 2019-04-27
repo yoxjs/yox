@@ -33,8 +33,6 @@ var RAW_VALUE = 'value';
 var RAW_LENGTH = 'length';
 var RAW_FUNCTION = 'function';
 var RAW_TEMPLATE = 'template';
-var RAW_STATIC_KEYPATH = 'staticKeypath';
-var RAW_ABSOLUTE_KEYPATH = 'absoluteKeypath';
 var KEYPATH_PARENT = '..';
 var KEYPATH_CURRENT = RAW_THIS;
 /**
@@ -112,8 +110,6 @@ var env = /*#__PURE__*/Object.freeze({
   RAW_LENGTH: RAW_LENGTH,
   RAW_FUNCTION: RAW_FUNCTION,
   RAW_TEMPLATE: RAW_TEMPLATE,
-  RAW_STATIC_KEYPATH: RAW_STATIC_KEYPATH,
-  RAW_ABSOLUTE_KEYPATH: RAW_ABSOLUTE_KEYPATH,
   KEYPATH_PARENT: KEYPATH_PARENT,
   KEYPATH_CURRENT: KEYPATH_CURRENT,
   EVENT_TAP: EVENT_TAP,
@@ -1154,7 +1150,7 @@ Emitter.prototype.off = function off (type, listener) {
         // 但你不知道它是空值
         {
             if (arguments.length > 0) {
-                warn("调用 emitter.off() 时，你传了事件名，但它是个空值");
+                warn("调用 emitter.off(type) 时，type 为空");
             }
         }
     }
@@ -1504,9 +1500,7 @@ function createComponent(vnode, options) {
         vnode.node = node;
     }
     else {
-        {
-            fatal(("the root element of component [" + (vnode.tag) + "] is not found."));
-        }
+        fatal(("the root element of component [" + (vnode.tag) + "] is not found."));
     }
     vnode.data[COMPONENT] = child;
     vnode.data[LOADING] = FALSE;
@@ -1927,9 +1921,7 @@ function destroy(api, vnode, isRemove) {
             removeVnode(api, parentNode, vnode);
         }
         else {
-            {
-                fatal("destroy vnode can't not work without parent node.");
-            }
+            fatal("destroy vnode can't not work without parent node.");
         }
     }
     else {
@@ -2006,24 +1998,24 @@ function createCall(name, args, raw) {
         args: args,
     };
 }
-function createIdentifierInner(raw, name, lookup, offset, staticKeypath) {
+function createIdentifierInner(raw, name, lookup, offset, sk) {
     return {
         type: IDENTIFIER,
         raw: raw,
         name: name,
         lookup: lookup === FALSE ? lookup : UNDEFINED,
         offset: offset > 0 ? offset : UNDEFINED,
-        staticKeypath: isDef(staticKeypath) ? staticKeypath : name,
+        sk: isDef(sk) ? sk : name,
     };
 }
-function createMemberInner(raw, props, lookup, offset, staticKeypath) {
+function createMemberInner(raw, props, lookup, offset, sk) {
     return {
         type: MEMBER,
         raw: raw,
         props: props,
         lookup: lookup === FALSE ? lookup : UNDEFINED,
         offset: offset > 0 ? offset : UNDEFINED,
-        staticKeypath: staticKeypath,
+        sk: sk,
     };
 }
 function createIdentifier(raw, name, isProp) {
@@ -2101,7 +2093,7 @@ function createMemberIfNeeded(raw, nodes) {
             identifier = nodes[0];
             name = identifier.name;
             lookup = identifier.lookup;
-            staticKeypath = identifier.staticKeypath;
+            staticKeypath = identifier.sk;
             if (identifier.offset > 0) {
                 offset += identifier.offset;
             }
@@ -3135,6 +3127,8 @@ var BLOCK_MODE_NONE = 1,
 BLOCK_MODE_SAFE = 2, 
 // {{{ x }}}
 BLOCK_MODE_UNSAFE = 3, 
+// 表达式的静态 keypath
+STATIC_KEYPATH = 'sk', 
 // 缓存编译模板
 compileCache = {}, 
 // 缓存编译正则
@@ -3360,7 +3354,7 @@ function compile$1(content) {
         prop.children = UNDEFINED;
         // 对于有静态路径的表达式，可转为单向绑定指令，可实现精确更新视图，如下
         // <div class="{{className}}">
-        if (expr[RAW_STATIC_KEYPATH]) {
+        if (expr[STATIC_KEYPATH]) {
             prop.binding = TRUE;
         }
     }, processAttributeEmptyChildren = function (element, attr) {
@@ -3389,7 +3383,7 @@ function compile$1(content) {
         attr.children = UNDEFINED;
         // 对于有静态路径的表达式，可转为单向绑定指令，可实现精确更新视图，如下
         // <div class="{{className}}">
-        if (expr[RAW_STATIC_KEYPATH]) {
+        if (expr[STATIC_KEYPATH]) {
             attr.binding = TRUE;
         }
     }, processDirectiveEmptyChildren = function (element, directive) {
@@ -3431,7 +3425,7 @@ function compile$1(content) {
                     else if (isEvent && expr.type !== IDENTIFIER) {
                         fatal$1('事件指令的表达式只能是 标识符 或 函数调用');
                     }
-                    if (isModel && !expr[RAW_STATIC_KEYPATH]) {
+                    if (isModel && !expr[STATIC_KEYPATH]) {
                         fatal$1(("model 指令的值格式错误: [" + (expr.raw) + "]"));
                     }
                 }
@@ -3978,7 +3972,7 @@ function compile$1(content) {
                 var expr = compile(source);
                 if (expr) {
                     if (currentElement && currentElement.isComponent) {
-                        return createSpread(expr, string(expr[RAW_STATIC_KEYPATH])
+                        return createSpread(expr, string(expr[STATIC_KEYPATH])
                             ? TRUE
                             : FALSE);
                     }
@@ -4538,9 +4532,7 @@ nodeExecutor[MEMBER] = function (node, getter, context) {
      * 以字面量开头，后面会用到变量
      *
      */
-    var props = node.props;
-    var staticKeypath = node.staticKeypath;
-    var first, data;
+    var staticKeypath = node.sk, props = node.props, first, data;
     if (isUndef(staticKeypath)) {
         // props 至少两个，否则无法创建 Member
         first = props[0];
@@ -4602,7 +4594,7 @@ function setPair(target, name, key, value) {
 function render(context, filters, partials, directives, transitions, template) {
     var $keypath = EMPTY_STRING, $scope = { $keypath: $keypath }, $stack = [$keypath, $scope], eventScope, vnodeStack = [], localPartials = {}, lookup = function (stack, index, key, node, depIgnore, defaultKeypath) {
         var keypath = join$1(stack[index], key), scope = stack[index + 1];
-        node.absoluteKeypath = keypath;
+        node.ak = keypath;
         // 如果最后还是取不到值，用回最初的 keypath
         if (isUndef(defaultKeypath)) {
             defaultKeypath = keypath;
@@ -4638,7 +4630,7 @@ function render(context, filters, partials, directives, transitions, template) {
             }
             result = get(filters, key);
             if (!result) {
-                node.absoluteKeypath = defaultKeypath;
+                node.ak = defaultKeypath;
                 warn(("data [" + (node.raw) + "] is not found."));
                 return;
             }
@@ -4660,7 +4652,7 @@ function render(context, filters, partials, directives, transitions, template) {
                 name: attr.name,
                 key: key,
                 hooks: hooks,
-                binding: expr.absoluteKeypath,
+                binding: expr.ak,
                 hint: attr.hint,
             });
         }
@@ -4673,7 +4665,7 @@ function render(context, filters, partials, directives, transitions, template) {
             each$2(value, function (value, key) {
                 setPair(vnode, 'props', key, value);
             });
-            var absoluteKeypath = expr[RAW_ABSOLUTE_KEYPATH];
+            var absoluteKeypath = expr.ak;
             if (absoluteKeypath) {
                 var key = join$1(DIRECTIVE_BINDING, absoluteKeypath), hooks = directives[DIRECTIVE_BINDING];
                 if (hooks) {
@@ -4714,7 +4706,7 @@ function render(context, filters, partials, directives, transitions, template) {
             case DIRECTIVE_MODEL:
                 hooks = directives[DIRECTIVE_MODEL];
                 vnode.model = getValue(attr.expr, TRUE);
-                binding = attr.expr.absoluteKeypath;
+                binding = attr.expr.ak;
                 break;
             case DIRECTIVE_LAZY:
                 setPair(vnode, 'lazy', name, value);
@@ -4911,7 +4903,7 @@ function render(context, filters, partials, directives, transitions, template) {
             eachHandler = handler;
             eachIndex = index;
         }
-        var value = getValue(expr), exprKeypath = expr[RAW_ABSOLUTE_KEYPATH], eachKeypath = exprKeypath || join$1($keypath, expr.raw), callback = function (item, key) {
+        var value = getValue(expr), exprKeypath = expr['ak'], eachKeypath = exprKeypath || join$1($keypath, expr.raw), callback = function (item, key) {
             var lastKeypath = $keypath, lastScope = $scope, lastKeypathStack = $stack;
             $keypath = join$1(eachKeypath, toString$1(key));
             $scope = {};
@@ -4947,7 +4939,6 @@ function render(context, filters, partials, directives, transitions, template) {
     return template(renderExpression, renderExpressionArg, renderExpressionVnode, renderTextVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach);
 }
 
-var syncWatcherOptions = { sync: TRUE }, asyncWatcherOptions = { sync: FALSE };
 /**
  * 计算属性
  *
@@ -4956,7 +4947,6 @@ var syncWatcherOptions = { sync: TRUE }, asyncWatcherOptions = { sync: FALSE };
 var Computed = function Computed(keypath, sync, cache, deps, observer, getter, setter) {
     var instance = this;
     instance.keypath = keypath;
-    instance.sync = sync;
     instance.cache = cache;
     // 因为可能会修改 deps，所以这里创建一个自己的对象，避免影响外部传入的 deps
     instance.deps = [];
@@ -4965,12 +4955,16 @@ var Computed = function Computed(keypath, sync, cache, deps, observer, getter, s
     instance.getter = getter;
     instance.setter = setter;
     instance.unique = {};
-    instance.callback = function ($0, $1, $2) {
+    instance.watcher = function ($0, $1, $2) {
         // 计算属性的依赖变了会走进这里
         var oldValue = instance.value, newValue = instance.get(TRUE);
         if (newValue !== oldValue) {
             observer.diff(keypath, newValue, oldValue);
         }
+    };
+    instance.watcherOptions = {
+        sync: sync,
+        watcher: instance.watcher
     };
     if (instance.fixed = !falsy(deps)) {
         each(deps, function (dep) {
@@ -5065,11 +5059,10 @@ Computed.prototype.bind = function bind () {
         var unique = ref.unique;
         var deps = ref.deps;
         var observer = ref.observer;
-        var callback = ref.callback;
-        var sync = ref.sync;
+        var watcherOptions = ref.watcherOptions;
     each$2(unique, function (_, dep) {
         push(deps, dep);
-        observer.watch(dep, callback, sync ? syncWatcherOptions : asyncWatcherOptions);
+        observer.watch(dep, watcherOptions);
     });
     // 用完重置
     // 方便下次收集依赖
@@ -5082,9 +5075,9 @@ Computed.prototype.unbind = function unbind () {
     var ref = this;
         var deps = ref.deps;
         var observer = ref.observer;
-        var callback = ref.callback;
+        var watcher = ref.watcher;
     each(deps, function (dep) {
-        observer.unwatch(dep, callback);
+        observer.unwatch(dep, watcher);
     }, TRUE);
     deps.length = 0;
 };
@@ -5263,13 +5256,19 @@ function filterWatcher (options, data) {
  *
  * @param options
  */
-function formatWatcherOptions (options) {
-    // 这里要返回全新的对象，避免后续的修改会影响外部传入的配置对象
-    return options === TRUE
-        ? { immediate: TRUE }
-        : object(options)
-            ? copy(options)
-            : {};
+function formatWatcherOptions (options, immediate) {
+    if (func(options)) {
+        return {
+            watcher: options,
+            immediate: immediate === TRUE,
+        };
+    }
+    if (options && options.watcher) {
+        return options;
+    }
+    {
+        fatal("watcher should be a function or object.");
+    }
 }
 
 /**
@@ -5478,50 +5477,27 @@ Observer.prototype.removeComputed = function removeComputed (keypath) {
  *
  * @param keypath
  * @param watcher
- * @param options
- * @param options.immediate 是否立即触发一次
- * @param options.sync 是否同步响应，默认是异步
- * @param options.once 是否监听一次
+ * @param immediate
  */
-Observer.prototype.watch = function watch (keypath, watcher, options) {
+Observer.prototype.watch = function watch (keypath, watcher, immediate) {
     var instance = this;
         var context = instance.context;
         var syncEmitter = instance.syncEmitter;
         var asyncEmitter = instance.asyncEmitter;
-        var bind = function (keypath, watcher, options) {
-        if (object(watcher)) {
-            if (boolean(watcher.immediate)) {
-                options.immediate = watcher.immediate;
-            }
-            if (boolean(watcher.sync)) {
-                options.sync = watcher.sync;
-            }
-            if (boolean(watcher.once)) {
-                options.once = watcher.once;
-            }
-            if (func(watcher.watcher)) {
-                watcher = watcher.watcher;
-            }
+        var bind = function (keypath, options) {
+        var emitter = options.sync ? syncEmitter : asyncEmitter, 
+        // formatWatcherOptions 保证了 options.watcher 一定存在
+        listener = {
+            fn: options.watcher,
+            ctx: context,
+            count: 0,
+        };
+        if (options.once) {
+            listener.max = 1;
         }
-        var emitter = options.sync ? syncEmitter : asyncEmitter;
-        if (func(watcher)) {
-            var listener = {
-                fn: watcher,
-                ctx: context,
-                count: 0,
-            };
-            if (options.once) {
-                listener.max = 1;
-            }
-            emitter.on(keypath, listener);
-        }
-        else {
-            {
-                fatal(("watcher for \"" + keypath + "\" should be a function."));
-            }
-        }
+        emitter.on(keypath, listener);
         if (options.immediate) {
-            execute(watcher, context, [
+            execute(options.watcher, context, [
                 instance.get(keypath),
                 UNDEFINED,
                 keypath
@@ -5529,18 +5505,11 @@ Observer.prototype.watch = function watch (keypath, watcher, options) {
         }
     };
     if (string(keypath)) {
-        if (func(watcher) || object(watcher)) {
-            bind(keypath, watcher, formatWatcherOptions(options));
-        }
-        else {
-            {
-                fatal(("watcher for \"" + keypath + "\" should be a function or object."));
-            }
-        }
+        bind(keypath, formatWatcherOptions(watcher, immediate));
         return;
     }
     each$2(keypath, function (value, keypath) {
-        bind(keypath, value, {});
+        bind(keypath, formatWatcherOptions(value));
     });
 };
 /**
@@ -5983,7 +5952,7 @@ function getOptionValue(option) {
         ? option.value
         : option.text;
 }
-var syncWatcherOptions$1 = { sync: TRUE }, inputControl = {
+var inputControl = {
     set: function set(input, keypath, context) {
         input.value = toString$1(context.get(keypath));
     },
@@ -6112,7 +6081,10 @@ var syncWatcherOptions$1 = { sync: TRUE }, inputControl = {
         }
         // 监听数据，修改界面
         // 这里使用同步监听，这样才能使 isSyncing 生效
-        context.watch(binding, set, syncWatcherOptions$1);
+        context.watch(binding, {
+            watcher: set,
+            sync: TRUE
+        });
         vnode.data[directive.key] = function () {
             if (vnode.isComponent) {
                 component.unwatch(component.$model, sync);
@@ -6585,17 +6557,8 @@ Yox.prototype.fire = function fire (bullet, data, downward) {
 /**
  * 监听数据变化
  */
-Yox.prototype.watch = function watch (keypath, watcher, options) {
-    this.$observer.watch(keypath, watcher, options);
-    return this;
-};
-/**
- * 监听一次数据变化
- */
-Yox.prototype.watchOnce = function watchOnce (keypath, watcher, options) {
-    var watcherOptions = formatWatcherOptions(options);
-    watcherOptions.once = TRUE;
-    this.$observer.watch(keypath, watcher, watcherOptions);
+Yox.prototype.watch = function watch (keypath, watcher, immediate) {
+    this.$observer.watch(keypath, watcher, immediate);
     return this;
 };
 /**

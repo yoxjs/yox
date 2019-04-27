@@ -32,9 +32,7 @@ interface Control {
 
 }
 
-const syncWatcherOptions = { sync: env.TRUE },
-
-inputControl: Control = {
+const inputControl: Control = {
   set(input: HTMLInputElement, keypath: string, context: Yox) {
     input.value = toString(context.get(keypath))
   },
@@ -226,7 +224,13 @@ directive: DirectiveHooks = {
 
     // 监听数据，修改界面
     // 这里使用同步监听，这样才能使 isSyncing 生效
-    context.watch(binding as string, set, syncWatcherOptions)
+    context.watch(
+      binding as string,
+      {
+        watcher: set,
+        sync: env.TRUE
+      }
+    )
 
     vnode.data[directive.key] = function () {
       if (vnode.isComponent) {

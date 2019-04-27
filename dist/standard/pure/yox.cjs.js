@@ -1290,7 +1290,6 @@ var RENDER_SLOT = 'a', RENDER_EACH = 'b', RENDER_EXPRESSION = 'c', RENDER_EXPRES
     RENDER_EACH
 ], SEP_COMMA)) + "){return ";
 
-var syncWatcherOptions = { sync: TRUE }, asyncWatcherOptions = { sync: FALSE };
 /**
  * 计算属性
  *
@@ -1299,7 +1298,6 @@ var syncWatcherOptions = { sync: TRUE }, asyncWatcherOptions = { sync: FALSE };
 var Computed = function Computed(keypath, sync, cache, deps, observer, getter, setter) {
     var instance = this;
     instance.keypath = keypath;
-    instance.sync = sync;
     instance.cache = cache;
     // 因为可能会修改 deps，所以这里创建一个自己的对象，避免影响外部传入的 deps
     instance.deps = [];
@@ -1308,12 +1306,16 @@ var Computed = function Computed(keypath, sync, cache, deps, observer, getter, s
     instance.getter = getter;
     instance.setter = setter;
     instance.unique = {};
-    instance.callback = function ($0, $1, $2) {
+    instance.watcher = function ($0, $1, $2) {
         // 计算属性的依赖变了会走进这里
         var oldValue = instance.value, newValue = instance.get(TRUE);
         if (newValue !== oldValue) {
             observer.diff(keypath, newValue, oldValue);
         }
+    };
+    instance.watcherOptions = {
+        sync: sync,
+        watcher: instance.watcher
     };
     if (instance.fixed = !falsy(deps)) {
         each(deps, function (dep) {
@@ -1408,11 +1410,10 @@ Computed.prototype.bind = function bind () {
         var unique = ref.unique;
         var deps = ref.deps;
         var observer = ref.observer;
-        var callback = ref.callback;
-        var sync = ref.sync;
+        var watcherOptions = ref.watcherOptions;
     each$2(unique, function (_, dep) {
         push(deps, dep);
-        observer.watch(dep, callback, sync ? syncWatcherOptions : asyncWatcherOptions);
+        observer.watch(dep, watcherOptions);
     });
     // 用完重置
     // 方便下次收集依赖
@@ -1425,9 +1426,9 @@ Computed.prototype.unbind = function unbind () {
     var ref = this;
         var deps = ref.deps;
         var observer = ref.observer;
-        var callback = ref.callback;
+        var watcher = ref.watcher;
     each(deps, function (dep) {
-        observer.unwatch(dep, callback);
+        observer.unwatch(dep, watcher);
     }, TRUE);
     deps.length = 0;
 };
@@ -1606,13 +1607,16 @@ function filterWatcher (options, data) {
  *
  * @param options
  */
-function formatWatcherOptions (options) {
-    // 这里要返回全新的对象，避免后续的修改会影响外部传入的配置对象
-    return options === TRUE
-        ? { immediate: TRUE }
-        : object(options)
-            ? copy(options)
-            : {};
+function formatWatcherOptions (options, immediate) {
+    if (func(options)) {
+        return {
+            watcher: options,
+            immediate: immediate === TRUE,
+        };
+    }
+    if (options && options.watcher) {
+        return options;
+    }
 }
 
 /**
@@ -1821,45 +1825,27 @@ Observer.prototype.removeComputed = function removeComputed (keypath) {
  *
  * @param keypath
  * @param watcher
- * @param options
- * @param options.immediate 是否立即触发一次
- * @param options.sync 是否同步响应，默认是异步
- * @param options.once 是否监听一次
+ * @param immediate
  */
-Observer.prototype.watch = function watch (keypath, watcher, options) {
+Observer.prototype.watch = function watch (keypath, watcher, immediate) {
     var instance = this;
         var context = instance.context;
         var syncEmitter = instance.syncEmitter;
         var asyncEmitter = instance.asyncEmitter;
-        var bind = function (keypath, watcher, options) {
-        if (object(watcher)) {
-            if (boolean(watcher.immediate)) {
-                options.immediate = watcher.immediate;
-            }
-            if (boolean(watcher.sync)) {
-                options.sync = watcher.sync;
-            }
-            if (boolean(watcher.once)) {
-                options.once = watcher.once;
-            }
-            if (func(watcher.watcher)) {
-                watcher = watcher.watcher;
-            }
+        var bind = function (keypath, options) {
+        var emitter = options.sync ? syncEmitter : asyncEmitter, 
+        // formatWatcherOptions 保证了 options.watcher 一定存在
+        listener = {
+            fn: options.watcher,
+            ctx: context,
+            count: 0,
+        };
+        if (options.once) {
+            listener.max = 1;
         }
-        var emitter = options.sync ? syncEmitter : asyncEmitter;
-        if (func(watcher)) {
-            var listener = {
-                fn: watcher,
-                ctx: context,
-                count: 0,
-            };
-            if (options.once) {
-                listener.max = 1;
-            }
-            emitter.on(keypath, listener);
-        }
+        emitter.on(keypath, listener);
         if (options.immediate) {
-            execute(watcher, context, [
+            execute(options.watcher, context, [
                 instance.get(keypath),
                 UNDEFINED,
                 keypath
@@ -1867,13 +1853,11 @@ Observer.prototype.watch = function watch (keypath, watcher, options) {
         }
     };
     if (string(keypath)) {
-        if (func(watcher) || object(watcher)) {
-            bind(keypath, watcher, formatWatcherOptions(options));
-        }
+        bind(keypath, formatWatcherOptions(watcher, immediate));
         return;
     }
     each$2(keypath, function (value, keypath) {
-        bind(keypath, value, {});
+        bind(keypath, formatWatcherOptions(value));
     });
 };
 /**
@@ -2296,17 +2280,8 @@ Yox.prototype.fire = function fire (bullet, data, downward) {
 /**
  * 监听数据变化
  */
-Yox.prototype.watch = function watch (keypath, watcher, options) {
-    this.$observer.watch(keypath, watcher, options);
-    return this;
-};
-/**
- * 监听一次数据变化
- */
-Yox.prototype.watchOnce = function watchOnce (keypath, watcher, options) {
-    var watcherOptions = formatWatcherOptions(options);
-    watcherOptions.once = TRUE;
-    this.$observer.watch(keypath, watcher, watcherOptions);
+Yox.prototype.watch = function watch (keypath, watcher, immediate) {
+    this.$observer.watch(keypath, watcher, immediate);
     return this;
 };
 /**
