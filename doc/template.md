@@ -52,7 +52,7 @@ Yox 采用了 `Mustache` 的定界符： `{{` 和 `}}`，我们认为这个设�
 
 #### 属性类型
 
-Yox 会自动识别常见的属性的类型，如下：
+Yox 会自动识别常见属性的类型，如下：
 
 * `number`: min minlength max maxlength step width height size rows cols tabindex
 * `boolean`: disabled checked required multiple readonly autofocus autoplay controls loop muted novalidate draggable hidden spellcheck
@@ -76,7 +76,7 @@ Yox 会自动识别常见的属性的类型，如下：
 
 子节点插值有两种类型：**安全插值** 和 **危险插值**。
 
-### 安全插值
+#### 安全插值
 
 安全插值，表示值最终会设置到 `元素节点` 或 `文本节点` 的 `textContent` 属性上，因此它是**安全**的。
 
@@ -87,7 +87,7 @@ Yox 会自动识别常见的属性的类型，如下：
 </div>
 ```
 
-### 危险插值
+#### 危险插值
 
 危险插值，表示值最终会设置到 `元素节点` 的 `innerHTML` 属性上，常用于渲染富文本。
 
@@ -123,27 +123,40 @@ Yox 会自动识别常见的属性的类型，如下：
 `if` 或 `else if` 后面紧跟一个表达式，语法和 `JavaScript` 完全一致。
 
 ```html
-{{#if expression}}
-    ...
-{{else if expression}}
-    ...
-{{else}}
-    ...
-{{/if}}
+<div>
+  {{#if expression}}
+      ...
+  {{else if expression}}
+      ...
+  {{else}}
+      ...
+  {{/if}}
+</div>
 ```
 
-> Mustache 的原版语法中，`[]` 被认为是 `false`，这个设计严重违背工程师的第一直觉，甚至很难几句话跟新人解释清楚。为了避免歧义和保持代码逻辑清晰，我们把它剔除了。
->
-> 此外，有些模板引擎喜欢把 `else if` 写成 `elif` 或是 `elseif`，我就奇了怪了，跟 js 语法保持一致很难么？
-
-判断非空数组的方式如下：
+此外，还可以在 HTML 元素或组件的**属性**上使用条件判断，如下：
 
 ```html
-{{#if !list || !list.length}}
-  没有数据
-{{else}}
-  ...
-{{/if}}
+<div {{#if id}}id="{{id}}"{{/if}}
+  class="{{#if class}}{{class}}{{else}}default{{/if}}">
+  xxx
+</div>
+```
+
+> 例子本身没有意义，纯粹演示功能。
+
+在 `Mustache` 的语法中，`[]` 被认为是 `false`，这个特性严重违反直觉，为了避免歧义和保持代码逻辑清晰，我们并未采用。
+
+Yox 判断非空数组的方式如下：
+
+```html
+<div>
+  {{#if !list || !list.length}}
+    没有数据
+  {{else}}
+    ...
+  {{/if}}
+</div>
 ```
 
 如果觉得麻烦，可以先注册一个 `isFalsyArray` 过滤器。
@@ -159,11 +172,13 @@ Yox.filter({
 改进版
 
 ```html
-{{#if isFalsyArray(list)}}
-  没有数据
-{{else}}
-  ...
-{{/if}}
+<div>
+  {{#if isFalsyArray(list)}}
+    没有数据
+  {{else}}
+    ...
+  {{/if}}
+</div>
 ```
 
 ## 循环数组
@@ -180,7 +195,7 @@ Yox.filter({
 </div>
 ```
 
-### Index
+### 数组下标
 
 如果循环过程中要用到数组下标，可通过 `[array]:[index]` 语法获取，如下：
 
@@ -192,7 +207,7 @@ Yox.filter({
 </div>
 ```
 
-常见的需求是判断数组的最后一项，对于 Yox 来说非常简单，只需 `if` 一下。
+对于 Yox 来说，判断数组的最后一项非常简单，只需 `if` 一下。
 
 ```html
 <div>
@@ -255,7 +270,7 @@ Yox.filter({
 
 > 对于基本类型的数组来说，`this` 简直是唯一的救命稻草。
 
-### 向上查找
+### 自动向上查找
 
 先来看一个例子。
 
@@ -376,3 +391,308 @@ Yox.filter({
 </div>
 ```
 
+
+## 循环对象
+
+```html
+<div>
+  {{#each object:key}}
+    ...
+  {{/each}}
+</div>
+```
+
+> 更多细节，请参考**循环数组**
+
+
+## 循环区间
+
+区间，表示从一个数到另一个数，比如从 5 到 10，或者反过来，从 10 到 5。
+
+```html
+<div>
+  // 包含 to
+  {{#each from => to:index}}
+    ...
+  {{/each
+
+  // 不包含 to
+  {{#each from -> to:index}}
+    ...
+  {{/each
+</div>
+```
+
+> `from` 是起始的数字，`to` 是结束的数字，如果 `from` 大于 `to`，则递减循环，如果 `from` 小于 `to`，则递增循环。
+
+当我们遇到一些特殊需求，循环区间比循环数组更自然 ，举个例子：
+
+创建 5 颗星星，如果没有循环区间，只能先创建一个数组，再循环该数组。
+
+数据
+
+```js
+{
+  stars: new Array(5)
+}
+```
+
+模板
+
+```html
+<div>
+  {{#each stars:index}}
+    <Star value="{{index + 1}}" />
+  {{/each
+</div>
+```
+
+使用循环区间则简单的多，不需要创建数组，直接开始写模板，如下：
+
+```html
+<div>
+  {{#each 1 => 5}}
+    <Star value="{{this}}" />
+  {{/each
+</div>
+```
+
+同样创建了 5 颗星星，还把当前值传给了 `value`。
+
+
+## 延展属性
+
+Yox 专门为 `组件` 的传值实现了延展属性，如下：
+
+```html
+<div>
+  <Component {{...props}} />
+</div>
+```
+
+> 不支持延展 HTML 元素属性，没必要
+
+为了给组件传递大量的数据，也许你曾经写过这样的代码：
+
+```html
+<Component name="{{props.name}}" age="{{props.age}}" email="{{props.email}}" />
+```
+
+逐个传值，看起来只是体力劳动，它的风险在于，如果写错一个字母，`debug` 分分钟让你怀疑人生。
+
+为了彻底消灭这个隐患，我们有情怀地实现了延展属性。
+
+
+## 定义子模板
+
+如果要在多个地方使用相同的模板，最好不要复制粘贴，而是应该使用子模板。
+
+子模板可以通过 API 注册，也可以用时定义，这取决于子模板复用性的高低。
+
+### API 注册
+
+全局注册
+
+```js
+// 单个注册
+Yox.partial('name', '<div>...</div>')
+
+// 批量注册
+Yox.partial({
+  name1: '<div>...</div>',
+  name2: '<div>...</div>',
+  ...
+})
+```
+
+本地注册
+
+```js
+{
+   partials: {
+    name1: '<div>...</div>',
+    name2: '<div>...</div>',
+  }
+}
+
+```
+
+### 用时定义
+
+我们可以在组件模板里定义 `当前组件` 会多处使用的子模板，如下：
+
+```html
+<div>
+  {{#partial name}}
+    <div>
+      ...
+    </div>
+  {{/partial}}
+</div>
+```
+
+注意，用时定义的子模板，不会注册到组件实例中。
+
+也就是说，用时定义和本地注册不是一回事。
+
+
+## 导入子模板
+
+查找子模板的顺序是 `用时定义` => `本地注册` => `全局注册`，三次尝试如果依然找不到子模板，则报错。
+
+```html
+<div>
+  {{> partialName}}
+</div>
+```
+
+## 过滤器
+
+Yox 的过滤器采用了 `函数调用` 的方式，如下：
+
+```html
+<div>
+    日期：{{formatDate(date)}}
+</div>
+```
+
+对于比较常用的过滤器，建议全局注册，如下：
+
+```js
+// 单个注册
+Yox.filter('formatDate', function (date) {
+  return 'x'
+})
+
+// 批量注册
+Yox.filter({
+  formatDate1: function (date) {
+    return 'x1'
+  },
+  formatDate2: function (date) {
+    return 'x2'
+  }
+})
+```
+
+对于比较冷门，通用性不强的过滤器，建议本地注册，如下：
+
+```js
+{
+  filters: {
+    formatName: function (name) {
+      return 'balabala'
+    }
+  }
+}
+```
+
+如果项目中用到了 `underscore` 或 `lodash`，甚至可以注册整个库，如下：
+
+```js
+Yox.filter(_)
+```
+
+
+## Keypath
+
+在前面介绍循环数组时，提到了 `each` 会递进数据上下文，其实质就是修改了 `keypath`。
+
+如果没有使用 `each`，`keypath` 始终是 `""`，只有 `each` 会把 `keypath` 切换成当前正在遍历的列表项，举个例子：
+
+数据
+
+```js
+{
+  data: {
+    users: [
+      {
+        name: 'Jack'
+      },
+      {
+        name: 'John'
+      },
+      {
+        name: 'Mike'
+      }
+    ]
+  },
+  methods: {
+    select: function (keypath, user) {
+      console.log(keypath, user)
+    }
+  }
+}
+```
+
+模板
+
+```html
+<div>
+  {{#each users}}
+    <div>
+      {{name}}
+    </div>
+    <button on-click="select($keypath, this)">
+      Select
+    </button>
+  {{/each}}
+</div>
+```
+
+> 关于 `$keypath` 请参考 **模板** - **特殊变量**
+
+渲染用户列表，我们给每个用户添加一个按钮，希望点击按钮能知道点击的是哪个用户。
+
+当我们点击第二个用户时，打印如下：
+
+```js
+users.1 Object {name: "John"}
+```
+
+`users.1` 正是渲染第二个用户时的 `keypath`。
+
+
+## 特殊变量
+
+### $event
+
+触发事件时，可用 `$event` 获取当前的事件对象，如下：
+
+```html
+<button on-click="submit($event)">
+  Submit
+</button>
+```
+
+> 调用方法如果没有参数，默认会把事件对象传进来，因此这里写与不写 `$event` 是一样的。
+>
+> 加上这个特性主要是方便多个参数时修改 event 参数的位置。
+
+### $data
+
+触发**组件**事件时，可用 `$data` 获取当前的事件数据，如下：
+
+```html
+<Button on-click="submit($event, $data)">
+  Submit
+</Button>
+```
+
+> 调用方法如果没有参数，默认会把事件对象和事件数据传进来，因此这里写与不写 `$event, $data` 是一样的。
+>
+> 加上这个特性主要是方便多个参数时修改 event 和 data 参数的位置，或只需要 data 参数。
+
+### $keypath
+
+在模板的任何位置，可用 `$keypath` 获取当前 `keypath`，如下：
+
+```html
+<div>
+  {{$keypath}}
+
+  {{#each list}}
+    {{$keypath}}
+  {{/each}}
+</div>
+```
