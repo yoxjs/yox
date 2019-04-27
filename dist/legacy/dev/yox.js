@@ -1986,19 +1986,19 @@
    */
   var CALL = 9;
 
-  function createArray(elements, raw) {
+  function createArray(nodes, raw) {
       return {
           type: ARRAY,
           raw: raw,
-          elements: elements,
+          nodes: nodes,
       };
   }
-  function createBinary(left, operator, right, raw) {
+  function createBinary(left, op, right, raw) {
       return {
           type: BINARY,
           raw: raw,
           left: left,
-          operator: operator,
+          op: op,
           right: right,
       };
   }
@@ -2071,11 +2071,11 @@
           no: no,
       };
   }
-  function createUnary(operator, arg, raw) {
+  function createUnary(op, arg, raw) {
       return {
           type: UNARY,
           raw: raw,
-          operator: operator,
+          op: op,
           arg: arg,
       };
   }
@@ -2713,11 +2713,9 @@
               else if (instance.is(CODE_GREAT)) {
                   instance.go();
               }
+              // 一个等号要报错
               else {
-                  // 一个等号要报错
-                  {
-                      instance.fatal(startIndex, "不支持一个等号这种赋值写法");
-                  }
+                  instance.fatal(startIndex, "不支持一个等号这种赋值写法");
               }
               break;
           // <、<=、<<
@@ -2825,9 +2823,7 @@
               test = createTernary(test, yes, no, instance.pick(index));
           }
           else {
-              {
-                  instance.fatal(index, "三元表达式写法错误");
-              }
+              instance.fatal(index, "三元表达式写法错误");
           }
       }
       // 过掉结束字符
@@ -2838,9 +2834,7 @@
           }
           // 没匹配到结束字符要报错
           else {
-              {
-                  instance.fatal(index, ("结束字符匹配错误，期待[" + (String.fromCharCode(endCode)) + "]，却发现[" + (String.fromCharCode(instance.code)) + "]"));
-              }
+              instance.fatal(index, ("结束字符匹配错误，期待[" + (String.fromCharCode(endCode)) + "]，却发现[" + (String.fromCharCode(instance.code)) + "]"));
           }
       }
       return test;
@@ -3115,16 +3109,22 @@
       };
   }
 
+  // 当前不位于 block 之间
+  var BLOCK_MODE_NONE = 1, 
+  // {{ x }}
+  BLOCK_MODE_SAFE = 2, 
+  // {{{ x }}}
+  BLOCK_MODE_UNSAFE = 3, 
   // 缓存编译模板
-  var compileCache = {}, 
+  compileCache = {}, 
   // 缓存编译正则
   patternCache$1 = {}, 
   // 指令分隔符，如 on-click 和 lazy-click
   directiveSeparator = '-', 
-  // 分割符，即 {{ xx }} 和 {{{ xx }}}
-  blockPattern = /(\{?\{\{)\s*([^\}]+?)\s*(\}\}\}?)/, 
   // 标签
   tagPattern = /<(\/)?([$a-z][-a-z0-9]*)/i, 
+  // 注释
+  commentPattern = /<!--[\s\S]*?-->/, 
   // 属性的 name
   attributePattern = /^\s*([-:\w]+)(['"])?(?:=(['"]))?/, 
   // 首字母大写，或中间包含 -
@@ -3177,9 +3177,17 @@
       nodeList = [];
       var nodeStack = [], 
       // 持有 if/elseif/else 节点
-      ifStack = [], currentElement, currentAttribute, 
-      // 干掉 html 注释
-      str = content.replace(/<!--[\s\S]*?-->/g, EMPTY_STRING), startQuote, length, isSafeBlock = FALSE, nextIsBlock = FALSE, match, fatal$1 = function (msg) {
+      ifStack = [], currentElement, currentAttribute, length = content.length, 
+      // 当前处理的位置
+      index = 0, 
+      // 下一段开始的位置
+      nextIndex = 0, 
+      // 开始定界符的位置，表示的是 {{ 的右侧位置
+      openBlockIndex = 0, 
+      // 结束定界符的位置，表示的是 }} 的左侧位置
+      closeBlockIndex = 0, 
+      // 当前正在处理或即将处理的 block 类型
+      blockMode = BLOCK_MODE_NONE, code, startQuote, fatal$1 = function (msg) {
           {
               fatal(("Error compiling " + (RAW_TEMPLATE) + ":\n" + content + "\n- " + msg));
           }
@@ -3299,9 +3307,7 @@
               return node;
           }
           else {
-              {
-                  fatal$1("出栈节点类型不匹配");
-              }
+              fatal$1("出栈节点类型不匹配");
           }
       }, processElementSingleExpression = function (element, child) {
           if (!element.isComponent && !element.slot && !child.safe) {
@@ -3379,15 +3385,11 @@
                       directive.value = value;
                   }
                   else {
-                      {
-                          fatal$1(("lazy 指令的值 [" + text + "] 必须大于 0"));
-                      }
+                      fatal$1(("lazy 指令的值 [" + text + "] 必须大于 0"));
                   }
               }
               else {
-                  {
-                      fatal$1(("lazy 指令的值 [" + text + "] 必须是数字"));
-                  }
+                  fatal$1(("lazy 指令的值 [" + text + "] 必须是数字"));
               }
           }
           else {
@@ -3417,10 +3419,8 @@
                   directive.expr = expr;
               }
               else {
-                  {
-                      if (isModel || isEvent) {
-                          fatal$1(((directive.name) + " 指令的表达式错误: [" + text + "]"));
-                      }
+                  if (isModel || isEvent) {
+                      fatal$1(((directive.name) + " 指令的表达式错误: [" + text + "]"));
                   }
               }
               directive.value = text;
@@ -3585,15 +3585,11 @@
                       }
                   }
                   else {
-                      {
-                          fatal$1('大哥，只能写一个 else 啊！！');
-                      }
+                      fatal$1('大哥，只能写一个 else 啊！！');
                   }
               }
               else {
-                  {
-                      fatal$1('不写 if 是几个意思？？');
-                  }
+                  fatal$1('不写 if 是几个意思？？');
               }
           }
           else {
@@ -3822,14 +3818,12 @@
                   }
                   // 没有结束引号，整段匹配
                   // 如 id="1{{x}}2" 中的 1
-                  else if (nextIsBlock) {
+                  else if (blockMode !== BLOCK_MODE_NONE) {
                       text = content;
                       addTextChild(text);
                   }
                   else {
-                      {
-                          fatal$1(((currentAttribute.name) + " 没有找到结束引号"));
-                      }
+                      fatal$1(((currentAttribute.name) + " 没有找到结束引号"));
                   }
               }
               // 如果不加判断，类似 <div {{...obj}}> 这样写，会把空格当做一个属性
@@ -3838,10 +3832,16 @@
               else if (!currentElement) {
                   // 获取 <tag 前面的字符
                   match = content.match(tagPattern);
-                  text = match && match.index > 0
-                      ? slice(content, 0, match.index)
-                      : content;
-                  addTextChild(text);
+                  if (match) {
+                      text = slice(content, 0, match.index);
+                      if (text) {
+                          addTextChild(text.replace(commentPattern, EMPTY_STRING));
+                      }
+                  }
+                  else {
+                      text = content;
+                      addTextChild(text);
+                  }
               }
               else {
                   {
@@ -3865,11 +3865,9 @@
                               return createEach(expr, trim(terms[1]));
                           }
                           else {
-                              {
-                                  fatal$1(currentAttribute
-                                      ? "each 不能写在属性的值里"
-                                      : "each 不能写在属性层级");
-                              }
+                              fatal$1(currentAttribute
+                                  ? "each 不能写在属性的值里"
+                                  : "each 不能写在属性层级");
                           }
                       }
                   }
@@ -3887,11 +3885,9 @@
                           return createImport(source);
                       }
                       else {
-                          {
-                              fatal$1(currentAttribute
-                                  ? "import 不能写在属性的值里"
-                                  : "import 不能写在属性层级");
-                          }
+                          fatal$1(currentAttribute
+                              ? "import 不能写在属性的值里"
+                              : "import 不能写在属性层级");
                       }
                   }
                   {
@@ -3908,11 +3904,9 @@
                           return createPartial(source);
                       }
                       else {
-                          {
-                              fatal$1(currentAttribute
-                                  ? "partial 不能写在属性的值里"
-                                  : "partial 不能写在属性层级");
-                          }
+                          fatal$1(currentAttribute
+                              ? "partial 不能写在属性的值里"
+                              : "partial 不能写在属性层级");
                       }
                   }
                   {
@@ -3970,9 +3964,7 @@
                               : FALSE);
                       }
                       else {
-                          {
-                              fatal$1("延展属性只能用于组件属性");
-                          }
+                          fatal$1("延展属性只能用于组件属性");
                       }
                   }
                   {
@@ -3986,94 +3978,129 @@
                   source = trim(source);
                   var expr = compile(source);
                   if (expr) {
-                      return createExpression(expr, isSafeBlock);
+                      return createExpression(expr, blockMode === BLOCK_MODE_SAFE);
                   }
                   {
                       fatal$1("无效的 expression");
                   }
               }
-          } ], parseHtml = function (content) {
-          var tpl = content;
-          while (tpl) {
+          } ], parseHtml = function (code) {
+          while (code) {
               each(htmlParsers, function (parse) {
-                  var match = parse(tpl);
+                  var match = parse(code);
                   if (match) {
-                      tpl = slice(tpl, match.length);
+                      code = slice(code, match.length);
                       return FALSE;
                   }
               });
           }
-          str = slice(str, content.length);
-      }, parseBlock = function (content, all) {
-          if (content) {
-              // 结束当前 block
-              // 正则会去掉 {{ xx }} 里面两侧的空白符，因此如果有 /，一定是第一个字符
-              if (charAt(content) === '/') {
-                  /**
-                   * 处理可能存在的自闭合元素，如下
-                   *
-                   * {{#if xx}}
-                   *    <input>
-                   * {{/if}}
-                   */
-                  popSelfClosingElementIfNeeded();
-                  var name = slice(content, 1);
-                  var type = name2Type[name], isCondition;
-                  if (type === IF) {
-                      var node = pop(ifStack);
-                      if (node) {
-                          type = node.type;
-                          isCondition = TRUE;
-                      }
-                      else {
-                          {
-                              fatal$1("if 还没开始就结束了？");
-                          }
-                      }
+      }, parseBlock = function (code) {
+          if (charAt(code) === '/') {
+              /**
+               * 处理可能存在的自闭合元素，如下
+               *
+               * {{#if xx}}
+               *    <input>
+               * {{/if}}
+               */
+              popSelfClosingElementIfNeeded();
+              var name = slice(code, 1);
+              var type = name2Type[name], isCondition;
+              if (type === IF) {
+                  var node = pop(ifStack);
+                  if (node) {
+                      type = node.type;
+                      isCondition = TRUE;
                   }
-                  var node$1 = popStack(type);
-                  if (node$1 && isCondition) {
-                      checkCondition(node$1);
+                  else {
+                      fatal$1("if 还没开始就结束了？");
                   }
               }
-              else {
-                  // 开始下一个 block 或表达式
-                  each(blockParsers, function (parse) {
-                      var node = parse(content);
-                      if (node) {
-                          addChild(node);
-                          return FALSE;
-                      }
-                  });
-              }
-          }
-          str = slice(str, all.length);
-      };
-      while (str) {
-          // 匹配 {{ }}
-          match = str.match(blockPattern);
-          if (match) {
-              nextIsBlock = TRUE;
-              // 裁剪开头到 {{ 之间的模板内容
-              if (match.index > 0) {
-                  parseHtml(slice(str, 0, match.index));
-              }
-              // 获取开始分隔符的长度，用于判断是否是安全输出
-              length = match[1].length;
-              // 避免手误写成 {{{ name }} 或 {{ name }}}
-              if (length === match[3].length) {
-                  isSafeBlock = length === 2;
-                  parseBlock(match[2], match[0]);
-              }
-              else {
-                  {
-                      fatal$1(((match[1]) + " and " + (match[3]) + " is not a pair."));
-                  }
+              var node$1 = popStack(type);
+              if (node$1 && isCondition) {
+                  checkCondition(node$1);
               }
           }
           else {
-              nextIsBlock = FALSE;
-              parseHtml(str);
+              // 开始下一个 block 或表达式
+              each(blockParsers, function (parse) {
+                  var node = parse(code);
+                  if (node) {
+                      addChild(node);
+                      return FALSE;
+                  }
+              });
+          }
+      };
+      while (TRUE) {
+          openBlockIndex = indexOf$1(content, '{{', nextIndex);
+          if (openBlockIndex >= nextIndex) {
+              blockMode = BLOCK_MODE_SAFE;
+              parseHtml(slice(content, nextIndex, openBlockIndex));
+              // 跳过 {{
+              openBlockIndex += 2;
+              // {{ 后面总得有内容吧
+              if (openBlockIndex < length) {
+                  if (charAt(content, openBlockIndex) === '{') {
+                      blockMode = BLOCK_MODE_UNSAFE;
+                      openBlockIndex++;
+                  }
+                  if (openBlockIndex < length) {
+                      closeBlockIndex = indexOf$1(content, '}}', openBlockIndex);
+                      if (closeBlockIndex >= openBlockIndex) {
+                          // 确定开始和结束定界符能否配对成功，即 {{ 对 }}，{{{ 对 }}}
+                          // 这里不能动 openBlockIndex 和 closeBlockIndex，因为等下要用他俩 slice
+                          index = closeBlockIndex + 2;
+                          // 这里要用 <=，因为很可能到头了
+                          if (index <= length) {
+                              if (index < length && charAt(content, index) === '}') {
+                                  if (blockMode === BLOCK_MODE_UNSAFE) {
+                                      nextIndex = index + 1;
+                                  }
+                                  else {
+                                      fatal$1("{{ 和 }}} 无法配对");
+                                  }
+                              }
+                              else {
+                                  if (blockMode === BLOCK_MODE_SAFE) {
+                                      nextIndex = index;
+                                  }
+                                  else {
+                                      fatal$1("{{{ 和 }} 无法配对");
+                                  }
+                              }
+                              code = trim(slice(content, openBlockIndex, closeBlockIndex));
+                              // 不用处理 {{ }} 和 {{{ }}} 这种空 block
+                              if (code) {
+                                  parseBlock(code);
+                              }
+                          }
+                          else {
+                              // 到头了
+                              break;
+                          }
+                      }
+                      else {
+                          fatal$1('找不到结束定界符');
+                      }
+                  }
+                  else {
+                      fatal$1('{{{ 后面没字符串了？');
+                  }
+              }
+              else {
+                  fatal$1('{{ 后面没字符串了？');
+              }
+          }
+          else {
+              blockMode = BLOCK_MODE_NONE;
+              parseHtml(slice(content, nextIndex));
+              break;
+          }
+      }
+      {
+          if (nodeStack.length) {
+              fatal$1('还有节点未出栈');
           }
       }
       return compileCache[content] = nodeList;
@@ -4520,10 +4547,10 @@
       }
   };
   nodeExecutor[UNARY] = function (node, getter, context) {
-      return unary[node.operator].exec(execute$1(node.arg, getter, context));
+      return unary[node.op].exec(execute$1(node.arg, getter, context));
   };
   nodeExecutor[BINARY] = function (node, getter, context) {
-      return binary[node.operator].exec(execute$1(node.left, getter, context), execute$1(node.right, getter, context));
+      return binary[node.op].exec(execute$1(node.left, getter, context), execute$1(node.right, getter, context));
   };
   nodeExecutor[TERNARY] = function (node, getter, context) {
       return execute$1(node.test, getter, context)
@@ -4531,7 +4558,7 @@
           : execute$1(node.no, getter, context);
   };
   nodeExecutor[ARRAY] = function (node, getter, context) {
-      return node.elements.map(function (node) {
+      return node.nodes.map(function (node) {
           return execute$1(node, getter, context);
       });
   };
@@ -4664,9 +4691,7 @@
                       vnode.transition = transition;
                   }
                   else {
-                      {
-                          fatal(("transition [" + value + "] is not found."));
-                      }
+                      fatal(("transition [" + value + "] is not found."));
                   }
                   return;
               case DIRECTIVE_MODEL:
@@ -4700,9 +4725,7 @@
               });
           }
           else {
-              {
-                  fatal(("directive [" + key + "] is not found."));
-              }
+              fatal(("directive [" + key + "] is not found."));
           }
       }, createEventListener = function (type) {
           return function (event, data) {
