@@ -7,3 +7,6 @@
 * [数据监听](watcher)
 * [计算属性](computed)
 * [事件处理](event)
+* [双向绑定](model)
+* [Lazy](lazy)
+* [自定义指令](directive)
