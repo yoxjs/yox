@@ -4745,8 +4745,8 @@ function render(context, filters, partials, directives, transitions, template) {
         return function (event, data) {
             if (event.type !== type) {
                 event = new CustomEvent(type, event);
+                context.fire(event, data);
             }
-            context.fire(event, data);
         };
     }, createMethodListener = function (method, args, stack) {
         return function (event, data) {

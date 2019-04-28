@@ -110,7 +110,7 @@ else {
 
 * `o-custom="1"`: `value` 是基本类型，自动转型为 `1`
 * `o-custom="true"`: `value` 是基本类型，自动转型为 `true`
-* `o-custom="'1'"`: `value` 是基本类型，自动转型为 `'1'`
+* `o-custom="'1'"`: `value` 是基本类型，自动转型为 `"1"`
 * `o-custom="name"`: `value` 不是基本类型（标识符），输出为字符串 `"name"`
 * `o-custom="{ name: 'yox' }"`: `value` 不是基本类型（对象），输出为字符串 `"{ name: 'yox' }"`
 

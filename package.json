@@ -55,7 +55,7 @@
     "yox-dom": "^0.0.28",
     "yox-observer": "^0.17.29",
     "yox-snabbdom": "^0.19.30",
-    "yox-template-compiler": "^0.27.46",
+    "yox-template-compiler": "^0.27.47",
     "yox-type": "^0.0.42"
   }
 }

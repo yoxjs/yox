@@ -212,6 +212,15 @@ this.fire('submit', true)
 this.fire('submit', { name: 'yox' }, true)
 ```
 
+## 解绑事件
+
+```js
+this.off(type, ?listener)
+```
+
+如果不传 `listener`，则解绑该 `type` 绑定的所有事件处理函数。
+
+
 ## 事件对象
 
 事件对象具有以下属性：
