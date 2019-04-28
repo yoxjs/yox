@@ -63,6 +63,10 @@
    */
   var EVENT_CHANGE = 'change';
   /**
+   * 唯一内置的特殊事件：model
+   */
+  var EVENT_MODEL = 'model';
+  /**
    * Single instance for window in browser
    */
   var win = typeof window !== RAW_UNDEFINED ? window : UNDEFINED;
@@ -120,6 +124,7 @@
     EVENT_CLICK: EVENT_CLICK,
     EVENT_INPUT: EVENT_INPUT,
     EVENT_CHANGE: EVENT_CHANGE,
+    EVENT_MODEL: EVENT_MODEL,
     win: win,
     doc: doc,
     EMPTY_FUNCTION: EMPTY_FUNCTION,
@@ -5949,7 +5954,7 @@
       },
       specialEvents: specialEvents
   };
-  specialEvents[EVENT_INPUT] = {
+  specialEvents[EVENT_MODEL] = {
       on: function on(node, listener) {
           var locked = FALSE;
           domApi.on(node, COMPOSITION_START, listener[COMPOSITION_START] = function () {
@@ -5957,12 +5962,11 @@
           });
           domApi.on(node, COMPOSITION_END, listener[COMPOSITION_END] = function (event) {
               locked = FALSE;
-              event.type = EVENT_INPUT;
-              listener(event);
+              listener(new CustomEvent(EVENT_MODEL, event));
           });
           addEventListener(node, EVENT_INPUT, listener[EVENT_INPUT] = function (event) {
               if (!locked) {
-                  listener(event);
+                  listener(new CustomEvent(EVENT_MODEL, event));
               }
           });
       },
@@ -6158,11 +6162,13 @@
               control = specialControls[element[RAW_TYPE]] || specialControls[domApi.tag(element)];
               // checkbox,radio,select 监听的是 change 事件
               type = EVENT_CHANGE;
-              // 如果是输入框，则切换成 input 事件
+              // 如果是输入框，则切换成 model 事件
+              // model 事件是个 yox-dom 实现的特殊事件
+              // 不会在输入法组合文字过程中得到触发事件
               if (!control) {
                   control = inputControl;
                   if (lazy !== TRUE) {
-                      type = EVENT_INPUT;
+                      type = EVENT_MODEL;
                   }
               }
               // 不管模板是否设值，统一用数据中的值
