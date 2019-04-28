@@ -6135,7 +6135,6 @@
       bind: function bind(node, directive, vnode) {
           var binding = directive.binding;
           var context = vnode.context;
-          var nativeProps = vnode.nativeProps;
           var lazy = vnode.lazy[DIRECTIVE_MODEL] || vnode.lazy[EMPTY_STRING], set = function () {
               if (!isSyncing) {
                   control.set(component || element, binding, context);
@@ -6166,10 +6165,8 @@
                       type = EVENT_INPUT;
                   }
               }
-              // 如果模板里没写对应的属性，则这里先设值
-              if (!nativeProps || !has$2(nativeProps, control.name)) {
-                  set();
-              }
+              // 不管模板是否设值，统一用数据中的值
+              set();
               // 监听交互，修改数据
               domApi.on(element, type, sync);
           }

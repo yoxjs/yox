@@ -6,7 +6,6 @@ import toString from 'yox-common/src/function/toString'
 import * as is from 'yox-common/src/util/is'
 import * as env from 'yox-common/src/util/env'
 import * as array from 'yox-common/src/util/array'
-import * as object from 'yox-common/src/util/object'
 
 import * as config from 'yox-config/index'
 import api from 'yox-dom/index'
@@ -157,7 +156,7 @@ directive: DirectiveHooks = {
 
     let { binding } = directive,
 
-    { context, nativeProps } = vnode,
+    { context } = vnode,
 
     lazy = vnode.lazy[config.DIRECTIVE_MODEL] || vnode.lazy[env.EMPTY_STRING],
 
@@ -204,18 +203,18 @@ directive: DirectiveHooks = {
       // checkbox,radio,select 监听的是 change 事件
       type = env.EVENT_CHANGE
 
-      // 如果是输入框，则切换成 input 事件
+      // 如果是输入框，则切换成 model 事件
+      // model 事件是个 yox-dom 实现的特殊事件
+      // 不会在输入法组合文字过程中得到触发事件
       if (!control) {
         control = inputControl
         if (lazy !== env.TRUE) {
-          type = env.EVENT_INPUT
+          type = env.EVENT_MODEL
         }
       }
 
-      // 如果模板里没写对应的属性，则这里先设值
-      if (!nativeProps || !object.has(nativeProps, control.name)) {
-        set()
-      }
+      // 不管模板是否设值，统一用数据中的值
+      set()
 
       // 监听交互，修改数据
       api.on(element, type, sync)
