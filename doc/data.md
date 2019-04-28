@@ -56,7 +56,7 @@ this.get('a.b.c.d.e.f').g
 this.set(keypath, value)
 ```
 
-`keypath` 参数如果是个对象，可批量设值。
+`keypath` 参数如果是对象，可批量设值。
 
 ```js
 this.set({

@@ -5,7 +5,7 @@
 * 配置 watchers
 * 调用 watch(keypath, options, ?immediate)
 
-## Options
+## options
 
 数据监听支持以下配置：
 
@@ -96,12 +96,13 @@ this.watch({
 
 ## 取消监听
 
-取消监听，需要传入 `keypath` 和 `监听函数`。
-
-```
-this.unwatch('keypath', watcher)
+```js
+this.unwatch(keypath, ?watcher)
 ```
 
+注意，`watcher` 是监听函数，不是对象。
+
+如果不传 `watcher`，则解除该 `keypath` 绑定的所有监听器。
 
 ## Keypath
 

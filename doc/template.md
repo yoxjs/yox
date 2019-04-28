@@ -38,7 +38,7 @@ Yox 采用了 `Mustache` 的定界符： `{{` 和 `}}`，我们认为这个设�
 </div>
 ```
 
-插值有两种使用场景：**属性值** 和 **子节点**。
+插值有两个位置：**属性值** 和 **子节点**。
 
 ### 属性值
 
@@ -59,6 +59,16 @@ Yox 会自动识别常见属性的类型，如下：
 * `string`: id class name value for accesskey title style src type href target alt placeholder preload poster wrap accept pattern dir autocomplete autocapitalize
 
 当我们为这些属性设值时，请**尊重**它们的类型。
+
+如果这些属性的值是字面量，Yox 会自动转型，如下：
+
+```html
+<!--
+  按照 HTML 的游戏规则，boolean 属性不写属性值表示 true
+  作为扩展，值为字面量 true 也表示 true
+-->
+<input type="checkbox" disabled checked="true">
+```
 
 #### 插值数量
 
@@ -98,7 +108,7 @@ Yox 会自动识别常见属性的类型，如下：
 </div>
 ```
 
-危险插值必须独享一个元素，如下：
+危险插值必须独享一个 `元素节点`，如下：
 
 ```html
 <div>
@@ -116,7 +126,7 @@ Yox 会自动识别常见属性的类型，如下：
 </div>
 ```
 
-> 请问这种怎么用 innerHTML？
+> 请问 `文本节点` 哪来的 `innerHTML`？
 
 ## 条件判断
 
@@ -134,7 +144,7 @@ Yox 会自动识别常见属性的类型，如下：
 </div>
 ```
 
-此外，还可以在 HTML 元素或组件的**属性**上使用条件判断，如下：
+此外，还可以在 `元素节点` 或 `组件节点` 的**属性**层级使用条件判断，如下：
 
 ```html
 <div {{#if id}}id="{{id}}"{{/if}}
