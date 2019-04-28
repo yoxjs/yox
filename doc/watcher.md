@@ -3,23 +3,31 @@
 数据监听，有以下两种方式：
 
 * 配置 watchers
-* 调用 watch(keypath, watcher, ?options)
+* 调用 watch(keypath, options, ?immediate)
 
 ## Options
 
-Yox 监听每一项数据变化都支持以下配置：
+数据监听支持以下配置：
 
 * `watcher`: 监听函数，参数列表是 `(newValue, oldValue, keypath)`
 * `immediate`: 是否立即执行一次，默认为 `false`
 * `sync`: 是否同步监听变化，默认为 `false`
 * `once`: 是否只监听一次，默认为 `false`
 
+如果 `options` 是个函数，则内部转换为如下格式：
+
+```js
+{
+  watcher: options
+}
+```
+
 ## 配置 watchers
 
 ```js
 {
   watchers: {
-    // 简单版本，immediate/sync/once 都采用默认值
+    // 简单版本
     name: function (newValue, oldValue, keypath) {
       // this 指向组件实例
     },
@@ -37,7 +45,7 @@ Yox 监听每一项数据变化都支持以下配置：
 ## 调用 watch()
 
 ```js
-// 简单版本，immediate/sync/once 都采用默认值
+// 简单版本
 this.watch(
   'name',
   function (newValue, oldValue, keypath) {
@@ -45,7 +53,7 @@ this.watch(
   }
 )
 
-// 立即执行一次 watcher 的简单版本，sync/once 都采用默认值
+// 立即执行一次 watcher 的简单版本
 // 考虑到 immediate 单词较长，不易拼写，才为它开了一个特例
 this.watch(
   'name',
@@ -68,19 +76,30 @@ this.watch(
 
 // 终极版本，一次监听多个数据
 this.watch({
-  name1: {
+  name1: function (newValue, oldValue, keypath) {
+    // this 指向组件实例
+  },
+  name2: {
     watcher: function (newValue, oldValue, keypath) {
       // this 指向组件实例
     },
     immediate: true
   },
-  name2: {
+  name3: {
     watcher: function (newValue, oldValue, keypath) {
       // this 指向组件实例
     },
     once: true
   }
 })
+```
+
+## 取消监听
+
+取消监听，需要传入 `keypath` 和 `监听函数`。
+
+```
+this.unwatch('keypath', watcher)
 ```
 
 
@@ -90,13 +109,14 @@ this.watch({
 
 所有的数据变化都是通过 `keypath` 进行分发。也就是说，如果你希望响应**数组**的变化，请用 `.` 的方式监听。
 
+> 不要写成 `this.watch('list[0].name', function)`
 
 ## 通配符
 
 通配符，类似于磁盘路径中的 `glob`，如下：
 
-* **\***：匹配一个段
-* **\*\***：匹配任意长度的段
+* `*`：匹配一个段
+* `**`：匹配任意长度的段
 
 下面，我们用几个例子加深印象：
 
