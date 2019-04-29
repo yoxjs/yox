@@ -220,7 +220,7 @@ Yox.component('AsyncComponent', function (callback) {
 
 ## 单个根元素
 
-组件必须有且只有一个根元素，如下：
+组件 `必须` 有且只有 `一个` 根元素，如下：
 
 ```html
 <div class="root">
@@ -232,7 +232,7 @@ Yox.component('AsyncComponent', function (callback) {
 </div>
 ```
 
-根元素应保持稳定，在组件的生命周期内，最好不要变来变去，反例如下：
+根元素应该 `保持稳定`，在组件的生命周期内，根元素不能变来变去，反例如下：
 
 ```html
 {{#if username}}
@@ -248,11 +248,14 @@ Yox.component('AsyncComponent', function (callback) {
 
 ## 传递数据
 
-你可以通过 `props` 把数据传递给组件，如下：
+可以通过 `props` 把数据传递给组件，如下：
 
 ```html
 <div>
-  <CustomComponent name="yox" title="guide" />
+  <CustomComponent
+    name="yox"
+    title="guide"
+  />
 </div>
 ```
 
@@ -279,13 +282,42 @@ Yox.component('AsyncComponent', function (callback) {
 
 ## 数据校验
 
-当组件接收到传入的 `props`，会立即调用 `Yox.checkPropTypes(props, propTypes)`，这是一个数据校验函数，返回一个经过校验的 `Object`。
+如果定义组件的时候配置了 `propTypes`，当它接收到传入的 `props` 后，会立即调用 `checkPropTypes()`，这是一个校验数据合法性的函数，如下：
+
+```js
+Yox.checkPropTypes = function (props, propTypes) {
+  var result = {}
+  for (var key in propTypes) {
+    var value = props[key]
+    // 先忽略校验细节，这里强调的是，如果数据不合法会被过滤
+    if (isOk) {
+      result[key] = value
+    }
+  }
+  return result
+}
+```
+
+如果默认实现不够严谨，没关系，你可以重写它，如下：
+
+```js
+Yox.checkPropTypes = function (props, propTypes) {
+  // 随便你怎么写
+  // 最后返回一个 Object 就行，它将作为有效的 props 继续往下执行
+}
+```
 
 ## 传递节点
 
-现在，你学会了给组件传递数据，正准备写一个 `<Button>` 练练手，这时你发现了一个问题，如何给 `<Button>` 传递可配置的图标呢？
+现在，你学会了给组件传递数据，正准备写一个 `<Button>` 练练手，这时你发现了一个问题，如何给 `<Button>` 传递图标呢？
 
-聪明的你想到了一个解决方法：让外部传入图标的名称，如下：
+聪明的你想到了一个解决方法：传入图标的名称，如下：
+
+```html
+<div>
+  <Button iconName="info" />
+</div>
+```
 
 ```html
 <div class="button">
@@ -295,7 +327,7 @@ Yox.component('AsyncComponent', function (callback) {
 </div>
 ```
 
-看起来没什么问题，但你需要知道的是，这里至少耦合了 `<i>` 标签和 `class` 的命名方式，这个 `<Button>` 肯定用不了 `<svg>` 图标。
+看起来没什么问题，但你需要知道的是，`<Button>` 至少耦合了 `<i>` 标签和 `class` 的命名方式，`<svg>` 图标肯定是没法用了。
 
 你左思右想，要是能把 `图标元素` 直接传进来就好了。幸运的是，`slot` 就是为这么聪明的你准备的。
 
@@ -340,7 +372,7 @@ Yox.component('AsyncComponent', function (callback) {
 </div>
 ```
 
-这里有一个特殊的 `<template>` 标签，它的角色是为组件传递节点的容器，你可以通过 `slot` 属性为它命名。
+这里出现了 `<template>` 标签，它的角色是为组件传递节点的容器，你可以通过 `slot` 属性为它命名。
 
 ```html
 <div class="button">

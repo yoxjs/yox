@@ -66,10 +66,10 @@ Yox 的指令是一个由两个钩子函数组成的对象，如下：
 
 ```js
 if (vnode.isComponent) {
-  // 组件节点
+  // node 是一个 Yox 实例
 }
 else {
-  // 元素节点
+  // node 是一个 DOM 元素
 }
 ```
 
@@ -100,7 +100,7 @@ else {
 
 #### key
 
-`key` 是 `节点` 级别每个指令的 `unique key`，它的格式为 `[ns].[name]`。
+`key` 是 `节点` 级别每个指令的 `unique key`。
 
 我们可以通过 `key` 在 `vnode.data` 上设置指令的数据，比如解绑事件需要的 `event handler`。
 
@@ -128,9 +128,9 @@ var value = directive.getter()
 
 注意，只能调用 `methods` 中定义的方法。
 
-## 注册
+## 全局注册
 
-对于通用性较强的指令，建议全局注册，如下：
+通用性较强的指令，建议全局注册，如下：
 
 ```js
 // 单个注册
@@ -144,7 +144,9 @@ Yox.directive({
 })
 ```
 
-对于通用性不强的指令，建议本地注册，如下：
+## 本地注册
+
+通用性不强的指令，建议本地注册，如下：
 
 ```js
 {
@@ -154,7 +156,7 @@ Yox.directive({
 }
 ```
 
-## 例子
+## 示例
 
 下面实现一个发送点击日志的例子。
 
@@ -179,6 +181,7 @@ Yox.directive('log', {
   unbind: function (node, directive, vnode) {
     Yox.dom.off(
       node,
+      'click',
       vnode.data[directive.key]
     )
   }
