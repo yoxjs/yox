@@ -50,12 +50,12 @@
     "typescript": "^3.4.4"
   },
   "dependencies": {
-    "yox-common": "^0.18.31",
+    "yox-common": "^0.18.32",
     "yox-config": "^0.1.6",
-    "yox-dom": "^0.0.28",
-    "yox-observer": "^0.17.29",
-    "yox-snabbdom": "^0.19.30",
-    "yox-template-compiler": "^0.27.47",
-    "yox-type": "^0.0.42"
+    "yox-dom": "^0.0.29",
+    "yox-observer": "^0.17.30",
+    "yox-snabbdom": "^0.19.31",
+    "yox-template-compiler": "0.27.49",
+    "yox-type": "^0.0.43"
   }
 }

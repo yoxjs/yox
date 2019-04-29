@@ -1055,9 +1055,9 @@ Emitter.prototype.off = function off (type, listener) {
             var name = ref.name;
             var ns = ref.ns;
             var matchListener = createMatchListener(listener), each$1 = function (list, name) {
-            each(list, function (options, index, array) {
+            each(list, function (options, index, list) {
                 if (matchListener(options) && matchNamespace(ns, options)) {
-                    array.splice(index, 1);
+                    list.splice(index, 1);
                 }
             }, TRUE);
             if (!list.length) {

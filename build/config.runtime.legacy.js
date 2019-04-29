@@ -1,4 +1,4 @@
 import create from './config.base'
 
-// 删除模板编译器的压缩版本（要源码版本没啥用啊）
-export default create('runtime', true, true, 0)
+// 删除模板编译器的源码版本
+export default create('runtime', false, true, 0)

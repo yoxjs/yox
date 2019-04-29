@@ -1130,9 +1130,9 @@ Emitter.prototype.off = function off (type, listener) {
             var name = ref.name;
             var ns = ref.ns;
             var matchListener = createMatchListener(listener), each$1 = function (list, name) {
-            each(list, function (options, index, array) {
+            each(list, function (options, index, list) {
                 if (matchListener(options) && matchNamespace(ns, options)) {
-                    array.splice(index, 1);
+                    list.splice(index, 1);
                 }
             }, TRUE);
             if (!list.length) {
@@ -1502,7 +1502,7 @@ function createComponent(vnode, options) {
     // 组件初始化创建的元素
     node = child.$el;
     if (node) {
-        vnode.node = node;
+        vnode[NODE] = node;
     }
     else {
         fatal(("the root element of component [" + (vnode.tag) + "] is not found."));
@@ -1513,7 +1513,10 @@ function createComponent(vnode, options) {
     update$2(vnode);
     return child;
 }
-var guid = 0;
+var guid = 0, 
+// vnode.node 设置成了 readonly，是为了避免外部修改
+// 但是这里还是要对 vnode.node 进行赋值，只好用变量属性赋值，跳过 ts 的类型检测
+NODE = 'node';
 function createData() {
     var data = {};
     data[ID] = ++guid;
@@ -1537,11 +1540,11 @@ function createVnode(api, vnode) {
     data = createData();
     vnode.data = data;
     if (isText) {
-        vnode.node = api.createText(text);
+        vnode[NODE] = api.createText(text);
         return;
     }
     if (isComment) {
-        vnode.node = api.createComment(text);
+        vnode[NODE] = api.createComment(text);
         return;
     }
     if (isComponent) {
@@ -1566,12 +1569,12 @@ function createVnode(api, vnode) {
             }
         });
         if (isAsync) {
-            vnode.node = api.createComment(RAW_COMPONENT);
+            vnode[NODE] = api.createComment(RAW_COMPONENT);
             data[LOADING] = TRUE;
         }
     }
     else {
-        node = vnode.node = api.createElement(vnode.tag);
+        node = vnode[NODE] = api.createElement(vnode.tag);
         if (children) {
             addVnodes(api, node, children);
         }
@@ -1856,7 +1859,7 @@ function patch(api, vnode, oldVnode) {
         }
         return;
     }
-    vnode.node = node;
+    vnode[NODE] = node;
     vnode.data = data;
     // 组件正在异步加载，更新为最新的 vnode
     // 当异步加载完成时才能用上最新的 vnode
@@ -3025,11 +3028,11 @@ function createAttribute(name) {
         name: name,
     };
 }
-function createDirective(name, modifier, value, expr, children) {
+function createDirective(ns, name, value, expr, children) {
     return {
         type: DIRECTIVE,
+        ns: ns,
         name: name,
-        modifier: modifier,
         value: value,
         expr: expr,
         children: children,
@@ -3397,7 +3400,7 @@ function compile$1(content) {
         var text = child.text;
         // lazy 不需要编译表达式
         // 因为 lazy 的值必须是大于 0 的数字
-        if (directive.name === DIRECTIVE_LAZY) {
+        if (directive.ns === DIRECTIVE_LAZY) {
             if (numeric(text)) {
                 var value = toNumber(text);
                 if (value > 0) {
@@ -3415,9 +3418,10 @@ function compile$1(content) {
             // 指令的值是纯文本，可以预编译表达式，提升性能
             var expr = compile(text), 
             // model="xx" model="this.x" 值只能是标识符或 Member
-            isModel = directive.name === DIRECTIVE_MODEL, 
+            isModel = directive.ns === DIRECTIVE_MODEL, 
             // on-click="xx" on-click="method()" 值只能是标识符或函数调用
-            isEvent = directive.name === DIRECTIVE_EVENT;
+            // on-click="click" 事件转换名称不能相同
+            isEvent = directive.ns === DIRECTIVE_EVENT;
             if (expr) {
                 {
                     // 如果指令表达式是函数调用，则只能调用方法（难道还有别的好调用的吗？）
@@ -3427,8 +3431,13 @@ function compile$1(content) {
                         }
                     }
                     // 上面检测过方法调用，接下来事件指令只需要判断是否是标识符
-                    else if (isEvent && expr.type !== IDENTIFIER) {
-                        fatal$1('事件指令的表达式只能是 标识符 或 函数调用');
+                    else if (isEvent) {
+                        if (expr.type !== IDENTIFIER) {
+                            fatal$1('事件指令的表达式只能是 标识符 或 函数调用');
+                        }
+                        else if (directive.name === expr.name) {
+                            fatal$1('事件转换的名称不能相同');
+                        }
                     }
                     if (isModel && !expr[STATIC_KEYPATH]) {
                         fatal$1(("model 指令的值格式错误: [" + (expr.raw) + "]"));
@@ -3438,7 +3447,7 @@ function compile$1(content) {
             }
             else {
                 if (isModel || isEvent) {
-                    fatal$1(((directive.name) + " 指令的表达式错误: [" + text + "]"));
+                    fatal$1(((directive.ns) + " 指令的表达式错误: [" + text + "]"));
                 }
             }
             directive.value = text;
@@ -4403,17 +4412,14 @@ nodeStringify[PROPERTY] = function (node) {
 };
 nodeStringify[DIRECTIVE] = function (node) {
     var type = node.type;
-    var name = node.name;
+    var ns = node.ns;
     var value = node.value;
     var expr = node.expr;
     var result = {
         // renderer 遍历 attrs 要用 type
         type: type,
-        // 换种说法
-        // name 变成命名空间
-        ns: toJSON(name),
-        // modifier 变成命名空间下的名称
-        name: toJSON(node.modifier),
+        ns: toJSON(ns),
+        name: toJSON(node.name),
     };
     // 尽可能把表达式编译成函数，这样对外界最友好
     //
@@ -4432,15 +4438,15 @@ nodeStringify[DIRECTIVE] = function (node) {
                 result.args = stringifyFunction(CODE_RETURN + stringifyArray(expr.args.map(stringifyExpressionArg)), ARG_CONTEXT);
             }
         }
-        else if (name === DIRECTIVE_EVENT) {
+        else if (ns === DIRECTIVE_EVENT) {
             // compiler 保证了这里只能是标识符
             result.event = toJSON(expr.name);
         }
         // <input model="id">
-        else if (name === DIRECTIVE_MODEL) {
+        else if (ns === DIRECTIVE_MODEL) {
             result.expr = toJSON(expr);
         }
-        else if (name === DIRECTIVE_CUSTOM) {
+        else if (ns === DIRECTIVE_CUSTOM) {
             // 如果表达式是字面量，直接取值
             // 比如 o-log="1" 取出来就是数字 1
             if (expr.type === LITERAL) {
@@ -4743,10 +4749,7 @@ function render(context, filters, partials, directives, transitions, template) {
         }
     }, createEventListener = function (type) {
         return function (event, data) {
-            if (event.type !== type) {
-                event = new CustomEvent(type, event);
-                context.fire(event, data);
-            }
+            context.fire(new CustomEvent(type, event), data);
         };
     }, createMethodListener = function (method, args, stack) {
         return function (event, data) {

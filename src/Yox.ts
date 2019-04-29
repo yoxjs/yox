@@ -1,7 +1,7 @@
 import isDef from 'yox-common/src/function/isDef'
 import execute from 'yox-common/src/function/execute'
 
-import Event from 'yox-common/src/util/Event'
+import CustomEvent from 'yox-common/src/util/CustomEvent'
 import Emitter from 'yox-common/src/util/Emitter'
 import NextTask from 'yox-common/src/util/NextTask'
 
@@ -98,7 +98,7 @@ export default class Yox implements YoxInterface {
   public static object = object
   public static string = string
   public static logger = logger
-  public static Event = Event
+  public static Event = CustomEvent
   public static Emitter = Emitter
 
   /**
@@ -614,7 +614,7 @@ export default class Yox implements YoxInterface {
    * 触发事件
    */
   fire(
-    bullet: string | Event,
+    bullet: string | CustomEvent,
     data?: signature.eventData | boolean,
     downward?: boolean
   ): boolean {
@@ -625,7 +625,7 @@ export default class Yox implements YoxInterface {
 
     let instance = this,
 
-    event = bullet instanceof Event ? bullet : new Event(bullet),
+    event = bullet instanceof CustomEvent ? bullet : new CustomEvent(bullet),
 
     eventData: signature.eventData | void,
 
