@@ -29,7 +29,7 @@
 
 ```js
 function (domEvent) {
-  this.fire(new Event('submit', domEvent))
+  this.fire(new Yox.Event('submit', domEvent))
 }
 ```
 
@@ -43,7 +43,7 @@ function (domEvent) {
 
 ```js
 function (event, data) {
-  this.fire(new Event('submit', event), data)
+  this.fire(new Yox.Event('submit', event), data)
 }
 ```
 
@@ -227,7 +227,7 @@ this.off(type, ?listener)
 
 * `type`: 事件名称
 * `target`: 是哪个组件发出的事件
-* `originalEvent`: 原始事件
+* `originalEvent`: 被封装的原始事件
 * `isPrevented`: 是否已阻止事件的默认行为
 * `isStoped`: 是否已停止事件冒泡
 * `listener`: 当前正在执行的事件处理函数

@@ -8,6 +8,7 @@
 * [计算属性](computed)
 * [事件处理](event)
 * [双向绑定](model)
+* [过渡动画](transition)
 * [Lazy](lazy)
 * [自定义指令](directive)
-* [工具方法](util)
+* [API](api)

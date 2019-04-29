@@ -1,5 +1,5 @@
 
-## DOM
+## Yox.dom
 
 ### createElement
 
