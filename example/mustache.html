@@ -6,7 +6,7 @@
 </head>
 <body>
     <div id="app"></div>
-    <script id="template" type="plain/text">
+    <textarea id="template">
 
         <div>
             <h1>
@@ -210,17 +210,17 @@
             <!-- 注释一 -->
 
             <!--
-                注释二 {{title}}
+                注释二
             -->
 
         </div>
 
-    </script>
-    <script src="../dist/yox.js"></script>
+    </textarea>
+    <script src="../dist/standard/dev/yox.js"></script>
     <script>
         var instance = new Yox({
             el: '#app',
-            template: '#template',
+            template: Yox.dom.find('#template').value,
             data: {
                 title: '<strong id="id" class="class">Yox</strong>',
                 disabled1: true,

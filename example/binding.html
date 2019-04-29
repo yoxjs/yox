@@ -156,7 +156,7 @@
                     <input type="checkbox" model="checkboxSelected">
                 </div>
                 <div class="ui message">
-                    是否选中：{{checkboxSelected ? '是' : '否'}}
+                    <label>是否选中</label>：{{checkboxSelected ? '是' : '否'}}
                 </div>
 
 
@@ -231,7 +231,7 @@
         </div>
 
     </script>
-    <script src="../dist/yox.js"></script>
+    <script src="../dist/standard/dev/yox.js"></script>
     <script>
 
         var instance = new Yox({
@@ -240,7 +240,7 @@
             data: {
                 title: 'yoxjs',
                 selectedUser: '',
-                checkboxSelected: false,
+                checkboxSelected: true,
 
                 selectedNames: [],
 

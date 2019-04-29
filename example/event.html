@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>事件</title>
+    <title>Event</title>
     <link rel="stylesheet" href="./style.css">
 </head>
 <body>
@@ -13,8 +13,8 @@
             <button on-click="submit"{{#if disabled}} disabled{{/if}}>
                 submit
             </button>
-            <button on-click="submit-1" lazy="1000">
-                submit-1
+            <button on-click="submit1" lazy-click="1000">
+                submit1
             </button>
             <button on-click="submit2($event, user.name)">
                 submit-2
@@ -22,13 +22,13 @@
             <button on-click="submit3($keypath, user.name)">
                 submit-3
             </button>
-            <button on-click="submit-4">
-                submit-4
+            <button on-click="submit4">
+                submit4
             </button>
         </div>
 
     </script>
-    <script src="../dist/yox.js"></script>
+    <script src="../dist/yox-new.js"></script>
     <script>
         var instance = new Yox({
             el: '#app',
@@ -50,7 +50,7 @@
                         1000
                     )
                 },
-                'submit-1': function () {
+                'submit1': function () {
                     console.log(this, arguments);
                 }
             },
@@ -63,12 +63,12 @@
                 }
             },
             afterMount: function () {
-                this.on('submit-1', function () {
-                    console.log(this, arguments);
-                });
-                this.on('submit-4', function () {
-                    console.log(this);
-                });
+                // this.on('submit1', function () {
+                //     console.log(this, arguments);
+                // });
+                // this.on('submit4', function () {
+                //     console.log(this);
+                // });
             }
         });
 
