@@ -116,23 +116,13 @@
 
 ## 组件
 
-```js
-{
-  data: {
-    name: 'yox'
-  },
-  components: {
-    Input: {
-      model: 'value',
-      propTypes: {
-        value: {
-          type: 'string'
-        }
-      }
-    }
-  }
-}
-```
+我们先揭秘 `<input type="text">` 的双向绑定是如何实现的。
+
+首先，把绑定的数据设置到 `<input>` 元素的 `value` 属性上，当用户交互使它的值发生变化，还要把最新的 `value` 属性值同步到绑定的数据，这样一来一回，数据和视图始终保持一致。
+
+相同的思路，我们再来看组件的双向绑定。
+
+首先，我们默认组件会有一个 `value` 属性，当使用 `model` 指令时，会自动把绑定的数据传给组件的 `value` 属性，如下：
 
 ```html
 <div>
@@ -140,9 +130,21 @@
 </div>
 ```
 
-组件 `options` 提供了一个 `model` 属性用于配置双向绑定字段，默认为 `value`。
+然后，我们监听 `<Input>` 组件的变化，一旦 `value` 变化了，再把 `newValue` 同步给绑定的数据，如下：
 
-不论是否配置 `model`，`propTypes` 都要定义该字段，否则传入组件的数据会被过滤。
+```js
+input.watch('value', function (newValue) {
+  context.set('name', newValue)
+})
+```
 
-> 如果你重写了 `Yox.checkPropTypes(props, propTypes)` 方法，`propTypes` 是否需要定义双向绑定字段就由你决定啦。
+我们根据这个流程实现了组件的双向绑定机制，组件默认同步 `value` 属性，如果不符合需求，可自定义属性名，如下：
+
+```js
+{
+  model: 'checked',
+  template: '',
+  ...
+}
+```
 

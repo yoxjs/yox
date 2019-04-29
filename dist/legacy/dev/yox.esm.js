@@ -17,7 +17,6 @@ var RAW_NULL = 'null';
 var RAW_UNDEFINED = 'undefined';
 var RAW_KEY = 'key';
 var RAW_REF = 'ref';
-var RAW_TAG = 'tag';
 var RAW_SLOT = 'slot';
 var RAW_NAME = 'name';
 var RAW_FILTER = 'filter';
@@ -86,46 +85,6 @@ var EMPTY_ARRAY = [];
  * 空字符串
  */
 var EMPTY_STRING = '';
-
-var env = /*#__PURE__*/Object.freeze({
-  TRUE: TRUE,
-  FALSE: FALSE,
-  NULL: NULL,
-  UNDEFINED: UNDEFINED,
-  RAW_TRUE: RAW_TRUE,
-  RAW_FALSE: RAW_FALSE,
-  RAW_NULL: RAW_NULL,
-  RAW_UNDEFINED: RAW_UNDEFINED,
-  RAW_KEY: RAW_KEY,
-  RAW_REF: RAW_REF,
-  RAW_TAG: RAW_TAG,
-  RAW_SLOT: RAW_SLOT,
-  RAW_NAME: RAW_NAME,
-  RAW_FILTER: RAW_FILTER,
-  RAW_PARTIAL: RAW_PARTIAL,
-  RAW_COMPONENT: RAW_COMPONENT,
-  RAW_DIRECTIVE: RAW_DIRECTIVE,
-  RAW_TRANSITION: RAW_TRANSITION,
-  RAW_THIS: RAW_THIS,
-  RAW_TYPE: RAW_TYPE,
-  RAW_VALUE: RAW_VALUE,
-  RAW_LENGTH: RAW_LENGTH,
-  RAW_FUNCTION: RAW_FUNCTION,
-  RAW_TEMPLATE: RAW_TEMPLATE,
-  KEYPATH_PARENT: KEYPATH_PARENT,
-  KEYPATH_CURRENT: KEYPATH_CURRENT,
-  EVENT_TAP: EVENT_TAP,
-  EVENT_CLICK: EVENT_CLICK,
-  EVENT_INPUT: EVENT_INPUT,
-  EVENT_CHANGE: EVENT_CHANGE,
-  EVENT_MODEL: EVENT_MODEL,
-  win: win,
-  doc: doc,
-  EMPTY_FUNCTION: EMPTY_FUNCTION,
-  EMPTY_OBJECT: EMPTY_OBJECT,
-  EMPTY_ARRAY: EMPTY_ARRAY,
-  EMPTY_STRING: EMPTY_STRING
-});
 
 function isDef (target) {
     return target !== UNDEFINED;
@@ -811,7 +770,9 @@ function copy(object$1, deep) {
 /**
  * 辅助 get 函数，持有最后找到的值，避免频繁的创建临时对象
  */
-var valueHolder = {};
+var valueHolder = {
+    value: UNDEFINED
+};
 /**
  * 从对象中查找一个 keypath
  *
@@ -1030,6 +991,9 @@ Emitter.prototype.fire = function fire (bullet, data, filter) {
                 event.listener = options.fn;
             }
             var result = execute(options.fn, options.ctx, args);
+            if (event) {
+                event.listener = UNDEFINED;
+            }
             // 执行次数
             options.num = options.num ? (options.num + 1) : 1;
             // 注册的 listener 可以指定最大执行次数
@@ -1572,7 +1536,7 @@ function createVnode(api, vnode) {
         }
     }
     else {
-        node = vnode[NODE] = api.createElement(vnode.tag);
+        node = vnode[NODE] = api.createElement(vnode.tag, vnode.isSvg);
         if (children) {
             addVnodes(api, node, children);
         }
@@ -3788,8 +3752,8 @@ function compile$1(content) {
                         else {
                             // 把 attr 优化成 prop
                             var lowerName = name.toLowerCase();
-                            // <slot> 或 <template> 中的属性不用识别为 property
-                            if (specialTags[currentElement.tag]) {
+                            // <slot> 、<template> 或 svg 中的属性不用识别为 property
+                            if (specialTags[currentElement.tag] || currentElement.isSvg) {
                                 node = createAttribute(name);
                             }
                             // 尝试识别成 property
@@ -4608,15 +4572,17 @@ function render(context, filters, partials, directives, transitions, template) {
         if (isUndef(defaultKeypath)) {
             defaultKeypath = keypath;
         }
-        if (eventScope && has$2(eventScope, key)) {
+        // eventScore 只有 event 和 data 两种值
+        if (eventScope && eventScope[key]) {
             return eventScope[key];
         }
         // 如果取的是 scope 上直接有的数据，如 keypath
-        if (has$2(scope, key)) {
+        if (scope[key]) {
             return scope[key];
         }
         // 如果取的是数组项，则要更进一步
-        if (has$2(scope, '$item')) {
+        // scope['$item'] 可能是 0，不能直接 if (scope['$item'])
+        if (isDef(scope['$item'])) {
             scope = scope.$item;
             // 到这里 scope 可能为空
             // 比如 new Array(10) 然后遍历这个数组，每一项肯定是空
@@ -4625,7 +4591,7 @@ function render(context, filters, partials, directives, transitions, template) {
                 return scope;
             }
             // 取 this.xx
-            if (scope && has$2(scope, key)) {
+            if (scope && isDef(scope[key])) {
                 return scope[key];
             }
         }
@@ -4635,12 +4601,14 @@ function render(context, filters, partials, directives, transitions, template) {
             // undefined 或 true 都表示需要向上寻找
             if (node.lookup !== FALSE && index > 1) {
                 index -= 2;
+                {
+                    warn(("[" + keypath + "] 找不到数据，开始向上查找."));
+                }
                 return lookup(stack, index, key, node, depIgnore, defaultKeypath);
             }
             result = get(filters, key);
             if (!result) {
                 node.ak = defaultKeypath;
-                warn(("data [" + (node.raw) + "] is not found."));
                 return;
             }
             result = result.value;
@@ -5257,6 +5225,10 @@ function filterWatcher (options, data) {
     }
 }
 
+// 避免频繁创建对象
+var optionsHolder = {
+    watcher: EMPTY_FUNCTION
+};
 /**
  * 格式化 watch options
  *
@@ -5264,10 +5236,9 @@ function filterWatcher (options, data) {
  */
 function formatWatcherOptions (options, immediate) {
     if (func(options)) {
-        return {
-            watcher: options,
-            immediate: immediate === TRUE,
-        };
+        optionsHolder.watcher = options;
+        optionsHolder.immediate = immediate === TRUE;
+        return optionsHolder;
     }
     if (options && options.watcher) {
         return options;
@@ -5818,7 +5789,10 @@ COMPOSITION_END = 'compositionend', domain = 'http://www.w3.org/', namespaces = 
             set(node, name, value, FALSE);
         }
         else {
-            return get(node, name);
+            var holder = get(node, name);
+            if (holder) {
+                return holder.value;
+            }
         }
     },
     removeProp: function removeProp(node, name, hint) {
@@ -6048,16 +6022,15 @@ function getOptionValue(option) {
         : option.text;
 }
 var inputControl = {
-    set: function set(input, keypath, context) {
-        input.value = toString$1(context.get(keypath));
+    set: function set(input, value) {
+        input.value = toString$1(value);
     },
     sync: function sync(input, keypath, context) {
         context.set(keypath, input.value);
     },
     name: RAW_VALUE
 }, selectControl = {
-    set: function set(select, keypath, context) {
-        var value = context.get(keypath);
+    set: function set(select, value) {
         each(toArray(select.options), select.multiple
             ? function (option) {
                 option.selected = has(value, getOptionValue(option), FALSE);
@@ -6089,8 +6062,8 @@ var inputControl = {
     },
     name: RAW_VALUE
 }, radioControl = {
-    set: function set(radio, keypath, context) {
-        radio.checked = radio.value === toString$1(context.get(keypath));
+    set: function set(radio, value) {
+        radio.checked = radio.value === toString$1(value);
     },
     sync: function sync(radio, keypath, context) {
         if (radio.checked) {
@@ -6099,8 +6072,7 @@ var inputControl = {
     },
     name: 'checked'
 }, checkboxControl = {
-    set: function set(checkbox, keypath, context) {
-        var value = context.get(keypath);
+    set: function set(checkbox, value) {
         checkbox.checked = array(value)
             ? has(value, checkbox.value, FALSE)
             : (boolean(value) ? value : !!value);
@@ -6120,73 +6092,71 @@ var inputControl = {
         }
     },
     name: 'checked'
-}, componentControl = {
-    set: function set(component, keypath, context) {
-        component.set(component.$model, context.get(keypath));
-    },
-    sync: function sync(component, keypath, context) {
-        context.set(keypath, component.get(component.$model));
-    },
-    name: RAW_VALUE
 }, specialControls = {
     radio: radioControl,
     checkbox: checkboxControl,
     select: selectControl,
 }, directive$1 = {
     bind: function bind(node, directive, vnode) {
-        var binding = directive.binding;
         var context = vnode.context;
-        var lazy = vnode.lazy[DIRECTIVE_MODEL] || vnode.lazy[EMPTY_STRING], set = function () {
-            if (!isSyncing) {
-                control.set(component || element, binding, context);
-            }
-        }, sync = function () {
-            isSyncing = TRUE;
-            control.sync(component || element, binding, context);
-            isSyncing = FALSE;
-        }, isSyncing = FALSE, component, element, control, type;
-        if (lazy && lazy !== TRUE) {
-            sync = debounce(sync, lazy);
-        }
+        var model = vnode.model;
+        var dataBinding = directive.binding, viewBinding, eventName, lazy = vnode.lazy[DIRECTIVE_MODEL] || vnode.lazy[EMPTY_STRING], set, sync, component, element;
         if (vnode.isComponent) {
             component = node;
-            control = componentControl;
-            // 监听交互，修改数据
-            component.watch(component.$model, sync);
+            viewBinding = component.$options.model || RAW_VALUE;
+            set = function (newValue) {
+                component.set(viewBinding, newValue);
+            };
+            sync = function (newValue) {
+                context.set(dataBinding, newValue);
+            };
+            // 不管模板是否设值，统一用数据中的值
+            component.set(viewBinding, model);
         }
         else {
             element = node;
-            control = specialControls[element[RAW_TYPE]] || specialControls[domApi.tag(element)];
+            var control = specialControls[element[RAW_TYPE]] || specialControls[domApi.tag(element)];
             // checkbox,radio,select 监听的是 change 事件
-            type = EVENT_CHANGE;
+            eventName = EVENT_CHANGE;
             // 如果是输入框，则切换成 model 事件
             // model 事件是个 yox-dom 实现的特殊事件
             // 不会在输入法组合文字过程中得到触发事件
             if (!control) {
                 control = inputControl;
                 if (lazy !== TRUE) {
-                    type = EVENT_MODEL;
+                    eventName = EVENT_MODEL;
                 }
             }
+            set = function (newValue) {
+                control.set(element, newValue);
+            };
+            sync = function () {
+                control.sync(element, dataBinding, context);
+            };
             // 不管模板是否设值，统一用数据中的值
-            set();
-            // 监听交互，修改数据
-            domApi.on(element, type, sync);
+            control.set(element, model);
+        }
+        // 应用 lazy
+        if (lazy && lazy !== TRUE) {
+            sync = debounce(sync, lazy);
+        }
+        // 监听交互，修改数据
+        if (component) {
+            component.watch(viewBinding, sync);
+        }
+        else {
+            domApi.on(element, eventName, sync);
         }
         // 监听数据，修改界面
-        // 这里使用同步监听，这样才能使 isSyncing 生效
-        context.watch(binding, {
-            watcher: set,
-            sync: TRUE
-        });
+        context.watch(dataBinding, set);
         vnode.data[directive.key] = function () {
-            if (vnode.isComponent) {
-                component.unwatch(component.$model, sync);
+            if (component) {
+                component.unwatch(viewBinding, sync);
             }
             else {
-                domApi.off(element, type, sync);
+                domApi.off(element, eventName, sync);
             }
-            context.unwatch(binding, set);
+            context.unwatch(dataBinding, set);
         };
     },
     unbind: function unbind(node, directive, vnode) {
@@ -6303,7 +6273,6 @@ var Yox = function Yox(options) {
     {
         var isComment = FALSE, placeholder;
         var el = $options.el;
-        var model = $options.model;
         var parent = $options.parent;
         var replace = $options.replace;
         var template = $options.template;
@@ -6313,9 +6282,6 @@ var Yox = function Yox(options) {
         var partials = $options.partials;
         var filters = $options.filters;
         var slots = $options.slots;
-        if (model) {
-            instance.$model = model;
-        }
         // 把 slots 放进数据里，方便 get
         if (slots) {
             extend(source, slots);
@@ -6503,58 +6469,60 @@ Yox.filter = function filter (name, filter$1) {
  * 验证 props，无爱请重写
  */
 Yox.checkPropTypes = function checkPropTypes (props, propTypes) {
-    var result = copy(props);
-    each$2(propTypes, function (rule, key) {
-        // 类型
-        var type = rule.type, 
-        // 默认值
-        value = rule.value, 
-        // 是否必传
-        required = rule.required, 
-        // 实际的值
-        actual = props[key];
-        // 动态化获取是否必填
-        if (func(required)) {
-            required = required(props);
-        }
-        // 传了数据
-        if (isDef(actual)) {
-            // 如果不写 type 或 type 不是 字符串 或 数组
-            // 就当做此规则无效，和没写一样
-            if (type) {
-                var matched;
-                // 比较类型
-                if (!falsy$1(type)) {
-                    matched = is(actual, type);
+    {
+        var result = copy(props);
+        each$2(propTypes, function (rule, key) {
+            // 类型
+            var type = rule.type, 
+            // 默认值
+            value = rule.value, 
+            // 是否必传
+            required = rule.required, 
+            // 实际的值
+            actual = props[key];
+            // 动态化获取是否必填
+            if (func(required)) {
+                required = required(props);
+            }
+            // 传了数据
+            if (isDef(actual)) {
+                // 如果不写 type 或 type 不是 字符串 或 数组
+                // 就当做此规则无效，和没写一样
+                if (type) {
+                    var matched;
+                    // 比较类型
+                    if (!falsy$1(type)) {
+                        matched = is(actual, type);
+                    }
+                    else if (!falsy(type)) {
+                        each(type, function (t) {
+                            if (is(actual, t)) {
+                                matched = TRUE;
+                                return FALSE;
+                            }
+                        });
+                    }
+                    if (matched !== TRUE) {
+                        warn(("The prop \"" + key + "\" type is not matched."));
+                    }
                 }
-                else if (!falsy(type)) {
-                    each(type, function (t) {
-                        if (is(actual, t)) {
-                            matched = TRUE;
-                            return FALSE;
-                        }
-                    });
-                }
-                if (matched !== TRUE) {
-                    warn(("The prop \"" + key + "\" type is not matched."));
+                else {
+                    warn(("The prop \"" + key + "\" in propTypes has no type."));
                 }
             }
-            else {
-                warn(("The prop \"" + key + "\" in propTypes has no type."));
+            // 没传值但此项是必传项
+            else if (required) {
+                warn(("The prop \"" + key + "\" is marked as required, but its value is not found."));
             }
-        }
-        // 没传值但此项是必传项
-        else if (required) {
-            warn(("The prop \"" + key + "\" is marked as required, but its value is not found."));
-        }
-        // 没传值但是配置了默认值
-        else if (isDef(value)) {
-            result[key] = type === RAW_FUNCTION
-                ? value
-                : (func(value) ? value(props) : value);
-        }
-    });
-    return result;
+            // 没传值但是配置了默认值
+            else if (isDef(value)) {
+                result[key] = type === RAW_FUNCTION
+                    ? value
+                    : (func(value) ? value(props) : value);
+            }
+        });
+        return result;
+    }
 };
 /**
  * 添加计算属性
@@ -6812,24 +6780,9 @@ Yox.prototype.create = function create (options, vnode, node) {
                 options.replace = TRUE;
             }
             var slots = vnode.slots;
-                var props = vnode.props;
-                var model = vnode.model;
             if (slots) {
                 options.slots = slots;
             }
-            // 把 model 的值设置给 props 的逻辑只能写到这
-            // 不然子组件会报数据找不到的警告
-            if (isDef(model)) {
-                if (!props) {
-                    props = {};
-                }
-                var name = options.model || RAW_VALUE;
-                if (!has$2(props, name)) {
-                    props[name] = model;
-                }
-                options.model = name;
-            }
-            options.props = props;
         }
         var child = new Yox(options);
         push(this.$children || (this.$children = []), child);

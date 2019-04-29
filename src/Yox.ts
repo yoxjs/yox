@@ -73,8 +73,6 @@ export default class Yox implements YoxInterface {
 
   $el?: HTMLElement
 
-  $model?: string
-
   $directives?: Record<string, DirectiveHooks>
 
   $components?: Record<string, YoxOptions>
@@ -380,7 +378,6 @@ export default class Yox implements YoxInterface {
 
       {
         el,
-        model,
         parent,
         replace,
         template,
@@ -391,10 +388,6 @@ export default class Yox implements YoxInterface {
         filters,
         slots,
       } = $options
-
-      if (model) {
-        instance.$model = model
-      }
 
       // 把 slots 放进数据里，方便 get
       if (slots) {
@@ -909,26 +902,11 @@ export default class Yox implements YoxInterface {
           options.replace = env.TRUE
         }
 
-        let { slots, props, model } = vnode
+        const { slots } = vnode
 
         if (slots) {
           options.slots = slots
         }
-
-        // 把 model 的值设置给 props 的逻辑只能写到这
-        // 不然子组件会报数据找不到的警告
-        if (isDef(model)) {
-          if (!props) {
-            props = {}
-          }
-          const name = options.model || env.RAW_VALUE
-          if (!object.has(props, name)) {
-            props[name] = model
-          }
-          options.model = name
-        }
-
-        options.props = props
 
       }
 

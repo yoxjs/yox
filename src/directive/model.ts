@@ -10,6 +10,7 @@ import * as array from 'yox-common/src/util/array'
 import * as config from 'yox-config/index'
 import api from 'yox-dom/index'
 
+import * as signature from 'yox-type/index'
 import Yox from 'yox-type/src/Yox'
 import VNode from 'yox-type/src/vnode/VNode'
 import Directive from 'yox-type/src/vnode/Directive'
@@ -32,8 +33,8 @@ interface Control {
 }
 
 const inputControl: Control = {
-  set(input: HTMLInputElement, keypath: string, context: Yox) {
-    input.value = toString(context.get(keypath))
+  set(input: HTMLInputElement, value: any) {
+    input.value = toString(value)
   },
   sync(input: HTMLInputElement, keypath: string, context: Yox) {
     context.set(keypath, input.value)
@@ -42,8 +43,7 @@ const inputControl: Control = {
 },
 
 selectControl: Control = {
-  set(select: HTMLSelectElement, keypath: string, context: Yox) {
-    const value = context.get(keypath)
+  set(select: HTMLSelectElement, value: any) {
     array.each(
       array.toArray(select.options),
       select.multiple
@@ -91,8 +91,8 @@ selectControl: Control = {
 },
 
 radioControl: Control = {
-  set(radio: HTMLInputElement, keypath: string, context: Yox) {
-    radio.checked = radio.value === toString(context.get(keypath))
+  set(radio: HTMLInputElement, value: any) {
+    radio.checked = radio.value === toString(value)
   },
   sync(radio: HTMLInputElement, keypath: string, context: Yox) {
     if (radio.checked) {
@@ -103,8 +103,7 @@ radioControl: Control = {
 },
 
 checkboxControl: Control = {
-  set(checkbox: HTMLInputElement, keypath: string, context: Yox) {
-    const value = context.get(keypath)
+  set(checkbox: HTMLInputElement, value: any) {
     checkbox.checked = is.array(value)
       ? array.has(value, checkbox.value, env.FALSE)
       : (is.boolean(value) ? value : !!value)
@@ -129,22 +128,6 @@ checkboxControl: Control = {
   name: 'checked'
 },
 
-componentControl: Control = {
-  set(component: Yox, keypath: string, context: Yox) {
-    component.set(
-      component.$model,
-      context.get(keypath)
-    )
-  },
-  sync(component: Yox, keypath: string, context: Yox) {
-    context.set(
-      keypath,
-      component.get(component.$model)
-    )
-  },
-  name: env.RAW_VALUE
-},
-
 specialControls = {
   radio: radioControl,
   checkbox: checkboxControl,
@@ -154,54 +137,50 @@ specialControls = {
 directive: DirectiveHooks = {
   bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
 
-    let { binding } = directive,
+    let { context, model } = vnode,
 
-    { context } = vnode,
+    dataBinding = directive.binding as string,
+
+    viewBinding: string,
+
+    eventName: string,
 
     lazy = vnode.lazy[config.DIRECTIVE_MODEL] || vnode.lazy[env.EMPTY_STRING],
 
-    set = function () {
-      if (!isSyncing) {
-        control.set(component || element, binding as string, context)
-      }
-    },
+    set: signature.watcher,
 
-    sync = function () {
-      isSyncing = env.TRUE
-      control.sync(component || element, binding as string, context)
-      isSyncing = env.FALSE
-    },
-
-    isSyncing = env.FALSE,
+    sync: signature.watcher,
 
     component: Yox,
 
-    element: HTMLElement,
-
-    control: Control,
-
-    type: string
-
-    if (lazy && lazy !== env.TRUE) {
-      sync = debounce(sync, lazy)
-    }
+    element: HTMLElement
 
     if (vnode.isComponent) {
 
       component = node as Yox
-      control = componentControl
 
-      // 监听交互，修改数据
-      component.watch(component.$model, sync)
+      viewBinding = component.$options.model || env.RAW_VALUE
+
+      set = function (newValue: any) {
+        component.set(viewBinding, newValue)
+      }
+
+      sync = function (newValue: any) {
+        context.set(dataBinding, newValue)
+      }
+
+      // 不管模板是否设值，统一用数据中的值
+      component.set(viewBinding, model)
 
     }
     else {
 
       element = node as HTMLElement
-      control = specialControls[element[env.RAW_TYPE]] || specialControls[api.tag(element) as string]
+
+      let control = specialControls[element[env.RAW_TYPE]] || specialControls[api.tag(element) as string]
 
       // checkbox,radio,select 监听的是 change 事件
-      type = env.EVENT_CHANGE
+      eventName = env.EVENT_CHANGE
 
       // 如果是输入框，则切换成 model 事件
       // model 事件是个 yox-dom 实现的特殊事件
@@ -209,36 +188,47 @@ directive: DirectiveHooks = {
       if (!control) {
         control = inputControl
         if (lazy !== env.TRUE) {
-          type = env.EVENT_MODEL
+          eventName = env.EVENT_MODEL
         }
       }
 
-      // 不管模板是否设值，统一用数据中的值
-      set()
+      set = function (newValue: any) {
+        control.set(element, newValue)
+      }
 
-      // 监听交互，修改数据
-      api.on(element, type, sync)
+      sync = function () {
+        control.sync(element, dataBinding, context)
+      }
+
+      // 不管模板是否设值，统一用数据中的值
+      control.set(element, model)
 
     }
 
+    // 应用 lazy
+    if (lazy && lazy !== env.TRUE) {
+      sync = debounce(sync, lazy)
+    }
+
+    // 监听交互，修改数据
+    if (component) {
+      component.watch(viewBinding, sync)
+    }
+    else {
+      api.on(element, eventName, sync as signature.nativeEventListener)
+    }
+
     // 监听数据，修改界面
-    // 这里使用同步监听，这样才能使 isSyncing 生效
-    context.watch(
-      binding as string,
-      {
-        watcher: set,
-        sync: env.TRUE
-      }
-    )
+    context.watch(dataBinding, set)
 
     vnode.data[directive.key] = function () {
-      if (vnode.isComponent) {
-        component.unwatch(component.$model, sync)
+      if (component) {
+        component.unwatch(viewBinding, sync)
       }
       else {
-        api.off(element, type, sync)
+        api.off(element, eventName, sync as signature.nativeEventListener)
       }
-      context.unwatch(binding as string, set)
+      context.unwatch(dataBinding, set)
     }
 
   },

@@ -1,14 +1,3 @@
-## 移动端
-
-移动端通常会识别某些字符，自动转换成 DOM 元素，这样会破坏底层维护的 Virtual DOM，将导致不可预期的问题。
-
-建议关闭浏览器的自动识别功能，如下：
-
-```html
-<meta name="format-detection" content="telephone=no">
-<meta name="format-detection" content="email=no">
-```
-
 ## SVG
 
 Yox 的模板引擎要求标签必须结束，或者自闭合。也就是说，规范的 `svg` 是支持的。
@@ -29,6 +18,30 @@ Yox 的模板引擎要求标签必须结束，或者自闭合。也就是说，�
 </svg>
 ```
 
+
+## 调试模式
+
+简单地说，源码版默认是调试模式，压缩版默认是非调试模式。
+
+在调试模式下，调用 `Yox.logger.log` 和 `Yox.logger.warn` 会打印信息。
+
+在非调试模式下，调用这两个函数不会打印任何信息。
+
+如果希望调试模式不依赖代码版本，可为 `window.DEBUG` 设置一个布尔值，它的优先级是最高的。
+
+
+## 移动端
+
+移动端通常会识别某些字符，自动转换成 DOM 元素，这样会破坏底层维护的 Virtual DOM，将导致不可预期的问题。
+
+建议关闭浏览器的自动识别功能，如下：
+
+```html
+<meta name="format-detection" content="telephone=no">
+<meta name="format-detection" content="email=no">
+```
+
+
 ## 语法糖
 
 很多人喜欢语法糖，比如 `Vue` 的 `Class` 绑定。
@@ -39,14 +52,15 @@ Yox 的模板引擎要求标签必须结束，或者自闭合。也就是说，�
 
 这个语法糖的语义很清晰：当 `isActive` 为 `true` 时，为 `div` 加上名为 `active` 的 `class`。
 
-虽然是很简单的语法糖，但当你知道，Vue 即可以这样写，又可以那样写，还可以 TMD 的各种写的时候，你就会崩溃了，总有一天你会问出这种低级问题：双向绑定怎么写来着？
+虽然是很简单的语法糖，但当你知道，`Vue` 既可以这样写，又可以那样写，还可以 TMD 的各种写的时候，你就会崩溃了，总有一天你会问出这种低级问题：双向绑定怎么写来着？
 
 出于减少记忆的考虑，我们希望通过一套设计精良的 `Mustache` 语法来满足各种需求，如下：
 
 ```html
-<!-- 以下两种方式都可以 -->
+<!-- 以下 3 种方式都可以 -->
 <div class="{{isActive ? 'active' : ''}}"></div>
 <div class="{{#if isActive}}active{{/if}}"></div>
+<div {{#if isActive}}class="active"{{/if}}></div>
 ```
 
 > 别忘了，还有过滤器函数呢，需要什么功能自己实现吧。

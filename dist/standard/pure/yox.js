@@ -747,7 +747,9 @@
   /**
    * 辅助 get 函数，持有最后找到的值，避免频繁的创建临时对象
    */
-  var valueHolder = {};
+  var valueHolder = {
+      value: UNDEFINED
+  };
   /**
    * 从对象中查找一个 keypath
    *
@@ -966,6 +968,9 @@
                   event.listener = options.fn;
               }
               var result = execute(options.fn, options.ctx, args);
+              if (event) {
+                  event.listener = UNDEFINED;
+              }
               // 执行次数
               options.num = options.num ? (options.num + 1) : 1;
               // 注册的 listener 可以指定最大执行次数
@@ -1606,6 +1611,10 @@
       }
   }
 
+  // 避免频繁创建对象
+  var optionsHolder = {
+      watcher: EMPTY_FUNCTION
+  };
   /**
    * 格式化 watch options
    *
@@ -1613,10 +1622,9 @@
    */
   function formatWatcherOptions (options, immediate) {
       if (func(options)) {
-          return {
-              watcher: options,
-              immediate: immediate === TRUE,
-          };
+          optionsHolder.watcher = options;
+          optionsHolder.immediate = immediate === TRUE;
+          return optionsHolder;
       }
       if (options && options.watcher) {
           return options;
@@ -2108,58 +2116,9 @@
    * 验证 props，无爱请重写
    */
   Yox.checkPropTypes = function checkPropTypes (props, propTypes) {
-      var result = copy(props);
-      each$2(propTypes, function (rule, key) {
-          // 类型
-          var type = rule.type, 
-          // 默认值
-          value = rule.value, 
-          // 是否必传
-          required = rule.required, 
-          // 实际的值
-          actual = props[key];
-          // 动态化获取是否必填
-          if (func(required)) {
-              required = required(props);
-          }
-          // 传了数据
-          if (isDef(actual)) {
-              // 如果不写 type 或 type 不是 字符串 或 数组
-              // 就当做此规则无效，和没写一样
-              if (type) {
-                  var matched;
-                  // 比较类型
-                  if (!falsy$1(type)) {
-                      matched = is(actual, type);
-                  }
-                  else if (!falsy(type)) {
-                      each(type, function (t) {
-                          if (is(actual, t)) {
-                              matched = TRUE;
-                              return FALSE;
-                          }
-                      });
-                  }
-                  if (matched !== TRUE) {
-                      warn(("The prop \"" + key + "\" type is not matched."));
-                  }
-              }
-              else {
-                  warn(("The prop \"" + key + "\" in propTypes has no type."));
-              }
-          }
-          // 没传值但此项是必传项
-          else if (required) {
-              warn(("The prop \"" + key + "\" is marked as required, but its value is not found."));
-          }
-          // 没传值但是配置了默认值
-          else if (isDef(value)) {
-              result[key] = type === RAW_FUNCTION
-                  ? value
-                  : (func(value) ? value(props) : value);
-          }
-      });
-      return result;
+      {
+          return props;
+      }
   };
   /**
    * 添加计算属性
