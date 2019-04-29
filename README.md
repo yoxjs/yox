@@ -38,7 +38,7 @@ yarn add yox
 
 ## Document
 
-[技术预览版](https://musicode.gitbooks.io/yox)
+[技术预览版](https://yoxjs.github.io/yox)
 
 ## Donation
 
