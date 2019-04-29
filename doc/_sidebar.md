@@ -10,3 +10,4 @@
 * [双向绑定](model)
 * [Lazy](lazy)
 * [自定义指令](directive)
+* [工具方法](util)
