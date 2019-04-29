@@ -280,62 +280,41 @@ export default class Yox implements YoxInterface {
     return result
   }
 
-  constructor(options: YoxOptions) {
+  constructor(options: YoxOptions | void) {
 
-    const instance = this
+    const instance = this, $options: YoxOptions = options || env.EMPTY_OBJECT
 
-    if (!is.object(options)) {
-      options = env.EMPTY_OBJECT
-    }
+    // 一进来就执行 before create
+    execute($options[config.HOOK_BEFORE_CREATE], instance, $options)
 
     // 如果不绑着，其他方法调不到钩子
-    instance.$options = options
-
-    execute(options[config.HOOK_BEFORE_CREATE], instance, options)
+    instance.$options = $options
 
     let {
-      el,
       data,
       props,
-      model,
-      parent,
-      replace,
       computed,
-      template,
-      transitions,
-      components,
-      directives,
-      partials,
-      filters,
-      slots,
       events,
       methods,
       watchers,
       extensions,
-    } = options
+    } = $options
+
+    // 如果传了 props，则 data 应该是个 function
+    if (process.env.NODE_ENV === 'dev') {
+      if (props && is.object(data)) {
+        logger.fatal('"data" option should be a function.')
+      }
+    }
 
     if (extensions) {
       object.extend(instance, extensions)
-    }
-
-    if (model) {
-      instance.$model = model
     }
 
     // 数据源
     const source = props
       ? instance.checkPropTypes(props)
       : {}
-
-    // 把 slots 放进数据里，方便 get
-    if (slots) {
-      object.extend(source, slots)
-    }
-
-    // 如果传了 props，则 data 应该是个 function
-    if (props && is.object(data)) {
-      logger.warn('"data" option expected to be a function.')
-    }
 
     // 先放 props
     // 当 data 是函数时，可以通过 this.get() 获取到外部数据
@@ -356,12 +335,26 @@ export default class Yox implements YoxInterface {
       object.each(
         extend,
         function (value, key) {
-          if (object.has(source, key)) {
-            logger.warn(`"${key}" is already defined as a prop. Use prop default value instead.`)
+          if (process.env.NODE_ENV === 'dev') {
+            if (object.has(source, key)) {
+              logger.warn(`"${key}" is already defined as a prop. Use prop default value instead.`)
+            }
           }
-          else {
-            source[key] = value
+          source[key] = value
+        }
+      )
+    }
+
+    if (methods) {
+      object.each(
+        methods,
+        function (method: Function, name: string) {
+          if (process.env.NODE_ENV === 'dev') {
+            if (instance[name]) {
+              logger.fatal(`method [${name}] is conflicted with built-in methods.`)
+            }
           }
+          instance[name] = method
         }
       )
     }
@@ -370,11 +363,38 @@ export default class Yox implements YoxInterface {
     // 支持命名空间
     instance.$emitter = new Emitter(env.TRUE)
 
-    let placeholder: Node | void,
-
-    isComment = env.FALSE
+    if (events) {
+      instance.on(events)
+    }
 
     if (process.env.NODE_ENV !== 'pure') {
+
+      let isComment = env.FALSE,
+
+      placeholder: Node | void,
+
+      {
+        el,
+        model,
+        parent,
+        replace,
+        template,
+        transitions,
+        components,
+        directives,
+        partials,
+        filters,
+        slots,
+      } = $options
+
+      if (model) {
+        instance.$model = model
+      }
+
+      // 把 slots 放进数据里，方便 get
+      if (slots) {
+        object.extend(source, slots)
+      }
 
       // 检查 template
       if (is.string(template)) {
@@ -436,37 +456,20 @@ export default class Yox implements YoxInterface {
       setFlexibleOptions(instance, env.RAW_PARTIAL, partials)
       setFlexibleOptions(instance, env.RAW_FILTER, filters)
 
-    }
-
-    if (methods) {
-      object.each(
-        methods,
-        function (method: Function, name: string) {
-          if (process.env.NODE_ENV === 'dev') {
-            if (instance[name]) {
-              logger.fatal(`method [${name}] is conflicted with built-in methods.`)
-            }
-          }
-          instance[name] = method
-        }
-      )
-    }
-
-    execute(options[config.HOOK_AFTER_CREATE], instance)
-
-    if (process.env.NODE_ENV !== 'pure') {
-
       // 当存在模板和计算属性时
       // 因为这里把模板当做一种特殊的计算属性
       // 因此模板这个计算属性的优先级应该最高
       if (template) {
 
-        // 编译模板
-        // 在开发阶段，template 是原始的 html 模板
-        // 在产品阶段，template 是编译后且经过 stringify 的字符串
-        // 当然，这个需要外部自己控制传入的 template 是什么
-        // Yox.compile 会自动判断 template 是否经过编译
-        instance.$template = Yox.compile(template) as Function
+        // 拷贝一份，避免影响外部定义的 watchers
+        watchers = watchers
+          ? object.copy(watchers)
+          : {}
+
+        // 当 virtual dom 变了，则更新视图
+        watchers[TEMPLATE_COMPUTED] = function (vnode: VNode) {
+          instance.update(vnode, instance.$vnode)
+        }
 
         // 当模板的依赖变了，则重新创建 virtual dom
         observer.addComputed(
@@ -480,15 +483,14 @@ export default class Yox implements YoxInterface {
           }
         )
 
-        // 拷贝一份，避免影响外部定义的 watchers
-        watchers = watchers
-          ? object.copy(watchers)
-          : {}
+        afterCreateHook(instance, watchers)
 
-        // 当 virtual dom 变了，则更新视图
-        watchers[TEMPLATE_COMPUTED] = function (vnode: VNode) {
-          instance.update(vnode, instance.$vnode)
-        }
+        // 编译模板
+        // 在开发阶段，template 是原始的 html 模板
+        // 在产品阶段，template 是编译后且经过 stringify 的字符串
+        // 当然，这个需要外部自己控制传入的 template 是什么
+        // Yox.compile 会自动判断 template 是否经过编译
+        instance.$template = Yox.compile(template) as Function
 
         // 第一次渲染视图
         if (!placeholder) {
@@ -508,26 +510,18 @@ export default class Yox implements YoxInterface {
         )
 
       }
-      else if (process.env.NODE_ENV === 'dev') {
-        if (placeholder) {
-          logger.fatal('有 el 没 template 是几个意思？')
-        }
-      }
-    }
-
-    if (events) {
-      instance.on(events)
-    }
-
-    // 确保早于 AFTER_MOUNT 执行
-    if (watchers) {
-      observer.nextTask.prepend(
-        function () {
-          if (instance.$observer) {
-            instance.watch(watchers)
+      else {
+        if (process.env.NODE_ENV === 'dev') {
+          if (placeholder) {
+            logger.fatal('有 el 没 template 是几个意思？')
           }
         }
-      )
+        afterCreateHook(instance, watchers)
+      }
+
+    }
+    else {
+      afterCreateHook(instance, watchers)
     }
 
   }
@@ -1087,6 +1081,17 @@ export default class Yox implements YoxInterface {
   copy<T>(data: T, deep?: boolean): T {
     return this.$observer.copy(data, deep)
   }
+
+}
+
+
+function afterCreateHook(instance: Yox, watchers: Record<string, signature.watcher | WatcherOptions> | void) {
+
+  if (watchers) {
+    instance.watch(watchers)
+  }
+
+  execute(instance.$options[config.HOOK_AFTER_CREATE], instance)
 
 }
 

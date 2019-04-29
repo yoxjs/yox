@@ -11,4 +11,5 @@
 * [过渡动画](transition)
 * [Lazy](lazy)
 * [自定义指令](directive)
+* [组件](component)
 * [API](api)

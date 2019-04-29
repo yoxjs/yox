@@ -5914,49 +5914,25 @@ function hasSlot (name) {
 
 var globalDirectives = {}, globalTransitions = {}, globalComponents = {}, globalPartials = {}, globalFilters = {}, TEMPLATE_COMPUTED = '$' + RAW_TEMPLATE, selectorPattern = /^[#.][-\w+]+$/;
 var Yox = function Yox(options) {
-    var instance = this;
-    if (!object(options)) {
-        options = EMPTY_OBJECT;
-    }
+    var instance = this, $options = options || EMPTY_OBJECT;
+    // 一进来就执行 before create
+    execute($options[HOOK_BEFORE_CREATE], instance, $options);
     // 如果不绑着，其他方法调不到钩子
-    instance.$options = options;
-    execute(options[HOOK_BEFORE_CREATE], instance, options);
-    var el = options.el;
-    var data = options.data;
-    var props = options.props;
-    var model = options.model;
-    var parent = options.parent;
-    var replace = options.replace;
-    var computed = options.computed;
-    var template = options.template;
-    var transitions = options.transitions;
-    var components = options.components;
-    var directives = options.directives;
-    var partials = options.partials;
-    var filters = options.filters;
-    var slots = options.slots;
-    var events = options.events;
-    var methods = options.methods;
-    var watchers = options.watchers;
-    var extensions = options.extensions;
+    instance.$options = $options;
+    var data = $options.data;
+    var props = $options.props;
+    var computed = $options.computed;
+    var events = $options.events;
+    var methods = $options.methods;
+    var watchers = $options.watchers;
+    var extensions = $options.extensions;
     if (extensions) {
         extend(instance, extensions);
-    }
-    if (model) {
-        instance.$model = model;
     }
     // 数据源
     var source = props
         ? instance.checkPropTypes(props)
         : {};
-    // 把 slots 放进数据里，方便 get
-    if (slots) {
-        extend(source, slots);
-    }
-    // 如果传了 props，则 data 应该是个 function
-    if (props && object(data)) {
-        warn('"data" option expected to be a function.');
-    }
     // 先放 props
     // 当 data 是函数时，可以通过 this.get() 获取到外部数据
     var observer = instance.$observer = new Observer(source, instance);
@@ -5969,19 +5945,40 @@ var Yox = function Yox(options) {
     var extend$1 = func(data) ? execute(data, instance, options) : data;
     if (object(extend$1)) {
         each$2(extend$1, function (value, key) {
-            if (has$2(source, key)) {
-                warn(("\"" + key + "\" is already defined as a prop. Use prop default value instead."));
-            }
-            else {
-                source[key] = value;
-            }
+            source[key] = value;
+        });
+    }
+    if (methods) {
+        each$2(methods, function (method, name) {
+            instance[name] = method;
         });
     }
     // 监听各种事件
     // 支持命名空间
     instance.$emitter = new Emitter(TRUE);
-    var placeholder, isComment = FALSE;
+    if (events) {
+        instance.on(events);
+    }
     {
+        var isComment = FALSE, placeholder;
+        var el = $options.el;
+        var model = $options.model;
+        var parent = $options.parent;
+        var replace = $options.replace;
+        var template = $options.template;
+        var transitions = $options.transitions;
+        var components = $options.components;
+        var directives = $options.directives;
+        var partials = $options.partials;
+        var filters = $options.filters;
+        var slots = $options.slots;
+        if (model) {
+            instance.$model = model;
+        }
+        // 把 slots 放进数据里，方便 get
+        if (slots) {
+            extend(source, slots);
+        }
         // 检查 template
         if (string(template)) {
             // 传了选择器，则取对应元素的 html
@@ -6022,32 +6019,10 @@ var Yox = function Yox(options) {
         setFlexibleOptions(instance, RAW_DIRECTIVE, directives);
         setFlexibleOptions(instance, RAW_PARTIAL, partials);
         setFlexibleOptions(instance, RAW_FILTER, filters);
-    }
-    if (methods) {
-        each$2(methods, function (method, name) {
-            instance[name] = method;
-        });
-    }
-    execute(options[HOOK_AFTER_CREATE], instance);
-    {
         // 当存在模板和计算属性时
         // 因为这里把模板当做一种特殊的计算属性
         // 因此模板这个计算属性的优先级应该最高
         if (template) {
-            // 编译模板
-            // 在开发阶段，template 是原始的 html 模板
-            // 在产品阶段，template 是编译后且经过 stringify 的字符串
-            // 当然，这个需要外部自己控制传入的 template 是什么
-            // Yox.compile 会自动判断 template 是否经过编译
-            instance.$template = Yox.compile(template);
-            // 当模板的依赖变了，则重新创建 virtual dom
-            observer.addComputed(TEMPLATE_COMPUTED, {
-                // 当模板依赖变化时，异步通知模板更新
-                sync: FALSE,
-                get: function () {
-                    return instance.render();
-                }
-            });
             // 拷贝一份，避免影响外部定义的 watchers
             watchers = watchers
                 ? copy(watchers)
@@ -6056,6 +6031,21 @@ var Yox = function Yox(options) {
             watchers[TEMPLATE_COMPUTED] = function (vnode) {
                 instance.update(vnode, instance.$vnode);
             };
+            // 当模板的依赖变了，则重新创建 virtual dom
+            observer.addComputed(TEMPLATE_COMPUTED, {
+                // 当模板依赖变化时，异步通知模板更新
+                sync: FALSE,
+                get: function () {
+                    return instance.render();
+                }
+            });
+            afterCreateHook(instance, watchers);
+            // 编译模板
+            // 在开发阶段，template 是原始的 html 模板
+            // 在产品阶段，template 是编译后且经过 stringify 的字符串
+            // 当然，这个需要外部自己控制传入的 template 是什么
+            // Yox.compile 会自动判断 template 是否经过编译
+            instance.$template = Yox.compile(template);
             // 第一次渲染视图
             if (!placeholder) {
                 isComment = TRUE;
@@ -6063,17 +6053,9 @@ var Yox = function Yox(options) {
             }
             instance.update(instance.get(TEMPLATE_COMPUTED), create(domApi, placeholder, isComment, instance, EMPTY_STRING));
         }
-    }
-    if (events) {
-        instance.on(events);
-    }
-    // 确保早于 AFTER_MOUNT 执行
-    if (watchers) {
-        observer.nextTask.prepend(function () {
-            if (instance.$observer) {
-                instance.watch(watchers);
-            }
-        });
+        else {
+            afterCreateHook(instance, watchers);
+        }
     }
 };
 /**
@@ -6632,6 +6614,12 @@ Yox.string = string$1;
 Yox.logger = logger;
 Yox.Event = CustomEvent;
 Yox.Emitter = Emitter;
+function afterCreateHook(instance, watchers) {
+    if (watchers) {
+        instance.watch(watchers);
+    }
+    execute(instance.$options[HOOK_AFTER_CREATE], instance);
+}
 function setFlexibleOptions(instance, key, value) {
     if (func(value)) {
         instance[key](execute(value, instance));

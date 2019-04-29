@@ -2037,49 +2037,25 @@ if (doc$1) {
 var immediateTypes = toObject([EVENT_CLICK, EVENT_TAP]);
 
 var Yox = function Yox(options) {
-    var instance = this;
-    if (!object(options)) {
-        options = EMPTY_OBJECT;
-    }
+    var instance = this, $options = options || EMPTY_OBJECT;
+    // 一进来就执行 before create
+    execute($options[HOOK_BEFORE_CREATE], instance, $options);
     // 如果不绑着，其他方法调不到钩子
-    instance.$options = options;
-    execute(options[HOOK_BEFORE_CREATE], instance, options);
-    var el = options.el;
-    var data = options.data;
-    var props = options.props;
-    var model = options.model;
-    var parent = options.parent;
-    var replace = options.replace;
-    var computed = options.computed;
-    var template = options.template;
-    var transitions = options.transitions;
-    var components = options.components;
-    var directives = options.directives;
-    var partials = options.partials;
-    var filters = options.filters;
-    var slots = options.slots;
-    var events = options.events;
-    var methods = options.methods;
-    var watchers = options.watchers;
-    var extensions = options.extensions;
+    instance.$options = $options;
+    var data = $options.data;
+    var props = $options.props;
+    var computed = $options.computed;
+    var events = $options.events;
+    var methods = $options.methods;
+    var watchers = $options.watchers;
+    var extensions = $options.extensions;
     if (extensions) {
         extend(instance, extensions);
-    }
-    if (model) {
-        instance.$model = model;
     }
     // 数据源
     var source = props
         ? instance.checkPropTypes(props)
         : {};
-    // 把 slots 放进数据里，方便 get
-    if (slots) {
-        extend(source, slots);
-    }
-    // 如果传了 props，则 data 应该是个 function
-    if (props && object(data)) {
-        warn('"data" option expected to be a function.');
-    }
     // 先放 props
     // 当 data 是函数时，可以通过 this.get() 获取到外部数据
     var observer = instance.$observer = new Observer(source, instance);
@@ -2092,33 +2068,22 @@ var Yox = function Yox(options) {
     var extend$1 = func(data) ? execute(data, instance, options) : data;
     if (object(extend$1)) {
         each$2(extend$1, function (value, key) {
-            if (has$2(source, key)) {
-                warn(("\"" + key + "\" is already defined as a prop. Use prop default value instead."));
-            }
-            else {
-                source[key] = value;
-            }
+            source[key] = value;
         });
     }
-    // 监听各种事件
-    // 支持命名空间
-    instance.$emitter = new Emitter(TRUE);
     if (methods) {
         each$2(methods, function (method, name) {
             instance[name] = method;
         });
     }
-    execute(options[HOOK_AFTER_CREATE], instance);
+    // 监听各种事件
+    // 支持命名空间
+    instance.$emitter = new Emitter(TRUE);
     if (events) {
         instance.on(events);
     }
-    // 确保早于 AFTER_MOUNT 执行
-    if (watchers) {
-        observer.nextTask.prepend(function () {
-            if (instance.$observer) {
-                instance.watch(watchers);
-            }
-        });
+    {
+        afterCreateHook(instance, watchers);
     }
 };
 /**
@@ -2484,6 +2449,12 @@ Yox.string = string$1;
 Yox.logger = logger;
 Yox.Event = CustomEvent;
 Yox.Emitter = Emitter;
+function afterCreateHook(instance, watchers) {
+    if (watchers) {
+        instance.watch(watchers);
+    }
+    execute(instance.$options[HOOK_AFTER_CREATE], instance);
+}
 
 export default Yox;
 //# sourceMappingURL=yox.esm.js.map
