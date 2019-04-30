@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.3
+ * yox.js v1.0.0-alpha.4
  * (c) 2016-2019 musicode
  * Released under the MIT License.
  */
@@ -2260,7 +2260,12 @@
           }
       }, createEventListener = function (type) {
           return function (event, data) {
-              context.fire(new CustomEvent(type, event), data);
+              // 事件名称相同的情况，只可能是监听 DOM 事件，比如写一个 Button 组件
+              // <button on-click="click"> 纯粹的封装了一个原生 click 事件
+              if (type !== event.type) {
+                  event = new CustomEvent(type, event);
+              }
+              context.fire(event, data);
           };
       }, createMethodListener = function (method, args, stack) {
           return function (event, data) {
@@ -4354,7 +4359,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.3";
+  Yox.version = "1.0.0-alpha.4";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

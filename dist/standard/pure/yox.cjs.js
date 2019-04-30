@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.3
+ * yox.js v1.0.0-alpha.4
  * (c) 2016-2019 musicode
  * Released under the MIT License.
  */
@@ -2383,7 +2383,7 @@ Yox.prototype.copy = function copy (data, deep) {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.3";
+Yox.version = "1.0.0-alpha.4";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

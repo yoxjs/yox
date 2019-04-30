@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.3
+ * yox.js v1.0.0-alpha.4
  * (c) 2016-2019 musicode
  * Released under the MIT License.
  */
@@ -3382,7 +3382,6 @@ function compile$1(content) {
             // model="xx" model="this.x" 值只能是标识符或 Member
             isModel = directive.ns === DIRECTIVE_MODEL, 
             // on-click="xx" on-click="method()" 值只能是标识符或函数调用
-            // on-click="click" 事件转换名称不能相同
             isEvent = directive.ns === DIRECTIVE_EVENT;
             if (expr) {
                 {
@@ -3397,12 +3396,14 @@ function compile$1(content) {
                         if (expr.type !== IDENTIFIER) {
                             fatal$1('事件指令的表达式只能是 标识符 或 函数调用');
                         }
-                        else if (directive.name === expr.name) {
-                            fatal$1('事件转换的名称不能相同');
+                        else if (currentElement
+                            && currentElement.isComponent
+                            && directive.name === expr.name) {
+                            fatal$1('转换组件事件的名称不能相同');
                         }
                     }
                     if (isModel && !expr[STATIC_KEYPATH]) {
-                        fatal$1(("model 指令的值格式错误: [" + (expr.raw) + "]"));
+                        fatal$1(((directive.ns) + " 指令的值格式错误: [" + (expr.raw) + "]"));
                     }
                 }
                 directive.expr = expr;
@@ -4715,7 +4716,12 @@ function render(context, filters, partials, directives, transitions, template) {
         }
     }, createEventListener = function (type) {
         return function (event, data) {
-            context.fire(new CustomEvent(type, event), data);
+            // 事件名称相同的情况，只可能是监听 DOM 事件，比如写一个 Button 组件
+            // <button on-click="click"> 纯粹的封装了一个原生 click 事件
+            if (type !== event.type) {
+                event = new CustomEvent(type, event);
+            }
+            context.fire(event, data);
         };
     }, createMethodListener = function (method, args, stack) {
         return function (event, data) {
@@ -6829,7 +6835,7 @@ Yox.prototype.copy = function copy (data, deep) {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.3";
+Yox.version = "1.0.0-alpha.4";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
