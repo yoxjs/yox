@@ -1,6 +1,6 @@
 /**
- * yox.js v1.0.0-alpha.6
- * (c) 2016-2019 musicode
+ * yox.js v1.0.0-alpha.7
+ * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
 
@@ -3587,6 +3587,7 @@
               else if (!currentElement) {
                   // 获取 <tag 前面的字符
                   match = content.match(tagPattern);
+                  // 元素层级的注释都要删掉
                   if (match) {
                       text = slice(content, 0, match.index);
                       if (text) {
@@ -3595,7 +3596,7 @@
                   }
                   else {
                       text = content;
-                      addTextChild(text);
+                      addTextChild(text.replace(commentPattern, EMPTY_STRING));
                   }
               }
               else {
@@ -6514,7 +6515,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.6";
+  Yox.version = "1.0.0-alpha.7";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
