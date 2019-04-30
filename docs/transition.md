@@ -16,12 +16,12 @@
   // 淡入动画，可选
   enter: function (node) {
     // node 是一个 DOM 元素
-    // 用 CSS3 尽情的浪吧
+    // 用 CSS3 尽情地浪吧
   },
   // 淡出动画，可选
   leave: function (node, done) {
     // node 是一个 DOM 元素
-    // 用 CSS3 尽情的浪吧
+    // 用 CSS3 尽情地浪吧
     // 等到动画结束后，调用 done()
   }
 }

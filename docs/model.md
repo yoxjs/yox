@@ -62,7 +62,7 @@
 
 ## Checkbox
 
-单选框
+单选
 
 ```js
 {
@@ -78,7 +78,7 @@
 </div>
 ```
 
-多选框
+多选
 
 ```js
 {
@@ -98,6 +98,8 @@
 
 ## Select
 
+单选
+
 ```js
 {
   data: {
@@ -114,11 +116,29 @@
 </select>
 ```
 
+多选
+
+```js
+{
+  data: {
+    selectedNames: []
+  }
+}
+```
+
+```html
+<select multiple="multiple" model="selectedNames">
+  <option>Jack</option>
+  <option>John</option>
+  <option>Mike</option>
+</select>
+```
+
 ## 组件
 
 我们先揭秘 `<input type="text">` 的双向绑定是如何实现的。
 
-首先，把绑定的数据设置到 `<input>` 元素的 `value` 属性上，当用户交互使它的值发生变化，还要把最新的 `value` 属性值同步到绑定的数据，这样一来一回，数据和视图始终保持一致。
+首先，把绑定的数据设置到 `<input>` 元素的 `value` 属性上，当用户交互使它的值发生变化，再把最新的 `value` 属性值同步回绑定的数据，这样一来一回，数据和视图始终保持一致。
 
 相同的思路，我们再来看组件的双向绑定。
 
