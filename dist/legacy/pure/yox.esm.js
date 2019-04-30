@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.2
+ * yox.js v1.0.0-alpha.3
  * (c) 2016-2019 musicode
  * Released under the MIT License.
  */
@@ -2020,7 +2020,8 @@ Observer.prototype.destroy = function destroy () {
 
 var doc$1 = doc; 
 if (doc$1) {
-    if (!doc$1.body.classList) ;
+    // 此时 doc.body 不一定有值，比如 script 放在 head 里
+    if (!doc$1.documentElement.classList) ;
     // 为 IE9 以下浏览器打补丁
     {
         if (!doc$1.addEventListener) {
@@ -2397,7 +2398,7 @@ Yox.prototype.copy = function copy (data, deep) {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.2";
+Yox.version = "1.0.0-alpha.3";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
