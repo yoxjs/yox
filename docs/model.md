@@ -127,7 +127,7 @@
 ```
 
 ```html
-<select multiple="multiple" model="selectedNames">
+<select multiple model="selectedNames">
   <option>Jack</option>
   <option>John</option>
   <option>Mike</option>
