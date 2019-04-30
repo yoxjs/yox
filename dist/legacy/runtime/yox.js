@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.5
+ * yox.js v1.0.0-alpha.6
  * (c) 2016-2019 musicode
  * Released under the MIT License.
  */
@@ -4219,7 +4219,11 @@
                   options.el = node;
                   options.replace = TRUE;
               }
-              var slots = vnode.slots;
+              var props = vnode.props;
+                  var slots = vnode.slots;
+              if (props) {
+                  options.props = props;
+              }
               if (slots) {
                   options.slots = slots;
               }
@@ -4358,7 +4362,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.5";
+  Yox.version = "1.0.0-alpha.6";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

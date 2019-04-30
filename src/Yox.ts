@@ -902,8 +902,10 @@ export default class Yox implements YoxInterface {
           options.replace = env.TRUE
         }
 
-        const { slots } = vnode
-
+        const { props, slots } = vnode
+        if (props) {
+          options.props = props
+        }
         if (slots) {
           options.slots = slots
         }
