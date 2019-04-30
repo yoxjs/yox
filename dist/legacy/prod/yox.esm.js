@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.4
+ * yox.js v1.0.0-alpha.5
  * (c) 2016-2019 musicode
  * Released under the MIT License.
  */
@@ -4267,11 +4267,10 @@ function render(context, filters, partials, directives, transitions, template) {
             return eventScope[key];
         }
         // 如果取的是 scope 上直接有的数据，如 keypath
-        if (scope[key]) {
+        if (isDef(scope[key])) {
             return scope[key];
         }
         // 如果取的是数组项，则要更进一步
-        // scope['$item'] 可能是 0，不能直接 if (scope['$item'])
         if (isDef(scope['$item'])) {
             scope = scope.$item;
             // 到这里 scope 可能为空
@@ -6505,7 +6504,7 @@ Yox.prototype.copy = function copy (data, deep) {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.4";
+Yox.version = "1.0.0-alpha.5";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
