@@ -55,8 +55,8 @@
 ```html
 <div>
   <!-- 因为 selected 为 1，因此默认会选中第一个 radio -->
-  <input type="radio" model="selected" value="1">
-  <input type="radio" model="selected" value="2">
+  <input type="radio" model="selected" name="xx" value="1">
+  <input type="radio" model="selected" name="xx" value="2">
 </div>
 ```
 

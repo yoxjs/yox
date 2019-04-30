@@ -30,7 +30,7 @@ yarn add yox
 ## Example
 
 * [Hello World](https://jsfiddle.net/musicode/coLxry2w/)
-* [If/Else If/Else](https://jsfiddle.net/musicode/5pq2kmo8/6/)
+* [If/Else If/Else](https://jsfiddle.net/musicode/5pq2kmo8/)
 * [Render List](https://jsfiddle.net/musicode/1kewyatu/)
 * [Data Binding](https://jsfiddle.net/musicode/u1kj5vyL/)
 * [Event Handle](https://jsfiddle.net/musicode/2hpLnoz5/)
