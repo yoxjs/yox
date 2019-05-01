@@ -426,3 +426,65 @@ Yox.checkPropTypes = function (props, propTypes) {
   </slot>
 </div>
 ```
+
+## 父子通信
+
+### 父组件 => 子组件
+
+父组件到子组件的通信方式有三种，第一种是前面介绍的传递数据，这里不再赘述。
+
+第二种是通过 `ref` 获取子组件实例，如下：
+
+```html
+<div>
+  <Player ref="player" />
+</div>
+```
+
+```js
+// 比如调用子组件的方法
+this.$refs.player.play()
+```
+
+这种方式无法跨层级通信，比如从父组件到孙组件，因此需要用到第三种方式，向下发射事件，如下：
+
+```js
+parent.fire('playVideo', true)
+```
+
+```js
+{
+  events: {
+    playVideo: function (event, data) {
+      // 子组件监听父组件发出的事件
+      // event.target 指向 parent
+    }
+  }
+}
+```
+
+> 更多内容，参考 **事件处理** - **手动触发事件**
+
+
+### 子组件 => 父组件
+
+原则上，子组件不应对父组件做出任何假设，作为可复用的组件，它可以是任何组件的子组件。
+
+为了解耦父子关系，子组件对外通信的方式是向上发射事件，如下：
+
+```js
+child.fire('someThingHappened')
+```
+
+```js
+{
+  events: {
+    someThingHappened: function (event, data) {
+      // 父组件监听子组件发出的事件
+      // event.target 指向 child
+    }
+  }
+}
+```
+
+> 更多内容，参考 **事件处理** - **手动触发事件**
