@@ -517,7 +517,13 @@ Yox 专门为 `组件` 的传值实现了延展属性，如下：
 为了给组件传递大量的数据，也许你曾经写过这样的代码：
 
 ```html
-<Component name="{{props.name}}" age="{{props.age}}" email="{{props.email}}" />
+<Component
+  name="{{props.name}}"
+  age="{{props.age}}"
+  email="{{props.email}}"
+  gender="{{props.gender}}"
+  address="{{props.address}}"
+/>
 ```
 
 逐个传值，看起来只是体力劳动，它的风险在于，如果写错一个字母，`debug` 分分钟让你怀疑人生。
