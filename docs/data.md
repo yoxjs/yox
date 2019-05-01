@@ -13,6 +13,8 @@ Yox 采用 `get()` 和 `set()` 的方式读写数据。
 
 ## get
 
+语法如下：
+
 ```js
 var value = this.get(keypath, defaultValue)
 ```
@@ -54,6 +56,8 @@ this.get('a.b.c.d.e.f').g
 
 ## set
 
+语法如下：
+
 ```js
 this.set(keypath, value)
 ```
@@ -68,7 +72,7 @@ this.set({
 })
 ```
 
-`set()` 方法会自动创建不存在的对象。
+`set()` 方法会自动创建尚不存在的对象。
 
 举个例子，初始化后，数据格式如下：
 
@@ -117,6 +121,7 @@ this.set({
 此模板依赖了 `name` 和 `age`，它们中的任何一个发生了变化，都会更新视图。
 
 ```js
+// 修改依赖
 this.set('name', 'yox')
 // 视图没有更新
 this.nextTick(

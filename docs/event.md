@@ -1,11 +1,4 @@
-事件处理有以下两种方式：
-
-* 事件转换
-* 调用函数
-
-## 事件转换
-
-事件转换，指的是把 A 事件转成了 B 事件。举个例子，把 `click` 转成 `submit`：
+你可以使用 `on` 指令在 `元素节点` 或 `组件节点` 绑定事件，如下：
 
 ```html
 <button on-click="submit">
@@ -13,9 +6,24 @@
 </button>
 ```
 
-为什么要做这种看似多此一举的工作呢？
+事件处理，有以下两种方式：
 
-对于监听 DOM 事件来说，转换意味着**语义化**，语义化让代码逻辑更加清晰，这一点是显而易见的。
+* 事件转换
+* 调用方法
+
+## 事件转换
+
+事件转换，指的是把 `A` 事件转成 `B` 事件，如下：
+
+```html
+<button on-click="submit">
+  Submit
+</button>
+```
+
+这里把 `click` 转成 `submit`，为什么要做这种看似多此一举的工作呢？
+
+对于 DOM 事件来说，转换意味着**语义化**，语义化让代码逻辑更加清晰，这一点是显而易见的。
 
 > `click` 没有业务层面的意义，`submit` 则不然，它意味着你可能即将向服务器提交一个请求。
 
@@ -51,7 +59,7 @@ function (event, data) {
 
 `<Button>` 组件冒泡了一个 `click` 事件，父组件监听到 `click` 事件后触发了一个 `submit` 事件，此时共有 `两个` 冒泡事件。
 
-当我们处于一个层级复杂的组件树中，事件可能从任何子组件（或孙组件）冒泡上来，因此，我们建议事件应该越语义化越好，这样当父组件接收到子组件（或孙组件）发出的事件时，才不会无所适从。
+当我们处于一个复杂的组件树中，事件可能从任何子组件（或孙组件）冒泡上来。因此，我们建议事件应该越语义化越好，这样当父组件接收到子组件（或孙组件）发出的事件时，才不会无所适从。
 
 > 如果不需要事件冒泡，请调用方法。
 
@@ -62,21 +70,22 @@ function (event, data) {
   events: {
     submit: function (event, data) {
       // this 指向当前组件实例
-      // event.target 是谁发出的事件
     }
   },
   afterMount: function () {
     this.on('submit', function (event, data) {
       // this 指向当前组件实例
-      console.log(this, event)
+      console.log(this, event, data)
     })
   }
 }
 ```
 
-## 调用函数
+## 调用方法
 
-我们也可以调用 `methods` 定义的方法，如下：
+你也可以调用 `methods` 定义的方法。
+
+在 `元素节点` 调用方法，默认会传入事件对象，如下：
 
 ```html
 <button on-click="submit()">
@@ -94,8 +103,21 @@ function (event, data) {
 }
 ```
 
-如果调用方法没有传参，默认会传入事件对象。
+在 `组件节点` 调用方法，默认会传入事件对象和数据对象，如下：
 
+```html
+<Button on-click="submit()">
+```
+
+```js
+{
+  methods: {
+    submit: function (event, data) {
+      // this 指向触发事件的组件实例
+    }
+  }
+}
+```
 
 ## 特殊变量
 
@@ -120,9 +142,9 @@ function (event, data) {
 
 事件冒泡过程中，任何一个事件处理函数，返回 `false` 或调用 `event.stop()` 可以阻止事件继续冒泡。
 
+如果不需要阻止事件的默认行为，调用 `event.stop()` 更为合适。
+
 > 返回 `false` 相当于 `event.prevent()` + `event.stop()`
->
-> 如果你不需要阻止事件默认行为，调用 `event.stop()` 更为合适
 
 ```js
 {
@@ -134,12 +156,12 @@ function (event, data) {
 }
 ```
 
-> `event.stop()` 等价于 `event.stopPropagation()`
+> `event.stop()` 是 `event.stopPropagation()` 的简单版本。
 
 
 ## 阻止事件默认行为
 
-在事件处理函数中，调用 `event.prevent()` 可以阻止事件默认行为。
+在事件处理函数中，调用 `event.prevent()` 可以阻止事件的默认行为。
 
 ```js
 {
@@ -151,7 +173,7 @@ function (event, data) {
 }
 ```
 
-> `event.prevent()` 等价于 `event.preventDefault()`
+> `event.prevent()` 是 `event.preventDefault()` 的简单版本。
 
 
 ## 自定义事件
@@ -257,6 +279,8 @@ this.off(type, ?listener)
 
 事件经过转换后，向上冒泡 `mousedown`、`mouse-up`、`mouseOver` 三个事件。
 
+> 事件转换后的名称，必须符合变量命名规则。也就是说，`mouse-up` 在模板编译阶段就会报错，为了讲解后面的知识先无视这个规则。
+
 在 `组件节点` 上监听事件，`on-[type]` 中的 `type` 会经过 `camelize` 处理，也就是说，不论 `type` 怎么写，最终都不会监听 `连字符` 格式的事件。
 
 ```html
@@ -267,5 +291,5 @@ this.off(type, ?listener)
 
 为了保证统一且规范的开发风格，我们推荐使用如下格式：
 
-* 调用 `fire(type)` 中的 `type`，使用驼峰格式
+* 事件转换或调用 `fire(type)` 中的 `type`，使用驼峰格式
 * 模板 `on-[type]` 中的 `type`，使用连字符格式

@@ -12,7 +12,7 @@ The key is that yox supports IE6.
 CDN
 
 ```html
-<script src="https://unpkg.com/yox@latest"></script>
+<script src="https://unpkg.com/yox"></script>
 ```
 
 NPM

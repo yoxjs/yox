@@ -1,4 +1,4 @@
-我们精心准备了几个在线示例，方便体验。
+在线示例
 
 * [Hello World](https://jsfiddle.net/musicode/coLxry2w/)
 * [条件判断](https://jsfiddle.net/musicode/5pq2kmo8/)

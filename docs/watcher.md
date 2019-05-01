@@ -2,25 +2,47 @@
 
 数据监听，有以下两种方式：
 
-* 配置 watchers
-* 调用 watch(keypath, options, ?immediate)
+* 配置 `watchers`
+* 调用 `watch(keypath, options, ?immediate)`
 
 ## options
 
 数据监听支持以下配置：
 
 * `watcher`: 监听函数，参数列表是 `(newValue, oldValue, keypath)`
-* `immediate`: 是否立即执行一次，默认为 `false`
+* `immediate`: 是否立即执行一次监听函数，默认为 `false`
 * `sync`: 是否同步监听变化，默认为 `false`
 * `once`: 是否只监听一次，默认为 `false`
 
-如果 `options` 是个函数，则内部转换为如下格式：
+### immediate
+
+`immediate` 如果为 `true`，在绑定数据监听后，会立即执行一次 `watcher` 函数。
+
+### sync
+
+数据一旦发生变化，默认不会立即调用 `watcher`，而是等到 `nextTick` 再调用，这样可避免一些不必要的性能损耗，如下：
 
 ```js
-{
-  watcher: options
-}
+// 设置初始值
+this.set('count', 1)
+
+// 监听数据
+this.watch('count', function () { })
+
+// 修改数据
+this.set('count', 2)
+// 此时不会立即调用 watcher
+
+// 再把数据改回来
+this.set('count', 1)
+// 数据没变，避免了一次 watcher 调用
 ```
+
+如果你希望数据一旦发生变化，就立即同步调用 `watcher`，可把 `sync` 设置为 `true`。
+
+### once
+
+数据发生变化会调用 `watcher`，如果你希望调用 `一次` 就取消数据监听，可把 `once` 设置为 `true`。
 
 ## 配置 watchers
 
@@ -100,7 +122,7 @@ this.watch({
 this.unwatch(keypath, ?watcher)
 ```
 
-注意，`watcher` 是监听函数，不是对象。
+注意，`watcher` 是监听函数，不是 `options`。
 
 如果不传 `watcher`，则解除该 `keypath` 绑定的所有监听器。
 
@@ -108,7 +130,7 @@ this.unwatch(keypath, ?watcher)
 
 `keypath` 的分隔符是 `.`，一个典型的例子是 `users.0.name`，可见即使是数组下标，最终也是通过 `.` 来访问。
 
-所有的数据变化都是通过 `keypath` 进行分发。也就是说，如果你希望响应**数组**的变化，请用 `.` 的方式监听。
+所有的数据变化都是通过 `keypath` 进行分发，也就是说，如果你希望响应 `数组` 的变化，请用 `.` 的方式监听。
 
 > 不要写成 `this.watch('list[0].name', function)`
 

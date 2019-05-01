@@ -116,7 +116,7 @@ Yox.component('CustomComponent', { ... })
 * `组件标签` 包含大写字母，如 `AppHeader`
 * `组件标签` 包含连字符，如 `app-header`
 
-> 某些 svg 标签试图挑战这个规则，比如 `<missing-glyph>` 和 `<foreignObject>`，放心，Yox 已把它们拿下。
+> 某些 svg 标签试图挑战规则，比如 `<missing-glyph>` 和 `<foreignObject>`，放心，它们的反抗是徒劳的。
 
 渲染模板时，Yox 通过 `组件标签` 获得组件名称，然后按照 `本地` => `全局` 的顺序去查找已注册的组件。
 
@@ -156,7 +156,7 @@ Yox.component({
 
 为了避免一棵组件树，打包之后的代码过于庞大，Yox 还支持异步注册。
 
-异步注册的方式和前面提到的 `全局注册` `本地注册` 相同，唯一不同的是它需要注册一个函数，如下：
+异步注册的方式和前面提到的 `全局注册`、`本地注册` 相同，唯一不同的是它注册的是一个函数，如下：
 
 ```js
 Yox.component('AsyncComponent', function (callback) {
@@ -410,6 +410,19 @@ Yox.checkPropTypes = function (props, propTypes) {
   </slot>
   <slot name="right">
     默认的 right
+  </slot>
+</div>
+```
+
+### 判断 slot
+
+你可以通过 `hasSlot(name)` 过滤器判断外部有没有传入某个节点，如下：
+
+```html
+<div class="button{{#if hasSlot('icon')}} button-icon{{/if}}">
+  <slot name="icon" />
+  <slot name="children">
+    默认文本
   </slot>
 </div>
 ```
