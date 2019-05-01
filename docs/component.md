@@ -23,18 +23,14 @@ Yox 组件是符合 [YoxOptions](https://github.com/yoxjs/yox-type/blob/master/s
 
   // 外部传入的数据格式定义
   propTypes: {
-    propA: {
+    propName: {
       // 数据类型
       type: 'string',
       // 默认值
       value: '',
-    },
-    propB: {
-      // 数据类型支持数组
-      type: ['string', 'number'],
-      // 是否必须传入
+      // 是否必传
       required: true
-    }
+    },
   },
 
   // 组件数据
@@ -184,7 +180,7 @@ Yox.component('AsyncComponent', function (callback) {
 
 模板编译之后，加入 DOM 树之前触发。
 
-> 仅触发一次。
+> 仅触发一次，`pure` 版本不会触发。
 
 ### afterMount
 
@@ -194,15 +190,19 @@ Yox.component('AsyncComponent', function (callback) {
 
 如有需要，可在此钩子初始化第三方 DOM 库。
 
-> 仅触发一次。
+> 仅触发一次，`pure` 版本不会触发。
 
 ### beforeUpdate
 
 视图更新之前触发。
 
+> `pure` 版本不会触发。
+
 ### afterUpdate
 
 视图更新之后触发。
+
+> `pure` 版本不会触发。
 
 ### beforeDestroy
 
@@ -248,7 +248,7 @@ Yox.component('AsyncComponent', function (callback) {
 
 ## 传递数据
 
-可以通过 `props` 把数据传递给组件，如下：
+通过 `props` 把数据传递给子组件，如下：
 
 ```html
 <div>
@@ -259,7 +259,7 @@ Yox.component('AsyncComponent', function (callback) {
 </div>
 ```
 
-如果传递的数据很多，推荐使用 `延展属性`。
+如果传递的数据比较多，推荐使用 `延展属性`。
 
 ```js
 {
@@ -282,23 +282,80 @@ Yox.component('AsyncComponent', function (callback) {
 
 ## 数据校验
 
-如果定义组件的时候配置了 `propTypes`，当它接收到传入的 `props` 后，会立即调用 `checkPropTypes()`，这是一个校验数据合法性的函数，如下：
+如果定义的组件配置了 `propTypes`，当它接收到传入的 `props` 后，会立即调用 `checkPropTypes()`，这个函数会根据配置的 `propTypes`，告诉你哪些数据不符合要求。
+
+> 此特性只在 `dev` 版本可用，其他版本，`checkPropTypes` 是个直接返回 `props` 的空函数。
+
+`propTypes` 每项配置有三个选项，如下：
+
+* `type`: 数据类型
+* `required`: 是否必需，可选
+* `value`: 默认值，可选
+
+### type
+
+数据类型，可以是 `string` 或 `string` 数组，也可以是 `Function`，如下：
 
 ```js
-Yox.checkPropTypes = function (props, propTypes) {
-  var result = {}
-  for (var key in propTypes) {
-    var value = props[key]
-    // 先忽略校验细节，这里强调的是，如果数据不合法会被过滤
-    if (isOk) {
-      result[key] = value
+{
+  propTypes: {
+    name: {
+      type: 'string'
+    },
+    age: {
+      type: ['number', 'numeric']
+    },
+    gender: {
+      type: function (props) {
+        // 返回布尔类型，表示是否符合类型要求
+        return true
+      }
     }
   }
-  return result
 }
 ```
 
-如果默认实现不够严谨，没关系，你可以重写它，如下：
+`type` 的可选值来自下面这个函数：
+
+```js
+function (prop) {
+  return Object.prototype.toString.call(prop).slice(8, -1).toLowerCase()
+}
+```
+
+常见的可选值有 `string`、`number`、`boolean`、`function`、`array`、`object`、`undefined`、`null`。
+
+此外还有一个特殊值 `numeric`，表示字符串类型的数字。
+
+### required
+
+是否必需，可以是 `boolean`，也可以是 `Function`，如下：
+
+```js
+{
+  propTypes: {
+    name: {
+      type: 'string',
+      required: true
+    },
+    age: {
+      type: 'number',
+      required: function (props) {
+        // 返回布尔类型，表示是否必传
+        return true
+      }
+    }
+  }
+}
+```
+
+### value
+
+如果外部没有传入此项数据，且 `required` 不为 `true`，则可设置默认值。
+
+### 重写
+
+如果默认实现不满足需求，你可以重写 `checkPropTypes` 函数：
 
 ```js
 Yox.checkPropTypes = function (props, propTypes) {

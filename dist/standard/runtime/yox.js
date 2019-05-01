@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.8
+ * yox.js v1.0.0-alpha.9
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -3676,9 +3676,7 @@
           extend(instance, extensions);
       }
       // 数据源
-      var source = props
-          ? instance.checkPropTypes(props)
-          : {};
+      var source = instance.checkPropTypes(props || {});
       // 先放 props
       // 当 data 是函数时，可以通过 this.get() 获取到外部数据
       var observer = instance.$observer = new Observer(source, instance);
@@ -4275,7 +4273,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.8";
+  Yox.version = "1.0.0-alpha.9";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

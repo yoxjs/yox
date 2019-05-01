@@ -322,9 +322,7 @@ export default class Yox implements YoxInterface {
     }
 
     // 数据源
-    const source = props
-      ? instance.checkPropTypes(props)
-      : {}
+    const source = instance.checkPropTypes(props || {})
 
     // 先放 props
     // 当 data 是函数时，可以通过 this.get() 获取到外部数据
