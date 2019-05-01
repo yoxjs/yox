@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.7
+ * yox.js v1.0.0-alpha.8
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -235,14 +235,14 @@ function each(array, callback, reversed) {
     if (length) {
         if (reversed) {
             for (var i = length - 1; i >= 0; i--) {
-                if (callback(array[i], i, array) === FALSE) {
+                if (callback(array[i], i, length) === FALSE) {
                     break;
                 }
             }
         }
         else {
             for (var i$1 = 0; i$1 < length; i$1++) {
-                if (callback(array[i$1], i$1, array) === FALSE) {
+                if (callback(array[i$1], i$1, length) === FALSE) {
                     break;
                 }
             }
@@ -698,10 +698,8 @@ function each$2(object, callback) {
  * @return
  */
 function has$2(object, key) {
-    // 优先不要用 hasOwnProperty，性能差
-    return isDef(object[key])
-        // 没辙，那就用吧
-        || object.hasOwnProperty(key);
+    // 不用 hasOwnProperty，性能差
+    return isDef(object[key]);
 }
 /**
  * 清空对象所有的键值对
@@ -789,13 +787,11 @@ function get(object, keypath) {
      */
     each$1(keypath, function (key, isLast) {
         if (object != NULL) {
-            // 这里主要目的是提升性能
-            // 因此不再调用 has 方法了
             // 先直接取值
             var value = object[key], 
             // 紧接着判断值是否存在
             // 下面会处理计算属性的值，不能在它后面设置 hasValue
-            hasValue = isDef(value) || object.hasOwnProperty(key);
+            hasValue = isDef(value);
             // 如果是计算属性，取计算属性的值
             if (value && func(value.get)) {
                 value = value.get();
@@ -964,7 +960,9 @@ Emitter.prototype.fire = function fire (bullet, data, filter) {
         var ns = ref.ns;
         var list = instance.listeners[name], isComplete = TRUE;
     if (list) {
-        each(copy(list), function (options, _, list) {
+        // 避免遍历过程中，数组发生变化，比如增删了
+        list = copy(list);
+        each(list, function (options, _) {
             // 传了 filter，则用 filter 测试是否继续往下执行
             if ((filter ? !filter(options, data) : !matchNamespace(ns, options))
                 // 在 fire 过程中被移除了
@@ -1079,7 +1077,7 @@ Emitter.prototype.off = function off (type, listener) {
             var name = ref.name;
             var ns = ref.ns;
             var matchListener = createMatchListener(listener), each$1 = function (list, name) {
-            each(list, function (options, index, list) {
+            each(list, function (options, index) {
                 if (matchListener(options) && matchNamespace(ns, options)) {
                     list.splice(index, 1);
                 }
@@ -1474,7 +1472,7 @@ function createVnode(api, vnode) {
     if (isComponent) {
         var isAsync = TRUE;
         context.component(tag, function (options) {
-            if (isDef(data[LOADING])) {
+            if (has$2(data, LOADING)) {
                 // 异步组件
                 if (data[LOADING]) {
                     // 尝试使用最新的 vnode
@@ -2129,7 +2127,7 @@ function render(context, filters, partials, directives, transitions, template) {
             return scope[key];
         }
         // 如果取的是数组项，则要更进一步
-        if (isDef(scope['$item'])) {
+        if (isDef(scope.$item)) {
             scope = scope.$item;
             // 到这里 scope 可能为空
             // 比如 new Array(10) 然后遍历这个数组，每一项肯定是空
@@ -2417,7 +2415,7 @@ function render(context, filters, partials, directives, transitions, template) {
             eachHandler = handler;
             eachIndex = index;
         }
-        var value = getValue(expr), exprKeypath = expr['ak'], eachKeypath = exprKeypath || join$1($keypath, expr.raw), callback = function (item, key) {
+        var value = getValue(expr), exprKeypath = expr['ak'], eachKeypath = exprKeypath || join$1($keypath, expr.raw), callback = function (item, key, length) {
             var lastKeypath = $keypath, lastScope = $scope, lastKeypathStack = $stack;
             $keypath = join$1(eachKeypath, toString$1(key));
             $scope = {};
@@ -2425,8 +2423,10 @@ function render(context, filters, partials, directives, transitions, template) {
             push($stack, $keypath);
             push($stack, $scope);
             // 从下面这几句赋值可以看出
-            // scope 至少会有 '$keypath' '$item' eachIndex 等几个值
+            // scope 至少会有 '$keypath' '$length' '$item' eachIndex 等几个值
             $scope.$keypath = $keypath;
+            // 避免模板里频繁读取 list.length
+            $scope.$length = length;
             // 类似 {{#each 1 -> 10}} 这样的临时循环，需要在 scope 上加上当前项
             // 因为通过 context.get() 无法获取数据
             if (!exprKeypath) {
@@ -2923,10 +2923,10 @@ Observer.prototype.diff = function diff (keypath, newValue, oldValue) {
         each(asyncEmitter.listeners[watchKeypath], function (item) {
             item.count++;
         });
-        var ref = asyncChanges[keypath] || (asyncChanges[keypath] = { value: oldValue, list: [] });
-            var list = ref.list;
-        if (!has(list, watchKeypath)) {
-            push(list, watchKeypath);
+        var ref = asyncChanges[keypath] || (asyncChanges[keypath] = { value: oldValue, keypaths: [] });
+            var keypaths = ref.keypaths;
+        if (!has(keypaths, watchKeypath)) {
+            push(keypaths, watchKeypath);
         }
         if (!instance.pending) {
             instance.pending = TRUE;
@@ -2947,11 +2947,11 @@ Observer.prototype.diffAsync = function diffAsync () {
         var asyncEmitter = instance.asyncEmitter;
         var asyncChanges = instance.asyncChanges;
     instance.asyncChanges = {};
-    each$2(asyncChanges, function (item, keypath) {
-        var args = [instance.get(keypath), item.value, keypath];
+    each$2(asyncChanges, function (change, keypath) {
+        var args = [instance.get(keypath), change.value, keypath];
         // 不能在这判断新旧值是否相同，相同就不 fire
         // 因为前面标记了 count，在这中断会导致 count 无法清除
-        each(item.list, function (watchKeypath) {
+        each(change.keypaths, function (watchKeypath) {
             asyncEmitter.fire(watchKeypath, args, filterWatcher);
         });
     });
@@ -3022,8 +3022,8 @@ Observer.prototype.watch = function watch (keypath, watcher, immediate) {
         bind(keypath, formatWatcherOptions(watcher, immediate));
         return;
     }
-    each$2(keypath, function (value, keypath) {
-        bind(keypath, formatWatcherOptions(value));
+    each$2(keypath, function (options, keypath) {
+        bind(keypath, formatWatcherOptions(options));
     });
 };
 /**
@@ -3180,7 +3180,7 @@ Observer.prototype.destroy = function destroy () {
 
 var doc$1 = doc, 
 // 这里先写 IE9 支持的接口
-innerText = 'textContent', findElement = function (selector) {
+innerText = 'textContent', innerHTML = 'innerHTML', findElement = function (selector) {
     var node = doc$1.querySelector(selector);
     if (node) {
         return node;
@@ -3316,11 +3316,11 @@ COMPOSITION_END = 'compositionend', domain = 'http://www.w3.org/', namespaces = 
     html: function html(node, html$1, isStyle) {
         if (isDef(html$1)) {
             {
-                node.innerHTML = html$1;
+                node[innerHTML] = html$1;
             }
         }
         else {
-            return node.innerHTML;
+            return node[innerHTML];
         }
     },
     addClass: addClass,
@@ -4269,7 +4269,7 @@ Yox.prototype.copy = function copy (data, deep) {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.7";
+Yox.version = "1.0.0-alpha.8";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

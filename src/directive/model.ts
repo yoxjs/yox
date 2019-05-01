@@ -16,12 +16,6 @@ import VNode from 'yox-type/src/vnode/VNode'
 import Directive from 'yox-type/src/vnode/Directive'
 import DirectiveHooks from 'yox-type/src/hooks/Directive'
 
-function getOptionValue(option: HTMLOptionElement) {
-  return isDef(option.value)
-    ? option.value
-    : option.text
-}
-
 interface Control {
 
   set(node: HTMLElement | Yox, keypath: string, context: Yox): void
@@ -30,6 +24,12 @@ interface Control {
 
   name: string
 
+}
+
+function getOptionValue(option: HTMLOptionElement) {
+  return isDef(option.value)
+    ? option.value
+    : option.text
 }
 
 const inputControl: Control = {

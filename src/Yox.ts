@@ -211,7 +211,7 @@ export default class Yox implements YoxInterface {
    */
   public static checkPropTypes(props: Record<string, any>, propTypes: Record<string, PropRule>): Record<string, any> {
     if (process.env.NODE_ENV === 'dev') {
-      let result = object.copy(props)
+      const result = object.copy(props)
       object.each(
         propTypes,
         function (rule: PropRule, key: string) {
@@ -240,23 +240,28 @@ export default class Yox implements YoxInterface {
             // 就当做此规则无效，和没写一样
             if (type) {
               let matched: boolean | void
-              // 比较类型
+              // type: 'string'
               if (!string.falsy(type)) {
                 matched = is.is(actual, type as string)
               }
+              // type: ['string', 'number']
               else if (!array.falsy(type)) {
                 array.each(
                   type as string[],
-                  function (t) {
-                    if (is.is(actual, t)) {
+                  function (item: string) {
+                    if (is.is(actual, item)) {
                       matched = env.TRUE
                       return env.FALSE
                     }
                   }
                 )
               }
-              if (matched !== env.TRUE) {
-                logger.warn(`The prop "${key}" type is not matched.`)
+              // 动态判断是否匹配类型
+              else if (is.func(type)) {
+                matched = (type as Function)(props)
+              }
+              if (!matched) {
+                logger.warn(`The type of prop "${key}" is not matched.`)
               }
             }
             else {
@@ -272,7 +277,9 @@ export default class Yox implements YoxInterface {
           else if (isDef(value)) {
             result[key] = type === env.RAW_FUNCTION
               ? value
-              : (is.func(value) ? value(props) : value)
+              : is.func(value)
+                ? value(props)
+                : value
           }
         }
       )
