@@ -263,8 +263,6 @@ Yox.filter({
 
 > 关于 `$length` 参考 **模板** - **特殊变量**
 
-> 也许你认为应该提供 `@last` 之类的语法糖，抱歉并没有，我们的考虑是减少记忆负担，况且实现这个功能只需要一行代码而已。
-
 ### 递进上下文
 
 有别于其他模板语法，`each` 会导致数据 `context` 递进一层，举个例子：
@@ -710,7 +708,7 @@ users.1 Object {name: "John"}
 
 ### $event
 
-触发事件时，可用 `$event` 获取当前的事件对象，如下：
+触发事件时，通过 `$event` 获取当前的事件对象，如下：
 
 ```html
 <button on-click="submit($event)">
@@ -724,7 +722,7 @@ users.1 Object {name: "John"}
 
 ### $data
 
-触发**组件**事件时，可用 `$data` 获取当前的事件数据，如下：
+触发**组件**事件时，通过 `$data` 获取当前的事件数据，如下：
 
 ```html
 <Button on-click="submit($event, $data)">
@@ -738,7 +736,7 @@ users.1 Object {name: "John"}
 
 ### $keypath
 
-在模板的任何位置，可用 `$keypath` 获取当前 `keypath`，如下：
+在模板的任何位置，通过 `$keypath` 获取当前 `keypath`，如下：
 
 ```html
 <div>
@@ -749,3 +747,25 @@ users.1 Object {name: "John"}
   {{/each}}
 </div>
 ```
+
+### $length
+
+在 `each` 内部，通过 `$length` 获取当前遍历数组的长度，如下：
+
+```html
+<div>
+  {{#each list}}
+    {{$length}}
+  {{/each}}
+</div>
+```
+
+`each` 会预先读取数组的长度，并存在 `$length` 变量中，就像下面这样：
+
+```js
+for (var i = 0, $length = list.length; i < $length; i++) {
+  // 读取 $length
+}
+```
+
+
