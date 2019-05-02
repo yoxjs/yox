@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.10
+ * yox.js v1.0.0-alpha.11
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -3027,7 +3027,8 @@ tagPattern = /<(\/)?([$a-z][-a-z0-9]*)/i,
 // 注释
 commentPattern = /<!--[\s\S]*?-->/g, 
 // 属性的 name
-attributePattern = /^\s*([-:\w]+)(['"])?(?:=(['"]))?/, 
+// 支持 on-click.namespace="" 或 on-get-out="" 或 xml:xx=""
+attributePattern = /^\s*([-.:\w]+)(['"])?(?:=(['"]))?/, 
 // 首字母大写，或中间包含 -
 componentNamePattern = /^[$A-Z]|-/, 
 // 自闭合标签
@@ -3258,9 +3259,7 @@ function compile$1(content) {
             // 指令的值是纯文本，可以预编译表达式，提升性能
             var expr = compile(text), 
             // model="xx" model="this.x" 值只能是标识符或 Member
-            isModel = directive.ns === DIRECTIVE_MODEL, 
-            // on-click="xx" on-click="method()" 值只能是标识符或函数调用
-            isEvent = directive.ns === DIRECTIVE_EVENT;
+            isModel = directive.ns === DIRECTIVE_MODEL, isEvent = directive.ns === DIRECTIVE_EVENT;
             if (expr) {
                 directive.expr = expr;
             }
@@ -4095,9 +4094,9 @@ nodeStringify[DIRECTIVE] = function (node) {
                 result.args = stringifyFunction(CODE_RETURN + stringifyArray(expr.args.map(stringifyExpressionArg)), ARG_CONTEXT);
             }
         }
+        // 不是调用方法，就是事件转换
         else if (ns === DIRECTIVE_EVENT) {
-            // compiler 保证了这里只能是标识符
-            result.event = toJSON(expr.name);
+            result.event = toJSON(expr.raw);
         }
         // <input model="id">
         else if (ns === DIRECTIVE_MODEL) {
@@ -6514,7 +6513,7 @@ Yox.prototype.copy = function copy (data, deep) {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.10";
+Yox.version = "1.0.0-alpha.11";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.10
+ * yox.js v1.0.0-alpha.11
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -3115,12 +3115,17 @@
   patternCache$1 = {}, 
   // 指令分隔符，如 on-click 和 lazy-click
   directiveSeparator = '-', 
+  // 没有命名空间的事件
+  eventPattern = /^[_$a-z]([\w]+)?$/i, 
+  // 有命名空间的事件
+  eventNamespacePattern = /^[_$a-z]([\w]+)?\.[_$a-z]([\w]+)?$/i, 
   // 标签
   tagPattern = /<(\/)?([$a-z][-a-z0-9]*)/i, 
   // 注释
   commentPattern = /<!--[\s\S]*?-->/g, 
   // 属性的 name
-  attributePattern = /^\s*([-:\w]+)(['"])?(?:=(['"]))?/, 
+  // 支持 on-click.namespace="" 或 on-get-out="" 或 xml:xx=""
+  attributePattern = /^\s*([-.:\w]+)(['"])?(?:=(['"]))?/, 
   // 首字母大写，或中间包含 -
   componentNamePattern = /^[$A-Z]|-/, 
   // 自闭合标签
@@ -3390,9 +3395,7 @@
               // 指令的值是纯文本，可以预编译表达式，提升性能
               var expr = compile(text), 
               // model="xx" model="this.x" 值只能是标识符或 Member
-              isModel = directive.ns === DIRECTIVE_MODEL, 
-              // on-click="xx" on-click="method()" 值只能是标识符或函数调用
-              isEvent = directive.ns === DIRECTIVE_EVENT;
+              isModel = directive.ns === DIRECTIVE_MODEL, isEvent = directive.ns === DIRECTIVE_EVENT;
               if (expr) {
                   {
                       // 如果指令表达式是函数调用，则只能调用方法（难道还有别的好调用的吗？）
@@ -3401,14 +3404,16 @@
                               fatal$1('指令表达式的类型如果是函数调用，则只能调用方法');
                           }
                       }
-                      // 上面检测过方法调用，接下来事件指令只需要判断是否是标识符
+                      // 上面检测过方法调用，接下来事件指令只需要判断是否以下两种格式：
+                      // on-click="name" 或 on-click="name.namespace"
                       else if (isEvent) {
-                          if (expr.type !== IDENTIFIER) {
-                              fatal$1('事件指令的表达式只能是 标识符 或 函数调用');
+                          var raw = expr.raw;
+                          if (!eventPattern.test(raw) && !eventNamespacePattern.test(raw)) {
+                              fatal$1('事件转换名称只能是 [name] 或 [name.namespace] 格式');
                           }
                           else if (currentElement
                               && currentElement.isComponent
-                              && directive.name === expr.name) {
+                              && directive.name === expr.raw) {
                               fatal$1('转换组件事件的名称不能相同');
                           }
                       }
@@ -4412,9 +4417,9 @@
                   result.args = stringifyFunction(CODE_RETURN + stringifyArray(expr.args.map(stringifyExpressionArg)), ARG_CONTEXT);
               }
           }
+          // 不是调用方法，就是事件转换
           else if (ns === DIRECTIVE_EVENT) {
-              // compiler 保证了这里只能是标识符
-              result.event = toJSON(expr.name);
+              result.event = toJSON(expr.raw);
           }
           // <input model="id">
           else if (ns === DIRECTIVE_MODEL) {
@@ -6854,7 +6859,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.10";
+  Yox.version = "1.0.0-alpha.11";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
