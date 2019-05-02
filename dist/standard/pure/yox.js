@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.9
+ * yox.js v1.0.0-alpha.10
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -53,11 +53,11 @@
   /**
    * 空对象，很多地方会用到，比如 `a || EMPTY_OBJECT` 确保是个对象
    */
-  var EMPTY_OBJECT = {};
+  var EMPTY_OBJECT = Object.freeze({});
   /**
    * 空数组
    */
-  var EMPTY_ARRAY = [];
+  var EMPTY_ARRAY = Object.freeze([]);
   /**
    * 空字符串
    */
@@ -1177,21 +1177,24 @@
    * 在队尾添加异步任务
    */
   NextTask.shared = function shared$1 () {
-      if (!shared) {
-          shared = new NextTask();
-      }
-      return shared;
+      return shared || (shared = new NextTask());
   };
 
-  NextTask.prototype.append = function append (task) {
-      push(this.nextTasks, task);
+  NextTask.prototype.append = function append (task, context) {
+      push(this.nextTasks, {
+          fn: task,
+          ctx: context
+      });
       this.start();
   };
   /**
    * 在队首添加异步任务
    */
-  NextTask.prototype.prepend = function prepend (task) {
-      unshift(this.nextTasks, task);
+  NextTask.prototype.prepend = function prepend (task, context) {
+      unshift(this.nextTasks, {
+          fn: task,
+          ctx: context
+      });
       this.start();
   };
   /**
@@ -1219,7 +1222,9 @@
           var nextTasks = ref.nextTasks;
       if (nextTasks.length) {
           this.nextTasks = [];
-          each(nextTasks, execute);
+          each(nextTasks, function (task) {
+              execute(task.fn, task.ctx);
+          });
       }
   };
 
@@ -2284,13 +2289,14 @@
    * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
    */
   Yox.prototype.nextTick = function nextTick (task, prepend) {
-      var ref = this.$observer;
+      var instance = this;
+          var ref = instance.$observer;
           var nextTask = ref.nextTask;
       if (prepend) {
-          nextTask.prepend(task);
+          nextTask.prepend(task, instance);
       }
       else {
-          nextTask.append(task);
+          nextTask.append(task, instance);
       }
   };
   /**
@@ -2383,7 +2389,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.9";
+  Yox.version = "1.0.0-alpha.10";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
