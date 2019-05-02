@@ -27,7 +27,7 @@
 
 > `click` 没有业务层面的意义，`submit` 则不然，它意味着你可能即将向服务器提交一个请求。
 
-在 `元素节点` 上监听事件，Yox 会把 DOM 事件封装成自定义事件，如下：
+在 `元素节点` 上监听事件，Yox 会把 DOM 事件封装成 `Yox.Event`，如下：
 
 ```html
 <button on-click="submit">
@@ -43,7 +43,7 @@ function (domEvent) {
 
 > `fire(event)` 方法的默认行为是 `向上冒泡`。
 
-在 `组件节点` 上监听事件，Yox 会把子组件冒泡上来的事件再次封装成新的自定义事件，如下：
+在 `组件节点` 上监听事件，Yox 会把子组件冒泡上来的事件封装成新的 `Yox.Event`，如下：
 
 ```html
 <Button on-click="submit" />
@@ -63,7 +63,7 @@ function (event, data) {
 
 > 如果不需要事件冒泡，请调用方法。
 
-转换后的事件，可以通过配置 `events` 监听，也可以调用 `on()` 监听。
+转换后的事件，可以通过配置 `events` 监听。
 
 ```js
 {
@@ -71,12 +71,6 @@ function (event, data) {
     submit: function (event, data) {
       // this 指向当前组件实例
     }
-  },
-  afterMount: function () {
-    this.on('submit', function (event, data) {
-      // this 指向当前组件实例
-      console.log(this, event, data)
-    })
   }
 }
 ```
@@ -211,9 +205,43 @@ Yox.dom.specialEvents.tap = {
 </button>
 ```
 
-## 手动触发事件
+## 绑定事件
 
-向上发射事件，即冒泡事件。
+调用 Yox 实例的 `on()` 方法手动绑定事件，如下：
+
+```js
+this.on(type, ?listener)
+```
+
+当 `type` 是个对象时，可绑定多个事件，如下：
+
+```js
+this.on({
+  click1: function () {
+
+  },
+  click2: function () {
+
+  },
+  ...
+})
+```
+
+如果响应一次事件后就要解绑事件，可换成 `once()` 方法。
+
+## 解绑事件
+
+调用 Yox 实例的 `off()` 方法手动解绑事件，如下：
+
+```js
+this.off(type, ?listener)
+```
+
+如果不传 `listener`，则解绑该 `type` 绑定的所有事件处理函数。
+
+## 触发事件
+
+向上发射事件，即冒泡事件，它会一直冒泡到根组件。
 
 ```js
 this.fire('submit')
@@ -225,7 +253,7 @@ this.fire('submit')
 this.fire('submit', { name: 'yox' })
 ```
 
-> 注意：数据必须是个对象。
+> 注意：数据必须是个 `Object`
 
 向下发射事件，事件会一层接一层的往下传递，直到尽头。
 
@@ -234,18 +262,70 @@ this.fire('submit', true)
 this.fire('submit', { name: 'yox' }, true)
 ```
 
-## 解绑事件
+## 事件命名空间
+
+`Yox` 实例还支持事件命名空间，前面提到的所有事件的命名空间都是 `""`，因此你感觉不到命名空间的存在。
+
+绑定事件，其实可以指定事件的命名空间，如下：
 
 ```js
-this.off(type, ?listener)
+// 不指定命名空间
+this.on('submit', function () {})
+// 指定命名空间为 button
+this.on('submit.button', function () {})
 ```
 
-如果不传 `listener`，则解绑该 `type` 绑定的所有事件处理函数。
+如果触发了 `submit` 事件，这两个事件处理函数都会执行，如下：
 
+```js
+this.fire('submit')
+```
+
+> 如果触发的事件没有命名空间，则不会判断事件处理函数的命名空间是否匹配
+
+如果触发了 `submit.button` 事件，只有第二个事件处理函数会执行，如下：
+
+```js
+this.fire('submit.button')
+```
+
+> 如果触发的事件包含命名空间，则会判断事件处理函数的命名空间和触发事件的命名空间是否匹配
+
+如果触发了 `submit.xx` 事件，则两个事件处理函数都不会执行，如下：
+
+```js
+this.fire('submit.xx')
+```
+
+> 因为命名空间不匹配
+
+解绑事件，也可以指定事件的命名空间，如下：
+
+```js
+this.off('submit.button', listener)
+```
+
+当你指定命名空间后，`事件名称`、`事件命名空间` 和 `事件处理函数` 三者必须同时匹配才能解绑成功。
+
+如果不传 `listener`，绑定到 `submit.button` 的所有事件都会被解绑，如下：
+
+```js
+this.off('submit.button')
+```
+
+> 只要匹配 `事件名称` 和`事件命名空间` 就能解绑成功
+
+你甚至可以不传 `事件名称`，这样可以解绑某个命名空间下的所有事件绑定，如下：
+
+```js
+this.off('.button')
+```
+
+> 只要匹配 `事件命名空间` 就能解绑成功
 
 ## 事件对象
 
-事件对象具有以下属性：
+当 `DOM 事件` 或 `组件事件` 触发后，Yox 会把它封装成 `Yox.Event`，它有如下属性：
 
 * `type`: 事件名称
 * `target`: 是哪个组件发出的事件

@@ -967,13 +967,18 @@ export default class Yox implements YoxInterface {
    * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
    */
   nextTick(task: Function, prepend?: boolean): void {
-    const { nextTask } = this.$observer
+
+    const instance = this,
+
+    { nextTask } = instance.$observer
+
     if (prepend) {
-      nextTask.prepend(task)
+      nextTask.prepend(task, instance)
     }
     else {
-      nextTask.append(task)
+      nextTask.append(task, instance)
     }
+
   }
 
   /**
