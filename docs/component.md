@@ -31,6 +31,7 @@ Yox 组件是符合 [YoxOptions](https://github.com/yoxjs/yox-type/blob/master/s
       // 是否必传
       required: true
     },
+    ...
   },
 
   // 组件数据

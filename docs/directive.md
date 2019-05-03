@@ -126,7 +126,7 @@ var value = directive.getter()
 
 如果指令的值是 `调用函数` 的形式，比如常见的 `on-click="submit()"`，Yox 会把它编译成 `handler` 函数，你需要做的就是在合适的时机调用它。
 
-注意，只能调用 `methods` 中定义的方法。
+注意，只能调用 Yox 的实例方法。
 
 ## 全局注册
 
