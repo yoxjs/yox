@@ -216,9 +216,11 @@ function (event, data) {
 > 更多内容，参考 **模板语法** - **特殊变量**
 
 
-## 停止事件冒泡
+## 停止事件传递
 
-事件冒泡过程中，任何一个事件处理函数，返回 `false` 或调用 `event.stop()` 可以阻止事件继续冒泡。
+事件传递过程中，任何一个事件处理函数，返回 `false` 或调用 `event.stop()` 可以阻止事件继续传递。
+
+> 事件支持向上或向下传递，参考 **事件处理** - **触发事件**
 
 如果不需要阻止事件的默认行为，调用 `event.stop()` 更为合适。
 
@@ -350,62 +352,78 @@ this.fire('submit', { name: 'yox' }, true)
 
 `Yox` 实例还支持事件命名空间，前面提到的所有事件的命名空间都是 `""`，因此你感觉不到命名空间的存在。
 
-绑定事件，其实可以指定事件的命名空间，如下：
+### 绑定事件
+
+绑定某个命名空间下的事件，如下：
+
+```js
+this.on('click.button', function (event) {})
+```
+
+发射某个命名空间下的事件，如下：
+
+```js
+this.fire('click.button')
+```
+
+如你所见，事件命名空间只是在 `事件名称` 后面加了一个 `.namespace` 而已。
+
+它的使用规则同样很简单，只有当绑定的事件（接收方）和发射的事件（发送方）`同时` 包含命名空间时，才会判断命名空间是否匹配。
+
+我们通过例子加深印象，首先绑定三个事件，如下：
 
 ```js
 // 不指定命名空间
 this.on('submit', function () {})
-// 指定命名空间为 button
-this.on('submit.button', function () {})
+// 指定命名空间为 a
+this.on('submit.a', function () {})
+// 指定命名空间为 b
+this.on('submit.b', function () {})
 ```
 
-如果触发了 `submit` 事件，这两个事件处理函数都会执行，如下：
+发射 `submit` 事件，这三个事件处理函数都会执行，如下：
 
 ```js
 this.fire('submit')
 ```
 
-> 如果触发的事件没有命名空间，则不会判断事件处理函数的命名空间是否匹配
+> 发送方没有命名空间
 
-如果触发了 `submit.button` 事件，这两个事件处理函数都会执行，如下：
-
-```js
-this.fire('submit.button')
-```
-
-> 如果绑定的事件没有指定命名空间，则不区分命名空间
-
-如果触发了 `submit.xx` 事件，则只有第一个事件处理函数会执行，如下：
+发射 `submit.a` 事件，只有 `submit` 和 `submit.a` 会执行，如下：
 
 ```js
-this.fire('submit.xx')
+this.fire('submit.a')
 ```
 
-> 如果绑定的事件没有指定命名空间，则不区分命名空间
+> `submit` 会执行是因为接收方没有命名空间
 
-解绑事件，也可以指定事件的命名空间，如下：
+发射 `submit.b` 事件，只有 `submit` 和 `submit.b` 会执行，如下：
 
 ```js
-this.off('submit.button', listener)
+this.fire('submit.b')
 ```
 
-当你指定命名空间后，`事件名称`、`事件命名空间` 和 `事件处理函数` 三者必须同时匹配才能解绑成功。
+### 解绑事件
 
-如果不传 `listener`，绑定到 `submit.button` 的所有事件都会被解绑，如下：
+解绑事件，也可以指定命名空间，如下：
 
 ```js
-this.off('submit.button')
+this.off('click.button', listener)
 ```
 
-> 只要匹配 `事件名称` 和`事件命名空间` 就能解绑成功
+如你所见，`事件名称`、`事件命名空间` 和 `事件处理函数` 三者必须同时匹配才能解绑成功。
 
-你甚至可以不传 `事件名称`，这样可以解绑某个命名空间下的所有事件绑定，如下：
+如果不传 `listener`，只要匹配 `事件名称` 和 `事件命名空间` 就能解绑成功，如下：
+
+```js
+this.off('click.button')
+```
+
+甚至可以省略 `事件名称`，此时只要匹配 `事件命名空间` 就能解绑成功，如下：
 
 ```js
 this.off('.button')
 ```
-
-> 只要匹配 `事件命名空间` 就能解绑成功
 
 ## 事件对象
 
@@ -416,8 +434,40 @@ this.off('.button')
 * `target`: 是哪个组件发出的事件
 * `originalEvent`: 被封装的原始事件
 * `isPrevented`: 是否已阻止事件的默认行为
-* `isStoped`: 是否已停止事件冒泡
+* `isStoped`: 是否已停止向上或向下传递事件
 * `listener`: 当前正在执行的事件处理函数
+
+需要重点介绍的属性有两个：`phase` 和 `listener`。
+
+### phase
+
+当 Yox 实例调用 `fire(type)` 方法发射一个事件，如果该实例监听了这个事件，此时 `event.phase` 的值为 `0`，如下：
+
+```js
+{
+  events: {
+    mounted: function (event) {
+      // 处理当前组件发出的事件
+      // event.phase 是 0
+    }
+  },
+  afterMount: function () {
+    this.fire('mounted')
+  }
+}
+```
+
+> 可通过 `Yox.Event.PHASE_CURRENT` 读取常量值
+
+当 Yox 实例 `向上` 发射事件，且事件已流转到父组件，此时 `event.phase` 的值为 `1`。
+
+> 可通过 `Yox.Event.PHASE_UPWARD` 读取常量值
+
+当 Yox 实例 `向下` 发射事件，且事件已流转到子组件，此时 `event.phase` 的值为 `-1`。
+
+> 可通过 `Yox.Event.PHASE_DOWNWARD` 读取常量值
+
+### listener
 
 下面用一个例子说明为什么要加 `listener` 属性，如下：
 
