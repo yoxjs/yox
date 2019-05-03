@@ -61,6 +61,8 @@ export default class Yox implements YoxInterface {
 
   $emitter: Emitter
 
+  $el?: HTMLElement
+
   $template?: Function
 
   $refs: Record<string, YoxInterface | HTMLElement>
@@ -70,8 +72,6 @@ export default class Yox implements YoxInterface {
   $children?: YoxInterface[]
 
   $vnode: VNode | undefined
-
-  $el?: HTMLElement
 
   $directives?: Record<string, DirectiveHooks>
 
@@ -104,15 +104,15 @@ export default class Yox implements YoxInterface {
    *
    * 插件必须暴露 install 方法
    */
-  public static use(plugin: YoxPlugin) {
+  public static use(plugin: YoxPlugin): void {
     plugin.install(Yox)
   }
 
   /**
    * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
    */
-  public static nextTick(task: Function) {
-    NextTask.shared().append(task)
+  public static nextTick(task: Function, context?: any): void {
+    NextTask.shared().append(task, context)
   }
 
   /**
@@ -209,7 +209,7 @@ export default class Yox implements YoxInterface {
   /**
    * 验证 props，无爱请重写
    */
-  public static checkPropTypes(props: Record<string, any>, propTypes: Record<string, PropRule>): Record<string, any> {
+  public static checkPropTypes(props: signature.data, propTypes: Record<string, PropRule>): signature.data {
     if (process.env.NODE_ENV === 'dev') {
       const result = object.copy(props)
       object.each(
@@ -242,14 +242,14 @@ export default class Yox implements YoxInterface {
               let matched: boolean | void
               // type: 'string'
               if (!string.falsy(type)) {
-                matched = is.is(actual, type as string)
+                matched = matchType(actual, type as string)
               }
               // type: ['string', 'number']
               else if (!array.falsy(type)) {
                 array.each(
                   type as string[],
                   function (item: string) {
-                    if (is.is(actual, item)) {
+                    if (matchType(actual, item)) {
                       matched = env.TRUE
                       return env.FALSE
                     }
@@ -563,7 +563,7 @@ export default class Yox implements YoxInterface {
    * 设值
    */
   set(
-    keypath: string | Record<string, any>,
+    keypath: string | signature.data,
     value?: any
   ): void {
     // 组件经常有各种异步改值，为了避免组件销毁后依然调用 set
@@ -578,8 +578,8 @@ export default class Yox implements YoxInterface {
    * 监听事件
    */
   on(
-    type: string | Record<string, signature.eventListener>,
-    listener?: signature.eventListener
+    type: string | Record<string, signature.listener>,
+    listener?: signature.listener
   ): YoxInterface {
     this.$emitter.on(type, listener, { ctx: this })
     return this
@@ -589,8 +589,8 @@ export default class Yox implements YoxInterface {
    * 监听一次事件
    */
   once(
-    type: string | Record<string, signature.eventListener>,
-    listener?: signature.eventListener
+    type: string | Record<string, signature.listener>,
+    listener?: signature.listener
   ): YoxInterface {
     this.$emitter.on(type, listener, { ctx: this, max: 1 })
     return this
@@ -601,7 +601,7 @@ export default class Yox implements YoxInterface {
    */
   off(
     type: string,
-    listener?: signature.eventListener
+    listener?: signature.listener
   ): YoxInterface {
     this.$emitter.off(type, listener)
     return this
@@ -611,8 +611,8 @@ export default class Yox implements YoxInterface {
    * 触发事件
    */
   fire(
-    bullet: string | CustomEvent,
-    data?: signature.eventData | boolean,
+    event: string | CustomEvent,
+    data?: signature.data | boolean,
     downward?: boolean
   ): boolean {
 
@@ -622,26 +622,26 @@ export default class Yox implements YoxInterface {
 
     let instance = this,
 
-    event = bullet instanceof CustomEvent ? bullet : new CustomEvent(bullet),
+    eventInstance = event instanceof CustomEvent ? event : new CustomEvent(event),
 
-    eventData: signature.eventData | void,
+    eventArgs: any[] = [eventInstance],
 
     isComplete: boolean | void
 
     // 告诉外部是谁发出的事件
-    if (!event.target) {
-      event.target = instance
+    if (!eventInstance.target) {
+      eventInstance.target = instance
     }
 
     // 比如 fire('name', true) 直接向下发事件
     if (is.object(data)) {
-      eventData = data as Record<string, any>
+      array.push(eventArgs, data as signature.data)
     }
     else if (data === env.TRUE) {
       downward = env.TRUE
     }
 
-    isComplete = instance.$emitter.fire(event, eventData)
+    isComplete = instance.$emitter.fire(eventInstance.type, eventArgs)
     if (isComplete) {
       if (downward) {
         if (instance.$children) {
@@ -880,7 +880,7 @@ export default class Yox implements YoxInterface {
    *
    * @param props
    */
-  checkPropTypes(props: Record<string, any>): Record<string, any> {
+  checkPropTypes(props: signature.data): signature.data {
     const { propTypes } = this.$options
     return propTypes
       ? Yox.checkPropTypes(props, propTypes)
@@ -1079,6 +1079,13 @@ export default class Yox implements YoxInterface {
 
 }
 
+const toString = Object.prototype.toString
+
+function matchType(value: any, type: string) {
+  return type === 'numeric'
+    ? is.numeric(value)
+    : toString.call(value).toLowerCase() === `[object ${type}]`
+}
 
 function afterCreateHook(instance: Yox, watchers: Record<string, signature.watcher | WatcherOptions> | void) {
 
@@ -1090,7 +1097,7 @@ function afterCreateHook(instance: Yox, watchers: Record<string, signature.watch
 
 }
 
-function setFlexibleOptions(instance: Yox, key: string, value: Function | Record<string, any>) {
+function setFlexibleOptions(instance: Yox, key: string, value: Function | signature.data) {
   if (is.func(value)) {
     instance[key](execute(value, instance))
   }
@@ -1099,7 +1106,7 @@ function setFlexibleOptions(instance: Yox, key: string, value: Function | Record
   }
 }
 
-function getComponentAsync(data: Record<string, any> | void, name: string, callback: signature.asyncComponent): boolean | void {
+function getComponentAsync(data: signature.data | void, name: string, callback: signature.asyncComponent): boolean | void {
   if (data && object.has(data, name)) {
     const component = data[name]
     // 注册的是异步加载函数
@@ -1116,7 +1123,7 @@ function getComponentAsync(data: Record<string, any> | void, name: string, callb
 
             array.each(
               $queue,
-              function (callback) {
+              function (callback: Function) {
                 callback(replacement)
               }
             )
@@ -1136,7 +1143,7 @@ function getComponentAsync(data: Record<string, any> | void, name: string, callb
   }
 }
 
-function getResource(data: Record<string, any> | void, name: string, lookup?: Function) {
+function getResource(data: signature.data | void, name: string, lookup?: Function) {
   if (data && data[name]) {
     return data[name]
   }
@@ -1145,7 +1152,7 @@ function getResource(data: Record<string, any> | void, name: string, lookup?: Fu
   }
 }
 
-function setResource(data: Record<string, any>, name: string | Record<string, any>, value?: any, formatValue?: (value: any) => any) {
+function setResource(data: signature.data, name: string | signature.data, value?: any, formatValue?: (value: any) => any) {
   if (is.string(name)) {
     data[name as string] = formatValue ? formatValue(value) : value
   }
@@ -1159,7 +1166,7 @@ function setResource(data: Record<string, any>, name: string | Record<string, an
   }
 }
 
-function mergeResource(locals: Record<string, any> | void, globals: Record<string, any>): Record<string, any> {
+function mergeResource(locals: signature.data | void, globals: signature.data): signature.data {
   return locals && globals
     ? object.extend({}, globals, locals)
     : locals || globals

@@ -47,7 +47,7 @@ directive: DirectiveHooks = {
 
       component.on(name, handler)
       vnode.data[directive.key] = function () {
-        component.off(name, handler as type.eventListener)
+        component.off(name, handler as type.listener)
       }
 
     }
@@ -57,7 +57,7 @@ directive: DirectiveHooks = {
 
       api.on(el, name, handler)
       vnode.data[directive.key] = function () {
-        api.off(el, name, handler as type.eventListener)
+        api.off(el, name, handler as type.listener)
       }
 
     }

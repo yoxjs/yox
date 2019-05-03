@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.11
+ * yox.js v1.0.0-alpha.12
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -29,6 +29,14 @@
   var RAW_FUNCTION = 'function';
   var RAW_TEMPLATE = 'template';
   /**
+   * Single instance for window in browser
+   */
+  var WINDOW = typeof window !== RAW_UNDEFINED ? window : UNDEFINED;
+  /**
+   * Single instance for document in browser
+   */
+  var DOCUMENT = typeof document !== RAW_UNDEFINED ? document : UNDEFINED;
+  /**
    * tap 事件
    *
    * 非常有用的抽象事件，比如 pc 端是 click 事件，移动端是 touchend 事件
@@ -56,14 +64,6 @@
    */
   var EVENT_MODEL = 'model';
   /**
-   * Single instance for window in browser
-   */
-  var win = typeof window !== RAW_UNDEFINED ? window : UNDEFINED;
-  /**
-   * Single instance for document in browser
-   */
-  var doc = typeof document !== RAW_UNDEFINED ? document : UNDEFINED;
-  /**
    * Single instance for noop function
    */
   var EMPTY_FUNCTION = function () {
@@ -86,13 +86,6 @@
       return target !== UNDEFINED;
   }
 
-  var toString = Object.prototype.toString;
-  // 这个函数比较慢，所以下面都不用它，主要是给外部用
-  function is(value, type) {
-      return type === 'numeric'
-          ? numeric(value)
-          : toString.call(value).toLowerCase() === ("[object " + type + "]");
-  }
   /**
    * Check if value is a function.
    *
@@ -159,8 +152,7 @@
           || (string(value) && !isNaN(parseFloat(value)) && isFinite(value));
   }
 
-  var is$1 = /*#__PURE__*/Object.freeze({
-    is: is,
+  var is = /*#__PURE__*/Object.freeze({
     func: func,
     array: array,
     object: object,
@@ -255,16 +247,6 @@
           }
       }
   }
-  /**
-   * 把数组合并成字符串
-   *
-   * @param array
-   * @param separator
-   * @return
-   */
-  function join(array, separator) {
-      return array.join(separator);
-  }
   function nativePush(array, item) {
       array[array.length] = item;
   }
@@ -307,32 +289,6 @@
       addItem(array, target, nativeUnshift);
   }
   /**
-   * 把类数组转成数组
-   *
-   * @param array 类数组
-   * @return
-   */
-  function toArray(array$1) {
-      return array(array$1)
-          ? array$1
-          : execute([].slice, array$1);
-  }
-  /**
-   * 把数组转成对象
-   *
-   * @param array 数组
-   * @param key 数组项包含的字段名称，如果数组项是基本类型，可不传
-   * @param value
-   * @return
-   */
-  function toObject(array, key, value) {
-      var result = {};
-      each(array, function (item) {
-          result[key ? item[key] : item] = value || item;
-      });
-      return result;
-  }
-  /**
    * 数组项在数组中的位置
    *
    * @param array 数组
@@ -349,17 +305,6 @@
           }
       });
       return result;
-  }
-  /**
-   * 数组是否包含 item
-   *
-   * @param array 数组
-   * @param target 可能包含的数组项
-   * @param strict 是否全等判断，默认是全等
-   * @return
-   */
-  function has(array, target, strict) {
-      return indexOf(array, target, strict) >= 0;
   }
   /**
    * 获取数组最后一项
@@ -382,7 +327,10 @@
    * @return 弹出的数组项
    */
   function pop(array) {
-      return array.pop();
+      var length = array.length;
+      if (length > 0) {
+          return array.pop();
+      }
   }
   /**
    * 删除数组项
@@ -403,6 +351,53 @@
       return result;
   }
   /**
+   * 数组是否包含 item
+   *
+   * @param array 数组
+   * @param target 可能包含的数组项
+   * @param strict 是否全等判断，默认是全等
+   * @return
+   */
+  function has(array, target, strict) {
+      return indexOf(array, target, strict) >= 0;
+  }
+  /**
+   * 把类数组转成数组
+   *
+   * @param array 类数组
+   * @return
+   */
+  function toArray(array$1) {
+      return array(array$1)
+          ? array$1
+          : execute(EMPTY_ARRAY.slice, array$1);
+  }
+  /**
+   * 把数组转成对象
+   *
+   * @param array 数组
+   * @param key 数组项包含的字段名称，如果数组项是基本类型，可不传
+   * @param value
+   * @return
+   */
+  function toObject(array, key, value) {
+      var result = {};
+      each(array, function (item) {
+          result[key ? item[key] : item] = value || item;
+      });
+      return result;
+  }
+  /**
+   * 把数组合并成字符串
+   *
+   * @param array
+   * @param separator
+   * @return
+   */
+  function join(array, separator) {
+      return array.join(separator);
+  }
+  /**
    * 用于判断长度大于 0 的数组
    *
    * @param array
@@ -414,20 +409,20 @@
 
   var array$1 = /*#__PURE__*/Object.freeze({
     each: each,
-    join: join,
     push: push,
     unshift: unshift,
-    toArray: toArray,
-    toObject: toObject,
     indexOf: indexOf,
-    has: has,
     last: last,
     pop: pop,
     remove: remove,
+    has: has,
+    toArray: toArray,
+    toObject: toObject,
+    join: join,
     falsy: falsy
   });
 
-  var camelizePattern = /-([a-z])/gi, hyphenatePattern = /\B([A-Z])/g, camelizeCache = {}, hyphenateCache = {};
+  var camelizePattern = /-([a-z])/gi, hyphenatePattern = /\B([A-Z])/g, capitalizePattern = /^[a-z]/, camelizeCache = {}, hyphenateCache = {}, capitalizeCache = {};
   /**
    * 连字符转成驼峰
    *
@@ -455,6 +450,20 @@
           });
       }
       return hyphenateCache[str];
+  }
+  /**
+   * 首字母大写
+   *
+   * @param str
+   * @return
+   */
+  function capitalize(str) {
+      if (!capitalizeCache[str]) {
+          capitalizeCache[str] = str.replace(capitalizePattern, function ($0) {
+              return $0.toUpperCase();
+          });
+      }
+      return capitalizeCache[str];
   }
   /**
    * 清除两侧空白符
@@ -505,16 +514,6 @@
       return str.lastIndexOf(part, isDef(end) ? end : str.length);
   }
   /**
-   * str 是否包含 part
-   *
-   * @param str
-   * @param part
-   * @return 是否包含
-   */
-  function has$1(str, part) {
-      return indexOf$1(str, part) >= 0;
-  }
-  /**
    * str 是否以 part 开头
    *
    * @param str
@@ -548,6 +547,16 @@
       return str.charCodeAt(index || 0);
   }
   /**
+   * str 是否包含 part
+   *
+   * @param str
+   * @param part
+   * @return 是否包含
+   */
+  function has$1(str, part) {
+      return indexOf$1(str, part) >= 0;
+  }
+  /**
    * 判断长度大于 0 的字符串
    *
    * @param str
@@ -560,15 +569,16 @@
   var string$1 = /*#__PURE__*/Object.freeze({
     camelize: camelize,
     hyphenate: hyphenate,
+    capitalize: capitalize,
     trim: trim,
     slice: slice,
     indexOf: indexOf$1,
     lastIndexOf: lastIndexOf,
-    has: has$1,
     startsWith: startsWith,
     endsWith: endsWith,
     charAt: charAt,
     codeAt: codeAt,
+    has: has$1,
     falsy: falsy$1
   });
 
@@ -656,17 +666,6 @@
   function keys(object) {
       return Object.keys(object);
   }
-  /**
-   * 是否是空对象
-   *
-   * @param object
-   * @return
-   */
-  function falsy$2(object$1) {
-      return !object(object$1)
-          || array(object$1)
-          || !keys(object$1).length;
-  }
   function sortKeyByAsc(a, b) {
       return a.length - b.length;
   }
@@ -695,17 +694,6 @@
               break;
           }
       }
-  }
-  /**
-   * 对象是否包含某个 key
-   *
-   * @param object
-   * @param key
-   * @return
-   */
-  function has$2(object, key) {
-      // 不用 hasOwnProperty，性能差
-      return isDef(object[key]);
   }
   /**
    * 清空对象所有的键值对
@@ -846,21 +834,43 @@
           }
       });
   }
+  /**
+   * 对象是否包含某个 key
+   *
+   * @param object
+   * @param key
+   * @return
+   */
+  function has$2(object, key) {
+      // 不用 hasOwnProperty，性能差
+      return isDef(object[key]);
+  }
+  /**
+   * 是否是空对象
+   *
+   * @param object
+   * @return
+   */
+  function falsy$2(object$1) {
+      return !object(object$1)
+          || array(object$1)
+          || !keys(object$1).length;
+  }
 
   var object$1 = /*#__PURE__*/Object.freeze({
     keys: keys,
-    falsy: falsy$2,
     sort: sort,
     each: each$2,
-    has: has$2,
     clear: clear,
     extend: extend,
     copy: copy,
     get: get,
-    set: set
+    set: set,
+    has: has$2,
+    falsy: falsy$2
   });
 
-  function toString$1 (target, defaultValue) {
+  function toString (target, defaultValue) {
       return target != NULL && target.toString
           ? target.toString()
           : isDef(defaultValue)
@@ -875,7 +885,7 @@
   /**
    * 当前是否是源码调试，如果开启了代码压缩，empty function 里的注释会被干掉
    */
-  useSource = /yox/.test(toString$1(EMPTY_FUNCTION));
+  useSource = /yox/.test(toString(EMPTY_FUNCTION));
   /**
    * 全局调试开关
    *
@@ -883,8 +893,8 @@
    * 比如线上环境，关了 debug 模式，为了调试，想强制打开
    */
   function isDebug() {
-      if (win) {
-          var debug = win['DEBUG'];
+      if (WINDOW) {
+          var debug = WINDOW['DEBUG'];
           if (boolean(debug)) {
               return debug;
           }
@@ -947,19 +957,7 @@
    * @param bullet 事件或事件名称
    * @param data 事件数据
    */
-  Emitter.prototype.fire = function fire (bullet, data, filter) {
-      var event, type, args;
-      if (bullet instanceof CustomEvent) {
-          event = bullet;
-          type = bullet.type;
-          args = object(data) ? [event, data] : event;
-      }
-      else {
-          type = bullet;
-          if (data) {
-              args = data;
-          }
-      }
+  Emitter.prototype.fire = function fire (type, args, filter) {
       var instance = this;
           var ref = parseNamespace(instance.ns, type);
           var name = ref.name;
@@ -968,9 +966,15 @@
       if (list) {
           // 避免遍历过程中，数组发生变化，比如增删了
           list = copy(list);
+          // 判断是否是发射事件
+          // 如果 args 的第一个参数是 CustomEvent 类型，表示发射事件
+          // 因为事件处理函数的参数列表是 (event, data)
+          var event = args && args[0] instanceof CustomEvent
+              ? args[0]
+              : UNDEFINED;
           each(list, function (options, _) {
               // 传了 filter，则用 filter 测试是否继续往下执行
-              if ((filter ? !filter(options, data) : !matchNamespace(ns, options))
+              if ((filter ? !filter(type, args, options) : !matchNamespace(ns, options))
                   // 在 fire 过程中被移除了
                   || !has(list, options)) {
                   return;
@@ -1044,15 +1048,15 @@
    *
    * @param type
    * @param listener
-   * @param data
+   * @param extra
    */
-  Emitter.prototype.on = function on (type, listener, data) {
+  Emitter.prototype.on = function on (type, listener, extra) {
       var instance = this, listeners = instance.listeners, addListener = function (item, type) {
           if (item) {
               var options = func(item) ? { fn: item } : item;
               if (object(options) && func(options.fn)) {
-                  if (data) {
-                      extend(options, data);
+                  if (extra) {
+                      extend(options, extra);
                   }
                   var ref = parseNamespace(instance.ns, type);
                       var name = ref.name;
@@ -1126,6 +1130,9 @@
       }
       return result;
   }
+  function matchTrue(options) {
+      return TRUE;
+  }
   /**
    * 外部会传入 Function 或 EmitterOptions 或 空
    *
@@ -1148,9 +1155,7 @@
               ? function (options) {
                   return listener === options.fn;
               }
-              : function (options) {
-                  return TRUE;
-              };
+              : matchTrue;
   }
   /**
    * 判断 options 是否能匹配命名空间
@@ -1165,7 +1170,7 @@
   }
 
   function isNative (target) {
-      return func(target) && /native code/.test(toString$1(target));
+      return func(target) && /native code/.test(toString(target));
   }
 
   var nextTick;
@@ -1199,9 +1204,9 @@
       return shared || (shared = new NextTask());
   };
 
-  NextTask.prototype.append = function append (task, context) {
+  NextTask.prototype.append = function append (func, context) {
       push(this.nextTasks, {
-          fn: task,
+          fn: func,
           ctx: context
       });
       this.start();
@@ -1209,9 +1214,9 @@
   /**
    * 在队首添加异步任务
    */
-  NextTask.prototype.prepend = function prepend (task, context) {
+  NextTask.prototype.prepend = function prepend (func, context) {
       unshift(this.nextTasks, {
-          fn: task,
+          fn: func,
           ctx: context
       });
       this.start();
@@ -1904,7 +1909,7 @@
    */
   var ARRAY = 7;
   /**
-   * 对象表达式
+   * 对象表达式，如 { name: 'yox' }
    */
   var OBJECT = 8;
   /**
@@ -2129,11 +2134,11 @@
           if (isUndef(defaultKeypath)) {
               defaultKeypath = keypath;
           }
-          // eventScore 只有 event 和 data 两种值
+          // eventScore 只有 $event 和 $data 两种值
           if (eventScope && eventScope[key]) {
               return eventScope[key];
           }
-          // 如果取的是 scope 上直接有的数据，如 keypath
+          // 如果取的是 scope 上直接有的数据，如 $keypath
           if (isDef(scope[key])) {
               return scope[key];
           }
@@ -2147,7 +2152,7 @@
                   return scope;
               }
               // 取 this.xx
-              if (scope && isDef(scope[key])) {
+              if (scope != NULL && isDef(scope[key])) {
                   return scope[key];
               }
           }
@@ -2269,9 +2274,9 @@
               }
               context.fire(event, data);
           };
-      }, createMethodListener = function (method, args, stack) {
+      }, createMethodListener = function (name, args, stack) {
           return function (event, data) {
-              var callee = context[method];
+              var method = context[name];
               if (event instanceof CustomEvent) {
                   var result;
                   if (args) {
@@ -2280,19 +2285,19 @@
                           $event: event,
                           $data: data,
                       };
-                      result = execute(callee, context, args(stack));
+                      result = execute(method, context, args(stack));
                       // 阅后即焚
                       eventScope = UNDEFINED;
                   }
                   else {
-                      result = execute(callee, context, data ? [event, data] : event);
+                      result = execute(method, context, data ? [event, data] : event);
                   }
                   if (result === FALSE) {
                       event.prevent().stop();
                   }
               }
               else {
-                  execute(callee, context, args ? args(stack) : UNDEFINED);
+                  execute(method, context, args ? args(stack) : UNDEFINED);
               }
           };
       }, createGetter = function (getter, stack) {
@@ -2302,7 +2307,7 @@
       }, renderExpression = function (expr, stringRequired) {
           var value = getValue(expr);
           return stringRequired
-              ? toString$1(value)
+              ? toString(value)
               : value;
       }, renderExpressionArg = function (expr, stack) {
           return getValue(expr, UNDEFINED, stack);
@@ -2316,12 +2321,13 @@
                   lastVnode.text += text;
               }
               else {
-                  push(vnodeList, {
+                  var textVnode = {
                       isText: TRUE,
                       text: text,
                       context: context,
                       keypath: $keypath,
-                  });
+                  };
+                  push(vnodeList, textVnode);
               }
           }
       }, renderElementVnode = function (vnode, attrs, childs, slots) {
@@ -2387,14 +2393,16 @@
       // <slot name="xx"/>
       renderSlot = function (name, defaultRender) {
           var vnodeList = last(vnodeStack), vnodes = context.get(name);
-          if (vnodes) {
-              each(vnodes, function (vnode) {
-                  push(vnodeList, vnode);
-                  vnode.parent = context;
-              });
-          }
-          else if (defaultRender) {
-              defaultRender();
+          if (vnodeList) {
+              if (vnodes) {
+                  each(vnodes, function (vnode) {
+                      push(vnodeList, vnode);
+                      vnode.parent = context;
+                  });
+              }
+              else if (defaultRender) {
+                  defaultRender();
+              }
           }
       }, 
       // {{#partial name}}
@@ -2428,7 +2436,7 @@
           }
           var value = getValue(expr), exprKeypath = expr['ak'], eachKeypath = exprKeypath || join$1($keypath, expr.raw), callback = function (item, key, length) {
               var lastKeypath = $keypath, lastScope = $scope, lastKeypathStack = $stack;
-              $keypath = join$1(eachKeypath, toString$1(key));
+              $keypath = join$1(eachKeypath, toString(key));
               $scope = {};
               $stack = copy($stack);
               push($stack, $keypath);
@@ -2473,8 +2481,7 @@
       var instance = this;
       instance.keypath = keypath;
       instance.cache = cache;
-      // 因为可能会修改 deps，所以这里创建一个自己的对象，避免影响外部传入的 deps
-      instance.deps = [];
+      instance.deps = deps;
       instance.context = observer.context;
       instance.observer = observer;
       instance.getter = getter;
@@ -2493,9 +2500,8 @@
       };
       if (instance.fixed = !falsy(deps)) {
           each(deps, function (dep) {
-              instance.add(dep);
+              observer.watch(dep, instance.watcherOptions);
           });
-          instance.bind();
       }
   };
   /**
@@ -2504,7 +2510,7 @@
    * @param force 是否强制刷新缓存
    */
   Computed.build = function build (keypath, observer, options) {
-      var cache = TRUE, sync = TRUE, deps = EMPTY_ARRAY, getter, setter;
+      var cache = TRUE, sync = TRUE, deps = [], getter, setter;
       if (func(options)) {
           getter = options;
       }
@@ -2515,8 +2521,9 @@
           if (boolean(options.sync)) {
               sync = options.sync;
           }
+          // 因为可能会修改 deps，所以这里创建一个新的 deps，避免影响外部传入的 deps
           if (array(options.deps)) {
-              deps = options.deps;
+              deps = copy(options.deps);
           }
           if (func(options.get)) {
               getter = options.get;
@@ -2666,7 +2673,7 @@
           var newLength = newIsArray ? newValue.length : UNDEFINED, oldLength = oldIsArray ? oldValue.length : UNDEFINED;
           callback(RAW_LENGTH, newLength, oldLength);
           for (var i = 0, length = Math.max(newLength || 0, oldLength || 0); i < length; i++) {
-              callback(("" + i), newValue ? newValue[i] : UNDEFINED, oldValue ? oldValue[i] : UNDEFINED);
+              callback('' + i, newValue ? newValue[i] : UNDEFINED, oldValue ? oldValue[i] : UNDEFINED);
           }
           return TRUE;
       }
@@ -2765,14 +2772,14 @@
    * @param item
    * @param data
    */
-  function filterWatcher (options, data) {
-      if (options.count && data) {
+  function filterWatcher (_, args, options) {
+      if (options.count && args) {
           // 采用计数器的原因是，同一个 options 可能执行多次
           // 比如监听 user.*，如果同批次修改了 user.name 和 user.age
           // 这个监听器会调用多次，如果第一次执行就把 count 干掉了，第二次就无法执行了
           options.count--;
           // 新旧值不相等
-          return data[0] !== data[1];
+          return args[0] !== args[1];
       }
   }
 
@@ -3189,10 +3196,10 @@
       clear(instance);
   };
 
-  var doc$1 = doc, 
+  var doc = DOCUMENT, 
   // 这里先写 IE9 支持的接口
   innerText = 'textContent', innerHTML = 'innerHTML', findElement = function (selector) {
-      var node = doc$1.querySelector(selector);
+      var node = doc.querySelector(selector);
       if (node) {
           return node;
       }
@@ -3209,9 +3216,9 @@
   }, createEvent = function (event, node) {
       return event;
   };
-  if (doc$1) {
+  if (doc) {
       // 此时 doc.body 不一定有值，比如 script 放在 head 里
-      if (!doc$1.documentElement.classList) {
+      if (!doc.documentElement.classList) {
           addClass = function (node, className) {
               var classes = node.className.split(CHAR_WHITESPACE);
               if (!has(classes, className)) {
@@ -3244,14 +3251,14 @@
   }, specialEvents = {}, domApi = {
       createElement: function createElement(tag, isSvg) {
           return isSvg
-              ? doc$1.createElementNS(namespaces.svg, tag)
-              : doc$1.createElement(tag);
+              ? doc.createElementNS(namespaces.svg, tag)
+              : doc.createElement(tag);
       },
       createText: function createText(text) {
-          return doc$1.createTextNode(text);
+          return doc.createTextNode(text);
       },
       createComment: function createComment(text) {
-          return doc$1.createComment(text);
+          return doc.createComment(text);
       },
       prop: function prop(node, name, value) {
           if (isDef(value)) {
@@ -3344,9 +3351,10 @@
               var special = specialEvents[type], 
               // 唯一的原生监听器
               nativeListener = function (event) {
-                  emitter.fire(event instanceof CustomEvent
+                  var customEvent = event instanceof CustomEvent
                       ? event
-                      : new CustomEvent(event.type, createEvent(event, node)));
+                      : new CustomEvent(event.type, createEvent(event, node));
+                  emitter.fire(customEvent.type, [customEvent]);
               };
               nativeListeners[type] = nativeListener;
               if (special) {
@@ -3482,7 +3490,7 @@
   }
   var inputControl = {
       set: function set(input, value) {
-          input.value = toString$1(value);
+          input.value = toString(value);
       },
       sync: function sync(input, keypath, context) {
           context.set(keypath, input.value);
@@ -3522,7 +3530,7 @@
       name: RAW_VALUE
   }, radioControl = {
       set: function set(radio, value) {
-          radio.checked = radio.value === toString$1(value);
+          radio.checked = radio.value === toString(value);
       },
       sync: function sync(radio, keypath, context) {
           if (radio.checked) {
@@ -3814,8 +3822,8 @@
   /**
    * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
    */
-  Yox.nextTick = function nextTick (task) {
-      NextTask.shared().append(task);
+  Yox.nextTick = function nextTick (task, context) {
+      NextTask.shared().append(task, context);
   };
   /**
    * 编译模板，暴露出来是为了打包阶段的模板预编译
@@ -3934,23 +3942,23 @@
   /**
    * 触发事件
    */
-  Yox.prototype.fire = function fire (bullet, data, downward) {
+  Yox.prototype.fire = function fire (event, data, downward) {
       // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
       // 内部为了保持格式统一
       // 需要转成 Event，这样还能知道 target 是哪个组件
-      var instance = this, event = bullet instanceof CustomEvent ? bullet : new CustomEvent(bullet), eventData, isComplete;
+      var instance = this, eventInstance = event instanceof CustomEvent ? event : new CustomEvent(event), eventArgs = [eventInstance], isComplete;
       // 告诉外部是谁发出的事件
-      if (!event.target) {
-          event.target = instance;
+      if (!eventInstance.target) {
+          eventInstance.target = instance;
       }
       // 比如 fire('name', true) 直接向下发事件
       if (object(data)) {
-          eventData = data;
+          push(eventArgs, data);
       }
       else if (data === TRUE) {
           downward = TRUE;
       }
-      isComplete = instance.$emitter.fire(event, eventData);
+      isComplete = instance.$emitter.fire(eventInstance.type, eventArgs);
       if (isComplete) {
           if (downward) {
               if (instance.$children) {
@@ -4279,11 +4287,11 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.11";
+  Yox.version = "1.0.0-alpha.12";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
-  Yox.is = is$1;
+  Yox.is = is;
   Yox.array = array$1;
   Yox.object = object$1;
   Yox.string = string$1;

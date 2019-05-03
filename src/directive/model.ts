@@ -215,7 +215,7 @@ directive: DirectiveHooks = {
       component.watch(viewBinding, sync)
     }
     else {
-      api.on(element, eventName, sync as signature.nativeEventListener)
+      api.on(element, eventName, sync as signature.nativeListener)
     }
 
     // 监听数据，修改界面
@@ -226,7 +226,7 @@ directive: DirectiveHooks = {
         component.unwatch(viewBinding, sync)
       }
       else {
-        api.off(element, eventName, sync as signature.nativeEventListener)
+        api.off(element, eventName, sync as signature.nativeListener)
       }
       context.unwatch(dataBinding, set)
     }
