@@ -21,7 +21,6 @@ import * as templateRender from 'yox-template-compiler/src/renderer'
 import VNode from 'yox-type/src/vnode/VNode'
 import YoxInterface from 'yox-type/src/Yox'
 import YoxOptions from 'yox-type/src/options/Yox'
-import YoxPlugin from 'yox-type/src/YoxPlugin'
 import ComputedOptions from 'yox-type/src/options/Computed'
 import WatcherOptions from 'yox-type/src/options/Watcher'
 import DirectiveHooks from 'yox-type/src/hooks/Directive'
@@ -38,6 +37,8 @@ import event from './directive/event'
 import model from './directive/model'
 import binding from './directive/binding'
 import hasSlot from './filter/hasSlot'
+
+import Plugin from './Plugin'
 
 const globalDirectives = {},
 
@@ -65,7 +66,7 @@ export default class Yox implements YoxInterface {
 
   $template?: Function
 
-  $refs: Record<string, YoxInterface | HTMLElement>
+  $refs?: Record<string, YoxInterface | HTMLElement>
 
   $parent?: YoxInterface
 
@@ -104,7 +105,7 @@ export default class Yox implements YoxInterface {
    *
    * 插件必须暴露 install 方法
    */
-  public static use(plugin: YoxPlugin): void {
+  public static use(plugin: Plugin): void {
     plugin.install(Yox)
   }
 
@@ -645,16 +646,18 @@ export default class Yox implements YoxInterface {
     if (isComplete) {
       if (downward) {
         if (instance.$children) {
+          eventInstance.phase = CustomEvent.PHASE_DOWNWARD
           array.each(
             instance.$children,
             function (child: Yox) {
-              return isComplete = child.fire(event, data, env.TRUE)
+              return isComplete = child.fire(eventInstance, data, env.TRUE)
             }
           )
         }
       }
       else if (instance.$parent) {
-        isComplete = instance.$parent.fire(event, data)
+        eventInstance.phase = CustomEvent.PHASE_UPWARD
+        isComplete = instance.$parent.fire(eventInstance, data)
       }
     }
 
@@ -1179,3 +1182,4 @@ if (process.env.NODE_ENV !== 'pure') {
   // 全局注册内置过滤器
   Yox.filter({ hasSlot })
 }
+

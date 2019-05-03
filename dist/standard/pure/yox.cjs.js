@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.12
+ * yox.js v1.0.0-alpha.13
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -161,6 +161,7 @@ function execute (fn, context, args) {
 
 var CustomEvent = function CustomEvent(type, originalEvent) {
     this.type = type;
+    this.phase = CustomEvent.PHASE_CURRENT;
     this.originalEvent = originalEvent;
 };
 /**
@@ -197,6 +198,9 @@ CustomEvent.prototype.prevent = function prevent () {
 CustomEvent.prototype.stop = function stop () {
     return this.stopPropagation();
 };
+CustomEvent.PHASE_CURRENT = 0;
+CustomEvent.PHASE_UPWARD = 1;
+CustomEvent.PHASE_DOWNWARD = -1;
 
 /**
  * 遍历数组
@@ -950,10 +954,12 @@ Emitter.prototype.fire = function fire (type, args, filter) {
             ? args[0]
             : UNDEFINED;
         each(list, function (options, _) {
-            // 传了 filter，则用 filter 测试是否继续往下执行
-            if ((filter ? !filter(type, args, options) : !matchNamespace(ns, options))
+            // 命名空间不匹配
+            if (!matchNamespace(ns, options)
                 // 在 fire 过程中被移除了
-                || !has(list, options)) {
+                || !has(list, options)
+                // 传了 filter，则用 filter 判断是否过滤此 options
+                || (filter && !filter(type, args, options))) {
                 return;
             }
             // 为 event 对象加上当前正在处理的 listener
@@ -1137,13 +1143,19 @@ function createMatchListener(listener) {
 /**
  * 判断 options 是否能匹配命名空间
  *
- * 如果 options 未指定命名空间，或 options.ns 和 namespace 一致，返回 true
+ * 如果 namespace 和 options.ns 都不为空，则需完全匹配
+ *
+ * 如果他们两个其中任何一个为空，则不判断命名空间
  *
  * @param namespace
  * @param options
  */
 function matchNamespace(namespace, options) {
-    return !namespace.length || namespace === options.ns;
+    var ns = options.ns;
+    if (ns && namespace) {
+        return ns === namespace;
+    }
+    return TRUE;
 }
 
 function isNative (target) {
@@ -2196,13 +2208,15 @@ Yox.prototype.fire = function fire (event, data, downward) {
     if (isComplete) {
         if (downward) {
             if (instance.$children) {
+                eventInstance.phase = CustomEvent.PHASE_DOWNWARD;
                 each(instance.$children, function (child) {
-                    return isComplete = child.fire(event, data, TRUE);
+                    return isComplete = child.fire(eventInstance, data, TRUE);
                 });
             }
         }
         else if (instance.$parent) {
-            isComplete = instance.$parent.fire(event, data);
+            eventInstance.phase = CustomEvent.PHASE_UPWARD;
+            isComplete = instance.$parent.fire(eventInstance, data);
         }
     }
     return isComplete;
@@ -2389,7 +2403,7 @@ Yox.prototype.copy = function copy (data, deep) {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.12";
+Yox.version = "1.0.0-alpha.13";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
