@@ -472,7 +472,7 @@ export default class Yox implements YoxInterface {
 
         // 当 virtual dom 变了，则更新视图
         watchers[TEMPLATE_COMPUTED] = function (vnode: VNode) {
-          instance.update(vnode, instance.$vnode)
+          instance.update(vnode, instance.$vnode as VNode)
         }
 
         // 当模板的依赖变了，则重新创建 virtual dom
@@ -586,7 +586,7 @@ export default class Yox implements YoxInterface {
     instance.$emitter.on(
       type,
       {
-        fn: listener,
+        fn: listener as Function,
         ctx: instance
       }
     )
@@ -604,7 +604,7 @@ export default class Yox implements YoxInterface {
     instance.$emitter.on(
       type,
       {
-        fn: listener,
+        fn: listener as Function,
         ctx: instance,
         max: 1
       }
@@ -659,20 +659,21 @@ export default class Yox implements YoxInterface {
 
     isComplete = instance.$emitter.fire(eventInstance.type, eventArgs)
     if (isComplete) {
+      const { $parent, $children } = instance
       if (downward) {
-        if (instance.$children) {
+        if ($children) {
           eventInstance.phase = CustomEvent.PHASE_DOWNWARD
           array.each(
-            instance.$children,
-            function (child: Yox) {
+            $children,
+            function (child) {
               return isComplete = child.fire(eventInstance, data, env.TRUE)
             }
           )
         }
       }
-      else if (instance.$parent) {
+      else if ($parent) {
         eventInstance.phase = CustomEvent.PHASE_UPWARD
-        isComplete = instance.$parent.fire(eventInstance, data)
+        isComplete = $parent.fire(eventInstance, data)
       }
     }
 
@@ -807,21 +808,23 @@ export default class Yox implements YoxInterface {
 
       const instance = this,
 
-      { $vnode, $observer } = instance
+      { $vnode, $observer } = instance,
 
-      if ($vnode) {
+      { computed } = $observer
 
-        const computed: Computed = $observer.computed[TEMPLATE_COMPUTED],
+      if ($vnode && computed) {
 
-        oldValue = computed.get()
+        const template = computed[TEMPLATE_COMPUTED],
+
+        oldValue = template.get()
 
         // 当前可能正在进行下一轮更新
         $observer.nextTask.run()
 
         // 没有更新模板，强制刷新
-        if (oldValue === computed.get()) {
+        if (oldValue === template.get()) {
           instance.update(
-            computed.get(env.TRUE),
+            template.get(env.TRUE),
             $vnode
           )
         }
@@ -841,7 +844,7 @@ export default class Yox implements YoxInterface {
         mergeResource(instance.$partials, globalPartials),
         mergeResource(instance.$directives, globalDirectives),
         mergeResource(instance.$transitions, globalTransitions),
-        instance.$template
+        instance.$template as Function
       )
     }
   }
@@ -1115,7 +1118,7 @@ function afterCreateHook(instance: Yox, watchers: Record<string, signature.watch
 
 }
 
-function setFlexibleOptions(instance: Yox, key: string, value: Function | signature.data) {
+function setFlexibleOptions(instance: Yox, key: string, value: Function | signature.data | void) {
   if (is.func(value)) {
     instance[key](execute(value, instance))
   }

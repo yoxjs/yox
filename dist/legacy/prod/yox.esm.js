@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.15
+ * yox.js v1.0.0-alpha.16
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1336,22 +1336,6 @@ function update$1(api, vnode, oldVnode) {
         });
     }
 }
-//
-// 旧 [ child1, child2 ]
-// 新 innerHTML
-//
-// 这种情况，要让外部先把 child1 child2 正常移除掉，再用 innerHTML 覆盖，否则指令无法销毁
-//
-// 旧 innerHTML
-// 新 [ child1, child2 ]
-//
-// 这种情况，先用 innerHTML 覆盖，再处理 child1 child2
-//
-// export default {
-//   create: createProps,
-//   update: removeProps,
-//   postpatch: createProps,
-// }
 
 function update$2(vnode, oldVnode) {
     var data = vnode.data;
@@ -4162,16 +4146,16 @@ nodeStringify[IF] = function (node) {
     return stringifyIf(node, node.stub);
 };
 nodeStringify[EACH] = function (node) {
-    var expr = toJSON(node.expr), index = node.index ? (", " + (toJSON(node.index))) : EMPTY_STRING, 
+    var expr = toJSON(node.expr), index = node.index ? ("" + SEP_COMMA + (toJSON(node.index))) : EMPTY_STRING, 
     // compiler 保证了 children 一定有值
     children = stringifyFunction(stringifyChildren(node.children, node.isComplex));
-    return stringifyCall(RENDER_EACH, ("" + expr + index + "," + children));
+    return stringifyCall(RENDER_EACH, ("" + expr + index + SEP_COMMA + children));
 };
 nodeStringify[PARTIAL] = function (node) {
     var name = toJSON(node.name), 
     // compiler 保证了 children 一定有值
     children = stringifyFunction(stringifyChildren(node.children, node.isComplex));
-    return stringifyCall(RENDER_PARTIAL, (name + "," + children));
+    return stringifyCall(RENDER_PARTIAL, ("" + name + SEP_COMMA + children));
 };
 nodeStringify[IMPORT] = function (node) {
     var name = toJSON(node.name);
@@ -5417,10 +5401,10 @@ if (DOCUMENT) {
                     node.detachEvent(("on" + type), listener);
                 }
             };
-            function isBoxElement(node) {
+            var isBoxElement = function (node) {
                 return node.tagName === 'INPUT'
                     && (node.type === 'radio' || node.type === 'checkbox');
-            }
+            };
             var IEEvent = function IEEvent(event, element) {
                 extend(this, event);
                 this.currentTarget = element;
@@ -6213,17 +6197,19 @@ Yox.prototype.fire = function fire (event, data, downward) {
     }
     isComplete = instance.$emitter.fire(eventInstance.type, eventArgs);
     if (isComplete) {
+        var $parent = instance.$parent;
+            var $children = instance.$children;
         if (downward) {
-            if (instance.$children) {
+            if ($children) {
                 eventInstance.phase = CustomEvent.PHASE_DOWNWARD;
-                each(instance.$children, function (child) {
+                each($children, function (child) {
                     return isComplete = child.fire(eventInstance, data, TRUE);
                 });
             }
         }
-        else if (instance.$parent) {
+        else if ($parent) {
             eventInstance.phase = CustomEvent.PHASE_UPWARD;
-            isComplete = instance.$parent.fire(eventInstance, data);
+            isComplete = $parent.fire(eventInstance, data);
         }
     }
     return isComplete;
@@ -6310,13 +6296,14 @@ Yox.prototype.forceUpdate = function forceUpdate () {
         var instance = this;
             var $vnode = instance.$vnode;
             var $observer = instance.$observer;
-        if ($vnode) {
-            var computed = $observer.computed[TEMPLATE_COMPUTED], oldValue = computed.get();
+            var computed = $observer.computed;
+        if ($vnode && computed) {
+            var template = computed[TEMPLATE_COMPUTED], oldValue = template.get();
             // 当前可能正在进行下一轮更新
             $observer.nextTask.run();
             // 没有更新模板，强制刷新
-            if (oldValue === computed.get()) {
-                instance.update(computed.get(TRUE), $vnode);
+            if (oldValue === template.get()) {
+                instance.update(template.get(TRUE), $vnode);
             }
         }
     }
@@ -6542,7 +6529,7 @@ Yox.prototype.copy = function copy (data, deep) {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.15";
+Yox.version = "1.0.0-alpha.16";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
