@@ -45,6 +45,26 @@ store.set('user.123', { ... })
 
 // 修改 id 为 123 的用户的名称
 store.set('user.123.name', 'new name')
+
+
+// 或者用作 event bus
+store
+.on(
+  'login',
+  function () {
+    console.log('用户已登入')
+  }
+)
+.on(
+  'logout',
+  function () {
+    console.log('用户已登出')
+  }
+)
+
+// 发射事件
+store.fire('login')
+store.fire('logout')
 ```
 
 ## 定位
