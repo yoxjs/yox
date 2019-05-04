@@ -390,6 +390,14 @@ this.fire('click.button')
 }
 ```
 
+### isPrevented
+
+一旦调用 `event.prevent()` 方法，`event.isPrevented` 变为 `true`。
+
+### isStoped
+
+一旦调用 `event.stop()` 方法，`event.isStoped` 变为 `true`。
+
 ### listener
 
 绑定事件需要事件处理函数，解绑事件则需要传入绑定事件时的事件处理函数，如下：
@@ -413,9 +421,72 @@ this.on('click', function (event) {
 
 > 如果你认为 `event.listener` 没什么用，就当它不存在吧
 
-## 自定义事件
+## 高级进阶
 
-如果浏览器自带的 DOM 事件不满足需求，Yox 还支持自定义事件。
+### on-[type]="[value]" 中的 type
+
+在 `元素节点` 监听事件，`on-[type]` 中的 `type` 和 DOM 事件名称完全一致（都是小写形式），如下：
+
+```html
+<button on-click="submit">
+  Submit
+</button>
+```
+
+在 `组件节点` 监听事件，`on-[type]` 中的 `type` 会经过 `camelize` 处理，也就是说，连字符格式的事件名称会转成驼峰格式，举个例子：
+
+```html
+<Button
+  on-user-remove="removeUser()"
+/>
+```
+
+这里实际监听的是 `userRemove`，而不是 `user-remove`。
+
+> 这样设计的原因是，连字符格式更符合 HTML 的开发习惯，如果你更喜欢使用驼峰格式，也无妨
+
+如果子组件冒泡上来的事件包含命名空间，父组件监听事件时，`on-[type]` 中的 `type` 也可以加上该命名空间，举个例子：
+
+```html
+<Button
+  on-user-remove.remove-button="removeUser()"
+/>
+```
+
+这里监听的事件名称是 `userRemove`，事件命名空间是 `removeButton`，可以发现，事件命名空间同样会经过 `camelize` 处理。
+
+> 关于事件命名空间，参考 **事件处理** - **事件命名空间**
+
+
+### on-[type]="[value]" 中的 value
+
+经过转换的事件名称，只支持以下两种格式：
+
+* 符合变量命名规则，比如 `click`
+* 符合事件命名空间规则，比如 `click.namespace`
+
+> `namespace` 同样需要符合变量命名规则
+
+也就是说，下面这两种写法都是错误的：
+
+```html
+<button on-mousedown="mouse-down" on-mouseup="mouseup.button-primary">
+  Submit
+</button>
+```
+
+> 关于事件命名空间，参考 **事件处理** - **事件命名空间**
+
+### 事件名称的最佳实践
+
+为了保证统一且规范的开发风格，我们在此给出事件名称的最佳实践：
+
+* 事件转换或调用 `fire(type)` 中的 `type`，使用驼峰格式，更符合 `JavaScript` 习惯
+* 模板 `on-[type]` 中的 `type`，使用连字符格式，更符合 `HTML` 习惯
+
+### 自定义事件
+
+如果浏览器自带的 `DOM 事件` 不满足需求，Yox 还支持自定义事件。
 
 我们知道，当使用中文输入法进行文本输入时，如果没有敲击回车或空格，输入框会不停地触发 `input` 事件，这通常不是什么问题，但对于双向绑定来说，这样的体验并不好。
 
@@ -447,117 +518,3 @@ Yox.dom.specialEvents.tap = {
   Submit
 </button>
 ```
-
-## 进阶
-
-### DOM 事件
-
-在 `元素节点` 上监听事件，`on-[type]` 中 `type` 和 DOM 事件名称完全一致（都是小写形式），如下：
-
-```html
-<button on-click="submit">
-  Submit
-</button>
-```
-
-Yox 会把 DOM 事件封装成 `Yox.Event`，因此在事件处理函数中，你能取到 `Yox.Event` 对象。
-
-```js
-function (domEvent) {
-  this.fire(new Yox.Event('submit', domEvent))
-}
-```
-
-> `fire(event)` 方法的默认行为是 `向上冒泡`。
-
-DOM 事件转换后的事件名称，只支持以下两种格式：
-
-* 符合变量命名规则，比如 `submit`
-* 符合事件命名空间规则，比如 `submit.button`
-
-> 关于事件命名空间，参考 **事件处理** - **事件命名空间**
-
-我们通过一个例子加深印象：
-
-```html
-<button
-  on-mousedown="mousedown"
-  on-mouseup="mouse-up"
-  on-mouseover="mouseOver"
-  on-click="submit.button"
->
-  Submit
-</button>
-```
-
-Yox 不支持 `mouse-up`，在模板编译阶段就会报错。
-
-### 组件事件
-
-在 `组件节点` 上监听的事件，通常是子组件冒泡上来的事件，如下：
-
-```html
-<Button on-click="submit" />
-```
-
-Yox 会把子组件冒泡上来的事件封装成新的 `Yox.Event`，如下：
-
-```js
-function (event, data) {
-  this.fire(new Yox.Event('submit', event), data)
-}
-```
-
-> `fire(event, data)` 方法的默认行为是 `向上冒泡`。
-
-`Button` 组件冒泡了一个 `click` 事件，父组件监听到 `click` 事件后转换成了 `submit` 事件，此时共有 `两个` 冒泡事件。
-
-> 如果不需要事件冒泡，请调用方法。
-
-子组件冒泡上来的事件名称有四种可能的格式：
-
-* 符合变量命名规则的简单事件，比如 `submit`
-* 符合变量命名规则的复杂事件，比如 `userRemove`
-* 符合事件命名空间规则的简单事件，比如 `submit.button`
-* 符合事件命名空间规则的复杂事件，比如 `userRemove.removeButton`
-
-> 这里的 `简单` 和 `复杂` 仅仅表示事件名称是否包含多个单词
-
-监听组件事件时，`on-[type]` 中的 `type` 会经过 `camelize` 处理，也就是说，连字符格式的事件名称会转成驼峰格式，举个例子：
-
-```html
-<Button
-  on-user-remove="removeUser()"
-/>
-```
-
-这里实际监听的是 `userRemove`，而不是 `user-remove`。
-
-> 这样设计的原因是，连字符格式更符合 HTML 的开发习惯，如果你更喜欢使用驼峰格式，也无妨
-
-如果子组件冒泡上来的事件包含命名空间，父组件监听事件时，`on-[type]` 中的 `type` 也可以加上该命名空间，举个例子：
-
-```html
-<Button
-  on-user-remove.remove-button="removeUser()"
-/>
-```
-
-这里监听的事件名称是 `userRemove`，事件命名空间是 `removeButton`，可以发现，事件命名空间同样会经过 `camelize` 处理。
-
-> 关于事件命名空间，参考 **事件处理** - **事件命名空间**
-
-最后，需要特别注意，组件事件名称和转换后的事件名称 `不能相同`，否则会报错，举个例子：
-
-```html
-<Button
-  on-click="click"
-/>
-```
-
-这种写法没有任何意义，冒泡事件本就可以直接处理，没必要再转换一个相同的事件。
-
-综上，为了保证统一且规范的开发风格，我们在此给出事件名称的最佳实践，如下：
-
-* 事件转换或调用 `fire(type)` 中的 `type`，使用驼峰格式，更符合 `JavaScript` 习惯
-* 模板 `on-[type]` 中的 `type`，使用连字符格式，更符合 `HTML` 习惯
