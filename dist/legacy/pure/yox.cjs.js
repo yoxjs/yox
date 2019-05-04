@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.14
+ * yox.js v1.0.0-alpha.15
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -2206,7 +2206,7 @@ Yox.prototype.off = function off (type, listener) {
     return this;
 };
 /**
- * 触发事件
+ * 发射事件
  */
 Yox.prototype.fire = function fire (event, data, downward) {
     // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
@@ -2423,7 +2423,7 @@ Yox.prototype.copy = function copy (data, deep) {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.14";
+Yox.version = "1.0.0-alpha.15";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

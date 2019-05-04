@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.14
+ * yox.js v1.0.0-alpha.15
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -3441,7 +3441,10 @@ COMPOSITION_END = 'compositionend', domain = 'http://www.w3.org/', namespaces = 
                 var customEvent = event instanceof CustomEvent
                     ? event
                     : new CustomEvent(event.type, createEvent(event, node));
-                emitter.fire(customEvent.type, [customEvent]);
+                if (customEvent.type !== type) {
+                    customEvent.type = type;
+                }
+                emitter.fire(type, [customEvent]);
             };
             nativeListeners[type] = nativeListener;
             if (special) {
@@ -3487,11 +3490,11 @@ specialEvents[EVENT_MODEL] = {
         });
         domApi.on(node, COMPOSITION_END, listener[COMPOSITION_END] = function (event) {
             locked = FALSE;
-            listener(new CustomEvent(EVENT_MODEL, event));
+            listener(event);
         });
         addEventListener(node, EVENT_INPUT, listener[EVENT_INPUT] = function (event) {
             if (!locked) {
-                listener(new CustomEvent(EVENT_MODEL, event));
+                listener(event);
             }
         });
     },
@@ -4036,7 +4039,7 @@ Yox.prototype.off = function off (type, listener) {
     return this;
 };
 /**
- * 触发事件
+ * 发射事件
  */
 Yox.prototype.fire = function fire (event, data, downward) {
     // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
@@ -4385,7 +4388,7 @@ Yox.prototype.copy = function copy (data, deep) {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.14";
+Yox.version = "1.0.0-alpha.15";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
