@@ -722,7 +722,7 @@ users.1 Object {name: "John"}
 
 ### $data
 
-触发**组件**事件时，通过 `$data` 获取当前的事件数据，如下：
+触发 `组件事件` 时，通过 `$data` 获取当前的事件数据，如下：
 
 ```html
 <Button on-click="submit($event, $data)">

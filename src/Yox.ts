@@ -624,7 +624,7 @@ export default class Yox implements YoxInterface {
   }
 
   /**
-   * 触发事件
+   * 发射事件
    */
   fire(
     event: string | CustomEvent,

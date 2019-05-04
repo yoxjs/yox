@@ -6536,7 +6536,7 @@
       return this;
   };
   /**
-   * 触发事件
+   * 发射事件
    */
   Yox.prototype.fire = function fire (event, data, downward) {
       // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
