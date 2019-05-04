@@ -441,7 +441,7 @@ this.off('.button')
 
 ### phase
 
-当 Yox 实例调用 `fire(type)` 方法发射一个事件，如果该实例监听了这个事件，此时 `event.phase` 的值为 `0`，如下：
+当 Yox 实例调用 `fire(type)` 方法发射一个事件，如果该实例绑定了这个事件，此时 `event.phase` 的值为 `0`，如下：
 
 ```js
 {

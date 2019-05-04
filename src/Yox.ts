@@ -582,8 +582,15 @@ export default class Yox implements YoxInterface {
     type: string | Record<string, signature.listener>,
     listener?: signature.listener
   ): YoxInterface {
-    this.$emitter.on(type, listener, { ctx: this })
-    return this
+    const instance = this
+    instance.$emitter.on(
+      type,
+      {
+        fn: listener,
+        ctx: instance
+      }
+    )
+    return instance
   }
 
   /**
@@ -593,8 +600,16 @@ export default class Yox implements YoxInterface {
     type: string | Record<string, signature.listener>,
     listener?: signature.listener
   ): YoxInterface {
-    this.$emitter.on(type, listener, { ctx: this, max: 1 })
-    return this
+    const instance = this
+    instance.$emitter.on(
+      type,
+      {
+        fn: listener,
+        ctx: instance,
+        max: 1
+      }
+    )
+    return instance
   }
 
   /**

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.13
+ * yox.js v1.0.0-alpha.14
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1054,16 +1054,12 @@
    *
    * @param type
    * @param listener
-   * @param extra
    */
-  Emitter.prototype.on = function on (type, listener, extra) {
+  Emitter.prototype.on = function on (type, listener) {
       var instance = this, listeners = instance.listeners, addListener = function (item, type) {
           if (item) {
               var options = func(item) ? { fn: item } : item;
               if (object(options) && func(options.fn)) {
-                  if (extra) {
-                      extend(options, extra);
-                  }
                   var ref = parseNamespace(instance.ns, type);
                       var name = ref.name;
                       var ns = ref.ns;
@@ -1175,10 +1171,9 @@
    */
   function matchNamespace(namespace, options) {
       var ns = options.ns;
-      if (ns && namespace) {
-          return ns === namespace;
-      }
-      return TRUE;
+      return ns && namespace
+          ? ns === namespace
+          : TRUE;
   }
 
   function isNative (target) {
@@ -3208,10 +3203,9 @@
       clear(instance);
   };
 
-  var doc = DOCUMENT, 
   // 这里先写 IE9 支持的接口
-  innerText = 'textContent', innerHTML = 'innerHTML', findElement = function (selector) {
-      var node = doc.querySelector(selector);
+  var innerText = 'textContent', innerHTML = 'innerHTML', findElement = function (selector) {
+      var node = DOCUMENT.querySelector(selector);
       if (node) {
           return node;
       }
@@ -3228,9 +3222,9 @@
   }, createEvent = function (event, node) {
       return event;
   };
-  if (doc) {
-      // 此时 doc.body 不一定有值，比如 script 放在 head 里
-      if (!doc.documentElement.classList) {
+  if (DOCUMENT) {
+      // 此时 document.body 不一定有值，比如 script 放在 head 里
+      if (!DOCUMENT.documentElement.classList) {
           addClass = function (node, className) {
               var classes = node.className.split(CHAR_WHITESPACE);
               if (!has(classes, className)) {
@@ -3247,7 +3241,7 @@
       }
       // 为 IE9 以下浏览器打补丁
       {
-          if (!doc.addEventListener) {
+          if (!DOCUMENT.addEventListener) {
               var PROPERTY_CHANGE = 'propertychange';
               addEventListener = function (node, type, listener) {
                   if (type === EVENT_INPUT) {
@@ -3311,7 +3305,7 @@
                   if (codeAt(selector, 0) === 35) {
                       selector = slice(selector, 1);
                   }
-                  var node = doc.getElementById(selector);
+                  var node = DOCUMENT.getElementById(selector);
                   if (node) {
                       return node;
                   }
@@ -3340,14 +3334,14 @@
   }, specialEvents = {}, domApi = {
       createElement: function createElement(tag, isSvg) {
           return isSvg
-              ? doc.createElementNS(namespaces.svg, tag)
-              : doc.createElement(tag);
+              ? DOCUMENT.createElementNS(namespaces.svg, tag)
+              : DOCUMENT.createElement(tag);
       },
       createText: function createText(text) {
-          return doc.createTextNode(text);
+          return DOCUMENT.createTextNode(text);
       },
       createComment: function createComment(text) {
-          return doc.createComment(text);
+          return DOCUMENT.createComment(text);
       },
       prop: function prop(node, name, value) {
           if (isDef(value)) {
@@ -4021,15 +4015,24 @@
    * 监听事件
    */
   Yox.prototype.on = function on (type, listener) {
-      this.$emitter.on(type, listener, { ctx: this });
-      return this;
+      var instance = this;
+      instance.$emitter.on(type, {
+          fn: listener,
+          ctx: instance
+      });
+      return instance;
   };
   /**
    * 监听一次事件
    */
   Yox.prototype.once = function once (type, listener) {
-      this.$emitter.on(type, listener, { ctx: this, max: 1 });
-      return this;
+      var instance = this;
+      instance.$emitter.on(type, {
+          fn: listener,
+          ctx: instance,
+          max: 1
+      });
+      return instance;
   };
   /**
    * 取消监听事件
@@ -4388,7 +4391,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.13";
+  Yox.version = "1.0.0-alpha.14";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
