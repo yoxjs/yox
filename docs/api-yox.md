@@ -8,7 +8,7 @@
 
 ### Yox.nextTick
 
-* **参数**: `(task: Function)`
+* **参数**: `(task: Function, context?: any)`
 * **返回值**: 无
 
 通过 [NextTask](https://github.com/yoxjs/yox-common/blob/master/src/util/NextTask.ts) 的共享单例，插入执行一次异步任务。
