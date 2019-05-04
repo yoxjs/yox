@@ -161,45 +161,51 @@ function (event, data) {
 
 ## 调用方法
 
-你也可以调用 `methods` 定义的方法。
-
-在 `元素节点` 调用方法，默认会传入事件对象，如下：
+你也可以调用 Yox 的实例方法，除了 `methods` 定义的业务层方法，还包括 Yox 内置的方法。
 
 ```html
-<button on-click="submit()">
-  Submit
+<button on-click="toggle('isHidden')">
+  Toggle
 </button>
 ```
 
+> 内置方法，参考 **API** - **实例方法**
+
+### 调用参数
+
+调用参数支持从 `data` 直接读取，如下：
+
+数据
+
 ```js
 {
+  data: {
+    users: [
+      { id: '1', name: 'first' },
+      { id: '2', name: 'second }
+    ]
+  },
   methods: {
-    submit: function (event) {
-      // this 指向触发事件的组件实例
+    select: function (user, index) {
+
     }
   }
 }
 ```
 
-在 `组件节点` 调用方法，默认会传入事件对象和数据对象，如下：
+模板
 
 ```html
-<Button on-click="submit()">
+<div>
+  {{#each users:index}}
+    <button on-click="select(this, index)">
+      {{name}}
+    </button>
+  {{/each}}
+</div>
 ```
 
-```js
-{
-  methods: {
-    submit: function (event, data) {
-      // this 指向触发事件的组件实例
-    }
-  }
-}
-```
-
-## 特殊变量
-
-在 `元素节点` 上监听事件，当事件触发时，会创建 `$event` 变量，如下：
+此外，还可以读取 `特殊变量`，如下：
 
 ```html
 <button on-click="submit($event)">
@@ -207,14 +213,7 @@ function (event, data) {
 </button>
 ```
 
-在 `组件节点` 上监听事件，当事件触发时，会创建 `$event` 和 `$data` 变量，如下：
-
-```html
-<Button on-click="submit($event, $data)" />
-```
-
-> 更多内容，参考 **模板语法** - **特殊变量**
-
+> 特殊变量，参考 **模板** - **特殊变量**（很重要，一定要看一遍）
 
 ## 停止事件传递
 
@@ -243,6 +242,8 @@ function (event, data) {
 
 在事件处理函数中，调用 `event.prevent()` 可以阻止事件的默认行为。
 
+> 通常是阻止 `DOM 事件` 的默认行为
+
 ```js
 {
   events: {
@@ -255,6 +256,267 @@ function (event, data) {
 
 > `event.prevent()` 是 `event.preventDefault()` 的简单版本。
 
+## 绑定事件
+
+你可以通过配置 `events` 绑定多个事件，这是 Yox 推荐的方式，如下：
+
+```js
+{
+  events: {
+    event1: function (event, data) {
+      // 如果是组件事件，可能会有 data，这取决于发送方是否发送了数据
+    },
+    event2: function (event, data) {
+
+    },
+    ...
+  }
+}
+```
+
+如果你使用了 `pure` 版本，或者需要手动绑定事件，可以调用 Yox 实例的 `on()` 方法，如下：
+
+```js
+this.on(type, ?listener)
+```
+
+如果 `type` 是个 `Object`，可以一次绑定多个事件，如下：
+
+```js
+this.on({
+  event1: function (event, data) {
+    // 如果是组件事件，可能会有 data，这取决于发送方是否发送了数据
+  },
+  event2: function (event, data) {
+
+  },
+  ...
+})
+```
+
+如果响应一次事件后需要解绑事件，可调用 `once()` 方法，方法签名完全相同。
+
+## 解绑事件
+
+你可以调用 Yox 实例的 `off()` 方法手动解绑事件，如下：
+
+```js
+this.off(?type, ?listener)
+```
+
+如果不传 `listener` 参数，可以解绑该 `type` 绑定的所有事件处理函数，如下：
+
+```js
+this.off('submit')
+```
+
+如果不传 `type` 参数，可以解绑该 Yox 绑定的所有事件处理函数，如下：
+
+```js
+this.off()
+```
+
+在一个事件驱动系统中，这是非常有用的特性，希望有一天你能体会到我们的良苦用心。
+
+## 触发事件
+
+你可以调用 Yox 实例的 `fire()` 方法发射事件，默认向上发射事件，即冒泡事件，它会一直冒泡到根组件。
+
+```js
+this.fire('submit')
+```
+
+你也可以带上一些数据，数据必须是个 `Object`，事件处理函数的第二个参数可以取到发送的数据。
+
+```js
+this.fire('submit', { name: 'yox' })
+```
+
+```js
+{
+  events: {
+    submit: function (event, data) {
+      // data 是 { name: 'yox' }
+    }
+  }
+}
+```
+
+同理，你也可以向下发射事件，事件会一层接一层的向下传递，直到尽头。
+
+```js
+this.fire('submit', true)
+this.fire('submit', { name: 'yox' }, true)
+```
+
+## 事件命名空间
+
+`Yox` 实例还支持事件命名空间，前面提到的所有事件的命名空间都是 `""`，因此你感觉不到命名空间的存在。
+
+### 绑定事件
+
+绑定某个命名空间下的事件，如下：
+
+```js
+this.on('click.button', function (event) { })
+```
+
+发射某个命名空间下的事件，如下：
+
+```js
+this.fire('click.button')
+```
+
+如你所见，事件命名空间只是在 `事件名称` 后面加了一个 `.namespace` 而已。
+
+它的使用规则同样很简单，只有当绑定的事件（接收方）和发射的事件（发送方）`同时` 包含命名空间时，才会判断命名空间是否匹配。
+
+我们通过例子加深印象，首先绑定三个事件，如下：
+
+```js
+// 不指定命名空间
+this.on('submit', function () {})
+// 指定命名空间为 a
+this.on('submit.a', function () {})
+// 指定命名空间为 b
+this.on('submit.b', function () {})
+```
+
+发射 `submit` 事件，这三个事件处理函数都会执行，如下：
+
+```js
+this.fire('submit')
+```
+
+> 发送方没有命名空间，不会判断命名空间是否匹配
+
+发射 `submit.a` 事件，只有 `submit` 和 `submit.a` 会执行，如下：
+
+```js
+this.fire('submit.a')
+```
+
+> `submit` 会执行的原因是接收方没有命名空间，不会判断命名空间是否匹配
+
+发射 `submit.b` 事件，只有 `submit` 和 `submit.b` 会执行，如下：
+
+```js
+this.fire('submit.b')
+```
+
+### 解绑事件
+
+解绑事件，也可以指定命名空间，如下：
+
+```js
+this.off('click.button', listener)
+```
+
+如你所见，`事件名称`、`事件命名空间` 和 `事件处理函数` 三者必须同时匹配才能解绑成功。
+
+如果不传 `listener` 参数，只要匹配 `事件名称` 和 `事件命名空间` 就能解绑成功，如下：
+
+```js
+this.off('click.button')
+```
+
+甚至可以省略 `事件名称`，此时只要匹配 `事件命名空间` 就能解绑成功，如下：
+
+```js
+this.off('.button')
+```
+
+## 事件对象
+
+当 `DOM 事件` 或 `组件事件` 触发后，Yox 会把它封装成 `Yox.Event`，它有如下属性：
+
+* `type`: 事件名称 + 事件命名空间（如果有的话）
+* `phase`: 事件处于什么阶段
+* `target`: 是哪个组件发出的事件
+* `originalEvent`: 被封装的原始事件
+* `isPrevented`: 是否已阻止事件的默认行为
+* `isStoped`: 是否已停止向上或向下传递事件
+* `listener`: 当前正在执行的事件处理函数
+
+### type
+
+`type` 就是 `fire(type)` 中的 `type`，它通常是事件名称。
+
+如果指定了命名空间，它的格式为 `name.namespace`。
+
+### phase
+
+当 Yox 实例调用 `fire(type)` 方法发射一个事件，如果该实例绑定了这个事件，此时 `event.phase` 的值为 `0`，如下：
+
+```js
+{
+  events: {
+    mounted: function (event) {
+      // 处理当前组件发出的事件
+      // event.phase 是 0
+    }
+  },
+  afterMount: function () {
+    this.fire('mounted')
+  }
+}
+```
+
+> 可通过 `Yox.Event.PHASE_CURRENT` 读取常量值
+
+当 Yox 实例 `向上` 发射事件，且事件已流转到父组件，此时 `event.phase` 的值为 `1`。
+
+> 可通过 `Yox.Event.PHASE_UPWARD` 读取常量值
+
+当 Yox 实例 `向下` 发射事件，且事件已流转到子组件，此时 `event.phase` 的值为 `-1`。
+
+> 可通过 `Yox.Event.PHASE_DOWNWARD` 读取常量值
+
+### target
+
+触发事件后，内部会第一时间将 `event.target` 指向触发事件的 Yox 实例。
+
+### originalEvent
+
+`DOM 事件` 触发后，内部会把它封装成 `Yox.Event` 对象再进行分发，此时 `originalEvent` 指向 `DOM 事件`。
+
+```html
+<button on-click="click">
+  Click
+</button>
+```
+
+```js
+// DOM 事件的事件处理函数
+function (domEvent) {
+  var event = new Yox.Event(domEvent.type, domEvent)
+  // event.originalEvent 指向 domEvent
+}
+```
+
+封装后的 `Yox.Event` 默认会开始向上冒泡，当在 `组件节点` 监听事件，并转换成另一个事件后，会把源事件再次封装，如下：
+
+```js
+function (type, event) {
+  var newEvent = new Yox.Event(type, event)
+  // event.originalEvent 指向 event
+}
+```
+
+### listener
+
+下面用一个例子说明为什么要加 `listener` 属性，如下：
+
+```js
+{
+  events: {
+    submit: function (event) {
+      // event.listener 非常便于事件解绑
+      this.off('submit', event.listener)
+    }
+  }
+}
+```
 
 ## 自定义事件
 
@@ -289,195 +551,4 @@ Yox.dom.specialEvents.tap = {
 <button on-tap="submit()">
   Submit
 </button>
-```
-
-## 绑定事件
-
-调用 Yox 实例的 `on()` 方法手动绑定事件，如下：
-
-```js
-this.on(type, ?listener)
-```
-
-当 `type` 是个对象时，可绑定多个事件，如下：
-
-```js
-this.on({
-  click1: function () {
-
-  },
-  click2: function () {
-
-  },
-  ...
-})
-```
-
-如果响应一次事件后就要解绑事件，可换成 `once()` 方法。
-
-## 解绑事件
-
-调用 Yox 实例的 `off()` 方法手动解绑事件，如下：
-
-```js
-this.off(type, ?listener)
-```
-
-如果不传 `listener`，则解绑该 `type` 绑定的所有事件处理函数。
-
-## 触发事件
-
-向上发射事件，即冒泡事件，它会一直冒泡到根组件。
-
-```js
-this.fire('submit')
-```
-
-向上发射事件，并带上一些数据。
-
-```js
-this.fire('submit', { name: 'yox' })
-```
-
-> 注意：数据必须是个 `Object`
-
-向下发射事件，事件会一层接一层的往下传递，直到尽头。
-
-```js
-this.fire('submit', true)
-this.fire('submit', { name: 'yox' }, true)
-```
-
-## 事件命名空间
-
-`Yox` 实例还支持事件命名空间，前面提到的所有事件的命名空间都是 `""`，因此你感觉不到命名空间的存在。
-
-### 绑定事件
-
-绑定某个命名空间下的事件，如下：
-
-```js
-this.on('click.button', function (event) {})
-```
-
-发射某个命名空间下的事件，如下：
-
-```js
-this.fire('click.button')
-```
-
-如你所见，事件命名空间只是在 `事件名称` 后面加了一个 `.namespace` 而已。
-
-它的使用规则同样很简单，只有当绑定的事件（接收方）和发射的事件（发送方）`同时` 包含命名空间时，才会判断命名空间是否匹配。
-
-我们通过例子加深印象，首先绑定三个事件，如下：
-
-```js
-// 不指定命名空间
-this.on('submit', function () {})
-// 指定命名空间为 a
-this.on('submit.a', function () {})
-// 指定命名空间为 b
-this.on('submit.b', function () {})
-```
-
-发射 `submit` 事件，这三个事件处理函数都会执行，如下：
-
-```js
-this.fire('submit')
-```
-
-> 发送方没有命名空间
-
-发射 `submit.a` 事件，只有 `submit` 和 `submit.a` 会执行，如下：
-
-```js
-this.fire('submit.a')
-```
-
-> `submit` 会执行是因为接收方没有命名空间
-
-发射 `submit.b` 事件，只有 `submit` 和 `submit.b` 会执行，如下：
-
-```js
-this.fire('submit.b')
-```
-
-### 解绑事件
-
-解绑事件，也可以指定命名空间，如下：
-
-```js
-this.off('click.button', listener)
-```
-
-如你所见，`事件名称`、`事件命名空间` 和 `事件处理函数` 三者必须同时匹配才能解绑成功。
-
-如果不传 `listener`，只要匹配 `事件名称` 和 `事件命名空间` 就能解绑成功，如下：
-
-```js
-this.off('click.button')
-```
-
-甚至可以省略 `事件名称`，此时只要匹配 `事件命名空间` 就能解绑成功，如下：
-
-```js
-this.off('.button')
-```
-
-## 事件对象
-
-当 `DOM 事件` 或 `组件事件` 触发后，Yox 会把它封装成 `Yox.Event`，它有如下属性：
-
-* `type`: 事件名称 + 事件命名空间（如果有的话）
-* `phase`: 事件处于什么阶段
-* `target`: 是哪个组件发出的事件
-* `originalEvent`: 被封装的原始事件
-* `isPrevented`: 是否已阻止事件的默认行为
-* `isStoped`: 是否已停止向上或向下传递事件
-* `listener`: 当前正在执行的事件处理函数
-
-需要重点介绍的属性有两个：`phase` 和 `listener`。
-
-### phase
-
-当 Yox 实例调用 `fire(type)` 方法发射一个事件，如果该实例绑定了这个事件，此时 `event.phase` 的值为 `0`，如下：
-
-```js
-{
-  events: {
-    mounted: function (event) {
-      // 处理当前组件发出的事件
-      // event.phase 是 0
-    }
-  },
-  afterMount: function () {
-    this.fire('mounted')
-  }
-}
-```
-
-> 可通过 `Yox.Event.PHASE_CURRENT` 读取常量值
-
-当 Yox 实例 `向上` 发射事件，且事件已流转到父组件，此时 `event.phase` 的值为 `1`。
-
-> 可通过 `Yox.Event.PHASE_UPWARD` 读取常量值
-
-当 Yox 实例 `向下` 发射事件，且事件已流转到子组件，此时 `event.phase` 的值为 `-1`。
-
-> 可通过 `Yox.Event.PHASE_DOWNWARD` 读取常量值
-
-### listener
-
-下面用一个例子说明为什么要加 `listener` 属性，如下：
-
-```js
-{
-  events: {
-    submit: function (event) {
-      // event.listener 非常便于事件解绑
-      this.off('submit', event.listener)
-    }
-  }
-}
 ```
