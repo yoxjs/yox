@@ -6,9 +6,9 @@ import * as keypathUtil from 'yox-common/src/util/keypath'
 import VNode from 'yox-type/src/vnode/VNode'
 import Directive from 'yox-type/src/vnode/Directive'
 import DirectiveHooks from 'yox-type/src/hooks/Directive'
-import Yox from 'yox-type/src/Yox'
+import Yox from 'yox-type/src/interface/Yox'
 
-import api from 'yox-dom/index'
+import api from 'yox-dom/src/dom'
 
 const directive: DirectiveHooks = {
 

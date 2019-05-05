@@ -7,11 +7,11 @@ import * as is from 'yox-common/src/util/is'
 import * as env from 'yox-common/src/util/env'
 import * as array from 'yox-common/src/util/array'
 
-import * as config from 'yox-config/index'
-import api from 'yox-dom/index'
+import * as config from 'yox-config/src/config'
+import api from 'yox-dom/src/dom'
 
-import * as signature from 'yox-type/index'
-import Yox from 'yox-type/src/Yox'
+import * as type from 'yox-type/src/type'
+import Yox from 'yox-type/src/interface/Yox'
 import VNode from 'yox-type/src/vnode/VNode'
 import Directive from 'yox-type/src/vnode/Directive'
 import DirectiveHooks from 'yox-type/src/hooks/Directive'
@@ -147,9 +147,9 @@ directive: DirectiveHooks = {
 
     lazy = vnode.lazy[config.DIRECTIVE_MODEL] || vnode.lazy[env.EMPTY_STRING],
 
-    set: signature.watcher,
+    set: type.watcher,
 
-    sync: signature.watcher,
+    sync: type.watcher,
 
     component: Yox,
 
@@ -215,7 +215,7 @@ directive: DirectiveHooks = {
       component.watch(viewBinding, sync)
     }
     else {
-      api.on(element, eventName, sync as signature.nativeListener)
+      api.on(element, eventName, sync as type.nativeListener)
     }
 
     // 监听数据，修改界面
@@ -226,7 +226,7 @@ directive: DirectiveHooks = {
         component.unwatch(viewBinding, sync)
       }
       else {
-        api.off(element, eventName, sync as signature.nativeListener)
+        api.off(element, eventName, sync as type.nativeListener)
       }
       context.unwatch(dataBinding, set)
     }

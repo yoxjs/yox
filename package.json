@@ -52,11 +52,11 @@
   },
   "dependencies": {
     "yox-common": "^0.18.43",
-    "yox-config": "^0.1.6",
-    "yox-dom": "^0.0.39",
-    "yox-observer": "^0.17.37",
-    "yox-snabbdom": "^0.19.39",
-    "yox-template-compiler": "^0.27.62",
-    "yox-type": "^0.0.59"
+    "yox-config": "^0.1.7",
+    "yox-dom": "^0.0.41",
+    "yox-observer": "^0.17.39",
+    "yox-snabbdom": "^0.19.41",
+    "yox-template-compiler": "^0.27.63",
+    "yox-type": "^0.0.62"
   }
 }

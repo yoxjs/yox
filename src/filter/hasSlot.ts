@@ -1,4 +1,4 @@
-import * as config from 'yox-config/index'
+import * as config from 'yox-config/src/config'
 
 import isDef from 'yox-common/src/function/isDef'
 

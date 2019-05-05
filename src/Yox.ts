@@ -12,26 +12,26 @@ import * as string from 'yox-common/src/util/string'
 import * as object from 'yox-common/src/util/object'
 import * as logger from 'yox-common/src/util/logger'
 
-import * as config from 'yox-config/index'
-import * as snabbdom from 'yox-snabbdom/index'
+import * as config from 'yox-config/src/config'
+import * as snabbdom from 'yox-snabbdom/src/snabbdom'
 
 import * as templateCompiler from 'yox-template-compiler/src/compiler'
 import * as templateStringify from 'yox-template-compiler/src/stringify'
 import * as templateRender from 'yox-template-compiler/src/renderer'
 import VNode from 'yox-type/src/vnode/VNode'
-import YoxInterface from 'yox-type/src/Yox'
+import YoxInterface from 'yox-type/src/interface/Yox'
 import YoxOptions from 'yox-type/src/options/Yox'
 import ComputedOptions from 'yox-type/src/options/Computed'
 import WatcherOptions from 'yox-type/src/options/Watcher'
 import DirectiveHooks from 'yox-type/src/hooks/Directive'
 import TransitionHooks from 'yox-type/src/hooks/Transition'
-import PropRule from 'yox-type/src/PropRule'
-import * as signature from 'yox-type/index'
+import PropRule from 'yox-type/src/interface/PropRule'
+import * as type from 'yox-type/src/type'
 
 import Computed from 'yox-observer/src/Computed'
 import Observer from 'yox-observer/src/Observer'
 
-import domApi from 'yox-dom/index'
+import domApi from 'yox-dom/src/dom'
 
 import event from './directive/event'
 import model from './directive/model'
@@ -166,7 +166,7 @@ export default class Yox implements YoxInterface {
 
   public static component(
     name: string | Record<string, YoxOptions>,
-    component?: YoxOptions | signature.asyncComponent
+    component?: YoxOptions | type.asyncComponent
   ): YoxOptions | void {
     if (process.env.NODE_ENV !== 'pure') {
       if (is.string(name)) {
@@ -175,7 +175,7 @@ export default class Yox implements YoxInterface {
           return getResource(globalComponents, name as string)
         }
         else if (is.func(component)) {
-          getComponentAsync(globalComponents, name as string, component as signature.asyncComponent)
+          getComponentAsync(globalComponents, name as string, component as type.asyncComponent)
           return
         }
       }
@@ -210,7 +210,7 @@ export default class Yox implements YoxInterface {
   /**
    * 验证 props，无爱请重写
    */
-  public static checkPropTypes(props: signature.data, propTypes: Record<string, PropRule>): signature.data {
+  public static checkPropTypes(props: type.data, propTypes: Record<string, PropRule>): type.data {
     if (process.env.NODE_ENV === 'dev') {
       const result = object.copy(props)
       object.each(
@@ -332,7 +332,7 @@ export default class Yox implements YoxInterface {
     if (computed) {
       object.each(
         computed,
-        function (options: signature.computedGetter | ComputedOptions, keypath: string) {
+        function (options: type.computedGetter | ComputedOptions, keypath: string) {
           observer.addComputed(keypath, options)
         }
       )
@@ -535,7 +535,7 @@ export default class Yox implements YoxInterface {
    */
   addComputed(
     keypath: string,
-    computed: signature.computedGetter | ComputedOptions
+    computed: type.computedGetter | ComputedOptions
   ): Computed | void {
     return this.$observer.addComputed(keypath, computed)
   }
@@ -564,7 +564,7 @@ export default class Yox implements YoxInterface {
    * 设值
    */
   set(
-    keypath: string | signature.data,
+    keypath: string | type.data,
     value?: any
   ): void {
     // 组件经常有各种异步改值，为了避免组件销毁后依然调用 set
@@ -579,8 +579,8 @@ export default class Yox implements YoxInterface {
    * 监听事件
    */
   on(
-    type: string | Record<string, signature.listener>,
-    listener?: signature.listener
+    type: string | Record<string, type.listener>,
+    listener?: type.listener
   ): YoxInterface {
     const instance = this
     instance.$emitter.on(
@@ -597,8 +597,8 @@ export default class Yox implements YoxInterface {
    * 监听一次事件
    */
   once(
-    type: string | Record<string, signature.listener>,
-    listener?: signature.listener
+    type: string | Record<string, type.listener>,
+    listener?: type.listener
   ): YoxInterface {
     const instance = this
     instance.$emitter.on(
@@ -617,7 +617,7 @@ export default class Yox implements YoxInterface {
    */
   off(
     type: string,
-    listener?: signature.listener
+    listener?: type.listener
   ): YoxInterface {
     this.$emitter.off(type, listener)
     return this
@@ -627,8 +627,8 @@ export default class Yox implements YoxInterface {
    * 发射事件
    */
   fire(
-    event: string | CustomEvent,
-    data?: signature.data | boolean,
+    type: string | CustomEvent,
+    data?: type.data | boolean,
     downward?: boolean
   ): boolean {
 
@@ -638,11 +638,11 @@ export default class Yox implements YoxInterface {
 
     let instance = this,
 
-    eventInstance = event instanceof CustomEvent ? event : new CustomEvent(event),
+    eventInstance = type instanceof CustomEvent ? type : new CustomEvent(type),
 
     eventArgs: any[] = [eventInstance],
 
-    isComplete: boolean | void
+    isComplete: boolean
 
     // 告诉外部是谁发出的事件
     if (!eventInstance.target) {
@@ -651,7 +651,7 @@ export default class Yox implements YoxInterface {
 
     // 比如 fire('name', true) 直接向下发事件
     if (is.object(data)) {
-      array.push(eventArgs, data as signature.data)
+      array.push(eventArgs, data as type.data)
     }
     else if (data === env.TRUE) {
       downward = env.TRUE
@@ -685,8 +685,8 @@ export default class Yox implements YoxInterface {
    * 监听数据变化
    */
   watch(
-    keypath: string | Record<string, signature.watcher | WatcherOptions>,
-    watcher?: signature.watcher | WatcherOptions,
+    keypath: string | Record<string, type.watcher | WatcherOptions>,
+    watcher?: type.watcher | WatcherOptions,
     immediate?: boolean
   ): YoxInterface {
     this.$observer.watch(keypath, watcher, immediate)
@@ -698,7 +698,7 @@ export default class Yox implements YoxInterface {
    */
   unwatch(
     keypath: string,
-    watcher?: signature.watcher
+    watcher?: type.watcher
   ): YoxInterface {
     this.$observer.unwatch(keypath, watcher)
     return this
@@ -740,7 +740,7 @@ export default class Yox implements YoxInterface {
 
   component(
     name: string | Record<string, YoxOptions>,
-    component?: YoxOptions | signature.asyncComponent
+    component?: YoxOptions | type.asyncComponent
   ): YoxOptions | void {
     if (process.env.NODE_ENV !== 'pure') {
       const instance = this, { $components } = instance
@@ -750,8 +750,8 @@ export default class Yox implements YoxInterface {
           return getResource($components, name as string, Yox.component)
         }
         else if (is.func(component)) {
-          if (!getComponentAsync($components, name as string, component as signature.asyncComponent)) {
-            getComponentAsync(globalComponents, name as string, component as signature.asyncComponent)
+          if (!getComponentAsync($components, name as string, component as type.asyncComponent)) {
+            getComponentAsync(globalComponents, name as string, component as type.asyncComponent)
           }
           return
         }
@@ -901,7 +901,7 @@ export default class Yox implements YoxInterface {
    *
    * @param props
    */
-  checkPropTypes(props: signature.data): signature.data {
+  checkPropTypes(props: type.data): type.data {
     const { propTypes } = this.$options
     return propTypes
       ? Yox.checkPropTypes(props, propTypes)
@@ -987,19 +987,8 @@ export default class Yox implements YoxInterface {
   /**
    * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
    */
-  nextTick(task: Function, prepend?: boolean): void {
-
-    const instance = this,
-
-    { nextTask } = instance.$observer
-
-    if (prepend) {
-      nextTask.prepend(task, instance)
-    }
-    else {
-      nextTask.append(task, instance)
-    }
-
+  nextTick(task: Function): void {
+    this.$observer.nextTask.append(task, this)
   }
 
   /**
@@ -1108,7 +1097,7 @@ function matchType(value: any, type: string) {
     : toString.call(value).toLowerCase() === `[object ${type}]`
 }
 
-function afterCreateHook(instance: Yox, watchers: Record<string, signature.watcher | WatcherOptions> | void) {
+function afterCreateHook(instance: Yox, watchers: Record<string, type.watcher | WatcherOptions> | void) {
 
   if (watchers) {
     instance.watch(watchers)
@@ -1118,7 +1107,7 @@ function afterCreateHook(instance: Yox, watchers: Record<string, signature.watch
 
 }
 
-function setFlexibleOptions(instance: Yox, key: string, value: Function | signature.data | void) {
+function setFlexibleOptions(instance: Yox, key: string, value: Function | type.data | void) {
   if (is.func(value)) {
     instance[key](execute(value, instance))
   }
@@ -1127,7 +1116,7 @@ function setFlexibleOptions(instance: Yox, key: string, value: Function | signat
   }
 }
 
-function getComponentAsync(data: signature.data | void, name: string, callback: signature.asyncComponent): boolean | void {
+function getComponentAsync(data: type.data | void, name: string, callback: type.asyncComponent): boolean | void {
   if (data && object.has(data, name)) {
     const component = data[name]
     // 注册的是异步加载函数
@@ -1164,7 +1153,7 @@ function getComponentAsync(data: signature.data | void, name: string, callback: 
   }
 }
 
-function getResource(data: signature.data | void, name: string, lookup?: Function) {
+function getResource(data: type.data | void, name: string, lookup?: Function) {
   if (data && data[name]) {
     return data[name]
   }
@@ -1173,7 +1162,7 @@ function getResource(data: signature.data | void, name: string, lookup?: Functio
   }
 }
 
-function setResource(data: signature.data, name: string | signature.data, value?: any, formatValue?: (value: any) => any) {
+function setResource(data: type.data, name: string | type.data, value?: any, formatValue?: (value: any) => any) {
   if (is.string(name)) {
     data[name as string] = formatValue ? formatValue(value) : value
   }
@@ -1187,7 +1176,7 @@ function setResource(data: signature.data, name: string | signature.data, value?
   }
 }
 
-function mergeResource(locals: signature.data | void, globals: signature.data): signature.data {
+function mergeResource(locals: type.data | void, globals: type.data): type.data {
   return locals && globals
     ? object.extend({}, globals, locals)
     : locals || globals
