@@ -110,8 +110,8 @@ Yox.component('CustomComponent', { ... })
 
 鉴于 `HTML 标签` 的形式通常是小写且没有连字符，我们定义了两种识别方式：
 
-* `组件标签` 包含大写字母，如 `AppHeader`
-* `组件标签` 包含连字符，如 `app-header`
+* `组件标签` 包含大写字母，比如 `AppHeader`
+* `组件标签` 包含连字符，比如 `app-header`
 
 > 某些 svg 标签试图挑战规则，比如 `<missing-glyph>` 和 `<foreignObject>`，放心，它们的反抗是徒劳的。
 
