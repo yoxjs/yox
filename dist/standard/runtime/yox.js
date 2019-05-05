@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.16
+ * yox.js v1.0.0-alpha.17
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1202,7 +1202,7 @@
 
   var shared;
   var NextTask = function NextTask() {
-      this.nextTasks = [];
+      this.tasks = [];
   };
   /**
    * 在队尾添加异步任务
@@ -1212,28 +1212,29 @@
   };
 
   NextTask.prototype.append = function append (func, context) {
-      push(this.nextTasks, {
+      var instance = this;
+          var tasks = instance.tasks;
+      push(tasks, {
           fn: func,
           ctx: context
       });
-      this.start();
+      if (tasks.length === 1) {
+          nextTick$1(function () {
+              instance.run();
+          });
+      }
   };
   /**
    * 在队首添加异步任务
    */
   NextTask.prototype.prepend = function prepend (func, context) {
-      unshift(this.nextTasks, {
+      var instance = this;
+          var tasks = instance.tasks;
+      unshift(tasks, {
           fn: func,
           ctx: context
       });
-      this.start();
-  };
-  /**
-   * 启动下一轮任务
-   */
-  NextTask.prototype.start = function start () {
-      var instance = this;
-      if (instance.nextTasks.length === 1) {
+      if (tasks.length === 1) {
           nextTick$1(function () {
               instance.run();
           });
@@ -1243,17 +1244,17 @@
    * 清空异步队列
    */
   NextTask.prototype.clear = function clear () {
-      this.nextTasks.length = 0;
+      this.tasks.length = 0;
   };
   /**
    * 立即执行异步任务，并清空队列
    */
   NextTask.prototype.run = function run () {
       var ref = this;
-          var nextTasks = ref.nextTasks;
-      if (nextTasks.length) {
-          this.nextTasks = [];
-          each(nextTasks, function (task) {
+          var tasks = ref.tasks;
+      if (tasks.length) {
+          this.tasks = [];
+          each(tasks, function (task) {
               execute(task.fn, task.ctx);
           });
       }
@@ -1425,16 +1426,13 @@
       }
   }
   function createComponent(vnode, options) {
-      if (!options) {
-          return;
-      }
       // 渲染同步加载的组件时，vnode.node 为空
       // 渲染异步加载的组件时，vnode.node 不为空，因为初始化用了占位节点
       var child = (vnode.parent || vnode.context).create(options, vnode, vnode.node), 
       // 组件初始化创建的元素
       node = child.$el;
       if (node) {
-          vnode[NODE] = node;
+          vnode.node = node;
       }
       vnode.data[COMPONENT] = child;
       vnode.data[LOADING] = FALSE;
@@ -1442,10 +1440,7 @@
       update$2(vnode);
       return child;
   }
-  var guid = 0, 
-  // vnode.node 设置成了 readonly，是为了避免外部修改
-  // 但是这里还是要对 vnode.node 进行赋值，只好用变量属性赋值，跳过 ts 的类型检测
-  NODE = 'node';
+  var guid = 0;
   function createData() {
       var data = {};
       data[ID] = ++guid;
@@ -1469,11 +1464,11 @@
       data = createData();
       vnode.data = data;
       if (isText) {
-          vnode[NODE] = api.createText(text);
+          vnode.node = api.createText(text);
           return;
       }
       if (isComment) {
-          vnode[NODE] = api.createComment(text);
+          vnode.node = api.createComment(text);
           return;
       }
       if (isComponent) {
@@ -1498,12 +1493,12 @@
               }
           });
           if (isAsync) {
-              vnode[NODE] = api.createComment(RAW_COMPONENT);
+              vnode.node = api.createComment(RAW_COMPONENT);
               data[LOADING] = TRUE;
           }
       }
       else {
-          node = vnode[NODE] = api.createElement(vnode.tag, vnode.isSvg);
+          node = vnode.node = api.createElement(vnode.tag, vnode.isSvg);
           if (children) {
               addVnodes(api, node, children);
           }
@@ -1561,7 +1556,7 @@
               // 执行到这时，组件还没有挂载到 DOM 树
               // 如果此时直接触发 enter，外部还需要做多余的工作，比如 setTimeout
               // 索性这里直接等挂载到 DOM 数之后再触发
-              context.nextTick(enter, TRUE);
+              context.$observer.nextTask.prepend(enter);
           }
       }
   }
@@ -1788,7 +1783,7 @@
           }
           return;
       }
-      vnode[NODE] = node;
+      vnode.node = node;
       vnode.data = data;
       // 组件正在异步加载，更新为最新的 vnode
       // 当异步加载完成时才能用上最新的 vnode
@@ -3944,11 +3939,11 @@
   /**
    * 发射事件
    */
-  Yox.prototype.fire = function fire (event, data, downward) {
+  Yox.prototype.fire = function fire (type, data, downward) {
       // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
       // 内部为了保持格式统一
       // 需要转成 Event，这样还能知道 target 是哪个组件
-      var instance = this, eventInstance = event instanceof CustomEvent ? event : new CustomEvent(event), eventArgs = [eventInstance], isComplete;
+      var instance = this, eventInstance = type instanceof CustomEvent ? type : new CustomEvent(type), eventArgs = [eventInstance], isComplete;
       // 告诉外部是谁发出的事件
       if (!eventInstance.target) {
           eventInstance.target = instance;
@@ -4193,16 +4188,8 @@
   /**
    * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
    */
-  Yox.prototype.nextTick = function nextTick (task, prepend) {
-      var instance = this;
-          var ref = instance.$observer;
-          var nextTask = ref.nextTask;
-      if (prepend) {
-          nextTask.prepend(task, instance);
-      }
-      else {
-          nextTask.append(task, instance);
-      }
+  Yox.prototype.nextTick = function nextTick (task) {
+      this.$observer.nextTask.append(task, this);
   };
   /**
    * 取反 keypath 对应的数据
@@ -4294,7 +4281,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.16";
+  Yox.version = "1.0.0-alpha.17";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

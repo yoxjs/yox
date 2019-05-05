@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.16
+ * yox.js v1.0.0-alpha.17
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1183,7 +1183,7 @@
 
   var shared;
   var NextTask = function NextTask() {
-      this.nextTasks = [];
+      this.tasks = [];
   };
   /**
    * 在队尾添加异步任务
@@ -1193,28 +1193,29 @@
   };
 
   NextTask.prototype.append = function append (func, context) {
-      push(this.nextTasks, {
+      var instance = this;
+          var tasks = instance.tasks;
+      push(tasks, {
           fn: func,
           ctx: context
       });
-      this.start();
+      if (tasks.length === 1) {
+          nextTick$1(function () {
+              instance.run();
+          });
+      }
   };
   /**
    * 在队首添加异步任务
    */
   NextTask.prototype.prepend = function prepend (func, context) {
-      unshift(this.nextTasks, {
+      var instance = this;
+          var tasks = instance.tasks;
+      unshift(tasks, {
           fn: func,
           ctx: context
       });
-      this.start();
-  };
-  /**
-   * 启动下一轮任务
-   */
-  NextTask.prototype.start = function start () {
-      var instance = this;
-      if (instance.nextTasks.length === 1) {
+      if (tasks.length === 1) {
           nextTick$1(function () {
               instance.run();
           });
@@ -1224,17 +1225,17 @@
    * 清空异步队列
    */
   NextTask.prototype.clear = function clear () {
-      this.nextTasks.length = 0;
+      this.tasks.length = 0;
   };
   /**
    * 立即执行异步任务，并清空队列
    */
   NextTask.prototype.run = function run () {
       var ref = this;
-          var nextTasks = ref.nextTasks;
-      if (nextTasks.length) {
-          this.nextTasks = [];
-          each(nextTasks, function (task) {
+          var tasks = ref.tasks;
+      if (tasks.length) {
+          this.tasks = [];
+          each(tasks, function (task) {
               execute(task.fn, task.ctx);
           });
       }
@@ -2178,11 +2179,11 @@
   /**
    * 发射事件
    */
-  Yox.prototype.fire = function fire (event, data, downward) {
+  Yox.prototype.fire = function fire (type, data, downward) {
       // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
       // 内部为了保持格式统一
       // 需要转成 Event，这样还能知道 target 是哪个组件
-      var instance = this, eventInstance = event instanceof CustomEvent ? event : new CustomEvent(event), eventArgs = [eventInstance], isComplete;
+      var instance = this, eventInstance = type instanceof CustomEvent ? type : new CustomEvent(type), eventArgs = [eventInstance], isComplete;
       // 告诉外部是谁发出的事件
       if (!eventInstance.target) {
           eventInstance.target = instance;
@@ -2294,16 +2295,8 @@
   /**
    * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
    */
-  Yox.prototype.nextTick = function nextTick (task, prepend) {
-      var instance = this;
-          var ref = instance.$observer;
-          var nextTask = ref.nextTask;
-      if (prepend) {
-          nextTask.prepend(task, instance);
-      }
-      else {
-          nextTask.append(task, instance);
-      }
+  Yox.prototype.nextTick = function nextTick (task) {
+      this.$observer.nextTask.append(task, this);
   };
   /**
    * 取反 keypath 对应的数据
@@ -2395,7 +2388,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.16";
+  Yox.version = "1.0.0-alpha.17";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
