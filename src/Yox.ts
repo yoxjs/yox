@@ -1,38 +1,38 @@
-import isDef from 'yox-common/src/function/isDef'
-import execute from 'yox-common/src/function/execute'
+import isDef from '../../yox-common/src/function/isDef'
+import execute from '../../yox-common/src/function/execute'
 
-import CustomEvent from 'yox-common/src/util/CustomEvent'
-import Emitter from 'yox-common/src/util/Emitter'
-import NextTask from 'yox-common/src/util/NextTask'
+import CustomEvent from '../../yox-common/src/util/CustomEvent'
+import Emitter from '../../yox-common/src/util/Emitter'
+import NextTask from '../../yox-common/src/util/NextTask'
 
-import * as is from 'yox-common/src/util/is'
-import * as env from 'yox-common/src/util/env'
-import * as array from 'yox-common/src/util/array'
-import * as string from 'yox-common/src/util/string'
-import * as object from 'yox-common/src/util/object'
-import * as logger from 'yox-common/src/util/logger'
+import * as is from '../../yox-common/src/util/is'
+import * as env from '../../yox-common/src/util/env'
+import * as array from '../../yox-common/src/util/array'
+import * as string from '../../yox-common/src/util/string'
+import * as object from '../../yox-common/src/util/object'
+import * as logger from '../../yox-common/src/util/logger'
 
-import * as config from 'yox-config/src/config'
-import * as snabbdom from 'yox-snabbdom/src/snabbdom'
+import * as config from '../../yox-config/src/config'
+import * as snabbdom from '../../yox-snabbdom/src/snabbdom'
 
-import * as templateCompiler from 'yox-template-compiler/src/compiler'
-import * as templateStringify from 'yox-template-compiler/src/stringify'
-import * as templateRender from 'yox-template-compiler/src/renderer'
-import VNode from 'yox-type/src/vnode/VNode'
-import YoxInterface from 'yox-type/src/interface/Yox'
-import YoxOptions from 'yox-type/src/options/Yox'
-import ComputedOptions from 'yox-type/src/options/Computed'
-import WatcherOptions from 'yox-type/src/options/Watcher'
-import EmitterOptions from 'yox-type/src/options/Emitter'
-import DirectiveHooks from 'yox-type/src/hooks/Directive'
-import TransitionHooks from 'yox-type/src/hooks/Transition'
-import PropRule from 'yox-type/src/interface/PropRule'
-import * as type from 'yox-type/src/type'
+import * as templateCompiler from '../../yox-template-compiler/src/compiler'
+import * as templateStringify from '../../yox-template-compiler/src/stringify'
+import * as templateRender from '../../yox-template-compiler/src/renderer'
+import VNode from '../../yox-type/src/vnode/VNode'
+import YoxInterface from '../../yox-type/src/interface/Yox'
+import YoxOptions from '../../yox-type/src/options/Yox'
+import ComputedOptions from '../../yox-type/src/options/Computed'
+import WatcherOptions from '../../yox-type/src/options/Watcher'
+import EmitterOptions from '../../yox-type/src/options/Emitter'
+import DirectiveHooks from '../../yox-type/src/hooks/Directive'
+import TransitionHooks from '../../yox-type/src/hooks/Transition'
+import PropRule from '../../yox-type/src/interface/PropRule'
+import * as type from '../../yox-type/src/type'
 
-import Computed from 'yox-observer/src/Computed'
-import Observer from 'yox-observer/src/Observer'
+import Computed from '../../yox-observer/src/Computed'
+import Observer from '../../yox-observer/src/Observer'
 
-import domApi from 'yox-dom/src/dom'
+import domApi from '../../yox-dom/src/dom'
 
 import event from './directive/event'
 import model from './directive/model'
@@ -121,7 +121,7 @@ export default class Yox implements YoxInterface {
   /**
    * 编译模板，暴露出来是为了打包阶段的模板预编译
    */
-  public static compile(template: string, stringify?: boolean): Function | string {
+  public static compile(template: string, stringify?: boolean): Function | string | void {
     if (process.env.NODE_ENV !== 'pure') {
       if (process.env.NODE_ENV !== 'runtime') {
         if (!templateStringify.hasStringify(template)) {
@@ -405,8 +405,8 @@ export default class Yox implements YoxInterface {
       // 检查 template
       if (is.string(template)) {
         // 传了选择器，则取对应元素的 html
-        if (selectorPattern.test(template)) {
-          placeholder = domApi.find(template)
+        if (selectorPattern.test(template as string)) {
+          placeholder = domApi.find(template as string)
           if (placeholder) {
             template = domApi.html(placeholder as Element) as string
             placeholder = env.UNDEFINED
@@ -601,7 +601,7 @@ export default class Yox implements YoxInterface {
    * 取消监听事件
    */
   off(
-    type: string,
+    type?: string,
     listener?: type.listener
   ): YoxInterface {
     this.$emitter.off(type, listener)
@@ -1119,7 +1119,7 @@ function addEvents(
   once?: true
 ): Yox {
   if (is.string(type)) {
-    addEvent(instance, type as string, listener, once)
+    addEvent(instance, type as string, listener as type.listener, once)
   }
   else {
     object.each(
@@ -1132,7 +1132,7 @@ function addEvents(
   return instance
 }
 
-function getComponentAsync(data: type.data | void, name: string, callback: type.asyncComponent): boolean | void {
+function getComponentAsync(data: type.data | void, name: string, callback: type.asyncComponent): true | void {
   if (data && object.has(data, name)) {
     const component = data[name]
     // 注册的是异步加载函数
