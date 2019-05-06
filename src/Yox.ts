@@ -1125,7 +1125,7 @@ function getComponentAsync(data: type.data | void, name: string, callback: type.
       if (!$queue) {
         $queue = component.$queue = [callback]
         component(
-          function (replacement: any) {
+          function (replacement: YoxOptions) {
 
             component.$queue = env.UNDEFINED
 
