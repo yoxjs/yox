@@ -23,6 +23,7 @@ import YoxInterface from 'yox-type/src/interface/Yox'
 import YoxOptions from 'yox-type/src/options/Yox'
 import ComputedOptions from 'yox-type/src/options/Computed'
 import WatcherOptions from 'yox-type/src/options/Watcher'
+import EmitterOptions from 'yox-type/src/options/Emitter'
 import DirectiveHooks from 'yox-type/src/hooks/Directive'
 import TransitionHooks from 'yox-type/src/hooks/Transition'
 import PropRule from 'yox-type/src/interface/PropRule'
@@ -39,6 +40,7 @@ import binding from './directive/binding'
 import hasSlot from './filter/hasSlot'
 
 import Plugin from './Plugin'
+
 
 const globalDirectives = {},
 
@@ -555,7 +557,7 @@ export default class Yox implements YoxInterface {
   get(
     keypath: string,
     defaultValue?: any,
-    depIgnore?: boolean
+    depIgnore?: true
   ): any {
     return this.$observer.get(keypath, defaultValue, depIgnore)
   }
@@ -582,15 +584,7 @@ export default class Yox implements YoxInterface {
     type: string | Record<string, type.listener>,
     listener?: type.listener
   ): YoxInterface {
-    const instance = this
-    instance.$emitter.on(
-      type,
-      {
-        fn: listener as Function,
-        ctx: instance
-      }
-    )
-    return instance
+    return addEvents(this, type, listener)
   }
 
   /**
@@ -600,16 +594,7 @@ export default class Yox implements YoxInterface {
     type: string | Record<string, type.listener>,
     listener?: type.listener
   ): YoxInterface {
-    const instance = this
-    instance.$emitter.on(
-      type,
-      {
-        fn: listener as Function,
-        ctx: instance,
-        max: 1
-      }
-    )
-    return instance
+    return addEvents(this, type, listener, env.TRUE)
   }
 
   /**
@@ -628,8 +613,8 @@ export default class Yox implements YoxInterface {
    */
   fire(
     type: string | CustomEvent,
-    data?: type.data | boolean,
-    downward?: boolean
+    data?: type.data | true,
+    downward?: true
   ): boolean {
 
     // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
@@ -687,7 +672,7 @@ export default class Yox implements YoxInterface {
   watch(
     keypath: string | Record<string, type.watcher | WatcherOptions>,
     watcher?: type.watcher | WatcherOptions,
-    immediate?: boolean
+    immediate?: true
   ): YoxInterface {
     this.$observer.watch(keypath, watcher, immediate)
     return this
@@ -1033,7 +1018,7 @@ export default class Yox implements YoxInterface {
    * @param item
    * @param index
    */
-  insert(keypath: string, item: any, index: number | boolean): boolean | void {
+  insert(keypath: string, item: any, index: number | boolean): true | void {
     return this.$observer.insert(keypath, item, index)
   }
 
@@ -1043,7 +1028,7 @@ export default class Yox implements YoxInterface {
    * @param keypath
    * @param item
    */
-  append(keypath: string, item: any): boolean | void {
+  append(keypath: string, item: any): true | void {
     return this.$observer.append(keypath, item)
   }
 
@@ -1053,7 +1038,7 @@ export default class Yox implements YoxInterface {
    * @param keypath
    * @param item
    */
-  prepend(keypath: string, item: any): boolean | void {
+  prepend(keypath: string, item: any): true | void {
     return this.$observer.prepend(keypath, item)
   }
 
@@ -1063,7 +1048,7 @@ export default class Yox implements YoxInterface {
    * @param keypath
    * @param index
    */
-  removeAt(keypath: string, index: number): boolean | void {
+  removeAt(keypath: string, index: number): true | void {
     return this.$observer.removeAt(keypath, index)
   }
 
@@ -1073,7 +1058,7 @@ export default class Yox implements YoxInterface {
    * @param keypath
    * @param item
    */
-  remove(keypath: string, item: any): boolean | void {
+  remove(keypath: string, item: any): true | void {
     return this.$observer.remove(keypath, item)
   }
 
@@ -1083,7 +1068,7 @@ export default class Yox implements YoxInterface {
    * @param data
    * @param deep
    */
-  copy<T>(data: T, deep?: boolean): T {
+  copy<T>(data: T, deep?: true): T {
     return this.$observer.copy(data, deep)
   }
 
@@ -1114,6 +1099,37 @@ function setFlexibleOptions(instance: Yox, key: string, value: Function | type.d
   else if (is.object(value)) {
     instance[key](value)
   }
+}
+
+function addEvent(instance: Yox, type: string, listener: type.listener, once?: true) {
+  const options: EmitterOptions = {
+    fn: listener,
+    ctx: instance
+  }
+  if (once) {
+    options.max = 1
+  }
+  instance.$emitter.on(type, options)
+}
+
+function addEvents(
+  instance: Yox,
+  type: string | Record<string, type.listener>,
+  listener?: type.listener,
+  once?: true
+): Yox {
+  if (is.string(type)) {
+    addEvent(instance, type as string, listener, once)
+  }
+  else {
+    object.each(
+      type,
+      function (value: type.listener, key: string) {
+        addEvent(instance, key, value, once)
+      }
+    )
+  }
+  return instance
 }
 
 function getComponentAsync(data: type.data | void, name: string, callback: type.asyncComponent): boolean | void {
