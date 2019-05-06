@@ -137,23 +137,27 @@ specialControls = {
 directive: DirectiveHooks = {
   bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
 
-    let { context, model } = vnode,
+    let { context, model, lazy } = vnode,
 
     dataBinding = directive.binding as string,
 
-    viewBinding: string,
+    viewBinding: string | void,
 
-    eventName: string,
-
-    lazy = vnode.lazy[config.DIRECTIVE_MODEL] || vnode.lazy[env.EMPTY_STRING],
+    eventName: string | void,
 
     set: type.watcher,
 
     sync: type.watcher,
 
-    component: Yox,
+    component: Yox | void,
 
-    element: HTMLElement
+    element: HTMLElement | void,
+
+    lazyValue: number | true | void
+
+    if (lazy) {
+      lazyValue = lazy[config.DIRECTIVE_MODEL] || lazy[env.EMPTY_STRING]
+    }
 
     if (vnode.isComponent) {
 
@@ -162,7 +166,7 @@ directive: DirectiveHooks = {
       viewBinding = component.$options.model || env.RAW_VALUE
 
       set = function (newValue: any) {
-        component.set(viewBinding, newValue)
+        (component as Yox).set(viewBinding as string, newValue)
       }
 
       sync = function (newValue: any) {
@@ -187,7 +191,7 @@ directive: DirectiveHooks = {
       // 不会在输入法组合文字过程中得到触发事件
       if (!control) {
         control = inputControl
-        if (lazy !== env.TRUE) {
+        if (lazyValue !== env.TRUE) {
           eventName = env.EVENT_MODEL
         }
       }
@@ -206,16 +210,16 @@ directive: DirectiveHooks = {
     }
 
     // 应用 lazy
-    if (lazy && lazy !== env.TRUE) {
-      sync = debounce(sync, lazy)
+    if (lazyValue && lazyValue !== env.TRUE) {
+      sync = debounce(sync, lazyValue)
     }
 
     // 监听交互，修改数据
     if (component) {
-      component.watch(viewBinding, sync)
+      component.watch(viewBinding as string, sync)
     }
     else {
-      api.on(element, eventName, sync as type.nativeListener)
+      api.on(element as HTMLElement, eventName as string, sync as type.nativeListener)
     }
 
     // 监听数据，修改界面
@@ -223,10 +227,10 @@ directive: DirectiveHooks = {
 
     vnode.data[directive.key] = function () {
       if (component) {
-        component.unwatch(viewBinding, sync)
+        component.unwatch(viewBinding as string, sync)
       }
       else {
-        api.off(element, eventName, sync as type.nativeListener)
+        api.off(element as HTMLElement, eventName as string, sync as type.nativeListener)
       }
       context.unwatch(dataBinding, set)
     }

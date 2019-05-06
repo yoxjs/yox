@@ -57,7 +57,7 @@ directive: DirectiveHooks = {
 
       const el = node as HTMLElement
 
-      api.on(el, name, handler as type.listener)
+      api.on(el, name, handler)
       vnode.data[directive.key] = function () {
         api.off(el, name, handler as type.listener)
       }
