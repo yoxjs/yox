@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.18
+ * yox.js v1.0.0-alpha.19
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -191,7 +191,9 @@ function execute (fn, context, args) {
 var CustomEvent = function CustomEvent(type, originalEvent) {
     this.type = type;
     this.phase = CustomEvent.PHASE_CURRENT;
-    this.originalEvent = originalEvent;
+    if (originalEvent) {
+        this.originalEvent = originalEvent;
+    }
 };
 /**
  * 阻止事件的默认行为
@@ -1008,7 +1010,7 @@ Emitter.prototype.fire = function fire (type, args, filter) {
             options.num = options.num ? (options.num + 1) : 1;
             // 注册的 listener 可以指定最大执行次数
             if (options.num === options.max) {
-                instance.off(type, options);
+                instance.off(type, options.fn);
             }
             // 如果没有返回 false，而是调用了 event.stop 也算是返回 false
             if (event) {
@@ -1062,27 +1064,18 @@ Emitter.prototype.has = function has (type, listener) {
  * @param listener
  */
 Emitter.prototype.on = function on (type, listener) {
-    var instance = this, listeners = instance.listeners, addListener = function (item, type) {
-        if (item) {
-            var options = func(item) ? { fn: item } : item;
-            if (object(options) && func(options.fn)) {
-                var ref = parseNamespace(instance.ns, type);
-                    var name = ref.name;
-                    var ns = ref.ns;
-                options.ns = ns;
-                push(listeners[name] || (listeners[name] = []), options);
-                return;
-            }
-        }
-        {
-            fatal("invoke emitter.on(type, listener) failed.");
-        }
-    };
-    if (string(type)) {
-        addListener(listener, type);
+    var instance = this, listeners = instance.listeners, options = func(listener)
+        ? { fn: listener }
+        : listener;
+    if (object(options) && func(options.fn)) {
+        var ref = parseNamespace(instance.ns, type);
+            var name = ref.name;
+            var ns = ref.ns;
+        options.ns = ns;
+        push(listeners[name] || (listeners[name] = []), options);
     }
     else {
-        each$2(type, addListener);
+        fatal("invoke emitter.on(type, listener) failed.");
     }
 };
 /**
@@ -1165,15 +1158,11 @@ function matchTrue(options) {
  * @param listener
  */
 function createMatchListener(listener) {
-    return object(listener)
+    return func(listener)
         ? function (options) {
-            return listener === options;
+            return listener === options.fn;
         }
-        : func(listener)
-            ? function (options) {
-                return listener === options.fn;
-            }
-            : matchTrue;
+        : matchTrue;
 }
 /**
  * 判断 options 是否能匹配命名空间
@@ -6575,24 +6564,13 @@ Yox.prototype.set = function set (keypath, value) {
  * 监听事件
  */
 Yox.prototype.on = function on (type, listener) {
-    var instance = this;
-    instance.$emitter.on(type, {
-        fn: listener,
-        ctx: instance
-    });
-    return instance;
+    return addEvents(this, type, listener);
 };
 /**
  * 监听一次事件
  */
 Yox.prototype.once = function once (type, listener) {
-    var instance = this;
-    instance.$emitter.on(type, {
-        fn: listener,
-        ctx: instance,
-        max: 1
-    });
-    return instance;
+    return addEvents(this, type, listener, TRUE);
 };
 /**
  * 取消监听事件
@@ -6946,7 +6924,7 @@ Yox.prototype.copy = function copy (data, deep) {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.18";
+Yox.version = "1.0.0-alpha.19";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
@@ -6976,6 +6954,27 @@ function setFlexibleOptions(instance, key, value) {
     else if (object(value)) {
         instance[key](value);
     }
+}
+function addEvent(instance, type, listener, once) {
+    var options = {
+        fn: listener,
+        ctx: instance
+    };
+    if (once) {
+        options.max = 1;
+    }
+    instance.$emitter.on(type, options);
+}
+function addEvents(instance, type, listener, once) {
+    if (string(type)) {
+        addEvent(instance, type, listener, once);
+    }
+    else {
+        each$2(type, function (value, key) {
+            addEvent(instance, key, value, once);
+        });
+    }
+    return instance;
 }
 function getComponentAsync(data, name, callback) {
     if (data && has$2(data, name)) {
