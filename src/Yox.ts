@@ -638,42 +638,42 @@ export default class Yox implements YoxInterface {
 
     let instance = this,
 
-    eventInstance = type instanceof CustomEvent ? type : new CustomEvent(type),
+    event = type instanceof CustomEvent ? type : new CustomEvent(type),
 
-    eventArgs: any[] = [eventInstance],
+    args: any[] = [event],
 
     isComplete: boolean
 
     // 告诉外部是谁发出的事件
-    if (!eventInstance.target) {
-      eventInstance.target = instance
+    if (!event.target) {
+      event.target = instance
     }
 
     // 比如 fire('name', true) 直接向下发事件
     if (is.object(data)) {
-      array.push(eventArgs, data as type.data)
+      array.push(args, data as type.data)
     }
     else if (data === env.TRUE) {
       downward = env.TRUE
     }
 
-    isComplete = instance.$emitter.fire(eventInstance.type, eventArgs)
+    isComplete = instance.$emitter.fire(event.type, args)
     if (isComplete) {
       const { $parent, $children } = instance
       if (downward) {
         if ($children) {
-          eventInstance.phase = CustomEvent.PHASE_DOWNWARD
+          event.phase = CustomEvent.PHASE_DOWNWARD
           array.each(
             $children,
             function (child) {
-              return isComplete = child.fire(eventInstance, data, env.TRUE)
+              return isComplete = child.fire(event, data, env.TRUE)
             }
           )
         }
       }
       else if ($parent) {
-        eventInstance.phase = CustomEvent.PHASE_UPWARD
-        isComplete = $parent.fire(eventInstance, data)
+        event.phase = CustomEvent.PHASE_UPWARD
+        isComplete = $parent.fire(event, data)
       }
     }
 

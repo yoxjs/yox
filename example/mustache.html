@@ -8,212 +8,228 @@
     <div id="app"></div>
     <textarea id="template">
 
+    <div>
+        <h4>
+            简单插值
+        </h4>
+
         <div>
-            <h1>
-                插值
-            </h1>
+          {{name1}}
+        </div>
 
+        <h4>
+            二元表达式插值
+        </h4>
+
+        <div>
+          {{name1 + name2 + name3}}
+        </div>
+
+        <h4>
+            连续插值
+        </h4>
+
+        <div>
+            12-{{name1}}-{{name2}}-{{name3}}-{{name4}}-{{name5}}-34-{{user.name}}
+        </div>
+
+        <p
+            class="
+                heihei
+                {{#if name1}}abc{{/if}}
+                {{#if name2}} def{{/if}}
+            "
+            data-name-haha1="{{#if name1}}1{{else}}0{{/if}}"
+            data-name-haha2="{{#if name1}}1{{else}}0{{/if}}"
+            data-name-haha3="{{#if name1}}1{{else}}0{{/if}}"
+        >
+            {{{title}}}
+        </p>
+
+        <p id="id"class="class"title="title">
+          连续属性，在模板打包时可能出现一行的情况
+        </p>
+
+        <p{{#if a}}id="id"{{/if}}>
+          标签名紧跟判断
+        </p>
+
+        <p>
+            {{filterUsers.length}}
+        </p>
+
+        <h1>
+            数组下标访问
+        </h1>
+
+        <p>
+            {{users.0.name}}
+        </p>
+
+        <h1>
+            子闭合标签
+        </h1>
+
+        <div>
+            <input type="checkbox" disabled="{{disabled1}}"> disabled
+            <input type="checkbox" disabled="{{disabled2}}"> enabled
+            <input type="checkbox" disabled="{{disabled3}}"> enabled
+            <input type="checkbox" disabled="disabled"> disabled
+            <input type="checkbox" disabled="abc"> enabled
+            <input type="checkbox" disabled> disabled
+            <input type="checkbox" aaa> aaa
+            <input type="checkbox" readonly> readonly
+        </div>
+
+        <div>
             <div>
-                12-{{name1}}-{{name2}}-{{name3}}-{{name4}}-{{name5}}-34-{{user.name}}
+              <input type="text">
+            </div>
+            <div>
+              <input type="text">text
+            </div>
+            <div>
+              <input type="text">
+              <span>text</span>
             </div>
 
-            <p>
-                {{{title + title}}}
-            </p>
-
-            <p data-html="{{title}}">
-                {{title}}
-            </p>
-
-            <p
-                class="
-                    heihei
-                    {{#if name1}}abc{{/if}}
-                    {{#if name2}} def{{/if}}
-                "
-                data-name-haha1="{{#if name1}}1{{else}}0{{/if}}"
-                data-name-haha2="{{#if name1}}1{{else}}0{{/if}}"
-                data-name-haha3="{{#if name1}}1{{else}}0{{/if}}"
-            >
-                {{{title}}}
-            </p>
-
-            <p>
-                {{filterUsers.length}}
-            </p>
-
-            <h1>
-                数组下标访问
-            </h1>
-
-            <p>
-                {{users.0.name}}
-            </p>
-
-            <h1>
-                子闭合标签
-            </h1>
-
             <div>
-                <input type="checkbox" disabled="{{disabled1}}"> disabled
-                <input type="checkbox" disabled="{{disabled2}}"> enabled
-                <input type="checkbox" disabled="{{disabled3}}"> enabled
-                <input type="checkbox" disabled="disabled"> disabled
-                <input type="checkbox" disabled="abc"> enabled
-                <input type="checkbox" disabled> disabled
-                <input type="checkbox" aaa> aaa
-                <input type="checkbox" readonly> readonly
+              <input type="text" />
+            </div>
+            <div>
+              <input type="text" />text
+            </div>
+            <div>
+              <input type="text" />
+              <span>text</span>
             </div>
 
-            <div>
+            <video controls>
+              <source src="//vjs.zencdn.net/v/oceans.mp4" type="video/mp4"></source>
+              <source src="//vjs.zencdn.net/v/oceans.mp4" type="video/mp4" />
+            </video>
+        </div>
+
+
+        <h1>
+            循环数组
+        </h1>
+
+        <p>
+            {{#each ['11', '111', '1111']:index}}
                 <div>
-                  <input type="text">
+                    {{index}} -> {{this}} -> {{this.length}}
                 </div>
+            {{/each}}
+        </p>
+
+        <p>
+            {{#each 5 -> 10:index}}
                 <div>
-                  <input type="text">text
+                    {{index}} -> {{this}}
                 </div>
+            {{/each}}
+        </p>
+
+        <p>
+            {{#each 10 => 5:index}}
                 <div>
-                  <input type="text">
-                  <span>text</span>
+                    {{index}} -> {{this}}
                 </div>
+            {{/each}}
+        </p>
 
-                <div>
-                  <input type="text" />
-                </div>
-                <div>
-                  <input type="text" />text
-                </div>
-                <div>
-                  <input type="text" />
-                  <span>text</span>
-                </div>
+        <p>
 
-                <video controls>
-                  <source src="//vjs.zencdn.net/v/oceans.mp4" type="video/mp4"></source>
-                  <source src="//vjs.zencdn.net/v/oceans.mp4" type="video/mp4" />
-                </video>
-            </div>
-
-
-            <h1>
-                循环数组
-            </h1>
-
-            <p>
-                {{#each ['11', '111', '1111']:index}}
-                    <div>
-                        {{index}} -> {{this}} -> {{this.length}}
-                    </div>
-                {{/each}}
-            </p>
-
-            <p>
-                {{#each 5 -> 10:index}}
-                    <div>
-                        {{index}} -> {{this}}
-                    </div>
-                {{/each}}
-            </p>
-
-            <p>
-                {{#each 10 => 5:index}}
-                    <div>
-                        {{index}} -> {{this}}
-                    </div>
-                {{/each}}
-            </p>
-
-            <p>
-
-                {{#each users:index}}
-                    <div key="{{index}}" class="wrapper" data-id="{{id}}">
-                        {{name}}-{{age}}
-                        {{#if index < users.length - 1}}
-                            -
-                        {{/if}}
-                    </div>
-                {{/each}}
-            </p>
-
-            <p>
-                {{#each users:index}}
-                    {{this.name}}
+            {{#each users:index}}
+                <div key="{{index}}" class="wrapper" data-id="{{id}}">
+                    {{name}}-{{age}}
                     {{#if index < users.length - 1}}
                         -
                     {{/if}}
-                {{/each}}
-            </p>
+                </div>
+            {{/each}}
+        </p>
 
-            <p>
-                {{#each user:key}}
-                    [{{key}}: "{{this}}"]
-                    {{$keypath}}
-                    <br>
-                {{/each}}
-            </p>
-
-            <h1>
-                循环对象
-            </h1>
-
-            <p>
-                {{#each users:index}}
-                    {{#each this:key}}
-                        <div>
-                            {{index}}-{{key}}: {{this}}
-                        </div>
-                    {{/each}}
-                {{/each}}
-            </p>
-
-            <h1>
-                子模板
-            </h1>
-
-            {{#partial hello}}
-                hi, {{user.name}}.
-            {{/partial}}
-
-            <p>
-                {{> hello}}
-            </p>
-
-            <p>
-                1{{> bye}}
-            </p>
-
-            <h1>
-                过滤器
-            </h1>
-
-            <p>
-                {{formatDate(today)}}
-            </p>
-
-            <p>
-                {{#if name1}}
-                    <span class="{{title}}">
-                        {{title}}
-                    </span>
-                {{else}}
-                    <h1>123</h1>
+        <p>
+            {{#each users:index}}
+                {{this.name}}
+                {{#if index < users.length - 1}}
+                    -
                 {{/if}}
-            </p>
+            {{/each}}
+        </p>
+
+        <p>
+            {{#each user:key}}
+                [{{key}}: "{{this}}"]
+                {{$keypath}}
+                <br>
+            {{/each}}
+        </p>
+
+        <h1>
+            循环对象
+        </h1>
+
+        <p>
+            {{#each users:index}}
+                {{#each this:key}}
+                    <div>
+                        {{index}}-{{key}}: {{this}}
+                    </div>
+                {{/each}}
+            {{/each}}
+        </p>
+
+        <h1>
+            子模板
+        </h1>
+
+        {{#partial hello}}
+            hi, {{user.name}}.
+        {{/partial}}
+
+        <p>
+            {{> hello}}
+        </p>
+
+        <p>
+            1{{> bye}}
+        </p>
+
+        <h1>
+            过滤器
+        </h1>
+
+        <p>
+            {{formatDate(today)}}
+        </p>
+
+        <p>
+            {{#if name1}}
+                <span class="{{title}}">
+                    {{title}}
+                </span>
+            {{else}}
+                <h1>123</h1>
+            {{/if}}
+        </p>
 
 
-            {{! 注释一 }}
+        {{! 注释一 }}
 
-            {{!
-                注释二
-            }}
+        {{!
+            注释二
+        }}
 
-            <!-- 注释一 -->
+        <!-- 注释一 -->
 
-            <!--
-                注释二
-            -->
+        <!--
+            注释二
+        -->
 
-        </div>
+    </div>
 
     </textarea>
     <script src="../dist/standard/dev/yox.js"></script>
