@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.17
+ * yox.js v1.0.0-alpha.18
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -2194,33 +2194,33 @@ Yox.prototype.fire = function fire (type, data, downward) {
     // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
     // 内部为了保持格式统一
     // 需要转成 Event，这样还能知道 target 是哪个组件
-    var instance = this, eventInstance = type instanceof CustomEvent ? type : new CustomEvent(type), eventArgs = [eventInstance], isComplete;
+    var instance = this, event = type instanceof CustomEvent ? type : new CustomEvent(type), args = [event], isComplete;
     // 告诉外部是谁发出的事件
-    if (!eventInstance.target) {
-        eventInstance.target = instance;
+    if (!event.target) {
+        event.target = instance;
     }
     // 比如 fire('name', true) 直接向下发事件
     if (object(data)) {
-        push(eventArgs, data);
+        push(args, data);
     }
     else if (data === TRUE) {
         downward = TRUE;
     }
-    isComplete = instance.$emitter.fire(eventInstance.type, eventArgs);
+    isComplete = instance.$emitter.fire(event.type, args);
     if (isComplete) {
         var $parent = instance.$parent;
             var $children = instance.$children;
         if (downward) {
             if ($children) {
-                eventInstance.phase = CustomEvent.PHASE_DOWNWARD;
+                event.phase = CustomEvent.PHASE_DOWNWARD;
                 each($children, function (child) {
-                    return isComplete = child.fire(eventInstance, data, TRUE);
+                    return isComplete = child.fire(event, data, TRUE);
                 });
             }
         }
         else if ($parent) {
-            eventInstance.phase = CustomEvent.PHASE_UPWARD;
-            isComplete = $parent.fire(eventInstance, data);
+            event.phase = CustomEvent.PHASE_UPWARD;
+            isComplete = $parent.fire(event, data);
         }
     }
     return isComplete;
@@ -2399,7 +2399,7 @@ Yox.prototype.copy = function copy (data, deep) {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.17";
+Yox.version = "1.0.0-alpha.18";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
