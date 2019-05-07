@@ -1,14 +1,14 @@
-import isDef from '../../../yox-common/src/function/isDef'
-import execute from '../../../yox-common/src/function/execute'
+import isDef from 'yox-common/src/function/isDef'
+import execute from 'yox-common/src/function/execute'
 
-import * as keypathUtil from '../../../yox-common/src/util/keypath'
+import * as keypathUtil from 'yox-common/src/util/keypath'
 
-import VNode from '../../../yox-type/src/vnode/VNode'
-import Directive from '../../../yox-type/src/vnode/Directive'
-import DirectiveHooks from '../../../yox-type/src/hooks/Directive'
-import Yox from '../../../yox-type/src/interface/Yox'
+import Yox from 'yox-type/src/interface/Yox'
+import VNode from 'yox-type/src/vnode/VNode'
+import Directive from 'yox-type/src/vnode/Directive'
+import DirectiveHooks from 'yox-type/src/hooks/Directive'
 
-import api from '../../../yox-dom/src/dom'
+import api from 'yox-dom/src/dom'
 
 const directive: DirectiveHooks = {
 
@@ -16,36 +16,32 @@ const directive: DirectiveHooks = {
 
     // binding 可能是模糊匹配
     // 比如延展属性 {{...obj}}，这里 binding 会是 `obj.*`
-    const { binding } = directive
+    const binding = directive.binding as string,
 
-    if (binding) {
+    isFuzzy = keypathUtil.isFuzzy(binding),
 
-      const isFuzzy = keypathUtil.isFuzzy(binding),
+    watcher = function (newValue: any, _: any, keypath: string) {
 
-      watcher = function (newValue: any, oldValue: any, keypath: string) {
+      const name = isFuzzy
+        ? keypathUtil.matchFuzzy(keypath, binding) as string
+        : directive.name
 
-        const name = isFuzzy
-          ? keypathUtil.matchFuzzy(keypath, binding) as string
-          : directive.name
-
-        if (vnode.isComponent) {
-          (node as Yox).set(name, newValue)
-        }
-        else if (isDef(directive.hint)) {
-          api.prop(node as HTMLElement, name, newValue)
-        }
-        else {
-          api.attr(node as HTMLElement, name, newValue)
-        }
-
+      if (vnode.isComponent) {
+        (node as Yox).set(name, newValue)
+      }
+      else if (isDef(directive.hint)) {
+        api.prop(node as HTMLElement, name, newValue)
+      }
+      else {
+        api.attr(node as HTMLElement, name, newValue)
       }
 
-      vnode.context.watch(binding, watcher)
+    }
 
-      vnode.data[directive.key] = function () {
-        vnode.context.unwatch(binding, watcher)
-      }
+    vnode.context.watch(binding, watcher)
 
+    vnode.data[directive.key] = function () {
+      vnode.context.unwatch(binding, watcher)
     }
 
   },

@@ -1,26 +1,27 @@
-import isDef from '../../../yox-common/src/function/isDef'
-import debounce from '../../../yox-common/src/function/debounce'
-import execute from '../../../yox-common/src/function/execute'
-import toString from '../../../yox-common/src/function/toString'
+import isDef from 'yox-common/src/function/isDef'
+import debounce from 'yox-common/src/function/debounce'
+import execute from 'yox-common/src/function/execute'
+import toString from 'yox-common/src/function/toString'
 
-import * as is from '../../../yox-common/src/util/is'
-import * as env from '../../../yox-common/src/util/env'
-import * as array from '../../../yox-common/src/util/array'
+import * as is from 'yox-common/src/util/is'
+import * as env from 'yox-common/src/util/env'
+import * as array from 'yox-common/src/util/array'
 
-import * as config from '../../../yox-config/src/config'
-import api from '../../../yox-dom/src/dom'
+import api from 'yox-dom/src/dom'
 
-import * as type from '../../../yox-type/src/type'
-import Yox from '../../../yox-type/src/interface/Yox'
-import VNode from '../../../yox-type/src/vnode/VNode'
-import Directive from '../../../yox-type/src/vnode/Directive'
-import DirectiveHooks from '../../../yox-type/src/hooks/Directive'
+import * as config from 'yox-config/src/config'
+import * as type from 'yox-type/src/type'
 
-interface Control {
+import Yox from 'yox-type/src/interface/Yox'
+import VNode from 'yox-type/src/vnode/VNode'
+import Directive from 'yox-type/src/vnode/Directive'
+import DirectiveHooks from 'yox-type/src/hooks/Directive'
 
-  set(node: HTMLElement | Yox, keypath: string, context: Yox): void
+interface NativeControl {
 
-  sync(node: HTMLElement | Yox, keypath: string, context: Yox): void
+  set(node: HTMLElement, value: any): void
+
+  sync(node: HTMLElement, keypath: string, context: Yox): void
 
   name: string
 
@@ -32,35 +33,73 @@ function getOptionValue(option: HTMLOptionElement) {
     : option.text
 }
 
-const inputControl: Control = {
-  set(input: HTMLInputElement, value: any) {
-    input.value = toString(value)
+const inputControl: NativeControl = {
+  set(node: HTMLInputElement, value: any) {
+    node.value = toString(value)
   },
-  sync(input: HTMLInputElement, keypath: string, context: Yox) {
-    context.set(keypath, input.value)
+  sync(node: HTMLInputElement, keypath: string, context: Yox) {
+    context.set(keypath, node.value)
   },
   name: env.RAW_VALUE
 },
 
-selectControl: Control = {
-  set(select: HTMLSelectElement, value: any) {
+radioControl: NativeControl = {
+  set(node: HTMLInputElement, value: any) {
+    node.checked = node.value === toString(value)
+  },
+  sync(node: HTMLInputElement, keypath: string, context: Yox) {
+    if (node.checked) {
+      context.set(keypath, node.value)
+    }
+  },
+  name: 'checked'
+},
+
+checkboxControl: NativeControl = {
+  set(node: HTMLInputElement, value: any) {
+    node.checked = is.array(value)
+      ? array.has(value, node.value, env.FALSE)
+      : !!value
+  },
+  sync(node: HTMLInputElement, keypath: string, context: Yox) {
+    const value = context.get(keypath)
+    if (is.array(value)) {
+      if (node.checked) {
+        context.append(keypath, node.value)
+      }
+      else {
+        context.removeAt(
+          keypath,
+          array.indexOf(value, node.value, env.FALSE)
+        )
+      }
+    }
+    else {
+      context.set(keypath, node.checked)
+    }
+  },
+  name: 'checked'
+},
+
+selectControl: NativeControl = {
+  set(node: HTMLSelectElement, value: any) {
     array.each(
-      array.toArray(select.options),
-      select.multiple
+      array.toArray(node.options),
+      node.multiple
         ? function (option: HTMLOptionElement) {
           option.selected = array.has(value, getOptionValue(option), env.FALSE)
         }
         : function (option: HTMLOptionElement, index: number) {
           if (getOptionValue(option) == value) {
-            select.selectedIndex = index
+            node.selectedIndex = index
             return env.FALSE
           }
         }
     )
   },
-  sync(select: HTMLSelectElement, keypath: string, context: Yox) {
-    const options = array.toArray(select.options)
-    if (select.multiple) {
+  sync(node: HTMLSelectElement, keypath: string, context: Yox) {
+    const options = array.toArray(node.options)
+    if (node.multiple) {
       const values: string[] = []
       array.each(
         options,
@@ -73,16 +112,13 @@ selectControl: Control = {
           }
         }
       )
-      // 如果新旧值都是 []，set 没有意义
-      if (!array.falsy(values) || !array.falsy(context.get(keypath))) {
-        context.set(keypath, values)
-      }
+      context.set(keypath, values)
     }
     else {
       context.set(
         keypath,
         getOptionValue(
-          options[select.selectedIndex]
+          options[node.selectedIndex]
         )
       )
     }
@@ -90,54 +126,15 @@ selectControl: Control = {
   name: env.RAW_VALUE
 },
 
-radioControl: Control = {
-  set(radio: HTMLInputElement, value: any) {
-    radio.checked = radio.value === toString(value)
-  },
-  sync(radio: HTMLInputElement, keypath: string, context: Yox) {
-    if (radio.checked) {
-      context.set(keypath, radio.value)
-    }
-  },
-  name: 'checked'
-},
-
-checkboxControl: Control = {
-  set(checkbox: HTMLInputElement, value: any) {
-    checkbox.checked = is.array(value)
-      ? array.has(value, checkbox.value, env.FALSE)
-      : (is.boolean(value) ? value : !!value)
-  },
-  sync(checkbox: HTMLInputElement, keypath: string, context: Yox) {
-    const value = context.get(keypath)
-    if (is.array(value)) {
-      if (checkbox.checked) {
-        context.append(keypath, checkbox.value)
-      }
-      else {
-        context.removeAt(
-          keypath,
-          array.indexOf(value, checkbox.value, env.FALSE)
-        )
-      }
-    }
-    else {
-      context.set(keypath, checkbox.checked)
-    }
-  },
-  name: 'checked'
-},
-
-specialControls = {
+inputTypes = {
   radio: radioControl,
   checkbox: checkboxControl,
-  select: selectControl,
 },
 
 directive: DirectiveHooks = {
   bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
 
-    let { context, model, lazy } = vnode,
+    let { context, model, lazy, isComponent } = vnode,
 
     dataBinding = directive.binding as string,
 
@@ -149,65 +146,59 @@ directive: DirectiveHooks = {
 
     sync: type.watcher,
 
-    component: Yox | void,
-
-    element: HTMLElement | void,
-
-    lazyValue: number | true | void
+    lazyValue: type.lazy | void
 
     if (lazy) {
       lazyValue = lazy[config.DIRECTIVE_MODEL] || lazy[env.EMPTY_STRING]
     }
 
-    if (vnode.isComponent) {
+    if (isComponent) {
 
-      component = node as Yox
-
-      viewBinding = component.$options.model || env.RAW_VALUE
+      viewBinding = (node as Yox).$options.model || env.RAW_VALUE
 
       set = function (newValue: any) {
-        (component as Yox).set(viewBinding as string, newValue)
+        (node as Yox).set(viewBinding as string, newValue)
       }
 
       sync = function (newValue: any) {
         context.set(dataBinding, newValue)
       }
 
-      // 不管模板是否设值，统一用数据中的值
-      component.set(viewBinding, model)
-
     }
     else {
 
-      element = node as HTMLElement
-
-      let control = specialControls[element[env.RAW_TYPE]] || specialControls[api.tag(element) as string]
+      let control = api.tag(node as HTMLElement) === 'select'
+        ? selectControl
+        : inputControl
 
       // checkbox,radio,select 监听的是 change 事件
       eventName = env.EVENT_CHANGE
 
-      // 如果是输入框，则切换成 model 事件
-      // model 事件是个 yox-dom 实现的特殊事件
-      // 不会在输入法组合文字过程中得到触发事件
-      if (!control) {
-        control = inputControl
-        if (lazyValue !== env.TRUE) {
+      if (control === inputControl) {
+        const type = (node as HTMLInputElement).type
+        if (inputTypes[type]) {
+          control = inputTypes[type]
+        }
+        // 如果是输入框，则切换成 model 事件
+        // model 事件是个 yox-dom 实现的特殊事件
+        // 不会在输入法组合文字过程中得到触发事件
+        else if (lazyValue !== env.TRUE) {
           eventName = env.EVENT_MODEL
         }
       }
 
       set = function (newValue: any) {
-        control.set(element, newValue)
+        control.set(node as HTMLElement, newValue)
       }
 
       sync = function () {
-        control.sync(element, dataBinding, context)
+        control.sync(node as HTMLElement, dataBinding, context)
       }
 
-      // 不管模板是否设值，统一用数据中的值
-      control.set(element, model)
-
     }
+
+    // 不管模板是否设值，统一用数据中的值
+    set(model, env.UNDEFINED, env.EMPTY_STRING)
 
     // 应用 lazy
     if (lazyValue && lazyValue !== env.TRUE) {
@@ -215,22 +206,22 @@ directive: DirectiveHooks = {
     }
 
     // 监听交互，修改数据
-    if (component) {
-      component.watch(viewBinding as string, sync)
+    if (isComponent) {
+      (node as Yox).watch(viewBinding as string, sync)
     }
     else {
-      api.on(element as HTMLElement, eventName as string, sync as type.nativeListener)
+      api.on(node as HTMLElement, eventName as string, sync as type.listener)
     }
 
     // 监听数据，修改界面
     context.watch(dataBinding, set)
 
     vnode.data[directive.key] = function () {
-      if (component) {
-        component.unwatch(viewBinding as string, sync)
+      if (isComponent) {
+        (node as Yox).unwatch(viewBinding as string, sync)
       }
       else {
-        api.off(element as HTMLElement, eventName as string, sync as type.nativeListener)
+        api.off(node as HTMLElement, eventName as string, sync as type.listener)
       }
       context.unwatch(dataBinding, set)
     }

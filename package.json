@@ -1,6 +1,6 @@
 {
   "name": "yox",
-  "version": "1.0.0-alpha.19",
+  "version": "1.0.0-alpha.20",
   "description": "A lightweight mvvm framework",
   "main": "dist/standard/dev/yox.js",
   "directories": {
@@ -51,12 +51,12 @@
     "typescript": "^3.4.4"
   },
   "dependencies": {
-    "yox-common": "^0.18.46",
-    "yox-config": "^0.1.7",
-    "yox-dom": "^0.0.42",
-    "yox-observer": "^0.17.40",
-    "yox-snabbdom": "^0.19.42",
-    "yox-template-compiler": "^0.27.64",
-    "yox-type": "^0.0.63"
+    "yox-common": "^0.18.47",
+    "yox-config": "^0.1.8",
+    "yox-dom": "^0.0.43",
+    "yox-observer": "^0.17.41",
+    "yox-snabbdom": "^0.19.43",
+    "yox-template-compiler": "^0.27.66",
+    "yox-type": "^0.0.64"
   }
 }
