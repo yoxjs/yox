@@ -198,9 +198,9 @@ export default class Yox implements YoxInterface {
   }
 
   public static filter(
-    name: string | Record<string, Function | Record<string, Function>>,
-    filter?: Function | Record<string, Function | Record<string, Function>>
-  ): Function | Record<string, Function> | void {
+    name: string | Record<string, type.filter>,
+    filter?: type.filter
+  ): type.filter | void {
     if (process.env.NODE_ENV !== 'pure') {
       if (is.string(name) && !filter) {
         return getResource(globalFilters, name as string)
@@ -334,7 +334,7 @@ export default class Yox implements YoxInterface {
     if (computed) {
       object.each(
         computed,
-        function (options: type.computedGetter | ComputedOptions, keypath: string) {
+        function (options: type.getter | ComputedOptions, keypath: string) {
           observer.addComputed(keypath, options)
         }
       )
@@ -433,7 +433,7 @@ export default class Yox implements YoxInterface {
             }
           }
           else if (process.env.NODE_ENV === 'dev') {
-            logger.fatal(`"el" option 格式错误`)
+            logger.fatal(`"el" option should be a selector.`)
           }
         }
         else {
@@ -468,12 +468,12 @@ export default class Yox implements YoxInterface {
       if (template) {
 
         // 拷贝一份，避免影响外部定义的 watchers
-        watchers = watchers
+        const newWatchers = watchers
           ? object.copy(watchers)
           : {}
 
         // 当 virtual dom 变了，则更新视图
-        watchers[TEMPLATE_COMPUTED] = function (vnode: VNode) {
+        newWatchers[TEMPLATE_COMPUTED] = function (vnode: VNode) {
           instance.update(vnode, instance.$vnode as VNode)
         }
 
@@ -489,7 +489,7 @@ export default class Yox implements YoxInterface {
           }
         )
 
-        afterCreateHook(instance, watchers)
+        afterCreateHook(instance, newWatchers)
 
         // 编译模板
         // 在开发阶段，template 是原始的 html 模板
@@ -515,20 +515,18 @@ export default class Yox implements YoxInterface {
           )
         )
 
+        return
+
       }
-      else {
-        if (process.env.NODE_ENV === 'dev') {
-          if (placeholder) {
-            logger.fatal('有 el 没 template 是几个意思？')
-          }
+      else if (process.env.NODE_ENV === 'dev') {
+        if (placeholder) {
+          logger.fatal('有 el 没 template 是几个意思？')
         }
-        afterCreateHook(instance, watchers)
       }
 
     }
-    else {
-      afterCreateHook(instance, watchers)
-    }
+
+    afterCreateHook(instance, watchers)
 
   }
 
@@ -537,7 +535,7 @@ export default class Yox implements YoxInterface {
    */
   addComputed(
     keypath: string,
-    computed: type.computedGetter | ComputedOptions
+    computed: type.getter | ComputedOptions
   ): Computed | void {
     return this.$observer.addComputed(keypath, computed)
   }
@@ -557,7 +555,7 @@ export default class Yox implements YoxInterface {
   get(
     keypath: string,
     defaultValue?: any,
-    depIgnore?: true
+    depIgnore?: boolean
   ): any {
     return this.$observer.get(keypath, defaultValue, depIgnore)
   }
@@ -613,8 +611,8 @@ export default class Yox implements YoxInterface {
    */
   fire(
     type: string | CustomEvent,
-    data?: type.data | true,
-    downward?: true
+    data?: type.data | boolean,
+    downward?: boolean
   ): boolean {
 
     // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
@@ -672,7 +670,7 @@ export default class Yox implements YoxInterface {
   watch(
     keypath: string | Record<string, type.watcher | WatcherOptions>,
     watcher?: type.watcher | WatcherOptions,
-    immediate?: true
+    immediate?: boolean
   ): YoxInterface {
     this.$observer.watch(keypath, watcher, immediate)
     return this
@@ -682,7 +680,7 @@ export default class Yox implements YoxInterface {
    * 取消监听数据变化
    */
   unwatch(
-    keypath: string,
+    keypath?: string,
     watcher?: type.watcher
   ): YoxInterface {
     this.$observer.unwatch(keypath, watcher)
@@ -768,9 +766,9 @@ export default class Yox implements YoxInterface {
   }
 
   filter(
-    name: string | Record<string, Function | Record<string, Function>>,
-    filter?: Function | Record<string, Function | Record<string, Function>>
-  ): Function | Record<string, Function> | void {
+    name: string | Record<string, type.filter>,
+    filter?: type.filter
+  ): type.filter | void {
     if (process.env.NODE_ENV !== 'pure') {
       const instance = this, { $filters } = instance
       if (is.string(name) && !filter) {
@@ -825,11 +823,11 @@ export default class Yox implements YoxInterface {
       const instance = this
       return templateRender.render(
         instance,
+        instance.$template as Function,
         mergeResource(instance.$filters, globalFilters),
         mergeResource(instance.$partials, globalPartials),
         mergeResource(instance.$directives, globalDirectives),
-        mergeResource(instance.$transitions, globalTransitions),
-        instance.$template as Function
+        mergeResource(instance.$transitions, globalTransitions)
       )
     }
   }
@@ -930,6 +928,9 @@ export default class Yox implements YoxInterface {
       )
 
       return child
+    }
+    else {
+      return this
     }
   }
 
@@ -1068,7 +1069,7 @@ export default class Yox implements YoxInterface {
    * @param data
    * @param deep
    */
-  copy<T>(data: T, deep?: true): T {
+  copy<T>(data: T, deep?: boolean): T {
     return this.$observer.copy(data, deep)
   }
 
@@ -1079,7 +1080,7 @@ const toString = Object.prototype.toString
 function matchType(value: any, type: string) {
   return type === 'numeric'
     ? is.numeric(value)
-    : toString.call(value).toLowerCase() === `[object ${type}]`
+    : string.lower(toString.call(value)) === `[object ${type}]`
 }
 
 function afterCreateHook(instance: Yox, watchers: Record<string, type.watcher | WatcherOptions> | void) {

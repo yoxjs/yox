@@ -3,6 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>demo</title>
+    <style>
+      .user {
+        background-color: lightblue;
+        margin: 10px;
+      }
+    </style>
 </head>
 <body>
     <div id="app"></div>
@@ -11,7 +17,7 @@
         <div>
             {{#each list:index}}
                 <div>
-                    <User index="{{index}}" {{...this}} />
+
                     <span>
                         {{index + 1 }}
                     </span>
@@ -19,6 +25,9 @@
                     <span>
                         {{list.length}}
                     </span>
+
+                    <User index="{{index}}" {{...this}} />
+
                 </div>
             {{/each}}
 
@@ -28,13 +37,15 @@
 
     <script id="template-user" type="plain/text">
 
-        <div>
-            {{index}}: {{name}} - <span>{{age}}</span>
+        <div class="user">
+            index: {{index}}<br>
+            name: {{name}}<br>
+            age: {{age}}
         </div>
 
     </script>
 
-    <script src="../dist/yox.js"></script>
+    <script src="../dist/standard/dev/yox.js"></script>
     <script>
         var instance = new Yox({
             el: '#app',
@@ -71,8 +82,20 @@
                         index: {
                             type: 'number'
                         }
+                    },
+                    beforeUpdate: function () {
+                        console.log('User beforeUpdate')
+                    },
+                    afterUpdate: function () {
+                      console.log('User afterUpdate')
                     }
                 }
+            },
+            beforeUpdate: function () {
+              console.log('Root beforeUpdate')
+            },
+            afterUpdate: function () {
+              console.log('Root afterUpdate')
             }
         });
 

@@ -68,7 +68,7 @@
 
       </section>
     </script>
-    <script src="../../dist/yox.js"></script>
+    <script src="../../dist/standard/dev/yox.js"></script>
     <script>
 
 // Full spec-compliant TodoMVC with localStorage persistence
@@ -231,9 +231,9 @@ var app = new Yox({
   // before focusing on the input field.
   // http://vuejs.org/guide/custom-directive.html
   directives: {
-    todoFocus: function (options) {
-      if (options.node.value) {
-        options.el.focus()
+    todoFocus: {
+      bind: function (node, directive, vnode) {
+        node.focus()
       }
     }
   }
