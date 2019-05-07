@@ -119,12 +119,22 @@ this.watch({
 ## 取消监听
 
 ```js
-this.unwatch(keypath, ?watcher)
+this.unwatch(?keypath, ?watcher)
 ```
 
-注意，`watcher` 是监听函数，不是 `options`。
+如果不传 `watcher`，则解除该 `keypath` 绑定的所有监听器，如下：
 
-如果不传 `watcher`，则解除该 `keypath` 绑定的所有监听器。
+```js
+this.unwatch('keypath')
+```
+
+如果不传 `keypath`，则解绑该 Yox 实例的所有数据监听，如下：
+
+```js
+this.unwatch()
+```
+
+> `watcher` 是监听函数，不是 `options`。
 
 ## Keypath
 

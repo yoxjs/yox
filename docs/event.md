@@ -390,6 +390,8 @@ this.fire('click.button')
 }
 ```
 
+> 直接调用 `fire(type)` 产生的事件对象，`event.originalEvent` 为空
+
 ### isPrevented
 
 一旦调用 `event.prevent()` 方法，`event.isPrevented` 变为 `true`。
