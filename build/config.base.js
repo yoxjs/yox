@@ -3,7 +3,7 @@ import typescript from 'rollup-plugin-typescript'
 import replace from 'rollup-plugin-replace'
 // 输出打包后的文件大小
 import filesize from 'rollup-plugin-filesize'
-// 压缩
+// ES6 转 ES5
 import buble from 'rollup-plugin-buble'
 // 压缩
 import { terser } from 'rollup-plugin-terser'
@@ -31,7 +31,7 @@ export default function (env, minify = false, legacy = false, port = 0) {
       'process.env.NODE_LEGACY': legacy
     }),
     typescript(),
-    // buble 比 typescript 直接转 ES3 效果更好
+    // buble 比 typescript 直接转 ES5 效果更好
     buble()
   ]
 

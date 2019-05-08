@@ -82,8 +82,11 @@
 ```js
 {
   bind: function (node, directive, vnode) {
-    // lazy 是个对象
+    // vnode.lazy 是个对象，如果没写过 lazy，则 vnode.lazy 为空
     var lazy = vnode.lazy
+    if (lazy) {
+      // balabala
+    }
   }
 }
 ```

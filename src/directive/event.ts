@@ -30,11 +30,10 @@ directive: DirectiveHooks = {
 
       const value = lazy[name] || lazy[env.EMPTY_STRING]
 
-      // 编译模板时能保证不是 true 就是大于 0 数字
       if (value === env.TRUE) {
         name = env.EVENT_CHANGE
       }
-      else {
+      else if (value > 0) {
         handler = debounce(
           handler,
           value,

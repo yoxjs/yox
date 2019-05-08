@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.20
+ * yox.js v1.0.0-alpha.21
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -2296,10 +2296,6 @@
                           break;
                   }
               });
-              // 确保有 directives 就必然有 lazy
-              if (vnode.directives && !vnode.lazy) {
-                  vnode.lazy = EMPTY_OBJECT;
-              }
           }
           // childs 和 slots 不可能同时存在
           if (childs) {
@@ -3362,11 +3358,10 @@
           }
           if (lazy) {
               var value = lazy[name] || lazy[EMPTY_STRING];
-              // 编译模板时能保证不是 true 就是大于 0 数字
               if (value === TRUE) {
                   name = EVENT_CHANGE;
               }
-              else {
+              else if (value > 0) {
                   handler = debounce(handler, value, immediateTypes[name]);
               }
           }
@@ -3562,6 +3557,7 @@
       }
   };
 
+  // this type https://jkchao.github.io/typescript-book-chinese/typings/thisType.html
   /**
    * 组件是否存在某个 slot
    *
@@ -4147,7 +4143,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.20";
+      Yox.version = "1.0.0-alpha.21";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
