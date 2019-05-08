@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.21
+ * yox.js v1.0.0-alpha.22
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -3082,9 +3082,16 @@ function compile$1(content) {
                 if (currentBranch.isStatic && !node.isStatic) {
                     currentBranch.isStatic = FALSE;
                 }
-                if (!currentBranch.isComplex
-                    && (node.isComplex || isElement)) {
-                    currentBranch.isComplex = TRUE;
+                if (!currentBranch.isComplex) {
+                    if (node.isComplex || isElement) {
+                        currentBranch.isComplex = TRUE;
+                    }
+                    // <div {{#if xx}} xx{{/if}}>
+                    else if (currentElement
+                        && currentElement !== currentBranch
+                        && (isAttribute || isProperty || isDirective)) {
+                        currentBranch.isComplex = TRUE;
+                    }
                 }
             }
             // 除了 helper.specialAttrs 里指定的特殊属性，attrs 里的任何节点都不能单独拎出来赋给 element
@@ -3774,11 +3781,20 @@ function toJSON (target) {
 // 是否要执行 join 操作
 var joinStack = [], 
 // 是否正在收集子节点
-collectStack = [], nodeStringify = {}, RENDER_SLOT = 'a', RENDER_EACH = 'b', RENDER_EXPRESSION = 'c', RENDER_EXPRESSION_ARG = 'd', RENDER_EXPRESSION_VNODE = 'e', RENDER_TEXT_VNODE = 'f', RENDER_ELEMENT_VNODE = 'g', RENDER_PARTIAL = 'h', RENDER_IMPORT = 'i', ARG_CONTEXT = 'j', SEP_COMMA = ',', SEP_COLON = ':', SEP_PLUS = '+', STRING_TRUE = '!0', STRING_FALSE = '!1', STRING_EMPTY = toJSON(EMPTY_STRING), CODE_RETURN = 'return ', CODE_PREFIX = "function(" + join([
+collectStack = [], nodeStringify = {}, RENDER_SLOT = 'a', RENDER_EACH = 'b', RENDER_EXPRESSION = 'c', RENDER_EXPRESSION_ARG = 'd', RENDER_EXPRESSION_VNODE = 'e', RENDER_TEXT_VNODE = 'f', RENDER_ATTRIBUTE_VNODE = 'g', RENDER_PROPERTY_VNODE = 'h', RENDER_LAZY_VNODE = 'i', RENDER_TRANSITION_VNODE = 'j', RENDER_MODEL_VNODE = 'k', RENDER_EVENT_METHOD_VNODE = 'l', RENDER_EVENT_NAME_VNODE = 'm', RENDER_DIRECTIVE_VNODE = 'n', RENDER_SPREAD_VNODE = 'o', RENDER_ELEMENT_VNODE = 'p', RENDER_PARTIAL = 'q', RENDER_IMPORT = 'r', ARG_CONTEXT = 's', SEP_COMMA = ',', SEP_COLON = ':', SEP_PLUS = '+', STRING_TRUE = '!0', STRING_FALSE = '!1', STRING_EMPTY = toJSON(EMPTY_STRING), CODE_RETURN = 'return ', CODE_PREFIX = "function(" + join([
     RENDER_EXPRESSION,
     RENDER_EXPRESSION_ARG,
     RENDER_EXPRESSION_VNODE,
     RENDER_TEXT_VNODE,
+    RENDER_ATTRIBUTE_VNODE,
+    RENDER_PROPERTY_VNODE,
+    RENDER_LAZY_VNODE,
+    RENDER_TRANSITION_VNODE,
+    RENDER_MODEL_VNODE,
+    RENDER_EVENT_METHOD_VNODE,
+    RENDER_EVENT_NAME_VNODE,
+    RENDER_DIRECTIVE_VNODE,
+    RENDER_SPREAD_VNODE,
     RENDER_ELEMENT_VNODE,
     RENDER_SLOT,
     RENDER_PARTIAL,
@@ -3867,9 +3883,26 @@ function stringifyIf(node, stub) {
         }));
     }
     if (isDef(yes) || isDef(no)) {
-        result = test + "?" + (isDef(yes) ? yes : STRING_EMPTY) + ":" + (isDef(no) ? no : STRING_EMPTY);
+        var isJoin = last(joinStack);
+        if (isJoin) {
+            if (!isDef(yes)) {
+                yes = STRING_EMPTY;
+            }
+            if (!isDef(no)) {
+                no = STRING_EMPTY;
+            }
+        }
+        if (!isDef(no)) {
+            result = test + " && " + yes;
+        }
+        else if (!isDef(yes)) {
+            result = "!" + test + " && " + no;
+        }
+        else {
+            result = test + "?" + yes + ":" + no;
+        }
         // 如果是连接操作，因为 ?: 优先级最低，因此要加 ()
-        return last(joinStack)
+        return isJoin
             ? stringifyGroup(result)
             : result;
     }
@@ -3977,46 +4010,44 @@ nodeStringify[ELEMENT] = function (node) {
     pop(collectStack);
     return renderElement(stringifyObject(data), falsy(outputAttrs)
         ? UNDEFINED
-        : stringifyArray(outputAttrs), outputChilds, outputSlots);
+        : stringifyFunction(join(outputAttrs, SEP_COMMA)), outputChilds, outputSlots);
 };
 nodeStringify[ATTRIBUTE] = function (node) {
-    var result = {
-        type: node.type,
-        name: toJSON(node.name),
-        binding: node.binding
-    };
-    if (node.binding) {
-        result.expr = toJSON(node.expr);
-    }
-    else {
-        result.value = stringifyValue(node.value, node.expr, node.children);
-    }
-    return stringifyObject(result);
+    var binding = node.binding;
+    return stringifyCall(RENDER_ATTRIBUTE_VNODE, join(trimArgs([
+        toJSON(node.name),
+        binding ? STRING_TRUE : UNDEFINED,
+        binding ? toJSON(node.expr) : UNDEFINED,
+        binding ? UNDEFINED : stringifyValue(node.value, node.expr, node.children)
+    ]), SEP_COMMA));
 };
 nodeStringify[PROPERTY] = function (node) {
-    var result = {
-        type: node.type,
-        name: toJSON(node.name),
-        hint: node.hint,
-        binding: node.binding
-    };
-    if (node.binding) {
-        result.expr = toJSON(node.expr);
-    }
-    else {
-        result.value = stringifyValue(node.value, node.expr, node.children);
-    }
-    return stringifyObject(result);
+    var binding = node.binding;
+    return stringifyCall(RENDER_PROPERTY_VNODE, join(trimArgs([
+        toJSON(node.name),
+        toJSON(node.hint),
+        binding ? STRING_TRUE : UNDEFINED,
+        binding ? toJSON(node.expr) : UNDEFINED,
+        binding ? UNDEFINED : stringifyValue(node.value, node.expr, node.children)
+    ]), SEP_COMMA));
 };
 nodeStringify[DIRECTIVE] = function (node) {
-    var type = node.type, ns = node.ns, expr = node.expr, result = {
-        // renderer 遍历 attrs 要用 type
-        type: type,
-        ns: toJSON(ns),
-        name: toJSON(node.name),
-        key: toJSON(node.key),
-        value: toJSON(node.value)
-    };
+    var ns = node.ns, name = node.name, key = node.key, value = node.value, expr = node.expr;
+    if (ns === DIRECTIVE_LAZY) {
+        return stringifyCall(RENDER_LAZY_VNODE, join(trimArgs([toJSON(name), toJSON(value)]), SEP_COMMA));
+    }
+    if (ns === RAW_TRANSITION) {
+        return stringifyCall(RENDER_TRANSITION_VNODE, join(trimArgs([toJSON(value)]), SEP_COMMA));
+    }
+    // <input model="id">
+    if (ns === DIRECTIVE_MODEL) {
+        return stringifyCall(RENDER_MODEL_VNODE, join(trimArgs([toJSON(expr)]), SEP_COMMA));
+    }
+    var renderName = RENDER_DIRECTIVE_VNODE, args = [
+        toJSON(ns),
+        toJSON(name),
+        toJSON(key),
+        toJSON(value) ];
     // 尽可能把表达式编译成函数，这样对外界最友好
     //
     // 众所周知，事件指令会编译成函数，对于自定义指令来说，也要尽可能编译成函数
@@ -4026,38 +4057,36 @@ nodeStringify[DIRECTIVE] = function (node) {
     if (expr) {
         // 如果表达式明确是在调用方法，则序列化成 method + args 的形式
         if (expr.type === CALL) {
+            if (ns === DIRECTIVE_EVENT) {
+                renderName = RENDER_EVENT_METHOD_VNODE;
+            }
             // compiler 保证了函数调用的 name 是标识符
-            result.method = toJSON(expr.name.name);
+            push(args, toJSON(expr.name.name));
             // 为了实现运行时动态收集参数，这里序列化成函数
             if (!falsy(expr.args)) {
                 // args 函数在触发事件时调用，调用时会传入它的作用域，因此这里要加一个参数
-                result.args = stringifyFunction(CODE_RETURN + stringifyArray(expr.args.map(stringifyExpressionArg)), ARG_CONTEXT);
+                push(args, stringifyFunction(CODE_RETURN + stringifyArray(expr.args.map(stringifyExpressionArg)), ARG_CONTEXT));
             }
         }
         // 不是调用方法，就是事件转换
         else if (ns === DIRECTIVE_EVENT) {
-            result.event = toJSON(expr.raw);
-        }
-        // <input model="id">
-        else if (ns === DIRECTIVE_MODEL) {
-            result.expr = toJSON(expr);
+            renderName = RENDER_EVENT_NAME_VNODE;
+            push(args, toJSON(expr.raw));
         }
         else if (ns === DIRECTIVE_CUSTOM) {
             // 取值函数
             // getter 函数在触发事件时调用，调用时会传入它的作用域，因此这里要加一个参数
             if (expr.type !== LITERAL) {
-                result.getter = stringifyFunction(CODE_RETURN + stringifyExpressionArg(expr), ARG_CONTEXT);
+                push(args, UNDEFINED); // method
+                push(args, UNDEFINED); // args
+                push(args, stringifyFunction(CODE_RETURN + stringifyExpressionArg(expr), ARG_CONTEXT));
             }
         }
     }
-    return stringifyObject(result);
+    return stringifyCall(renderName, join(trimArgs(args), SEP_COMMA));
 };
 nodeStringify[SPREAD] = function (node) {
-    return stringifyObject({
-        type: node.type,
-        expr: toJSON(node.expr),
-        binding: node.binding
-    });
+    return stringifyCall(RENDER_SPREAD_VNODE, join(trimArgs([toJSON(node.expr), node.binding ? STRING_TRUE : UNDEFINED]), SEP_COMMA));
 };
 nodeStringify[TEXT] = function (node) {
     var result = toJSON(node.text);
@@ -4192,7 +4221,7 @@ function setPair(target, name, key, value) {
     data[key] = value;
 }
 function render(context, template, filters, partials, directives, transitions) {
-    var $keypath = EMPTY_STRING, $scope = { $keypath: $keypath }, $stack = [$keypath, $scope], vnodeStack = [], localPartials = {}, lookup = function (stack, index, key, node, depIgnore, defaultKeypath) {
+    var $keypath = EMPTY_STRING, $scope = { $keypath: $keypath }, $stack = [$keypath, $scope], $vnode, vnodeStack = [], localPartials = {}, lookup = function (stack, index, key, node, depIgnore, defaultKeypath) {
         var keypath = join$1(stack[index], key), scope = stack[index + 1];
         node.ak = keypath;
         // 如果最后还是取不到值，用回最初的 keypath
@@ -4236,81 +4265,17 @@ function render(context, template, filters, partials, directives, transitions) {
         return execute$1(expr, function (keypath, node) {
             return lookup(renderStack, length - 2 * ((node.offset || 0) + 1), keypath, node, depIgnore);
         }, context);
-    }, addBinding = function (vnode, attr) {
-        var expr = attr.expr, value = getValue(expr, TRUE), key = join$1(DIRECTIVE_BINDING, attr.name);
+    }, addBinding = function (vnode, name, expr, hint) {
+        var value = getValue(expr, TRUE), key = join$1(DIRECTIVE_BINDING, name);
         setPair(vnode, 'directives', key, {
             ns: DIRECTIVE_BINDING,
-            name: attr.name,
+            name: name,
             key: key,
             hooks: directives[DIRECTIVE_BINDING],
             binding: expr.ak,
-            hint: attr.hint
+            hint: hint
         });
         return value;
-    }, spreadObject = function (vnode, attr) {
-        var expr = attr.expr, value = getValue(expr, attr.binding);
-        // 数组也算一种对象，要排除掉
-        if (object(value) && !array(value)) {
-            each$2(value, function (value, key) {
-                setPair(vnode, 'props', key, value);
-            });
-            var absoluteKeypath = expr.ak;
-            if (absoluteKeypath) {
-                var key = join$1(DIRECTIVE_BINDING, absoluteKeypath);
-                setPair(vnode, 'directives', key, {
-                    ns: DIRECTIVE_BINDING,
-                    name: EMPTY_STRING,
-                    key: key,
-                    hooks: directives[DIRECTIVE_BINDING],
-                    binding: join$1(absoluteKeypath, RAW_WILDCARD)
-                });
-            }
-        }
-        else {
-            warn("[" + expr.raw + "] \u4E0D\u662F\u5BF9\u8C61\uFF0C\u5EF6\u5C55\u4E2A\u6BDB\u554A");
-        }
-    }, addDirective = function (vnode, attr) {
-        var ns = attr.ns, name = attr.name, key = attr.key, value = attr.value, binding, hooks, getter, handler;
-        switch (ns) {
-            case DIRECTIVE_EVENT:
-                hooks = directives[DIRECTIVE_EVENT];
-                handler = attr.event
-                    ? createEventListener(attr.event)
-                    : createMethodListener(attr.method, attr.args, $stack);
-                break;
-            case RAW_TRANSITION:
-                vnode.transition = transitions[value];
-                return;
-            case DIRECTIVE_MODEL:
-                hooks = directives[DIRECTIVE_MODEL];
-                vnode.model = getValue(attr.expr, TRUE);
-                binding = attr.expr.ak;
-                break;
-            case DIRECTIVE_LAZY:
-                setPair(vnode, 'lazy', name, value);
-                return;
-            default:
-                hooks = directives[name];
-                if (attr.method) {
-                    handler = createMethodListener(attr.method, attr.args, $stack);
-                }
-                else if (attr.getter) {
-                    getter = createGetter(attr.getter, $stack);
-                }
-                break;
-        }
-        if (hooks) {
-            setPair(vnode, 'directives', key, {
-                ns: ns,
-                name: name,
-                key: key,
-                value: value,
-                binding: binding,
-                hooks: hooks,
-                getter: getter,
-                handler: handler
-            });
-        }
     }, createEventListener = function (type) {
         return function (event, data) {
             // 事件名称相同的情况，只可能是监听 DOM 事件，比如写一个 Button 组件
@@ -4374,37 +4339,87 @@ function render(context, template, filters, partials, directives, transitions) {
                 push(vnodeList, textVnode);
             }
         }
+    }, renderAttributeVnode = function (name, binding, expr, value) {
+        if (binding) {
+            value = addBinding($vnode, name, expr);
+        }
+        if ($vnode.isComponent) {
+            setPair($vnode, 'props', name, value);
+        }
+        else {
+            setPair($vnode, 'nativeAttrs', name, { name: name, value: value });
+        }
+    }, renderPropertyVnode = function (name, hint, binding, expr, value) {
+        if (binding) {
+            value = addBinding($vnode, name, expr, hint);
+        }
+        setPair($vnode, 'nativeProps', name, { name: name, value: value, hint: hint });
+    }, renderLazyVnode = function (name, value) {
+        setPair($vnode, 'lazy', name, value);
+    }, renderTransitionVnode = function (name) {
+        $vnode.transition = transitions[name];
+    }, renderModelVnode = function (expr) {
+        $vnode.model = getValue(expr, TRUE);
+        setPair($vnode, 'directives', DIRECTIVE_MODEL, {
+            ns: DIRECTIVE_MODEL,
+            name: EMPTY_STRING,
+            key: DIRECTIVE_MODEL,
+            binding: expr.ak,
+            hooks: directives[DIRECTIVE_MODEL]
+        });
+    }, renderEventMethodVnode = function (ns, name, key, value, method, args) {
+        setPair($vnode, 'directives', key, {
+            ns: ns,
+            name: name,
+            key: key,
+            value: value,
+            hooks: directives[DIRECTIVE_EVENT],
+            handler: createMethodListener(method, args, $stack)
+        });
+    }, renderEventNameVnode = function (ns, name, key, value, event) {
+        setPair($vnode, 'directives', key, {
+            ns: ns,
+            name: name,
+            key: key,
+            value: value,
+            hooks: directives[DIRECTIVE_EVENT],
+            handler: createEventListener(event)
+        });
+    }, renderDirectiveVnode = function (ns, name, key, value, method, args, getter) {
+        var hooks = directives[name];
+        setPair($vnode, 'directives', key, {
+            ns: ns,
+            name: name,
+            key: key,
+            value: value,
+            hooks: hooks,
+            getter: getter ? createGetter(getter, $stack) : UNDEFINED,
+            handler: method ? createMethodListener(method, args, $stack) : UNDEFINED
+        });
+    }, renderSpreadVnode = function (expr, binding) {
+        var value = getValue(expr, binding);
+        // 数组也算一种对象，要排除掉
+        if (object(value) && !array(value)) {
+            each$2(value, function (value, key) {
+                setPair($vnode, 'props', key, value);
+            });
+            var absoluteKeypath = expr['ak'];
+            if (absoluteKeypath) {
+                var key = join$1(DIRECTIVE_BINDING, absoluteKeypath);
+                setPair($vnode, 'directives', key, {
+                    ns: DIRECTIVE_BINDING,
+                    name: EMPTY_STRING,
+                    key: key,
+                    hooks: directives[DIRECTIVE_BINDING],
+                    binding: join$1(absoluteKeypath, RAW_WILDCARD)
+                });
+            }
+        }
     }, renderElementVnode = function (vnode, attrs, childs, slots) {
         if (attrs) {
-            each(attrs, function (attr) {
-                var name = attr.name, value = attr.value;
-                switch (attr.type) {
-                    case ATTRIBUTE:
-                        if (attr.binding) {
-                            value = addBinding(vnode, attr);
-                        }
-                        if (vnode.isComponent) {
-                            setPair(vnode, 'props', name, value);
-                        }
-                        else {
-                            setPair(vnode, 'nativeAttrs', name, { name: name, value: value });
-                        }
-                        break;
-                    case PROPERTY:
-                        setPair(vnode, 'nativeProps', name, {
-                            name: name,
-                            value: attr.binding ? addBinding(vnode, attr) : value,
-                            hint: attr.hint
-                        });
-                        break;
-                    case DIRECTIVE:
-                        addDirective(vnode, attr);
-                        break;
-                    case SPREAD:
-                        spreadObject(vnode, attr);
-                        break;
-                }
-            });
+            $vnode = vnode;
+            attrs();
+            $vnode = UNDEFINED;
         }
         // childs 和 slots 不可能同时存在
         if (childs) {
@@ -4458,7 +4473,7 @@ function render(context, template, filters, partials, directives, transitions) {
         else {
             var partial = partials[name];
             if (partial) {
-                partial(renderExpression, renderExpressionArg, renderExpressionVnode, renderTextVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach);
+                partial(renderExpression, renderExpressionArg, renderExpressionVnode, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach);
             }
         }
     }, renderEach = function (handler, expr, index) {
@@ -4497,7 +4512,7 @@ function render(context, template, filters, partials, directives, transitions) {
             value(callback);
         }
     };
-    return template(renderExpression, renderExpressionArg, renderExpressionVnode, renderTextVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach);
+    return template(renderExpression, renderExpressionArg, renderExpressionVnode, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach);
 }
 
 /**
@@ -6262,7 +6277,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.21";
+    Yox.version = "1.0.0-alpha.22";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */

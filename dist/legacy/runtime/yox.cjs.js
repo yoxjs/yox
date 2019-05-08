@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.21
+ * yox.js v1.0.0-alpha.22
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1262,7 +1262,6 @@ var NextTask = /** @class */ (function () {
 
 var SLOT_DATA_PREFIX = '$slot_';
 var HINT_BOOLEAN = 3;
-var DIRECTIVE_LAZY = 'lazy';
 var DIRECTIVE_MODEL = 'model';
 var DIRECTIVE_EVENT = 'event';
 var DIRECTIVE_BINDING = 'binding';
@@ -1936,22 +1935,6 @@ var binary = {
 /**
  * 元素 节点
  */
-/**
- * 属性 节点
- */
-var ATTRIBUTE = 2;
-/**
- * 指令 节点
- */
-var DIRECTIVE = 3;
-/**
- * 属性 节点
- */
-var PROPERTY = 4;
-/**
- * 延展操作 节点
- */
-var SPREAD = 13;
 
 function toJSON (target) {
     return JSON.stringify(target);
@@ -1975,11 +1958,20 @@ function toJSON (target) {
  *
  */
 // 是否要执行 join 操作
-var RENDER_SLOT = 'a', RENDER_EACH = 'b', RENDER_EXPRESSION = 'c', RENDER_EXPRESSION_ARG = 'd', RENDER_EXPRESSION_VNODE = 'e', RENDER_TEXT_VNODE = 'f', RENDER_ELEMENT_VNODE = 'g', RENDER_PARTIAL = 'h', RENDER_IMPORT = 'i', SEP_COMMA = ',', STRING_EMPTY = toJSON(EMPTY_STRING), CODE_PREFIX = "function(" + join([
+var RENDER_SLOT = 'a', RENDER_EACH = 'b', RENDER_EXPRESSION = 'c', RENDER_EXPRESSION_ARG = 'd', RENDER_EXPRESSION_VNODE = 'e', RENDER_TEXT_VNODE = 'f', RENDER_ATTRIBUTE_VNODE = 'g', RENDER_PROPERTY_VNODE = 'h', RENDER_LAZY_VNODE = 'i', RENDER_TRANSITION_VNODE = 'j', RENDER_MODEL_VNODE = 'k', RENDER_EVENT_METHOD_VNODE = 'l', RENDER_EVENT_NAME_VNODE = 'm', RENDER_DIRECTIVE_VNODE = 'n', RENDER_SPREAD_VNODE = 'o', RENDER_ELEMENT_VNODE = 'p', RENDER_PARTIAL = 'q', RENDER_IMPORT = 'r', SEP_COMMA = ',', STRING_EMPTY = toJSON(EMPTY_STRING), CODE_PREFIX = "function(" + join([
     RENDER_EXPRESSION,
     RENDER_EXPRESSION_ARG,
     RENDER_EXPRESSION_VNODE,
     RENDER_TEXT_VNODE,
+    RENDER_ATTRIBUTE_VNODE,
+    RENDER_PROPERTY_VNODE,
+    RENDER_LAZY_VNODE,
+    RENDER_TRANSITION_VNODE,
+    RENDER_MODEL_VNODE,
+    RENDER_EVENT_METHOD_VNODE,
+    RENDER_EVENT_NAME_VNODE,
+    RENDER_DIRECTIVE_VNODE,
+    RENDER_SPREAD_VNODE,
     RENDER_ELEMENT_VNODE,
     RENDER_SLOT,
     RENDER_PARTIAL,
@@ -2079,7 +2071,7 @@ function setPair(target, name, key, value) {
     data[key] = value;
 }
 function render(context, template, filters, partials, directives, transitions) {
-    var $keypath = EMPTY_STRING, $scope = { $keypath: $keypath }, $stack = [$keypath, $scope], vnodeStack = [], localPartials = {}, lookup = function (stack, index, key, node, depIgnore, defaultKeypath) {
+    var $keypath = EMPTY_STRING, $scope = { $keypath: $keypath }, $stack = [$keypath, $scope], $vnode, vnodeStack = [], localPartials = {}, lookup = function (stack, index, key, node, depIgnore, defaultKeypath) {
         var keypath = join$1(stack[index], key), scope = stack[index + 1];
         node.ak = keypath;
         // 如果最后还是取不到值，用回最初的 keypath
@@ -2123,81 +2115,17 @@ function render(context, template, filters, partials, directives, transitions) {
         return execute$1(expr, function (keypath, node) {
             return lookup(renderStack, length - 2 * ((node.offset || 0) + 1), keypath, node, depIgnore);
         }, context);
-    }, addBinding = function (vnode, attr) {
-        var expr = attr.expr, value = getValue(expr, TRUE), key = join$1(DIRECTIVE_BINDING, attr.name);
+    }, addBinding = function (vnode, name, expr, hint) {
+        var value = getValue(expr, TRUE), key = join$1(DIRECTIVE_BINDING, name);
         setPair(vnode, 'directives', key, {
             ns: DIRECTIVE_BINDING,
-            name: attr.name,
+            name: name,
             key: key,
             hooks: directives[DIRECTIVE_BINDING],
             binding: expr.ak,
-            hint: attr.hint
+            hint: hint
         });
         return value;
-    }, spreadObject = function (vnode, attr) {
-        var expr = attr.expr, value = getValue(expr, attr.binding);
-        // 数组也算一种对象，要排除掉
-        if (object(value) && !array(value)) {
-            each$2(value, function (value, key) {
-                setPair(vnode, 'props', key, value);
-            });
-            var absoluteKeypath = expr.ak;
-            if (absoluteKeypath) {
-                var key = join$1(DIRECTIVE_BINDING, absoluteKeypath);
-                setPair(vnode, 'directives', key, {
-                    ns: DIRECTIVE_BINDING,
-                    name: EMPTY_STRING,
-                    key: key,
-                    hooks: directives[DIRECTIVE_BINDING],
-                    binding: join$1(absoluteKeypath, RAW_WILDCARD)
-                });
-            }
-        }
-        else {
-            warn("[" + expr.raw + "] \u4E0D\u662F\u5BF9\u8C61\uFF0C\u5EF6\u5C55\u4E2A\u6BDB\u554A");
-        }
-    }, addDirective = function (vnode, attr) {
-        var ns = attr.ns, name = attr.name, key = attr.key, value = attr.value, binding, hooks, getter, handler;
-        switch (ns) {
-            case DIRECTIVE_EVENT:
-                hooks = directives[DIRECTIVE_EVENT];
-                handler = attr.event
-                    ? createEventListener(attr.event)
-                    : createMethodListener(attr.method, attr.args, $stack);
-                break;
-            case RAW_TRANSITION:
-                vnode.transition = transitions[value];
-                return;
-            case DIRECTIVE_MODEL:
-                hooks = directives[DIRECTIVE_MODEL];
-                vnode.model = getValue(attr.expr, TRUE);
-                binding = attr.expr.ak;
-                break;
-            case DIRECTIVE_LAZY:
-                setPair(vnode, 'lazy', name, value);
-                return;
-            default:
-                hooks = directives[name];
-                if (attr.method) {
-                    handler = createMethodListener(attr.method, attr.args, $stack);
-                }
-                else if (attr.getter) {
-                    getter = createGetter(attr.getter, $stack);
-                }
-                break;
-        }
-        if (hooks) {
-            setPair(vnode, 'directives', key, {
-                ns: ns,
-                name: name,
-                key: key,
-                value: value,
-                binding: binding,
-                hooks: hooks,
-                getter: getter,
-                handler: handler
-            });
-        }
     }, createEventListener = function (type) {
         return function (event, data) {
             // 事件名称相同的情况，只可能是监听 DOM 事件，比如写一个 Button 组件
@@ -2261,37 +2189,87 @@ function render(context, template, filters, partials, directives, transitions) {
                 push(vnodeList, textVnode);
             }
         }
+    }, renderAttributeVnode = function (name, binding, expr, value) {
+        if (binding) {
+            value = addBinding($vnode, name, expr);
+        }
+        if ($vnode.isComponent) {
+            setPair($vnode, 'props', name, value);
+        }
+        else {
+            setPair($vnode, 'nativeAttrs', name, { name: name, value: value });
+        }
+    }, renderPropertyVnode = function (name, hint, binding, expr, value) {
+        if (binding) {
+            value = addBinding($vnode, name, expr, hint);
+        }
+        setPair($vnode, 'nativeProps', name, { name: name, value: value, hint: hint });
+    }, renderLazyVnode = function (name, value) {
+        setPair($vnode, 'lazy', name, value);
+    }, renderTransitionVnode = function (name) {
+        $vnode.transition = transitions[name];
+    }, renderModelVnode = function (expr) {
+        $vnode.model = getValue(expr, TRUE);
+        setPair($vnode, 'directives', DIRECTIVE_MODEL, {
+            ns: DIRECTIVE_MODEL,
+            name: EMPTY_STRING,
+            key: DIRECTIVE_MODEL,
+            binding: expr.ak,
+            hooks: directives[DIRECTIVE_MODEL]
+        });
+    }, renderEventMethodVnode = function (ns, name, key, value, method, args) {
+        setPair($vnode, 'directives', key, {
+            ns: ns,
+            name: name,
+            key: key,
+            value: value,
+            hooks: directives[DIRECTIVE_EVENT],
+            handler: createMethodListener(method, args, $stack)
+        });
+    }, renderEventNameVnode = function (ns, name, key, value, event) {
+        setPair($vnode, 'directives', key, {
+            ns: ns,
+            name: name,
+            key: key,
+            value: value,
+            hooks: directives[DIRECTIVE_EVENT],
+            handler: createEventListener(event)
+        });
+    }, renderDirectiveVnode = function (ns, name, key, value, method, args, getter) {
+        var hooks = directives[name];
+        setPair($vnode, 'directives', key, {
+            ns: ns,
+            name: name,
+            key: key,
+            value: value,
+            hooks: hooks,
+            getter: getter ? createGetter(getter, $stack) : UNDEFINED,
+            handler: method ? createMethodListener(method, args, $stack) : UNDEFINED
+        });
+    }, renderSpreadVnode = function (expr, binding) {
+        var value = getValue(expr, binding);
+        // 数组也算一种对象，要排除掉
+        if (object(value) && !array(value)) {
+            each$2(value, function (value, key) {
+                setPair($vnode, 'props', key, value);
+            });
+            var absoluteKeypath = expr['ak'];
+            if (absoluteKeypath) {
+                var key = join$1(DIRECTIVE_BINDING, absoluteKeypath);
+                setPair($vnode, 'directives', key, {
+                    ns: DIRECTIVE_BINDING,
+                    name: EMPTY_STRING,
+                    key: key,
+                    hooks: directives[DIRECTIVE_BINDING],
+                    binding: join$1(absoluteKeypath, RAW_WILDCARD)
+                });
+            }
+        }
     }, renderElementVnode = function (vnode, attrs, childs, slots) {
         if (attrs) {
-            each(attrs, function (attr) {
-                var name = attr.name, value = attr.value;
-                switch (attr.type) {
-                    case ATTRIBUTE:
-                        if (attr.binding) {
-                            value = addBinding(vnode, attr);
-                        }
-                        if (vnode.isComponent) {
-                            setPair(vnode, 'props', name, value);
-                        }
-                        else {
-                            setPair(vnode, 'nativeAttrs', name, { name: name, value: value });
-                        }
-                        break;
-                    case PROPERTY:
-                        setPair(vnode, 'nativeProps', name, {
-                            name: name,
-                            value: attr.binding ? addBinding(vnode, attr) : value,
-                            hint: attr.hint
-                        });
-                        break;
-                    case DIRECTIVE:
-                        addDirective(vnode, attr);
-                        break;
-                    case SPREAD:
-                        spreadObject(vnode, attr);
-                        break;
-                }
-            });
+            $vnode = vnode;
+            attrs();
+            $vnode = UNDEFINED;
         }
         // childs 和 slots 不可能同时存在
         if (childs) {
@@ -2345,7 +2323,7 @@ function render(context, template, filters, partials, directives, transitions) {
         else {
             var partial = partials[name];
             if (partial) {
-                partial(renderExpression, renderExpressionArg, renderExpressionVnode, renderTextVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach);
+                partial(renderExpression, renderExpressionArg, renderExpressionVnode, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach);
             }
         }
     }, renderEach = function (handler, expr, index) {
@@ -2384,7 +2362,7 @@ function render(context, template, filters, partials, directives, transitions) {
             value(callback);
         }
     };
-    return template(renderExpression, renderExpressionArg, renderExpressionVnode, renderTextVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach);
+    return template(renderExpression, renderExpressionArg, renderExpressionVnode, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach);
 }
 
 /**
@@ -4229,7 +4207,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.21";
+    Yox.version = "1.0.0-alpha.22";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */

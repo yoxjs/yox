@@ -1,6 +1,6 @@
 {
   "name": "yox",
-  "version": "1.0.0-alpha.21",
+  "version": "1.0.0-alpha.22",
   "description": "A lightweight mvvm framework",
   "main": "dist/standard/dev/yox.js",
   "directories": {
@@ -57,7 +57,7 @@
     "yox-dom": "^0.0.43",
     "yox-observer": "^0.17.41",
     "yox-snabbdom": "^0.19.43",
-    "yox-template-compiler": "^0.27.67",
+    "yox-template-compiler": "^0.27.68",
     "yox-type": "^0.0.64"
   }
 }
