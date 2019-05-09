@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.22
+ * yox.js v1.0.0-alpha.23
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -27,7 +27,6 @@ var RAW_COMPONENT = 'component';
 var RAW_DIRECTIVE = 'directive';
 var RAW_TRANSITION = 'transition';
 var RAW_THIS = 'this';
-var RAW_TYPE = 'type';
 var RAW_VALUE = 'value';
 var RAW_LENGTH = 'length';
 var RAW_FUNCTION = 'function';
@@ -1050,31 +1049,6 @@ var Emitter = /** @class */ (function () {
         return isComplete;
     };
     /**
-     * 是否已监听某个事件
-     *
-     * @param type
-     * @param listener
-     */
-    Emitter.prototype.has = function (type, listener) {
-        var instance = this, listeners = instance.listeners, _a = parseNamespace(instance.ns, type), name = _a.name, ns = _a.ns, result = TRUE, matchListener = createMatchListener(listener), each$1 = function (list) {
-            each(list, function (options) {
-                if (matchListener(options) && matchNamespace(ns, options)) {
-                    return result = FALSE;
-                }
-            });
-            return result;
-        };
-        if (name) {
-            if (listeners[name]) {
-                each$1(listeners[name]);
-            }
-        }
-        else if (ns) {
-            each$2(listeners, each$1);
-        }
-        return !result;
-    };
-    /**
      * 注册监听
      *
      * @param type
@@ -1122,6 +1096,31 @@ var Emitter = /** @class */ (function () {
             // 清空
             instance.listeners = {};
         }
+    };
+    /**
+     * 是否已监听某个事件
+     *
+     * @param type
+     * @param listener
+     */
+    Emitter.prototype.has = function (type, listener) {
+        var instance = this, listeners = instance.listeners, _a = parseNamespace(instance.ns, type), name = _a.name, ns = _a.ns, result = TRUE, matchListener = createMatchListener(listener), each$1 = function (list) {
+            each(list, function (options) {
+                if (matchListener(options) && matchNamespace(ns, options)) {
+                    return result = FALSE;
+                }
+            });
+            return result;
+        };
+        if (name) {
+            if (listeners[name]) {
+                each$1(listeners[name]);
+            }
+        }
+        else if (ns) {
+            each$2(listeners, each$1);
+        }
+        return !result;
     };
     return Emitter;
 }());
@@ -3280,7 +3279,7 @@ function compile$1(content) {
         // 因为 attrs 具有动态性，compiler 无法保证最终一定会输出 type 属性
         if (element.isStyle && falsy(element.attrs)) {
             element.attrs = [
-                createProperty(RAW_TYPE, HINT_STRING, 'text/css')
+                createProperty('type', HINT_STRING, 'text/css')
             ];
         }
     }, bindSpecialAttr = function (element, attr) {
@@ -4036,14 +4035,14 @@ nodeStringify[PROPERTY] = function (node) {
 nodeStringify[DIRECTIVE] = function (node) {
     var ns = node.ns, name = node.name, key = node.key, value = node.value, expr = node.expr;
     if (ns === DIRECTIVE_LAZY) {
-        return stringifyCall(RENDER_LAZY_VNODE, join(trimArgs([toJSON(name), toJSON(value)]), SEP_COMMA));
+        return stringifyCall(RENDER_LAZY_VNODE, join([toJSON(name), toJSON(value)], SEP_COMMA));
     }
     if (ns === RAW_TRANSITION) {
-        return stringifyCall(RENDER_TRANSITION_VNODE, join(trimArgs([toJSON(value)]), SEP_COMMA));
+        return stringifyCall(RENDER_TRANSITION_VNODE, toJSON(value));
     }
     // <input model="id">
     if (ns === DIRECTIVE_MODEL) {
-        return stringifyCall(RENDER_MODEL_VNODE, join(trimArgs([toJSON(expr)]), SEP_COMMA));
+        return stringifyCall(RENDER_MODEL_VNODE, toJSON(expr));
     }
     var renderName = RENDER_DIRECTIVE_VNODE, args = [
         toJSON(ns),
@@ -5420,7 +5419,9 @@ COMPOSITION_END = 'compositionend', domain = 'http://www.w3.org/', namespaces = 
             node[EMITTER] = UNDEFINED;
         }
     },
-    specialEvents: specialEvents
+    addSpecialEvent: function (type, hooks) {
+        specialEvents[type] = hooks;
+    }
 };
 specialEvents[EVENT_MODEL] = {
     on: function (node, listener) {
@@ -6279,7 +6280,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.22";
+    Yox.version = "1.0.0-alpha.23";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */

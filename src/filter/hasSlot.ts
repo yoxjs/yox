@@ -1,5 +1,5 @@
-import * as config from 'yox-config/src/config'
-import isDef from 'yox-common/src/function/isDef'
+import * as config from '../../../yox-config/src/config'
+import isDef from '../../../yox-common/src/function/isDef'
 
 // this type https://jkchao.github.io/typescript-book-chinese/typings/thisType.html
 

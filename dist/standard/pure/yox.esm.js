@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.22
+ * yox.js v1.0.0-alpha.23
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1019,31 +1019,6 @@ var Emitter = /** @class */ (function () {
         return isComplete;
     };
     /**
-     * 是否已监听某个事件
-     *
-     * @param type
-     * @param listener
-     */
-    Emitter.prototype.has = function (type, listener) {
-        var instance = this, listeners = instance.listeners, _a = parseNamespace(instance.ns, type), name = _a.name, ns = _a.ns, result = TRUE, matchListener = createMatchListener(listener), each$1 = function (list) {
-            each(list, function (options) {
-                if (matchListener(options) && matchNamespace(ns, options)) {
-                    return result = FALSE;
-                }
-            });
-            return result;
-        };
-        if (name) {
-            if (listeners[name]) {
-                each$1(listeners[name]);
-            }
-        }
-        else if (ns) {
-            each$2(listeners, each$1);
-        }
-        return !result;
-    };
-    /**
      * 注册监听
      *
      * @param type
@@ -1091,6 +1066,31 @@ var Emitter = /** @class */ (function () {
             // 清空
             instance.listeners = {};
         }
+    };
+    /**
+     * 是否已监听某个事件
+     *
+     * @param type
+     * @param listener
+     */
+    Emitter.prototype.has = function (type, listener) {
+        var instance = this, listeners = instance.listeners, _a = parseNamespace(instance.ns, type), name = _a.name, ns = _a.ns, result = TRUE, matchListener = createMatchListener(listener), each$1 = function (list) {
+            each(list, function (options) {
+                if (matchListener(options) && matchNamespace(ns, options)) {
+                    return result = FALSE;
+                }
+            });
+            return result;
+        };
+        if (name) {
+            if (listeners[name]) {
+                each$1(listeners[name]);
+            }
+        }
+        else if (ns) {
+            each$2(listeners, each$1);
+        }
+        return !result;
     };
     return Emitter;
 }());
@@ -2363,7 +2363,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.22";
+    Yox.version = "1.0.0-alpha.23";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */

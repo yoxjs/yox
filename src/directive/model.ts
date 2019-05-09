@@ -1,21 +1,21 @@
-import isDef from 'yox-common/src/function/isDef'
-import debounce from 'yox-common/src/function/debounce'
-import execute from 'yox-common/src/function/execute'
-import toString from 'yox-common/src/function/toString'
+import isDef from '../../../yox-common/src/function/isDef'
+import debounce from '../../../yox-common/src/function/debounce'
+import execute from '../../../yox-common/src/function/execute'
+import toString from '../../../yox-common/src/function/toString'
 
-import * as is from 'yox-common/src/util/is'
-import * as env from 'yox-common/src/util/env'
-import * as array from 'yox-common/src/util/array'
+import * as is from '../../../yox-common/src/util/is'
+import * as env from '../../../yox-common/src/util/env'
+import * as array from '../../../yox-common/src/util/array'
 
-import api from 'yox-dom/src/dom'
+import api from '../../../yox-dom/src/dom'
 
-import * as config from 'yox-config/src/config'
-import * as type from 'yox-type/src/type'
+import * as config from '../../../yox-config/src/config'
+import * as type from '../../../yox-type/src/type'
 
-import Yox from 'yox-type/src/interface/Yox'
-import VNode from 'yox-type/src/vnode/VNode'
-import Directive from 'yox-type/src/vnode/Directive'
-import DirectiveHooks from 'yox-type/src/hooks/Directive'
+import Yox from '../../../yox-type/src/interface/Yox'
+import VNode from '../../../yox-type/src/vnode/VNode'
+import Directive from '../../../yox-type/src/vnode/Directive'
+import DirectiveHooks from '../../../yox-type/src/hooks/Directive'
 
 interface NativeControl {
 
