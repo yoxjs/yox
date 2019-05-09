@@ -23,6 +23,7 @@ import * as type from '../../yox-type/src/type'
 
 import VNode from '../../yox-type/src/vnode/VNode'
 import YoxInterface from '../../yox-type/src/interface/Yox'
+import YoxPluginInterface from '../../yox-type/src/interface/YoxPlugin'
 import YoxOptions from '../../yox-type/src/options/Yox'
 import ComputedOptions from '../../yox-type/src/options/Computed'
 import WatcherOptions from '../../yox-type/src/options/Watcher'
@@ -40,8 +41,6 @@ import event from './directive/event'
 import model from './directive/model'
 import binding from './directive/binding'
 import hasSlot from './filter/hasSlot'
-
-import Plugin from './Plugin'
 
 
 const globalDirectives = {},
@@ -109,7 +108,7 @@ export default class Yox implements YoxInterface {
    *
    * 插件必须暴露 install 方法
    */
-  public static use(plugin: Plugin): void {
+  public static use(plugin: YoxPluginInterface): void {
     plugin.install(Yox)
   }
 
@@ -123,7 +122,7 @@ export default class Yox implements YoxInterface {
   /**
    * 编译模板，暴露出来是为了打包阶段的模板预编译
    */
-  public static compile(template: string, stringify?: boolean): Function | string | void {
+  public static compile(template: string, stringify?: boolean): Function | string {
     if (process.env.NODE_ENV !== 'pure') {
       if (process.env.NODE_ENV !== 'runtime') {
         if (!templateStringify.hasStringify(template)) {
@@ -141,6 +140,9 @@ export default class Yox implements YoxInterface {
         }
       }
       return new Function(`return ${template}`)()
+    }
+    else {
+      return env.EMPTY_STRING
     }
   }
 
@@ -169,8 +171,8 @@ export default class Yox implements YoxInterface {
   }
 
   public static component(
-    name: string | Record<string, YoxOptions>,
-    component?: YoxOptions | type.asyncComponent
+    name: string | Record<string, type.component>,
+    component?: type.component
   ): YoxOptions | void {
     if (process.env.NODE_ENV !== 'pure') {
       if (is.string(name)) {
@@ -724,8 +726,8 @@ export default class Yox implements YoxInterface {
   }
 
   component(
-    name: string | Record<string, YoxOptions>,
-    component?: YoxOptions | type.asyncComponent
+    name: string | Record<string, type.component>,
+    component?: type.component
   ): YoxOptions | void {
     if (process.env.NODE_ENV !== 'pure') {
       const instance = this, { $components } = instance

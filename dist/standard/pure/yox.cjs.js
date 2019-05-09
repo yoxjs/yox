@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.24
+ * yox.js v1.0.0-alpha.25
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -892,7 +892,11 @@ var nativeConsole = typeof console !== RAW_UNDEFINED ? console : NULL,
 /**
  * 当前是否是源码调试，如果开启了代码压缩，empty function 里的注释会被干掉
  */
-useSource = /yox/.test(toString(EMPTY_FUNCTION));
+useSource = /yox/.test(toString(EMPTY_FUNCTION)), 
+/**
+ * console 样式前缀
+ */
+stylePrefix = '%c';
 /**
  * 全局调试开关
  *
@@ -916,9 +920,9 @@ function getStyle(backgroundColor) {
  *
  * @param msg
  */
-function debug(msg) {
+function debug(msg, tag) {
     if (nativeConsole && isDebug()) {
-        nativeConsole.log('%cYox debug', getStyle('#888'), msg);
+        nativeConsole.log(stylePrefix + (tag || 'Yox debug'), getStyle('#888'), msg);
     }
 }
 /**
@@ -926,9 +930,9 @@ function debug(msg) {
  *
  * @param msg
  */
-function info(msg) {
+function info(msg, tag) {
     if (nativeConsole && isDebug()) {
-        nativeConsole.log('%cYox info', getStyle('#2db7f5'), msg);
+        nativeConsole.log(stylePrefix + (tag || 'Yox info'), getStyle('#2db7f5'), msg);
     }
 }
 /**
@@ -936,29 +940,29 @@ function info(msg) {
  *
  * @param msg
  */
-function success(msg) {
+function success(msg, tag) {
     if (nativeConsole && isDebug()) {
-        nativeConsole.log('%cYox success', getStyle('#19be6b'), msg);
+        nativeConsole.log(stylePrefix + (tag || 'Yox success'), getStyle('#19be6b'), msg);
     }
 }
 /**
- * 打印警告日志
+ * 打印 warn 日志
  *
  * @param msg
  */
-function warn(msg) {
+function warn(msg, tag) {
     if (nativeConsole && isDebug()) {
-        nativeConsole.warn('%cYox warn', getStyle('#f90'), msg);
+        nativeConsole.warn(stylePrefix + (tag || 'Yox warn'), getStyle('#f90'), msg);
     }
 }
 /**
- * 打印错误日志
+ * 打印 error 日志
  *
  * @param msg
  */
-function error(msg) {
+function error(msg, tag) {
     if (nativeConsole) {
-        nativeConsole.error('%cYox error', getStyle('#ed4014'), msg);
+        nativeConsole.error(stylePrefix + (tag || 'Yox error'), getStyle('#ed4014'), msg);
     }
 }
 /**
@@ -2113,6 +2117,9 @@ var Yox = /** @class */ (function () {
      * 编译模板，暴露出来是为了打包阶段的模板预编译
      */
     Yox.compile = function (template, stringify) {
+        {
+            return EMPTY_STRING;
+        }
     };
     Yox.directive = function (name, directive) {
     };
@@ -2390,7 +2397,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.24";
+    Yox.version = "1.0.0-alpha.25";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */
