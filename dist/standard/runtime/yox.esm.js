@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.25
+ * yox.js v1.0.0-alpha.26
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -3665,8 +3665,11 @@ var Yox = /** @class */ (function () {
                     ? copy(watchers)
                     : {};
                 // 当 virtual dom 变了，则更新视图
-                newWatchers[TEMPLATE_COMPUTED] = function (vnode) {
-                    instance.update(vnode, instance.$vnode);
+                newWatchers[TEMPLATE_COMPUTED] = {
+                    sync: TRUE,
+                    watcher: function (vnode) {
+                        instance.update(vnode, instance.$vnode);
+                    }
                 };
                 // 当模板的依赖变了，则重新创建 virtual dom
                 observer.addComputed(TEMPLATE_COMPUTED, {
@@ -4146,7 +4149,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.25";
+    Yox.version = "1.0.0-alpha.26";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */

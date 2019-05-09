@@ -477,8 +477,11 @@ export default class Yox implements YoxInterface {
           : {}
 
         // 当 virtual dom 变了，则更新视图
-        newWatchers[TEMPLATE_COMPUTED] = function (vnode: VNode) {
-          instance.update(vnode, instance.$vnode as VNode)
+        newWatchers[TEMPLATE_COMPUTED] = {
+          sync: env.TRUE,
+          watcher: function (vnode: VNode) {
+            instance.update(vnode, instance.$vnode as VNode)
+          }
         }
 
         // 当模板的依赖变了，则重新创建 virtual dom
