@@ -488,7 +488,7 @@ this.on('click', function (event) {
 
 ### 自定义事件
 
-如果浏览器自带的 `DOM 事件` 不满足需求，Yox 还支持自定义事件。
+如果浏览器自带的 `DOM 事件` 不满足需求，Yox 还支持 `自定义事件`。
 
 我们知道，当使用中文输入法进行文本输入时，如果没有敲击回车或空格，输入框会不停地触发 `input` 事件，这通常不是什么问题，但对于双向绑定来说，这样的体验并不好。
 
@@ -497,7 +497,7 @@ this.on('click', function (event) {
 对于跨端页面来说，通常还需要 `tap` 事件，下面简单示范如何实现它：
 
 ```js
-Yox.dom.specialEvents.tap = {
+Yox.dom.addSpecialEvent('tap', {
   on: function (element, listener) {
     Yox.dom.on(
       element,
@@ -512,7 +512,7 @@ Yox.dom.specialEvents.tap = {
       listener
     )
   }
-}
+})
 ```
 
 ```html
