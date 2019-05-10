@@ -53,6 +53,8 @@ globalPartials = {},
 
 globalFilters = {},
 
+LOADER_QUEUE = '$queue',
+
 TEMPLATE_COMPUTED = '$' + env.RAW_TEMPLATE,
 
 selectorPattern = /^[#.][-\w+]+$/
@@ -146,6 +148,10 @@ export default class Yox implements YoxInterface {
     }
   }
 
+  public static loadComponent(name: string, callback: type.componentCallback): void {
+    loadComponent(globalComponents, name, callback)
+  }
+
   public static directive(
     name: string | Record<string, DirectiveHooks>,
     directive?: DirectiveHooks
@@ -173,17 +179,10 @@ export default class Yox implements YoxInterface {
   public static component(
     name: string | Record<string, type.component>,
     component?: type.component
-  ): YoxOptions | void {
+  ): type.component | void {
     if (process.env.NODE_ENV !== 'pure') {
-      if (is.string(name)) {
-        // 同步取值
-        if (!component) {
-          return getResource(globalComponents, name as string)
-        }
-        else if (is.func(component)) {
-          getComponentAsync(globalComponents, name as string, component as type.asyncComponent)
-          return
-        }
+      if (is.string(name) && !component) {
+        return getResource(globalComponents, name as string)
       }
       setResource(globalComponents, name, component)
     }
@@ -476,8 +475,8 @@ export default class Yox implements YoxInterface {
           ? object.copy(watchers)
           : {}
 
-        // 当 virtual dom 变了，则更新视图
         newWatchers[TEMPLATE_COMPUTED] = {
+          // 模板一旦变化，立即刷新
           sync: env.TRUE,
           watcher: function (vnode: VNode) {
             instance.update(vnode, instance.$vnode as VNode)
@@ -694,6 +693,10 @@ export default class Yox implements YoxInterface {
     return this
   }
 
+  loadComponent(name: string, callback: type.componentCallback): void {
+    loadComponent(this.$components, name, callback)
+  }
+
   directive(
     name: string | Record<string, DirectiveHooks>,
     directive?: DirectiveHooks
@@ -731,20 +734,11 @@ export default class Yox implements YoxInterface {
   component(
     name: string | Record<string, type.component>,
     component?: type.component
-  ): YoxOptions | void {
+  ): type.component | void {
     if (process.env.NODE_ENV !== 'pure') {
       const instance = this, { $components } = instance
-      if (is.string(name)) {
-        // 同步取值
-        if (!component) {
-          return getResource($components, name as string, Yox.component)
-        }
-        else if (is.func(component)) {
-          if (!getComponentAsync($components, name as string, component as type.asyncComponent)) {
-            getComponentAsync(globalComponents, name as string, component as type.asyncComponent)
-          }
-          return
-        }
+      if (is.string(name) && !component) {
+        return getResource($components, name as string, Yox.component)
       }
       setResource(
         $components || (instance.$components = {}),
@@ -1140,38 +1134,44 @@ function addEvents(
   return instance
 }
 
-function getComponentAsync(data: type.data | void, name: string, callback: type.asyncComponent): true | void {
-  if (data && object.has(data, name)) {
-    const component = data[name]
+function loadComponent(data: type.data | void, name: string, callback: type.componentCallback): true | void {
+  if (data && data[name]) {
+    const component: YoxOptions | type.componentLoader = data[name]
     // 注册的是异步加载函数
     if (is.func(component)) {
-      let { $queue } = component
-      if (!$queue) {
-        $queue = component.$queue = [callback]
-        component(
-          function (replacement: YoxOptions) {
 
-            component.$queue = env.UNDEFINED
+      let loader = component as type.componentLoader,
 
-            data[name] = replacement
+      queue: type.componentCallback[] = loader[LOADER_QUEUE]
+
+      if (queue) {
+        array.push(queue, callback)
+      }
+      else {
+        queue = component[LOADER_QUEUE] = [callback]
+
+        loader(
+          function (options: YoxOptions) {
+
+            loader[LOADER_QUEUE] = env.UNDEFINED
+
+            data[name] = options
 
             array.each(
-              $queue,
-              function (callback: Function) {
-                callback(replacement)
+              queue,
+              function (callback) {
+                callback(options)
               }
             )
 
           }
         )
       }
-      else {
-        array.push($queue, callback)
-      }
+
     }
     // 不是异步加载函数，直接同步返回
     else {
-      callback(component)
+      callback(component as YoxOptions)
     }
     return env.TRUE
   }

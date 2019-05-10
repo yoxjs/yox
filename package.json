@@ -51,7 +51,6 @@
     "typescript": "^3.4.4"
   },
   "dependencies": {
-    "yox": "^1.0.0-alpha.20",
     "yox-common": "^0.18.47",
     "yox-config": "^0.1.8",
     "yox-dom": "^0.0.43",
