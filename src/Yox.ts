@@ -148,10 +148,6 @@ export default class Yox implements YoxInterface {
     }
   }
 
-  public static loadComponent(name: string, callback: type.componentCallback): void {
-    loadComponent(globalComponents, name, callback)
-  }
-
   public static directive(
     name: string | Record<string, DirectiveHooks>,
     directive?: DirectiveHooks
@@ -267,7 +263,7 @@ export default class Yox implements YoxInterface {
                 matched = (type as Function)(props)
               }
               if (!matched) {
-                logger.warn(`The type of prop "${key}" is not matched.`)
+                logger.warn(`The type of prop "${key}" expected to be "${type}", but is "${actual}".`)
               }
             }
             else {
@@ -1136,9 +1132,9 @@ function addEvents(
   return instance
 }
 
-function loadComponent(data: type.data | void, name: string, callback: type.componentCallback): true | void {
+function loadComponent(data: Record<string, type.component> | void, name: string, callback: type.componentCallback): true | void {
   if (data && data[name]) {
-    const component: YoxOptions | type.componentLoader = data[name]
+    const component = data[name]
     // 注册的是异步加载函数
     if (is.func(component)) {
 

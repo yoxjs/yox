@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.26
+ * yox.js v1.0.0-alpha.27
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -929,7 +929,7 @@ function isDebug() {
     return useSource;
 }
 function getStyle(backgroundColor) {
-    return "background-color:" + backgroundColor + ";color:#fff;padding:4px 8px;border-radius:20px;";
+    return "background-color:" + backgroundColor + ";border-radius:20px;color:#fff;font-size:10px;padding:3px 6px;";
 }
 /**
  * 打印 debug 日志
@@ -986,8 +986,8 @@ function error(msg, tag) {
  *
  * @param msg
  */
-function fatal(msg) {
-    throw new Error("[Yox fatal]: " + msg);
+function fatal(msg, tag) {
+    throw new Error("[" + (tag || 'Yox fatal') + "]: " + msg);
 }
 
 var logger = /*#__PURE__*/Object.freeze({
@@ -1478,7 +1478,7 @@ function createVnode(api, vnode) {
     }
     if (isComponent) {
         var isAsync_1 = TRUE;
-        context.component(tag, function (options) {
+        context.loadComponent(tag, function (options) {
             if (has$2(data, LOADING)) {
                 // 异步组件
                 if (data[LOADING]) {
@@ -3660,7 +3660,7 @@ function hasSlot (name) {
     return isDef(this.get(SLOT_DATA_PREFIX + name));
 }
 
-var globalDirectives = {}, globalTransitions = {}, globalComponents = {}, globalPartials = {}, globalFilters = {}, TEMPLATE_COMPUTED = '$' + RAW_TEMPLATE, selectorPattern = /^[#.][-\w+]+$/;
+var globalDirectives = {}, globalTransitions = {}, globalComponents = {}, globalPartials = {}, globalFilters = {}, LOADER_QUEUE = '$queue', TEMPLATE_COMPUTED = '$' + RAW_TEMPLATE, selectorPattern = /^[#.][-\w+]+$/;
 var Yox = /** @class */ (function () {
     function Yox(options) {
         var instance = this, $options = options || EMPTY_OBJECT;
@@ -3754,8 +3754,8 @@ var Yox = /** @class */ (function () {
                 var newWatchers = watchers
                     ? copy(watchers)
                     : {};
-                // 当 virtual dom 变了，则更新视图
                 newWatchers[TEMPLATE_COMPUTED] = {
+                    // 模板一旦变化，立即刷新
                     sync: TRUE,
                     watcher: function (vnode) {
                         instance.update(vnode, instance.$vnode);
@@ -3827,15 +3827,8 @@ var Yox = /** @class */ (function () {
     };
     Yox.component = function (name, component) {
         {
-            if (string(name)) {
-                // 同步取值
-                if (!component) {
-                    return getResource(globalComponents, name);
-                }
-                else if (func(component)) {
-                    getComponentAsync(globalComponents, name, component);
-                    return;
-                }
+            if (string(name) && !component) {
+                return getResource(globalComponents, name);
             }
             setResource(globalComponents, name, component);
         }
@@ -3963,6 +3956,11 @@ var Yox = /** @class */ (function () {
         this.$observer.unwatch(keypath, watcher);
         return this;
     };
+    Yox.prototype.loadComponent = function (name, callback) {
+        if (!loadComponent(this.$components, name, callback)) {
+            loadComponent(globalComponents, name, callback);
+        }
+    };
     Yox.prototype.directive = function (name, directive) {
         {
             var instance = this, $directives = instance.$directives;
@@ -3984,17 +3982,8 @@ var Yox = /** @class */ (function () {
     Yox.prototype.component = function (name, component) {
         {
             var instance = this, $components = instance.$components;
-            if (string(name)) {
-                // 同步取值
-                if (!component) {
-                    return getResource($components, name, Yox.component);
-                }
-                else if (func(component)) {
-                    if (!getComponentAsync($components, name, component)) {
-                        getComponentAsync(globalComponents, name, component);
-                    }
-                    return;
-                }
+            if (string(name) && !component) {
+                return getResource($components, name, Yox.component);
             }
             setResource($components || (instance.$components = {}), name, component);
         }
@@ -4239,7 +4228,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.26";
+    Yox.version = "1.0.0-alpha.27";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */
@@ -4287,29 +4276,29 @@ function addEvents(instance, type, listener, once) {
     }
     return instance;
 }
-function getComponentAsync(data, name, callback) {
-    if (data && has$2(data, name)) {
-        var component_1 = data[name];
+function loadComponent(data, name, callback) {
+    if (data && data[name]) {
+        var component = data[name];
         // 注册的是异步加载函数
-        if (func(component_1)) {
-            var $queue_1 = component_1.$queue;
-            if (!$queue_1) {
-                $queue_1 = component_1.$queue = [callback];
-                component_1(function (replacement) {
-                    component_1.$queue = UNDEFINED;
-                    data[name] = replacement;
-                    each($queue_1, function (callback) {
-                        callback(replacement);
-                    });
-                });
+        if (func(component)) {
+            var loader_1 = component, queue_1 = loader_1[LOADER_QUEUE];
+            if (queue_1) {
+                push(queue_1, callback);
             }
             else {
-                push($queue_1, callback);
+                queue_1 = component[LOADER_QUEUE] = [callback];
+                loader_1(function (options) {
+                    loader_1[LOADER_QUEUE] = UNDEFINED;
+                    data[name] = options;
+                    each(queue_1, function (callback) {
+                        callback(options);
+                    });
+                });
             }
         }
         // 不是异步加载函数，直接同步返回
         else {
-            callback(component_1);
+            callback(component);
         }
         return TRUE;
     }

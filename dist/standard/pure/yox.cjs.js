@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.26
+ * yox.js v1.0.0-alpha.27
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -913,7 +913,7 @@ function isDebug() {
     return useSource;
 }
 function getStyle(backgroundColor) {
-    return "background-color:" + backgroundColor + ";color:#fff;padding:4px 8px;border-radius:20px;";
+    return "background-color:" + backgroundColor + ";border-radius:20px;color:#fff;font-size:10px;padding:3px 6px;";
 }
 /**
  * 打印 debug 日志
@@ -970,8 +970,8 @@ function error(msg, tag) {
  *
  * @param msg
  */
-function fatal(msg) {
-    throw new Error("[Yox fatal]: " + msg);
+function fatal(msg, tag) {
+    throw new Error("[" + (tag || 'Yox fatal') + "]: " + msg);
 }
 
 var logger = /*#__PURE__*/Object.freeze({
@@ -2058,6 +2058,7 @@ if (DOCUMENT) {
 // 移动端的 tap 事件可自行在业务层打补丁实现
 var immediateTypes = toObject([EVENT_CLICK, EVENT_TAP]);
 
+var globalComponents = {}, LOADER_QUEUE = '$queue';
 var Yox = /** @class */ (function () {
     function Yox(options) {
         var instance = this, $options = options || EMPTY_OBJECT;
@@ -2238,6 +2239,11 @@ var Yox = /** @class */ (function () {
         this.$observer.unwatch(keypath, watcher);
         return this;
     };
+    Yox.prototype.loadComponent = function (name, callback) {
+        if (!loadComponent(this.$components, name, callback)) {
+            loadComponent(globalComponents, name, callback);
+        }
+    };
     Yox.prototype.directive = function (name, directive) {
     };
     Yox.prototype.transition = function (name, transition) {
@@ -2397,7 +2403,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.26";
+    Yox.version = "1.0.0-alpha.27";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */
@@ -2436,6 +2442,33 @@ function addEvents(instance, type, listener, once) {
         });
     }
     return instance;
+}
+function loadComponent(data, name, callback) {
+    if (data && data[name]) {
+        var component = data[name];
+        // 注册的是异步加载函数
+        if (func(component)) {
+            var loader_1 = component, queue_1 = loader_1[LOADER_QUEUE];
+            if (queue_1) {
+                push(queue_1, callback);
+            }
+            else {
+                queue_1 = component[LOADER_QUEUE] = [callback];
+                loader_1(function (options) {
+                    loader_1[LOADER_QUEUE] = UNDEFINED;
+                    data[name] = options;
+                    each(queue_1, function (callback) {
+                        callback(options);
+                    });
+                });
+            }
+        }
+        // 不是异步加载函数，直接同步返回
+        else {
+            callback(component);
+        }
+        return TRUE;
+    }
 }
 
 module.exports = Yox;
