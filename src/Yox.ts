@@ -694,7 +694,9 @@ export default class Yox implements YoxInterface {
   }
 
   loadComponent(name: string, callback: type.componentCallback): void {
-    loadComponent(this.$components, name, callback)
+    if (!loadComponent(this.$components, name, callback)) {
+      loadComponent(globalComponents, name, callback)
+    }
   }
 
   directive(
