@@ -73,6 +73,8 @@ export default class Yox implements YoxInterface {
 
   $refs?: Record<string, YoxInterface | HTMLElement>
 
+  $root?: YoxInterface
+
   $parent?: YoxInterface
 
   $children?: YoxInterface[]
@@ -385,6 +387,7 @@ export default class Yox implements YoxInterface {
 
       {
         el,
+        root,
         parent,
         replace,
         template,
@@ -451,6 +454,9 @@ export default class Yox implements YoxInterface {
         )
       }
 
+      if (root) {
+        instance.$root = root
+      }
       if (parent) {
         instance.$parent = parent
       }
@@ -897,30 +903,27 @@ export default class Yox implements YoxInterface {
    * @param vnode 虚拟节点
    * @param node DOM 元素
    */
-  create(options: YoxOptions, vnode?: VNode, node?: Node): YoxInterface {
+  create(options: YoxOptions, vnode: VNode, node: Node | void): YoxInterface {
     if (process.env.NODE_ENV !== 'pure') {
       options = object.copy(options)
+      options.root = this.$root || this
       options.parent = this
 
-      if (vnode) {
+      // 如果传了 node，表示有一个占位元素，新创建的 child 需要把它替换掉
+      if (node) {
+        options.el = node
+        options.replace = env.TRUE
+      }
 
-        // 如果传了 node，表示有一个占位元素，新创建的 child 需要把它替换掉
-        if (node) {
-          options.el = node
-          options.replace = env.TRUE
-        }
-
-        const { props, slots } = vnode
-        if (props) {
-          options.props = props
-        }
-        if (slots) {
-          options.slots = slots
-        }
-
+      if (vnode.props) {
+        options.props = vnode.props
+      }
+      if (vnode.slots) {
+        options.slots = vnode.slots
       }
 
       const child = new Yox(options)
+
       array.push(
         this.$children || (this.$children = [ ]),
         child
