@@ -957,7 +957,7 @@ export default class Yox implements YoxInterface {
 
       if ($vnode) {
         // virtual dom 通过判断 parent.$vnode 知道宿主组件是否正在销毁
-        delete instance.$vnode
+        instance.$vnode = env.UNDEFINED
         snabbdom.destroy(domApi, $vnode, !$parent)
       }
 
