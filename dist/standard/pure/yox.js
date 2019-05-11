@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.29
+ * yox.js v1.0.0-alpha.30
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -874,6 +874,11 @@
               : EMPTY_STRING;
   }
 
+  var DEBUG = 1;
+  var INFO = 2;
+  var WARN = 3;
+  var ERROR = 4;
+  var FATAL = 5;
   /**
    * 是否有原生的日志特性，没有必要单独实现
    */
@@ -881,25 +886,22 @@
   /**
    * 当前是否是源码调试，如果开启了代码压缩，empty function 里的注释会被干掉
    */
-  useSource = /yox/.test(toString(EMPTY_FUNCTION)), 
+  level = /yox/.test(toString(EMPTY_FUNCTION)) ? DEBUG : WARN, 
   /**
    * console 样式前缀
    */
   stylePrefix = '%c';
   /**
    * 全局调试开关
-   *
-   * 比如开发环境，开了 debug 模式，但是有时候觉得看着一堆日志特烦，想强制关掉
-   * 比如线上环境，关了 debug 模式，为了调试，想强制打开
    */
-  function isDebug() {
+  function getLevel() {
       if (WINDOW) {
-          var debug_1 = WINDOW['DEBUG'];
-          if (boolean(debug_1)) {
-              return debug_1;
+          var logLevel = WINDOW['YOX_LOG_LEVEL'];
+          if (logLevel >= DEBUG && logLevel <= FATAL) {
+              return logLevel;
           }
       }
-      return useSource;
+      return level;
   }
   function getStyle(backgroundColor) {
       return "background-color:" + backgroundColor + ";border-radius:20px;color:#fff;font-size:10px;padding:3px 6px;";
@@ -910,7 +912,7 @@
    * @param msg
    */
   function debug(msg, tag) {
-      if (nativeConsole && isDebug()) {
+      if (nativeConsole && getLevel() <= DEBUG) {
           nativeConsole.log(stylePrefix + (tag || 'Yox debug'), getStyle('#888'), msg);
       }
   }
@@ -920,18 +922,8 @@
    * @param msg
    */
   function info(msg, tag) {
-      if (nativeConsole && isDebug()) {
+      if (nativeConsole && getLevel() <= INFO) {
           nativeConsole.log(stylePrefix + (tag || 'Yox info'), getStyle('#2db7f5'), msg);
-      }
-  }
-  /**
-   * 打印 success 日志
-   *
-   * @param msg
-   */
-  function success(msg, tag) {
-      if (nativeConsole && isDebug()) {
-          nativeConsole.log(stylePrefix + (tag || 'Yox success'), getStyle('#19be6b'), msg);
       }
   }
   /**
@@ -940,7 +932,7 @@
    * @param msg
    */
   function warn(msg, tag) {
-      if (nativeConsole && isDebug()) {
+      if (nativeConsole && getLevel() <= WARN) {
           nativeConsole.warn(stylePrefix + (tag || 'Yox warn'), getStyle('#f90'), msg);
       }
   }
@@ -950,7 +942,7 @@
    * @param msg
    */
   function error(msg, tag) {
-      if (nativeConsole) {
+      if (nativeConsole && getLevel() <= ERROR) {
           nativeConsole.error(stylePrefix + (tag || 'Yox error'), getStyle('#ed4014'), msg);
       }
   }
@@ -960,13 +952,19 @@
    * @param msg
    */
   function fatal(msg, tag) {
-      throw new Error("[" + (tag || 'Yox fatal') + "]: " + msg);
+      if (getLevel() <= FATAL) {
+          throw new Error("[" + (tag || 'Yox fatal') + "]: " + msg);
+      }
   }
 
   var logger = /*#__PURE__*/Object.freeze({
+    DEBUG: DEBUG,
+    INFO: INFO,
+    WARN: WARN,
+    ERROR: ERROR,
+    FATAL: FATAL,
     debug: debug,
     info: info,
-    success: success,
     warn: warn,
     error: error,
     fatal: fatal
@@ -2388,7 +2386,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.29";
+      Yox.version = "1.0.0-alpha.30";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
