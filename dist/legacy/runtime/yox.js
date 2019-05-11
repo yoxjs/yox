@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.28
+ * yox.js v1.0.0-alpha.29
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -3447,9 +3447,7 @@
       };
   }
 
-  // 避免连续多次点击，主要用于提交表单场景
-  // 移动端的 tap 事件可自行在业务层打补丁实现
-  var immediateTypes = toObject([EVENT_CLICK, EVENT_TAP]), directive = {
+  var directive = {
       bind: function (node, directive, vnode) {
           var name = directive.name, handler = directive.handler, lazy = vnode.lazy;
           if (!handler) {
@@ -3461,7 +3459,10 @@
                   name = EVENT_CHANGE;
               }
               else if (value > 0) {
-                  handler = debounce(handler, value, immediateTypes[name]);
+                  handler = debounce(handler, value, 
+                  // 避免连续多次点击，主要用于提交表单场景
+                  // 移动端的 tap 事件可自行在业务层打补丁实现
+                  name === EVENT_CLICK || name === EVENT_TAP);
               }
           }
           if (vnode.isComponent) {
@@ -4130,7 +4131,7 @@
               }
               if ($vnode) {
                   // virtual dom 通过判断 parent.$vnode 知道宿主组件是否正在销毁
-                  delete instance.$vnode;
+                  instance.$vnode = UNDEFINED;
                   destroy(domApi, $vnode, !$parent);
               }
           }
@@ -4235,7 +4236,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.28";
+      Yox.version = "1.0.0-alpha.29";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

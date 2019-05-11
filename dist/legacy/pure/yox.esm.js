@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.28
+ * yox.js v1.0.0-alpha.29
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -24,21 +24,6 @@ var WINDOW = typeof window !== RAW_UNDEFINED ? window : UNDEFINED;
  * Single instance for document in browser
  */
 var DOCUMENT = typeof document !== RAW_UNDEFINED ? document : UNDEFINED;
-/**
- * tap 事件
- *
- * 非常有用的抽象事件，比如 pc 端是 click 事件，移动端是 touchend 事件
- *
- * 这样只需 on-tap="handler" 就可以完美兼容各端
- *
- * 框架未实现此事件，通过 Yox.dom.specialEvents 提供给外部扩展
- *
- */
-var EVENT_TAP = 'tap';
-/**
- * 点击事件
- */
-var EVENT_CLICK = 'click';
 /**
  * Single instance for noop function
  */
@@ -2056,10 +2041,6 @@ if (DOCUMENT) {
     }
 }
 
-// 避免连续多次点击，主要用于提交表单场景
-// 移动端的 tap 事件可自行在业务层打补丁实现
-var immediateTypes = toObject([EVENT_CLICK, EVENT_TAP]);
-
 var globalComponents = {}, LOADER_QUEUE = '$queue';
 var Yox = /** @class */ (function () {
     function Yox(options) {
@@ -2405,7 +2386,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.28";
+    Yox.version = "1.0.0-alpha.29";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */
