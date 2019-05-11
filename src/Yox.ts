@@ -234,7 +234,7 @@ export default class Yox implements YoxInterface {
 
           // 动态化获取是否必填
           if (is.func(required)) {
-            required = (required as Function)(props)
+            required = (required as type.propRequired)(props, key)
           }
 
           // 传了数据
@@ -260,9 +260,10 @@ export default class Yox implements YoxInterface {
                   }
                 )
               }
-              // 动态判断是否匹配类型
+              // 动态判断是否匹配类型，自行校验并输出 warn 吧
               else if (is.func(type)) {
-                matched = (type as Function)(props)
+                (type as type.propType)(props, type)
+                matched = env.TRUE
               }
               if (!matched) {
                 logger.warn(`The type of prop "${key}" expected to be "${type}", but is "${actual}".`)
@@ -282,7 +283,7 @@ export default class Yox implements YoxInterface {
             result[key] = type === env.RAW_FUNCTION
               ? value
               : is.func(value)
-                ? value(props)
+                ? (value as type.propValue)(props, key)
                 : value
           }
         }

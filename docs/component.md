@@ -285,7 +285,7 @@ Yox.component('AsyncComponent', function (callback) {
 
 如果定义的组件配置了 `propTypes`，当它接收到传入的 `props` 后，会立即调用 `checkPropTypes()`，这个函数会根据配置的 `propTypes`，告诉你哪些数据不符合要求。
 
-> 此特性只在 `dev` 版本可用，其他版本，`checkPropTypes` 是个直接返回 `props` 的空函数。
+> 此特性只在 `dev` 版本可用，其他版本，`checkPropTypes` 是个直接返回 `props` 的简单函数。
 
 `propTypes` 每项配置有三个选项，如下：
 
@@ -307,9 +307,10 @@ Yox.component('AsyncComponent', function (callback) {
       type: ['number', 'numeric']
     },
     gender: {
-      type: function (props) {
-        // 返回布尔类型，表示是否符合类型要求
-        return true
+      type: function (props, key) {
+        // 自行判断是否 props[key] 是否符合要求
+        // 如果不符合，调用 Yox.logger.warn('xx') 输出警告
+        // 方便外部实现 oneOf(['a', 'b', 'c']) 之类的校验库
       }
     }
   }
@@ -341,7 +342,7 @@ function (prop) {
     },
     age: {
       type: 'number',
-      required: function (props) {
+      required: function (props, key) {
         // 返回布尔类型，表示是否必传
         return true
       }
