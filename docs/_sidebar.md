@@ -12,6 +12,7 @@
 * [Lazy](lazy)
 * [自定义指令](directive)
 * [组件](component)
+* [日志](log)
 * [API](api-yox)
 * [特别声明](notice)
 * [适配低端浏览器](ie)
