@@ -116,7 +116,7 @@ else {
 
 #### getter
 
-如果指令的值 `不是` 基本类型的字面量，Yox 会把它编译成 `getter` 函数，取值非常简单，如下：
+如果 `value` 是一个合法表达式，且 `不是` 基本类型的字面量，Yox 会把它编译成 `getter` 函数，取值非常简单，如下：
 
 ```js
 var value = directive.getter()
@@ -124,7 +124,7 @@ var value = directive.getter()
 
 #### handler
 
-如果指令的值是 `调用函数` 的形式，比如常见的 `on-click="submit()"`，Yox 会把它编译成 `handler` 函数，你需要做的就是在合适的时机调用它。
+如果 `value` 是一个合法表达式，且是一个 `函数调用`，比如常见的 `on-click="submit()"`，Yox 会把它编译成 `handler` 函数，你需要做的就是在合适的时机调用它。
 
 注意，只能调用 Yox 的实例方法。
 
