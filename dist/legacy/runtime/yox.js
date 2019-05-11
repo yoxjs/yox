@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.27
+ * yox.js v1.0.0-alpha.28
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -3707,7 +3707,7 @@
               instance.on(events);
           }
           {
-              var isComment = FALSE, placeholder = void 0, el = $options.el, parent = $options.parent, replace = $options.replace, template = $options.template, transitions = $options.transitions, components = $options.components, directives = $options.directives, partials = $options.partials, filters = $options.filters, slots = $options.slots;
+              var isComment = FALSE, placeholder = void 0, el = $options.el, root = $options.root, parent = $options.parent, replace = $options.replace, template = $options.template, transitions = $options.transitions, components = $options.components, directives = $options.directives, partials = $options.partials, filters = $options.filters, slots = $options.slots;
               // 把 slots 放进数据里，方便 get
               if (slots) {
                   extend(source, slots);
@@ -3743,6 +3743,9 @@
                   // 则在该元素下新建一个注释节点，等会用新组件替换掉
                   isComment = TRUE;
                   domApi.append(placeholder, placeholder = domApi.createComment(EMPTY_STRING));
+              }
+              if (root) {
+                  instance.$root = root;
               }
               if (parent) {
                   instance.$parent = parent;
@@ -4096,20 +4099,18 @@
       Yox.prototype.create = function (options, vnode, node) {
           {
               options = copy(options);
+              options.root = this.$root || this;
               options.parent = this;
-              if (vnode) {
-                  // 如果传了 node，表示有一个占位元素，新创建的 child 需要把它替换掉
-                  if (node) {
-                      options.el = node;
-                      options.replace = TRUE;
-                  }
-                  var props = vnode.props, slots = vnode.slots;
-                  if (props) {
-                      options.props = props;
-                  }
-                  if (slots) {
-                      options.slots = slots;
-                  }
+              // 如果传了 node，表示有一个占位元素，新创建的 child 需要把它替换掉
+              if (node) {
+                  options.el = node;
+                  options.replace = TRUE;
+              }
+              if (vnode.props) {
+                  options.props = vnode.props;
+              }
+              if (vnode.slots) {
+                  options.slots = vnode.slots;
               }
               var child = new Yox(options);
               push(this.$children || (this.$children = []), child);
@@ -4234,7 +4235,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.27";
+      Yox.version = "1.0.0-alpha.28";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
