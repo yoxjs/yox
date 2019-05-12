@@ -1,4 +1,4 @@
-Yox 内置了一个简易的 `分级` 日志打印器，支持以下五个等级：
+Yox 内置了一个简易的 `分级` 日志打印器，支持以下五个日志等级：
 
 * `Yox.logger.DEBUG`: 一般的信息
 * `Yox.logger.INFO`: 比较重要的信息
@@ -18,8 +18,10 @@ Yox 内置了一个简易的 `分级` 日志打印器，支持以下五个等级
 
 也就是说，`源码版` 版本会打印所有等级的日志，`压缩版` 只会打印 `大于或等于` 警告级别的日志（即 `WARN`/`ERROR`/`FATAL` 三种日志）。
 
-如果你希望改变这个行为，可以通过全局变量 `YOX_LOG_LEVEL` 进行设置，如下：
+如果你希望改变这个行为，可以修改全局变量 `YOX_LOG_LEVEL`，如下：
 
 ```js
 window.YOX_LOG_LEVEL = Yox.logger.ERROR
 ```
+
+修改 `YOX_LOG_LEVEL` 是实时生效的，也就是说，即使上一秒还在打印 `DEBUG` 日志，一旦把 `YOX_LOG_LEVEL` 修改为 `ERROR`，之后便只会打印 `ERROR` 和 `FATAL` 日志。
