@@ -390,7 +390,7 @@ this.fire('click.button')
 }
 ```
 
-> 直接调用 `fire(type)` 产生的事件对象，`event.originalEvent` 为空
+> 手动调用 `fire()` 方法产生的事件对象，`event.originalEvent` 为空
 
 ### isPrevented
 
