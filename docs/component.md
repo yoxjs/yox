@@ -320,7 +320,7 @@ function (prop) {
 
 此外还有一个特殊值 `numeric`，表示字符串类型的数字。
 
-为了进行更 `严谨` 的数据校验，`type` 还支持函数，比如类似 `oneOf` 的校验函数：
+为了进行更 `严谨` 的数据校验，`type` 还支持函数，这样你就可以实现 `oneOf` 之类的校验函数，如下：
 
 ```js
 function oneOf(values) {
