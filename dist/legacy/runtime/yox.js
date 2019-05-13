@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.32
+ * yox.js v1.0.0-alpha.33
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -3863,39 +3863,6 @@
           }
       };
       /**
-       * 验证 props，无爱请重写
-       */
-      Yox.checkPropTypes = function (props, propTypes) {
-          var result = copy(props);
-          each$2(propTypes, function (rule, key) {
-              // 类型
-              var type = rule.type, 
-              // 默认值
-              value = rule.value, 
-              // 是否必传
-              required = rule.required, 
-              // 实际的值
-              actual = props[key];
-              // 动态化获取是否必填
-              if (func(required)) {
-                  required = required(props, key);
-              }
-              // 传了数据
-              if (isDef(actual)) ;
-              else {
-                  // 没传值但是配置了默认值
-                  if (isDef(value)) {
-                      result[key] = type === RAW_FUNCTION
-                          ? value
-                          : func(value)
-                              ? value(props, key)
-                              : value;
-                  }
-              }
-          });
-          return result;
-      };
-      /**
        * 添加计算属性
        */
       Yox.prototype.addComputed = function (keypath, computed) {
@@ -4114,9 +4081,33 @@
        */
       Yox.prototype.checkPropTypes = function (props) {
           var propTypes = this.$options.propTypes;
-          return propTypes
-              ? Yox.checkPropTypes(props, propTypes)
-              : props;
+          if (propTypes) {
+              var result_1 = copy(props);
+              each$2(propTypes, function (rule, key) {
+                  // 类型
+                  var type = rule.type, 
+                  // 默认值
+                  value = rule.value, 
+                  // 是否必传
+                  required = rule.required, 
+                  // 实际的值
+                  actual = props[key];
+                  // 传了数据
+                  if (isDef(actual)) ;
+                  else {
+                      // 没传值但是配置了默认值
+                      if (isDef(value)) {
+                          result_1[key] = type === RAW_FUNCTION
+                              ? value
+                              : func(value)
+                                  ? value(props, key)
+                                  : value;
+                      }
+                  }
+              });
+              return result_1;
+          }
+          return props;
       };
       /**
        * 创建子组件
@@ -4264,7 +4255,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.32";
+      Yox.version = "1.0.0-alpha.33";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

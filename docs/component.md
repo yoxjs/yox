@@ -283,19 +283,17 @@ Yox.component('AsyncComponent', function (callback) {
 
 ## 数据校验
 
-如果定义的组件配置了 `propTypes`，当它接收到传入的 `props` 后，会立即调用 `checkPropTypes()`，这个函数会根据配置的 `propTypes`，告诉你哪些数据不符合要求。
+如果定义的组件配置了 `propTypes`，当它接收到传入的 `props` 后，会立即进行数据校验，它会根据配置的 `propTypes`，告诉你哪些数据不符合要求。
 
-> 此特性只在 `dev` 版本可用，其他版本，`checkPropTypes` 是个直接返回 `props` 的简单函数。
+`propTypes` 为每个字段提供三个配置项，如下：
 
-`propTypes` 每项配置有三个选项，如下：
-
-* `type`: 数据类型
+* `type`: 数据类型，必填
 * `required`: 是否必需，可选
 * `value`: 默认值，可选
 
 ### type
 
-数据类型，可以是 `string` 或 `string` 数组，也可以是 `Function`，如下：
+数据类型，可以是 `string` 或 `string` 数组，如下：
 
 ```js
 {
@@ -305,13 +303,6 @@ Yox.component('AsyncComponent', function (callback) {
     },
     age: {
       type: ['number', 'numeric']
-    },
-    gender: {
-      type: function (props, key) {
-        // 自行判断是否 props[key] 是否符合要求
-        // 如果不符合，调用 Yox.logger.warn('xx') 输出警告
-        // 方便外部实现 oneOf(['a', 'b', 'c']) 之类的校验库
-      }
     }
   }
 }
@@ -328,6 +319,30 @@ function (prop) {
 常见的可选值有 `string`、`number`、`boolean`、`function`、`array`、`object`、`undefined`、`null`。
 
 此外还有一个特殊值 `numeric`，表示字符串类型的数字。
+
+为了进行更 `严谨` 的数据校验，`type` 还支持函数，比如类似 `oneOf` 的校验函数：
+
+```js
+function oneOf(values) {
+  return function (props, key) {
+    if (!Yox.array.has(values, props[key])) {
+      Yox.logger.warn('error message')
+    }
+  }
+}
+```
+
+```js
+{
+  propType: {
+    gender: {
+      type: oneOf(['male', 'female'])
+    }
+  }
+}
+```
+
+> 为了提升性能，校验 `type` 只在 `dev` 版本可用
 
 ### required
 
@@ -351,20 +366,11 @@ function (prop) {
 }
 ```
 
+> 为了提升性能，校验 `required` 只在 `dev` 版本可用
+
 ### value
 
-如果外部没有传入此项数据，且 `required` 不为 `true`，则可设置默认值。
-
-### 重写
-
-如果默认实现不满足需求，你可以重写 `checkPropTypes` 函数：
-
-```js
-Yox.checkPropTypes = function (props, propTypes) {
-  // 随便你怎么写
-  // 最后返回一个 Object 就行，它将作为有效的 props 继续往下执行
-}
-```
+如果外部没有传入此项数据（即值为 `undefined`），则可设置默认值。
 
 ## 传递节点
 
@@ -423,15 +429,15 @@ Yox.checkPropTypes = function (props, propTypes) {
     <template slot="left">
       <i class="icon-left"></i>
     </template>
-    <template slot="right">
-      <i class="icon-right"></i>
-    </template>
+    <i slot="right" class="icon-right"></i>
     text
   </Button>
 </div>
 ```
 
-这里出现了 `<template>` 标签，它的角色是为组件传递节点的容器，你可以通过 `slot` 属性为它命名。
+一般来说，我们可以直接为节点加上 `slot` 属性，这样它便有了名字。
+
+如果你需要传入多个同级节点，可以借助 `<template>` 标签。
 
 ```html
 <div class="button">

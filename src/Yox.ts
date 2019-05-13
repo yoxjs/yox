@@ -210,103 +210,6 @@ export default class Yox implements YoxInterface {
     }
   }
 
-  /**
-   * 验证 props，无爱请重写
-   */
-  public static checkPropTypes(props: type.data, propTypes: Record<string, PropRule>): type.data {
-    const result = object.copy(props)
-    object.each(
-      propTypes,
-      function (rule: PropRule, key: string) {
-
-        // 类型
-        let type = rule.type,
-
-        // 默认值
-        value = rule.value,
-
-        // 是否必传
-        required = rule.required,
-
-        // 实际的值
-        actual = props[key]
-
-        // 动态化获取是否必填
-        if (is.func(required)) {
-          required = (required as type.propRequired)(props, key)
-        }
-
-        // 传了数据
-        if (isDef(actual)) {
-
-          if (process.env.NODE_ENV === 'dev') {
-
-            // 如果不写 type 或 type 不是 字符串 或 数组
-            // 就当做此规则无效，和没写一样
-            if (type) {
-
-              // 动态判断是否匹配类型，自行校验并输出 warn 吧
-              if (is.func(type)) {
-                (type as type.propType)(props, key)
-              }
-              else {
-
-                let matched: boolean | void
-
-                // type: 'string'
-                if (!string.falsy(type)) {
-                  matched = matchType(actual, type as string)
-                }
-                // type: ['string', 'number']
-                else if (!array.falsy(type)) {
-                  array.each(
-                    type as string[],
-                    function (item: string) {
-                      if (matchType(actual, item)) {
-                        matched = env.TRUE
-                        return env.FALSE
-                      }
-                    }
-                  )
-                }
-                if (!matched) {
-                  logger.warn(`The type of prop "${key}" expected to be "${type}", but is "${actual}".`)
-                }
-
-              }
-
-            }
-            else {
-              logger.warn(`The prop "${key}" in propTypes has no type.`)
-            }
-          }
-
-        }
-        else {
-
-          if (process.env.NODE_ENV === 'dev') {
-            // 没传值但此项是必传项
-            if (required) {
-              logger.warn(`The prop "${key}" is marked as required, but its value is not found.`)
-            }
-          }
-
-          // 没传值但是配置了默认值
-          if (isDef(value)) {
-            result[key] = type === env.RAW_FUNCTION
-              ? value
-              : is.func(value)
-                ? (value as type.propValue)(props, key)
-                : value
-          }
-
-        }
-
-      }
-    )
-    return result
-  }
-
   constructor(options: YoxOptions | void) {
 
     const instance = this, $options: YoxOptions = options || env.EMPTY_OBJECT
@@ -904,9 +807,100 @@ export default class Yox implements YoxInterface {
    */
   checkPropTypes(props: type.data): type.data {
     const { propTypes } = this.$options
-    return propTypes
-      ? Yox.checkPropTypes(props, propTypes)
-      : props
+    if (propTypes) {
+      const result = object.copy(props)
+      object.each(
+        propTypes,
+        function (rule: PropRule, key: string) {
+
+          // 类型
+          let type = rule.type,
+
+          // 默认值
+          value = rule.value,
+
+          // 是否必传
+          required = rule.required,
+
+          // 实际的值
+          actual = props[key]
+
+          // 传了数据
+          if (isDef(actual)) {
+
+            if (process.env.NODE_ENV === 'dev') {
+
+              // 如果不写 type 或 type 不是 字符串 或 数组
+              // 就当做此规则无效，和没写一样
+              if (type) {
+
+                // 自定义函数判断是否匹配类型
+                // 自己打印警告信息吧
+                if (is.func(type)) {
+                  (type as type.propType)(props, key)
+                }
+                else {
+
+                  let matched: boolean | void
+
+                  // type: 'string'
+                  if (!string.falsy(type)) {
+                    matched = matchType(actual, type as string)
+                  }
+                  // type: ['string', 'number']
+                  else if (!array.falsy(type)) {
+                    array.each(
+                      type as string[],
+                      function (item: string) {
+                        if (matchType(actual, item)) {
+                          matched = env.TRUE
+                          return env.FALSE
+                        }
+                      }
+                    )
+                  }
+                  if (!matched) {
+                    logger.warn(`The type of prop "${key}" expected to be "${type}", but is "${actual}".`)
+                  }
+
+                }
+
+              }
+              else {
+                logger.warn(`The prop "${key}" in propTypes has no type.`)
+              }
+            }
+
+          }
+          else {
+
+            if (process.env.NODE_ENV === 'dev') {
+              // 动态化获取是否必填
+              if (is.func(required)) {
+                required = (required as type.propRequired)(props, key)
+              }
+              // 没传值但此项是必传项
+              if (required) {
+                logger.warn(`The prop "${key}" is marked as required, but its value is not found.`)
+              }
+            }
+
+            // 没传值但是配置了默认值
+            if (isDef(value)) {
+              result[key] = type === env.RAW_FUNCTION
+                ? value
+                : is.func(value)
+                  ? (value as type.propValue)(props, key)
+                  : value
+            }
+
+          }
+
+        }
+      )
+      return result
+    }
+    return props
   }
 
   /**
