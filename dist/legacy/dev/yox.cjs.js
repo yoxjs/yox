@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.30
+ * yox.js v1.0.0-alpha.31
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -4732,7 +4732,7 @@ function render(context, template, filters, partials, directives, transitions) {
             hooks: directives[DIRECTIVE_EVENT],
             handler: createMethodListener(method, args, $stack)
         });
-    }, renderEventNameVnode = function (ns, name, key, value, event) {
+    }, renderEventNameVnode = function (name, key, value, event) {
         setPair($vnode, 'directives', key, {
             ns: DIRECTIVE_EVENT,
             name: name,
@@ -6406,23 +6406,25 @@ var Yox = /** @class */ (function () {
      * 验证 props，无爱请重写
      */
     Yox.checkPropTypes = function (props, propTypes) {
-        {
-            var result_1 = copy(props);
-            each$2(propTypes, function (rule, key) {
-                // 类型
-                var type = rule.type, 
-                // 默认值
-                value = rule.value, 
-                // 是否必传
-                required = rule.required, 
-                // 实际的值
-                actual = props[key];
-                // 动态化获取是否必填
-                if (func(required)) {
-                    required = required(props, key);
-                }
-                // 传了数据
-                if (isDef(actual)) {
+        var result = copy(props);
+        each$2(propTypes, function (rule, key) {
+            // 类型
+            var type = rule.type, 
+            // 默认值
+            value = rule.value, 
+            // 是否必传
+            required = rule.required, 
+            // 转换值
+            transform = rule.transform, 
+            // 实际的值
+            actual = props[key];
+            // 动态化获取是否必填
+            if (func(required)) {
+                required = required(props, key);
+            }
+            // 传了数据
+            if (isDef(actual)) {
+                {
                     // 如果不写 type 或 type 不是 字符串 或 数组
                     // 就当做此规则无效，和没写一样
                     if (type) {
@@ -6442,7 +6444,7 @@ var Yox = /** @class */ (function () {
                         }
                         // 动态判断是否匹配类型，自行校验并输出 warn 吧
                         else if (func(type)) {
-                            type(props, type);
+                            type(props, key);
                             matched_1 = TRUE;
                         }
                         if (!matched_1) {
@@ -6453,21 +6455,28 @@ var Yox = /** @class */ (function () {
                         warn("The prop \"" + key + "\" in propTypes has no type.");
                     }
                 }
-                // 没传值但此项是必传项
-                else if (required) {
-                    warn("The prop \"" + key + "\" is marked as required, but its value is not found.");
+                if (transform) {
+                    result[key] = transform(props, key);
+                }
+            }
+            else {
+                {
+                    // 没传值但此项是必传项
+                    if (required) {
+                        warn("The prop \"" + key + "\" is marked as required, but its value is not found.");
+                    }
                 }
                 // 没传值但是配置了默认值
-                else if (isDef(value)) {
-                    result_1[key] = type === RAW_FUNCTION
+                if (isDef(value)) {
+                    result[key] = type === RAW_FUNCTION
                         ? value
                         : func(value)
                             ? value(props, key)
                             : value;
                 }
-            });
-            return result_1;
-        }
+            }
+        });
+        return result;
     };
     /**
      * 添加计算属性
@@ -6838,7 +6847,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.30";
+    Yox.version = "1.0.0-alpha.31";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */

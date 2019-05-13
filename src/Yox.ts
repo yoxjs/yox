@@ -214,31 +214,35 @@ export default class Yox implements YoxInterface {
    * 验证 props，无爱请重写
    */
   public static checkPropTypes(props: type.data, propTypes: Record<string, PropRule>): type.data {
-    if (process.env.NODE_ENV === 'dev') {
-      const result = object.copy(props)
-      object.each(
-        propTypes,
-        function (rule: PropRule, key: string) {
+    const result = object.copy(props)
+    object.each(
+      propTypes,
+      function (rule: PropRule, key: string) {
 
-          // 类型
-          let type = rule.type,
+        // 类型
+        let type = rule.type,
 
-          // 默认值
-          value = rule.value,
+        // 默认值
+        value = rule.value,
 
-          // 是否必传
-          required = rule.required,
+        // 是否必传
+        required = rule.required,
 
-          // 实际的值
-          actual = props[key]
+        // 转换值
+        transform = rule.transform,
 
-          // 动态化获取是否必填
-          if (is.func(required)) {
-            required = (required as type.propRequired)(props, key)
-          }
+        // 实际的值
+        actual = props[key]
 
-          // 传了数据
-          if (isDef(actual)) {
+        // 动态化获取是否必填
+        if (is.func(required)) {
+          required = (required as type.propRequired)(props, key)
+        }
+
+        // 传了数据
+        if (isDef(actual)) {
+
+          if (process.env.NODE_ENV === 'dev') {
 
             // 如果不写 type 或 type 不是 字符串 或 数组
             // 就当做此规则无效，和没写一样
@@ -262,7 +266,7 @@ export default class Yox implements YoxInterface {
               }
               // 动态判断是否匹配类型，自行校验并输出 warn 吧
               else if (is.func(type)) {
-                (type as type.propType)(props, type)
+                (type as type.propType)(props, key)
                 matched = env.TRUE
               }
               if (!matched) {
@@ -272,27 +276,36 @@ export default class Yox implements YoxInterface {
             else {
               logger.warn(`The prop "${key}" in propTypes has no type.`)
             }
+          }
 
+          if (transform) {
+            result[key] = transform(props, key)
           }
-          // 没传值但此项是必传项
-          else if (required) {
-            logger.warn(`The prop "${key}" is marked as required, but its value is not found.`)
+
+        }
+        else {
+
+          if (process.env.NODE_ENV === 'dev') {
+            // 没传值但此项是必传项
+            if (required) {
+              logger.warn(`The prop "${key}" is marked as required, but its value is not found.`)
+            }
           }
+
           // 没传值但是配置了默认值
-          else if (isDef(value)) {
+          if (isDef(value)) {
             result[key] = type === env.RAW_FUNCTION
               ? value
               : is.func(value)
                 ? (value as type.propValue)(props, key)
                 : value
           }
+
         }
-      )
-      return result
-    }
-    else {
-      return props
-    }
+
+      }
+    )
+    return result
   }
 
   constructor(options: YoxOptions | void) {

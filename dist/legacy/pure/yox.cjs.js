@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.30
+ * yox.js v1.0.0-alpha.31
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -2119,9 +2119,40 @@ var Yox = /** @class */ (function () {
      * 验证 props，无爱请重写
      */
     Yox.checkPropTypes = function (props, propTypes) {
-        {
-            return props;
-        }
+        var result = copy(props);
+        each$2(propTypes, function (rule, key) {
+            // 类型
+            var type = rule.type, 
+            // 默认值
+            value = rule.value, 
+            // 是否必传
+            required = rule.required, 
+            // 转换值
+            transform = rule.transform, 
+            // 实际的值
+            actual = props[key];
+            // 动态化获取是否必填
+            if (func(required)) {
+                required = required(props, key);
+            }
+            // 传了数据
+            if (isDef(actual)) {
+                if (transform) {
+                    result[key] = transform(props, key);
+                }
+            }
+            else {
+                // 没传值但是配置了默认值
+                if (isDef(value)) {
+                    result[key] = type === RAW_FUNCTION
+                        ? value
+                        : func(value)
+                            ? value(props, key)
+                            : value;
+                }
+            }
+        });
+        return result;
     };
     /**
      * 添加计算属性
@@ -2386,7 +2417,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.30";
+    Yox.version = "1.0.0-alpha.31";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */
