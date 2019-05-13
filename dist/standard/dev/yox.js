@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.31
+ * yox.js v1.0.0-alpha.32
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1648,15 +1648,18 @@
        * 不论是组件或是元素，都不能销毁，只能简单的 remove，
        * 否则子组件下一次展现它们时，会出问题
        */
-      var data = vnode.data, children = vnode.children, parent = vnode.parent;
-      if (parent
-          // 如果宿主组件正在销毁，$vnode 属性会在调 destroy() 之前被删除
-          // 这里表示的是宿主组件还没被销毁
-          // 如果宿主组件被销毁了，则它的一切都要进行销毁
-          && parent.$vnode
-          // 是从外部传入到组件内的
-          && parent !== vnode.context) {
-          return;
+      var data = vnode.data, children = vnode.children, parent = vnode.parent, slot = vnode.slot;
+      // 销毁插槽组件
+      // 如果宿主组件正在销毁，$vnode 属性会在调 destroy() 之前被删除
+      // 这里表示的是宿主组件还没被销毁
+      // 如果宿主组件被销毁了，则它的一切都要进行销毁
+      if (slot && parent && parent.$vnode) {
+          // 如果更新时，父组件没有传入该 slot，则子组件需要销毁该 slot
+          var slots = parent.get(slot);
+          // slots 要么没有，要么是数组，不可能是别的
+          if (slots && has(slots, vnode)) {
+              return;
+          }
       }
       if (vnode.isComponent) {
           var component_3 = data[COMPONENT];
@@ -3472,12 +3475,8 @@
           }
       }, checkElement = function (element) {
           {
-              var isTemplate = element.tag === RAW_TEMPLATE;
-              if (element.slot) {
-                  if (!isTemplate) {
-                      fatal$1("slot \u5C5E\u6027\u53EA\u80FD\u7528\u4E8E <template>");
-                  }
-                  else if (element.key) {
+              if (element.tag === RAW_TEMPLATE) {
+                  if (element.key) {
                       fatal$1("<template> \u4E0D\u652F\u6301 key");
                   }
                   else if (element.ref) {
@@ -3486,9 +3485,9 @@
                   else if (element.attrs) {
                       fatal$1("<template> \u4E0D\u652F\u6301\u5C5E\u6027\u6216\u6307\u4EE4");
                   }
-              }
-              else if (isTemplate) {
-                  fatal$1("<template> \u4E0D\u5199 slot \u5C5E\u6027\u662F\u51E0\u4E2A\u610F\u601D\uFF1F");
+                  else if (!element.slot) {
+                      fatal$1("<template> \u4E0D\u5199 slot \u5C5E\u6027\u662F\u51E0\u4E2A\u610F\u601D\uFF1F");
+                  }
               }
               else if (element.tag === RAW_SLOT && !element.name) {
                   fatal$1("<slot> \u4E0D\u5199 name \u5C5E\u6027\u662F\u51E0\u4E2A\u610F\u601D\uFF1F");
@@ -4102,9 +4101,17 @@
               break;
           }
       }
-      {
-          if (nodeStack.length) {
-              fatal$1('还有节点未出栈');
+      if (nodeStack.length) {
+          /**
+           * 处理可能存在的自闭合元素，如下
+           *
+           * <input>
+           */
+          popSelfClosingElementIfNeeded();
+          {
+              if (nodeStack.length) {
+                  fatal$1('还有节点未出栈');
+              }
           }
       }
       return compileCache[content] = nodeList;
@@ -4292,7 +4299,9 @@
           if (child.type === ELEMENT) {
               var element = child;
               if (element.slot) {
-                  addSlot(element.slot, element.children);
+                  addSlot(element.slot, element.tag === RAW_TEMPLATE
+                      ? element.children
+                      : [element]);
                   return;
               }
           }
@@ -4819,6 +4828,7 @@
               if (vnodes) {
                   each(vnodes, function (vnode) {
                       push(vnodeList, vnode);
+                      vnode.slot = name;
                       vnode.parent = context;
                   });
               }
@@ -6325,8 +6335,6 @@
               value = rule.value, 
               // 是否必传
               required = rule.required, 
-              // 转换值
-              transform = rule.transform, 
               // 实际的值
               actual = props[key];
               // 动态化获取是否必填
@@ -6339,35 +6347,33 @@
                       // 如果不写 type 或 type 不是 字符串 或 数组
                       // 就当做此规则无效，和没写一样
                       if (type) {
-                          var matched_1;
-                          // type: 'string'
-                          if (!falsy$1(type)) {
-                              matched_1 = matchType(actual, type);
-                          }
-                          // type: ['string', 'number']
-                          else if (!falsy(type)) {
-                              each(type, function (item) {
-                                  if (matchType(actual, item)) {
-                                      matched_1 = TRUE;
-                                      return FALSE;
-                                  }
-                              });
-                          }
                           // 动态判断是否匹配类型，自行校验并输出 warn 吧
-                          else if (func(type)) {
+                          if (func(type)) {
                               type(props, key);
-                              matched_1 = TRUE;
                           }
-                          if (!matched_1) {
-                              warn("The type of prop \"" + key + "\" expected to be \"" + type + "\", but is \"" + actual + "\".");
+                          else {
+                              var matched_1;
+                              // type: 'string'
+                              if (!falsy$1(type)) {
+                                  matched_1 = matchType(actual, type);
+                              }
+                              // type: ['string', 'number']
+                              else if (!falsy(type)) {
+                                  each(type, function (item) {
+                                      if (matchType(actual, item)) {
+                                          matched_1 = TRUE;
+                                          return FALSE;
+                                      }
+                                  });
+                              }
+                              if (!matched_1) {
+                                  warn("The type of prop \"" + key + "\" expected to be \"" + type + "\", but is \"" + actual + "\".");
+                              }
                           }
                       }
                       else {
                           warn("The prop \"" + key + "\" in propTypes has no type.");
                       }
-                  }
-                  if (transform) {
-                      result[key] = transform(props, key);
                   }
               }
               else {
@@ -6758,7 +6764,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.31";
+      Yox.version = "1.0.0-alpha.32";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

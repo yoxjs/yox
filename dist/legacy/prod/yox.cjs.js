@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.31
+ * yox.js v1.0.0-alpha.32
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1631,15 +1631,18 @@ function destroyVnode(api, vnode) {
      * 不论是组件或是元素，都不能销毁，只能简单的 remove，
      * 否则子组件下一次展现它们时，会出问题
      */
-    var data = vnode.data, children = vnode.children, parent = vnode.parent;
-    if (parent
-        // 如果宿主组件正在销毁，$vnode 属性会在调 destroy() 之前被删除
-        // 这里表示的是宿主组件还没被销毁
-        // 如果宿主组件被销毁了，则它的一切都要进行销毁
-        && parent.$vnode
-        // 是从外部传入到组件内的
-        && parent !== vnode.context) {
-        return;
+    var data = vnode.data, children = vnode.children, parent = vnode.parent, slot = vnode.slot;
+    // 销毁插槽组件
+    // 如果宿主组件正在销毁，$vnode 属性会在调 destroy() 之前被删除
+    // 这里表示的是宿主组件还没被销毁
+    // 如果宿主组件被销毁了，则它的一切都要进行销毁
+    if (slot && parent && parent.$vnode) {
+        // 如果更新时，父组件没有传入该 slot，则子组件需要销毁该 slot
+        var slots = parent.get(slot);
+        // slots 要么没有，要么是数组，不可能是别的
+        if (slots && has(slots, vnode)) {
+            return;
+        }
     }
     if (vnode.isComponent) {
         var component_3 = data[COMPONENT];
@@ -3788,6 +3791,14 @@ function compile$1(content) {
             break;
         }
     }
+    if (nodeStack.length) {
+        /**
+         * 处理可能存在的自闭合元素，如下
+         *
+         * <input>
+         */
+        popSelfClosingElementIfNeeded();
+    }
     return compileCache[content] = nodeList;
 }
 
@@ -3973,7 +3984,9 @@ function getComponentSlots(children) {
         if (child.type === ELEMENT) {
             var element = child;
             if (element.slot) {
-                addSlot(element.slot, element.children);
+                addSlot(element.slot, element.tag === RAW_TEMPLATE
+                    ? element.children
+                    : [element]);
                 return;
             }
         }
@@ -4484,6 +4497,7 @@ function render(context, template, filters, partials, directives, transitions) {
             if (vnodes) {
                 each(vnodes, function (vnode) {
                     push(vnodeList, vnode);
+                    vnode.slot = name;
                     vnode.parent = context;
                 });
             }
@@ -6031,8 +6045,6 @@ var Yox = /** @class */ (function () {
             value = rule.value, 
             // 是否必传
             required = rule.required, 
-            // 转换值
-            transform = rule.transform, 
             // 实际的值
             actual = props[key];
             // 动态化获取是否必填
@@ -6040,11 +6052,7 @@ var Yox = /** @class */ (function () {
                 required = required(props, key);
             }
             // 传了数据
-            if (isDef(actual)) {
-                if (transform) {
-                    result[key] = transform(props, key);
-                }
-            }
+            if (isDef(actual)) ;
             else {
                 // 没传值但是配置了默认值
                 if (isDef(value)) {
@@ -6427,7 +6435,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.31";
+    Yox.version = "1.0.0-alpha.32";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */

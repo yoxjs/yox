@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Slot</title>
+  <style>
+  </style>
+</head>
+
+<body>
+  <div id="app"></div>
+
+  <script src="../dist/standard/dev/yox.js"></script>
+  <script>
+    Yox.component({
+      Button: {
+        data: {
+          visible: true
+        },
+        template: `
+          <div class="button">
+            <slot name="icon" />
+
+            {{#if visible}}
+              <slot name="children" />
+            {{/if}}
+
+            <button on-click="toggle('visible')">
+              inner toggle
+            </button>
+          </div>
+        `,
+        beforeMount: function () {
+          console.log('Button beforeMount')
+        },
+        afterMount: function () {
+          console.log('Button afterMount')
+        },
+        beforeDestroy: function () {
+          console.log('Button beforeDestroy')
+        },
+        afterDestroy: function () {
+          console.log('Button afterDestroy')
+        }
+      },
+      Input: {
+        propTypes: {
+          value: {
+            type: 'string',
+          }
+        },
+        template: `
+          <input model="value">
+        `,
+        beforeMount: function () {
+          console.log('Input beforeMount')
+        },
+        afterMount: function () {
+          console.log('Input afterMount')
+        },
+        beforeDestroy: function () {
+          console.log('Input beforeDestroy')
+        },
+        afterDestroy: function () {
+          console.log('Input afterDestroy')
+        }
+      }
+    })
+    var instance = new Yox({
+      el: '#app',
+      data: {
+        inputVisible: true,
+        buttonVisible: true,
+        value: '1'
+      },
+      template: `
+          <div>
+            {{#if buttonVisible}}
+              <Button>
+                {{#if inputVisible}}
+                  <Input model="value"/>
+                {{/if}}
+
+                <i slot="icon" class="icon-xx">icon</i>
+              </Button>
+            {{/if}}
+
+            <button on-click="toggle('inputVisible')">
+              toggle input
+            </button>
+
+            <button on-click="toggle('buttonVisible')">
+              toggle button
+            </button>
+          </div>
+      `
+    });
+
+  </script>
+</body>
+
+</html>

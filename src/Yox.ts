@@ -228,9 +228,6 @@ export default class Yox implements YoxInterface {
         // 是否必传
         required = rule.required,
 
-        // 转换值
-        transform = rule.transform,
-
         // 实际的值
         actual = props[key]
 
@@ -247,39 +244,41 @@ export default class Yox implements YoxInterface {
             // 如果不写 type 或 type 不是 字符串 或 数组
             // 就当做此规则无效，和没写一样
             if (type) {
-              let matched: boolean | void
-              // type: 'string'
-              if (!string.falsy(type)) {
-                matched = matchType(actual, type as string)
-              }
-              // type: ['string', 'number']
-              else if (!array.falsy(type)) {
-                array.each(
-                  type as string[],
-                  function (item: string) {
-                    if (matchType(actual, item)) {
-                      matched = env.TRUE
-                      return env.FALSE
-                    }
-                  }
-                )
-              }
+
               // 动态判断是否匹配类型，自行校验并输出 warn 吧
-              else if (is.func(type)) {
+              if (is.func(type)) {
                 (type as type.propType)(props, key)
-                matched = env.TRUE
               }
-              if (!matched) {
-                logger.warn(`The type of prop "${key}" expected to be "${type}", but is "${actual}".`)
+              else {
+
+                let matched: boolean | void
+
+                // type: 'string'
+                if (!string.falsy(type)) {
+                  matched = matchType(actual, type as string)
+                }
+                // type: ['string', 'number']
+                else if (!array.falsy(type)) {
+                  array.each(
+                    type as string[],
+                    function (item: string) {
+                      if (matchType(actual, item)) {
+                        matched = env.TRUE
+                        return env.FALSE
+                      }
+                    }
+                  )
+                }
+                if (!matched) {
+                  logger.warn(`The type of prop "${key}" expected to be "${type}", but is "${actual}".`)
+                }
+
               }
+
             }
             else {
               logger.warn(`The prop "${key}" in propTypes has no type.`)
             }
-          }
-
-          if (transform) {
-            result[key] = transform(props, key)
           }
 
         }
