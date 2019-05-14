@@ -296,12 +296,11 @@ export default class Yox implements YoxInterface {
 
     if (process.env.NODE_ENV !== 'pure') {
 
-      let isComment = env.FALSE,
-
-      placeholder: Node | void,
+      let placeholder: Node | void = env.UNDEFINED,
 
       {
         el,
+        vnode,
         root,
         parent,
         replace,
@@ -339,6 +338,7 @@ export default class Yox implements YoxInterface {
 
       // 检查 el
       if (el) {
+
         if (is.string(el)) {
           const selector = el as string
           if (selectorPattern.test(selector)) {
@@ -356,17 +356,14 @@ export default class Yox implements YoxInterface {
         else {
           placeholder = el as Node
         }
-      }
 
+        if (!replace) {
+          domApi.append(
+            placeholder as Node,
+            placeholder = domApi.createComment(env.EMPTY_STRING)
+          )
+        }
 
-      if (placeholder && !replace) {
-        // 如果不是替换占位元素
-        // 则在该元素下新建一个注释节点，等会用新组件替换掉
-        isComment = env.TRUE
-        domApi.append(
-          placeholder as Node,
-          placeholder = domApi.createComment(env.EMPTY_STRING)
-        )
       }
 
       if (root) {
@@ -421,29 +418,34 @@ export default class Yox implements YoxInterface {
         // Yox.compile 会自动判断 template 是否经过编译
         instance.$template = Yox.compile(template) as Function
 
-        // 第一次渲染视图
-        if (!placeholder) {
-          isComment = env.TRUE
-          placeholder = domApi.createComment(env.EMPTY_STRING)
+        if (!vnode) {
+
+          if (process.env.NODE_ENV === 'dev') {
+            if (!placeholder) {
+              logger.fatal('根组件不传 el 是几个意思？')
+            }
+          }
+
+          vnode = snabbdom.create(
+            domApi,
+            placeholder as Node,
+            instance,
+            env.EMPTY_STRING
+          )
+
         }
 
         instance.update(
           instance.get(TEMPLATE_COMPUTED),
-          snabbdom.create(
-            domApi,
-            placeholder,
-            isComment,
-            instance,
-            env.EMPTY_STRING
-          )
+          vnode
         )
 
         return
 
       }
       else if (process.env.NODE_ENV === 'dev') {
-        if (placeholder) {
-          logger.fatal('有 el 没 template 是几个意思？')
+        if (placeholder || vnode) {
+          logger.fatal('组件不写 template 是几个意思？')
         }
       }
 
@@ -610,9 +612,61 @@ export default class Yox implements YoxInterface {
     return this
   }
 
+  /**
+   * 加载组件，组件可以是同步或异步，最后会调用 callback
+   *
+   * @param name 组件名称
+   * @param callback 组件加载成功后的回调
+   */
   loadComponent(name: string, callback: type.componentCallback): void {
     if (!loadComponent(this.$components, name, callback)) {
       loadComponent(globalComponents, name, callback)
+    }
+  }
+
+  /**
+   * 创建子组件
+   *
+   * @param options 组件配置
+   * @param vnode 虚拟节点
+   */
+  createComponent(options: YoxOptions, vnode: VNode): YoxInterface {
+    if (process.env.NODE_ENV !== 'pure') {
+
+      const instance = this
+
+      options = object.copy(options)
+      options.root = instance.$root || instance
+      options.parent = instance
+      options.vnode = vnode
+      options.replace = env.TRUE
+
+      if (vnode.props) {
+        options.props = vnode.props
+      }
+      if (vnode.slots) {
+        options.slots = vnode.slots
+      }
+
+      const child = new Yox(options)
+
+      array.push(
+        instance.$children || (instance.$children = []),
+        child
+      )
+
+      const node = child.$el
+      if (node) {
+        vnode.node = node
+      }
+      else if (process.env.NODE_ENV === 'dev') {
+        logger.fatal(`The root element of [Component ${vnode.tag}] is not found.`)
+      }
+
+      return child
+    }
+    else {
+      return this
     }
   }
 
@@ -901,59 +955,6 @@ export default class Yox implements YoxInterface {
       }
     }
     return props
-  }
-
-  /**
-   * 创建子组件
-   *
-   * @param options 组件配置
-   * @param vnode 虚拟节点
-   * @param node DOM 元素
-   */
-  create(options: YoxOptions, vnode: VNode, node: Node | void): YoxInterface {
-    if (process.env.NODE_ENV !== 'pure') {
-
-      const instance = this
-
-      options = object.copy(options)
-      options.root = instance.$root || instance
-      options.parent = instance
-      options.vnode = vnode
-
-      // 如果传了 node，表示有一个占位元素，新创建的 child 需要把它替换掉
-      if (node) {
-        options.el = node
-        options.replace = env.TRUE
-      }
-
-      if (vnode.props) {
-        options.props = vnode.props
-      }
-      if (vnode.slots) {
-        options.slots = vnode.slots
-      }
-
-      const child = new Yox(options)
-
-      array.push(
-        instance.$children || (instance.$children = [ ]),
-        child
-      )
-
-      node = child.$el
-
-      if (node) {
-        vnode.node = node
-      }
-      else if (process.env.NODE_ENV === 'dev') {
-        logger.fatal(`The root element of [Component ${vnode.tag}] is not found.`)
-      }
-
-      return child
-    }
-    else {
-      return this
-    }
   }
 
   /**

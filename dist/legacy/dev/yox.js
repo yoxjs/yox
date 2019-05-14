@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.34
+ * yox.js v1.0.0-alpha.35
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1480,9 +1480,7 @@
       }
   }
   function createComponent(vnode, options) {
-      // 渲染同步加载的组件时，vnode.node 为空
-      // 渲染异步加载的组件时，vnode.node 不为空，因为初始化用了占位节点
-      var child = (vnode.parent || vnode.context).create(options, vnode, vnode.node);
+      var child = (vnode.parent || vnode.context).createComponent(options, vnode);
       vnode.data[COMPONENT] = child;
       vnode.data[LOADING] = FALSE;
       update$3(vnode);
@@ -1510,7 +1508,7 @@
           return;
       }
       if (isComponent) {
-          var isAsync_1 = TRUE;
+          var componentOptions_1 = UNDEFINED;
           context.loadComponent(tag, function (options) {
               if (has$2(data, LOADING)) {
                   // 异步组件
@@ -1526,12 +1524,15 @@
               }
               // 同步组件
               else {
-                  createComponent(vnode, options);
-                  isAsync_1 = FALSE;
+                  componentOptions_1 = options;
               }
           });
-          if (isAsync_1) {
-              vnode.node = api.createComment(RAW_COMPONENT);
+          // 不论是同步还是异步组件，都需要一个占位元素
+          vnode.node = api.createComment(RAW_COMPONENT);
+          if (componentOptions_1) {
+              createComponent(vnode, componentOptions_1);
+          }
+          else {
               data[LOADING] = TRUE;
           }
       }
@@ -1573,7 +1574,7 @@
       // 普通元素和组件的占位节点都会走到这里
       // 但是占位节点不用 enter，而是等组件加载回来之后再调 enter
       if (!hasParent) {
-          var enter = void 0;
+          var enter = UNDEFINED;
           if (vnode.isComponent) {
               var component_1 = data[COMPONENT];
               if (component_1) {
@@ -1864,11 +1865,10 @@
           api.text(node, EMPTY_STRING, isStyle);
       }
   }
-  function create(api, node, isComment, context, keypath) {
+  function create(api, node, context, keypath) {
       return {
           tag: api.tag(node),
           data: createData(),
-          isComment: isComment,
           node: node,
           context: context,
           keypath: keypath
@@ -4000,7 +4000,7 @@
                */
               popSelfClosingElementIfNeeded();
               var name = slice(code, 1);
-              var type = name2Type[name], isCondition = void 0;
+              var type = name2Type[name], isCondition = FALSE;
               if (type === IF) {
                   var node_1 = pop(ifStack);
                   if (node_1) {
@@ -4651,7 +4651,7 @@
           return function (event, data) {
               var method = context[name];
               if (event instanceof CustomEvent) {
-                  var result = void 0;
+                  var result = UNDEFINED;
                   if (args) {
                       var scope = last(stack);
                       if (scope) {
@@ -6240,7 +6240,7 @@
               instance.on(events);
           }
           {
-              var isComment = FALSE, placeholder = void 0, el = $options.el, root = $options.root, parent = $options.parent, replace = $options.replace, template = $options.template, transitions = $options.transitions, components = $options.components, directives = $options.directives, partials = $options.partials, filters = $options.filters, slots = $options.slots;
+              var placeholder = UNDEFINED, el = $options.el, vnode = $options.vnode, root = $options.root, parent = $options.parent, replace = $options.replace, template = $options.template, transitions = $options.transitions, components = $options.components, directives = $options.directives, partials = $options.partials, filters = $options.filters, slots = $options.slots;
               // 把 slots 放进数据里，方便 get
               if (slots) {
                   extend(source, slots);
@@ -6281,12 +6281,9 @@
                   else {
                       placeholder = el;
                   }
-              }
-              if (placeholder && !replace) {
-                  // 如果不是替换占位元素
-                  // 则在该元素下新建一个注释节点，等会用新组件替换掉
-                  isComment = TRUE;
-                  domApi.append(placeholder, placeholder = domApi.createComment(EMPTY_STRING));
+                  if (!replace) {
+                      domApi.append(placeholder, placeholder = domApi.createComment(EMPTY_STRING));
+                  }
               }
               if (root) {
                   instance.$root = root;
@@ -6329,17 +6326,20 @@
                   // 当然，这个需要外部自己控制传入的 template 是什么
                   // Yox.compile 会自动判断 template 是否经过编译
                   instance.$template = Yox.compile(template);
-                  // 第一次渲染视图
-                  if (!placeholder) {
-                      isComment = TRUE;
-                      placeholder = domApi.createComment(EMPTY_STRING);
+                  if (!vnode) {
+                      {
+                          if (!placeholder) {
+                              fatal('根组件不传 el 是几个意思？');
+                          }
+                      }
+                      vnode = create(domApi, placeholder, instance, EMPTY_STRING);
                   }
-                  instance.update(instance.get(TEMPLATE_COMPUTED), create(domApi, placeholder, isComment, instance, EMPTY_STRING));
+                  instance.update(instance.get(TEMPLATE_COMPUTED), vnode);
                   return;
               }
               else {
-                  if (placeholder) {
-                      fatal('有 el 没 template 是几个意思？');
+                  if (placeholder || vnode) {
+                      fatal('组件不写 template 是几个意思？');
                   }
               }
           }
@@ -6521,9 +6521,47 @@
           this.$observer.unwatch(keypath, watcher);
           return this;
       };
+      /**
+       * 加载组件，组件可以是同步或异步，最后会调用 callback
+       *
+       * @param name 组件名称
+       * @param callback 组件加载成功后的回调
+       */
       Yox.prototype.loadComponent = function (name, callback) {
           if (!loadComponent(this.$components, name, callback)) {
               loadComponent(globalComponents, name, callback);
+          }
+      };
+      /**
+       * 创建子组件
+       *
+       * @param options 组件配置
+       * @param vnode 虚拟节点
+       */
+      Yox.prototype.createComponent = function (options, vnode) {
+          {
+              var instance = this;
+              options = copy(options);
+              options.root = instance.$root || instance;
+              options.parent = instance;
+              options.vnode = vnode;
+              options.replace = TRUE;
+              if (vnode.props) {
+                  options.props = vnode.props;
+              }
+              if (vnode.slots) {
+                  options.slots = vnode.slots;
+              }
+              var child = new Yox(options);
+              push(instance.$children || (instance.$children = []), child);
+              var node = child.$el;
+              if (node) {
+                  vnode.node = node;
+              }
+              else {
+                  fatal("The root element of [Component " + vnode.tag + "] is not found.");
+              }
+              return child;
           }
       };
       Yox.prototype.directive = function (name, directive) {
@@ -6716,43 +6754,6 @@
           return props;
       };
       /**
-       * 创建子组件
-       *
-       * @param options 组件配置
-       * @param vnode 虚拟节点
-       * @param node DOM 元素
-       */
-      Yox.prototype.create = function (options, vnode, node) {
-          {
-              var instance = this;
-              options = copy(options);
-              options.root = instance.$root || instance;
-              options.parent = instance;
-              options.vnode = vnode;
-              // 如果传了 node，表示有一个占位元素，新创建的 child 需要把它替换掉
-              if (node) {
-                  options.el = node;
-                  options.replace = TRUE;
-              }
-              if (vnode.props) {
-                  options.props = vnode.props;
-              }
-              if (vnode.slots) {
-                  options.slots = vnode.slots;
-              }
-              var child = new Yox(options);
-              push(instance.$children || (instance.$children = []), child);
-              node = child.$el;
-              if (node) {
-                  vnode.node = node;
-              }
-              else {
-                  fatal("The root element of [Component " + vnode.tag + "] is not found.");
-              }
-              return child;
-          }
-      };
-      /**
        * 销毁组件
        */
       Yox.prototype.destroy = function () {
@@ -6870,7 +6871,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.34";
+      Yox.version = "1.0.0-alpha.35";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

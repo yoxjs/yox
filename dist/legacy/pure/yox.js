@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.34
+ * yox.js v1.0.0-alpha.35
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -2217,9 +2217,26 @@
           this.$observer.unwatch(keypath, watcher);
           return this;
       };
+      /**
+       * 加载组件，组件可以是同步或异步，最后会调用 callback
+       *
+       * @param name 组件名称
+       * @param callback 组件加载成功后的回调
+       */
       Yox.prototype.loadComponent = function (name, callback) {
           if (!loadComponent(this.$components, name, callback)) {
               loadComponent(globalComponents, name, callback);
+          }
+      };
+      /**
+       * 创建子组件
+       *
+       * @param options 组件配置
+       * @param vnode 虚拟节点
+       */
+      Yox.prototype.createComponent = function (options, vnode) {
+          {
+              return this;
           }
       };
       Yox.prototype.directive = function (name, directive) {
@@ -2258,18 +2275,6 @@
        */
       Yox.prototype.checkPropTypes = function (props) {
           return props;
-      };
-      /**
-       * 创建子组件
-       *
-       * @param options 组件配置
-       * @param vnode 虚拟节点
-       * @param node DOM 元素
-       */
-      Yox.prototype.create = function (options, vnode, node) {
-          {
-              return this;
-          }
       };
       /**
        * 销毁组件
@@ -2378,7 +2383,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.34";
+      Yox.version = "1.0.0-alpha.35";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
