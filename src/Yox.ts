@@ -217,7 +217,6 @@ export default class Yox implements YoxInterface {
     // 一进来就执行 before create
     execute($options[config.HOOK_BEFORE_CREATE], instance, $options)
 
-    // 如果不绑着，其他方法调不到钩子
     instance.$options = $options
 
     let {
@@ -806,99 +805,100 @@ export default class Yox implements YoxInterface {
    * @param props
    */
   checkPropTypes(props: type.data): type.data {
-    const { propTypes } = this.$options
-    if (propTypes) {
-      const result = object.copy(props)
-      object.each(
-        propTypes,
-        function (rule: PropRule, key: string) {
+    if (process.env.NODE_ENV !== 'pure') {
+      const { propTypes } = this.$options
+      if (propTypes) {
+        const result = object.copy(props)
+        object.each(
+          propTypes,
+          function (rule: PropRule, key: string) {
 
-          // 类型
-          let type = rule.type,
+            // 类型
+            const type = rule.type,
 
-          // 默认值
-          value = rule.value,
+            // 默认值
+            value = rule.value,
 
-          // 是否必传
-          required = rule.required,
+            // 实际的值
+            actual = props[key]
 
-          // 实际的值
-          actual = props[key]
+            // 传了数据
+            if (isDef(actual)) {
 
-          // 传了数据
-          if (isDef(actual)) {
+              if (process.env.NODE_ENV === 'dev') {
 
-            if (process.env.NODE_ENV === 'dev') {
+                // 如果不写 type 或 type 不是 字符串 或 数组
+                // 就当做此规则无效，和没写一样
+                if (type) {
 
-              // 如果不写 type 或 type 不是 字符串 或 数组
-              // 就当做此规则无效，和没写一样
-              if (type) {
+                  // 自定义函数判断是否匹配类型
+                  // 自己打印警告信息吧
+                  if (is.func(type)) {
+                    (type as type.propType)(props, key)
+                  }
+                  else {
 
-                // 自定义函数判断是否匹配类型
-                // 自己打印警告信息吧
-                if (is.func(type)) {
-                  (type as type.propType)(props, key)
+                    let matched: boolean | void
+
+                    // type: 'string'
+                    if (!string.falsy(type)) {
+                      matched = matchType(actual, type as string)
+                    }
+                    // type: ['string', 'number']
+                    else if (!array.falsy(type)) {
+                      array.each(
+                        type as string[],
+                        function (item: string) {
+                          if (matchType(actual, item)) {
+                            matched = env.TRUE
+                            return env.FALSE
+                          }
+                        }
+                      )
+                    }
+                    if (!matched) {
+                      logger.warn(`The type of prop "${key}" expected to be "${type}", but is "${actual}".`)
+                    }
+
+                  }
+
                 }
                 else {
-
-                  let matched: boolean | void
-
-                  // type: 'string'
-                  if (!string.falsy(type)) {
-                    matched = matchType(actual, type as string)
-                  }
-                  // type: ['string', 'number']
-                  else if (!array.falsy(type)) {
-                    array.each(
-                      type as string[],
-                      function (item: string) {
-                        if (matchType(actual, item)) {
-                          matched = env.TRUE
-                          return env.FALSE
-                        }
-                      }
-                    )
-                  }
-                  if (!matched) {
-                    logger.warn(`The type of prop "${key}" expected to be "${type}", but is "${actual}".`)
-                  }
-
+                  logger.warn(`The prop "${key}" in propTypes has no type.`)
                 }
+              }
 
+            }
+            else {
+
+              if (process.env.NODE_ENV === 'dev') {
+                // 是否必传
+                let required = rule.required
+                // 动态化获取是否必填
+                if (is.func(required)) {
+                  required = (required as type.propRequired)(props, key)
+                }
+                // 没传值但此项是必传项
+                if (required) {
+                  logger.warn(`The prop "${key}" is marked as required, but its value is not found.`)
+                }
               }
-              else {
-                logger.warn(`The prop "${key}" in propTypes has no type.`)
+
+              // 没传值但是配置了默认值
+              if (isDef(value)) {
+                result[key] = type === env.RAW_FUNCTION
+                  ? value
+                  : is.func(value)
+                    ? (value as type.propValue)(props, key)
+                    : value
               }
+
             }
 
           }
-          else {
-
-            if (process.env.NODE_ENV === 'dev') {
-              // 动态化获取是否必填
-              if (is.func(required)) {
-                required = (required as type.propRequired)(props, key)
-              }
-              // 没传值但此项是必传项
-              if (required) {
-                logger.warn(`The prop "${key}" is marked as required, but its value is not found.`)
-              }
-            }
-
-            // 没传值但是配置了默认值
-            if (isDef(value)) {
-              result[key] = type === env.RAW_FUNCTION
-                ? value
-                : is.func(value)
-                  ? (value as type.propValue)(props, key)
-                  : value
-            }
-
-          }
-
-        }
-      )
-      return result
+        )
+        return result
+      }
     }
     return props
   }
@@ -912,9 +912,13 @@ export default class Yox implements YoxInterface {
    */
   create(options: YoxOptions, vnode: VNode, node: Node | void): YoxInterface {
     if (process.env.NODE_ENV !== 'pure') {
+
+      const instance = this
+
       options = object.copy(options)
-      options.root = this.$root || this
-      options.parent = this
+      options.root = instance.$root || instance
+      options.parent = instance
+      options.vnode = vnode
 
       // 如果传了 node，表示有一个占位元素，新创建的 child 需要把它替换掉
       if (node) {
@@ -932,9 +936,18 @@ export default class Yox implements YoxInterface {
       const child = new Yox(options)
 
       array.push(
-        this.$children || (this.$children = [ ]),
+        instance.$children || (instance.$children = [ ]),
         child
       )
+
+      node = child.$el
+
+      if (node) {
+        vnode.node = node
+      }
+      else if (process.env.NODE_ENV === 'dev') {
+        logger.fatal(`The root element of [Component ${vnode.tag}] is not found.`)
+      }
 
       return child
     }

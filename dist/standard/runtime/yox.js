@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.33
+ * yox.js v1.0.0-alpha.34
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1449,12 +1449,7 @@
   function createComponent(vnode, options) {
       // 渲染同步加载的组件时，vnode.node 为空
       // 渲染异步加载的组件时，vnode.node 不为空，因为初始化用了占位节点
-      var child = (vnode.parent || vnode.context).create(options, vnode, vnode.node), 
-      // 组件初始化创建的元素
-      node = child.$el;
-      if (node) {
-          vnode.node = node;
-      }
+      var child = (vnode.parent || vnode.context).create(options, vnode, vnode.node);
       vnode.data[COMPONENT] = child;
       vnode.data[LOADING] = FALSE;
       update$3(vnode);
@@ -2300,7 +2295,11 @@
                   });
               }
           }
-      }, renderElementVnode = function (vnode, attrs, childs, slots) {
+      }, renderElementVnode = function (vnode, tag, attrs, childs, slots) {
+          if (tag) {
+              var componentName = context.get(tag);
+              vnode.tag = componentName;
+          }
           if (attrs) {
               $vnode = vnode;
               attrs();
@@ -3586,7 +3585,6 @@
           var instance = this, $options = options || EMPTY_OBJECT;
           // 一进来就执行 before create
           execute($options[HOOK_BEFORE_CREATE], instance, $options);
-          // 如果不绑着，其他方法调不到钩子
           instance.$options = $options;
           var data = $options.data, props = $options.props, computed = $options.computed, events = $options.events, methods = $options.methods, watchers = $options.watchers, extensions = $options.extensions;
           if (extensions) {
@@ -3990,32 +3988,32 @@
        * @param props
        */
       Yox.prototype.checkPropTypes = function (props) {
-          var propTypes = this.$options.propTypes;
-          if (propTypes) {
-              var result_1 = copy(props);
-              each$2(propTypes, function (rule, key) {
-                  // 类型
-                  var type = rule.type, 
-                  // 默认值
-                  value = rule.value, 
-                  // 是否必传
-                  required = rule.required, 
-                  // 实际的值
-                  actual = props[key];
-                  // 传了数据
-                  if (isDef(actual)) ;
-                  else {
-                      // 没传值但是配置了默认值
-                      if (isDef(value)) {
-                          result_1[key] = type === RAW_FUNCTION
-                              ? value
-                              : func(value)
-                                  ? value(props, key)
-                                  : value;
+          {
+              var propTypes = this.$options.propTypes;
+              if (propTypes) {
+                  var result_1 = copy(props);
+                  each$2(propTypes, function (rule, key) {
+                      // 类型
+                      var type = rule.type, 
+                      // 默认值
+                      value = rule.value, 
+                      // 实际的值
+                      actual = props[key];
+                      // 传了数据
+                      if (isDef(actual)) ;
+                      else {
+                          // 没传值但是配置了默认值
+                          if (isDef(value)) {
+                              result_1[key] = type === RAW_FUNCTION
+                                  ? value
+                                  : func(value)
+                                      ? value(props, key)
+                                      : value;
+                          }
                       }
-                  }
-              });
-              return result_1;
+                  });
+                  return result_1;
+              }
           }
           return props;
       };
@@ -4028,9 +4026,11 @@
        */
       Yox.prototype.create = function (options, vnode, node) {
           {
+              var instance = this;
               options = copy(options);
-              options.root = this.$root || this;
-              options.parent = this;
+              options.root = instance.$root || instance;
+              options.parent = instance;
+              options.vnode = vnode;
               // 如果传了 node，表示有一个占位元素，新创建的 child 需要把它替换掉
               if (node) {
                   options.el = node;
@@ -4043,7 +4043,11 @@
                   options.slots = vnode.slots;
               }
               var child = new Yox(options);
-              push(this.$children || (this.$children = []), child);
+              push(instance.$children || (instance.$children = []), child);
+              node = child.$el;
+              if (node) {
+                  vnode.node = node;
+              }
               return child;
           }
       };
@@ -4165,7 +4169,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.33";
+      Yox.version = "1.0.0-alpha.34";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

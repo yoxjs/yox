@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.33
+ * yox.js v1.0.0-alpha.34
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1478,15 +1478,7 @@ function insertBefore(api, parentNode, node, referenceNode) {
 function createComponent(vnode, options) {
     // 渲染同步加载的组件时，vnode.node 为空
     // 渲染异步加载的组件时，vnode.node 不为空，因为初始化用了占位节点
-    var child = (vnode.parent || vnode.context).create(options, vnode, vnode.node), 
-    // 组件初始化创建的元素
-    node = child.$el;
-    if (node) {
-        vnode.node = node;
-    }
-    else {
-        fatal("The root element of component [" + vnode.tag + "] is not found.");
-    }
+    var child = (vnode.parent || vnode.context).create(options, vnode, vnode.node);
     vnode.data[COMPONENT] = child;
     vnode.data[LOADING] = FALSE;
     update$3(vnode);
@@ -4280,8 +4272,8 @@ function trimArgs(list) {
     }, TRUE);
     return args;
 }
-function renderElement(data, attrs, childs, slots) {
-    return stringifyCall(RENDER_ELEMENT_VNODE, join(trimArgs([data, attrs, childs, slots]), SEP_COMMA));
+function renderElement(data, tag, attrs, childs, slots) {
+    return stringifyCall(RENDER_ELEMENT_VNODE, join(trimArgs([data, tag, attrs, childs, slots]), SEP_COMMA));
 }
 function getComponentSlots(children) {
     var result = {}, slots = {}, addSlot = function (name, nodes) {
@@ -4313,7 +4305,7 @@ function getComponentSlots(children) {
     }
 }
 nodeStringify[ELEMENT] = function (node) {
-    var tag = node.tag, isComponent = node.isComponent, isSvg = node.isSvg, isStyle = node.isStyle, isStatic = node.isStatic, isComplex = node.isComplex, name = node.name, ref = node.ref, key = node.key, html = node.html, attrs = node.attrs, children = node.children, data = {}, outputAttrs = [], outputChilds, outputSlots, args;
+    var tag = node.tag, isComponent = node.isComponent, isSvg = node.isSvg, isStyle = node.isStyle, isStatic = node.isStatic, isComplex = node.isComplex, name = node.name, ref = node.ref, key = node.key, html = node.html, attrs = node.attrs, children = node.children, data = {}, outputTag, outputAttrs = [], outputChilds, outputSlots, args;
     if (tag === RAW_SLOT) {
         args = [toJSON(SLOT_DATA_PREFIX + name)];
         if (children) {
@@ -4327,7 +4319,13 @@ nodeStringify[ELEMENT] = function (node) {
             push(outputAttrs, nodeStringify[attr.type](attr));
         });
     }
-    data.tag = toJSON(tag);
+    // 如果以 $ 开头，表示动态组件
+    if (codeAt(tag) === 36) {
+        outputTag = toJSON(slice(tag, 1));
+    }
+    else {
+        data.tag = toJSON(tag);
+    }
     if (isSvg) {
         data.isSvg = STRING_TRUE;
     }
@@ -4366,7 +4364,7 @@ nodeStringify[ELEMENT] = function (node) {
         }
     }
     pop(collectStack);
-    return renderElement(stringifyObject(data), falsy(outputAttrs)
+    return renderElement(stringifyObject(data), outputTag, falsy(outputAttrs)
         ? UNDEFINED
         : stringifyFunction(join(outputAttrs, SEP_COMMA)), outputChilds, outputSlots);
 };
@@ -4788,7 +4786,16 @@ function render(context, template, filters, partials, directives, transitions) {
         else {
             warn("[" + expr.raw + "] \u4E0D\u662F\u5BF9\u8C61\uFF0C\u5EF6\u5C55\u4E2A\u6BDB\u554A");
         }
-    }, renderElementVnode = function (vnode, attrs, childs, slots) {
+    }, renderElementVnode = function (vnode, tag, attrs, childs, slots) {
+        if (tag) {
+            var componentName = context.get(tag);
+            {
+                if (!componentName) {
+                    error("Dynamic component [" + tag + "] is not found.");
+                }
+            }
+            vnode.tag = componentName;
+        }
         if (attrs) {
             $vnode = vnode;
             attrs();
@@ -6179,7 +6186,6 @@ var Yox = /** @class */ (function () {
         var instance = this, $options = options || EMPTY_OBJECT;
         // 一进来就执行 before create
         execute($options[HOOK_BEFORE_CREATE], instance, $options);
-        // 如果不绑着，其他方法调不到钩子
         instance.$options = $options;
         var data = $options.data, props = $options.props, computed = $options.computed, events = $options.events, methods = $options.methods, watchers = $options.watchers, extensions = $options.extensions;
         // 如果传了 props，则 data 应该是个 function
@@ -6630,76 +6636,78 @@ var Yox = /** @class */ (function () {
      * @param props
      */
     Yox.prototype.checkPropTypes = function (props) {
-        var propTypes = this.$options.propTypes;
-        if (propTypes) {
-            var result_1 = copy(props);
-            each$2(propTypes, function (rule, key) {
-                // 类型
-                var type = rule.type, 
-                // 默认值
-                value = rule.value, 
-                // 是否必传
-                required = rule.required, 
-                // 实际的值
-                actual = props[key];
-                // 传了数据
-                if (isDef(actual)) {
-                    {
-                        // 如果不写 type 或 type 不是 字符串 或 数组
-                        // 就当做此规则无效，和没写一样
-                        if (type) {
-                            // 自定义函数判断是否匹配类型
-                            // 自己打印警告信息吧
-                            if (func(type)) {
-                                type(props, key);
+        {
+            var propTypes = this.$options.propTypes;
+            if (propTypes) {
+                var result_1 = copy(props);
+                each$2(propTypes, function (rule, key) {
+                    // 类型
+                    var type = rule.type, 
+                    // 默认值
+                    value = rule.value, 
+                    // 实际的值
+                    actual = props[key];
+                    // 传了数据
+                    if (isDef(actual)) {
+                        {
+                            // 如果不写 type 或 type 不是 字符串 或 数组
+                            // 就当做此规则无效，和没写一样
+                            if (type) {
+                                // 自定义函数判断是否匹配类型
+                                // 自己打印警告信息吧
+                                if (func(type)) {
+                                    type(props, key);
+                                }
+                                else {
+                                    var matched_1;
+                                    // type: 'string'
+                                    if (!falsy$1(type)) {
+                                        matched_1 = matchType(actual, type);
+                                    }
+                                    // type: ['string', 'number']
+                                    else if (!falsy(type)) {
+                                        each(type, function (item) {
+                                            if (matchType(actual, item)) {
+                                                matched_1 = TRUE;
+                                                return FALSE;
+                                            }
+                                        });
+                                    }
+                                    if (!matched_1) {
+                                        warn("The type of prop \"" + key + "\" expected to be \"" + type + "\", but is \"" + actual + "\".");
+                                    }
+                                }
                             }
                             else {
-                                var matched_1;
-                                // type: 'string'
-                                if (!falsy$1(type)) {
-                                    matched_1 = matchType(actual, type);
-                                }
-                                // type: ['string', 'number']
-                                else if (!falsy(type)) {
-                                    each(type, function (item) {
-                                        if (matchType(actual, item)) {
-                                            matched_1 = TRUE;
-                                            return FALSE;
-                                        }
-                                    });
-                                }
-                                if (!matched_1) {
-                                    warn("The type of prop \"" + key + "\" expected to be \"" + type + "\", but is \"" + actual + "\".");
-                                }
+                                warn("The prop \"" + key + "\" in propTypes has no type.");
                             }
                         }
-                        else {
-                            warn("The prop \"" + key + "\" in propTypes has no type.");
+                    }
+                    else {
+                        {
+                            // 是否必传
+                            var required = rule.required;
+                            // 动态化获取是否必填
+                            if (func(required)) {
+                                required = required(props, key);
+                            }
+                            // 没传值但此项是必传项
+                            if (required) {
+                                warn("The prop \"" + key + "\" is marked as required, but its value is not found.");
+                            }
+                        }
+                        // 没传值但是配置了默认值
+                        if (isDef(value)) {
+                            result_1[key] = type === RAW_FUNCTION
+                                ? value
+                                : func(value)
+                                    ? value(props, key)
+                                    : value;
                         }
                     }
-                }
-                else {
-                    {
-                        // 动态化获取是否必填
-                        if (func(required)) {
-                            required = required(props, key);
-                        }
-                        // 没传值但此项是必传项
-                        if (required) {
-                            warn("The prop \"" + key + "\" is marked as required, but its value is not found.");
-                        }
-                    }
-                    // 没传值但是配置了默认值
-                    if (isDef(value)) {
-                        result_1[key] = type === RAW_FUNCTION
-                            ? value
-                            : func(value)
-                                ? value(props, key)
-                                : value;
-                    }
-                }
-            });
-            return result_1;
+                });
+                return result_1;
+            }
         }
         return props;
     };
@@ -6712,9 +6720,11 @@ var Yox = /** @class */ (function () {
      */
     Yox.prototype.create = function (options, vnode, node) {
         {
+            var instance = this;
             options = copy(options);
-            options.root = this.$root || this;
-            options.parent = this;
+            options.root = instance.$root || instance;
+            options.parent = instance;
+            options.vnode = vnode;
             // 如果传了 node，表示有一个占位元素，新创建的 child 需要把它替换掉
             if (node) {
                 options.el = node;
@@ -6727,7 +6737,14 @@ var Yox = /** @class */ (function () {
                 options.slots = vnode.slots;
             }
             var child = new Yox(options);
-            push(this.$children || (this.$children = []), child);
+            push(instance.$children || (instance.$children = []), child);
+            node = child.$el;
+            if (node) {
+                vnode.node = node;
+            }
+            else {
+                fatal("The root element of [Component " + vnode.tag + "] is not found.");
+            }
             return child;
         }
     };
@@ -6849,7 +6866,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.33";
+    Yox.version = "1.0.0-alpha.34";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */
