@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.35
+ * yox.js v1.0.0-alpha.36
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -3058,15 +3058,7 @@ var Observer = /** @class */ (function () {
      * @param index
      */
     Observer.prototype.removeAt = function (keypath, index) {
-        var list = this.get(keypath);
-        if (array(list)
-            && index >= 0
-            && index < list.length) {
-            list = copy(list);
-            list.splice(index, 1);
-            this.set(keypath, list);
-            return TRUE;
-        }
+        return this.splice(keypath, index, 1);
     };
     /**
      * 直接移除数组中的元素
@@ -3082,6 +3074,31 @@ var Observer = /** @class */ (function () {
                 this.set(keypath, list);
                 return TRUE;
             }
+        }
+    };
+    /**
+     * 删除旧元素并插入新元素
+     *
+     * @param keypath
+     * @param index
+     * @param count
+     * @param items
+     */
+    Observer.prototype.splice = function (keypath, index, count) {
+        var arguments$1 = arguments;
+
+        var items = [];
+        for (var _i = 3; _i < arguments.length; _i++) {
+            items[_i - 3] = arguments$1[_i];
+        }
+        var list = this.get(keypath);
+        if (array(list)) {
+            list = copy(list);
+            unshift(items, count);
+            unshift(items, index);
+            execute(list.splice, list, items);
+            this.set(keypath, list);
+            return TRUE;
         }
     };
     /**
@@ -4226,7 +4243,7 @@ var Yox = /** @class */ (function () {
      * @param index
      */
     Yox.prototype.removeAt = function (keypath, index) {
-        return this.$observer.removeAt(keypath, index);
+        return this.splice(keypath, index, 1);
     };
     /**
      * 直接移除数组中的元素
@@ -4236,6 +4253,24 @@ var Yox = /** @class */ (function () {
      */
     Yox.prototype.remove = function (keypath, item) {
         return this.$observer.remove(keypath, item);
+    };
+    /**
+     * 删除旧元素并插入新元素
+     *
+     * @param keypath
+     * @param index
+     * @param count
+     * @param items
+     */
+    Yox.prototype.splice = function (keypath, index, count) {
+        var arguments$1 = arguments;
+
+        var _a;
+        var items = [];
+        for (var _i = 3; _i < arguments.length; _i++) {
+            items[_i - 3] = arguments$1[_i];
+        }
+        return (_a = this.$observer).splice.apply(_a, [keypath, index, count].concat(items));
     };
     /**
      * 拷贝任意数据，支持深拷贝
@@ -4249,7 +4284,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.35";
+    Yox.version = "1.0.0-alpha.36";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */

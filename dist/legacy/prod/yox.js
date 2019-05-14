@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.35
+ * yox.js v1.0.0-alpha.36
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -2191,10 +2191,23 @@
        * 跳过空白符
        */
       Parser.prototype.skip = function (step) {
-          var instance = this;
-          // 走一步
+          var instance = this, reversed = step && step < 0;
+          // 如果表达式是 "   xyz   "，到达结尾后，如果希望 skip(-1) 回到最后一个非空白符
+          // 必须先判断最后一个字符是空白符，否则碰到 "xyz" 这样结尾不是空白符的，其实不应该回退
           if (instance.code === CODE_EOF) {
+              var oldIndex = instance.index;
               instance.go(step);
+              // 如果跳一位之后不是空白符，还原，然后返回
+              if (!isWhitespace(instance.code)) {
+                  instance.go(oldIndex - instance.index);
+                  return;
+              }
+          }
+          // 逆向时，只有位置真的发生过变化才需要在停止时正向移动一位
+          // 比如 (a) 如果调用 skip 前位于 )，调用 skip(-1) ，结果应该是原地不动
+          // 为了解决这个问题，应该首先判断当前是不是空白符，如果不是，直接返回
+          else if (!isWhitespace(instance.code)) {
+              return;
           }
           // 如果是正向的，停在第一个非空白符左侧
           // 如果是逆向的，停在第一个非空白符右侧
@@ -2203,7 +2216,7 @@
                   instance.go(step);
               }
               else {
-                  if (step && step < 0) {
+                  if (reversed) {
                       instance.go();
                   }
                   break;
@@ -2634,7 +2647,7 @@
                   }
                   break;
           }
-          if (instance.code > startIndex) {
+          if (instance.index > startIndex) {
               return instance.pick(startIndex);
           }
       };
@@ -5235,15 +5248,7 @@
        * @param index
        */
       Observer.prototype.removeAt = function (keypath, index) {
-          var list = this.get(keypath);
-          if (array(list)
-              && index >= 0
-              && index < list.length) {
-              list = copy(list);
-              list.splice(index, 1);
-              this.set(keypath, list);
-              return TRUE;
-          }
+          return this.splice(keypath, index, 1);
       };
       /**
        * 直接移除数组中的元素
@@ -5259,6 +5264,31 @@
                   this.set(keypath, list);
                   return TRUE;
               }
+          }
+      };
+      /**
+       * 删除旧元素并插入新元素
+       *
+       * @param keypath
+       * @param index
+       * @param count
+       * @param items
+       */
+      Observer.prototype.splice = function (keypath, index, count) {
+          var arguments$1 = arguments;
+
+          var items = [];
+          for (var _i = 3; _i < arguments.length; _i++) {
+              items[_i - 3] = arguments$1[_i];
+          }
+          var list = this.get(keypath);
+          if (array(list)) {
+              list = copy(list);
+              unshift(items, count);
+              unshift(items, index);
+              execute(list.splice, list, items);
+              this.set(keypath, list);
+              return TRUE;
           }
       };
       /**
@@ -6413,7 +6443,7 @@
        * @param index
        */
       Yox.prototype.removeAt = function (keypath, index) {
-          return this.$observer.removeAt(keypath, index);
+          return this.splice(keypath, index, 1);
       };
       /**
        * 直接移除数组中的元素
@@ -6423,6 +6453,24 @@
        */
       Yox.prototype.remove = function (keypath, item) {
           return this.$observer.remove(keypath, item);
+      };
+      /**
+       * 删除旧元素并插入新元素
+       *
+       * @param keypath
+       * @param index
+       * @param count
+       * @param items
+       */
+      Yox.prototype.splice = function (keypath, index, count) {
+          var arguments$1 = arguments;
+
+          var _a;
+          var items = [];
+          for (var _i = 3; _i < arguments.length; _i++) {
+              items[_i - 3] = arguments$1[_i];
+          }
+          return (_a = this.$observer).splice.apply(_a, [keypath, index, count].concat(items));
       };
       /**
        * 拷贝任意数据，支持深拷贝
@@ -6436,7 +6484,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.35";
+      Yox.version = "1.0.0-alpha.36";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
