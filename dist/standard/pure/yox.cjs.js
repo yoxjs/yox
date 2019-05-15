@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.37
+ * yox.js v1.0.0-alpha.38
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -18,6 +18,7 @@ var RAW_VALUE = 'value';
 var RAW_LENGTH = 'length';
 var RAW_FUNCTION = 'function';
 var RAW_WILDCARD = '*';
+var RAW_MINUS_ONE = -1;
 /**
  * Single instance for window in browser
  */
@@ -194,7 +195,7 @@ var CustomEvent = /** @class */ (function () {
     };
     CustomEvent.PHASE_CURRENT = 0;
     CustomEvent.PHASE_UPWARD = 1;
-    CustomEvent.PHASE_DOWNWARD = -1;
+    CustomEvent.PHASE_DOWNWARD = RAW_MINUS_ONE;
     return CustomEvent;
 }());
 
@@ -274,7 +275,7 @@ function unshift(array, target) {
  * @return 如果未找到，返回 -1
  */
 function indexOf(array, target, strict) {
-    var result = -1;
+    var result = RAW_MINUS_ONE;
     each(array, function (item, index) {
         if (strict === FALSE ? item == target : item === target) {
             result = index;
@@ -586,7 +587,7 @@ function match(keypath, prefix) {
     prefix += SEP_DOT;
     return startsWith(keypath, prefix)
         ? prefix.length
-        : -1;
+        : RAW_MINUS_ONE;
 }
 /**
  * 遍历 keypath 的每个部分
@@ -2410,7 +2411,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.37";
+    Yox.version = "1.0.0-alpha.38";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.37
+ * yox.js v1.0.0-alpha.38
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -32,6 +32,7 @@ var RAW_TEMPLATE = 'template';
 var RAW_WILDCARD = '*';
 var KEYPATH_PARENT = '..';
 var KEYPATH_CURRENT = RAW_THIS;
+var RAW_MINUS_ONE = -1;
 /**
  * Single instance for window in browser
  */
@@ -235,7 +236,7 @@ var CustomEvent = /** @class */ (function () {
     };
     CustomEvent.PHASE_CURRENT = 0;
     CustomEvent.PHASE_UPWARD = 1;
-    CustomEvent.PHASE_DOWNWARD = -1;
+    CustomEvent.PHASE_DOWNWARD = RAW_MINUS_ONE;
     return CustomEvent;
 }());
 
@@ -315,7 +316,7 @@ function unshift(array, target) {
  * @return 如果未找到，返回 -1
  */
 function indexOf(array, target, strict) {
-    var result = -1;
+    var result = RAW_MINUS_ONE;
     each(array, function (item, index) {
         if (strict === FALSE ? item == target : item === target) {
             result = index;
@@ -627,7 +628,7 @@ function match(keypath, prefix) {
     prefix += SEP_DOT;
     return startsWith(keypath, prefix)
         ? prefix.length
-        : -1;
+        : RAW_MINUS_ONE;
 }
 /**
  * 遍历 keypath 的每个部分
@@ -2160,7 +2161,7 @@ function compile(content) {
 var Parser = /** @class */ (function () {
     function Parser(content) {
         var instance = this, length = content.length;
-        instance.index = -1;
+        instance.index = RAW_MINUS_ONE;
         instance.end = length;
         instance.code = CODE_EOF;
         instance.content = content;
@@ -2178,7 +2179,7 @@ var Parser = /** @class */ (function () {
         }
         else {
             instance.code = CODE_EOF;
-            instance.index = index < 0 ? -1 : end;
+            instance.index = index < 0 ? RAW_MINUS_ONE : end;
         }
     };
     /**
@@ -2281,12 +2282,12 @@ var Parser = /** @class */ (function () {
                     var value = node.value;
                     if (number(value)) {
                         // 类似 ' -1 ' 这样的右侧有空格，需要撤回来
-                        instance.skip(-1);
+                        instance.skip(RAW_MINUS_ONE);
                         return createLiteral(-value, instance.pick(index));
                     }
                 }
                 // 类似 ' -a ' 这样的右侧有空格，需要撤回来
-                instance.skip(-1);
+                instance.skip(RAW_MINUS_ONE);
                 return createUnary(operator, node, instance.pick(index));
             }
         }
@@ -2723,7 +2724,7 @@ var Parser = /** @class */ (function () {
             }
             if (test && yes && no) {
                 // 类似 ' a ? 1 : 0 ' 这样的右侧有空格，需要撤回来
-                instance.skip(-1);
+                instance.skip(RAW_MINUS_ONE);
                 test = createTernary(test, yes, no, instance.pick(index));
             }
         }
@@ -3093,7 +3094,8 @@ function compile$1(content) {
     closeBlockIndex = 0, 
     // 当前正在处理或即将处理的 block 类型
     blockMode = BLOCK_MODE_NONE, 
-    code, startQuote, /**
+    // mustache 注释可能出现嵌套插值的情况
+    blockStack = [], indexList = [], code, startQuote, /**
      * 常见的两种情况：
      *
      * <div>
@@ -3208,7 +3210,7 @@ function compile$1(content) {
         // 类似 <!-- xx {{name}} yy {{age}} zz --> 这样的注释里包含插值
         // 按照目前的解析逻辑，是根据定界符进行模板分拆
         // 一旦出现插值，children 长度必然大于 1
-        var openIndex = -1, openText = EMPTY_STRING, closeIndex = -1, closeText = EMPTY_STRING;
+        var openIndex = RAW_MINUS_ONE, openText = EMPTY_STRING, closeIndex = RAW_MINUS_ONE, closeText = EMPTY_STRING;
         each(children, function (child, index) {
             if (child.type === TEXT) {
                 if (closeIndex >= 0) {
@@ -3231,7 +3233,7 @@ function compile$1(content) {
                             closeIndex--;
                         }
                         children.splice(openIndex, closeIndex - openIndex + 1);
-                        openIndex = closeIndex = -1;
+                        openIndex = closeIndex = RAW_MINUS_ONE;
                     }
                 }
                 else {
@@ -3799,12 +3801,52 @@ function compile$1(content) {
                 }
             });
         }
+    }, closeBlock = function () {
+        // 确定开始和结束定界符能否配对成功，即 {{ 对 }}，{{{ 对 }}}
+        // 这里不能动 openBlockIndex 和 closeBlockIndex，因为等下要用他俩 slice
+        index = closeBlockIndex + 2;
+        // 这里要用 <=，因为很可能到头了
+        if (index <= length) {
+            if (index < length && charAt(content, index) === '}') {
+                if (blockMode === BLOCK_MODE_UNSAFE) {
+                    nextIndex = index + 1;
+                }
+            }
+            else {
+                if (blockMode === BLOCK_MODE_SAFE) {
+                    nextIndex = index;
+                }
+            }
+            pop(blockStack);
+            // }} 左侧的位置
+            addIndex(closeBlockIndex);
+            openBlockIndex = indexOf$1(content, '{{', nextIndex);
+            closeBlockIndex = indexOf$1(content, '}}', nextIndex);
+            // 如果碰到连续的结束定界符，继续 close
+            if (closeBlockIndex >= nextIndex
+                && (openBlockIndex < 0 || closeBlockIndex < openBlockIndex)) {
+                return closeBlock();
+            }
+        }
+        else {
+            // 到头了
+            return TRUE;
+        }
+    }, addIndex = function (index) {
+        if (!blockStack.length) {
+            push(indexList, index);
+        }
     };
+    // 因为存在 mustache 注释内包含插值的情况
+    // 这里把流程设计为先标记切片的位置，标记过程中丢弃无效的 block
+    // 最后处理有效的 block
     while (TRUE) {
+        addIndex(nextIndex);
         openBlockIndex = indexOf$1(content, '{{', nextIndex);
         if (openBlockIndex >= nextIndex) {
             blockMode = BLOCK_MODE_SAFE;
-            parseHtml(slice(content, nextIndex, openBlockIndex));
+            // {{ 左侧的位置
+            addIndex(openBlockIndex);
             // 跳过 {{
             openBlockIndex += 2;
             // {{ 后面总得有内容吧
@@ -3813,42 +3855,51 @@ function compile$1(content) {
                     blockMode = BLOCK_MODE_UNSAFE;
                     openBlockIndex++;
                 }
+                // {{ 右侧的位置
+                addIndex(openBlockIndex);
+                // block 是否安全
+                addIndex(blockMode);
+                // 打开一个 block 就入栈一个
+                push(blockStack, TRUE);
                 if (openBlockIndex < length) {
-                    closeBlockIndex = indexOf$1(content, '}}', index);
+                    closeBlockIndex = indexOf$1(content, '}}', openBlockIndex);
                     if (closeBlockIndex >= openBlockIndex) {
-                        // 确定开始和结束定界符能否配对成功，即 {{ 对 }}，{{{ 对 }}}
-                        // 这里不能动 openBlockIndex 和 closeBlockIndex，因为等下要用他俩 slice
-                        index = closeBlockIndex + 2;
-                        // 这里要用 <=，因为很可能到头了
-                        if (index <= length) {
-                            if (index < length && charAt(content, index) === '}') {
-                                if (blockMode === BLOCK_MODE_UNSAFE) {
-                                    nextIndex = index + 1;
-                                }
+                        // 注释可以嵌套，如 {{！  {{xx}} {{! {{xx}} }}  }}
+                        nextIndex = indexOf$1(content, '{{', openBlockIndex);
+                        if (nextIndex < 0 || closeBlockIndex < nextIndex) {
+                            if (closeBlock()) {
+                                break;
                             }
-                            else {
-                                if (blockMode === BLOCK_MODE_SAFE) {
-                                    nextIndex = index;
-                                }
-                            }
-                            code = trim(slice(content, openBlockIndex, closeBlockIndex));
-                            // 不用处理 {{ }} 和 {{{ }}} 这种空 block
-                            if (code) {
-                                parseBlock(code);
-                            }
-                        }
-                        else {
-                            // 到头了
-                            break;
                         }
                     }
                 }
             }
         }
         else {
-            blockMode = BLOCK_MODE_NONE;
-            parseHtml(slice(content, nextIndex));
             break;
+        }
+    }
+    for (var i = 0, length_1 = indexList.length; i < length_1; i += 5) {
+        index = indexList[i];
+        // {{ 左侧的位置
+        openBlockIndex = indexList[i + 1];
+        if (openBlockIndex) {
+            parseHtml(slice(content, index, openBlockIndex));
+        }
+        // {{ 右侧的位置
+        openBlockIndex = indexList[i + 2];
+        blockMode = indexList[i + 3];
+        closeBlockIndex = indexList[i + 4];
+        if (closeBlockIndex) {
+            code = trim(slice(content, openBlockIndex, closeBlockIndex));
+            // 不用处理 {{ }} 和 {{{ }}} 这种空 block
+            if (code) {
+                parseBlock(code);
+            }
+        }
+        else {
+            blockMode = BLOCK_MODE_NONE;
+            parseHtml(slice(content, index));
         }
     }
     if (nodeStack.length) {
@@ -6535,7 +6586,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.37";
+    Yox.version = "1.0.0-alpha.38";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */

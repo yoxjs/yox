@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>各种注释写法</title>
+</head>
+
+<body>
+  <div id="app"></div>
+  <script id="template" type="plain/text">
+
+      <div>
+          <h1>空字符串</h1>
+          <div>
+              <!-- xx -->
+          </div>
+
+          <h1>空字符串</h1>
+          <div>
+              <!--
+                1
+                2
+                3
+              -->
+          </div>
+
+          <h1>22</h1>
+          <div>
+              2<!-- {{name}} {{age}} -->2
+          </div>
+
+          <h1>22</h1>
+          <div>
+              2<!-- <!-- {{name}} {{age}} --> -->2
+          </div>
+
+          <h1>22</h1>
+          <div>
+              2{{!
+                {{name}}
+                {{age}}
+
+                {{!
+                  {{gender}}
+                }}
+              }}2
+          </div>
+
+          <h1>只有 title 属性</h1>
+          <div
+              title="title"
+              {{!
+              id="id"
+              class="class"
+              data-xx="{{name}}"
+              }}
+          >
+              test
+          </div>
+
+          <h1>属性值包含 html 注释，当做普通文本</h1>
+          <div title="<!-- test -->">
+              test
+          </div>
+
+      </div>
+
+  </script>
+
+  <script src="../dist/standard/dev/yox.js"></script>
+  <script>
+    var instance = new Yox({
+      el: '#app',
+      template: '#template'
+    });
+
+  </script>
+</body>
+
+</html>
