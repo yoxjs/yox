@@ -1,6 +1,6 @@
 {
   "name": "yox",
-  "version": "1.0.0-alpha.38",
+  "version": "1.0.0-alpha.39",
   "description": "A lightweight mvvm framework",
   "main": "dist/standard/dev/yox.js",
   "directories": {
@@ -9,16 +9,30 @@
   },
   "scripts": {
     "doc": "docsify serve docs",
+
     "dev": "node_modules/.bin/rollup -c ./build/config.dev.js",
-    "prod": "node_modules/.bin/rollup -c ./build/config.prod.js",
-    "runtime": "node_modules/.bin/rollup -c ./build/config.runtime.js",
-    "pure": "node_modules/.bin/rollup -c ./build/config.pure.js",
-    "build": "npm run pure && npm run runtime && npm run prod && npm run dev",
-    "dev-legacy": "node_modules/.bin/rollup -c ./build/config.dev.legacy.js",
-    "prod-legacy": "node_modules/.bin/rollup -c ./build/config.prod.legacy.js",
-    "runtime-legacy": "node_modules/.bin/rollup -c ./build/config.runtime.legacy.js",
-    "pure-legacy": "node_modules/.bin/rollup -c ./build/config.pure.legacy.js",
-    "build-legacy": "npm run pure-legacy && npm run runtime-legacy && npm run prod-legacy && npm run dev-legacy"
+
+    "dev-standard-source": "node_modules/.bin/rollup -c ./build/config.dev.standard.source.js",
+    "prod-standard-source": "node_modules/.bin/rollup -c ./build/config.prod.standard.source.js",
+    "runtime-standard-source": "node_modules/.bin/rollup -c ./build/config.runtime.standard.source.js",
+    "pure-standard-source": "node_modules/.bin/rollup -c ./build/config.pure.standard.source.js",
+
+    "dev-standard-min": "node_modules/.bin/rollup -c ./build/config.dev.standard.min.js",
+    "prod-standard-min": "node_modules/.bin/rollup -c ./build/config.prod.standard.min.js",
+    "runtime-standard-min": "node_modules/.bin/rollup -c ./build/config.runtime.standard.min.js",
+    "pure-standard-min": "node_modules/.bin/rollup -c ./build/config.pure.standard.min.js",
+
+    "dev-legacy-source": "node_modules/.bin/rollup -c ./build/config.dev.legacy.source.js",
+    "prod-legacy-source": "node_modules/.bin/rollup -c ./build/config.prod.legacy.source.js",
+    "runtime-legacy-source": "node_modules/.bin/rollup -c ./build/config.runtime.legacy.source.js",
+    "pure-legacy-source": "node_modules/.bin/rollup -c ./build/config.pure.legacy.source.js",
+
+    "dev-legacy-min": "node_modules/.bin/rollup -c ./build/config.dev.legacy.min.js",
+    "prod-legacy-min": "node_modules/.bin/rollup -c ./build/config.prod.legacy.min.js",
+    "runtime-legacy-min": "node_modules/.bin/rollup -c ./build/config.runtime.legacy.min.js",
+    "pure-legacy-min": "node_modules/.bin/rollup -c ./build/config.pure.legacy.min.js",
+
+    "build": "npm run pure-standard-source && npm run runtime-standard-source && npm run prod-standard-source && npm run dev-standard-source && npm run pure-legacy-source && npm run runtime-legacy-source && npm run prod-legacy-source && npm run dev-legacy-source && npm run pure-standard-min && npm run runtime-standard-min && npm run prod-standard-min && npm run dev-standard-min && npm run pure-legacy-min && npm run runtime-legacy-min && npm run prod-legacy-min && npm run dev-legacy-min"
   },
   "repository": {
     "type": "git",

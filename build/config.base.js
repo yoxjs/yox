@@ -21,7 +21,7 @@ const banner =
 
 const sourcemap = true
 
-const suffix = '.js'
+let suffix = '.js'
 
 export default function (env, minify = false, legacy = false, port = 0) {
 
@@ -39,6 +39,7 @@ export default function (env, minify = false, legacy = false, port = 0) {
   let dir = (legacy ? 'legacy' : 'standard') + '/' + env
 
   if (minify) {
+    suffix = '.min' + suffix
     plugins.push(
       terser()
     )

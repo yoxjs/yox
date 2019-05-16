@@ -89,7 +89,7 @@ export default class Yox implements YoxInterface {
 
   $partials?: Record<string, Function>
 
-  $filters?: Record<string, Function | Record<string, Function>>
+  $filters?: Record<string, type.filter>
 
   /**
    * core 版本
@@ -620,7 +620,12 @@ export default class Yox implements YoxInterface {
    */
   loadComponent(name: string, callback: type.componentCallback): void {
     if (!loadComponent(this.$components, name, callback)) {
-      loadComponent(globalComponents, name, callback)
+      const hasComponent = loadComponent(globalComponents, name, callback)
+      if (process.env.NODE_ENV === 'dev') {
+        if (!hasComponent) {
+          logger.error(`Component [${name}] is not found.`)
+        }
+      }
     }
   }
 
@@ -633,7 +638,7 @@ export default class Yox implements YoxInterface {
   createComponent(options: YoxOptions, vnode: VNode): YoxInterface {
     if (process.env.NODE_ENV !== 'pure') {
 
-      const instance = this
+      const instance = this, { $options } = instance
 
       options = object.copy(options)
       options.root = instance.$root || instance
@@ -647,6 +652,8 @@ export default class Yox implements YoxInterface {
       if (vnode.slots) {
         options.slots = vnode.slots
       }
+
+      execute($options[config.HOOK_BEFORE_CHILD_CREATE], instance, options)
 
       const child = new Yox(options)
 
@@ -662,6 +669,8 @@ export default class Yox implements YoxInterface {
       else if (process.env.NODE_ENV === 'dev') {
         logger.fatal(`The root element of [Component ${vnode.tag}] is not found.`)
       }
+
+      execute($options[config.HOOK_AFTER_CHILD_CREATE], instance, child)
 
       return child
     }
@@ -798,10 +807,10 @@ export default class Yox implements YoxInterface {
       return templateRender.render(
         instance,
         instance.$template as Function,
-        mergeResource(instance.$filters, globalFilters),
-        mergeResource(instance.$partials, globalPartials),
-        mergeResource(instance.$directives, globalDirectives),
-        mergeResource(instance.$transitions, globalTransitions)
+        object.merge(instance.$filters, globalFilters),
+        object.merge(instance.$partials, globalPartials),
+        object.merge(instance.$directives, globalDirectives),
+        object.merge(instance.$transitions, globalTransitions)
       )
     }
   }
@@ -964,13 +973,17 @@ export default class Yox implements YoxInterface {
 
     const instance = this,
 
-    { $options, $emitter, $observer } = instance
+    { $parent, $options, $emitter, $observer } = instance
+
+    if ($parent) {
+      execute($parent.$options[config.HOOK_BEFORE_CHILD_DESTROY], $parent, instance)
+    }
 
     execute($options[config.HOOK_BEFORE_DESTROY], instance)
 
     if (process.env.NODE_ENV !== 'pure') {
 
-      const { $vnode, $parent } = instance
+      const { $vnode } = instance
 
       if ($parent && $parent.$children) {
         array.remove($parent.$children, instance)
@@ -983,6 +996,9 @@ export default class Yox implements YoxInterface {
       }
 
     }
+    else {
+      execute($options[config.HOOK_BEFORE_DESTROY], instance)
+    }
 
     $emitter.off()
     $observer.destroy()
@@ -990,6 +1006,10 @@ export default class Yox implements YoxInterface {
     object.clear(instance)
 
     execute($options[config.HOOK_AFTER_DESTROY], instance)
+
+    if ($parent) {
+      execute($parent.$options[config.HOOK_AFTER_CHILD_DESTROY], $parent, instance)
+    }
 
   }
 
@@ -1159,7 +1179,7 @@ function addEvents(
   }
   else {
     object.each(
-      type,
+      type as type.data,
       function (value: type.listener, key: string) {
         addEvent(instance, key, value, once)
       }
@@ -1226,18 +1246,12 @@ function setResource(data: type.data, name: string | type.data, value?: any, for
   }
   else {
     object.each(
-      name,
+      name as type.data,
       function (value, key) {
         data[key] = formatValue ? formatValue(value) : value
       }
     )
   }
-}
-
-function mergeResource(locals: type.data | void, globals: type.data): type.data {
-  return locals && globals
-    ? object.extend({}, globals, locals)
-    : locals || globals
 }
 
 if (process.env.NODE_ENV !== 'pure') {

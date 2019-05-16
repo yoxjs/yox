@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.38
+ * yox.js v1.0.0-alpha.39
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -704,19 +704,21 @@
    *
    * @return
    */
-  function extend(original) {
-      var arguments$1 = arguments;
-
-      var objects = [];
-      for (var _i = 1; _i < arguments.length; _i++) {
-          objects[_i - 1] = arguments$1[_i];
-      }
-      each(objects, function (object) {
-          each$2(object, function (value, key) {
-              original[key] = value;
-          });
+  function extend(original, object) {
+      each$2(object, function (value, key) {
+          original[key] = value;
       });
       return original;
+  }
+  /**
+   * 合并对象
+   *
+   * @return
+   */
+  function merge(object1, object2) {
+      return object1 && object2
+          ? extend(extend({}, object1), object2)
+          : object1 || object2;
   }
   /**
    * 拷贝对象
@@ -860,6 +862,7 @@
     each: each$2,
     clear: clear,
     extend: extend,
+    merge: merge,
     copy: copy,
     get: get,
     set: set,
@@ -1263,6 +1266,8 @@
   var HOOK_AFTER_CREATE = 'afterCreate';
   var HOOK_BEFORE_DESTROY = 'beforeDestroy';
   var HOOK_AFTER_DESTROY = 'afterDestroy';
+  var HOOK_BEFORE_CHILD_DESTROY = 'beforeChildDestroy';
+  var HOOK_AFTER_CHILD_DESTROY = 'afterChildDestroy';
 
   // vnode.data 内部使用的几个字段
 
@@ -2239,7 +2244,7 @@
        */
       Yox.prototype.loadComponent = function (name, callback) {
           if (!loadComponent(this.$components, name, callback)) {
-              loadComponent(globalComponents, name, callback);
+              var hasComponent = loadComponent(globalComponents, name, callback);
           }
       };
       /**
@@ -2294,12 +2299,21 @@
        * 销毁组件
        */
       Yox.prototype.destroy = function () {
-          var instance = this, $options = instance.$options, $emitter = instance.$emitter, $observer = instance.$observer;
+          var instance = this, $parent = instance.$parent, $options = instance.$options, $emitter = instance.$emitter, $observer = instance.$observer;
+          if ($parent) {
+              execute($parent.$options[HOOK_BEFORE_CHILD_DESTROY], $parent, instance);
+          }
           execute($options[HOOK_BEFORE_DESTROY], instance);
+          {
+              execute($options[HOOK_BEFORE_DESTROY], instance);
+          }
           $emitter.off();
           $observer.destroy();
           clear(instance);
           execute($options[HOOK_AFTER_DESTROY], instance);
+          if ($parent) {
+              execute($parent.$options[HOOK_AFTER_CHILD_DESTROY], $parent, instance);
+          }
       };
       /**
        * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
@@ -2415,7 +2429,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.38";
+      Yox.version = "1.0.0-alpha.39";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

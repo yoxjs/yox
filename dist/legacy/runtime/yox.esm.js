@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.38
+ * yox.js v1.0.0-alpha.39
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -731,19 +731,21 @@ function clear(object) {
  *
  * @return
  */
-function extend(original) {
-    var arguments$1 = arguments;
-
-    var objects = [];
-    for (var _i = 1; _i < arguments.length; _i++) {
-        objects[_i - 1] = arguments$1[_i];
-    }
-    each(objects, function (object) {
-        each$2(object, function (value, key) {
-            original[key] = value;
-        });
+function extend(original, object) {
+    each$2(object, function (value, key) {
+        original[key] = value;
     });
     return original;
+}
+/**
+ * 合并对象
+ *
+ * @return
+ */
+function merge(object1, object2) {
+    return object1 && object2
+        ? extend(extend({}, object1), object2)
+        : object1 || object2;
 }
 /**
  * 拷贝对象
@@ -887,6 +889,7 @@ var object$1 = /*#__PURE__*/Object.freeze({
   each: each$2,
   clear: clear,
   extend: extend,
+  merge: merge,
   copy: copy,
   get: get,
   set: set,
@@ -1300,6 +1303,10 @@ var HOOK_BEFORE_UPDATE = 'beforeUpdate';
 var HOOK_AFTER_UPDATE = 'afterUpdate';
 var HOOK_BEFORE_DESTROY = 'beforeDestroy';
 var HOOK_AFTER_DESTROY = 'afterDestroy';
+var HOOK_BEFORE_CHILD_CREATE = 'beforeChildCreate';
+var HOOK_AFTER_CHILD_CREATE = 'afterChildCreate';
+var HOOK_BEFORE_CHILD_DESTROY = 'beforeChildDestroy';
+var HOOK_AFTER_CHILD_DESTROY = 'afterChildDestroy';
 
 var guid = 0;
 function guid$1 () {
@@ -1396,11 +1403,9 @@ function update$3(vnode, oldVnode) {
         // 更新时才要 set
         // 因为初始化时，所有这些都经过构造函数完成了
         if (oldVnode) {
-            if (props) {
-                node.set(node.checkPropTypes(props));
-            }
-            if (slots) {
-                node.set(slots);
+            var result = merge(props ? node.checkPropTypes(props) : UNDEFINED, slots);
+            if (result) {
+                node.set(result);
             }
         }
     }
@@ -3974,7 +3979,7 @@ var Yox = /** @class */ (function () {
      */
     Yox.prototype.loadComponent = function (name, callback) {
         if (!loadComponent(this.$components, name, callback)) {
-            loadComponent(globalComponents, name, callback);
+            var hasComponent = loadComponent(globalComponents, name, callback);
         }
     };
     /**
@@ -3985,7 +3990,7 @@ var Yox = /** @class */ (function () {
      */
     Yox.prototype.createComponent = function (options, vnode) {
         {
-            var instance = this;
+            var instance = this, $options = instance.$options;
             options = copy(options);
             options.root = instance.$root || instance;
             options.parent = instance;
@@ -3997,12 +4002,14 @@ var Yox = /** @class */ (function () {
             if (vnode.slots) {
                 options.slots = vnode.slots;
             }
+            execute($options[HOOK_BEFORE_CHILD_CREATE], instance, options);
             var child = new Yox(options);
             push(instance.$children || (instance.$children = []), child);
             var node = child.$el;
             if (node) {
                 vnode.node = node;
             }
+            execute($options[HOOK_AFTER_CHILD_CREATE], instance, child);
             return child;
         }
     };
@@ -4075,7 +4082,7 @@ var Yox = /** @class */ (function () {
     Yox.prototype.render = function () {
         {
             var instance = this;
-            return render(instance, instance.$template, mergeResource(instance.$filters, globalFilters), mergeResource(instance.$partials, globalPartials), mergeResource(instance.$directives, globalDirectives), mergeResource(instance.$transitions, globalTransitions));
+            return render(instance, instance.$template, merge(instance.$filters, globalFilters), merge(instance.$partials, globalPartials), merge(instance.$directives, globalDirectives), merge(instance.$transitions, globalTransitions));
         }
     };
     /**
@@ -4153,10 +4160,13 @@ var Yox = /** @class */ (function () {
      * 销毁组件
      */
     Yox.prototype.destroy = function () {
-        var instance = this, $options = instance.$options, $emitter = instance.$emitter, $observer = instance.$observer;
+        var instance = this, $parent = instance.$parent, $options = instance.$options, $emitter = instance.$emitter, $observer = instance.$observer;
+        if ($parent) {
+            execute($parent.$options[HOOK_BEFORE_CHILD_DESTROY], $parent, instance);
+        }
         execute($options[HOOK_BEFORE_DESTROY], instance);
         {
-            var $vnode = instance.$vnode, $parent = instance.$parent;
+            var $vnode = instance.$vnode;
             if ($parent && $parent.$children) {
                 remove($parent.$children, instance);
             }
@@ -4170,6 +4180,9 @@ var Yox = /** @class */ (function () {
         $observer.destroy();
         clear(instance);
         execute($options[HOOK_AFTER_DESTROY], instance);
+        if ($parent) {
+            execute($parent.$options[HOOK_AFTER_CHILD_DESTROY], $parent, instance);
+        }
     };
     /**
      * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
@@ -4285,7 +4298,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.38";
+    Yox.version = "1.0.0-alpha.39";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */
@@ -4377,11 +4390,6 @@ function setResource(data, name, value, formatValue) {
             data[key] = formatValue ? formatValue(value) : value;
         });
     }
-}
-function mergeResource(locals, globals) {
-    return locals && globals
-        ? extend({}, globals, locals)
-        : locals || globals;
 }
 {
     Yox['dom'] = domApi;
