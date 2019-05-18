@@ -73,6 +73,8 @@ export default class Yox implements YoxInterface {
 
   $refs?: Record<string, YoxInterface | HTMLElement>
 
+  $model?: string
+
   $root?: YoxInterface
 
   $parent?: YoxInterface
@@ -302,6 +304,7 @@ export default class Yox implements YoxInterface {
         el,
         vnode,
         root,
+        model,
         parent,
         replace,
         template,
@@ -312,6 +315,10 @@ export default class Yox implements YoxInterface {
         filters,
         slots,
       } = $options
+
+      if (model) {
+        instance.$model = model
+      }
 
       // 把 slots 放进数据里，方便 get
       if (slots) {
@@ -646,11 +653,27 @@ export default class Yox implements YoxInterface {
       options.vnode = vnode
       options.replace = env.TRUE
 
-      if (vnode.props) {
-        options.props = vnode.props
+      let { props, slots } = vnode,
+
+      modelKey = options.model || env.RAW_VALUE,
+
+      modelValue = vnode.model
+
+      options.model = modelKey
+
+      if (isDef(modelValue)) {
+        if (!props) {
+          props = {}
+        }
+        props[modelKey] = modelValue
       }
-      if (vnode.slots) {
-        options.slots = vnode.slots
+
+      if (props) {
+        options.props = props
+      }
+
+      if (slots) {
+        options.slots = slots
       }
 
       execute($options[config.HOOK_BEFORE_CHILD_CREATE], instance, options)

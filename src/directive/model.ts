@@ -33,6 +33,13 @@ function getOptionValue(option: HTMLOptionElement) {
     : option.text
 }
 
+function debounceIfNeeded(fn: any, lazy: type.lazy | void): any {
+  // 应用 lazy
+  return lazy && lazy !== env.TRUE
+    ? debounce(fn, lazy)
+    : fn
+}
+
 const inputControl: NativeControl = {
   set(node: HTMLInputElement, value: any) {
     node.value = toString(value)
@@ -132,44 +139,56 @@ inputTypes = {
 },
 
 directive: DirectiveHooks = {
+
+  once: env.TRUE,
+
   bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
 
-    let { context, model, lazy, isComponent } = vnode,
+    let { context, lazy, isComponent } = vnode,
 
     dataBinding = directive.binding as string,
 
-    viewBinding: string | void,
+    lazyValue = lazy && (lazy[config.DIRECTIVE_MODEL] || lazy[env.EMPTY_STRING]),
 
-    eventName: string | void,
-
-    set: type.watcher,
+    set: type.watcher | void,
 
     sync: type.watcher,
 
-    lazyValue: type.lazy | void
-
-    if (lazy) {
-      lazyValue = lazy[config.DIRECTIVE_MODEL] || lazy[env.EMPTY_STRING]
-    }
+    unbind: Function
 
     if (isComponent) {
 
-      viewBinding = (node as Yox).$options.model || env.RAW_VALUE
+      let component = node as Yox,
+
+      viewBinding = component.$model as string
 
       set = function (newValue: any) {
-        (node as Yox).set(viewBinding as string, newValue)
+        if (set) {
+          component.set(viewBinding, newValue)
+        }
       }
 
-      sync = function (newValue: any) {
-        context.set(dataBinding, newValue)
+      sync = debounceIfNeeded(
+        function (newValue: any) {
+          context.set(dataBinding, newValue)
+        },
+        lazyValue
+      )
+
+      unbind = function () {
+        component.unwatch(viewBinding, sync)
       }
+
+      component.watch(viewBinding, sync)
 
     }
     else {
 
-      let control = api.tag(node as HTMLElement) === 'select'
+      let element = node as HTMLElement,
+
+      control = api.tag(element) === 'select'
         ? selectControl
-        : inputControl
+        : inputControl,
 
       // checkbox,radio,select 监听的是 change 事件
       eventName = env.EVENT_CHANGE
@@ -188,42 +207,35 @@ directive: DirectiveHooks = {
       }
 
       set = function (newValue: any) {
-        control.set(node as HTMLElement, newValue)
+        if (set) {
+          control.set(element, newValue)
+        }
       }
 
-      sync = function () {
-        control.sync(node as HTMLElement, dataBinding, context)
+      sync = debounceIfNeeded(
+        function () {
+          control.sync(element, dataBinding, context)
+        },
+        lazyValue
+      )
+
+      unbind = function () {
+        api.off(element, eventName, sync as type.listener)
       }
 
-    }
+      api.on(element, eventName, sync as type.listener)
 
-    // 不管模板是否设值，统一用数据中的值
-    set(model, env.UNDEFINED, env.EMPTY_STRING)
+      control.set(element, vnode.model)
 
-    // 应用 lazy
-    if (lazyValue && lazyValue !== env.TRUE) {
-      sync = debounce(sync, lazyValue)
-    }
-
-    // 监听交互，修改数据
-    if (isComponent) {
-      (node as Yox).watch(viewBinding as string, sync)
-    }
-    else {
-      api.on(node as HTMLElement, eventName as string, sync as type.listener)
     }
 
     // 监听数据，修改界面
-    context.watch(dataBinding, set)
+    context.watch(dataBinding, set as type.watcher)
 
     vnode.data[directive.key] = function () {
-      if (isComponent) {
-        (node as Yox).unwatch(viewBinding as string, sync)
-      }
-      else {
-        api.off(node as HTMLElement, eventName as string, sync as type.listener)
-      }
-      context.unwatch(dataBinding, set)
+      context.unwatch(dataBinding, set as type.watcher)
+      set = env.UNDEFINED
+      unbind()
     }
 
   },
