@@ -33,7 +33,7 @@ function getOptionValue(option: HTMLOptionElement) {
     : option.text
 }
 
-function debounceIfNeeded(fn: any, lazy: type.lazy | void): any {
+function debounceIfNeeded(fn: Function, lazy: type.lazy | void): any {
   // 应用 lazy
   return lazy && lazy !== env.TRUE
     ? debounce(fn, lazy)
@@ -186,7 +186,7 @@ directive: DirectiveHooks = {
 
       let element = node as HTMLElement,
 
-      control = api.tag(element) === 'select'
+      control = vnode.tag === 'select'
         ? selectControl
         : inputControl,
 
