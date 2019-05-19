@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.40
+ * yox.js v1.0.0-alpha.41
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1988,7 +1988,15 @@ var Observer = /** @class */ (function () {
      * @param index
      */
     Observer.prototype.removeAt = function (keypath, index) {
-        return this.splice(keypath, index, 1);
+        var list = this.get(keypath);
+        if (array(list)
+            && index >= 0
+            && index < list.length) {
+            list = copy(list);
+            list.splice(index, 1);
+            this.set(keypath, list);
+            return TRUE;
+        }
     };
     /**
      * 直接移除数组中的元素
@@ -2004,31 +2012,6 @@ var Observer = /** @class */ (function () {
                 this.set(keypath, list);
                 return TRUE;
             }
-        }
-    };
-    /**
-     * 删除旧元素并插入新元素
-     *
-     * @param keypath
-     * @param index
-     * @param count
-     * @param items
-     */
-    Observer.prototype.splice = function (keypath, index, count) {
-        var arguments$1 = arguments;
-
-        var items = [];
-        for (var _i = 3; _i < arguments.length; _i++) {
-            items[_i - 3] = arguments$1[_i];
-        }
-        var list = this.get(keypath);
-        if (array(list)) {
-            list = copy(list);
-            unshift(items, count);
-            unshift(items, index);
-            execute(list.splice, list, items);
-            this.set(keypath, list);
-            return TRUE;
         }
     };
     /**
@@ -2266,7 +2249,7 @@ var Yox = /** @class */ (function () {
      * 对于某些特殊场景，修改了数据，但是模板的依赖中并没有这一项
      * 而你非常确定需要更新模板，强制刷新正是你需要的
      */
-    Yox.prototype.forceUpdate = function () {
+    Yox.prototype.forceUpdate = function (data) {
     };
     /**
      * 把模板抽象语法树渲染成 virtual dom
@@ -2382,7 +2365,7 @@ var Yox = /** @class */ (function () {
      * @param index
      */
     Yox.prototype.removeAt = function (keypath, index) {
-        return this.splice(keypath, index, 1);
+        return this.$observer.removeAt(keypath, index);
     };
     /**
      * 直接移除数组中的元素
@@ -2392,24 +2375,6 @@ var Yox = /** @class */ (function () {
      */
     Yox.prototype.remove = function (keypath, item) {
         return this.$observer.remove(keypath, item);
-    };
-    /**
-     * 删除旧元素并插入新元素
-     *
-     * @param keypath
-     * @param index
-     * @param count
-     * @param items
-     */
-    Yox.prototype.splice = function (keypath, index, count) {
-        var arguments$1 = arguments;
-
-        var _a;
-        var items = [];
-        for (var _i = 3; _i < arguments.length; _i++) {
-            items[_i - 3] = arguments$1[_i];
-        }
-        return (_a = this.$observer).splice.apply(_a, [keypath, index, count].concat(items));
     };
     /**
      * 拷贝任意数据，支持深拷贝
@@ -2423,7 +2388,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.40";
+    Yox.version = "1.0.0-alpha.41";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */
