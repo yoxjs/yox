@@ -1116,7 +1116,7 @@ export default class Yox implements YoxInterface {
    * @param index
    */
   removeAt(keypath: string, index: number): true | void {
-    return this.splice(keypath, index, 1)
+    return this.$observer.removeAt(keypath, index)
   }
 
   /**
@@ -1127,18 +1127,6 @@ export default class Yox implements YoxInterface {
    */
   remove(keypath: string, item: any): true | void {
     return this.$observer.remove(keypath, item)
-  }
-
-  /**
-   * 删除旧元素并插入新元素
-   *
-   * @param keypath
-   * @param index
-   * @param count
-   * @param items
-   */
-  splice(keypath: string, index: number, count: number, ...items: any[]): true | void {
-    return this.$observer.splice(keypath, index, count, ...items)
   }
 
   /**
