@@ -31,10 +31,8 @@ const directive: DirectiveHooks = {
         ? keypathUtil.matchFuzzy(keypath, binding) as string
         : directive.name
 
-        if (vnode.isComponent) {
-          (node as Yox).set(name, newValue)
-        }
-        else if (isDef(directive.hint)) {
+        // 单向绑定不会作用于组件
+        if (isDef(directive.hint)) {
           api.prop(node as HTMLElement, name, newValue)
         }
         else {
