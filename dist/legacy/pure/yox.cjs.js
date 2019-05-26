@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.41
+ * yox.js v1.0.0-alpha.42
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -2110,6 +2110,26 @@ var Yox = /** @class */ (function () {
             return EMPTY_STRING;
         }
     };
+    Yox.checkProp = function (props, key, rule) {
+        // 类型
+        var type = rule.type, 
+        // 默认值
+        defaultValue = rule.value, 
+        // 实际传的值
+        value = props[key];
+        // 传了数据
+        if (isDef(value)) ;
+        else {
+            // 没传值但是配置了默认值
+            if (isDef(defaultValue)) {
+                return type === RAW_FUNCTION
+                    ? defaultValue
+                    : func(defaultValue)
+                        ? defaultValue(props, key)
+                        : defaultValue;
+            }
+        }
+    };
     Yox.directive = function (name, directive) {
     };
     Yox.transition = function (name, transition) {
@@ -2394,7 +2414,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.41";
+    Yox.version = "1.0.0-alpha.42";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */

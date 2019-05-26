@@ -152,6 +152,93 @@ export default class Yox implements YoxInterface {
     }
   }
 
+  public static checkProp(props: type.data, key: string, rule: PropRule): any {
+
+    // 类型
+    const type = rule.type,
+
+    // 默认值
+    defaultValue = rule.value,
+
+    // 实际传的值
+    value = props[key]
+
+    // 传了数据
+    if (isDef(value)) {
+
+      if (process.env.NODE_ENV === 'dev') {
+
+        // 如果不写 type 或 type 不是 字符串 或 数组
+        // 就当做此规则无效，和没写一样
+        if (type) {
+
+          // 自定义函数判断是否匹配类型
+          // 自己打印警告信息吧
+          if (is.func(type)) {
+            (type as type.propType)(props, key)
+          }
+          else {
+
+            let matched = env.FALSE
+
+            // type: 'string'
+            if (!string.falsy(type)) {
+              matched = matchType(value, type as string)
+            }
+            // type: ['string', 'number']
+            else if (!array.falsy(type)) {
+              array.each(
+                type as string[],
+                function (item: string) {
+                  if (matchType(value, item)) {
+                    matched = env.TRUE
+                    return env.FALSE
+                  }
+                }
+              )
+            }
+
+            if (!matched) {
+              logger.warn(`The type of prop "${key}" expected to be "${type}", but is "${value}".`)
+            }
+
+          }
+
+        }
+        else {
+          logger.warn(`The prop "${key}" in propTypes has no type.`)
+        }
+      }
+
+    }
+    else {
+
+      if (process.env.NODE_ENV === 'dev') {
+        // 是否必传
+        let required = rule.required
+        // 动态化获取是否必填
+        if (is.func(required)) {
+          required = (required as type.propRequired)(props, key)
+        }
+        // 没传值但此项是必传项
+        if (required) {
+          logger.warn(`The prop "${key}" is marked as required, but its value is not found.`)
+        }
+      }
+
+      // 没传值但是配置了默认值
+      if (isDef(defaultValue)) {
+        return type === env.RAW_FUNCTION
+          ? defaultValue
+          : is.func(defaultValue)
+            ? (defaultValue as type.propValue)(props, key)
+            : defaultValue
+      }
+
+    }
+
+  }
+
   public static directive(
     name: string | Record<string, DirectiveHooks>,
     directive?: DirectiveHooks
@@ -878,7 +965,7 @@ export default class Yox implements YoxInterface {
       // 跟 nextTask 保持一个节奏
       // 这样可以预留一些优化的余地
       if (hook) {
-        instance.nextTick(
+        Yox.nextTick(
           function () {
             if (instance.$vnode) {
               execute(hook, instance)
@@ -902,89 +989,10 @@ export default class Yox implements YoxInterface {
         object.each(
           propTypes,
           function (rule: PropRule, key: string) {
-
-            // 类型
-            const type = rule.type,
-
-            // 默认值
-            value = rule.value,
-
-            // 实际的值
-            actual = props[key]
-
-            // 传了数据
-            if (isDef(actual)) {
-
-              if (process.env.NODE_ENV === 'dev') {
-
-                // 如果不写 type 或 type 不是 字符串 或 数组
-                // 就当做此规则无效，和没写一样
-                if (type) {
-
-                  // 自定义函数判断是否匹配类型
-                  // 自己打印警告信息吧
-                  if (is.func(type)) {
-                    (type as type.propType)(props, key)
-                  }
-                  else {
-
-                    let matched: boolean | void
-
-                    // type: 'string'
-                    if (!string.falsy(type)) {
-                      matched = matchType(actual, type as string)
-                    }
-                    // type: ['string', 'number']
-                    else if (!array.falsy(type)) {
-                      array.each(
-                        type as string[],
-                        function (item: string) {
-                          if (matchType(actual, item)) {
-                            matched = env.TRUE
-                            return env.FALSE
-                          }
-                        }
-                      )
-                    }
-                    if (!matched) {
-                      logger.warn(`The type of prop "${key}" expected to be "${type}", but is "${actual}".`)
-                    }
-
-                  }
-
-                }
-                else {
-                  logger.warn(`The prop "${key}" in propTypes has no type.`)
-                }
-              }
-
+            const defaultValue = Yox.checkProp(props, key, rule)
+            if (isDef(defaultValue)) {
+              result[key] = defaultValue
             }
-            else {
-
-              if (process.env.NODE_ENV === 'dev') {
-                // 是否必传
-                let required = rule.required
-                // 动态化获取是否必填
-                if (is.func(required)) {
-                  required = (required as type.propRequired)(props, key)
-                }
-                // 没传值但此项是必传项
-                if (required) {
-                  logger.warn(`The prop "${key}" is marked as required, but its value is not found.`)
-                }
-              }
-
-              // 没传值但是配置了默认值
-              if (isDef(value)) {
-                result[key] = type === env.RAW_FUNCTION
-                  ? value
-                  : is.func(value)
-                    ? (value as type.propValue)(props, key)
-                    : value
-              }
-
-            }
-
           }
         )
         return result

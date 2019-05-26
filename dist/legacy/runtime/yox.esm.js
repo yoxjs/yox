@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.41
+ * yox.js v1.0.0-alpha.42
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1486,24 +1486,27 @@ function createVnode(api, vnode) {
     }
     if (isComponent) {
         var componentOptions_1 = UNDEFINED;
-        context.loadComponent(tag, function (options) {
-            if (has$2(data, LOADING)) {
-                // 异步组件
-                if (data[LOADING]) {
-                    // 尝试使用最新的 vnode
-                    if (data[VNODE]) {
-                        vnode = data[VNODE];
-                        // 用完就删掉
-                        delete data[VNODE];
+        // 动态组件，tag 可能为空
+        if (tag) {
+            context.loadComponent(tag, function (options) {
+                if (has$2(data, LOADING)) {
+                    // 异步组件
+                    if (data[LOADING]) {
+                        // 尝试使用最新的 vnode
+                        if (data[VNODE]) {
+                            vnode = data[VNODE];
+                            // 用完就删掉
+                            delete data[VNODE];
+                        }
+                        enterVnode(vnode, createComponent(vnode, options));
                     }
-                    enterVnode(vnode, createComponent(vnode, options));
                 }
-            }
-            // 同步组件
-            else {
-                componentOptions_1 = options;
-            }
-        });
+                // 同步组件
+                else {
+                    componentOptions_1 = options;
+                }
+            });
+        }
         // 不论是同步还是异步组件，都需要一个占位元素
         vnode.node = api.createComment(RAW_COMPONENT);
         if (componentOptions_1) {
@@ -3832,6 +3835,26 @@ var Yox = /** @class */ (function () {
             return new Function("return " + template)();
         }
     };
+    Yox.checkProp = function (props, key, rule) {
+        // 类型
+        var type = rule.type, 
+        // 默认值
+        defaultValue = rule.value, 
+        // 实际传的值
+        value = props[key];
+        // 传了数据
+        if (isDef(value)) ;
+        else {
+            // 没传值但是配置了默认值
+            if (isDef(defaultValue)) {
+                return type === RAW_FUNCTION
+                    ? defaultValue
+                    : func(defaultValue)
+                        ? defaultValue(props, key)
+                        : defaultValue;
+            }
+        }
+    };
     Yox.directive = function (name, directive) {
         {
             if (string(name) && !directive) {
@@ -4124,7 +4147,7 @@ var Yox = /** @class */ (function () {
             // 跟 nextTask 保持一个节奏
             // 这样可以预留一些优化的余地
             if (hook_1) {
-                instance_1.nextTick(function () {
+                Yox.nextTick(function () {
                     if (instance_1.$vnode) {
                         execute(hook_1, instance_1);
                     }
@@ -4143,23 +4166,9 @@ var Yox = /** @class */ (function () {
             if (propTypes) {
                 var result_1 = copy(props);
                 each$2(propTypes, function (rule, key) {
-                    // 类型
-                    var type = rule.type, 
-                    // 默认值
-                    value = rule.value, 
-                    // 实际的值
-                    actual = props[key];
-                    // 传了数据
-                    if (isDef(actual)) ;
-                    else {
-                        // 没传值但是配置了默认值
-                        if (isDef(value)) {
-                            result_1[key] = type === RAW_FUNCTION
-                                ? value
-                                : func(value)
-                                    ? value(props, key)
-                                    : value;
-                        }
+                    var defaultValue = Yox.checkProp(props, key, rule);
+                    if (isDef(defaultValue)) {
+                        result_1[key] = defaultValue;
                     }
                 });
                 return result_1;
@@ -4291,7 +4300,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.41";
+    Yox.version = "1.0.0-alpha.42";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */

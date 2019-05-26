@@ -113,8 +113,6 @@ Yox.component('CustomComponent', { ... })
 * `组件标签` 包含大写字母，比如 `AppHeader`
 * `组件标签` 包含连字符，比如 `app-header`
 
-> 某些 svg 标签试图挑战规则，比如 `<missing-glyph>` 和 `<foreignObject>`，放心，它们的反抗是徒劳的。
-
 渲染模板时，Yox 通过 `组件标签` 获得组件名称，然后按照 `本地` => `全局` 的顺序去查找已注册的组件。
 
 > 如果你喜欢写 `<DIV></DIV>`，那我只能送你离开。
@@ -372,6 +370,8 @@ function oneOf(values) {
 
 如果外部没有传入此项数据（即值为 `undefined`），则可设置默认值。
 
+> 在低版本 IE 中，`default` 是关键字，因此选择了 `value` 而不是 `default`
+
 ## 传递节点
 
 现在，你学会了给组件传递数据，正准备写一个 `<Button>` 练练手，这时你发现了一个问题，如何给 `<Button>` 传递图标呢？
@@ -492,7 +492,7 @@ function oneOf(values) {
 </div>
 ```
 
-## 父子通信
+## 通信
 
 ### 父组件 => 子组件
 
