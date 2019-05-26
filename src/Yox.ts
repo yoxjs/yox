@@ -53,6 +53,8 @@ globalPartials = {},
 
 globalFilters = {},
 
+compileCache = {},
+
 LOADER_QUEUE = '$queue',
 
 TEMPLATE_COMPUTED = '$' + env.RAW_TEMPLATE,
@@ -133,13 +135,16 @@ export default class Yox implements YoxInterface {
       if (process.env.NODE_ENV !== 'runtime') {
         if (!templateStringify.hasStringify(template)) {
           // 未编译，常出现在开发阶段
-          const nodes = templateCompiler.compile(template)
-          if (process.env.NODE_ENV === 'dev') {
-            if (nodes.length !== 1) {
-              logger.fatal(`"template" should have just one root element.`)
+          if (!compileCache[template]) {
+            const nodes = templateCompiler.compile(template)
+            if (process.env.NODE_ENV === 'dev') {
+              if (nodes.length !== 1) {
+                logger.fatal(`"template" should have just one root element.`)
+              }
             }
+            compileCache[template] = templateStringify.stringify(nodes[0])
           }
-          template = templateStringify.stringify(nodes[0])
+          template = compileCache[template]
           if (stringify) {
             return template
           }
