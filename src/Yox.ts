@@ -157,16 +157,13 @@ export default class Yox implements YoxInterface {
     }
   }
 
-  public static checkProp(props: type.data, key: string, rule: PropRule): any {
+  public static checkProp(key: string, value: any, rule: PropRule): any {
 
     // 类型
     const type = rule.type,
 
     // 默认值
-    defaultValue = rule.value,
-
-    // 实际传的值
-    value = props[key]
+    defaultValue = rule.value
 
     // 传了数据
     if (isDef(value)) {
@@ -180,7 +177,7 @@ export default class Yox implements YoxInterface {
           // 自定义函数判断是否匹配类型
           // 自己打印警告信息吧
           if (is.func(type)) {
-            (type as type.propType)(props, key)
+            (type as type.propType)(key, value)
           }
           else {
 
@@ -223,7 +220,7 @@ export default class Yox implements YoxInterface {
         let required = rule.required
         // 动态化获取是否必填
         if (is.func(required)) {
-          required = (required as type.propRequired)(props, key)
+          required = (required as type.propRequired)(key, value)
         }
         // 没传值但此项是必传项
         if (required) {
@@ -233,14 +230,16 @@ export default class Yox implements YoxInterface {
 
       // 没传值但是配置了默认值
       if (isDef(defaultValue)) {
-        return type === env.RAW_FUNCTION
+        value = type === env.RAW_FUNCTION
           ? defaultValue
           : is.func(defaultValue)
-            ? (defaultValue as type.propValue)(props, key)
+            ? (defaultValue as type.propValue)(key, value)
             : defaultValue
       }
 
     }
+
+    return value
 
   }
 
@@ -335,7 +334,7 @@ export default class Yox implements YoxInterface {
     }
 
     // 数据源
-    const source = instance.checkPropTypes(props || {})
+    const source = instance.checkProps(props || {})
 
     // 先放 props
     // 当 data 是函数时，可以通过 this.get() 获取到外部数据
@@ -986,7 +985,7 @@ export default class Yox implements YoxInterface {
    *
    * @param props
    */
-  checkPropTypes(props: type.data): type.data {
+  checkProps(props: type.data): type.data {
     if (process.env.NODE_ENV !== 'pure') {
       const { propTypes } = this.$options
       if (propTypes) {
@@ -994,16 +993,26 @@ export default class Yox implements YoxInterface {
         object.each(
           propTypes,
           function (rule: PropRule, key: string) {
-            const defaultValue = Yox.checkProp(props, key, rule)
-            if (isDef(defaultValue)) {
-              result[key] = defaultValue
-            }
+            result[key] = Yox.checkProp(key, props[key], rule)
           }
         )
         return result
       }
     }
     return props
+  }
+
+  checkProp(key: string, value: any): any {
+    if (process.env.NODE_ENV !== 'pure') {
+      const { propTypes } = this.$options
+      if (propTypes) {
+        const rule = propTypes[key]
+        if (rule) {
+          value = Yox.checkProp(key, value, rule)
+        }
+      }
+    }
+    return value
   }
 
   /**

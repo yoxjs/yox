@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.42
+ * yox.js v1.0.0-alpha.43
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -2059,7 +2059,7 @@
               extend(instance, extensions);
           }
           // 数据源
-          var source = instance.checkPropTypes(props || {});
+          var source = instance.checkProps(props || {});
           // 先放 props
           // 当 data 是函数时，可以通过 this.get() 获取到外部数据
           var observer = instance.$observer = new Observer(source, instance);
@@ -2110,25 +2110,24 @@
               return EMPTY_STRING;
           }
       };
-      Yox.checkProp = function (props, key, rule) {
+      Yox.checkProp = function (key, value, rule) {
           // 类型
           var type = rule.type, 
           // 默认值
-          defaultValue = rule.value, 
-          // 实际传的值
-          value = props[key];
+          defaultValue = rule.value;
           // 传了数据
           if (isDef(value)) ;
           else {
               // 没传值但是配置了默认值
               if (isDef(defaultValue)) {
-                  return type === RAW_FUNCTION
+                  value = type === RAW_FUNCTION
                       ? defaultValue
                       : func(defaultValue)
-                          ? defaultValue(props, key)
+                          ? defaultValue(key, value)
                           : defaultValue;
               }
           }
+          return value;
       };
       Yox.directive = function (name, directive) {
       };
@@ -2295,8 +2294,11 @@
        *
        * @param props
        */
-      Yox.prototype.checkPropTypes = function (props) {
+      Yox.prototype.checkProps = function (props) {
           return props;
+      };
+      Yox.prototype.checkProp = function (key, value) {
+          return value;
       };
       /**
        * 销毁组件
@@ -2414,7 +2416,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.42";
+      Yox.version = "1.0.0-alpha.43";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

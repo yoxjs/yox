@@ -28,11 +28,14 @@ const directive: DirectiveHooks = {
 
       if (watcher) {
         const name = isFuzzy
-        ? keypathUtil.matchFuzzy(keypath, binding) as string
-        : directive.name
+          ? keypathUtil.matchFuzzy(keypath, binding) as string
+          : directive.name
 
-        // 单向绑定不会作用于组件
-        if (isDef(directive.hint)) {
+        if (vnode.isComponent) {
+          const component = node as Yox
+          component.set(name, component.checkProp(name, newValue))
+        }
+        else if (isDef(directive.hint)) {
           api.prop(node as HTMLElement, name, newValue)
         }
         else {

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.42
+ * yox.js v1.0.0-alpha.43
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -3036,8 +3036,6 @@ BLOCK_MODE_SAFE = 2,
 BLOCK_MODE_UNSAFE = 3, 
 // 表达式的静态 keypath
 STATIC_KEYPATH = 'sk', 
-// 缓存编译模板
-compileCache = {}, 
 // 缓存编译正则
 patternCache$1 = {}, 
 // 指令分隔符，如 on-click 和 lazy-click
@@ -3096,12 +3094,7 @@ function trimBreakline(content) {
     return content.replace(/^\s*[\n\r]\s*|\s*[\n\r]\s*$/g, EMPTY_STRING);
 }
 function compile$1(content) {
-    var nodeList = compileCache[content];
-    if (nodeList) {
-        return nodeList;
-    }
-    nodeList = [];
-    var nodeStack = [], 
+    var nodeList = [], nodeStack = [], 
     // 持有 if/elseif/else 节点
     ifStack = [], currentElement, currentAttribute, length = content.length, 
     // 当前处理的位置
@@ -3933,7 +3926,7 @@ function compile$1(content) {
     if (nodeList.length > 0) {
         removeComment(nodeList);
     }
-    return compileCache[content] = nodeList;
+    return nodeList;
 }
 
 function toJSON (target) {
@@ -5858,7 +5851,8 @@ var directive$2 = {
                     ? matchFuzzy(keypath, binding)
                     : directive.name;
                 if (vnode.isComponent) {
-                    node.set(name, newValue);
+                    var component = node;
+                    component.set(name, component.checkProp(name, newValue));
                 }
                 else if (isDef(directive.hint)) {
                     domApi.prop(node, name, newValue);
@@ -5889,7 +5883,7 @@ function hasSlot (name) {
     return isDef(this.get(SLOT_DATA_PREFIX + name));
 }
 
-var globalDirectives = {}, globalTransitions = {}, globalComponents = {}, globalPartials = {}, globalFilters = {}, LOADER_QUEUE = '$queue', TEMPLATE_COMPUTED = '$' + RAW_TEMPLATE, selectorPattern = /^[#.][-\w+]+$/;
+var globalDirectives = {}, globalTransitions = {}, globalComponents = {}, globalPartials = {}, globalFilters = {}, compileCache = {}, LOADER_QUEUE = '$queue', TEMPLATE_COMPUTED = '$' + RAW_TEMPLATE, selectorPattern = /^[#.][-\w+]+$/;
 var Yox = /** @class */ (function () {
     function Yox(options) {
         var instance = this, $options = options || EMPTY_OBJECT;
@@ -5901,7 +5895,7 @@ var Yox = /** @class */ (function () {
             extend(instance, extensions);
         }
         // 数据源
-        var source = instance.checkPropTypes(props || {});
+        var source = instance.checkProps(props || {});
         // 先放 props
         // 当 data 是函数时，可以通过 this.get() 获取到外部数据
         var observer = instance.$observer = new Observer(source, instance);
@@ -6038,8 +6032,11 @@ var Yox = /** @class */ (function () {
             {
                 if (!hasStringify(template)) {
                     // 未编译，常出现在开发阶段
-                    var nodes = compile$1(template);
-                    template = stringify(nodes[0]);
+                    if (!compileCache[template]) {
+                        var nodes = compile$1(template);
+                        compileCache[template] = stringify(nodes[0]);
+                    }
+                    template = compileCache[template];
                     if (stringify$1) {
                         return template;
                     }
@@ -6048,25 +6045,24 @@ var Yox = /** @class */ (function () {
             return new Function("return " + template)();
         }
     };
-    Yox.checkProp = function (props, key, rule) {
+    Yox.checkProp = function (key, value, rule) {
         // 类型
         var type = rule.type, 
         // 默认值
-        defaultValue = rule.value, 
-        // 实际传的值
-        value = props[key];
+        defaultValue = rule.value;
         // 传了数据
         if (isDef(value)) ;
         else {
             // 没传值但是配置了默认值
             if (isDef(defaultValue)) {
-                return type === RAW_FUNCTION
+                value = type === RAW_FUNCTION
                     ? defaultValue
                     : func(defaultValue)
-                        ? defaultValue(props, key)
+                        ? defaultValue(key, value)
                         : defaultValue;
             }
         }
+        return value;
     };
     Yox.directive = function (name, directive) {
         {
@@ -6373,21 +6369,30 @@ var Yox = /** @class */ (function () {
      *
      * @param props
      */
-    Yox.prototype.checkPropTypes = function (props) {
+    Yox.prototype.checkProps = function (props) {
         {
             var propTypes = this.$options.propTypes;
             if (propTypes) {
                 var result_1 = copy(props);
                 each$2(propTypes, function (rule, key) {
-                    var defaultValue = Yox.checkProp(props, key, rule);
-                    if (isDef(defaultValue)) {
-                        result_1[key] = defaultValue;
-                    }
+                    result_1[key] = Yox.checkProp(key, props[key], rule);
                 });
                 return result_1;
             }
         }
         return props;
+    };
+    Yox.prototype.checkProp = function (key, value) {
+        {
+            var propTypes = this.$options.propTypes;
+            if (propTypes) {
+                var rule = propTypes[key];
+                if (rule) {
+                    value = Yox.checkProp(key, value, rule);
+                }
+            }
+        }
+        return value;
     };
     /**
      * 销毁组件
@@ -6513,7 +6518,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.42";
+    Yox.version = "1.0.0-alpha.43";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */
