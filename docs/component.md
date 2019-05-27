@@ -322,8 +322,8 @@ function (prop) {
 
 ```js
 function oneOf(values) {
-  return function (props, key) {
-    if (!Yox.array.has(values, props[key])) {
+  return function (key, value) {
+    if (!Yox.array.has(values, value)) {
       Yox.logger.warn('error message')
     }
   }
@@ -344,7 +344,7 @@ function oneOf(values) {
 
 ### required
 
-是否必需，可以是 `boolean`，也可以是 `Function`，如下：
+是否必传，如下：
 
 ```js
 {
@@ -352,13 +352,6 @@ function oneOf(values) {
     name: {
       type: 'string',
       required: true
-    },
-    age: {
-      type: 'number',
-      required: function (props, key) {
-        // 返回布尔类型，表示是否必传
-        return true
-      }
     }
   }
 }
@@ -371,6 +364,37 @@ function oneOf(values) {
 如果外部没有传入此项数据（即值为 `undefined`），则可设置默认值。
 
 > 在低版本 IE 中，`default` 是关键字，因此选择了 `value` 而不是 `default`
+
+```js
+{
+  propTypes: {
+    step: {
+      type: 'number',
+      value: 1
+    }
+  }
+}
+```
+
+如果数据是引用类型，也可以配置一个函数，如下：
+
+```js
+{
+  propTypes: {
+    user: {
+      type: 'object',
+      value: function () {
+        return {
+          name: 'xxx'
+        }
+      }
+    }
+  }
+}
+```
+
+如果不使用函数，而是直接配置固定的引用类型，所有组件实例都会持有相同的引用，这在大部分场景下都是不符合预期的。
+
 
 ## 传递节点
 

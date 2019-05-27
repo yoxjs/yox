@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.43
+ * yox.js v1.0.0-alpha.44
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -6475,14 +6475,8 @@
           }
           else {
               {
-                  // 是否必传
-                  var required = rule.required;
-                  // 动态化获取是否必填
-                  if (func(required)) {
-                      required = required(key, value);
-                  }
                   // 没传值但此项是必传项
-                  if (required) {
+                  if (rule.required) {
                       warn("The prop \"" + key + "\" is marked as required, but its value is not found.");
                   }
               }
@@ -6491,7 +6485,7 @@
                   value = type === RAW_FUNCTION
                       ? defaultValue
                       : func(defaultValue)
-                          ? defaultValue(key, value)
+                          ? defaultValue()
                           : defaultValue;
               }
           }
@@ -6959,7 +6953,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.43";
+      Yox.version = "1.0.0-alpha.44";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

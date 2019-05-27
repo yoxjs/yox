@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.43
+ * yox.js v1.0.0-alpha.44
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -6062,7 +6062,7 @@
                   value = type === RAW_FUNCTION
                       ? defaultValue
                       : func(defaultValue)
-                          ? defaultValue(key, value)
+                          ? defaultValue()
                           : defaultValue;
               }
           }
@@ -6522,7 +6522,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.43";
+      Yox.version = "1.0.0-alpha.44";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

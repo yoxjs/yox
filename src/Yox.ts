@@ -216,14 +216,8 @@ export default class Yox implements YoxInterface {
     else {
 
       if (process.env.NODE_ENV === 'dev') {
-        // 是否必传
-        let required = rule.required
-        // 动态化获取是否必填
-        if (is.func(required)) {
-          required = (required as type.propRequired)(key, value)
-        }
         // 没传值但此项是必传项
-        if (required) {
+        if (rule.required) {
           logger.warn(`The prop "${key}" is marked as required, but its value is not found.`)
         }
       }
@@ -233,7 +227,7 @@ export default class Yox implements YoxInterface {
         value = type === env.RAW_FUNCTION
           ? defaultValue
           : is.func(defaultValue)
-            ? (defaultValue as type.propValue)(key, value)
+            ? (defaultValue as type.propValue)()
             : defaultValue
       }
 
