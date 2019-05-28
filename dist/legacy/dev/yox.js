@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.44
+ * yox.js v1.0.0-alpha.45
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -4625,12 +4625,6 @@
   }
 
   var nodeExecutor = {};
-  nodeExecutor[LITERAL] = function (node) {
-      return node.value;
-  };
-  nodeExecutor[IDENTIFIER] = function (node, getter) {
-      return getter(node.name, node);
-  };
   nodeExecutor[MEMBER] = function (node, getter, context) {
       /**
        * 先说第一种奇葩情况：
@@ -4704,7 +4698,12 @@
       }));
   };
   function execute$1(node, getter, context) {
-      return nodeExecutor[node.type](node, getter, context);
+      // LITERAL 和 IDENTIFIER 避免再一次的函数调用
+      return node.type === LITERAL
+          ? node.value
+          : node.type === IDENTIFIER
+              ? getter(node.name, node)
+              : nodeExecutor[node.type](node, getter, context);
   }
 
   function setPair(target, name, key, value) {
@@ -5008,7 +5007,9 @@
               // scope 至少会有 '$keypath' '$length' '$item' index 等几个值
               $scope.$keypath = $keypath;
               // 避免模板里频繁读取 list.length
-              $scope.$length = length;
+              if (isDef(length)) {
+                  $scope.$length = length;
+              }
               // 类似 {{#each 1 -> 10}} 这样的临时循环，需要在 scope 上加上当前项
               // 因为通过 context.get() 无法获取数据
               if (!exprKeypath) {
@@ -5769,100 +5770,102 @@
   }, createEvent = function (event, node) {
       return event;
   };
-  if (DOCUMENT) {
-      // 此时 document.body 不一定有值，比如 script 放在 head 里
-      if (!DOCUMENT.documentElement.classList) {
-          addClass = function (node, className) {
-              var classes = node.className.split(CHAR_WHITESPACE);
-              if (!has(classes, className)) {
-                  push(classes, className);
-                  node.className = join(classes, CHAR_WHITESPACE);
-              }
-          };
-          removeClass = function (node, className) {
-              var classes = node.className.split(CHAR_WHITESPACE);
-              if (remove(classes, className)) {
-                  node.className = join(classes, CHAR_WHITESPACE);
-              }
-          };
-      }
-      // 为 IE9 以下浏览器打补丁
-      {
-          if (!DOCUMENT.addEventListener) {
-              var PROPERTY_CHANGE_1 = 'propertychange';
-              addEventListener = function (node, type, listener) {
-                  if (type === EVENT_INPUT) {
-                      addEventListener(node, PROPERTY_CHANGE_1, 
-                      // 借用 EMITTER，反正只是内部临时用一下...
-                      listener[EMITTER] = function (event) {
-                          if (event.propertyName === RAW_VALUE) {
+  {
+      if (DOCUMENT) {
+          // 此时 document.body 不一定有值，比如 script 放在 head 里
+          if (!DOCUMENT.documentElement.classList) {
+              addClass = function (node, className) {
+                  var classes = node.className.split(CHAR_WHITESPACE);
+                  if (!has(classes, className)) {
+                      push(classes, className);
+                      node.className = join(classes, CHAR_WHITESPACE);
+                  }
+              };
+              removeClass = function (node, className) {
+                  var classes = node.className.split(CHAR_WHITESPACE);
+                  if (remove(classes, className)) {
+                      node.className = join(classes, CHAR_WHITESPACE);
+                  }
+              };
+          }
+          // 为 IE9 以下浏览器打补丁
+          {
+              if (!DOCUMENT.addEventListener) {
+                  var PROPERTY_CHANGE_1 = 'propertychange';
+                  addEventListener = function (node, type, listener) {
+                      if (type === EVENT_INPUT) {
+                          addEventListener(node, PROPERTY_CHANGE_1, 
+                          // 借用 EMITTER，反正只是内部临时用一下...
+                          listener[EMITTER] = function (event) {
+                              if (event.propertyName === RAW_VALUE) {
+                                  event = new CustomEvent(event);
+                                  event.type = EVENT_INPUT;
+                                  execute(listener, this, event);
+                              }
+                          });
+                      }
+                      else if (type === EVENT_CHANGE && isBoxElement_1(node)) {
+                          addEventListener(node, EVENT_CLICK, listener[EMITTER] = function (event) {
                               event = new CustomEvent(event);
-                              event.type = EVENT_INPUT;
+                              event.type = EVENT_CHANGE;
                               execute(listener, this, event);
-                          }
-                      });
-                  }
-                  else if (type === EVENT_CHANGE && isBoxElement_1(node)) {
-                      addEventListener(node, EVENT_CLICK, listener[EMITTER] = function (event) {
-                          event = new CustomEvent(event);
-                          event.type = EVENT_CHANGE;
-                          execute(listener, this, event);
-                      });
-                  }
-                  else {
-                      node.attachEvent("on" + type, listener);
-                  }
-              };
-              removeEventListener = function (node, type, listener) {
-                  if (type === EVENT_INPUT) {
-                      removeEventListener(node, PROPERTY_CHANGE_1, listener[EMITTER]);
-                      delete listener[EMITTER];
-                  }
-                  else if (type === EVENT_CHANGE && isBoxElement_1(node)) {
-                      removeEventListener(node, EVENT_CLICK, listener[EMITTER]);
-                      delete listener[EMITTER];
-                  }
-                  else {
-                      node.detachEvent("on" + type, listener);
-                  }
-              };
-              var isBoxElement_1 = function (node) {
-                  return node.tagName === 'INPUT'
-                      && (node.type === 'radio' || node.type === 'checkbox');
-              };
-              var IEEvent_1 = /** @class */ (function () {
-                  function IEEvent(event, element) {
-                      extend(this, event);
-                      this.currentTarget = element;
-                      this.target = event.srcElement || element;
-                      this.originalEvent = event;
-                  }
-                  IEEvent.prototype.preventDefault = function () {
-                      this.originalEvent.returnValue = FALSE;
+                          });
+                      }
+                      else {
+                          node.attachEvent("on" + type, listener);
+                      }
                   };
-                  IEEvent.prototype.stopPropagation = function () {
-                      this.originalEvent.cancelBubble = TRUE;
+                  removeEventListener = function (node, type, listener) {
+                      if (type === EVENT_INPUT) {
+                          removeEventListener(node, PROPERTY_CHANGE_1, listener[EMITTER]);
+                          delete listener[EMITTER];
+                      }
+                      else if (type === EVENT_CHANGE && isBoxElement_1(node)) {
+                          removeEventListener(node, EVENT_CLICK, listener[EMITTER]);
+                          delete listener[EMITTER];
+                      }
+                      else {
+                          node.detachEvent("on" + type, listener);
+                      }
                   };
-                  return IEEvent;
-              }());
-              // textContent 不兼容 IE 678
-              innerText = 'innerText';
-              createEvent = function (event, element) {
-                  return new IEEvent_1(event, element);
-              };
-              findElement = function (selector) {
-                  // 去掉 #
-                  if (codeAt(selector, 0) === 35) {
-                      selector = slice(selector, 1);
-                  }
-                  else {
-                      fatal("\"#id\" is the only supported selector for legacy version.");
-                  }
-                  var node = DOCUMENT.getElementById(selector);
-                  if (node) {
-                      return node;
-                  }
-              };
+                  var isBoxElement_1 = function (node) {
+                      return node.tagName === 'INPUT'
+                          && (node.type === 'radio' || node.type === 'checkbox');
+                  };
+                  var IEEvent_1 = /** @class */ (function () {
+                      function IEEvent(event, element) {
+                          extend(this, event);
+                          this.currentTarget = element;
+                          this.target = event.srcElement || element;
+                          this.originalEvent = event;
+                      }
+                      IEEvent.prototype.preventDefault = function () {
+                          this.originalEvent.returnValue = FALSE;
+                      };
+                      IEEvent.prototype.stopPropagation = function () {
+                          this.originalEvent.cancelBubble = TRUE;
+                      };
+                      return IEEvent;
+                  }());
+                  // textContent 不兼容 IE 678
+                  innerText = 'innerText';
+                  createEvent = function (event, element) {
+                      return new IEEvent_1(event, element);
+                  };
+                  findElement = function (selector) {
+                      // 去掉 #
+                      if (codeAt(selector, 0) === 35) {
+                          selector = slice(selector, 1);
+                      }
+                      else {
+                          fatal("\"#id\" is the only supported selector for legacy version.");
+                      }
+                      var node = DOCUMENT.getElementById(selector);
+                      if (node) {
+                          return node;
+                      }
+                  };
+              }
           }
       }
   }
@@ -6526,60 +6529,62 @@
           }
       };
       Yox.checkProp = function (key, value, rule) {
-          // 类型
-          var type = rule.type, 
-          // 默认值
-          defaultValue = rule.value;
-          // 传了数据
-          if (isDef(value)) {
-              {
-                  // 如果不写 type 或 type 不是 字符串 或 数组
-                  // 就当做此规则无效，和没写一样
-                  if (type) {
-                      // 自定义函数判断是否匹配类型
-                      // 自己打印警告信息吧
-                      if (func(type)) {
-                          type(key, value);
+          {
+              // 类型
+              var type_1 = rule.type, 
+              // 默认值
+              defaultValue = rule.value;
+              // 传了数据
+              if (isDef(value)) {
+                  {
+                      // 如果不写 type 或 type 不是 字符串 或 数组
+                      // 就当做此规则无效，和没写一样
+                      if (type_1) {
+                          // 自定义函数判断是否匹配类型
+                          // 自己打印警告信息吧
+                          if (func(type_1)) {
+                              type_1(key, value);
+                          }
+                          else {
+                              var matched_1 = FALSE;
+                              // type: 'string'
+                              if (!falsy$1(type_1)) {
+                                  matched_1 = matchType(value, type_1);
+                              }
+                              // type: ['string', 'number']
+                              else if (!falsy(type_1)) {
+                                  each(type_1, function (item) {
+                                      if (matchType(value, item)) {
+                                          matched_1 = TRUE;
+                                          return FALSE;
+                                      }
+                                  });
+                              }
+                              if (!matched_1) {
+                                  warn("The type of prop \"" + key + "\" expected to be \"" + type_1 + "\", but is \"" + value + "\".");
+                              }
+                          }
                       }
                       else {
-                          var matched_1 = FALSE;
-                          // type: 'string'
-                          if (!falsy$1(type)) {
-                              matched_1 = matchType(value, type);
-                          }
-                          // type: ['string', 'number']
-                          else if (!falsy(type)) {
-                              each(type, function (item) {
-                                  if (matchType(value, item)) {
-                                      matched_1 = TRUE;
-                                      return FALSE;
-                                  }
-                              });
-                          }
-                          if (!matched_1) {
-                              warn("The type of prop \"" + key + "\" expected to be \"" + type + "\", but is \"" + value + "\".");
-                          }
+                          warn("The prop \"" + key + "\" in propTypes has no type.");
                       }
                   }
-                  else {
-                      warn("The prop \"" + key + "\" in propTypes has no type.");
-                  }
               }
-          }
-          else {
-              {
-                  // 没传值但此项是必传项
-                  if (rule.required) {
-                      warn("The prop \"" + key + "\" is marked as required, but its value is not found.");
+              else {
+                  {
+                      // 没传值但此项是必传项
+                      if (rule.required) {
+                          warn("The prop \"" + key + "\" is marked as required, but its value is not found.");
+                      }
                   }
-              }
-              // 没传值但是配置了默认值
-              if (isDef(defaultValue)) {
-                  value = type === RAW_FUNCTION
-                      ? defaultValue
-                      : func(defaultValue)
-                          ? defaultValue()
-                          : defaultValue;
+                  // 没传值但是配置了默认值
+                  if (isDef(defaultValue)) {
+                      value = type_1 === RAW_FUNCTION
+                          ? defaultValue
+                          : func(defaultValue)
+                              ? defaultValue()
+                              : defaultValue;
+                  }
               }
           }
           return value;
@@ -6730,11 +6735,13 @@
        * @param callback 组件加载成功后的回调
        */
       Yox.prototype.loadComponent = function (name, callback) {
-          if (!loadComponent(this.$components, name, callback)) {
-              var hasComponent = loadComponent(globalComponents, name, callback);
-              {
-                  if (!hasComponent) {
-                      error("Component [" + name + "] is not found.");
+          {
+              if (!loadComponent(this.$components, name, callback)) {
+                  var hasComponent = loadComponent(globalComponents, name, callback);
+                  {
+                      if (!hasComponent) {
+                          error("Component [" + name + "] is not found.");
+                      }
                   }
               }
           }
@@ -7046,7 +7053,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.44";
+      Yox.version = "1.0.0-alpha.45";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

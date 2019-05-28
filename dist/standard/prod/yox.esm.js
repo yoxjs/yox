@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.44
+ * yox.js v1.0.0-alpha.45
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -4311,12 +4311,6 @@ function isUndef (target) {
 }
 
 var nodeExecutor = {};
-nodeExecutor[LITERAL] = function (node) {
-    return node.value;
-};
-nodeExecutor[IDENTIFIER] = function (node, getter) {
-    return getter(node.name, node);
-};
 nodeExecutor[MEMBER] = function (node, getter, context) {
     /**
      * 先说第一种奇葩情况：
@@ -4390,7 +4384,12 @@ nodeExecutor[CALL] = function (node, getter, context) {
     }));
 };
 function execute$1(node, getter, context) {
-    return nodeExecutor[node.type](node, getter, context);
+    // LITERAL 和 IDENTIFIER 避免再一次的函数调用
+    return node.type === LITERAL
+        ? node.value
+        : node.type === IDENTIFIER
+            ? getter(node.name, node)
+            : nodeExecutor[node.type](node, getter, context);
 }
 
 function setPair(target, name, key, value) {
@@ -4670,7 +4669,9 @@ function render(context, template, filters, partials, directives, transitions) {
             // scope 至少会有 '$keypath' '$length' '$item' index 等几个值
             $scope.$keypath = $keypath;
             // 避免模板里频繁读取 list.length
-            $scope.$length = length;
+            if (isDef(length)) {
+                $scope.$length = length;
+            }
             // 类似 {{#each 1 -> 10}} 这样的临时循环，需要在 scope 上加上当前项
             // 因为通过 context.get() 无法获取数据
             if (!exprKeypath) {
@@ -5428,22 +5429,24 @@ addClass = function (node, className) {
 }, createEvent = function (event, node) {
     return event;
 };
-if (DOCUMENT) {
-    // 此时 document.body 不一定有值，比如 script 放在 head 里
-    if (!DOCUMENT.documentElement.classList) {
-        addClass = function (node, className) {
-            var classes = node.className.split(CHAR_WHITESPACE);
-            if (!has(classes, className)) {
-                push(classes, className);
-                node.className = join(classes, CHAR_WHITESPACE);
-            }
-        };
-        removeClass = function (node, className) {
-            var classes = node.className.split(CHAR_WHITESPACE);
-            if (remove(classes, className)) {
-                node.className = join(classes, CHAR_WHITESPACE);
-            }
-        };
+{
+    if (DOCUMENT) {
+        // 此时 document.body 不一定有值，比如 script 放在 head 里
+        if (!DOCUMENT.documentElement.classList) {
+            addClass = function (node, className) {
+                var classes = node.className.split(CHAR_WHITESPACE);
+                if (!has(classes, className)) {
+                    push(classes, className);
+                    node.className = join(classes, CHAR_WHITESPACE);
+                }
+            };
+            removeClass = function (node, className) {
+                var classes = node.className.split(CHAR_WHITESPACE);
+                if (remove(classes, className)) {
+                    node.className = join(classes, CHAR_WHITESPACE);
+                }
+            };
+        }
     }
 }
 var CHAR_WHITESPACE = ' ', 
@@ -6044,20 +6047,22 @@ var Yox = /** @class */ (function () {
         }
     };
     Yox.checkProp = function (key, value, rule) {
-        // 类型
-        var type = rule.type, 
-        // 默认值
-        defaultValue = rule.value;
-        // 传了数据
-        if (isDef(value)) ;
-        else {
-            // 没传值但是配置了默认值
-            if (isDef(defaultValue)) {
-                value = type === RAW_FUNCTION
-                    ? defaultValue
-                    : func(defaultValue)
-                        ? defaultValue()
-                        : defaultValue;
+        {
+            // 类型
+            var type_1 = rule.type, 
+            // 默认值
+            defaultValue = rule.value;
+            // 传了数据
+            if (isDef(value)) ;
+            else {
+                // 没传值但是配置了默认值
+                if (isDef(defaultValue)) {
+                    value = type_1 === RAW_FUNCTION
+                        ? defaultValue
+                        : func(defaultValue)
+                            ? defaultValue()
+                            : defaultValue;
+                }
             }
         }
         return value;
@@ -6208,8 +6213,10 @@ var Yox = /** @class */ (function () {
      * @param callback 组件加载成功后的回调
      */
     Yox.prototype.loadComponent = function (name, callback) {
-        if (!loadComponent(this.$components, name, callback)) {
-            var hasComponent = loadComponent(globalComponents, name, callback);
+        {
+            if (!loadComponent(this.$components, name, callback)) {
+                var hasComponent = loadComponent(globalComponents, name, callback);
+            }
         }
     };
     /**
@@ -6516,7 +6523,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.44";
+    Yox.version = "1.0.0-alpha.45";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */

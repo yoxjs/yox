@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.44
+ * yox.js v1.0.0-alpha.45
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -27,10 +27,6 @@
    * Single instance for window in browser
    */
   var WINDOW = typeof window !== RAW_UNDEFINED ? window : UNDEFINED;
-  /**
-   * Single instance for document in browser
-   */
-  var DOCUMENT = typeof document !== RAW_UNDEFINED ? document : UNDEFINED;
   /**
    * Single instance for noop function
    */
@@ -2042,16 +2038,6 @@
       return Observer;
   }());
 
-  if (DOCUMENT) {
-      // 此时 document.body 不一定有值，比如 script 放在 head 里
-      if (!DOCUMENT.documentElement.classList) ;
-      // 为 IE9 以下浏览器打补丁
-      {
-          if (!DOCUMENT.addEventListener) ;
-      }
-  }
-
-  var globalComponents = {}, LOADER_QUEUE = '$queue';
   var Yox = /** @class */ (function () {
       function Yox(options) {
           var instance = this, $options = options || EMPTY_OBJECT;
@@ -2115,22 +2101,6 @@
           }
       };
       Yox.checkProp = function (key, value, rule) {
-          // 类型
-          var type = rule.type, 
-          // 默认值
-          defaultValue = rule.value;
-          // 传了数据
-          if (isDef(value)) ;
-          else {
-              // 没传值但是配置了默认值
-              if (isDef(defaultValue)) {
-                  value = type === RAW_FUNCTION
-                      ? defaultValue
-                      : func(defaultValue)
-                          ? defaultValue()
-                          : defaultValue;
-              }
-          }
           return value;
       };
       Yox.directive = function (name, directive) {
@@ -2249,9 +2219,6 @@
        * @param callback 组件加载成功后的回调
        */
       Yox.prototype.loadComponent = function (name, callback) {
-          if (!loadComponent(this.$components, name, callback)) {
-              var hasComponent = loadComponent(globalComponents, name, callback);
-          }
       };
       /**
        * 创建子组件
@@ -2420,7 +2387,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.44";
+      Yox.version = "1.0.0-alpha.45";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
@@ -2459,33 +2426,6 @@
           });
       }
       return instance;
-  }
-  function loadComponent(data, name, callback) {
-      if (data && data[name]) {
-          var component = data[name];
-          // 注册的是异步加载函数
-          if (func(component)) {
-              var loader_1 = component, queue_1 = loader_1[LOADER_QUEUE];
-              if (queue_1) {
-                  push(queue_1, callback);
-              }
-              else {
-                  queue_1 = component[LOADER_QUEUE] = [callback];
-                  loader_1(function (options) {
-                      loader_1[LOADER_QUEUE] = UNDEFINED;
-                      data[name] = options;
-                      each(queue_1, function (callback) {
-                          callback(options);
-                      });
-                  });
-              }
-          }
-          // 不是异步加载函数，直接同步返回
-          else {
-              callback(component);
-          }
-          return TRUE;
-      }
   }
 
   return Yox;

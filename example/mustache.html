@@ -234,6 +234,7 @@
     </textarea>
     <script src="../dist/standard/dev/yox.js"></script>
     <script>
+        window.YOX_LOG_LEVEL = Yox.logger.WARN
         var instance = new Yox({
             el: '#app',
             template: Yox.dom.find('#template').value,

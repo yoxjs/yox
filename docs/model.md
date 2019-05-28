@@ -13,15 +13,11 @@
 ```
 
 ```html
-<div>
-  <input type="text" model="name">
-</div>
+<input type="text" model="name">
 ```
 
 ```html
-<div>
-  <textarea model="name"></textarea>
-</div>
+<textarea model="name"></textarea>
 ```
 
 如果希望控制同步的节奏，可通过 `lazy` 实现，如下：
@@ -29,17 +25,13 @@
 通过 `change` 事件触发同步
 
 ```html
-<div>
-  <input type="text" model="name" lazy>
-</div>
+<input type="text" model="name" lazy>
 ```
 
 指定多少毫秒同步一次
 
 ```html
-<div>
-  <input type="text" model="name" lazy="500">
-</div>
+<input type="text" model="name" lazy="500">
 ```
 
 ## Radio
@@ -145,25 +137,27 @@
 首先，我们默认组件会有一个 `value` 属性，当使用 `model` 指令时，会自动把绑定的数据传给组件的 `value` 属性，如下：
 
 ```html
-<div>
-  <Input model="name" />
-</div>
+<Input model="name" />
 ```
 
 然后，我们监听 `<Input>` 组件的变化，一旦 `value` 变化了，再把 `newValue` 同步给绑定的数据，如下：
 
 ```js
-input.watch('value', function (newValue) {
-  context.set('name', newValue)
-})
+input.watch(
+  'value',
+  function (newValue) {
+    context.set('name', newValue)
+  }
+)
 ```
 
 我们根据这个流程实现了组件的双向绑定机制，组件默认同步 `value` 属性，如果不符合需求，可自定义属性名，如下：
 
 ```js
 {
+  // 设置双向绑定的属性
   model: 'checked',
-  template: '',
+  template: 'balabala',
   ...
 }
 ```
