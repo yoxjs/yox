@@ -437,11 +437,11 @@ function oneOf(values) {
 
 ```html
 <div class="button">
-  <slot name="children" />
+  <slot />
 </div>
 ```
 
-如果没有为传递的节点命名，默认就叫作 `children`。
+如果传入的是匿名 slot，则获取时也可以匿名。
 
 ### 命名 slot
 
@@ -471,14 +471,12 @@ function oneOf(values) {
 </div>
 ```
 
-细心的同学可能注意到上面的例子中还有一个孤零零的 `text`，它并非是多余的，我们的初衷是，如果组件标签内定义的节点没有名字，那它统统属于 `children`。
-
-也就是说，你可以通过 `children` 取到 `text`，如下：
+细心的同学可能注意到上面的例子中还有一个孤零零的 `text`，它并非是多余的，我们的初衷是，如果组件标签内定义的节点没有名字，那它统统属于匿名 slot。
 
 ```html
 <div class="button">
   <slot name="left" />
-  <slot name="children" />
+  <slot />
   <slot name="right" />
 </div>
 ```
@@ -494,9 +492,6 @@ function oneOf(values) {
   <slot name="left">
     默认的 left
   </slot>
-  <slot name="children">
-    默认的 children
-  </slot>
   <slot name="right">
     默认的 right
   </slot>
@@ -505,16 +500,26 @@ function oneOf(values) {
 
 ### 判断 slot
 
-你可以通过 `hasSlot(name)` 过滤器判断外部有没有传入某个节点，如下：
+你可以通过 `hasSlot(name)` 过滤器判断外部是否传入某个节点，如下：
 
 ```html
 <div class="button{{#if hasSlot('icon')}} button-icon{{/if}}">
   <slot name="icon" />
-  <slot name="children">
-    默认文本
-  </slot>
 </div>
 ```
+
+渲染 `<slot>` 节点时，内部会自动判断外部是否传入该名称的节点，如果没传入，则不会渲染该 `<slot>`，因此没有必要像下面这个示例一样加一层判断：
+
+```html
+<div>
+  {{#if hasSlot('left')}}
+    <slot name="left" />
+  {{/if}}
+</div>
+```
+
+> 应该去掉 `if`，否则会判断两次
+
 
 ## 通信
 

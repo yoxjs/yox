@@ -23,7 +23,7 @@
             <slot name="icon" />
 
             {{#if visible}}
-              <slot name="children" />
+              <slot />
             {{/if}}
 
             <button on-click="toggle('visible')">
@@ -83,6 +83,10 @@
                 {{/if}}
 
                 <i slot="icon" class="icon-xx">icon</i>
+
+                <template slot="xx">
+
+                </template>
               </Button>
             {{/if}}
 

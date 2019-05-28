@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.45
+ * yox.js v1.0.0-alpha.46
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -2136,39 +2136,7 @@ var binary = {
     '^': { prec: 8, exec: function (a, b) { return a ^ b; } },
     '|': { prec: 7, exec: function (a, b) { return a | b; } },
     '&&': { prec: 6, exec: function (a, b) { return a && b; } },
-    '||': { prec: 5, exec: function (a, b) { return a || b; } },
-    '->': {
-        prec: 0,
-        exec: function (a, b) {
-            return a > b
-                ? function (callback) {
-                    for (var i = a, index = 0; i > b; i--) {
-                        callback(i, index++);
-                    }
-                }
-                : function (callback) {
-                    for (var i = a, index = 0; i < b; i++) {
-                        callback(i, index++);
-                    }
-                };
-        }
-    },
-    '=>': {
-        prec: 0,
-        exec: function (a, b) {
-            return a > b
-                ? function (callback) {
-                    for (var i = a, index = 0; i >= b; i--) {
-                        callback(i, index++);
-                    }
-                }
-                : function (callback) {
-                    for (var i = a, index = 0; i <= b; i++) {
-                        callback(i, index++);
-                    }
-                };
-        }
-    }
+    '||': { prec: 5, exec: function (a, b) { return a || b; } }
 };
 
 function compile(content) {
@@ -2593,12 +2561,9 @@ var Parser = /** @class */ (function () {
             case CODE_PLUS:
                 instance.go();
                 break;
-            // -、->
+            // -
             case CODE_MINUS:
                 instance.go();
-                if (instance.is(CODE_GREAT)) {
-                    instance.go();
-                }
                 break;
             // !、!!、!=、!==
             case CODE_NOT:
@@ -2627,7 +2592,7 @@ var Parser = /** @class */ (function () {
                     instance.go();
                 }
                 break;
-            // ==、===、=>
+            // ==、===
             case CODE_EQUAL:
                 instance.go();
                 if (instance.is(CODE_EQUAL)) {
@@ -2635,9 +2600,6 @@ var Parser = /** @class */ (function () {
                     if (instance.is(CODE_EQUAL)) {
                         instance.go();
                     }
-                }
-                else if (instance.is(CODE_GREAT)) {
-                    instance.go();
                 }
                 break;
             // <、<=、<<
@@ -2948,10 +2910,12 @@ function createProperty(name, hint, value, expr, children) {
         children: children
     };
 }
-function createEach(expr, index) {
+function createEach(from, to, equal, index) {
     return {
         type: EACH,
-        expr: expr,
+        from: from,
+        to: to,
+        equal: equal,
         index: index,
         isComplex: TRUE
     };
@@ -3040,6 +3004,11 @@ STATIC_KEYPATH = 'sk',
 patternCache$1 = {}, 
 // 指令分隔符，如 on-click 和 lazy-click
 directiveSeparator = '-', 
+// 换行符
+// 换行符比较神奇，有时候你明明看不到换行符，却真的存在一个，那就是 \r
+breaklinePattern = /^\s*[\n\r]\s*|\s*[\n\r]\s*$/g, 
+// 区间遍历
+rangePattern = /\s*(=>|->)\s*/, 
 // 标签
 tagPattern = /<(\/)?([$a-z][-a-z0-9]*)/i, 
 // 注释
@@ -3083,15 +3052,6 @@ attr2Prop['maxlength'] = 'maxLength';
  */
 function slicePrefix(str, prefix) {
     return trim(slice(str, prefix.length));
-}
-/**
- * trim 文本开始和结束位置的换行符
- *
- * 换行符比较神奇，有时候你明明看不到换行符，却真的存在一个，那就是 \r
- *
- */
-function trimBreakline(content) {
-    return content.replace(/^\s*[\n\r]\s*|\s*[\n\r]\s*$/g, EMPTY_STRING);
 }
 function compile$1(content) {
     var nodeList = [], nodeStack = [], 
@@ -3384,11 +3344,20 @@ function compile$1(content) {
             replaceChild(partial);
         }
     }, checkElement = function (element) {
+        var isTemplate = element.tag === RAW_TEMPLATE;
+        // 没有子节点，则意味着这个插槽没任何意义
+        if (isTemplate && element.slot && !element.children) {
+            replaceChild(element);
+        }
+        // <slot /> 如果没写 name，自动加上默认名称
+        else if (element.tag === RAW_SLOT && !element.name) {
+            element.name = 'children';
+        }
         // style 如果啥都没写，就默认加一个 type="text/css"
         // 因为低版本 IE 没这个属性，没法正常渲染样式
         // 如果 style 写了 attribute 那就自己保证吧
         // 因为 attrs 具有动态性，compiler 无法保证最终一定会输出 type 属性
-        if (element.isStyle && falsy(element.attrs)) {
+        else if (element.isStyle && falsy(element.attrs)) {
             element.attrs = [
                 createProperty('type', HINT_STRING, 'text/css')
             ];
@@ -3511,7 +3480,8 @@ function compile$1(content) {
         // </Component>
         // 按现在的逻辑，这样的组件是没有子节点的，因为在这里过滤掉了，因此该组件没有 slot
         // 如果这里放开了，组件就会有一个 slot
-        text = trimBreakline(text);
+        // trim 文本开始和结束位置的换行符
+        text = text.replace(breaklinePattern, EMPTY_STRING);
         if (text) {
             addChild(createText(text));
         }
@@ -3687,10 +3657,17 @@ function compile$1(content) {
                 source = slicePrefix(source, SYNTAX_EACH);
                 var terms = source.replace(/\s+/g, EMPTY_STRING).split(':');
                 if (terms[0]) {
-                    var expr = compile(trim(terms[0]));
-                    if (expr) {
-                        if (!currentElement) {
-                            return createEach(expr, trim(terms[1]));
+                    var literal = trim(terms[0]), index_1 = trim(terms[1]), match = literal.match(rangePattern);
+                    if (match) {
+                        var parts = literal.split(rangePattern), from = compile(parts[0]), to = compile(parts[2]);
+                        if (from && to) {
+                            return createEach(from, to, trim(match[1]) === '=>', index_1);
+                        }
+                    }
+                    else {
+                        var expr = compile(literal);
+                        if (expr) {
+                            return createEach(expr, UNDEFINED, FALSE, index_1);
                         }
                     }
                 }
@@ -4289,7 +4266,13 @@ nodeStringify[IF] = function (node) {
 nodeStringify[EACH] = function (node) {
     // compiler 保证了 children 一定有值
     var generate = stringifyFunction(stringifyChildren(node.children, node.isComplex));
-    return stringifyCall(RENDER_EACH, join(trimArgs([generate, toJSON(node.expr), node.index ? toJSON(node.index) : UNDEFINED]), SEP_COMMA));
+    return stringifyCall(RENDER_EACH, join(trimArgs([
+        generate,
+        toJSON(node.from),
+        node.to ? toJSON(node.to) : UNDEFINED,
+        node.equal ? STRING_TRUE : UNDEFINED,
+        node.index ? toJSON(node.index) : UNDEFINED
+    ]), SEP_COMMA));
 };
 nodeStringify[PARTIAL] = function (node) {
     var name = toJSON(node.name), 
@@ -4659,42 +4642,74 @@ function render(context, template, filters, partials, directives, transitions) {
                 partial(renderExpression, renderExpressionArg, renderExpressionVnode, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach);
             }
         }
-    }, renderEach = function (handler, expr, index) {
-        var value = getValue(expr), exprKeypath = expr['ak'], eachKeypath = exprKeypath || join$1($keypath, expr.raw), callback = function (item, key, length) {
-            var lastKeypath = $keypath, lastScope = $scope, lastKeypathStack = $stack;
-            $keypath = join$1(eachKeypath, toString(key));
-            $scope = {};
-            $stack = copy($stack);
-            push($stack, $keypath);
-            push($stack, $scope);
-            // 从下面这几句赋值可以看出
-            // scope 至少会有 '$keypath' '$length' '$item' index 等几个值
-            $scope.$keypath = $keypath;
-            // 避免模板里频繁读取 list.length
-            if (isDef(length)) {
-                $scope.$length = length;
-            }
-            // 类似 {{#each 1 -> 10}} 这样的临时循环，需要在 scope 上加上当前项
-            // 因为通过 context.get() 无法获取数据
-            if (!exprKeypath) {
-                $scope.$item = item;
-            }
-            if (index) {
-                $scope[index] = key;
-            }
-            handler();
-            $keypath = lastKeypath;
-            $scope = lastScope;
-            $stack = lastKeypathStack;
-        };
-        if (array(value)) {
-            each(value, callback);
+    }, eachHandler = function (lastLength, lastKeypath, lastScope, generate, item, key, keypath, index, length) {
+        $keypath = keypath;
+        $scope = {};
+        $stack.push($keypath, $scope);
+        // each 会改变 $keypath
+        $scope.$keypath = $keypath;
+        // 避免模板里频繁读取 list.length
+        if (isDef(length)) {
+            $scope.$length = length;
         }
-        else if (object(value)) {
-            each$2(value, callback);
+        // 业务层是否写了 expr:index
+        if (index) {
+            $scope[index] = key;
         }
-        else if (func(value)) {
-            value(callback);
+        // 无法通过 context.get($keypath + key) 读取到数据的场景
+        // 必须把 item 写到 scope
+        if (!keypath) {
+            $scope.$item = item;
+        }
+        generate();
+        $stack.length = lastLength;
+        $keypath = lastKeypath;
+        $scope = lastScope;
+    }, renderEach = function (generate, from, to, equal, index) {
+        var fromValue = getValue(from), lastLength = $stack.length, lastKeypath = $keypath, lastScope = $scope;
+        if (to) {
+            var toValue = getValue(to), count = 0;
+            if (fromValue < toValue) {
+                if (equal) {
+                    for (var i = fromValue; i <= toValue; i++) {
+                        eachHandler(lastLength, lastKeypath, lastScope, generate, i, count++, EMPTY_STRING, index);
+                    }
+                }
+                else {
+                    for (var i = fromValue; i < toValue; i++) {
+                        eachHandler(lastLength, lastKeypath, lastScope, generate, i, count++, EMPTY_STRING, index);
+                    }
+                }
+            }
+            else {
+                if (equal) {
+                    for (var i = fromValue; i >= toValue; i--) {
+                        eachHandler(lastLength, lastKeypath, lastScope, generate, i, count++, EMPTY_STRING, index);
+                    }
+                }
+                else {
+                    for (var i = fromValue; i > toValue; i--) {
+                        eachHandler(lastLength, lastKeypath, lastScope, generate, i, count++, EMPTY_STRING, index);
+                    }
+                }
+            }
+        }
+        else {
+            var eachKeypath = from['ak'];
+            if (array(fromValue)) {
+                for (var i = 0, length = fromValue.length; i < length; i++) {
+                    eachHandler(lastLength, lastKeypath, lastScope, generate, fromValue[i], i, eachKeypath
+                        ? join$1(eachKeypath, EMPTY_STRING + i)
+                        : EMPTY_STRING, index, length);
+                }
+            }
+            else if (object(fromValue)) {
+                for (var key in fromValue) {
+                    eachHandler(lastLength, lastKeypath, lastScope, generate, fromValue[key], key, eachKeypath
+                        ? join$1(eachKeypath, key)
+                        : EMPTY_STRING, index);
+                }
+            }
         }
     };
     return template(renderExpression, renderExpressionArg, renderExpressionVnode, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach);
@@ -6525,7 +6540,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.45";
+    Yox.version = "1.0.0-alpha.46";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */

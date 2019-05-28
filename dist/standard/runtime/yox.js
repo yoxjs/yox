@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.45
+ * yox.js v1.0.0-alpha.46
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1946,39 +1946,7 @@
       '^': { prec: 8, exec: function (a, b) { return a ^ b; } },
       '|': { prec: 7, exec: function (a, b) { return a | b; } },
       '&&': { prec: 6, exec: function (a, b) { return a && b; } },
-      '||': { prec: 5, exec: function (a, b) { return a || b; } },
-      '->': {
-          prec: 0,
-          exec: function (a, b) {
-              return a > b
-                  ? function (callback) {
-                      for (var i = a, index = 0; i > b; i--) {
-                          callback(i, index++);
-                      }
-                  }
-                  : function (callback) {
-                      for (var i = a, index = 0; i < b; i++) {
-                          callback(i, index++);
-                      }
-                  };
-          }
-      },
-      '=>': {
-          prec: 0,
-          exec: function (a, b) {
-              return a > b
-                  ? function (callback) {
-                      for (var i = a, index = 0; i >= b; i--) {
-                          callback(i, index++);
-                      }
-                  }
-                  : function (callback) {
-                      for (var i = a, index = 0; i <= b; i++) {
-                          callback(i, index++);
-                      }
-                  };
-          }
-      }
+      '||': { prec: 5, exec: function (a, b) { return a || b; } }
   };
 
   /**
@@ -2379,42 +2347,74 @@
                   partial(renderExpression, renderExpressionArg, renderExpressionVnode, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach);
               }
           }
-      }, renderEach = function (handler, expr, index) {
-          var value = getValue(expr), exprKeypath = expr['ak'], eachKeypath = exprKeypath || join$1($keypath, expr.raw), callback = function (item, key, length) {
-              var lastKeypath = $keypath, lastScope = $scope, lastKeypathStack = $stack;
-              $keypath = join$1(eachKeypath, toString(key));
-              $scope = {};
-              $stack = copy($stack);
-              push($stack, $keypath);
-              push($stack, $scope);
-              // 从下面这几句赋值可以看出
-              // scope 至少会有 '$keypath' '$length' '$item' index 等几个值
-              $scope.$keypath = $keypath;
-              // 避免模板里频繁读取 list.length
-              if (isDef(length)) {
-                  $scope.$length = length;
-              }
-              // 类似 {{#each 1 -> 10}} 这样的临时循环，需要在 scope 上加上当前项
-              // 因为通过 context.get() 无法获取数据
-              if (!exprKeypath) {
-                  $scope.$item = item;
-              }
-              if (index) {
-                  $scope[index] = key;
-              }
-              handler();
-              $keypath = lastKeypath;
-              $scope = lastScope;
-              $stack = lastKeypathStack;
-          };
-          if (array(value)) {
-              each(value, callback);
+      }, eachHandler = function (lastLength, lastKeypath, lastScope, generate, item, key, keypath, index, length) {
+          $keypath = keypath;
+          $scope = {};
+          $stack.push($keypath, $scope);
+          // each 会改变 $keypath
+          $scope.$keypath = $keypath;
+          // 避免模板里频繁读取 list.length
+          if (isDef(length)) {
+              $scope.$length = length;
           }
-          else if (object(value)) {
-              each$2(value, callback);
+          // 业务层是否写了 expr:index
+          if (index) {
+              $scope[index] = key;
           }
-          else if (func(value)) {
-              value(callback);
+          // 无法通过 context.get($keypath + key) 读取到数据的场景
+          // 必须把 item 写到 scope
+          if (!keypath) {
+              $scope.$item = item;
+          }
+          generate();
+          $stack.length = lastLength;
+          $keypath = lastKeypath;
+          $scope = lastScope;
+      }, renderEach = function (generate, from, to, equal, index) {
+          var fromValue = getValue(from), lastLength = $stack.length, lastKeypath = $keypath, lastScope = $scope;
+          if (to) {
+              var toValue = getValue(to), count = 0;
+              if (fromValue < toValue) {
+                  if (equal) {
+                      for (var i = fromValue; i <= toValue; i++) {
+                          eachHandler(lastLength, lastKeypath, lastScope, generate, i, count++, EMPTY_STRING, index);
+                      }
+                  }
+                  else {
+                      for (var i = fromValue; i < toValue; i++) {
+                          eachHandler(lastLength, lastKeypath, lastScope, generate, i, count++, EMPTY_STRING, index);
+                      }
+                  }
+              }
+              else {
+                  if (equal) {
+                      for (var i = fromValue; i >= toValue; i--) {
+                          eachHandler(lastLength, lastKeypath, lastScope, generate, i, count++, EMPTY_STRING, index);
+                      }
+                  }
+                  else {
+                      for (var i = fromValue; i > toValue; i--) {
+                          eachHandler(lastLength, lastKeypath, lastScope, generate, i, count++, EMPTY_STRING, index);
+                      }
+                  }
+              }
+          }
+          else {
+              var eachKeypath = from['ak'];
+              if (array(fromValue)) {
+                  for (var i = 0, length = fromValue.length; i < length; i++) {
+                      eachHandler(lastLength, lastKeypath, lastScope, generate, fromValue[i], i, eachKeypath
+                          ? join$1(eachKeypath, EMPTY_STRING + i)
+                          : EMPTY_STRING, index, length);
+                  }
+              }
+              else if (object(fromValue)) {
+                  for (var key in fromValue) {
+                      eachHandler(lastLength, lastKeypath, lastScope, generate, fromValue[key], key, eachKeypath
+                          ? join$1(eachKeypath, key)
+                          : EMPTY_STRING, index);
+                  }
+              }
           }
       };
       return template(renderExpression, renderExpressionArg, renderExpressionVnode, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach);
@@ -4232,7 +4232,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.45";
+      Yox.version = "1.0.0-alpha.46";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
