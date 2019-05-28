@@ -158,79 +158,80 @@ export default class Yox implements YoxInterface {
   }
 
   public static checkProp(key: string, value: any, rule: PropRule): any {
+    if (process.env.NODE_ENV !== 'pure') {
+      // 类型
+      const type = rule.type,
 
-    // 类型
-    const type = rule.type,
+      // 默认值
+      defaultValue = rule.value
 
-    // 默认值
-    defaultValue = rule.value
+      // 传了数据
+      if (isDef(value)) {
 
-    // 传了数据
-    if (isDef(value)) {
+        if (process.env.NODE_ENV === 'dev') {
 
-      if (process.env.NODE_ENV === 'dev') {
+          // 如果不写 type 或 type 不是 字符串 或 数组
+          // 就当做此规则无效，和没写一样
+          if (type) {
 
-        // 如果不写 type 或 type 不是 字符串 或 数组
-        // 就当做此规则无效，和没写一样
-        if (type) {
+            // 自定义函数判断是否匹配类型
+            // 自己打印警告信息吧
+            if (is.func(type)) {
+              (type as type.propType)(key, value)
+            }
+            else {
 
-          // 自定义函数判断是否匹配类型
-          // 自己打印警告信息吧
-          if (is.func(type)) {
-            (type as type.propType)(key, value)
+              let matched = env.FALSE
+
+              // type: 'string'
+              if (!string.falsy(type)) {
+                matched = matchType(value, type as string)
+              }
+              // type: ['string', 'number']
+              else if (!array.falsy(type)) {
+                array.each(
+                  type as string[],
+                  function (item: string) {
+                    if (matchType(value, item)) {
+                      matched = env.TRUE
+                      return env.FALSE
+                    }
+                  }
+                )
+              }
+
+              if (!matched) {
+                logger.warn(`The type of prop "${key}" expected to be "${type}", but is "${value}".`)
+              }
+
+            }
+
           }
           else {
-
-            let matched = env.FALSE
-
-            // type: 'string'
-            if (!string.falsy(type)) {
-              matched = matchType(value, type as string)
-            }
-            // type: ['string', 'number']
-            else if (!array.falsy(type)) {
-              array.each(
-                type as string[],
-                function (item: string) {
-                  if (matchType(value, item)) {
-                    matched = env.TRUE
-                    return env.FALSE
-                  }
-                }
-              )
-            }
-
-            if (!matched) {
-              logger.warn(`The type of prop "${key}" expected to be "${type}", but is "${value}".`)
-            }
-
+            logger.warn(`The prop "${key}" in propTypes has no type.`)
           }
-
         }
-        else {
-          logger.warn(`The prop "${key}" in propTypes has no type.`)
+
+      }
+      else {
+
+        if (process.env.NODE_ENV === 'dev') {
+          // 没传值但此项是必传项
+          if (rule.required) {
+            logger.warn(`The prop "${key}" is marked as required, but its value is not found.`)
+          }
         }
-      }
 
-    }
-    else {
-
-      if (process.env.NODE_ENV === 'dev') {
-        // 没传值但此项是必传项
-        if (rule.required) {
-          logger.warn(`The prop "${key}" is marked as required, but its value is not found.`)
+        // 没传值但是配置了默认值
+        if (isDef(defaultValue)) {
+          value = type === env.RAW_FUNCTION
+            ? defaultValue
+            : is.func(defaultValue)
+              ? (defaultValue as type.propValue)()
+              : defaultValue
         }
-      }
 
-      // 没传值但是配置了默认值
-      if (isDef(defaultValue)) {
-        value = type === env.RAW_FUNCTION
-          ? defaultValue
-          : is.func(defaultValue)
-            ? (defaultValue as type.propValue)()
-            : defaultValue
       }
-
     }
 
     return value
@@ -711,11 +712,13 @@ export default class Yox implements YoxInterface {
    * @param callback 组件加载成功后的回调
    */
   loadComponent(name: string, callback: type.componentCallback): void {
-    if (!loadComponent(this.$components, name, callback)) {
-      const hasComponent = loadComponent(globalComponents, name, callback)
-      if (process.env.NODE_ENV === 'dev') {
-        if (!hasComponent) {
-          logger.error(`Component [${name}] is not found.`)
+    if (process.env.NODE_ENV !== 'pure') {
+      if (!loadComponent(this.$components, name, callback)) {
+        const hasComponent = loadComponent(globalComponents, name, callback)
+        if (process.env.NODE_ENV === 'dev') {
+          if (!hasComponent) {
+            logger.error(`Component [${name}] is not found.`)
+          }
         }
       }
     }
