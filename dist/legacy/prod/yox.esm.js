@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.46
+ * yox.js v1.0.0-alpha.47
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1436,7 +1436,7 @@ function update$3(vnode, oldVnode) {
                 }
                 props[node.$model] = model;
             }
-            var result = merge(props ? node.checkPropTypes(props) : UNDEFINED, slots);
+            var result = merge(props ? node.checkProps(props) : UNDEFINED, slots);
             if (result) {
                 node.forceUpdate(result);
             }
@@ -6628,7 +6628,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.46";
+    Yox.version = "1.0.0-alpha.47";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */
