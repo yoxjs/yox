@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.48
+ * yox.js v1.0.0-alpha.49
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -945,7 +945,7 @@ function getLevel() {
     return level;
 }
 function getStyle(backgroundColor) {
-    return "background-color:" + backgroundColor + ";border-radius:20px;color:#fff;font-size:10px;padding:3px 6px;";
+    return "background-color:" + backgroundColor + ";border-radius:12px;color:#fff;font-size:10px;padding:3px 6px;";
 }
 /**
  * 打印 debug 日志
@@ -954,7 +954,7 @@ function getStyle(backgroundColor) {
  */
 function debug(msg, tag) {
     if (nativeConsole && getLevel() <= DEBUG) {
-        nativeConsole.log(stylePrefix + (tag || 'Yox debug'), getStyle('#888'), msg);
+        nativeConsole.log(stylePrefix + (tag || 'Yox debug'), getStyle('#999'), msg);
     }
 }
 /**
@@ -1489,7 +1489,7 @@ function createData() {
     return data;
 }
 function createVnode(api, vnode) {
-    var tag = vnode.tag, node = vnode.node, data = vnode.data, isComponent = vnode.isComponent, isComment = vnode.isComment, isText = vnode.isText, isStyle = vnode.isStyle, children = vnode.children, text = vnode.text, html = vnode.html, context = vnode.context;
+    var tag = vnode.tag, node = vnode.node, data = vnode.data, isComponent = vnode.isComponent, isComment = vnode.isComment, isText = vnode.isText, isStyle = vnode.isStyle, isOption = vnode.isOption, children = vnode.children, text = vnode.text, html = vnode.html, context = vnode.context;
     if (node && data) {
         return;
     }
@@ -1541,10 +1541,10 @@ function createVnode(api, vnode) {
             addVnodes(api, node, children);
         }
         else if (text) {
-            api.text(node, text, isStyle);
+            api.text(node, text, isStyle, isOption);
         }
         else if (html) {
-            api.html(node, html, isStyle);
+            api.html(node, html, isStyle, isOption);
         }
         update(api, vnode);
         update$1(api, vnode);
@@ -1831,15 +1831,15 @@ function patch(api, vnode, oldVnode) {
     update$1(api, vnode, oldVnode);
     update$3(vnode, oldVnode);
     update$2(vnode, oldVnode);
-    var text = vnode.text, html = vnode.html, children = vnode.children, isStyle = vnode.isStyle, oldText = oldVnode.text, oldHtml = oldVnode.html, oldChildren = oldVnode.children;
+    var text = vnode.text, html = vnode.html, children = vnode.children, isStyle = vnode.isStyle, isOption = vnode.isOption, oldText = oldVnode.text, oldHtml = oldVnode.html, oldChildren = oldVnode.children;
     if (string(text)) {
         if (text !== oldText) {
-            api.text(node, text, isStyle);
+            api.text(node, text, isStyle, isOption);
         }
     }
     else if (string(html)) {
         if (html !== oldHtml) {
-            api.html(node, html, isStyle);
+            api.html(node, html, isStyle, isOption);
         }
     }
     // 两个都有需要 diff
@@ -2925,6 +2925,8 @@ function createElement(tag, isSvg, isComponent) {
         tag: tag,
         isSvg: isSvg,
         isStyle: tag === 'style',
+        // 只有 <option> 没有 value 属性时才为 true
+        isOption: FALSE,
         isComponent: isComponent,
         isStatic: !isComponent && tag !== RAW_SLOT
     };
@@ -2999,7 +3001,7 @@ patternCache$1 = {},
 // 指令分隔符，如 on-click 和 lazy-click
 directiveSeparator = '-', 
 // 换行符
-// 换行符比较神奇，有时候你明明看不到换行符，却真的存在一个，那就是 \r
+// 比较神奇是，有时候你明明看不到换行符，却真的存在一个，那就是 \r
 breaklinePattern = /^\s*[\n\r]\s*|\s*[\n\r]\s*$/g, 
 // 区间遍历
 rangePattern = /\s*(=>|->)\s*/, 
@@ -3338,24 +3340,43 @@ function compile$1(content) {
             replaceChild(partial);
         }
     }, checkElement = function (element) {
-        var isTemplate = element.tag === RAW_TEMPLATE;
+        var tag = element.tag, attrs = element.attrs, slot = element.slot, children = element.children, isTemplate = tag === RAW_TEMPLATE;
         // 没有子节点，则意味着这个插槽没任何意义
-        if (isTemplate && element.slot && !element.children) {
+        if (isTemplate && slot && !children) {
             replaceChild(element);
         }
         // <slot /> 如果没写 name，自动加上默认名称
-        else if (element.tag === RAW_SLOT && !element.name) {
-            element.name = 'children';
+        else if (tag === RAW_SLOT && !element.name) {
+            element.name = SLOT_NAME_DEFAULT;
         }
-        // style 如果啥都没写，就默认加一个 type="text/css"
+        // 补全 style 标签的 type
+        // style 如果没有 type 则加一个 type="text/css"
         // 因为低版本 IE 没这个属性，没法正常渲染样式
-        // 如果 style 写了 attribute 那就自己保证吧
-        // 因为 attrs 具有动态性，compiler 无法保证最终一定会输出 type 属性
-        else if (element.isStyle && falsy(element.attrs)) {
-            element.attrs = [
-                createProperty('type', HINT_STRING, 'text/css')
-            ];
+        else {
+            var hasType_1 = FALSE, hasValue_1 = FALSE;
+            if (attrs) {
+                each(attrs, function (attr) {
+                    var name = attr.type === PROPERTY
+                        ? attr.name
+                        : UNDEFINED;
+                    if (name === 'type') {
+                        hasType_1 = TRUE;
+                    }
+                    else if (name === RAW_VALUE) {
+                        hasValue_1 = TRUE;
+                    }
+                });
+            }
+            if (element.isStyle && !hasType_1) {
+                addProperty(element, createProperty('type', HINT_STRING, 'text/css'));
+            }
+            // 低版本 IE 需要给 option 标签强制加 value
+            else if (tag === 'option' && !hasValue_1) {
+                element.isOption = TRUE;
+            }
         }
+    }, addProperty = function (element, prop) {
+        push(element.attrs || (element.attrs = []), prop);
     }, bindSpecialAttr = function (element, attr) {
         var name = attr.name, value = attr.value, 
         // 这三个属性值要求是字符串
@@ -4100,7 +4121,7 @@ function getComponentSlots(children) {
     }
 }
 nodeStringify[ELEMENT] = function (node) {
-    var tag = node.tag, isComponent = node.isComponent, isSvg = node.isSvg, isStyle = node.isStyle, isStatic = node.isStatic, isComplex = node.isComplex, name = node.name, ref = node.ref, key = node.key, html = node.html, attrs = node.attrs, children = node.children, data = {}, outputTag, outputAttrs = [], outputChilds, outputSlots, args;
+    var tag = node.tag, isComponent = node.isComponent, isSvg = node.isSvg, isStyle = node.isStyle, isOption = node.isOption, isStatic = node.isStatic, isComplex = node.isComplex, name = node.name, ref = node.ref, key = node.key, html = node.html, attrs = node.attrs, children = node.children, data = {}, outputTag, outputAttrs = [], outputChilds, outputSlots, args;
     if (tag === RAW_SLOT) {
         args = [toJSON(SLOT_DATA_PREFIX + name)];
         if (children) {
@@ -4126,6 +4147,9 @@ nodeStringify[ELEMENT] = function (node) {
     }
     if (isStyle) {
         data.isStyle = STRING_TRUE;
+    }
+    if (isOption) {
+        data.isOption = STRING_TRUE;
     }
     if (isStatic) {
         data.isStatic = STRING_TRUE;
@@ -4376,8 +4400,8 @@ function setPair(target, name, key, value) {
     data[key] = value;
 }
 function render(context, template, filters, partials, directives, transitions) {
-    var $keypath = EMPTY_STRING, $scope = { $keypath: $keypath }, $stack = [$keypath, $scope], $vnode, vnodeStack = [], localPartials = {}, lookup = function (stack, index, key, node, depIgnore, defaultKeypath) {
-        var keypath = join$1(stack[index], key), scope = stack[index + 1];
+    var $scope = { $keypath: EMPTY_STRING }, $stack = [$scope], $vnode, vnodeStack = [], localPartials = {}, lookup = function (stack, index, key, node, depIgnore, defaultKeypath) {
+        var scope = stack[index], keypath = join$1(scope.$keypath, key);
         node.ak = keypath;
         // 如果最后还是取不到值，用回最初的 keypath
         if (isUndef(defaultKeypath)) {
@@ -4405,9 +4429,8 @@ function render(context, template, filters, partials, directives, transitions) {
         var result = context.get(keypath, lookup, depIgnore);
         if (result === lookup) {
             // undefined 或 true 都表示需要向上寻找
-            if (node.lookup !== FALSE && index > 1) {
-                index -= 2;
-                return lookup(stack, index, key, node, depIgnore, defaultKeypath);
+            if (node.lookup !== FALSE && index > 0) {
+                return lookup(stack, index - 1, key, node, depIgnore, defaultKeypath);
             }
             var holder = get(filters, key);
             return holder
@@ -4418,7 +4441,7 @@ function render(context, template, filters, partials, directives, transitions) {
     }, getValue = function (expr, depIgnore, stack) {
         var renderStack = stack || $stack, length = renderStack.length;
         return execute$1(expr, function (keypath, node) {
-            return lookup(renderStack, length - 2 * ((node.offset || 0) + 1), keypath, node, depIgnore);
+            return lookup(renderStack, length - ((node.offset || 0) + 1), keypath, node, depIgnore);
         }, context);
     }, addBinding = function (vnode, name, expr, hint) {
         var value = getValue(expr, TRUE), key = join$1(DIRECTIVE_BINDING, name);
@@ -4489,7 +4512,7 @@ function render(context, template, filters, partials, directives, transitions) {
                     isText: TRUE,
                     text: text,
                     context: context,
-                    keypath: $keypath
+                    keypath: $scope.$keypath
                 };
                 push(vnodeList, textVnode);
             }
@@ -4596,7 +4619,7 @@ function render(context, template, filters, partials, directives, transitions) {
             vnode.slots = renderSlots_1;
         }
         vnode.context = context;
-        vnode.keypath = $keypath;
+        vnode.keypath = $scope.$keypath;
         var vnodeList = last(vnodeStack);
         if (vnodeList) {
             push(vnodeList, vnode);
@@ -4636,12 +4659,11 @@ function render(context, template, filters, partials, directives, transitions) {
                 partial(renderExpression, renderExpressionArg, renderExpressionVnode, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach);
             }
         }
-    }, eachHandler = function (lastLength, lastKeypath, lastScope, generate, item, key, keypath, index, length) {
-        $keypath = keypath;
-        $scope = {};
-        $stack.push($keypath, $scope);
-        // each 会改变 $keypath
-        $scope.$keypath = $keypath;
+    }, eachHandler = function (generate, item, key, keypath, index, length) {
+        var lastScope = $scope, lastStack = $stack;
+        // each 会改变 keypath
+        $scope = { $keypath: keypath };
+        $stack = lastStack.concat($scope);
         // 避免模板里频繁读取 list.length
         if (isDef(length)) {
             $scope.$length = length;
@@ -4656,34 +4678,33 @@ function render(context, template, filters, partials, directives, transitions) {
             $scope.$item = item;
         }
         generate();
-        $stack.length = lastLength;
-        $keypath = lastKeypath;
         $scope = lastScope;
+        $stack = lastStack;
     }, renderEach = function (generate, from, to, equal, index) {
-        var fromValue = getValue(from), lastLength = $stack.length, lastKeypath = $keypath, lastScope = $scope;
+        var fromValue = getValue(from);
         if (to) {
             var toValue = getValue(to), count = 0;
             if (fromValue < toValue) {
                 if (equal) {
                     for (var i = fromValue; i <= toValue; i++) {
-                        eachHandler(lastLength, lastKeypath, lastScope, generate, i, count++, EMPTY_STRING, index);
+                        eachHandler(generate, i, count++, EMPTY_STRING, index);
                     }
                 }
                 else {
                     for (var i = fromValue; i < toValue; i++) {
-                        eachHandler(lastLength, lastKeypath, lastScope, generate, i, count++, EMPTY_STRING, index);
+                        eachHandler(generate, i, count++, EMPTY_STRING, index);
                     }
                 }
             }
             else {
                 if (equal) {
                     for (var i = fromValue; i >= toValue; i--) {
-                        eachHandler(lastLength, lastKeypath, lastScope, generate, i, count++, EMPTY_STRING, index);
+                        eachHandler(generate, i, count++, EMPTY_STRING, index);
                     }
                 }
                 else {
                     for (var i = fromValue; i > toValue; i--) {
-                        eachHandler(lastLength, lastKeypath, lastScope, generate, i, count++, EMPTY_STRING, index);
+                        eachHandler(generate, i, count++, EMPTY_STRING, index);
                     }
                 }
             }
@@ -4692,14 +4713,14 @@ function render(context, template, filters, partials, directives, transitions) {
             var eachKeypath = from['ak'];
             if (array(fromValue)) {
                 for (var i = 0, length = fromValue.length; i < length; i++) {
-                    eachHandler(lastLength, lastKeypath, lastScope, generate, fromValue[i], i, eachKeypath
+                    eachHandler(generate, fromValue[i], i, eachKeypath
                         ? join$1(eachKeypath, EMPTY_STRING + i)
                         : EMPTY_STRING, index, length);
                 }
             }
             else if (object(fromValue)) {
                 for (var key in fromValue) {
-                    eachHandler(lastLength, lastKeypath, lastScope, generate, fromValue[key], key, eachKeypath
+                    eachHandler(generate, fromValue[key], key, eachKeypath
                         ? join$1(eachKeypath, key)
                         : EMPTY_STRING, index);
                 }
@@ -5547,7 +5568,7 @@ COMPOSITION_END = 'compositionend', domain = 'http://www.w3.org/', namespaces = 
             return lower(node.tagName);
         }
     },
-    text: function (node, text, isStyle) {
+    text: function (node, text, isStyle, isOption) {
         if (isDef(text)) {
             {
                 node[innerText] = text;
@@ -5557,7 +5578,7 @@ COMPOSITION_END = 'compositionend', domain = 'http://www.w3.org/', namespaces = 
             return node[innerText];
         }
     },
-    html: function (node, html, isStyle) {
+    html: function (node, html, isStyle, isOption) {
         if (isDef(html)) {
             {
                 node[innerHTML] = html;
@@ -5706,11 +5727,6 @@ var directive = {
     }
 };
 
-function getOptionValue(option) {
-    return isDef(option.value)
-        ? option.value
-        : option.text;
-}
 function debounceIfNeeded(fn, lazy) {
     // 应用 lazy
     return lazy && lazy !== TRUE
@@ -5760,28 +5776,28 @@ var inputControl = {
     set: function (node, value) {
         each(toArray(node.options), node.multiple
             ? function (option) {
-                option.selected = has(value, getOptionValue(option), FALSE);
+                option.selected = has(value, option.value, FALSE);
             }
             : function (option, index) {
-                if (getOptionValue(option) == value) {
+                if (option.value == value) {
                     node.selectedIndex = index;
                     return FALSE;
                 }
             });
     },
     sync: function (node, keypath, context) {
-        var options = toArray(node.options);
+        var options = node.options;
         if (node.multiple) {
             var values_1 = [];
-            each(options, function (option) {
+            each(toArray(options), function (option) {
                 if (option.selected) {
-                    push(values_1, getOptionValue(option));
+                    push(values_1, option.value);
                 }
             });
             context.set(keypath, values_1);
         }
         else {
-            context.set(keypath, getOptionValue(options[node.selectedIndex]));
+            context.set(keypath, options[node.selectedIndex].value);
         }
     },
     name: RAW_VALUE
@@ -6530,7 +6546,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.48";
+    Yox.version = "1.0.0-alpha.49";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */

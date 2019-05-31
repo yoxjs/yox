@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.48
+ * yox.js v1.0.0-alpha.49
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -898,7 +898,7 @@ function getLevel() {
     return level;
 }
 function getStyle(backgroundColor) {
-    return "background-color:" + backgroundColor + ";border-radius:20px;color:#fff;font-size:10px;padding:3px 6px;";
+    return "background-color:" + backgroundColor + ";border-radius:12px;color:#fff;font-size:10px;padding:3px 6px;";
 }
 /**
  * 打印 debug 日志
@@ -907,7 +907,7 @@ function getStyle(backgroundColor) {
  */
 function debug(msg, tag) {
     if (nativeConsole && getLevel() <= DEBUG) {
-        nativeConsole.log(stylePrefix + (tag || 'Yox debug'), getStyle('#888'), msg);
+        nativeConsole.log(stylePrefix + (tag || 'Yox debug'), getStyle('#999'), msg);
     }
 }
 /**
@@ -2373,7 +2373,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.48";
+    Yox.version = "1.0.0-alpha.49";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */

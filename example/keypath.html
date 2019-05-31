@@ -12,21 +12,18 @@
         <div>
         {{#each users:index}}
 
-            <p>
-                name: {{name}}
-            </p>
-            <p>
-                {{$keypath}}
-            </p>
             <button on-click="select($keypath, name, this, index)">
                 Select
             </button>
+            <br>
+            name: {{name}}<br>
+            keypath: {{$keypath}}<br>
 
         {{/each}}
         </div>
 
     </script>
-    <script src="../dist/yox-new.js"></script>
+    <script src="../dist/standard/dev/yox.js"></script>
     <script>
         var instance = new Yox({
             el: '#app',

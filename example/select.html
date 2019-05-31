@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>select</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+
+<body>
+  <div id="app"></div>
+  <script id="template" type="plain/text">
+
+        <select>
+            <option></option>
+            <option>11</option>
+            <option>{{title}}</option>
+            <option>{{{html}}}</option>
+            <option>1{{title}}2</option>
+        </select>
+
+    </script>
+
+  <script src="../dist/standard/dev/yox.js"></script>
+  <script>
+    var instance = new Yox({
+      el: '#app',
+      template: '#template',
+      data: {
+        title: 'title',
+        html: '<strong>html</strong>',
+      }
+    });
+    console.log(instance.$vnode.children[0])
+    console.log(instance.$vnode.children[1])
+    console.log(instance.$vnode.children[2])
+    console.log(instance.$vnode.children[3])
+    console.log(instance.$vnode.children[4])
+  </script>
+</body>
+
+</html>

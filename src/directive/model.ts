@@ -27,12 +27,6 @@ interface NativeControl {
 
 }
 
-function getOptionValue(option: HTMLOptionElement) {
-  return isDef(option.value)
-    ? option.value
-    : option.text
-}
-
 function debounceIfNeeded(fn: Function, lazy: type.lazy | void): any {
   // 应用 lazy
   return lazy && lazy !== env.TRUE
@@ -94,10 +88,10 @@ selectControl: NativeControl = {
       array.toArray(node.options),
       node.multiple
         ? function (option: HTMLOptionElement) {
-          option.selected = array.has(value, getOptionValue(option), env.FALSE)
+          option.selected = array.has(value, option.value, env.FALSE)
         }
         : function (option: HTMLOptionElement, index: number) {
-          if (getOptionValue(option) == value) {
+          if (option.value == value) {
             node.selectedIndex = index
             return env.FALSE
           }
@@ -105,16 +99,16 @@ selectControl: NativeControl = {
     )
   },
   sync(node: HTMLSelectElement, keypath: string, context: Yox) {
-    const options = array.toArray(node.options)
+    const { options } = node
     if (node.multiple) {
       const values: string[] = []
       array.each(
-        options,
+        array.toArray(options),
         function (option: HTMLOptionElement) {
           if (option.selected) {
             array.push(
               values,
-              getOptionValue(option)
+              option.value
             )
           }
         }
@@ -124,9 +118,7 @@ selectControl: NativeControl = {
     else {
       context.set(
         keypath,
-        getOptionValue(
-          options[node.selectedIndex]
-        )
+        options[node.selectedIndex].value
       )
     }
   },

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.48
+ * yox.js v1.0.0-alpha.49
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -941,7 +941,7 @@
       return level;
   }
   function getStyle(backgroundColor) {
-      return "background-color:" + backgroundColor + ";border-radius:20px;color:#fff;font-size:10px;padding:3px 6px;";
+      return "background-color:" + backgroundColor + ";border-radius:12px;color:#fff;font-size:10px;padding:3px 6px;";
   }
   /**
    * 打印 debug 日志
@@ -950,7 +950,7 @@
    */
   function debug(msg, tag) {
       if (nativeConsole && getLevel() <= DEBUG) {
-          nativeConsole.log(stylePrefix + (tag || 'Yox debug'), getStyle('#888'), msg);
+          nativeConsole.log(stylePrefix + (tag || 'Yox debug'), getStyle('#999'), msg);
       }
   }
   /**
@@ -1472,7 +1472,7 @@
       return data;
   }
   function createVnode(api, vnode) {
-      var tag = vnode.tag, node = vnode.node, data = vnode.data, isComponent = vnode.isComponent, isComment = vnode.isComment, isText = vnode.isText, isStyle = vnode.isStyle, children = vnode.children, text = vnode.text, html = vnode.html, context = vnode.context;
+      var tag = vnode.tag, node = vnode.node, data = vnode.data, isComponent = vnode.isComponent, isComment = vnode.isComment, isText = vnode.isText, isStyle = vnode.isStyle, isOption = vnode.isOption, children = vnode.children, text = vnode.text, html = vnode.html, context = vnode.context;
       if (node && data) {
           return;
       }
@@ -1524,10 +1524,10 @@
               addVnodes(api, node, children);
           }
           else if (text) {
-              api.text(node, text, isStyle);
+              api.text(node, text, isStyle, isOption);
           }
           else if (html) {
-              api.html(node, html, isStyle);
+              api.html(node, html, isStyle, isOption);
           }
           update(api, vnode);
           update$1(api, vnode);
@@ -1814,15 +1814,15 @@
       update$1(api, vnode, oldVnode);
       update$3(vnode, oldVnode);
       update$2(vnode, oldVnode);
-      var text = vnode.text, html = vnode.html, children = vnode.children, isStyle = vnode.isStyle, oldText = oldVnode.text, oldHtml = oldVnode.html, oldChildren = oldVnode.children;
+      var text = vnode.text, html = vnode.html, children = vnode.children, isStyle = vnode.isStyle, isOption = vnode.isOption, oldText = oldVnode.text, oldHtml = oldVnode.html, oldChildren = oldVnode.children;
       if (string(text)) {
           if (text !== oldText) {
-              api.text(node, text, isStyle);
+              api.text(node, text, isStyle, isOption);
           }
       }
       else if (string(html)) {
           if (html !== oldHtml) {
-              api.html(node, html, isStyle);
+              api.html(node, html, isStyle, isOption);
           }
       }
       // 两个都有需要 diff
@@ -2083,8 +2083,8 @@
       data[key] = value;
   }
   function render(context, template, filters, partials, directives, transitions) {
-      var $keypath = EMPTY_STRING, $scope = { $keypath: $keypath }, $stack = [$keypath, $scope], $vnode, vnodeStack = [], localPartials = {}, lookup = function (stack, index, key, node, depIgnore, defaultKeypath) {
-          var keypath = join$1(stack[index], key), scope = stack[index + 1];
+      var $scope = { $keypath: EMPTY_STRING }, $stack = [$scope], $vnode, vnodeStack = [], localPartials = {}, lookup = function (stack, index, key, node, depIgnore, defaultKeypath) {
+          var scope = stack[index], keypath = join$1(scope.$keypath, key);
           node.ak = keypath;
           // 如果最后还是取不到值，用回最初的 keypath
           if (isUndef(defaultKeypath)) {
@@ -2112,9 +2112,8 @@
           var result = context.get(keypath, lookup, depIgnore);
           if (result === lookup) {
               // undefined 或 true 都表示需要向上寻找
-              if (node.lookup !== FALSE && index > 1) {
-                  index -= 2;
-                  return lookup(stack, index, key, node, depIgnore, defaultKeypath);
+              if (node.lookup !== FALSE && index > 0) {
+                  return lookup(stack, index - 1, key, node, depIgnore, defaultKeypath);
               }
               var holder = get(filters, key);
               return holder
@@ -2125,7 +2124,7 @@
       }, getValue = function (expr, depIgnore, stack) {
           var renderStack = stack || $stack, length = renderStack.length;
           return execute$1(expr, function (keypath, node) {
-              return lookup(renderStack, length - 2 * ((node.offset || 0) + 1), keypath, node, depIgnore);
+              return lookup(renderStack, length - ((node.offset || 0) + 1), keypath, node, depIgnore);
           }, context);
       }, addBinding = function (vnode, name, expr, hint) {
           var value = getValue(expr, TRUE), key = join$1(DIRECTIVE_BINDING, name);
@@ -2196,7 +2195,7 @@
                       isText: TRUE,
                       text: text,
                       context: context,
-                      keypath: $keypath
+                      keypath: $scope.$keypath
                   };
                   push(vnodeList, textVnode);
               }
@@ -2303,7 +2302,7 @@
               vnode.slots = renderSlots_1;
           }
           vnode.context = context;
-          vnode.keypath = $keypath;
+          vnode.keypath = $scope.$keypath;
           var vnodeList = last(vnodeStack);
           if (vnodeList) {
               push(vnodeList, vnode);
@@ -2343,12 +2342,11 @@
                   partial(renderExpression, renderExpressionArg, renderExpressionVnode, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach);
               }
           }
-      }, eachHandler = function (lastLength, lastKeypath, lastScope, generate, item, key, keypath, index, length) {
-          $keypath = keypath;
-          $scope = {};
-          $stack.push($keypath, $scope);
-          // each 会改变 $keypath
-          $scope.$keypath = $keypath;
+      }, eachHandler = function (generate, item, key, keypath, index, length) {
+          var lastScope = $scope, lastStack = $stack;
+          // each 会改变 keypath
+          $scope = { $keypath: keypath };
+          $stack = lastStack.concat($scope);
           // 避免模板里频繁读取 list.length
           if (isDef(length)) {
               $scope.$length = length;
@@ -2363,34 +2361,33 @@
               $scope.$item = item;
           }
           generate();
-          $stack.length = lastLength;
-          $keypath = lastKeypath;
           $scope = lastScope;
+          $stack = lastStack;
       }, renderEach = function (generate, from, to, equal, index) {
-          var fromValue = getValue(from), lastLength = $stack.length, lastKeypath = $keypath, lastScope = $scope;
+          var fromValue = getValue(from);
           if (to) {
               var toValue = getValue(to), count = 0;
               if (fromValue < toValue) {
                   if (equal) {
                       for (var i = fromValue; i <= toValue; i++) {
-                          eachHandler(lastLength, lastKeypath, lastScope, generate, i, count++, EMPTY_STRING, index);
+                          eachHandler(generate, i, count++, EMPTY_STRING, index);
                       }
                   }
                   else {
                       for (var i = fromValue; i < toValue; i++) {
-                          eachHandler(lastLength, lastKeypath, lastScope, generate, i, count++, EMPTY_STRING, index);
+                          eachHandler(generate, i, count++, EMPTY_STRING, index);
                       }
                   }
               }
               else {
                   if (equal) {
                       for (var i = fromValue; i >= toValue; i--) {
-                          eachHandler(lastLength, lastKeypath, lastScope, generate, i, count++, EMPTY_STRING, index);
+                          eachHandler(generate, i, count++, EMPTY_STRING, index);
                       }
                   }
                   else {
                       for (var i = fromValue; i > toValue; i--) {
-                          eachHandler(lastLength, lastKeypath, lastScope, generate, i, count++, EMPTY_STRING, index);
+                          eachHandler(generate, i, count++, EMPTY_STRING, index);
                       }
                   }
               }
@@ -2399,14 +2396,14 @@
               var eachKeypath = from['ak'];
               if (array(fromValue)) {
                   for (var i = 0, length = fromValue.length; i < length; i++) {
-                      eachHandler(lastLength, lastKeypath, lastScope, generate, fromValue[i], i, eachKeypath
+                      eachHandler(generate, fromValue[i], i, eachKeypath
                           ? join$1(eachKeypath, EMPTY_STRING + i)
                           : EMPTY_STRING, index, length);
                   }
               }
               else if (object(fromValue)) {
                   for (var key in fromValue) {
-                      eachHandler(lastLength, lastKeypath, lastScope, generate, fromValue[key], key, eachKeypath
+                      eachHandler(generate, fromValue[key], key, eachKeypath
                           ? join$1(eachKeypath, key)
                           : EMPTY_STRING, index);
                   }
@@ -3254,7 +3251,7 @@
               return lower(node.tagName);
           }
       },
-      text: function (node, text, isStyle) {
+      text: function (node, text, isStyle, isOption) {
           if (isDef(text)) {
               {
                   node[innerText] = text;
@@ -3264,7 +3261,7 @@
               return node[innerText];
           }
       },
-      html: function (node, html, isStyle) {
+      html: function (node, html, isStyle, isOption) {
           if (isDef(html)) {
               {
                   node[innerHTML] = html;
@@ -3413,11 +3410,6 @@
       }
   };
 
-  function getOptionValue(option) {
-      return isDef(option.value)
-          ? option.value
-          : option.text;
-  }
   function debounceIfNeeded(fn, lazy) {
       // 应用 lazy
       return lazy && lazy !== TRUE
@@ -3467,28 +3459,28 @@
       set: function (node, value) {
           each(toArray(node.options), node.multiple
               ? function (option) {
-                  option.selected = has(value, getOptionValue(option), FALSE);
+                  option.selected = has(value, option.value, FALSE);
               }
               : function (option, index) {
-                  if (getOptionValue(option) == value) {
+                  if (option.value == value) {
                       node.selectedIndex = index;
                       return FALSE;
                   }
               });
       },
       sync: function (node, keypath, context) {
-          var options = toArray(node.options);
+          var options = node.options;
           if (node.multiple) {
               var values_1 = [];
-              each(options, function (option) {
+              each(toArray(options), function (option) {
                   if (option.selected) {
-                      push(values_1, getOptionValue(option));
+                      push(values_1, option.value);
                   }
               });
               context.set(keypath, values_1);
           }
           else {
-              context.set(keypath, getOptionValue(options[node.selectedIndex]));
+              context.set(keypath, options[node.selectedIndex].value);
           }
       },
       name: RAW_VALUE
@@ -4224,7 +4216,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.48";
+      Yox.version = "1.0.0-alpha.49";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

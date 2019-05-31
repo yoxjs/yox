@@ -3,17 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <title>Style</title>
-    <style type="text/css">
-        #login {
-            background-color: red;
-        }
-        #login .logo {
-            color: green;
-        }
-        .btn {
-            background-color: blue;
-        }
-    </style>
 </head>
 <body>
     <div id="app"></div>
@@ -25,10 +14,21 @@
             <button class="btn" on-click="reverseMessage()">
                 Reverse Message
             </button>
+            <style>
+                #login {
+                    background-color: red;
+                }
+                #login .logo {
+                    color: green;
+                }
+                .btn {
+                    background-color: blue;
+                }
+            </style>
         </div>
     </script>
 
-    <script src="../dist/yox-legacy.js"></script>
+    <script src="../dist/standard/dev/yox.js"></script>
     <script>
         var instance = new Yox({
             el: '#app',

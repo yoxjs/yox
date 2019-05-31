@@ -11,12 +11,12 @@
   <script id="template" type="plain/text">
 
       <div>
-          <h1>空字符串</h1>
+          <h1>内容为空</h1>
           <div>
               <!-- xx -->
           </div>
 
-          <h1>空字符串</h1>
+          <h1>内容为空</h1>
           <div>
               <!--
                 1
@@ -25,17 +25,17 @@
               -->
           </div>
 
-          <h1>22</h1>
+          <h1>内容是22</h1>
           <div>
               2<!-- {{name}} {{age}} -->2
           </div>
 
-          <h1>22</h1>
+          <h1>内容是22</h1>
           <div>
               2<!-- <!-- {{name}} {{age}} --> -->2
           </div>
 
-          <h1>22</h1>
+          <h1>内容是22</h1>
           <div>
               2{{!
                 {{name}}
@@ -60,9 +60,7 @@
           </div>
 
           <h1>属性值包含 html 注释，当做普通文本</h1>
-          <div title="<!-- test -->">
-              test
-          </div>
+          <input value="<!-- test -->">
 
       </div>
 
