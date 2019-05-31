@@ -8,7 +8,7 @@ Yox 采用了 `Mustache` 的定界符： `{{` 和 `}}`，我们认为这个设�
 </div>
 ```
 
-> Yox 不支持自定义定界符，没有理由不选最好的设计。
+> Yox 不支持自定义定界符，没有理由不选最好的设计
 
 ## 注释
 
@@ -63,14 +63,14 @@ Yox 采用了 `Mustache` 的定界符： `{{` 和 `}}`，我们认为这个设�
 
 ## 引用
 
-通过 `ref` 在 `JavaScript` 获取模板里的 `元素节点` 或 `组件节点`，如下：
+通过 `ref` 获取模板里的 `元素节点` 或 `组件节点`，如下：
 
 ```html
 <div>
   <!-- 引用元素 -->
   <video ref="video"></video>
   <!-- 引用组件 -->
-  <Editor ref="editor" />
+  <Player ref="player" />
 </div>
 ```
 
@@ -78,20 +78,20 @@ Yox 采用了 `Mustache` 的定界符： `{{` 和 `}}`，我们认为这个设�
 {
   afterMount: function () {
 
-    // 元素节点
+    // 获取元素节点
     var video = this.$refs.video
     video.play()
 
-    // 组件实例
-    var editor = this.$refs.editor
+    // 获取组件实例
+    var player = this.$refs.player
     // 调用组件方法
-    editor.xx()
+    player.play()
 
   }
 }
 ```
 
-> `$refs` 在组件 `afterMount` 之后可用
+> `$refs` 在组件触发 `afterMount` 钩子函数之后可用
 
 ## 插值
 
