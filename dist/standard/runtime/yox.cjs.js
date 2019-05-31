@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.47
+ * yox.js v1.0.0-alpha.48
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1305,10 +1305,6 @@ var HOOK_BEFORE_UPDATE = 'beforeUpdate';
 var HOOK_AFTER_UPDATE = 'afterUpdate';
 var HOOK_BEFORE_DESTROY = 'beforeDestroy';
 var HOOK_AFTER_DESTROY = 'afterDestroy';
-var HOOK_BEFORE_CHILD_CREATE = 'beforeChildCreate';
-var HOOK_AFTER_CHILD_CREATE = 'afterChildCreate';
-var HOOK_BEFORE_CHILD_DESTROY = 'beforeChildDestroy';
-var HOOK_AFTER_CHILD_DESTROY = 'afterChildDestroy';
 
 var guid = 0;
 function guid$1 () {
@@ -3608,6 +3604,7 @@ var Yox = /** @class */ (function () {
         var instance = this, $options = options || EMPTY_OBJECT;
         // 一进来就执行 before create
         execute($options[HOOK_BEFORE_CREATE], instance, $options);
+        execute(Yox[HOOK_BEFORE_CREATE], UNDEFINED, $options);
         instance.$options = $options;
         var data = $options.data, props = $options.props, computed = $options.computed, events = $options.events, methods = $options.methods, watchers = $options.watchers, extensions = $options.extensions;
         if (extensions) {
@@ -3932,7 +3929,7 @@ var Yox = /** @class */ (function () {
      */
     Yox.prototype.createComponent = function (options, vnode) {
         {
-            var instance = this, $options = instance.$options;
+            var instance = this;
             options = copy(options);
             options.root = instance.$root || instance;
             options.parent = instance;
@@ -3952,14 +3949,12 @@ var Yox = /** @class */ (function () {
             if (slots) {
                 options.slots = slots;
             }
-            execute($options[HOOK_BEFORE_CHILD_CREATE], instance, options);
             var child = new Yox(options);
             push(instance.$children || (instance.$children = []), child);
             var node = child.$el;
             if (node) {
                 vnode.node = node;
             }
-            execute($options[HOOK_AFTER_CHILD_CREATE], instance, child);
             return child;
         }
     };
@@ -4046,32 +4041,33 @@ var Yox = /** @class */ (function () {
      */
     Yox.prototype.update = function (vnode, oldVnode) {
         {
-            var instance_1 = this, $vnode = instance_1.$vnode, $options = instance_1.$options, hook_1;
+            var instance_1 = this, $vnode = instance_1.$vnode, $options_1 = instance_1.$options, afterHook_1;
             // 每次渲染重置 refs
             // 在渲染过程中收集最新的 ref
             // 这样可避免更新时，新的 ref，在前面创建，老的 ref 却在后面删除的情况
             instance_1.$refs = {};
             if ($vnode) {
-                execute($options[HOOK_BEFORE_UPDATE], instance_1);
+                execute($options_1[HOOK_BEFORE_UPDATE], instance_1);
+                execute(Yox[HOOK_BEFORE_UPDATE], UNDEFINED, instance_1);
                 patch(domApi, vnode, oldVnode);
-                hook_1 = $options[HOOK_AFTER_UPDATE];
+                afterHook_1 = HOOK_AFTER_UPDATE;
             }
             else {
-                execute($options[HOOK_BEFORE_MOUNT], instance_1);
+                execute($options_1[HOOK_BEFORE_MOUNT], instance_1);
+                execute(Yox[HOOK_BEFORE_MOUNT], UNDEFINED, instance_1);
                 patch(domApi, vnode, oldVnode);
                 instance_1.$el = vnode.node;
-                hook_1 = $options[HOOK_AFTER_MOUNT];
+                afterHook_1 = HOOK_AFTER_MOUNT;
             }
             instance_1.$vnode = vnode;
             // 跟 nextTask 保持一个节奏
             // 这样可以预留一些优化的余地
-            if (hook_1) {
-                Yox.nextTick(function () {
-                    if (instance_1.$vnode) {
-                        execute(hook_1, instance_1);
-                    }
-                });
-            }
+            Yox.nextTick(function () {
+                if (instance_1.$vnode) {
+                    execute($options_1[afterHook_1], instance_1);
+                    execute(Yox[afterHook_1], UNDEFINED, instance_1);
+                }
+            });
         }
     };
     /**
@@ -4109,10 +4105,8 @@ var Yox = /** @class */ (function () {
      */
     Yox.prototype.destroy = function () {
         var instance = this, $parent = instance.$parent, $options = instance.$options, $emitter = instance.$emitter, $observer = instance.$observer;
-        if ($parent) {
-            execute($parent.$options[HOOK_BEFORE_CHILD_DESTROY], $parent, instance);
-        }
         execute($options[HOOK_BEFORE_DESTROY], instance);
+        execute(Yox[HOOK_BEFORE_DESTROY], UNDEFINED, instance);
         {
             var $vnode = instance.$vnode;
             if ($parent && $parent.$children) {
@@ -4126,11 +4120,9 @@ var Yox = /** @class */ (function () {
         }
         $emitter.off();
         $observer.destroy();
-        clear(instance);
         execute($options[HOOK_AFTER_DESTROY], instance);
-        if ($parent) {
-            execute($parent.$options[HOOK_AFTER_CHILD_DESTROY], $parent, instance);
-        }
+        execute(Yox[HOOK_AFTER_DESTROY], UNDEFINED, instance);
+        clear(instance);
     };
     /**
      * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
@@ -4228,7 +4220,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.47";
+    Yox.version = "1.0.0-alpha.48";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */
@@ -4246,6 +4238,7 @@ function afterCreateHook(instance, watchers) {
         instance.watch(watchers);
     }
     execute(instance.$options[HOOK_AFTER_CREATE], instance);
+    execute(Yox[HOOK_AFTER_CREATE], UNDEFINED, instance);
 }
 function setFlexibleOptions(instance, key, value) {
     if (func(value)) {

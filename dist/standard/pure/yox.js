@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.47
+ * yox.js v1.0.0-alpha.48
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1262,8 +1262,6 @@
   var HOOK_AFTER_CREATE = 'afterCreate';
   var HOOK_BEFORE_DESTROY = 'beforeDestroy';
   var HOOK_AFTER_DESTROY = 'afterDestroy';
-  var HOOK_BEFORE_CHILD_DESTROY = 'beforeChildDestroy';
-  var HOOK_AFTER_CHILD_DESTROY = 'afterChildDestroy';
 
   // vnode.data 内部使用的几个字段
 
@@ -2043,6 +2041,7 @@
           var instance = this, $options = options || EMPTY_OBJECT;
           // 一进来就执行 before create
           execute($options[HOOK_BEFORE_CREATE], instance, $options);
+          execute(Yox[HOOK_BEFORE_CREATE], UNDEFINED, $options);
           instance.$options = $options;
           var data = $options.data, props = $options.props, computed = $options.computed, events = $options.events, methods = $options.methods, watchers = $options.watchers, extensions = $options.extensions;
           if (extensions) {
@@ -2276,20 +2275,13 @@
        */
       Yox.prototype.destroy = function () {
           var instance = this, $parent = instance.$parent, $options = instance.$options, $emitter = instance.$emitter, $observer = instance.$observer;
-          if ($parent) {
-              execute($parent.$options[HOOK_BEFORE_CHILD_DESTROY], $parent, instance);
-          }
           execute($options[HOOK_BEFORE_DESTROY], instance);
-          {
-              execute($options[HOOK_BEFORE_DESTROY], instance);
-          }
+          execute(Yox[HOOK_BEFORE_DESTROY], UNDEFINED, instance);
           $emitter.off();
           $observer.destroy();
-          clear(instance);
           execute($options[HOOK_AFTER_DESTROY], instance);
-          if ($parent) {
-              execute($parent.$options[HOOK_AFTER_CHILD_DESTROY], $parent, instance);
-          }
+          execute(Yox[HOOK_AFTER_DESTROY], UNDEFINED, instance);
+          clear(instance);
       };
       /**
        * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
@@ -2387,7 +2379,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.47";
+      Yox.version = "1.0.0-alpha.48";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
@@ -2405,6 +2397,7 @@
           instance.watch(watchers);
       }
       execute(instance.$options[HOOK_AFTER_CREATE], instance);
+      execute(Yox[HOOK_AFTER_CREATE], UNDEFINED, instance);
   }
   function addEvent(instance, type, listener, once) {
       var options = {

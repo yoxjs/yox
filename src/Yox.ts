@@ -304,6 +304,7 @@ export default class Yox implements YoxInterface {
 
     // 一进来就执行 before create
     execute($options[config.HOOK_BEFORE_CREATE], instance, $options)
+    execute(Yox[config.HOOK_BEFORE_CREATE], env.UNDEFINED, $options)
 
     instance.$options = $options
 
@@ -733,7 +734,7 @@ export default class Yox implements YoxInterface {
   createComponent(options: YoxOptions, vnode: VNode): YoxInterface {
     if (process.env.NODE_ENV !== 'pure') {
 
-      const instance = this, { $options } = instance
+      const instance = this
 
       options = object.copy(options)
       options.root = instance.$root || instance
@@ -764,8 +765,6 @@ export default class Yox implements YoxInterface {
         options.slots = slots
       }
 
-      execute($options[config.HOOK_BEFORE_CHILD_CREATE], instance, options)
-
       const child = new Yox(options)
 
       array.push(
@@ -780,8 +779,6 @@ export default class Yox implements YoxInterface {
       else if (process.env.NODE_ENV === 'dev') {
         logger.fatal(`The root element of [Component ${vnode.tag}] is not found.`)
       }
-
-      execute($options[config.HOOK_AFTER_CHILD_CREATE], instance, child)
 
       return child
     }
@@ -942,7 +939,7 @@ export default class Yox implements YoxInterface {
 
       { $vnode, $options } = instance,
 
-      hook: Function | void
+      afterHook: string
 
       // 每次渲染重置 refs
       // 在渲染过程中收集最新的 ref
@@ -951,29 +948,30 @@ export default class Yox implements YoxInterface {
 
       if ($vnode) {
         execute($options[config.HOOK_BEFORE_UPDATE], instance)
+        execute(Yox[config.HOOK_BEFORE_UPDATE], env.UNDEFINED, instance)
         snabbdom.patch(domApi, vnode, oldVnode)
-        hook = $options[config.HOOK_AFTER_UPDATE]
+        afterHook = config.HOOK_AFTER_UPDATE
       }
       else {
         execute($options[config.HOOK_BEFORE_MOUNT], instance)
+        execute(Yox[config.HOOK_BEFORE_MOUNT], env.UNDEFINED, instance)
         snabbdom.patch(domApi, vnode, oldVnode)
         instance.$el = vnode.node as HTMLElement
-        hook = $options[config.HOOK_AFTER_MOUNT]
+        afterHook = config.HOOK_AFTER_MOUNT
       }
 
       instance.$vnode = vnode
 
       // 跟 nextTask 保持一个节奏
       // 这样可以预留一些优化的余地
-      if (hook) {
-        Yox.nextTick(
-          function () {
-            if (instance.$vnode) {
-              execute(hook, instance)
-            }
+      Yox.nextTick(
+        function () {
+          if (instance.$vnode) {
+            execute($options[afterHook], instance)
+            execute(Yox[afterHook], env.UNDEFINED, instance)
           }
-        )
-      }
+        }
+      )
     }
   }
 
@@ -1021,11 +1019,8 @@ export default class Yox implements YoxInterface {
 
     { $parent, $options, $emitter, $observer } = instance
 
-    if ($parent) {
-      execute($parent.$options[config.HOOK_BEFORE_CHILD_DESTROY], $parent, instance)
-    }
-
     execute($options[config.HOOK_BEFORE_DESTROY], instance)
+    execute(Yox[config.HOOK_BEFORE_DESTROY], env.UNDEFINED, instance)
 
     if (process.env.NODE_ENV !== 'pure') {
 
@@ -1042,20 +1037,14 @@ export default class Yox implements YoxInterface {
       }
 
     }
-    else {
-      execute($options[config.HOOK_BEFORE_DESTROY], instance)
-    }
 
     $emitter.off()
     $observer.destroy()
 
-    object.clear(instance)
-
     execute($options[config.HOOK_AFTER_DESTROY], instance)
+    execute(Yox[config.HOOK_AFTER_DESTROY], env.UNDEFINED, instance)
 
-    if ($parent) {
-      execute($parent.$options[config.HOOK_AFTER_CHILD_DESTROY], $parent, instance)
-    }
+    object.clear(instance)
 
   }
 
@@ -1179,6 +1168,7 @@ function afterCreateHook(instance: Yox, watchers: Record<string, type.watcher | 
   }
 
   execute(instance.$options[config.HOOK_AFTER_CREATE], instance)
+  execute(Yox[config.HOOK_AFTER_CREATE], env.UNDEFINED, instance)
 
 }
 
