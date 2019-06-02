@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.49
+ * yox.js v1.0.0-alpha.50
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -4948,7 +4948,8 @@
               each$2(slots, function (slot, name) {
                   vnodeStack.push([]);
                   slot();
-                  renderSlots_1[name] = pop(vnodeStack);
+                  var vnodes = pop(vnodeStack);
+                  renderSlots_1[name] = vnodes.length ? vnodes : UNDEFINED;
               });
               vnode.slots = renderSlots_1;
           }
@@ -6982,7 +6983,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.49";
+      Yox.version = "1.0.0-alpha.50";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
