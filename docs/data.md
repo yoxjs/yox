@@ -13,8 +13,6 @@ Yox 采用 `get()` 和 `set()` 的方式读写数据。
 
 ## get
 
-语法如下：
-
 ```js
 var value = this.get(keypath, defaultValue)
 ```
@@ -56,8 +54,6 @@ this.get('a.b.c.d.e.f').g
 
 ## set
 
-语法如下：
-
 ```js
 this.set(keypath, value)
 ```
@@ -77,9 +73,7 @@ this.set({
 举个例子，初始化后，数据格式如下：
 
 ```js
-{
-
-}
+{}
 ```
 
 调用 `this.set('user.name', 'yox')` 后，数据格式如下：

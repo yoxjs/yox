@@ -443,6 +443,14 @@ function oneOf(values) {
 
 如果传入的是匿名 slot，则获取时也可以匿名。
 
+其实，所谓的匿名 slot，在内部我们给它取了一个名字叫作 `children`，因此你也可以通过它获取匿名 slot：
+
+```html
+<div class="button">
+  <slot name="children" />
+</div>
+```
+
 ### 命名 slot
 
 有时候，你希望传入多个节点，比如左边一个图标，右边一个图标，如下：
@@ -476,7 +484,7 @@ function oneOf(values) {
 ```html
 <div class="button">
   <slot name="left" />
-  <slot />
+  <slot name="children" />
   <slot name="right" />
 </div>
 ```
@@ -508,7 +516,7 @@ function oneOf(values) {
 </div>
 ```
 
-渲染 `<slot>` 节点时，内部会自动判断外部是否传入该名称的节点，如果没传入，则不会渲染该 `<slot>`，因此没有必要像下面这个示例一样加一层判断：
+渲染 `<slot>` 节点时，内部会自动判断外部是否传入该名称的节点，如果没传入，则不会渲染该 `<slot>`，因此没有必要像下面这样加一个判断：
 
 ```html
 <div>

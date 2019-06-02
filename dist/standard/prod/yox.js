@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.51
+ * yox.js v1.0.0-alpha.52
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -2108,35 +2108,35 @@
   }
 
   var unary = {
-      '+': { exec: function (a) { return +a; } },
-      '-': { exec: function (a) { return -a; } },
-      '~': { exec: function (a) { return ~a; } },
-      '!': { exec: function (a) { return !a; } },
-      '!!': { exec: function (a) { return !!a; } }
+      '+': { x: function (a) { return +a; } },
+      '-': { x: function (a) { return -a; } },
+      '~': { x: function (a) { return ~a; } },
+      '!': { x: function (a) { return !a; } },
+      '!!': { x: function (a) { return !!a; } }
   };
   // 参考 https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_Precedence
   var binary = {
-      '*': { prec: 14, exec: function (a, b) { return a * b; } },
-      '/': { prec: 14, exec: function (a, b) { return a / b; } },
-      '%': { prec: 14, exec: function (a, b) { return a % b; } },
-      '+': { prec: 13, exec: function (a, b) { return a + b; } },
-      '-': { prec: 13, exec: function (a, b) { return a - b; } },
-      '<<': { prec: 12, exec: function (a, b) { return a << b; } },
-      '>>': { prec: 12, exec: function (a, b) { return a >> b; } },
-      '>>>': { prec: 12, exec: function (a, b) { return a >>> b; } },
-      '<': { prec: 11, exec: function (a, b) { return a < b; } },
-      '<=': { prec: 11, exec: function (a, b) { return a <= b; } },
-      '>': { prec: 11, exec: function (a, b) { return a > b; } },
-      '>=': { prec: 11, exec: function (a, b) { return a >= b; } },
-      '==': { prec: 10, exec: function (a, b) { return a == b; } },
-      '!=': { prec: 10, exec: function (a, b) { return a != b; } },
-      '===': { prec: 10, exec: function (a, b) { return a === b; } },
-      '!==': { prec: 10, exec: function (a, b) { return a !== b; } },
-      '&': { prec: 9, exec: function (a, b) { return a & b; } },
-      '^': { prec: 8, exec: function (a, b) { return a ^ b; } },
-      '|': { prec: 7, exec: function (a, b) { return a | b; } },
-      '&&': { prec: 6, exec: function (a, b) { return a && b; } },
-      '||': { prec: 5, exec: function (a, b) { return a || b; } }
+      '*': { p: 14, x: function (a, b) { return a * b; } },
+      '/': { p: 14, x: function (a, b) { return a / b; } },
+      '%': { p: 14, x: function (a, b) { return a % b; } },
+      '+': { p: 13, x: function (a, b) { return a + b; } },
+      '-': { p: 13, x: function (a, b) { return a - b; } },
+      '<<': { p: 12, x: function (a, b) { return a << b; } },
+      '>>': { p: 12, x: function (a, b) { return a >> b; } },
+      '>>>': { p: 12, x: function (a, b) { return a >>> b; } },
+      '<': { p: 11, x: function (a, b) { return a < b; } },
+      '<=': { p: 11, x: function (a, b) { return a <= b; } },
+      '>': { p: 11, x: function (a, b) { return a > b; } },
+      '>=': { p: 11, x: function (a, b) { return a >= b; } },
+      '==': { p: 10, x: function (a, b) { return a == b; } },
+      '!=': { p: 10, x: function (a, b) { return a != b; } },
+      '===': { p: 10, x: function (a, b) { return a === b; } },
+      '!==': { p: 10, x: function (a, b) { return a !== b; } },
+      '&': { p: 9, x: function (a, b) { return a & b; } },
+      '^': { p: 8, x: function (a, b) { return a ^ b; } },
+      '|': { p: 7, x: function (a, b) { return a | b; } },
+      '&&': { p: 6, x: function (a, b) { return a && b; } },
+      '||': { p: 5, x: function (a, b) { return a || b; } }
   };
 
   var interpreter = /*#__PURE__*/Object.freeze({
@@ -2659,7 +2659,7 @@
                       // 如 a + b * c / d，当从左到右读取到 / 时，发现和前一个 * 优先级相同，则把 b * c 取出用于创建 Binary
                       if ((lastOperator = output[index])
                           && (lastOperatorInfo = binary[lastOperator])
-                          && lastOperatorInfo.prec >= operatorInfo.prec) {
+                          && lastOperatorInfo.p >= operatorInfo.p) {
                           output.splice(index - 2, 5, createBinary(output[index - 2], lastOperator, output[index + 2], instance.pick(output[index - 3], output[index + 3])));
                       }
                       push(output, operator);
@@ -3315,7 +3315,6 @@
           directive.children = UNDEFINED;
       }, checkCondition = function (condition) {
           var currentNode = condition, prevNode, hasChildren, hasNext;
-          // 变成一维数组，方便遍历
           while (TRUE) {
               if (currentNode.children) {
                   if (!hasNext) {
@@ -4329,9 +4328,9 @@
           case IDENTIFIER:
               return getter(node.name, node);
           case UNARY:
-              return unary[node.op].exec(execute$1(node.a, getter, context));
+              return unary[node.op].x(execute$1(node.a, getter, context));
           case BINARY:
-              return binary[node.op].exec(execute$1(node.a, getter, context), execute$1(node.b, getter, context));
+              return binary[node.op].x(execute$1(node.a, getter, context), execute$1(node.b, getter, context));
           case TERNARY:
               return execute$1(node.test, getter, context)
                   ? execute$1(node.yes, getter, context)
@@ -6548,7 +6547,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.51";
+      Yox.version = "1.0.0-alpha.52";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
