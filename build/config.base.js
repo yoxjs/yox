@@ -23,7 +23,7 @@ const sourcemap = true
 
 let suffix = '.js'
 
-export default function (env, minify = false, legacy = false, port = 0) {
+export default function (env, version, minify = false, legacy = false, port = 0) {
 
   let plugins = [
     replace({
@@ -36,7 +36,7 @@ export default function (env, minify = false, legacy = false, port = 0) {
     buble()
   ]
 
-  let dir = (legacy ? 'legacy' : 'standard') + '/' + env
+  let dir = (legacy ? 'legacy' : 'standard') + '/' + version
 
   if (minify) {
     suffix = '.min' + suffix

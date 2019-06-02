@@ -137,7 +137,7 @@ export default class Yox implements YoxInterface {
           // 未编译，常出现在开发阶段
           if (!compileCache[template]) {
             const nodes = templateCompiler.compile(template)
-            if (process.env.NODE_ENV === 'dev') {
+            if (process.env.NODE_ENV === 'development') {
               if (nodes.length !== 1) {
                 logger.fatal(`"template" should have just one root element.`)
               }
@@ -168,7 +168,7 @@ export default class Yox implements YoxInterface {
       // 传了数据
       if (isDef(value)) {
 
-        if (process.env.NODE_ENV === 'dev') {
+        if (process.env.NODE_ENV === 'development') {
 
           // 如果不写 type 或 type 不是 字符串 或 数组
           // 就当做此规则无效，和没写一样
@@ -215,7 +215,7 @@ export default class Yox implements YoxInterface {
       }
       else {
 
-        if (process.env.NODE_ENV === 'dev') {
+        if (process.env.NODE_ENV === 'development') {
           // 没传值但此项是必传项
           if (rule.required) {
             logger.warn(`The prop "${key}" is marked as required, but its value is not found.`)
@@ -319,7 +319,7 @@ export default class Yox implements YoxInterface {
     } = $options
 
     // 如果传了 props，则 data 应该是个 function
-    if (process.env.NODE_ENV === 'dev') {
+    if (process.env.NODE_ENV === 'development') {
       if (props && is.object(data)) {
         logger.fatal('"data" option should be a function.')
       }
@@ -351,7 +351,7 @@ export default class Yox implements YoxInterface {
       object.each(
         extend,
         function (value, key) {
-          if (process.env.NODE_ENV === 'dev') {
+          if (process.env.NODE_ENV === 'development') {
             if (object.has(source, key)) {
               logger.warn(`"${key}" is already defined as a prop. Use prop default value instead.`)
             }
@@ -365,7 +365,7 @@ export default class Yox implements YoxInterface {
       object.each(
         methods,
         function (method: Function, name: string) {
-          if (process.env.NODE_ENV === 'dev') {
+          if (process.env.NODE_ENV === 'development') {
             if (instance[name]) {
               logger.fatal(`method [${name}] is conflicted with built-in methods.`)
             }
@@ -421,7 +421,7 @@ export default class Yox implements YoxInterface {
             template = domApi.html(placeholder as Element) as string
             placeholder = env.UNDEFINED
           }
-          else if (process.env.NODE_ENV === 'dev') {
+          else if (process.env.NODE_ENV === 'development') {
             logger.fatal(`"${template}" 选择器找不到对应的元素`)
           }
         }
@@ -437,13 +437,13 @@ export default class Yox implements YoxInterface {
           const selector = el as string
           if (selectorPattern.test(selector)) {
             placeholder = domApi.find(selector)
-            if (process.env.NODE_ENV === 'dev') {
+            if (process.env.NODE_ENV === 'development') {
               if (!placeholder) {
                 logger.fatal(`"${selector}" 选择器找不到对应的元素`)
               }
             }
           }
-          else if (process.env.NODE_ENV === 'dev') {
+          else if (process.env.NODE_ENV === 'development') {
             logger.fatal(`"el" option should be a selector.`)
           }
         }
@@ -514,7 +514,7 @@ export default class Yox implements YoxInterface {
 
         if (!vnode) {
 
-          if (process.env.NODE_ENV === 'dev') {
+          if (process.env.NODE_ENV === 'development') {
             if (!placeholder) {
               logger.fatal('根组件不传 el 是几个意思？')
             }
@@ -537,7 +537,7 @@ export default class Yox implements YoxInterface {
         return
 
       }
-      else if (process.env.NODE_ENV === 'dev') {
+      else if (process.env.NODE_ENV === 'development') {
         if (placeholder || vnode) {
           logger.fatal('组件不写 template 是几个意思？')
         }
@@ -716,7 +716,7 @@ export default class Yox implements YoxInterface {
     if (process.env.NODE_ENV !== 'pure') {
       if (!loadComponent(this.$components, name, callback)) {
         const hasComponent = loadComponent(globalComponents, name, callback)
-        if (process.env.NODE_ENV === 'dev') {
+        if (process.env.NODE_ENV === 'development') {
           if (!hasComponent) {
             logger.error(`Component [${name}] is not found.`)
           }
@@ -776,7 +776,7 @@ export default class Yox implements YoxInterface {
       if (node) {
         vnode.node = node
       }
-      else if (process.env.NODE_ENV === 'dev') {
+      else if (process.env.NODE_ENV === 'development') {
         logger.fatal(`The root element of [Component ${vnode.tag}] is not found.`)
       }
 

@@ -3548,15 +3548,13 @@
                   });
               }
               if (element.isStyle && !hasType_1) {
-                  addProperty(element, createProperty('type', HINT_STRING, 'text/css'));
+                  push(element.attrs || (element.attrs = []), createProperty('type', HINT_STRING, 'text/css'));
               }
               // 低版本 IE 需要给 option 标签强制加 value
               else if (tag === 'option' && !hasValue_1) {
                   element.isOption = TRUE;
               }
           }
-      }, addProperty = function (element, prop) {
-          push(element.attrs || (element.attrs = []), prop);
       }, bindSpecialAttr = function (element, attr) {
           var name = attr.name, value = attr.value, 
           // 这三个属性值要求是字符串
@@ -6983,7 +6981,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.50";
+      Yox.version = "dev";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
