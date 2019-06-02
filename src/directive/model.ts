@@ -1,4 +1,3 @@
-import isDef from '../../../yox-common/src/function/isDef'
 import debounce from '../../../yox-common/src/function/debounce'
 import execute from '../../../yox-common/src/function/execute'
 import toString from '../../../yox-common/src/function/toString'

@@ -919,10 +919,10 @@ export default class Yox implements YoxInterface {
       return templateRender.render(
         instance,
         instance.$template as Function,
-        object.merge(instance.$filters, globalFilters),
-        object.merge(instance.$partials, globalPartials),
-        object.merge(instance.$directives, globalDirectives),
-        object.merge(instance.$transitions, globalTransitions)
+        object.merge(instance.$filters, globalFilters) as Record<string, Function>,
+        object.merge(instance.$partials, globalPartials) as Record<string, Function>,
+        object.merge(instance.$directives, globalDirectives) as Record<string, DirectiveHooks>,
+        object.merge(instance.$transitions, globalTransitions) as Record<string, TransitionHooks>
       )
     }
   }
