@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.50
+ * yox.js v1.0.0-alpha.51
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -2133,6 +2133,11 @@ var binary = {
     '||': { prec: 5, exec: function (a, b) { return a || b; } }
 };
 
+var interpreter = /*#__PURE__*/Object.freeze({
+  unary: unary,
+  binary: binary
+});
+
 function compile(content) {
     if (!cache[content]) {
         var parser = new Parser(content);
@@ -3368,15 +3373,13 @@ function compile$1(content) {
                 });
             }
             if (element.isStyle && !hasType_1) {
-                addProperty(element, createProperty('type', HINT_STRING, 'text/css'));
+                push(element.attrs || (element.attrs = []), createProperty('type', HINT_STRING, 'text/css'));
             }
             // 低版本 IE 需要给 option 标签强制加 value
             else if (tag === 'option' && !hasValue_1) {
                 element.isOption = TRUE;
             }
         }
-    }, addProperty = function (element, prop) {
-        push(element.attrs || (element.attrs = []), prop);
     }, bindSpecialAttr = function (element, attr) {
         var name = attr.name, value = attr.value, 
         // 这三个属性值要求是字符串
@@ -4313,86 +4316,78 @@ function isUndef (target) {
     return target === UNDEFINED;
 }
 
-var nodeExecutor = {};
-nodeExecutor[MEMBER] = function (node, getter, context) {
-    /**
-     * 先说第一种奇葩情况：
-     *
-     * 'xx'.length
-     *
-     * 没有变量数据，直接执行字面量，这里用不上 getter
-     *
-     * 第二种：
-     *
-     * a.b.c
-     *
-     * 这是常规操作
-     *
-     * 第三种：
-     *
-     * 'xx'[name]
-     *
-     * 以字面量开头，后面会用到变量
-     *
-     */
-    var staticKeypath = node.sk, props = node.props, first, data;
-    if (isUndef(staticKeypath)) {
-        // props 至少两个，否则无法创建 Member
-        first = props[0];
-        if (first.type === IDENTIFIER) {
-            staticKeypath = first.name;
-        }
-        else {
-            staticKeypath = EMPTY_STRING;
-            data = execute$1(first, getter, context);
-        }
-        for (var i = 1, len = props.length; i < len; i++) {
-            staticKeypath = join$1(staticKeypath, execute$1(props[i], getter, context));
-        }
-    }
-    if (isDef(data)) {
-        data = get(data, staticKeypath);
-        return data ? data.value : UNDEFINED;
-    }
-    if (getter) {
-        return getter(staticKeypath, node);
-    }
-};
-nodeExecutor[UNARY] = function (node, getter, context) {
-    return unary[node.op].exec(execute$1(node.a, getter, context));
-};
-nodeExecutor[BINARY] = function (node, getter, context) {
-    return binary[node.op].exec(execute$1(node.a, getter, context), execute$1(node.b, getter, context));
-};
-nodeExecutor[TERNARY] = function (node, getter, context) {
-    return execute$1(node.test, getter, context)
-        ? execute$1(node.yes, getter, context)
-        : execute$1(node.no, getter, context);
-};
-nodeExecutor[ARRAY] = function (node, getter, context) {
-    return node.nodes.map(function (node) {
-        return execute$1(node, getter, context);
-    });
-};
-nodeExecutor[OBJECT] = function (node, getter, context) {
-    var result = {};
-    each(node.keys, function (key, index) {
-        result[key] = execute$1(node.values[index], getter, context);
-    });
-    return result;
-};
-nodeExecutor[CALL] = function (node, getter, context) {
-    return execute(execute$1(node.name, getter, context), context, node.args.map(function (node) {
-        return execute$1(node, getter, context);
-    }));
-};
 function execute$1(node, getter, context) {
-    // LITERAL 和 IDENTIFIER 避免再一次的函数调用
-    return node.type === LITERAL
-        ? node.value
-        : node.type === IDENTIFIER
-            ? getter(node.name, node)
-            : nodeExecutor[node.type](node, getter, context);
+    switch (node.type) {
+        case LITERAL:
+            return node.value;
+        case IDENTIFIER:
+            return getter(node.name, node);
+        case UNARY:
+            return unary[node.op].exec(execute$1(node.a, getter, context));
+        case BINARY:
+            return binary[node.op].exec(execute$1(node.a, getter, context), execute$1(node.b, getter, context));
+        case TERNARY:
+            return execute$1(node.test, getter, context)
+                ? execute$1(node.yes, getter, context)
+                : execute$1(node.no, getter, context);
+        case ARRAY:
+            return node.nodes.map(function (node) {
+                return execute$1(node, getter, context);
+            });
+        case OBJECT:
+            var result_1 = {};
+            each(node.keys, function (key, index) {
+                result_1[key] = execute$1(node.values[index], getter, context);
+            });
+            return result_1;
+        case CALL:
+            return execute(execute$1(node.name, getter, context), context, node.args.map(function (node) {
+                return execute$1(node, getter, context);
+            }));
+        case MEMBER:
+            /**
+             * 先说第一种奇葩情况：
+             *
+             * 'xx'.length
+             *
+             * 没有变量数据，直接执行字面量，这里用不上 getter
+             *
+             * 第二种：
+             *
+             * a.b.c
+             *
+             * 这是常规操作
+             *
+             * 第三种：
+             *
+             * 'xx'[name]
+             *
+             * 以字面量开头，后面会用到变量
+             *
+             */
+            var staticKeypath = node.sk, props = node.props, first = void 0, data = void 0;
+            if (isUndef(staticKeypath)) {
+                // props 至少两个，否则无法创建 Member
+                first = props[0];
+                if (first.type === IDENTIFIER) {
+                    staticKeypath = first.name;
+                }
+                else {
+                    staticKeypath = EMPTY_STRING;
+                    data = execute$1(first, getter, context);
+                }
+                for (var i = 1, len = props.length; i < len; i++) {
+                    staticKeypath = join$1(staticKeypath, execute$1(props[i], getter, context));
+                }
+            }
+            if (isDef(data)) {
+                data = get(data, staticKeypath);
+                return data ? data.value : UNDEFINED;
+            }
+            if (getter) {
+                return getter(staticKeypath, node);
+            }
+    }
 }
 
 function setPair(target, name, key, value) {
@@ -6547,7 +6542,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.50";
+    Yox.version = "1.0.0-alpha.51";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */
