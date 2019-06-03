@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.52
+ * yox.js v1.0.0-alpha.53
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1299,26 +1299,7 @@ function toJSON (target) {
  *
  */
 // 是否要执行 join 操作
-var RENDER_SLOT = 'a', RENDER_EACH = 'b', RENDER_EXPRESSION = 'c', RENDER_EXPRESSION_ARG = 'd', RENDER_EXPRESSION_VNODE = 'e', RENDER_TEXT_VNODE = 'f', RENDER_ATTRIBUTE_VNODE = 'g', RENDER_PROPERTY_VNODE = 'h', RENDER_LAZY_VNODE = 'i', RENDER_TRANSITION_VNODE = 'j', RENDER_MODEL_VNODE = 'k', RENDER_EVENT_METHOD_VNODE = 'l', RENDER_EVENT_NAME_VNODE = 'm', RENDER_DIRECTIVE_VNODE = 'n', RENDER_SPREAD_VNODE = 'o', RENDER_ELEMENT_VNODE = 'p', RENDER_PARTIAL = 'q', RENDER_IMPORT = 'r', SEP_COMMA = ',', STRING_EMPTY = toJSON(EMPTY_STRING), CODE_PREFIX = "function(" + join([
-    RENDER_EXPRESSION,
-    RENDER_EXPRESSION_ARG,
-    RENDER_EXPRESSION_VNODE,
-    RENDER_TEXT_VNODE,
-    RENDER_ATTRIBUTE_VNODE,
-    RENDER_PROPERTY_VNODE,
-    RENDER_LAZY_VNODE,
-    RENDER_TRANSITION_VNODE,
-    RENDER_MODEL_VNODE,
-    RENDER_EVENT_METHOD_VNODE,
-    RENDER_EVENT_NAME_VNODE,
-    RENDER_DIRECTIVE_VNODE,
-    RENDER_SPREAD_VNODE,
-    RENDER_ELEMENT_VNODE,
-    RENDER_SLOT,
-    RENDER_PARTIAL,
-    RENDER_IMPORT,
-    RENDER_EACH
-], SEP_COMMA) + "){return ";
+var STRING_EMPTY = toJSON(EMPTY_STRING);
 
 /**
  * 计算属性
@@ -2375,7 +2356,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.52";
+    Yox.version = "1.0.0-alpha.53";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */

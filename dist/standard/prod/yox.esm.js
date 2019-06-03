@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.52
+ * yox.js v1.0.0-alpha.53
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -3947,28 +3947,52 @@ function toJSON (target) {
 // 是否要执行 join 操作
 var joinStack = [], 
 // 是否正在收集子节点
-collectStack = [], nodeStringify = {}, RENDER_SLOT = 'a', RENDER_EACH = 'b', RENDER_EXPRESSION = 'c', RENDER_EXPRESSION_ARG = 'd', RENDER_EXPRESSION_VNODE = 'e', RENDER_TEXT_VNODE = 'f', RENDER_ATTRIBUTE_VNODE = 'g', RENDER_PROPERTY_VNODE = 'h', RENDER_LAZY_VNODE = 'i', RENDER_TRANSITION_VNODE = 'j', RENDER_MODEL_VNODE = 'k', RENDER_EVENT_METHOD_VNODE = 'l', RENDER_EVENT_NAME_VNODE = 'm', RENDER_DIRECTIVE_VNODE = 'n', RENDER_SPREAD_VNODE = 'o', RENDER_ELEMENT_VNODE = 'p', RENDER_PARTIAL = 'q', RENDER_IMPORT = 'r', ARG_CONTEXT = 's', SEP_COMMA = ',', SEP_COLON = ':', SEP_PLUS = '+', STRING_TRUE = '!0', STRING_FALSE = '!1', STRING_EMPTY = toJSON(EMPTY_STRING), CODE_RETURN = 'return ', CODE_PREFIX = "function(" + join([
-    RENDER_EXPRESSION,
-    RENDER_EXPRESSION_ARG,
-    RENDER_EXPRESSION_VNODE,
-    RENDER_TEXT_VNODE,
-    RENDER_ATTRIBUTE_VNODE,
-    RENDER_PROPERTY_VNODE,
-    RENDER_LAZY_VNODE,
-    RENDER_TRANSITION_VNODE,
-    RENDER_MODEL_VNODE,
-    RENDER_EVENT_METHOD_VNODE,
-    RENDER_EVENT_NAME_VNODE,
-    RENDER_DIRECTIVE_VNODE,
-    RENDER_SPREAD_VNODE,
-    RENDER_ELEMENT_VNODE,
-    RENDER_SLOT,
-    RENDER_PARTIAL,
-    RENDER_IMPORT,
-    RENDER_EACH
-], SEP_COMMA) + "){return ", CODE_SUFFIX = "}";
+collectStack = [], nodeStringify = {}, RENDER_SLOT = 'a', RENDER_EACH = 'b', RENDER_EXPRESSION = 'c', RENDER_EXPRESSION_ARG = 'd', RENDER_EXPRESSION_VNODE = 'e', RENDER_TEXT_VNODE = 'f', RENDER_ATTRIBUTE_VNODE = 'g', RENDER_PROPERTY_VNODE = 'h', RENDER_LAZY_VNODE = 'i', RENDER_TRANSITION_VNODE = 'j', RENDER_MODEL_VNODE = 'k', RENDER_EVENT_METHOD_VNODE = 'l', RENDER_EVENT_NAME_VNODE = 'm', RENDER_DIRECTIVE_VNODE = 'n', RENDER_SPREAD_VNODE = 'o', RENDER_ELEMENT_VNODE = 'p', RENDER_PARTIAL = 'q', RENDER_IMPORT = 'r', ARG_CONTEXT = 's', SEP_COMMA = ',', SEP_COLON = ':', SEP_PLUS = '+', SEP_AND = '&&', STRING_TRUE = '!0', STRING_FALSE = '!1', STRING_EMPTY = toJSON(EMPTY_STRING), CODE_RETURN = 'return ';
+// 序列化代码的前缀
+var codePrefix, 
 // 表达式求值是否要求返回字符串类型
-var isStringRequired;
+isStringRequired;
+function getCodePrefix() {
+    if (!codePrefix) {
+        codePrefix = "function(" + join([
+            RENDER_EXPRESSION,
+            RENDER_EXPRESSION_ARG,
+            RENDER_EXPRESSION_VNODE,
+            RENDER_TEXT_VNODE,
+            RENDER_ATTRIBUTE_VNODE,
+            RENDER_PROPERTY_VNODE,
+            RENDER_LAZY_VNODE,
+            RENDER_TRANSITION_VNODE,
+            RENDER_MODEL_VNODE,
+            RENDER_EVENT_METHOD_VNODE,
+            RENDER_EVENT_NAME_VNODE,
+            RENDER_DIRECTIVE_VNODE,
+            RENDER_SPREAD_VNODE,
+            RENDER_ELEMENT_VNODE,
+            RENDER_SLOT,
+            RENDER_PARTIAL,
+            RENDER_IMPORT,
+            RENDER_EACH
+        ], SEP_COMMA) + "){" + CODE_RETURN;
+    }
+    return codePrefix;
+}
+/**
+ * 目的是 保证调用参数顺序稳定，减少运行时判断
+ */
+function trimArgs(list) {
+    var args = [], removable = TRUE;
+    each(list, function (arg) {
+        if (isDef(arg)) {
+            removable = FALSE;
+            unshift(args, arg);
+        }
+        else if (!removable) {
+            unshift(args, STRING_FALSE);
+        }
+    }, TRUE);
+    return args;
+}
 function stringifyObject(obj) {
     var fields = [];
     each$2(obj, function (value, key) {
@@ -3981,8 +4005,8 @@ function stringifyObject(obj) {
 function stringifyArray(arr) {
     return "[" + join(arr, SEP_COMMA) + "]";
 }
-function stringifyCall(name, arg) {
-    return name + "(" + arg + ")";
+function stringifyCall(name, args) {
+    return name + "(" + join(trimArgs(args), SEP_COMMA) + ")";
 }
 function stringifyFunction(result, arg) {
     return "function(" + (arg || EMPTY_STRING) + "){" + (result || EMPTY_STRING) + "}";
@@ -3991,14 +4015,10 @@ function stringifyGroup(code) {
     return "(" + code + ")";
 }
 function stringifyExpression(renderName, expr, extra) {
-    var args = [toJSON(expr)];
-    if (extra) {
-        push(args, extra);
-    }
-    return stringifyCall(renderName, join(args, SEP_COMMA));
+    return stringifyCall(renderName, [toJSON(expr), extra]);
 }
 function stringifyExpressionArg(expr) {
-    return stringifyExpression(RENDER_EXPRESSION_ARG, expr, [ARG_CONTEXT]);
+    return stringifyExpression(RENDER_EXPRESSION_ARG, expr, ARG_CONTEXT);
 }
 function stringifyValue(value, expr, children) {
     if (isDef(value)) {
@@ -4059,10 +4079,10 @@ function stringifyIf(node, stub) {
             }
         }
         if (!isDef(no)) {
-            result = test + " && " + yes;
+            result = "" + test + SEP_AND + yes;
         }
         else if (!isDef(yes)) {
-            result = "!" + test + " && " + no;
+            result = "!" + test + SEP_AND + no;
         }
         else {
             result = test + "?" + yes + ":" + no;
@@ -4074,24 +4094,8 @@ function stringifyIf(node, stub) {
     }
     return STRING_EMPTY;
 }
-/**
- * 目的是 保证调用参数顺序稳定，减少运行时判断
- */
-function trimArgs(list) {
-    var args = [], removable = TRUE;
-    each(list, function (arg) {
-        if (isDef(arg)) {
-            removable = FALSE;
-            unshift(args, arg);
-        }
-        else if (!removable) {
-            unshift(args, STRING_FALSE);
-        }
-    }, TRUE);
-    return args;
-}
 function renderElement(data, tag, attrs, childs, slots) {
-    return stringifyCall(RENDER_ELEMENT_VNODE, join(trimArgs([data, tag, attrs, childs, slots]), SEP_COMMA));
+    return stringifyCall(RENDER_ELEMENT_VNODE, [data, tag, attrs, childs, slots]);
 }
 function getComponentSlots(children) {
     var result = {}, slots = {}, addSlot = function (name, nodes) {
@@ -4123,13 +4127,13 @@ function getComponentSlots(children) {
     }
 }
 nodeStringify[ELEMENT] = function (node) {
-    var tag = node.tag, isComponent = node.isComponent, isSvg = node.isSvg, isStyle = node.isStyle, isOption = node.isOption, isStatic = node.isStatic, isComplex = node.isComplex, name = node.name, ref = node.ref, key = node.key, html = node.html, attrs = node.attrs, children = node.children, data = {}, outputTag, outputAttrs = [], outputChilds, outputSlots, args;
+    var tag = node.tag, isComponent = node.isComponent, isSvg = node.isSvg, isStyle = node.isStyle, isOption = node.isOption, isStatic = node.isStatic, isComplex = node.isComplex, name = node.name, ref = node.ref, key = node.key, html = node.html, attrs = node.attrs, children = node.children, data = {}, outputTag, outputAttrs = [], outputChilds, outputSlots;
     if (tag === RAW_SLOT) {
-        args = [toJSON(SLOT_DATA_PREFIX + name)];
+        var args = [toJSON(SLOT_DATA_PREFIX + name)];
         if (children) {
             push(args, stringifyFunction(stringifyChildren(children, TRUE)));
         }
-        return stringifyCall(RENDER_SLOT, join(args, SEP_COMMA));
+        return stringifyCall(RENDER_SLOT, args);
     }
     push(collectStack, FALSE);
     if (attrs) {
@@ -4163,7 +4167,7 @@ nodeStringify[ELEMENT] = function (node) {
         data.key = stringifyValue(key.value, key.expr, key.children);
     }
     if (html) {
-        data.html = stringifyExpression(RENDER_EXPRESSION, html, [STRING_TRUE]);
+        data.html = stringifyExpression(RENDER_EXPRESSION, html, STRING_TRUE);
     }
     if (isComponent) {
         data.isComponent = STRING_TRUE;
@@ -4191,34 +4195,34 @@ nodeStringify[ELEMENT] = function (node) {
 };
 nodeStringify[ATTRIBUTE] = function (node) {
     var binding = node.binding;
-    return stringifyCall(RENDER_ATTRIBUTE_VNODE, join(trimArgs([
+    return stringifyCall(RENDER_ATTRIBUTE_VNODE, [
         toJSON(node.name),
         binding ? STRING_TRUE : UNDEFINED,
         binding ? toJSON(node.expr) : UNDEFINED,
         binding ? UNDEFINED : stringifyValue(node.value, node.expr, node.children)
-    ]), SEP_COMMA));
+    ]);
 };
 nodeStringify[PROPERTY] = function (node) {
     var binding = node.binding;
-    return stringifyCall(RENDER_PROPERTY_VNODE, join(trimArgs([
+    return stringifyCall(RENDER_PROPERTY_VNODE, [
         toJSON(node.name),
         toJSON(node.hint),
         binding ? STRING_TRUE : UNDEFINED,
         binding ? toJSON(node.expr) : UNDEFINED,
         binding ? UNDEFINED : stringifyValue(node.value, node.expr, node.children)
-    ]), SEP_COMMA));
+    ]);
 };
 nodeStringify[DIRECTIVE] = function (node) {
     var ns = node.ns, name = node.name, key = node.key, value = node.value, expr = node.expr;
     if (ns === DIRECTIVE_LAZY) {
-        return stringifyCall(RENDER_LAZY_VNODE, join([toJSON(name), toJSON(value)], SEP_COMMA));
+        return stringifyCall(RENDER_LAZY_VNODE, [toJSON(name), toJSON(value)]);
     }
     if (ns === RAW_TRANSITION) {
-        return stringifyCall(RENDER_TRANSITION_VNODE, toJSON(value));
+        return stringifyCall(RENDER_TRANSITION_VNODE, [toJSON(value)]);
     }
     // <input model="id">
     if (ns === DIRECTIVE_MODEL) {
-        return stringifyCall(RENDER_MODEL_VNODE, toJSON(expr));
+        return stringifyCall(RENDER_MODEL_VNODE, [toJSON(expr)]);
     }
     var renderName = RENDER_DIRECTIVE_VNODE, args = [
         toJSON(name),
@@ -4259,56 +4263,53 @@ nodeStringify[DIRECTIVE] = function (node) {
             }
         }
     }
-    return stringifyCall(renderName, join(trimArgs(args), SEP_COMMA));
+    return stringifyCall(renderName, args);
 };
 nodeStringify[SPREAD] = function (node) {
-    return stringifyCall(RENDER_SPREAD_VNODE, join(trimArgs([toJSON(node.expr), node.binding ? STRING_TRUE : UNDEFINED]), SEP_COMMA));
+    return stringifyCall(RENDER_SPREAD_VNODE, [toJSON(node.expr), node.binding ? STRING_TRUE : UNDEFINED]);
 };
 nodeStringify[TEXT] = function (node) {
     var result = toJSON(node.text);
     if (last(collectStack) && !last(joinStack)) {
-        return stringifyCall(RENDER_TEXT_VNODE, result);
+        return stringifyCall(RENDER_TEXT_VNODE, [result]);
     }
     return result;
 };
 nodeStringify[EXPRESSION] = function (node) {
     // 强制保留 isStringRequired 参数，减少运行时判断参数是否存在
     // 因为还有 stack 参数呢，各种判断真的很累
-    var renderName = RENDER_EXPRESSION, args = [isStringRequired ? STRING_TRUE : UNDEFINED];
-    if (last(collectStack) && !last(joinStack)) {
-        renderName = RENDER_EXPRESSION_VNODE;
-    }
-    return stringifyExpression(renderName, node.expr, trimArgs(args));
+    return stringifyExpression(last(collectStack) && !last(joinStack)
+        ? RENDER_EXPRESSION_VNODE
+        : RENDER_EXPRESSION, node.expr, isStringRequired ? STRING_TRUE : UNDEFINED);
 };
 nodeStringify[IF] = function (node) {
     return stringifyIf(node, node.stub);
 };
 nodeStringify[EACH] = function (node) {
-    // compiler 保证了 children 一定有值
-    var generate = stringifyFunction(stringifyChildren(node.children, node.isComplex));
-    return stringifyCall(RENDER_EACH, join(trimArgs([
-        generate,
+    return stringifyCall(RENDER_EACH, [
+        // compiler 保证了 children 一定有值
+        stringifyFunction(stringifyChildren(node.children, node.isComplex)),
         toJSON(node.from),
         node.to ? toJSON(node.to) : UNDEFINED,
         node.equal ? STRING_TRUE : UNDEFINED,
         node.index ? toJSON(node.index) : UNDEFINED
-    ]), SEP_COMMA));
+    ]);
 };
 nodeStringify[PARTIAL] = function (node) {
-    var name = toJSON(node.name), 
-    // compiler 保证了 children 一定有值
-    children = stringifyFunction(stringifyChildren(node.children, node.isComplex));
-    return stringifyCall(RENDER_PARTIAL, "" + name + SEP_COMMA + children);
+    return stringifyCall(RENDER_PARTIAL, [
+        toJSON(node.name),
+        // compiler 保证了 children 一定有值
+        stringifyFunction(stringifyChildren(node.children, node.isComplex))
+    ]);
 };
 nodeStringify[IMPORT] = function (node) {
-    var name = toJSON(node.name);
-    return stringifyCall(RENDER_IMPORT, "" + name);
+    return stringifyCall(RENDER_IMPORT, [toJSON(node.name)]);
 };
 function stringify(node) {
-    return CODE_PREFIX + nodeStringify[node.type](node) + CODE_SUFFIX;
+    return getCodePrefix() + nodeStringify[node.type](node) + '}';
 }
 function hasStringify(code) {
-    return startsWith(code, CODE_PREFIX);
+    return startsWith(code, getCodePrefix());
 }
 
 function isUndef (target) {
@@ -6541,7 +6542,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.52";
+    Yox.version = "1.0.0-alpha.53";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */
