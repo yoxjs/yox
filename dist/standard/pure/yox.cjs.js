@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.53
+ * yox.js v1.0.0-alpha.54
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -41,6 +41,12 @@ var EMPTY_ARRAY = Object.freeze([]);
  * 空字符串
  */
 var EMPTY_STRING = '';
+/**
+ * 全局 value holder，避免频繁的创建临时对象
+ */
+var VALUE_HOLDER = {
+    value: UNDEFINED
+};
 
 function isDef (target) {
     return target !== UNDEFINED;
@@ -568,7 +574,8 @@ var string$1 = /*#__PURE__*/Object.freeze({
   falsy: falsy$1
 });
 
-var SEP_DOT = '.', dotPattern = /\./g, asteriskPattern = /\*/g, doubleAsteriskPattern = /\*\*/g, splitCache = {}, patternCache = {};
+var dotPattern = /\./g, asteriskPattern = /\*/g, doubleAsteriskPattern = /\*\*/g, splitCache = {}, patternCache = {};
+var separator = '.';
 /**
  * 判断 keypath 是否以 prefix 开头，如果是，返回匹配上的前缀长度，否则返回 -1
  *
@@ -580,7 +587,7 @@ function match(keypath, prefix) {
     if (keypath === prefix) {
         return prefix.length;
     }
-    prefix += SEP_DOT;
+    prefix += separator;
     return startsWith(keypath, prefix)
         ? prefix.length
         : RAW_MINUS_ONE;
@@ -596,7 +603,7 @@ function each$1(keypath, callback) {
     // 而 splitCache.toString 是个函数
     var list = isDef(splitCache[keypath])
         ? splitCache[keypath]
-        : (splitCache[keypath] = keypath.split(SEP_DOT));
+        : (splitCache[keypath] = keypath.split(separator));
     for (var i = 0, lastIndex = list.length - 1; i <= lastIndex; i++) {
         if (callback(list[i], i === lastIndex) === FALSE) {
             break;
@@ -611,7 +618,7 @@ function each$1(keypath, callback) {
  */
 function join$1(keypath1, keypath2) {
     return keypath1 && keypath2
-        ? keypath1 + SEP_DOT + keypath2
+        ? keypath1 + separator + keypath2
         : keypath1 || keypath2;
 }
 /**
@@ -741,12 +748,6 @@ function copy(object$1, deep) {
     return result;
 }
 /**
- * 辅助 get 函数，持有最后找到的值，避免频繁的创建临时对象
- */
-var valueHolder = {
-    value: UNDEFINED
-};
-/**
  * 从对象中查找一个 keypath
  *
  * 返回值是空时，表示没找到值
@@ -783,8 +784,8 @@ function get(object, keypath) {
             }
             if (isLast) {
                 if (hasValue) {
-                    valueHolder.value = value;
-                    object = valueHolder;
+                    VALUE_HOLDER.value = value;
+                    object = VALUE_HOLDER;
                 }
                 else {
                     object = UNDEFINED;
@@ -1281,25 +1282,7 @@ function toJSON (target) {
     return JSON.stringify(target);
 }
 
-/**
- * 这里的难点在于处理 Element 的 children，举个例子：
- *
- * ['1', _x(expr), _l(expr, index, generate), _x(expr) ? ['1', _x(expr), _l(expr, index, generate)] : y]
- *
- * children 用数组表示，其中表达式求出的值可能是任意类型，比如数组或对象，我们无法控制表达式的值最终会是什么类型
- *
- * 像 each 或 import 这样的语法，内部其实会产生一个 vnode 数组，这里就出现了两个难点：
- *
- * 1. 如何区分 each 或其他语法产生的数组和表达式求值的数组
- * 2. 如何避免频繁的创建数组
- *
- * 我能想到的解决方案是，根据当前节点类型，如果是元素，则确保 children 的每一项的值序列化后都是函数调用的形式
- *
- * 这样能确保是从左到右依次执行，也就便于在内部创建一个公共数组，执行一个函数就收集一个值，而不管那个值到底是什么类型
- *
- */
-// 是否要执行 join 操作
-var STRING_EMPTY = toJSON(EMPTY_STRING);
+var EMPTY = toJSON(EMPTY_STRING);
 
 /**
  * 计算属性
@@ -2356,7 +2339,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.53";
+    Yox.version = "1.0.0-alpha.54";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */

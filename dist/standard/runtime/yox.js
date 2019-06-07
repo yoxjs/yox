@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.53
+ * yox.js v1.0.0-alpha.54
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -82,6 +82,12 @@
    * 空字符串
    */
   var EMPTY_STRING = '';
+  /**
+   * 全局 value holder，避免频繁的创建临时对象
+   */
+  var VALUE_HOLDER = {
+      value: UNDEFINED
+  };
 
   function isDef (target) {
       return target !== UNDEFINED;
@@ -609,7 +615,8 @@
     falsy: falsy$1
   });
 
-  var SEP_DOT = '.', dotPattern = /\./g, asteriskPattern = /\*/g, doubleAsteriskPattern = /\*\*/g, splitCache = {}, patternCache = {};
+  var dotPattern = /\./g, asteriskPattern = /\*/g, doubleAsteriskPattern = /\*\*/g, splitCache = {}, patternCache = {};
+  var separator = '.';
   /**
    * 判断 keypath 是否以 prefix 开头，如果是，返回匹配上的前缀长度，否则返回 -1
    *
@@ -621,7 +628,7 @@
       if (keypath === prefix) {
           return prefix.length;
       }
-      prefix += SEP_DOT;
+      prefix += separator;
       return startsWith(keypath, prefix)
           ? prefix.length
           : RAW_MINUS_ONE;
@@ -637,7 +644,7 @@
       // 而 splitCache.toString 是个函数
       var list = isDef(splitCache[keypath])
           ? splitCache[keypath]
-          : (splitCache[keypath] = keypath.split(SEP_DOT));
+          : (splitCache[keypath] = keypath.split(separator));
       for (var i = 0, lastIndex = list.length - 1; i <= lastIndex; i++) {
           if (callback(list[i], i === lastIndex) === FALSE) {
               break;
@@ -652,7 +659,7 @@
    */
   function join$1(keypath1, keypath2) {
       return keypath1 && keypath2
-          ? keypath1 + SEP_DOT + keypath2
+          ? keypath1 + separator + keypath2
           : keypath1 || keypath2;
   }
   /**
@@ -782,12 +789,6 @@
       return result;
   }
   /**
-   * 辅助 get 函数，持有最后找到的值，避免频繁的创建临时对象
-   */
-  var valueHolder = {
-      value: UNDEFINED
-  };
-  /**
    * 从对象中查找一个 keypath
    *
    * 返回值是空时，表示没找到值
@@ -824,8 +825,8 @@
               }
               if (isLast) {
                   if (hasValue) {
-                      valueHolder.value = value;
-                      object = valueHolder;
+                      VALUE_HOLDER.value = value;
+                      object = VALUE_HOLDER;
                   }
                   else {
                       object = UNDEFINED;
@@ -1879,76 +1880,6 @@
   /**
    * 字面量
    */
-  var LITERAL = 1;
-  /**
-   * 标识符
-   */
-  var IDENTIFIER = 2;
-  /**
-   * 对象属性或数组下标
-   */
-  var MEMBER = 3;
-  /**
-   * 一元表达式，如 - a
-   */
-  var UNARY = 4;
-  /**
-   * 二元表达式，如 a + b
-   */
-  var BINARY = 5;
-  /**
-   * 三元表达式，如 a ? b : c
-   */
-  var TERNARY = 6;
-  /**
-   * 数组表达式，如 [ 1, 2, 3 ]
-   */
-  var ARRAY = 7;
-  /**
-   * 对象表达式，如 { name: 'yox' }
-   */
-  var OBJECT = 8;
-  /**
-   * 函数调用表达式，如 a()
-   */
-  var CALL = 9;
-
-  var unary = {
-      '+': { x: function (a) { return +a; } },
-      '-': { x: function (a) { return -a; } },
-      '~': { x: function (a) { return ~a; } },
-      '!': { x: function (a) { return !a; } },
-      '!!': { x: function (a) { return !!a; } }
-  };
-  // 参考 https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_Precedence
-  var binary = {
-      '*': { p: 14, x: function (a, b) { return a * b; } },
-      '/': { p: 14, x: function (a, b) { return a / b; } },
-      '%': { p: 14, x: function (a, b) { return a % b; } },
-      '+': { p: 13, x: function (a, b) { return a + b; } },
-      '-': { p: 13, x: function (a, b) { return a - b; } },
-      '<<': { p: 12, x: function (a, b) { return a << b; } },
-      '>>': { p: 12, x: function (a, b) { return a >> b; } },
-      '>>>': { p: 12, x: function (a, b) { return a >>> b; } },
-      '<': { p: 11, x: function (a, b) { return a < b; } },
-      '<=': { p: 11, x: function (a, b) { return a <= b; } },
-      '>': { p: 11, x: function (a, b) { return a > b; } },
-      '>=': { p: 11, x: function (a, b) { return a >= b; } },
-      '==': { p: 10, x: function (a, b) { return a == b; } },
-      '!=': { p: 10, x: function (a, b) { return a != b; } },
-      '===': { p: 10, x: function (a, b) { return a === b; } },
-      '!==': { p: 10, x: function (a, b) { return a !== b; } },
-      '&': { p: 9, x: function (a, b) { return a & b; } },
-      '^': { p: 8, x: function (a, b) { return a ^ b; } },
-      '|': { p: 7, x: function (a, b) { return a | b; } },
-      '&&': { p: 6, x: function (a, b) { return a && b; } },
-      '||': { p: 5, x: function (a, b) { return a || b; } }
-  };
-
-  var interpreter = /*#__PURE__*/Object.freeze({
-    unary: unary,
-    binary: binary
-  });
 
   /**
    * 元素 节点
@@ -1958,102 +1889,10 @@
       return JSON.stringify(target);
   }
 
-  /**
-   * 这里的难点在于处理 Element 的 children，举个例子：
-   *
-   * ['1', _x(expr), _l(expr, index, generate), _x(expr) ? ['1', _x(expr), _l(expr, index, generate)] : y]
-   *
-   * children 用数组表示，其中表达式求出的值可能是任意类型，比如数组或对象，我们无法控制表达式的值最终会是什么类型
-   *
-   * 像 each 或 import 这样的语法，内部其实会产生一个 vnode 数组，这里就出现了两个难点：
-   *
-   * 1. 如何区分 each 或其他语法产生的数组和表达式求值的数组
-   * 2. 如何避免频繁的创建数组
-   *
-   * 我能想到的解决方案是，根据当前节点类型，如果是元素，则确保 children 的每一项的值序列化后都是函数调用的形式
-   *
-   * 这样能确保是从左到右依次执行，也就便于在内部创建一个公共数组，执行一个函数就收集一个值，而不管那个值到底是什么类型
-   *
-   */
-  // 是否要执行 join 操作
-  var STRING_EMPTY = toJSON(EMPTY_STRING);
+  var EMPTY = toJSON(EMPTY_STRING);
 
   function isUndef (target) {
       return target === UNDEFINED;
-  }
-
-  function execute$1(node, getter, context) {
-      switch (node.type) {
-          case LITERAL:
-              return node.value;
-          case IDENTIFIER:
-              return getter(node.name, node);
-          case UNARY:
-              return unary[node.op].x(execute$1(node.a, getter, context));
-          case BINARY:
-              return binary[node.op].x(execute$1(node.a, getter, context), execute$1(node.b, getter, context));
-          case TERNARY:
-              return execute$1(node.test, getter, context)
-                  ? execute$1(node.yes, getter, context)
-                  : execute$1(node.no, getter, context);
-          case ARRAY:
-              return node.nodes.map(function (node) {
-                  return execute$1(node, getter, context);
-              });
-          case OBJECT:
-              var result_1 = {};
-              each(node.keys, function (key, index) {
-                  result_1[key] = execute$1(node.values[index], getter, context);
-              });
-              return result_1;
-          case CALL:
-              return execute(execute$1(node.name, getter, context), context, node.args.map(function (node) {
-                  return execute$1(node, getter, context);
-              }));
-          case MEMBER:
-              /**
-               * 先说第一种奇葩情况：
-               *
-               * 'xx'.length
-               *
-               * 没有变量数据，直接执行字面量，这里用不上 getter
-               *
-               * 第二种：
-               *
-               * a.b.c
-               *
-               * 这是常规操作
-               *
-               * 第三种：
-               *
-               * 'xx'[name]
-               *
-               * 以字面量开头，后面会用到变量
-               *
-               */
-              var staticKeypath = node.sk, props = node.props, first = void 0, data = void 0;
-              if (isUndef(staticKeypath)) {
-                  // props 至少两个，否则无法创建 Member
-                  first = props[0];
-                  if (first.type === IDENTIFIER) {
-                      staticKeypath = first.name;
-                  }
-                  else {
-                      staticKeypath = EMPTY_STRING;
-                      data = execute$1(first, getter, context);
-                  }
-                  for (var i = 1, len = props.length; i < len; i++) {
-                      staticKeypath = join$1(staticKeypath, execute$1(props[i], getter, context));
-                  }
-              }
-              if (isDef(data)) {
-                  data = get(data, staticKeypath);
-                  return data ? data.value : UNDEFINED;
-              }
-              if (getter) {
-                  return getter(staticKeypath, node);
-              }
-      }
   }
 
   function setPair(target, name, key, value) {
@@ -2061,60 +1900,53 @@
       data[key] = value;
   }
   function render(context, template, filters, partials, directives, transitions) {
-      var $scope = { $keypath: EMPTY_STRING }, $stack = [$scope], $vnode, vnodeStack = [], localPartials = {}, lookup = function (stack, index, key, node, depIgnore, defaultKeypath) {
-          var scope = stack[index], keypath = join$1(scope.$keypath, key);
-          node.ak = keypath;
+      var $scope = { $keypath: EMPTY_STRING }, $stack = [$scope], $vnode, vnodeStack = [], localPartials = {}, findValue = function (stack, index, key, lookup, depIgnore, defaultKeypath) {
+          var scope = stack[index], keypath = join$1(scope.$keypath, key), value = stack, holder = VALUE_HOLDER;
           // 如果最后还是取不到值，用回最初的 keypath
           if (isUndef(defaultKeypath)) {
               defaultKeypath = keypath;
           }
           // 如果取的是 scope 上直接有的数据，如 $keypath
           if (isDef(scope[key])) {
-              return scope[key];
+              value = scope[key];
           }
           // 如果取的是数组项，则要更进一步
-          if (isDef(scope.$item)) {
+          else if (isDef(scope.$item)) {
               scope = scope.$item;
               // 到这里 scope 可能为空
               // 比如 new Array(10) 然后遍历这个数组，每一项肯定是空
               // 取 this
               if (key === EMPTY_STRING) {
-                  return scope;
+                  value = scope;
               }
               // 取 this.xx
-              if (scope != NULL && isDef(scope[key])) {
-                  return scope[key];
+              else if (scope != NULL && isDef(scope[key])) {
+                  value = scope[key];
               }
           }
-          // 正常取数据
-          var result = context.get(keypath, lookup, depIgnore);
-          if (result === lookup) {
-              // undefined 或 true 都表示需要向上寻找
-              if (node.lookup !== FALSE && index > 0) {
-                  return lookup(stack, index - 1, key, node, depIgnore, defaultKeypath);
+          if (value === stack) {
+              // 正常取数据
+              value = context.get(keypath, stack, depIgnore);
+              if (value === stack) {
+                  if (lookup && index > 0) {
+                      return findValue(stack, index - 1, key, lookup, depIgnore, defaultKeypath);
+                  }
+                  // 到头了，最后尝试过滤器
+                  var result = get(filters, key);
+                  if (result) {
+                      holder = result;
+                      holder.keypath = key;
+                  }
+                  else {
+                      holder.value = UNDEFINED;
+                      holder.keypath = defaultKeypath;
+                  }
+                  return holder;
               }
-              var holder = get(filters, key);
-              return holder
-                  ? holder.value
-                  : (node.ak = defaultKeypath, UNDEFINED);
           }
-          return result;
-      }, getValue = function (expr, depIgnore, stack) {
-          var renderStack = stack || $stack, length = renderStack.length;
-          return execute$1(expr, function (keypath, node) {
-              return lookup(renderStack, length - ((node.offset || 0) + 1), keypath, node, depIgnore);
-          }, context);
-      }, addBinding = function (vnode, name, expr, hint) {
-          var value = getValue(expr, TRUE), key = join$1(DIRECTIVE_BINDING, name);
-          setPair(vnode, 'directives', key, {
-              ns: DIRECTIVE_BINDING,
-              name: name,
-              key: key,
-              hooks: directives[DIRECTIVE_BINDING],
-              binding: expr.ak,
-              hint: hint
-          });
-          return value;
+          holder.value = value;
+          holder.keypath = keypath;
+          return holder;
       }, createEventListener = function (type) {
           return function (event, data) {
               // 事件名称相同的情况，只可能是监听 DOM 事件，比如写一个 Button 组件
@@ -2152,15 +1984,6 @@
           return function () {
               return getter(stack);
           };
-      }, renderExpression = function (expr, stringRequired) {
-          var value = getValue(expr);
-          return stringRequired
-              ? toString(value)
-              : value;
-      }, renderExpressionArg = function (expr, stack) {
-          return getValue(expr, UNDEFINED, stack);
-      }, renderExpressionVnode = function (expr, stringRequired) {
-          renderTextVnode(renderExpression(expr, stringRequired));
       }, renderTextVnode = function (text) {
           var vnodeList = last(vnodeStack);
           if (vnodeList) {
@@ -2178,32 +2001,37 @@
                   push(vnodeList, textVnode);
               }
           }
-      }, renderAttributeVnode = function (name, binding, expr, value) {
-          if (binding) {
-              value = addBinding($vnode, name, expr);
-          }
+      }, renderAttributeVnode = function (name, value) {
           if ($vnode.isComponent) {
               setPair($vnode, 'props', name, value);
           }
           else {
               setPair($vnode, 'nativeAttrs', name, { name: name, value: value });
           }
-      }, renderPropertyVnode = function (name, hint, binding, expr, value) {
-          if (binding) {
-              value = addBinding($vnode, name, expr, hint);
-          }
+      }, renderPropertyVnode = function (name, hint, value) {
           setPair($vnode, 'nativeProps', name, { name: name, value: value, hint: hint });
       }, renderLazyVnode = function (name, value) {
           setPair($vnode, 'lazy', name, value);
       }, renderTransitionVnode = function (name) {
           $vnode.transition = transitions[name];
-      }, renderModelVnode = function (expr) {
-          $vnode.model = getValue(expr, TRUE);
+      }, renderBindingVnode = function (name, holder, hint) {
+          var key = join$1(DIRECTIVE_BINDING, name);
+          setPair($vnode, 'directives', key, {
+              ns: DIRECTIVE_BINDING,
+              name: name,
+              key: key,
+              hooks: directives[DIRECTIVE_BINDING],
+              binding: holder.keypath,
+              hint: hint
+          });
+          return holder.value;
+      }, renderModelVnode = function (holder) {
+          $vnode.model = holder.value;
           setPair($vnode, 'directives', DIRECTIVE_MODEL, {
               ns: DIRECTIVE_MODEL,
               name: EMPTY_STRING,
               key: DIRECTIVE_MODEL,
-              binding: expr.ak,
+              binding: holder.keypath,
               hooks: directives[DIRECTIVE_MODEL]
           });
       }, renderEventMethodVnode = function (name, key, value, method, args) {
@@ -2235,23 +2063,25 @@
               getter: getter ? createGetter(getter, $stack) : UNDEFINED,
               handler: method ? createMethodListener(method, args, $stack) : UNDEFINED
           });
-      }, renderSpreadVnode = function (expr, binding) {
-          var value = getValue(expr, binding);
-          // 数组也算一种对象，要排除掉
-          if (object(value) && !array(value)) {
-              each$2(value, function (value, key) {
-                  setPair($vnode, 'props', key, value);
-              });
-              var absoluteKeypath = expr['ak'];
-              if (absoluteKeypath) {
-                  var key = join$1(DIRECTIVE_BINDING, absoluteKeypath);
-                  setPair($vnode, 'directives', key, {
-                      ns: DIRECTIVE_BINDING,
-                      name: EMPTY_STRING,
-                      key: key,
-                      hooks: directives[DIRECTIVE_BINDING],
-                      binding: join$1(absoluteKeypath, RAW_WILDCARD)
+      }, renderSpreadVnode = function (holder) {
+          var value = holder.value, keypath = holder.keypath;
+          // 如果为 null 或 undefined，则不需要 warn
+          if (value != NULL) {
+              // 数组也算一种对象，要排除掉
+              if (object(value) && !array(value)) {
+                  each$2(value, function (value, key) {
+                      setPair($vnode, 'props', key, value);
                   });
+                  if (keypath) {
+                      var key = join$1(DIRECTIVE_BINDING, keypath);
+                      setPair($vnode, 'directives', key, {
+                          ns: DIRECTIVE_BINDING,
+                          name: EMPTY_STRING,
+                          key: key,
+                          hooks: directives[DIRECTIVE_BINDING],
+                          binding: join$1(keypath, RAW_WILDCARD)
+                      });
+                  }
               }
           }
       }, renderElementVnode = function (vnode, tag, attrs, childs, slots) {
@@ -2287,6 +2117,26 @@
               push(vnodeList, vnode);
           }
           return vnode;
+      }, renderExpressionIdentifier = function (name, lookup, offset, holder, depIgnore, stack) {
+          var myStack = stack || $stack, result = findValue(myStack, myStack.length - ((offset || 0) + 1), name, lookup, depIgnore);
+          return holder ? result : result.value;
+      }, renderExpressionMemberKeypath = function (identifier, runtimeKeypath) {
+          unshift(runtimeKeypath, identifier);
+          return join(runtimeKeypath, separator);
+      }, renderExpressionMemberLiteral = function (value, staticKeypath, runtimeKeypath, holder) {
+          if (isDef(runtimeKeypath)) {
+              staticKeypath = join(runtimeKeypath, separator);
+          }
+          var result = VALUE_HOLDER, match = get(value, staticKeypath);
+          result.keypath = UNDEFINED;
+          result.value = match ? match.value : UNDEFINED;
+          return holder ? result : result.value;
+      }, renderExpressionCall = function (fn, args, holder) {
+          var result = VALUE_HOLDER;
+          result.keypath = UNDEFINED;
+          // 当 holder 为 true, args 为空时，args 会传入 false
+          result.value = execute(fn, context, args || UNDEFINED);
+          return holder ? result : result.value;
       }, 
       // <slot name="xx"/>
       renderSlot = function (name, defaultRender) {
@@ -2318,7 +2168,7 @@
           else {
               var partial = partials[name];
               if (partial) {
-                  partial(renderExpression, renderExpressionArg, renderExpressionVnode, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach);
+                  partial(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, toString);
               }
           }
       }, eachHandler = function (generate, item, key, keypath, index, length) {
@@ -2343,9 +2193,9 @@
           $scope = lastScope;
           $stack = lastStack;
       }, renderEach = function (generate, from, to, equal, index) {
-          var fromValue = getValue(from);
+          var fromValue = from.value, fromKeypath = from.keypath;
           if (to) {
-              var toValue = getValue(to), count = 0;
+              var toValue = to.value, count = 0;
               if (fromValue < toValue) {
                   if (equal) {
                       for (var i = fromValue; i <= toValue; i++) {
@@ -2372,24 +2222,23 @@
               }
           }
           else {
-              var eachKeypath = from['ak'];
               if (array(fromValue)) {
                   for (var i = 0, length = fromValue.length; i < length; i++) {
-                      eachHandler(generate, fromValue[i], i, eachKeypath
-                          ? join$1(eachKeypath, EMPTY_STRING + i)
+                      eachHandler(generate, fromValue[i], i, fromKeypath
+                          ? join$1(fromKeypath, EMPTY_STRING + i)
                           : EMPTY_STRING, index, length);
                   }
               }
               else if (object(fromValue)) {
                   for (var key in fromValue) {
-                      eachHandler(generate, fromValue[key], key, eachKeypath
-                          ? join$1(eachKeypath, key)
+                      eachHandler(generate, fromValue[key], key, fromKeypath
+                          ? join$1(fromKeypath, key)
                           : EMPTY_STRING, index);
                   }
               }
           }
       };
-      return template(renderExpression, renderExpressionArg, renderExpressionVnode, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach);
+      return template(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, toString);
   }
 
   /**
@@ -4195,7 +4044,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.53";
+      Yox.version = "1.0.0-alpha.54";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
