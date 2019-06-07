@@ -426,11 +426,9 @@ function oneOf(values) {
 你可以在 `组件标签` 的内部写上需要传递的节点，如下：
 
 ```html
-<div>
-  <Button>
-    <i class="icon icon-info"></i>
-  </Button>
-</div>
+<Button>
+  <i class="icon icon-info"></i>
+</Button>
 ```
 
 在 `<Button>` 组件的模板中，通过 `<slot>` 标签获取外部传入的节点，如下：
@@ -456,20 +454,19 @@ function oneOf(values) {
 有时候，你希望传入多个节点，比如左边一个图标，右边一个图标，如下：
 
 ```html
-<div>
-  <Button>
-    <template slot="left">
-      <i class="icon-left"></i>
-    </template>
-    <i slot="right" class="icon-right"></i>
-    text
-  </Button>
-</div>
+<Button>
+  <template slot="left">
+    <i class="icon-left"></i>
+  </template>
+  <i slot="right" class="icon-right"></i>
+</Button>
 ```
 
 一般来说，我们可以直接为节点加上 `slot` 属性，这样它便有了名字。
 
-如果你需要传入多个同级节点，可以借助 `<template>` 标签。
+> 如果你需要传入多个同级节点，可以借助 `<template>` 标签。
+
+在 `<Button>` 组件的模板中，通过 `<slot name="[name]" />` 获取某个名称的节点，如下：
 
 ```html
 <div class="button">
@@ -479,14 +476,32 @@ function oneOf(values) {
 </div>
 ```
 
-细心的同学可能注意到上面的例子中还有一个孤零零的 `text`，它并非是多余的，我们的初衷是，如果组件标签内定义的节点没有名字，那它统统属于匿名 slot。
+需要补充的是，如果组件标签内定义的节点没有名字，那它统统属于匿名 slot，也就是默认名称为 `children` 的 slot，来看一个极端的例子：
 
 ```html
-<div class="button">
-  <slot name="left" />
-  <slot name="children" />
-  <slot name="right" />
-</div>
+<Button>
+  a
+  <template slot="left">
+    <i class="icon-left"></i>
+  </template>
+  b
+  <i slot="right" class="icon-right"></i>
+  c
+</Button>
+```
+
+它等价于下面的写法：
+
+```html
+<Button>
+  <template slot="children">
+    abc
+  </template>
+  <template slot="left">
+    <i class="icon-left"></i>
+  </template>
+  <i slot="right" class="icon-right"></i>
+</Button>
 ```
 
 ### 默认 slot

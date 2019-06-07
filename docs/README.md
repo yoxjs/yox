@@ -4,7 +4,7 @@
 
 ## 特性
 
-* 比 Vue 更低的学习门槛，比 Vue 小一半的文件体积
+* 比 Vue 更低的学习门槛，比 Vue 更小的文件体积（`runtime` 版本：Vue [63KB](https://github.com/vuejs/vue/blob/dev/dist/vue.runtime.min.js) Yox [31KB](https://github.com/yoxjs/yox/blob/master/dist/standard/runtime/yox.min.js)）
 * 采用 `TypeScript` 开发，带来更好的工程化开发体验
 * 设计上保持克制，没有语法糖，没有多余功能
 * 提供 `Mustache` 风格的模板引擎
@@ -21,7 +21,7 @@ Yox 提供两个大版本，如下：
 
 每个大版本分别提供四个小版本，如下：
 
-* **dev**: 具有完整功能和丰富的报错信息，适合开发调试（Gzipped Size：21KB）
+* **dev**: 具有完整功能和丰富的报错信息，适合开发调试（Gzipped Size：20KB）
 * **prod**: 不包含报错信息，相比 `runtime` 版本，此版本适合不在意性能的懒人（Gzipped Size：18KB）
 * **runtime**：不包含报错信息和模板编译器，性能提升巨大，适合线上运行（Gzipped Size：11KB）
 * **pure**：不包含报错信息和视图层代码，文件体积最小，适合全局数据存储和观察（Gzipped Size：6KB）
