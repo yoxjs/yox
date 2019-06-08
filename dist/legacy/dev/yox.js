@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.56
+ * yox.js v1.0.0-alpha.57
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -6508,7 +6508,7 @@
               instance.on(events);
           }
           {
-              var placeholder = UNDEFINED, el = $options.el, vnode = $options.vnode, root = $options.root, model_1 = $options.model, parent = $options.parent, replace = $options.replace, template = $options.template, transitions = $options.transitions, components = $options.components, directives = $options.directives, partials = $options.partials, filters = $options.filters, slots = $options.slots;
+              var placeholder = UNDEFINED, el = $options.el, vnode = $options.vnode, root = $options.root, model_1 = $options.model, parent = $options.parent, context = $options.context, replace = $options.replace, template = $options.template, transitions = $options.transitions, components = $options.components, directives = $options.directives, partials = $options.partials, filters = $options.filters, slots = $options.slots;
               if (model_1) {
                   instance.$model = model_1;
               }
@@ -6566,8 +6566,8 @@
               }
               // 当前组件是被哪个组件渲染出来的
               // 因为有 slot 机制，$context 不一定等于 $parent
-              if (vnode) {
-                  instance.$context = vnode.context;
+              if (context) {
+                  instance.$context = context;
               }
               setFlexibleOptions(instance, RAW_TRANSITION, transitions);
               setFlexibleOptions(instance, RAW_COMPONENT, components);
@@ -6893,6 +6893,7 @@
               options = copy(options);
               options.root = instance.$root || instance;
               options.parent = instance;
+              options.context = vnode.context;
               options.vnode = vnode;
               options.replace = TRUE;
               var props = vnode.props, slots = vnode.slots, modelKey = options.model || RAW_VALUE, modelValue = vnode.model;
@@ -7183,7 +7184,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.56";
+      Yox.version = "1.0.0-alpha.57";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

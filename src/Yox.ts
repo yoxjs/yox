@@ -395,6 +395,7 @@ export default class Yox implements YoxInterface {
         root,
         model,
         parent,
+        context,
         replace,
         template,
         transitions,
@@ -472,8 +473,8 @@ export default class Yox implements YoxInterface {
       }
       // 当前组件是被哪个组件渲染出来的
       // 因为有 slot 机制，$context 不一定等于 $parent
-      if (vnode) {
-        instance.$context = vnode.context
+      if (context) {
+        instance.$context = context
       }
 
       setFlexibleOptions(instance, env.RAW_TRANSITION, transitions)
@@ -748,6 +749,7 @@ export default class Yox implements YoxInterface {
       options = object.copy(options)
       options.root = instance.$root || instance
       options.parent = instance
+      options.context = vnode.context
       options.vnode = vnode
       options.replace = env.TRUE
 
