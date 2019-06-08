@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.54
+ * yox.js v1.0.0-alpha.55
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1884,12 +1884,6 @@
   /**
    * 元素 节点
    */
-
-  function toJSON (target) {
-      return JSON.stringify(target);
-  }
-
-  var EMPTY = toJSON(EMPTY_STRING);
 
   function isUndef (target) {
       return target === UNDEFINED;
@@ -4044,7 +4038,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.54";
+      Yox.version = "1.0.0-alpha.55";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

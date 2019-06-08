@@ -16,7 +16,7 @@ import * as config from '../../yox-config/src/config'
 import * as snabbdom from '../../yox-snabbdom/src/snabbdom'
 
 import * as templateCompiler from '../../yox-template-compiler/src/compiler'
-import * as templateStringify from '../../yox-template-compiler/src/stringify'
+import * as templateGenerator from '../../yox-template-compiler/src/generator'
 import * as templateRender from '../../yox-template-compiler/src/renderer'
 
 import * as type from '../../yox-type/src/type'
@@ -133,7 +133,7 @@ export default class Yox implements YoxInterface {
   public static compile(template: string, stringify?: boolean): Function | string {
     if (process.env.NODE_ENV !== 'pure') {
       if (process.env.NODE_ENV !== 'runtime') {
-        if (!templateStringify.hasStringify(template)) {
+        if (!templateGenerator.hasGenerated(template)) {
           // 未编译，常出现在开发阶段
           if (!compileCache[template]) {
             const nodes = templateCompiler.compile(template)
@@ -142,7 +142,7 @@ export default class Yox implements YoxInterface {
                 logger.fatal(`"template" should have just one root element.`)
               }
             }
-            compileCache[template] = templateStringify.stringify(nodes[0])
+            compileCache[template] = templateGenerator.generate(nodes[0])
           }
           template = compileCache[template]
           if (stringify) {
