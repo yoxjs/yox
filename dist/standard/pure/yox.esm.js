@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.55
+ * yox.js v1.0.0-alpha.56
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -39,12 +39,6 @@ var EMPTY_ARRAY = Object.freeze([]);
  * 空字符串
  */
 var EMPTY_STRING = '';
-/**
- * 全局 value holder，避免频繁的创建临时对象
- */
-var VALUE_HOLDER = {
-    value: UNDEFINED
-};
 
 function isDef (target) {
     return target !== UNDEFINED;
@@ -649,6 +643,13 @@ function matchFuzzy(keypath, pattern) {
 }
 
 /**
+ * 全局 value holder，避免频繁的创建临时对象
+ */
+var valueHolder = {
+    value: UNDEFINED
+};
+
+/**
  * 获取对象的 key 的数组
  *
  * @param object
@@ -782,8 +783,8 @@ function get(object, keypath) {
             }
             if (isLast) {
                 if (hasValue) {
-                    VALUE_HOLDER.value = value;
-                    object = VALUE_HOLDER;
+                    valueHolder.value = value;
+                    object = valueHolder;
                 }
                 else {
                     object = UNDEFINED;
@@ -2331,7 +2332,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.55";
+    Yox.version = "1.0.0-alpha.56";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */

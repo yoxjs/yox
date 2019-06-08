@@ -81,6 +81,8 @@ export default class Yox implements YoxInterface {
 
   $parent?: YoxInterface
 
+  $context?: YoxInterface
+
   $children?: YoxInterface[]
 
   $vnode: VNode | undefined
@@ -460,11 +462,18 @@ export default class Yox implements YoxInterface {
 
       }
 
+      // 根组件
       if (root) {
         instance.$root = root
       }
+      // 当前组件的直接父组件
       if (parent) {
         instance.$parent = parent
+      }
+      // 当前组件是被哪个组件渲染出来的
+      // 因为有 slot 机制，$context 不一定等于 $parent
+      if (vnode) {
+        instance.$context = vnode.context
       }
 
       setFlexibleOptions(instance, env.RAW_TRANSITION, transitions)

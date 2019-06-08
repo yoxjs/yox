@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.55
+ * yox.js v1.0.0-alpha.56
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -88,12 +88,6 @@ var EMPTY_ARRAY = Object.freeze([]);
  * 空字符串
  */
 var EMPTY_STRING = '';
-/**
- * 全局 value holder，避免频繁的创建临时对象
- */
-var VALUE_HOLDER = {
-    value: UNDEFINED
-};
 
 function isDef (target) {
     return target !== UNDEFINED;
@@ -698,6 +692,13 @@ function matchFuzzy(keypath, pattern) {
 }
 
 /**
+ * 全局 value holder，避免频繁的创建临时对象
+ */
+var valueHolder = {
+    value: UNDEFINED
+};
+
+/**
  * 获取对象的 key 的数组
  *
  * @param object
@@ -831,8 +832,8 @@ function get(object, keypath) {
             }
             if (isLast) {
                 if (hasValue) {
-                    VALUE_HOLDER.value = value;
-                    object = VALUE_HOLDER;
+                    valueHolder.value = value;
+                    object = valueHolder;
                 }
                 else {
                     object = UNDEFINED;
@@ -4797,7 +4798,7 @@ function setPair(target, name, key, value) {
 }
 function render(context, template, filters, partials, directives, transitions) {
     var $scope = { $keypath: EMPTY_STRING }, $stack = [$scope], $vnode, vnodeStack = [], localPartials = {}, findValue = function (stack, index, key, lookup, depIgnore, defaultKeypath) {
-        var scope = stack[index], keypath = join$1(scope.$keypath, key), value = stack, holder = VALUE_HOLDER;
+        var scope = stack[index], keypath = join$1(scope.$keypath, key), value = stack, holder = valueHolder;
         // 如果最后还是取不到值，用回最初的 keypath
         if (isUndef(defaultKeypath)) {
             defaultKeypath = keypath;
@@ -5041,16 +5042,15 @@ function render(context, template, filters, partials, directives, transitions) {
         if (isDef(runtimeKeypath)) {
             staticKeypath = join(runtimeKeypath, separator);
         }
-        var result = VALUE_HOLDER, match = get(value, staticKeypath);
-        result.keypath = UNDEFINED;
-        result.value = match ? match.value : UNDEFINED;
-        return holder ? result : result.value;
+        var match = get(value, staticKeypath);
+        valueHolder.keypath = UNDEFINED;
+        valueHolder.value = match ? match.value : UNDEFINED;
+        return holder ? valueHolder : valueHolder.value;
     }, renderExpressionCall = function (fn, args, holder) {
-        var result = VALUE_HOLDER;
-        result.keypath = UNDEFINED;
+        valueHolder.keypath = UNDEFINED;
         // 当 holder 为 true, args 为空时，args 会传入 false
-        result.value = execute(fn, context, args || UNDEFINED);
-        return holder ? result : result.value;
+        valueHolder.value = execute(fn, context, args || UNDEFINED);
+        return holder ? valueHolder : valueHolder.value;
     }, 
     // <slot name="xx"/>
     renderSlot = function (name, defaultRender) {
@@ -6552,11 +6552,18 @@ var Yox = /** @class */ (function () {
                     domApi.append(placeholder, placeholder = domApi.createComment(EMPTY_STRING));
                 }
             }
+            // 根组件
             if (root) {
                 instance.$root = root;
             }
+            // 当前组件的直接父组件
             if (parent) {
                 instance.$parent = parent;
+            }
+            // 当前组件是被哪个组件渲染出来的
+            // 因为有 slot 机制，$context 不一定等于 $parent
+            if (vnode) {
+                instance.$context = vnode.context;
             }
             setFlexibleOptions(instance, RAW_TRANSITION, transitions);
             setFlexibleOptions(instance, RAW_COMPONENT, components);
@@ -7172,7 +7179,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.55";
+    Yox.version = "1.0.0-alpha.56";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */
