@@ -33,7 +33,8 @@ const directive: DirectiveHooks = {
 
         if (vnode.isComponent) {
           const component = node as Yox
-          component.set(name, component.checkProp(name, newValue))
+          component.checkProp(name, newValue)
+          component.set(name, newValue)
         }
         else if (isDef(directive.hint)) {
           api.prop(node as HTMLElement, name, newValue)

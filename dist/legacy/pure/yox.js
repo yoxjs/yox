@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.57
+ * yox.js v1.0.0-alpha.58
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -762,20 +762,6 @@
    * @return
    */
   function get(object, keypath) {
-      /**
-       * 考虑以下情况:
-       *
-       * {
-       *   'a.b.c.d': 1,
-       *   'a.b.c': {
-       *      d: 2
-       *   }
-       * }
-       *
-       * 此时 keypath 是 `a.b.c.d`，可以获取到 1
-       * 如果没有这个 key，按 keypath 推进是取不到值的，因为没有 a.b.c 对象
-       * 个人觉得没有必要支持字面量，情况实在太多，会把这个函数搞的性能很差
-       */
       each$1(keypath, function (key, isLast) {
           if (object != NULL) {
               // 先直接取值
@@ -2002,12 +1988,27 @@
           execute($options[HOOK_BEFORE_CREATE], instance, $options);
           execute(Yox[HOOK_BEFORE_CREATE], UNDEFINED, $options);
           instance.$options = $options;
-          var data = $options.data, props = $options.props, computed = $options.computed, events = $options.events, methods = $options.methods, watchers = $options.watchers, extensions = $options.extensions;
+          var data = $options.data, props = $options.props, propTypes = $options.propTypes, computed = $options.computed, events = $options.events, methods = $options.methods, watchers = $options.watchers, extensions = $options.extensions;
           if (extensions) {
               extend(instance, extensions);
           }
-          // 数据源
-          var source = instance.checkProps(props || {});
+          // 数据源，默认值仅在创建组件时启用
+          var source = props ? copy(props) : {};
+          if (propTypes) {
+              each$2(propTypes, function (rule, key) {
+                  var value = source[key];
+                  if (isDef(value)) {
+                      value = rule.value;
+                      if (!isDef(value)) {
+                          source[key] = rule.type === RAW_FUNCTION
+                              ? value
+                              : func(value)
+                                  ? value()
+                                  : value;
+                      }
+                  }
+              });
+          }
           // 先放 props
           // 当 data 是函数时，可以通过 this.get() 获取到外部数据
           var observer = instance.$observer = new Observer(source, instance);
@@ -2057,9 +2058,6 @@
           {
               return EMPTY_STRING;
           }
-      };
-      Yox.checkProp = function (key, value, rule) {
-          return value;
       };
       Yox.directive = function (name, directive) {
       };
@@ -2224,10 +2222,8 @@
        * @param props
        */
       Yox.prototype.checkProps = function (props) {
-          return props;
       };
       Yox.prototype.checkProp = function (key, value) {
-          return value;
       };
       /**
        * 销毁组件
@@ -2338,7 +2334,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.57";
+      Yox.version = "1.0.0-alpha.58";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

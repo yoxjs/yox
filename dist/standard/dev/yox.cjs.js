@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.57
+ * yox.js v1.0.0-alpha.58
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -805,20 +805,6 @@ function copy(object$1, deep) {
  * @return
  */
 function get(object, keypath) {
-    /**
-     * 考虑以下情况:
-     *
-     * {
-     *   'a.b.c.d': 1,
-     *   'a.b.c': {
-     *      d: 2
-     *   }
-     * }
-     *
-     * 此时 keypath 是 `a.b.c.d`，可以获取到 1
-     * 如果没有这个 key，按 keypath 推进是取不到值的，因为没有 a.b.c 对象
-     * 个人觉得没有必要支持字面量，情况实在太多，会把这个函数搞的性能很差
-     */
     each$1(keypath, function (key, isLast) {
         if (object != NULL) {
             // 先直接取值
@@ -1446,7 +1432,10 @@ function update$3(vnode, oldVnode) {
                 }
                 props[node.$model] = model;
             }
-            var result = merge(props ? node.checkProps(props) : UNDEFINED, slots);
+            if (props) {
+                node.checkProps(props);
+            }
+            var result = merge(props, slots);
             if (result) {
                 node.forceUpdate(result);
             }
@@ -6317,7 +6306,8 @@ var directive$2 = {
                     : directive.name;
                 if (vnode.isComponent) {
                     var component = node;
-                    component.set(name, component.checkProp(name, newValue));
+                    component.checkProp(name, newValue);
+                    component.set(name, newValue);
                 }
                 else if (isDef(directive.hint)) {
                     domApi.prop(node, name, newValue);
@@ -6356,7 +6346,7 @@ var Yox = /** @class */ (function () {
         execute($options[HOOK_BEFORE_CREATE], instance, $options);
         execute(Yox[HOOK_BEFORE_CREATE], UNDEFINED, $options);
         instance.$options = $options;
-        var data = $options.data, props = $options.props, computed = $options.computed, events = $options.events, methods = $options.methods, watchers = $options.watchers, extensions = $options.extensions;
+        var data = $options.data, props = $options.props, propTypes = $options.propTypes, computed = $options.computed, events = $options.events, methods = $options.methods, watchers = $options.watchers, extensions = $options.extensions;
         // 如果传了 props，则 data 应该是个 function
         {
             if (props && object(data)) {
@@ -6366,8 +6356,26 @@ var Yox = /** @class */ (function () {
         if (extensions) {
             extend(instance, extensions);
         }
-        // 数据源
-        var source = instance.checkProps(props || {});
+        // 数据源，默认值仅在创建组件时启用
+        var source = props ? copy(props) : {};
+        if (propTypes) {
+            each$2(propTypes, function (rule, key) {
+                var value = source[key];
+                {
+                    checkProp(key, value, rule);
+                }
+                if (isDef(value)) {
+                    value = rule.value;
+                    if (!isDef(value)) {
+                        source[key] = rule.type === RAW_FUNCTION
+                            ? value
+                            : func(value)
+                                ? value()
+                                : value;
+                    }
+                }
+            });
+        }
         // 先放 props
         // 当 data 是函数时，可以通过 this.get() 获取到外部数据
         var observer = instance.$observer = new Observer(source, instance);
@@ -6559,67 +6567,6 @@ var Yox = /** @class */ (function () {
             }
             return new Function("return " + template)();
         }
-    };
-    Yox.checkProp = function (key, value, rule) {
-        {
-            // 类型
-            var type_1 = rule.type, 
-            // 默认值
-            defaultValue = rule.value;
-            // 传了数据
-            if (isDef(value)) {
-                {
-                    // 如果不写 type 或 type 不是 字符串 或 数组
-                    // 就当做此规则无效，和没写一样
-                    if (type_1) {
-                        // 自定义函数判断是否匹配类型
-                        // 自己打印警告信息吧
-                        if (func(type_1)) {
-                            type_1(key, value);
-                        }
-                        else {
-                            var matched_1 = FALSE;
-                            // type: 'string'
-                            if (!falsy$1(type_1)) {
-                                matched_1 = matchType(value, type_1);
-                            }
-                            // type: ['string', 'number']
-                            else if (!falsy(type_1)) {
-                                each(type_1, function (item) {
-                                    if (matchType(value, item)) {
-                                        matched_1 = TRUE;
-                                        return FALSE;
-                                    }
-                                });
-                            }
-                            if (!matched_1) {
-                                warn("The type of prop \"" + key + "\" expected to be \"" + type_1 + "\", but is \"" + value + "\".");
-                            }
-                        }
-                    }
-                    else {
-                        warn("The prop \"" + key + "\" in propTypes has no type.");
-                    }
-                }
-            }
-            else {
-                {
-                    // 没传值但此项是必传项
-                    if (rule.required) {
-                        warn("The prop \"" + key + "\" is marked as required, but its value is not found.");
-                    }
-                }
-                // 没传值但是配置了默认值
-                if (isDef(defaultValue)) {
-                    value = type_1 === RAW_FUNCTION
-                        ? defaultValue
-                        : func(defaultValue)
-                            ? defaultValue()
-                            : defaultValue;
-                }
-            }
-        }
-        return value;
     };
     Yox.directive = function (name, directive) {
         {
@@ -6938,16 +6885,11 @@ var Yox = /** @class */ (function () {
      */
     Yox.prototype.checkProps = function (props) {
         {
-            var propTypes = this.$options.propTypes;
-            if (propTypes) {
-                var result_1 = copy(props);
-                each$2(propTypes, function (rule, key) {
-                    result_1[key] = Yox.checkProp(key, props[key], rule);
-                });
-                return result_1;
-            }
+            var instance_2 = this;
+            each$2(props, function (value, key) {
+                instance_2.checkProp(key, value);
+            });
         }
-        return props;
     };
     Yox.prototype.checkProp = function (key, value) {
         {
@@ -6955,11 +6897,10 @@ var Yox = /** @class */ (function () {
             if (propTypes) {
                 var rule = propTypes[key];
                 if (rule) {
-                    value = Yox.checkProp(key, value, rule);
+                    checkProp(key, value, rule);
                 }
             }
         }
-        return value;
     };
     /**
      * 销毁组件
@@ -7081,7 +7022,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.57";
+    Yox.version = "1.0.0-alpha.58";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */
@@ -7099,6 +7040,49 @@ function matchType(value, type) {
     return type === 'numeric'
         ? numeric(value)
         : lower(toString$2.call(value)) === "[object " + type + "]";
+}
+function checkProp(key, value, rule) {
+    var type = rule.type;
+    // 传了数据
+    if (isDef(value)) {
+        // 如果不写 type 或 type 不是 字符串 或 数组
+        // 就当做此规则无效，和没写一样
+        if (type) {
+            // 自定义函数判断是否匹配类型
+            // 自己打印警告信息吧
+            if (func(type)) {
+                type(key, value);
+            }
+            else {
+                var matched_1 = FALSE;
+                // type: 'string'
+                if (!falsy$1(type)) {
+                    matched_1 = matchType(value, type);
+                }
+                // type: ['string', 'number']
+                else if (!falsy(type)) {
+                    each(type, function (item) {
+                        if (matchType(value, item)) {
+                            matched_1 = TRUE;
+                            return FALSE;
+                        }
+                    });
+                }
+                if (!matched_1) {
+                    warn("The type of prop \"" + key + "\" expected to be \"" + type + "\", but is \"" + value + "\".");
+                }
+            }
+        }
+        else {
+            warn("The prop \"" + key + "\" in propTypes has no type.");
+        }
+    }
+    else {
+        // 没传值但此项是必传项
+        if (rule.required) {
+            warn("The prop \"" + key + "\" is marked as required, but its value is not found.");
+        }
+    }
 }
 function afterCreateHook(instance, watchers) {
     if (watchers) {

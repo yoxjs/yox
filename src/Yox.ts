@@ -159,87 +159,6 @@ export default class Yox implements YoxInterface {
     }
   }
 
-  public static checkProp(key: string, value: any, rule: PropRule): any {
-    if (process.env.NODE_ENV !== 'pure') {
-      // 类型
-      const type = rule.type,
-
-      // 默认值
-      defaultValue = rule.value
-
-      // 传了数据
-      if (isDef(value)) {
-
-        if (process.env.NODE_ENV === 'development') {
-
-          // 如果不写 type 或 type 不是 字符串 或 数组
-          // 就当做此规则无效，和没写一样
-          if (type) {
-
-            // 自定义函数判断是否匹配类型
-            // 自己打印警告信息吧
-            if (is.func(type)) {
-              (type as type.propType)(key, value)
-            }
-            else {
-
-              let matched = env.FALSE
-
-              // type: 'string'
-              if (!string.falsy(type)) {
-                matched = matchType(value, type as string)
-              }
-              // type: ['string', 'number']
-              else if (!array.falsy(type)) {
-                array.each(
-                  type as string[],
-                  function (item: string) {
-                    if (matchType(value, item)) {
-                      matched = env.TRUE
-                      return env.FALSE
-                    }
-                  }
-                )
-              }
-
-              if (!matched) {
-                logger.warn(`The type of prop "${key}" expected to be "${type}", but is "${value}".`)
-              }
-
-            }
-
-          }
-          else {
-            logger.warn(`The prop "${key}" in propTypes has no type.`)
-          }
-        }
-
-      }
-      else {
-
-        if (process.env.NODE_ENV === 'development') {
-          // 没传值但此项是必传项
-          if (rule.required) {
-            logger.warn(`The prop "${key}" is marked as required, but its value is not found.`)
-          }
-        }
-
-        // 没传值但是配置了默认值
-        if (isDef(defaultValue)) {
-          value = type === env.RAW_FUNCTION
-            ? defaultValue
-            : is.func(defaultValue)
-              ? (defaultValue as type.propValue)()
-              : defaultValue
-        }
-
-      }
-    }
-
-    return value
-
-  }
-
   public static directive(
     name: string | Record<string, DirectiveHooks>,
     directive?: DirectiveHooks
@@ -313,6 +232,7 @@ export default class Yox implements YoxInterface {
     let {
       data,
       props,
+      propTypes,
       computed,
       events,
       methods,
@@ -331,8 +251,29 @@ export default class Yox implements YoxInterface {
       object.extend(instance, extensions)
     }
 
-    // 数据源
-    const source = instance.checkProps(props || {})
+    // 数据源，默认值仅在创建组件时启用
+    const source = props ? object.copy(props) : {}
+    if (propTypes) {
+      object.each(
+        propTypes,
+        function (rule: PropRule, key: string) {
+          let value = source[key]
+          if (process.env.NODE_ENV === 'development') {
+            checkProp(key, value, rule)
+          }
+          if (isDef(value)) {
+            value = rule.value
+            if (!isDef(value)) {
+              source[key] = rule.type === env.RAW_FUNCTION
+                ? value
+                : is.func(value)
+                  ? (value as type.propValue)()
+                  : value
+            }
+          }
+        }
+      )
+    }
 
     // 先放 props
     // 当 data 是函数时，可以通过 this.get() 获取到外部数据
@@ -991,34 +932,28 @@ export default class Yox implements YoxInterface {
    *
    * @param props
    */
-  checkProps(props: type.data): type.data {
-    if (process.env.NODE_ENV !== 'pure') {
-      const { propTypes } = this.$options
-      if (propTypes) {
-        const result = object.copy(props)
-        object.each(
-          propTypes,
-          function (rule: PropRule, key: string) {
-            result[key] = Yox.checkProp(key, props[key], rule)
-          }
-        )
-        return result
-      }
+  checkProps(props: type.data): void {
+    if (process.env.NODE_ENV === 'development') {
+      const instance = this
+      object.each(
+        props,
+        function (value, key) {
+          instance.checkProp(key, value)
+        }
+      )
     }
-    return props
   }
 
-  checkProp(key: string, value: any): any {
-    if (process.env.NODE_ENV !== 'pure') {
+  checkProp(key: string, value: any): void {
+    if (process.env.NODE_ENV === 'development') {
       const { propTypes } = this.$options
       if (propTypes) {
         const rule = propTypes[key]
         if (rule) {
-          value = Yox.checkProp(key, value, rule)
+          checkProp(key, value, rule)
         }
       }
     }
-    return value
   }
 
   /**
@@ -1170,6 +1105,66 @@ function matchType(value: any, type: string) {
   return type === 'numeric'
     ? is.numeric(value)
     : string.lower(toString.call(value)) === `[object ${type}]`
+}
+
+function checkProp(key: string, value: any, rule: PropRule) {
+
+  const type = rule.type
+
+  // 传了数据
+  if (isDef(value)) {
+
+    // 如果不写 type 或 type 不是 字符串 或 数组
+    // 就当做此规则无效，和没写一样
+    if (type) {
+
+      // 自定义函数判断是否匹配类型
+      // 自己打印警告信息吧
+      if (is.func(type)) {
+        (type as type.propType)(key, value)
+      }
+      else {
+
+        let matched = env.FALSE
+
+        // type: 'string'
+        if (!string.falsy(type)) {
+          matched = matchType(value, type as string)
+        }
+        // type: ['string', 'number']
+        else if (!array.falsy(type)) {
+          array.each(
+            type as string[],
+            function (item: string) {
+              if (matchType(value, item)) {
+                matched = env.TRUE
+                return env.FALSE
+              }
+            }
+          )
+        }
+
+        if (!matched) {
+          logger.warn(`The type of prop "${key}" expected to be "${type}", but is "${value}".`)
+        }
+
+      }
+
+    }
+    else {
+      logger.warn(`The prop "${key}" in propTypes has no type.`)
+    }
+
+  }
+  else {
+
+    // 没传值但此项是必传项
+    if (rule.required) {
+      logger.warn(`The prop "${key}" is marked as required, but its value is not found.`)
+    }
+
+  }
+
 }
 
 function afterCreateHook(instance: Yox, watchers: Record<string, type.watcher | WatcherOptions> | void) {

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.57
+ * yox.js v1.0.0-alpha.58
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -805,20 +805,6 @@ function copy(object$1, deep) {
  * @return
  */
 function get(object, keypath) {
-    /**
-     * 考虑以下情况:
-     *
-     * {
-     *   'a.b.c.d': 1,
-     *   'a.b.c': {
-     *      d: 2
-     *   }
-     * }
-     *
-     * 此时 keypath 是 `a.b.c.d`，可以获取到 1
-     * 如果没有这个 key，按 keypath 推进是取不到值的，因为没有 a.b.c 对象
-     * 个人觉得没有必要支持字面量，情况实在太多，会把这个函数搞的性能很差
-     */
     each$1(keypath, function (key, isLast) {
         if (object != NULL) {
             // 先直接取值
@@ -1436,7 +1422,10 @@ function update$3(vnode, oldVnode) {
                 }
                 props[node.$model] = model;
             }
-            var result = merge(props ? node.checkProps(props) : UNDEFINED, slots);
+            if (props) {
+                node.checkProps(props);
+            }
+            var result = merge(props, slots);
             if (result) {
                 node.forceUpdate(result);
             }
@@ -6076,7 +6065,8 @@ var directive$2 = {
                     : directive.name;
                 if (vnode.isComponent) {
                     var component = node;
-                    component.set(name, component.checkProp(name, newValue));
+                    component.checkProp(name, newValue);
+                    component.set(name, newValue);
                 }
                 else if (isDef(directive.hint)) {
                     domApi.prop(node, name, newValue);
@@ -6115,12 +6105,27 @@ var Yox = /** @class */ (function () {
         execute($options[HOOK_BEFORE_CREATE], instance, $options);
         execute(Yox[HOOK_BEFORE_CREATE], UNDEFINED, $options);
         instance.$options = $options;
-        var data = $options.data, props = $options.props, computed = $options.computed, events = $options.events, methods = $options.methods, watchers = $options.watchers, extensions = $options.extensions;
+        var data = $options.data, props = $options.props, propTypes = $options.propTypes, computed = $options.computed, events = $options.events, methods = $options.methods, watchers = $options.watchers, extensions = $options.extensions;
         if (extensions) {
             extend(instance, extensions);
         }
-        // 数据源
-        var source = instance.checkProps(props || {});
+        // 数据源，默认值仅在创建组件时启用
+        var source = props ? copy(props) : {};
+        if (propTypes) {
+            each$2(propTypes, function (rule, key) {
+                var value = source[key];
+                if (isDef(value)) {
+                    value = rule.value;
+                    if (!isDef(value)) {
+                        source[key] = rule.type === RAW_FUNCTION
+                            ? value
+                            : func(value)
+                                ? value()
+                                : value;
+                    }
+                }
+            });
+        }
         // 先放 props
         // 当 data 是函数时，可以通过 this.get() 获取到外部数据
         var observer = instance.$observer = new Observer(source, instance);
@@ -6276,27 +6281,6 @@ var Yox = /** @class */ (function () {
             }
             return new Function("return " + template)();
         }
-    };
-    Yox.checkProp = function (key, value, rule) {
-        {
-            // 类型
-            var type_1 = rule.type, 
-            // 默认值
-            defaultValue = rule.value;
-            // 传了数据
-            if (isDef(value)) ;
-            else {
-                // 没传值但是配置了默认值
-                if (isDef(defaultValue)) {
-                    value = type_1 === RAW_FUNCTION
-                        ? defaultValue
-                        : func(defaultValue)
-                            ? defaultValue()
-                            : defaultValue;
-                }
-            }
-        }
-        return value;
     };
     Yox.directive = function (name, directive) {
         {
@@ -6606,29 +6590,8 @@ var Yox = /** @class */ (function () {
      * @param props
      */
     Yox.prototype.checkProps = function (props) {
-        {
-            var propTypes = this.$options.propTypes;
-            if (propTypes) {
-                var result_1 = copy(props);
-                each$2(propTypes, function (rule, key) {
-                    result_1[key] = Yox.checkProp(key, props[key], rule);
-                });
-                return result_1;
-            }
-        }
-        return props;
     };
     Yox.prototype.checkProp = function (key, value) {
-        {
-            var propTypes = this.$options.propTypes;
-            if (propTypes) {
-                var rule = propTypes[key];
-                if (rule) {
-                    value = Yox.checkProp(key, value, rule);
-                }
-            }
-        }
-        return value;
     };
     /**
      * 销毁组件
@@ -6750,7 +6713,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.57";
+    Yox.version = "1.0.0-alpha.58";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */
