@@ -1,4 +1,4 @@
 import create from './config.base'
 
 // 包含所有功能的源码版本
-export default create('prod', 'prod', false, false)
+export default create('production', 'prod', false, false)

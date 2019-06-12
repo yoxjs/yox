@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.58
+ * yox.js v1.0.0-alpha.59
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -89,6 +89,10 @@ var EMPTY_STRING = '';
 
 function isDef (target) {
     return target !== UNDEFINED;
+}
+
+function isUndef (target) {
+    return target === UNDEFINED;
 }
 
 /**
@@ -4775,10 +4779,6 @@ function hasGenerated(code) {
     return startsWith(code, getCodePrefix());
 }
 
-function isUndef (target) {
-    return target === UNDEFINED;
-}
-
 function setPair(target, name, key, value) {
     var data = target[name] || (target[name] = {});
     data[key] = value;
@@ -6362,9 +6362,9 @@ var Yox = /** @class */ (function () {
                 {
                     checkProp(key, value, rule);
                 }
-                if (isDef(value)) {
+                if (isUndef(value)) {
                     value = rule.value;
-                    if (!isDef(value)) {
+                    if (isDef(value)) {
                         source[key] = rule.type === RAW_FUNCTION
                             ? value
                             : func(value)
@@ -7020,7 +7020,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.58";
+    Yox.version = "1.0.0-alpha.59";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */
@@ -7040,26 +7040,26 @@ function matchType(value, type) {
         : lower(toString$2.call(value)) === "[object " + type + "]";
 }
 function checkProp(key, value, rule) {
-    var type = rule.type;
     // 传了数据
     if (isDef(value)) {
+        var type_1 = rule.type;
         // 如果不写 type 或 type 不是 字符串 或 数组
         // 就当做此规则无效，和没写一样
-        if (type) {
+        if (type_1) {
             // 自定义函数判断是否匹配类型
             // 自己打印警告信息吧
-            if (func(type)) {
-                type(key, value);
+            if (func(type_1)) {
+                type_1(key, value);
             }
             else {
                 var matched_1 = FALSE;
                 // type: 'string'
-                if (!falsy$1(type)) {
-                    matched_1 = matchType(value, type);
+                if (!falsy$1(type_1)) {
+                    matched_1 = matchType(value, type_1);
                 }
                 // type: ['string', 'number']
-                else if (!falsy(type)) {
-                    each(type, function (item) {
+                else if (!falsy(type_1)) {
+                    each(type_1, function (item) {
                         if (matchType(value, item)) {
                             matched_1 = TRUE;
                             return FALSE;
@@ -7067,7 +7067,7 @@ function checkProp(key, value, rule) {
                     });
                 }
                 if (!matched_1) {
-                    warn("The type of prop \"" + key + "\" expected to be \"" + type + "\", but is \"" + value + "\".");
+                    warn("The type of prop \"" + key + "\" expected to be \"" + type_1 + "\", but is \"" + value + "\".");
                 }
             }
         }
@@ -7075,11 +7075,9 @@ function checkProp(key, value, rule) {
             warn("The prop \"" + key + "\" in propTypes has no type.");
         }
     }
-    else {
-        // 没传值但此项是必传项
-        if (rule.required) {
-            warn("The prop \"" + key + "\" is marked as required, but its value is not found.");
-        }
+    // 没传值但此项是必传项
+    else if (rule.required) {
+        warn("The prop \"" + key + "\" is marked as required, but its value is not found.");
     }
 }
 function afterCreateHook(instance, watchers) {

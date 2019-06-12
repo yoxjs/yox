@@ -1,4 +1,5 @@
 import isDef from '../../yox-common/src/function/isDef'
+import isUndef from '../../yox-common/src/function/isUndef'
 import execute from '../../yox-common/src/function/execute'
 
 import CustomEvent from '../../yox-common/src/util/CustomEvent'
@@ -261,9 +262,9 @@ export default class Yox implements YoxInterface {
           if (process.env.NODE_ENV === 'development') {
             checkProp(key, value, rule)
           }
-          if (isDef(value)) {
+          if (isUndef(value)) {
             value = rule.value
-            if (!isDef(value)) {
+            if (isDef(value)) {
               source[key] = rule.type === env.RAW_FUNCTION
                 ? value
                 : is.func(value)
@@ -1109,10 +1110,10 @@ function matchType(value: any, type: string) {
 
 function checkProp(key: string, value: any, rule: PropRule) {
 
-  const type = rule.type
-
   // 传了数据
   if (isDef(value)) {
+
+    const type = rule.type
 
     // 如果不写 type 或 type 不是 字符串 或 数组
     // 就当做此规则无效，和没写一样
@@ -1156,13 +1157,9 @@ function checkProp(key: string, value: any, rule: PropRule) {
     }
 
   }
-  else {
-
-    // 没传值但此项是必传项
-    if (rule.required) {
-      logger.warn(`The prop "${key}" is marked as required, but its value is not found.`)
-    }
-
+  // 没传值但此项是必传项
+  else if (rule.required) {
+    logger.warn(`The prop "${key}" is marked as required, but its value is not found.`)
   }
 
 }

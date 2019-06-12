@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.58
+ * yox.js v1.0.0-alpha.59
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -89,6 +89,10 @@ var EMPTY_STRING = '';
 
 function isDef (target) {
     return target !== UNDEFINED;
+}
+
+function isUndef (target) {
+    return target === UNDEFINED;
 }
 
 /**
@@ -4468,10 +4472,6 @@ function hasGenerated(code) {
     return startsWith(code, getCodePrefix());
 }
 
-function isUndef (target) {
-    return target === UNDEFINED;
-}
-
 function setPair(target, name, key, value) {
     var data = target[name] || (target[name] = {});
     data[key] = value;
@@ -6112,9 +6112,9 @@ var Yox = /** @class */ (function () {
         if (propTypes) {
             each$2(propTypes, function (rule, key) {
                 var value = source[key];
-                if (isDef(value)) {
+                if (isUndef(value)) {
                     value = rule.value;
-                    if (!isDef(value)) {
+                    if (isDef(value)) {
                         source[key] = rule.type === RAW_FUNCTION
                             ? value
                             : func(value)
@@ -6711,7 +6711,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.58";
+    Yox.version = "1.0.0-alpha.59";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */
