@@ -4,61 +4,55 @@ import execute from '../../../yox-common/src/function/execute'
 import * as env from '../../../yox-common/src/util/env'
 import * as keypathUtil from '../../../yox-common/src/util/keypath'
 
+import * as domApi from '../../../yox-dom/src/dom'
+
 import * as type from '../../../yox-type/src/type'
 import Yox from '../../../yox-type/src/interface/Yox'
 import VNode from '../../../yox-type/src/vnode/VNode'
 import Directive from '../../../yox-type/src/vnode/Directive'
-import DirectiveHooks from '../../../yox-type/src/hooks/Directive'
 
-import api from '../../../yox-dom/src/dom'
+export const once = env.TRUE
 
-const directive: DirectiveHooks = {
+export function bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
 
-  once: env.TRUE,
+  // binding 可能是模糊匹配
+  // 比如延展属性 {{...obj}}，这里 binding 会是 `obj.*`
+  let binding = directive.binding as string,
 
-  bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
+  isFuzzy = keypathUtil.isFuzzy(binding),
 
-    // binding 可能是模糊匹配
-    // 比如延展属性 {{...obj}}，这里 binding 会是 `obj.*`
-    let binding = directive.binding as string,
+  watcher: type.watcher | void = function (newValue: any, _: any, keypath: string) {
 
-    isFuzzy = keypathUtil.isFuzzy(binding),
+    if (watcher) {
+      const name = isFuzzy
+        ? keypathUtil.matchFuzzy(keypath, binding) as string
+        : directive.name
 
-    watcher: type.watcher | void = function (newValue: any, _: any, keypath: string) {
-
-      if (watcher) {
-        const name = isFuzzy
-          ? keypathUtil.matchFuzzy(keypath, binding) as string
-          : directive.name
-
-        if (vnode.isComponent) {
-          const component = node as Yox
-          component.checkProp(name, newValue)
-          component.set(name, newValue)
-        }
-        else if (isDef(directive.hint)) {
-          api.prop(node as HTMLElement, name, newValue)
-        }
-        else {
-          api.attr(node as HTMLElement, name, newValue)
-        }
+      if (vnode.isComponent) {
+        const component = node as Yox
+        component.checkProp(name, newValue)
+        component.set(name, newValue)
       }
-
+      else if (isDef(directive.hint)) {
+        domApi.prop(node as HTMLElement, name, newValue)
+      }
+      else {
+        domApi.attr(node as HTMLElement, name, newValue)
+      }
     }
 
-    vnode.context.watch(binding, watcher as type.watcher)
+  }
 
-    vnode.data[directive.key] = function () {
-      vnode.context.unwatch(binding, watcher as type.watcher)
-      watcher = env.UNDEFINED
-    }
+  vnode.context.watch(binding, watcher as type.watcher)
 
-  },
-
-  unbind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
-    execute(vnode.data[directive.key])
+  vnode.data[directive.key] = function () {
+    vnode.context.unwatch(binding, watcher as type.watcher)
+    watcher = env.UNDEFINED
   }
 
 }
 
-export default directive
+export function unbind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
+  execute(vnode.data[directive.key])
+}
+

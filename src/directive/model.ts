@@ -6,7 +6,7 @@ import * as is from '../../../yox-common/src/util/is'
 import * as env from '../../../yox-common/src/util/env'
 import * as array from '../../../yox-common/src/util/array'
 
-import api from '../../../yox-dom/src/dom'
+import * as domApi from '../../../yox-dom/src/dom'
 
 import * as config from '../../../yox-config/src/config'
 import * as type from '../../../yox-type/src/type'
@@ -14,7 +14,6 @@ import * as type from '../../../yox-type/src/type'
 import Yox from '../../../yox-type/src/interface/Yox'
 import VNode from '../../../yox-type/src/vnode/VNode'
 import Directive from '../../../yox-type/src/vnode/Directive'
-import DirectiveHooks from '../../../yox-type/src/hooks/Directive'
 
 interface NativeControl {
 
@@ -127,113 +126,108 @@ selectControl: NativeControl = {
 inputTypes = {
   radio: radioControl,
   checkbox: checkboxControl,
-},
-
-directive: DirectiveHooks = {
-
-  once: env.TRUE,
-
-  bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
-
-    let { context, lazy, isComponent } = vnode,
-
-    dataBinding = directive.binding as string,
-
-    lazyValue = lazy && (lazy[config.DIRECTIVE_MODEL] || lazy[env.EMPTY_STRING]),
-
-    set: type.watcher | void,
-
-    sync: type.watcher,
-
-    unbind: Function
-
-    if (isComponent) {
-
-      let component = node as Yox,
-
-      viewBinding = component.$model as string
-
-      set = function (newValue: any) {
-        if (set) {
-          component.set(viewBinding, newValue)
-        }
-      }
-
-      sync = debounceIfNeeded(
-        function (newValue: any) {
-          context.set(dataBinding, newValue)
-        },
-        lazyValue
-      )
-
-      unbind = function () {
-        component.unwatch(viewBinding, sync)
-      }
-
-      component.watch(viewBinding, sync)
-
-    }
-    else {
-
-      let element = node as HTMLElement,
-
-      control = vnode.tag === 'select'
-        ? selectControl
-        : inputControl,
-
-      // checkbox,radio,select 监听的是 change 事件
-      eventName = env.EVENT_CHANGE
-
-      if (control === inputControl) {
-        const type = (node as HTMLInputElement).type
-        if (inputTypes[type]) {
-          control = inputTypes[type]
-        }
-        // 如果是输入框，则切换成 model 事件
-        // model 事件是个 yox-dom 实现的特殊事件
-        // 不会在输入法组合文字过程中得到触发事件
-        else if (lazyValue !== env.TRUE) {
-          eventName = env.EVENT_MODEL
-        }
-      }
-
-      set = function (newValue: any) {
-        if (set) {
-          control.set(element, newValue)
-        }
-      }
-
-      sync = debounceIfNeeded(
-        function () {
-          control.sync(element, dataBinding, context)
-        },
-        lazyValue
-      )
-
-      unbind = function () {
-        api.off(element, eventName, sync as type.listener)
-      }
-
-      api.on(element, eventName, sync as type.listener)
-
-      control.set(element, directive.value)
-
-    }
-
-    // 监听数据，修改界面
-    context.watch(dataBinding, set as type.watcher)
-
-    vnode.data[directive.key] = function () {
-      context.unwatch(dataBinding, set as type.watcher)
-      set = env.UNDEFINED
-      unbind()
-    }
-
-  },
-
-  unbind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
-    execute(vnode.data[directive.key])
-  }
 }
 
-export default directive
+export const once = env.TRUE
+
+export function bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
+
+  let { context, lazy, isComponent } = vnode,
+
+  dataBinding = directive.binding as string,
+
+  lazyValue = lazy && (lazy[config.DIRECTIVE_MODEL] || lazy[env.EMPTY_STRING]),
+
+  set: type.watcher | void,
+
+  sync: type.watcher,
+
+  unbind: Function
+
+  if (isComponent) {
+
+    let component = node as Yox,
+
+    viewBinding = component.$model as string
+
+    set = function (newValue: any) {
+      if (set) {
+        component.set(viewBinding, newValue)
+      }
+    }
+
+    sync = debounceIfNeeded(
+      function (newValue: any) {
+        context.set(dataBinding, newValue)
+      },
+      lazyValue
+    )
+
+    unbind = function () {
+      component.unwatch(viewBinding, sync)
+    }
+
+    component.watch(viewBinding, sync)
+
+  }
+  else {
+
+    let element = node as HTMLElement,
+
+    control = vnode.tag === 'select'
+      ? selectControl
+      : inputControl,
+
+    // checkbox,radio,select 监听的是 change 事件
+    eventName = env.EVENT_CHANGE
+
+    if (control === inputControl) {
+      const type = (node as HTMLInputElement).type
+      if (inputTypes[type]) {
+        control = inputTypes[type]
+      }
+      // 如果是输入框，则切换成 model 事件
+      // model 事件是个 yox-dom 实现的特殊事件
+      // 不会在输入法组合文字过程中得到触发事件
+      else if (lazyValue !== env.TRUE) {
+        eventName = env.EVENT_MODEL
+      }
+    }
+
+    set = function (newValue: any) {
+      if (set) {
+        control.set(element, newValue)
+      }
+    }
+
+    sync = debounceIfNeeded(
+      function () {
+        control.sync(element, dataBinding, context)
+      },
+      lazyValue
+    )
+
+    unbind = function () {
+      domApi.off(element, eventName, sync as type.listener)
+    }
+
+    domApi.on(element, eventName, sync as type.listener)
+
+    control.set(element, directive.value)
+
+  }
+
+  // 监听数据，修改界面
+  context.watch(dataBinding, set as type.watcher)
+
+  vnode.data[directive.key] = function () {
+    context.unwatch(dataBinding, set as type.watcher)
+    set = env.UNDEFINED
+    unbind()
+  }
+
+}
+
+export function unbind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
+  execute(vnode.data[directive.key])
+}

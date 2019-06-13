@@ -21,6 +21,7 @@ import * as templateGenerator from '../../yox-template-compiler/src/generator'
 import * as templateRender from '../../yox-template-compiler/src/renderer'
 
 import * as type from '../../yox-type/src/type'
+import * as domApi from '../../yox-dom/src/dom'
 
 import VNode from '../../yox-type/src/vnode/VNode'
 import YoxInterface from '../../yox-type/src/interface/Yox'
@@ -36,11 +37,9 @@ import PropRule from '../../yox-type/src/interface/PropRule'
 import Computed from '../../yox-observer/src/Computed'
 import Observer from '../../yox-observer/src/Observer'
 
-import domApi from '../../yox-dom/src/dom'
-
-import event from './directive/event'
-import model from './directive/model'
-import binding from './directive/binding'
+import * as event from './directive/event'
+import * as model from './directive/model'
+import * as binding from './directive/binding'
 import hasSlot from './filter/hasSlot'
 
 
