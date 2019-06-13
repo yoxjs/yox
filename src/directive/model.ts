@@ -216,7 +216,7 @@ directive: DirectiveHooks = {
 
       api.on(element, eventName, sync as type.listener)
 
-      control.set(element, vnode.model)
+      control.set(element, directive.value)
 
     }
 

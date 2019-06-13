@@ -233,6 +233,7 @@ export default class Yox implements YoxInterface {
     let {
       data,
       props,
+      vnode,
       propTypes,
       computed,
       events,
@@ -240,13 +241,6 @@ export default class Yox implements YoxInterface {
       watchers,
       extensions,
     } = $options
-
-    // 如果传了 props，则 data 应该是个 function
-    if (process.env.NODE_ENV === 'development') {
-      if (props && is.object(data)) {
-        logger.fatal('"data" option should be a function.')
-      }
-    }
 
     if (extensions) {
       object.extend(instance, extensions)
@@ -290,6 +284,12 @@ export default class Yox implements YoxInterface {
     }
 
     // 后放 data
+    if (process.env.NODE_ENV === 'development') {
+      if (vnode && is.object(data)) {
+        logger.warn(`child component's data should be a function which return an object.`)
+      }
+    }
+
     const extend = is.func(data) ? execute(data, instance, options) : data
     if (is.object(extend)) {
       object.each(
@@ -311,7 +311,7 @@ export default class Yox implements YoxInterface {
         function (method: Function, name: string) {
           if (process.env.NODE_ENV === 'development') {
             if (instance[name]) {
-              logger.fatal(`method [${name}] is conflicted with built-in methods.`)
+              logger.fatal(`method "${name}" is conflicted with built-in methods.`)
             }
           }
           instance[name] = method
@@ -333,7 +333,6 @@ export default class Yox implements YoxInterface {
 
       {
         el,
-        vnode,
         root,
         model,
         parent,
@@ -367,7 +366,7 @@ export default class Yox implements YoxInterface {
             placeholder = env.UNDEFINED
           }
           else if (process.env.NODE_ENV === 'development') {
-            logger.fatal(`"${template}" 选择器找不到对应的元素`)
+            logger.fatal(`selector "${template}" can't match an element.`)
           }
         }
       }
@@ -384,7 +383,7 @@ export default class Yox implements YoxInterface {
             placeholder = domApi.find(selector)
             if (process.env.NODE_ENV === 'development') {
               if (!placeholder) {
-                logger.fatal(`"${selector}" 选择器找不到对应的元素`)
+                logger.fatal(`selector "${selector}" can't match an element.`)
               }
             }
           }
@@ -468,7 +467,7 @@ export default class Yox implements YoxInterface {
 
           if (process.env.NODE_ENV === 'development') {
             if (!placeholder) {
-              logger.fatal('根组件不传 el 是几个意思？')
+              logger.fatal('"el" option is required for root component.')
             }
           }
 
@@ -491,7 +490,7 @@ export default class Yox implements YoxInterface {
       }
       else if (process.env.NODE_ENV === 'development') {
         if (placeholder || vnode) {
-          logger.fatal('组件不写 template 是几个意思？')
+          logger.fatal('"template" option is required.')
         }
       }
 
@@ -695,19 +694,17 @@ export default class Yox implements YoxInterface {
       options.vnode = vnode
       options.replace = env.TRUE
 
-      let { props, slots } = vnode,
+      let { props, slots, directives } = vnode,
 
-      modelKey = options.model || env.RAW_VALUE,
+      model = directives && directives[config.DIRECTIVE_MODEL]
 
-      modelValue = vnode.model
-
-      options.model = modelKey
-
-      if (isDef(modelValue)) {
+      if (model) {
         if (!props) {
           props = {}
         }
-        props[modelKey] = modelValue
+        const key = options.model || config.MODEL_PROP_DEFAULT
+        props[key] = model.value
+        options.model = key
       }
 
       if (props) {

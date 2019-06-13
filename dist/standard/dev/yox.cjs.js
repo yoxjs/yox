@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.59
+ * yox.js v1.0.0-alpha.60
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1322,6 +1322,7 @@ var DIRECTIVE_MODEL = 'model';
 var DIRECTIVE_EVENT = 'event';
 var DIRECTIVE_BINDING = 'binding';
 var DIRECTIVE_CUSTOM = 'o';
+var MODEL_PROP_DEFAULT = 'value';
 var HOOK_BEFORE_CREATE = 'beforeCreate';
 var HOOK_AFTER_CREATE = 'afterCreate';
 var HOOK_BEFORE_MOUNT = 'beforeMount';
@@ -1421,20 +1422,18 @@ function remove$1(vnode) {
 }
 
 function update$3(vnode, oldVnode) {
-    var data = vnode.data, ref = vnode.ref, props = vnode.props, slots = vnode.slots, model = vnode.model, context = vnode.context, node;
+    var data = vnode.data, ref = vnode.ref, props = vnode.props, slots = vnode.slots, directives = vnode.directives, context = vnode.context, node;
     if (vnode.isComponent) {
         node = data[COMPONENT];
         // 更新时才要 set
         // 因为初始化时，所有这些都经过构造函数完成了
         if (oldVnode) {
-            // 更新组件时，如果写了 <Component model="xx"/>
-            // 必须把双向绑定的值写到 props 里，否则一旦 propTypes 加了默认值
-            // 传下去的数据就错了
-            if (isDef(model)) {
+            var model = directives && directives[DIRECTIVE_MODEL];
+            if (model) {
                 if (!props) {
                     props = {};
                 }
-                props[node.$model] = model;
+                props[node.$model] = model.value;
             }
             if (props) {
                 node.checkProps(props);
@@ -3272,8 +3271,15 @@ function compile$1(content) {
             else if (isElement) {
                 checkElement(node);
             }
-            else if (currentElement && isAttribute && isSpecialAttr(currentElement, node)) {
-                bindSpecialAttr(currentElement, node);
+            else if (currentElement) {
+                if (isAttribute) {
+                    if (isSpecialAttr(currentElement, node)) {
+                        bindSpecialAttr(currentElement, node);
+                    }
+                }
+                else if (isDirective) {
+                    checkDirective(currentElement, node);
+                }
             }
             return node;
         }
@@ -3545,6 +3551,15 @@ function compile$1(content) {
             // 低版本 IE 需要给 option 标签强制加 value
             else if (tag === 'option' && !hasValue_1) {
                 element.isOption = TRUE;
+            }
+        }
+    }, checkDirective = function (element, directive) {
+        {
+            // model 不能写在 if 里，影响节点的静态结构
+            if (directive.ns === DIRECTIVE_MODEL) {
+                if (last(nodeStack) !== element) {
+                    fatal$1("model \u4E0D\u80FD\u5199\u5728 if \u5185");
+                }
             }
         }
     }, bindSpecialAttr = function (element, attr) {
@@ -4920,11 +4935,11 @@ function render(context, template, filters, partials, directives, transitions) {
         });
         return holder.value;
     }, renderModelVnode = function (holder) {
-        $vnode.model = holder.value;
         setPair($vnode, 'directives', DIRECTIVE_MODEL, {
             ns: DIRECTIVE_MODEL,
             name: EMPTY_STRING,
             key: DIRECTIVE_MODEL,
+            value: holder.value,
             binding: holder.keypath,
             hooks: directives[DIRECTIVE_MODEL]
         });
@@ -6279,7 +6294,7 @@ var inputControl = {
                 domApi.off(element_1, eventName_1, sync);
             };
             domApi.on(element_1, eventName_1, sync);
-            control_1.set(element_1, vnode.model);
+            control_1.set(element_1, directive.value);
         }
         // 监听数据，修改界面
         context.watch(dataBinding, set);
@@ -6346,13 +6361,7 @@ var Yox = /** @class */ (function () {
         execute($options[HOOK_BEFORE_CREATE], instance, $options);
         execute(Yox[HOOK_BEFORE_CREATE], UNDEFINED, $options);
         instance.$options = $options;
-        var data = $options.data, props = $options.props, propTypes = $options.propTypes, computed = $options.computed, events = $options.events, methods = $options.methods, watchers = $options.watchers, extensions = $options.extensions;
-        // 如果传了 props，则 data 应该是个 function
-        {
-            if (props && object(data)) {
-                fatal('"data" option should be a function.');
-            }
-        }
+        var data = $options.data, props = $options.props, vnode = $options.vnode, propTypes = $options.propTypes, computed = $options.computed, events = $options.events, methods = $options.methods, watchers = $options.watchers, extensions = $options.extensions;
         if (extensions) {
             extend(instance, extensions);
         }
@@ -6385,6 +6394,11 @@ var Yox = /** @class */ (function () {
             });
         }
         // 后放 data
+        {
+            if (vnode && object(data)) {
+                warn("child component's data should be a function which return an object.");
+            }
+        }
         var extend$1 = func(data) ? execute(data, instance, options) : data;
         if (object(extend$1)) {
             each$2(extend$1, function (value, key) {
@@ -6400,7 +6414,7 @@ var Yox = /** @class */ (function () {
             each$2(methods, function (method, name) {
                 {
                     if (instance[name]) {
-                        fatal("method [" + name + "] is conflicted with built-in methods.");
+                        fatal("method \"" + name + "\" is conflicted with built-in methods.");
                     }
                 }
                 instance[name] = method;
@@ -6413,7 +6427,7 @@ var Yox = /** @class */ (function () {
             instance.on(events);
         }
         {
-            var placeholder = UNDEFINED, el = $options.el, vnode = $options.vnode, root = $options.root, model_1 = $options.model, parent = $options.parent, context = $options.context, replace = $options.replace, template = $options.template, transitions = $options.transitions, components = $options.components, directives = $options.directives, partials = $options.partials, filters = $options.filters, slots = $options.slots;
+            var placeholder = UNDEFINED, el = $options.el, root = $options.root, model_1 = $options.model, parent = $options.parent, context = $options.context, replace = $options.replace, template = $options.template, transitions = $options.transitions, components = $options.components, directives = $options.directives, partials = $options.partials, filters = $options.filters, slots = $options.slots;
             if (model_1) {
                 instance.$model = model_1;
             }
@@ -6431,7 +6445,7 @@ var Yox = /** @class */ (function () {
                         placeholder = UNDEFINED;
                     }
                     else {
-                        fatal("\"" + template + "\" \u9009\u62E9\u5668\u627E\u4E0D\u5230\u5BF9\u5E94\u7684\u5143\u7D20");
+                        fatal("selector \"" + template + "\" can't match an element.");
                     }
                 }
             }
@@ -6446,7 +6460,7 @@ var Yox = /** @class */ (function () {
                         placeholder = domApi.find(selector);
                         {
                             if (!placeholder) {
-                                fatal("\"" + selector + "\" \u9009\u62E9\u5668\u627E\u4E0D\u5230\u5BF9\u5E94\u7684\u5143\u7D20");
+                                fatal("selector \"" + selector + "\" can't match an element.");
                             }
                         }
                     }
@@ -6512,7 +6526,7 @@ var Yox = /** @class */ (function () {
                 if (!vnode) {
                     {
                         if (!placeholder) {
-                            fatal('根组件不传 el 是几个意思？');
+                            fatal('"el" option is required for root component.');
                         }
                     }
                     vnode = create(domApi, placeholder, instance, EMPTY_STRING);
@@ -6522,7 +6536,7 @@ var Yox = /** @class */ (function () {
             }
             else {
                 if (placeholder || vnode) {
-                    fatal('组件不写 template 是几个意思？');
+                    fatal('"template" option is required.');
                 }
             }
         }
@@ -6740,13 +6754,14 @@ var Yox = /** @class */ (function () {
             options.context = vnode.context;
             options.vnode = vnode;
             options.replace = TRUE;
-            var props = vnode.props, slots = vnode.slots, modelKey = options.model || RAW_VALUE, modelValue = vnode.model;
-            options.model = modelKey;
-            if (isDef(modelValue)) {
+            var props = vnode.props, slots = vnode.slots, directives = vnode.directives, model_2 = directives && directives[DIRECTIVE_MODEL];
+            if (model_2) {
                 if (!props) {
                     props = {};
                 }
-                props[modelKey] = modelValue;
+                var key = options.model || MODEL_PROP_DEFAULT;
+                props[key] = model_2.value;
+                options.model = key;
             }
             if (props) {
                 options.props = props;
@@ -7022,7 +7037,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.59";
+    Yox.version = "1.0.0-alpha.60";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */

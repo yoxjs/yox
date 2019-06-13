@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.59
+ * yox.js v1.0.0-alpha.60
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1992,7 +1992,7 @@
           execute($options[HOOK_BEFORE_CREATE], instance, $options);
           execute(Yox[HOOK_BEFORE_CREATE], UNDEFINED, $options);
           instance.$options = $options;
-          var data = $options.data, props = $options.props, propTypes = $options.propTypes, computed = $options.computed, events = $options.events, methods = $options.methods, watchers = $options.watchers, extensions = $options.extensions;
+          var data = $options.data, props = $options.props, vnode = $options.vnode, propTypes = $options.propTypes, computed = $options.computed, events = $options.events, methods = $options.methods, watchers = $options.watchers, extensions = $options.extensions;
           if (extensions) {
               extend(instance, extensions);
           }
@@ -2021,7 +2021,6 @@
                   observer.addComputed(keypath, options);
               });
           }
-          // 后放 data
           var extend$1 = func(data) ? execute(data, instance, options) : data;
           if (object(extend$1)) {
               each$2(extend$1, function (value, key) {
@@ -2338,7 +2337,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.59";
+      Yox.version = "1.0.0-alpha.60";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

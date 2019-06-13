@@ -2,16 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>组件 if</title>
-    <link rel="stylesheet" href="./style.css">
+    <title>组件双向绑定</title>
 </head>
 <body>
     <div id="app"></div>
 
     <script id="template1" type="plain/text">
         <div>
-            <Input1 model="name1" />
-            <Input2 model="name2" />
+            <Input model="name" />
+            {{name}}
         </div>
     </script>
 
@@ -19,7 +18,7 @@
         <input type="text" model="value">
     </script>
 
-    <script src="../dist/yox.js"></script>
+    <script src="../dist/standard/dev/yox.js"></script>
     <script>
 
         var Input = {
@@ -30,38 +29,16 @@
                     value: ''
                 }
             },
-            watchers: {
-                value: function (value) {
-                    console.log(value)
-                }
-            }
         };
 
         var instance = new Yox({
             el: '#app',
             data: {
-                name1: '111',
-                name2: '333'
+                name: '111',
             },
             template: '#template1',
             components: {
-                Input1: function (callback) {
-                    setTimeout(
-                        function () {
-                            callback(Input);
-                        },
-                        200
-                    );
-                },
-                Input2: Input,
-            },
-            watchers: {
-                name1: function (name) {
-                    console.log(name)
-                },
-                name2: function (name) {
-                    console.log(name)
-                }
+                Input: Input,
             }
         });
 
