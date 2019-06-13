@@ -7,7 +7,7 @@
 
 ## options
 
-数据监听支持以下配置：
+数据监听支持以下配置项：
 
 * `watcher`: 监听函数，参数列表是 `(newValue, oldValue, keypath)`
 * `immediate`: 是否立即执行一次监听函数，默认为 `false`
@@ -16,7 +16,18 @@
 
 ### immediate
 
-`immediate` 如果为 `true`，在绑定数据监听后，会立即执行一次 `watcher` 函数。
+`immediate` 如果设置为 `true`，在绑定数据监听后，会立即执行一次 `watcher` 函数。
+
+```js
+this.watch({
+  count: {
+    watcher: function (newValue, oldValue) {
+
+    },
+    immediate: true
+  }
+})
+```
 
 ### sync
 
@@ -40,9 +51,33 @@ this.set('count', 1)
 
 如果你希望数据一旦发生变化，就立即同步调用 `watcher`，可把 `sync` 设置为 `true`。
 
+```js
+this.watch({
+  count: {
+    watcher: function (newValue, oldValue) {
+
+    },
+    sync: true
+  }
+})
+```
+
+> 友情提示：`sync` 是调试神器
+
 ### once
 
 数据发生变化会调用 `watcher`，如果你希望调用 `一次` 就取消数据监听，可把 `once` 设置为 `true`。
+
+```js
+this.watch({
+  count: {
+    watcher: function (newValue, oldValue) {
+
+    },
+    once: true
+  }
+})
+```
 
 ## 配置 watchers
 
