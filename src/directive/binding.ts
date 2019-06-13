@@ -19,6 +19,7 @@ export function bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode
   // 比如延展属性 {{...obj}}，这里 binding 会是 `obj.*`
   let binding = directive.binding as string,
 
+  // 提前判断好是否是模糊匹配，避免 watcher 频繁执行判断逻辑
   isFuzzy = keypathUtil.isFuzzy(binding),
 
   watcher: type.watcher | void = function (newValue: any, _: any, keypath: string) {
@@ -33,11 +34,14 @@ export function bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode
         component.checkProp(name, newValue)
         component.set(name, newValue)
       }
-      else if (isDef(directive.hint)) {
-        domApi.prop(node as HTMLElement, name, newValue)
-      }
       else {
-        domApi.attr(node as HTMLElement, name, newValue)
+        const element = node as HTMLElement
+        if (isDef(directive.hint)) {
+          domApi.prop(element, name, newValue)
+        }
+        else {
+          domApi.attr(element, name, newValue)
+        }
       }
     }
 

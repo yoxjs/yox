@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.60
+ * yox.js v1.0.0-alpha.61
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -4220,17 +4220,17 @@ function stringifyIf(node, stub) {
     if (isDef(yes) || isDef(no)) {
         var isJoin = last(joinStack);
         if (isJoin) {
-            if (!isDef(yes)) {
+            if (isUndef(yes)) {
                 yes = EMPTY;
             }
-            if (!isDef(no)) {
+            if (isUndef(no)) {
                 no = EMPTY;
             }
         }
-        if (!isDef(no)) {
+        if (isUndef(no)) {
             result = test + AND + yes;
         }
-        else if (!isDef(yes)) {
+        else if (isUndef(yes)) {
             result = NOT + test + AND + no;
         }
         else {
@@ -4371,10 +4371,16 @@ nodeGenerator[PROPERTY] = function (node) {
 nodeGenerator[DIRECTIVE] = function (node) {
     var ns = node.ns, name = node.name, key = node.key, value = node.value, expr = node.expr;
     if (ns === DIRECTIVE_LAZY) {
-        return toCall(RENDER_LAZY_VNODE, [toString$1(name), toString$1(value)]);
+        return toCall(RENDER_LAZY_VNODE, [
+            toString$1(name),
+            toString$1(value)
+        ]);
     }
+    // <div transition="name">
     if (ns === RAW_TRANSITION) {
-        return toCall(RENDER_TRANSITION_VNODE, [toString$1(value)]);
+        return toCall(RENDER_TRANSITION_VNODE, [
+            toString$1(value)
+        ]);
     }
     // <input model="id">
     if (ns === DIRECTIVE_MODEL) {
@@ -4431,7 +4437,9 @@ nodeGenerator[SPREAD] = function (node) {
 nodeGenerator[TEXT] = function (node) {
     var result = toString$1(node.text);
     if (last(collectStack) && !last(joinStack)) {
-        return toCall(RENDER_TEXT_VNODE, [result]);
+        return toCall(RENDER_TEXT_VNODE, [
+            result
+        ]);
     }
     return result;
 };
@@ -4479,6 +4487,7 @@ function setPair(target, name, key, value) {
     var data = target[name] || (target[name] = {});
     data[key] = value;
 }
+var KEY_DIRECTIVES = 'directives';
 function render(context, template, filters, partials, directives, transitions) {
     var $scope = { $keypath: EMPTY_STRING }, $stack = [$scope], $vnode, vnodeStack = [], localPartials = {}, findValue = function (stack, index, key, lookup, depIgnore, defaultKeypath) {
         var scope = stack[index], keypath = join$1(scope.$keypath, key), value = stack, holder = valueHolder;
@@ -4596,7 +4605,7 @@ function render(context, template, filters, partials, directives, transitions) {
         $vnode.transition = transitions[name];
     }, renderBindingVnode = function (name, holder, hint) {
         var key = join$1(DIRECTIVE_BINDING, name);
-        setPair($vnode, 'directives', key, {
+        setPair($vnode, KEY_DIRECTIVES, key, {
             ns: DIRECTIVE_BINDING,
             name: name,
             key: key,
@@ -4606,7 +4615,7 @@ function render(context, template, filters, partials, directives, transitions) {
         });
         return holder.value;
     }, renderModelVnode = function (holder) {
-        setPair($vnode, 'directives', DIRECTIVE_MODEL, {
+        setPair($vnode, KEY_DIRECTIVES, DIRECTIVE_MODEL, {
             ns: DIRECTIVE_MODEL,
             name: EMPTY_STRING,
             key: DIRECTIVE_MODEL,
@@ -4615,7 +4624,7 @@ function render(context, template, filters, partials, directives, transitions) {
             hooks: directives[DIRECTIVE_MODEL]
         });
     }, renderEventMethodVnode = function (name, key, value, method, args) {
-        setPair($vnode, 'directives', key, {
+        setPair($vnode, KEY_DIRECTIVES, key, {
             ns: DIRECTIVE_EVENT,
             name: name,
             key: key,
@@ -4624,7 +4633,7 @@ function render(context, template, filters, partials, directives, transitions) {
             handler: createMethodListener(method, args, $stack)
         });
     }, renderEventNameVnode = function (name, key, value, event) {
-        setPair($vnode, 'directives', key, {
+        setPair($vnode, KEY_DIRECTIVES, key, {
             ns: DIRECTIVE_EVENT,
             name: name,
             key: key,
@@ -4634,7 +4643,7 @@ function render(context, template, filters, partials, directives, transitions) {
         });
     }, renderDirectiveVnode = function (name, key, value, method, args, getter) {
         var hooks = directives[name];
-        setPair($vnode, 'directives', key, {
+        setPair($vnode, KEY_DIRECTIVES, key, {
             ns: DIRECTIVE_CUSTOM,
             name: name,
             key: key,
@@ -4654,7 +4663,7 @@ function render(context, template, filters, partials, directives, transitions) {
                 });
                 if (keypath) {
                     var key = join$1(DIRECTIVE_BINDING, keypath);
-                    setPair($vnode, 'directives', key, {
+                    setPair($vnode, KEY_DIRECTIVES, key, {
                         ns: DIRECTIVE_BINDING,
                         name: EMPTY_STRING,
                         key: key,
@@ -4819,6 +4828,349 @@ function render(context, template, filters, partials, directives, transitions) {
     };
     return template(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, toString);
 }
+
+// 这里先写 IE9 支持的接口
+var innerText = 'textContent', innerHTML = 'innerHTML', findElement = function (selector) {
+    var node = DOCUMENT.querySelector(selector);
+    if (node) {
+        return node;
+    }
+}, addEventListener = function (node, type, listener) {
+    node.addEventListener(type, listener, FALSE);
+}, removeEventListener = function (node, type, listener) {
+    node.removeEventListener(type, listener, FALSE);
+}, 
+// IE9 不支持 classList
+addElementClass = function (node, className) {
+    node.classList.add(className);
+}, removeElementClass = function (node, className) {
+    node.classList.remove(className);
+}, createEvent = function (event, node) {
+    return event;
+};
+{
+    if (DOCUMENT) {
+        // 此时 document.body 不一定有值，比如 script 放在 head 里
+        if (!DOCUMENT.documentElement.classList) {
+            addElementClass = function (node, className) {
+                var classes = node.className.split(CHAR_WHITESPACE);
+                if (!has(classes, className)) {
+                    push(classes, className);
+                    node.className = join(classes, CHAR_WHITESPACE);
+                }
+            };
+            removeElementClass = function (node, className) {
+                var classes = node.className.split(CHAR_WHITESPACE);
+                if (remove(classes, className)) {
+                    node.className = join(classes, CHAR_WHITESPACE);
+                }
+            };
+        }
+        // 为 IE9 以下浏览器打补丁
+        {
+            if (!DOCUMENT.addEventListener) {
+                var PROPERTY_CHANGE_1 = 'propertychange';
+                addEventListener = function (node, type, listener) {
+                    if (type === EVENT_INPUT) {
+                        addEventListener(node, PROPERTY_CHANGE_1, 
+                        // 借用 EMITTER，反正只是内部临时用一下...
+                        listener[EMITTER] = function (event) {
+                            if (event.propertyName === RAW_VALUE) {
+                                event = new CustomEvent(event);
+                                event.type = EVENT_INPUT;
+                                execute(listener, this, event);
+                            }
+                        });
+                    }
+                    else if (type === EVENT_CHANGE && isBoxElement_1(node)) {
+                        addEventListener(node, EVENT_CLICK, listener[EMITTER] = function (event) {
+                            event = new CustomEvent(event);
+                            event.type = EVENT_CHANGE;
+                            execute(listener, this, event);
+                        });
+                    }
+                    else {
+                        node.attachEvent("on" + type, listener);
+                    }
+                };
+                removeEventListener = function (node, type, listener) {
+                    if (type === EVENT_INPUT) {
+                        removeEventListener(node, PROPERTY_CHANGE_1, listener[EMITTER]);
+                        delete listener[EMITTER];
+                    }
+                    else if (type === EVENT_CHANGE && isBoxElement_1(node)) {
+                        removeEventListener(node, EVENT_CLICK, listener[EMITTER]);
+                        delete listener[EMITTER];
+                    }
+                    else {
+                        node.detachEvent("on" + type, listener);
+                    }
+                };
+                var isBoxElement_1 = function (node) {
+                    return node.tagName === 'INPUT'
+                        && (node.type === 'radio' || node.type === 'checkbox');
+                };
+                var IEEvent_1 = /** @class */ (function () {
+                    function IEEvent(event, element) {
+                        extend(this, event);
+                        this.currentTarget = element;
+                        this.target = event.srcElement || element;
+                        this.originalEvent = event;
+                    }
+                    IEEvent.prototype.preventDefault = function () {
+                        this.originalEvent.returnValue = FALSE;
+                    };
+                    IEEvent.prototype.stopPropagation = function () {
+                        this.originalEvent.cancelBubble = TRUE;
+                    };
+                    return IEEvent;
+                }());
+                // textContent 不兼容 IE 678
+                innerText = 'innerText';
+                createEvent = function (event, element) {
+                    return new IEEvent_1(event, element);
+                };
+                findElement = function (selector) {
+                    // 去掉 #
+                    if (codeAt(selector, 0) === 35) {
+                        selector = slice(selector, 1);
+                    }
+                    var node = DOCUMENT.getElementById(selector);
+                    if (node) {
+                        return node;
+                    }
+                };
+            }
+        }
+    }
+}
+var CHAR_WHITESPACE = ' ', 
+/**
+ * 绑定在 HTML 元素上的事件发射器
+ */
+EMITTER = '$emitter', 
+/**
+ * 低版本 IE 上 style 标签的专有属性
+ */
+STYLE_SHEET = 'styleSheet', 
+/**
+ * 跟输入事件配套使用的事件
+ */
+COMPOSITION_START = 'compositionstart', 
+/**
+ * 跟输入事件配套使用的事件
+ */
+COMPOSITION_END = 'compositionend', domain = 'http://www.w3.org/', namespaces = {
+    svg: domain + '2000/svg'
+}, specialEvents = {};
+specialEvents[EVENT_MODEL] = {
+    on: function (node, listener) {
+        var locked = FALSE;
+        on(node, COMPOSITION_START, listener[COMPOSITION_START] = function () {
+            locked = TRUE;
+        });
+        on(node, COMPOSITION_END, listener[COMPOSITION_END] = function (event) {
+            locked = FALSE;
+            listener(event);
+        });
+        addEventListener(node, EVENT_INPUT, listener[EVENT_INPUT] = function (event) {
+            if (!locked) {
+                listener(event);
+            }
+        });
+    },
+    off: function (node, listener) {
+        off(node, COMPOSITION_START, listener[COMPOSITION_START]);
+        off(node, COMPOSITION_END, listener[COMPOSITION_END]);
+        removeEventListener(node, EVENT_INPUT, listener[EVENT_INPUT]);
+        listener[COMPOSITION_START] =
+            listener[COMPOSITION_END] =
+                listener[EVENT_INPUT] = UNDEFINED;
+    }
+};
+function createElement$1(tag, isSvg) {
+    return isSvg
+        ? DOCUMENT.createElementNS(namespaces.svg, tag)
+        : DOCUMENT.createElement(tag);
+}
+function createText$1(text) {
+    return DOCUMENT.createTextNode(text);
+}
+function createComment(text) {
+    return DOCUMENT.createComment(text);
+}
+function prop(node, name, value) {
+    if (isDef(value)) {
+        set(node, name, value, FALSE);
+    }
+    else {
+        var holder = get(node, name);
+        if (holder) {
+            return holder.value;
+        }
+    }
+}
+function removeProp(node, name, hint) {
+    set(node, name, hint === HINT_BOOLEAN
+        ? FALSE
+        : EMPTY_STRING, FALSE);
+}
+function attr(node, name, value) {
+    if (isDef(value)) {
+        node.setAttribute(name, value);
+    }
+    else {
+        // value 还可能是 null
+        var value_1 = node.getAttribute(name);
+        if (value_1 != NULL) {
+            return value_1;
+        }
+    }
+}
+function removeAttr(node, name) {
+    node.removeAttribute(name);
+}
+function before(parentNode, node, beforeNode) {
+    parentNode.insertBefore(node, beforeNode);
+}
+function append(parentNode, node) {
+    parentNode.appendChild(node);
+}
+function replace(parentNode, node, oldNode) {
+    parentNode.replaceChild(node, oldNode);
+}
+function remove$2(parentNode, node) {
+    parentNode.removeChild(node);
+}
+function parent(node) {
+    var parentNode = node.parentNode;
+    if (parentNode) {
+        return parentNode;
+    }
+}
+function next(node) {
+    var nextSibling = node.nextSibling;
+    if (nextSibling) {
+        return nextSibling;
+    }
+}
+var find = findElement;
+function tag(node) {
+    if (node.nodeType === 1) {
+        return lower(node.tagName);
+    }
+}
+function text(node, text, isStyle, isOption) {
+    if (isDef(text)) {
+        {
+            if (isStyle && has$2(node, STYLE_SHEET)) {
+                node[STYLE_SHEET].cssText = text;
+            }
+            else {
+                if (isOption) {
+                    node.value = text;
+                }
+                node[innerText] = text;
+            }
+        }
+    }
+    else {
+        return node[innerText];
+    }
+}
+function html(node, html, isStyle, isOption) {
+    if (isDef(html)) {
+        {
+            if (isStyle && has$2(node, STYLE_SHEET)) {
+                node[STYLE_SHEET].cssText = html;
+            }
+            else {
+                if (isOption) {
+                    node.value = html;
+                }
+                node[innerHTML] = html;
+            }
+        }
+    }
+    else {
+        return node[innerHTML];
+    }
+}
+var addClass = addElementClass;
+var removeClass = removeElementClass;
+function on(node, type, listener) {
+    var emitter = node[EMITTER] || (node[EMITTER] = new Emitter()), nativeListeners = emitter.nativeListeners || (emitter.nativeListeners = {});
+    // 一个元素，相同的事件，只注册一个 native listener
+    if (!nativeListeners[type]) {
+        // 特殊事件
+        var special = specialEvents[type], 
+        // 唯一的原生监听器
+        nativeListener = function (event) {
+            var customEvent = event instanceof CustomEvent
+                ? event
+                : new CustomEvent(event.type, createEvent(event, node));
+            if (customEvent.type !== type) {
+                customEvent.type = type;
+            }
+            emitter.fire(type, [customEvent]);
+        };
+        nativeListeners[type] = nativeListener;
+        if (special) {
+            special.on(node, nativeListener);
+        }
+        else {
+            addEventListener(node, type, nativeListener);
+        }
+    }
+    emitter.on(type, listener);
+}
+function off(node, type, listener) {
+    var emitter = node[EMITTER], listeners = emitter.listeners, nativeListeners = emitter.nativeListeners;
+    // emitter 会根据 type 和 listener 参数进行适当的删除
+    emitter.off(type, listener);
+    // 如果注册的 type 事件都解绑了，则去掉原生监听器
+    if (nativeListeners && !emitter.has(type)) {
+        var special = specialEvents[type], nativeListener = nativeListeners[type];
+        if (special) {
+            special.off(node, nativeListener);
+        }
+        else {
+            removeEventListener(node, type, nativeListener);
+        }
+        delete nativeListeners[type];
+    }
+    if (falsy$2(listeners)) {
+        node[EMITTER] = UNDEFINED;
+    }
+}
+function addSpecialEvent(type, hooks) {
+    specialEvents[type] = hooks;
+}
+
+var domApi = /*#__PURE__*/Object.freeze({
+  createElement: createElement$1,
+  createText: createText$1,
+  createComment: createComment,
+  prop: prop,
+  removeProp: removeProp,
+  attr: attr,
+  removeAttr: removeAttr,
+  before: before,
+  append: append,
+  replace: replace,
+  remove: remove$2,
+  parent: parent,
+  next: next,
+  find: find,
+  tag: tag,
+  text: text,
+  html: html,
+  addClass: addClass,
+  removeClass: removeClass,
+  on: on,
+  off: off,
+  addSpecialEvent: addSpecialEvent
+});
 
 /**
  * 计算属性
@@ -5532,325 +5884,6 @@ var Observer = /** @class */ (function () {
     return Observer;
 }());
 
-// 这里先写 IE9 支持的接口
-var innerText = 'textContent', innerHTML = 'innerHTML', findElement = function (selector) {
-    var node = DOCUMENT.querySelector(selector);
-    if (node) {
-        return node;
-    }
-}, addEventListener = function (node, type, listener) {
-    node.addEventListener(type, listener, FALSE);
-}, removeEventListener = function (node, type, listener) {
-    node.removeEventListener(type, listener, FALSE);
-}, 
-// IE9 不支持 classList
-addClass = function (node, className) {
-    node.classList.add(className);
-}, removeClass = function (node, className) {
-    node.classList.remove(className);
-}, createEvent = function (event, node) {
-    return event;
-};
-{
-    if (DOCUMENT) {
-        // 此时 document.body 不一定有值，比如 script 放在 head 里
-        if (!DOCUMENT.documentElement.classList) {
-            addClass = function (node, className) {
-                var classes = node.className.split(CHAR_WHITESPACE);
-                if (!has(classes, className)) {
-                    push(classes, className);
-                    node.className = join(classes, CHAR_WHITESPACE);
-                }
-            };
-            removeClass = function (node, className) {
-                var classes = node.className.split(CHAR_WHITESPACE);
-                if (remove(classes, className)) {
-                    node.className = join(classes, CHAR_WHITESPACE);
-                }
-            };
-        }
-        // 为 IE9 以下浏览器打补丁
-        {
-            if (!DOCUMENT.addEventListener) {
-                var PROPERTY_CHANGE_1 = 'propertychange';
-                addEventListener = function (node, type, listener) {
-                    if (type === EVENT_INPUT) {
-                        addEventListener(node, PROPERTY_CHANGE_1, 
-                        // 借用 EMITTER，反正只是内部临时用一下...
-                        listener[EMITTER] = function (event) {
-                            if (event.propertyName === RAW_VALUE) {
-                                event = new CustomEvent(event);
-                                event.type = EVENT_INPUT;
-                                execute(listener, this, event);
-                            }
-                        });
-                    }
-                    else if (type === EVENT_CHANGE && isBoxElement_1(node)) {
-                        addEventListener(node, EVENT_CLICK, listener[EMITTER] = function (event) {
-                            event = new CustomEvent(event);
-                            event.type = EVENT_CHANGE;
-                            execute(listener, this, event);
-                        });
-                    }
-                    else {
-                        node.attachEvent("on" + type, listener);
-                    }
-                };
-                removeEventListener = function (node, type, listener) {
-                    if (type === EVENT_INPUT) {
-                        removeEventListener(node, PROPERTY_CHANGE_1, listener[EMITTER]);
-                        delete listener[EMITTER];
-                    }
-                    else if (type === EVENT_CHANGE && isBoxElement_1(node)) {
-                        removeEventListener(node, EVENT_CLICK, listener[EMITTER]);
-                        delete listener[EMITTER];
-                    }
-                    else {
-                        node.detachEvent("on" + type, listener);
-                    }
-                };
-                var isBoxElement_1 = function (node) {
-                    return node.tagName === 'INPUT'
-                        && (node.type === 'radio' || node.type === 'checkbox');
-                };
-                var IEEvent_1 = /** @class */ (function () {
-                    function IEEvent(event, element) {
-                        extend(this, event);
-                        this.currentTarget = element;
-                        this.target = event.srcElement || element;
-                        this.originalEvent = event;
-                    }
-                    IEEvent.prototype.preventDefault = function () {
-                        this.originalEvent.returnValue = FALSE;
-                    };
-                    IEEvent.prototype.stopPropagation = function () {
-                        this.originalEvent.cancelBubble = TRUE;
-                    };
-                    return IEEvent;
-                }());
-                // textContent 不兼容 IE 678
-                innerText = 'innerText';
-                createEvent = function (event, element) {
-                    return new IEEvent_1(event, element);
-                };
-                findElement = function (selector) {
-                    // 去掉 #
-                    if (codeAt(selector, 0) === 35) {
-                        selector = slice(selector, 1);
-                    }
-                    var node = DOCUMENT.getElementById(selector);
-                    if (node) {
-                        return node;
-                    }
-                };
-            }
-        }
-    }
-}
-var CHAR_WHITESPACE = ' ', 
-/**
- * 绑定在 HTML 元素上的事件发射器
- */
-EMITTER = '$emitter', 
-/**
- * 低版本 IE 上 style 标签的专有属性
- */
-STYLE_SHEET = 'styleSheet', 
-/**
- * 跟输入事件配套使用的事件
- */
-COMPOSITION_START = 'compositionstart', 
-/**
- * 跟输入事件配套使用的事件
- */
-COMPOSITION_END = 'compositionend', domain = 'http://www.w3.org/', namespaces = {
-    svg: domain + '2000/svg'
-}, specialEvents = {}, domApi = {
-    createElement: function (tag, isSvg) {
-        return isSvg
-            ? DOCUMENT.createElementNS(namespaces.svg, tag)
-            : DOCUMENT.createElement(tag);
-    },
-    createText: function (text) {
-        return DOCUMENT.createTextNode(text);
-    },
-    createComment: function (text) {
-        return DOCUMENT.createComment(text);
-    },
-    prop: function (node, name, value) {
-        if (isDef(value)) {
-            set(node, name, value, FALSE);
-        }
-        else {
-            var holder = get(node, name);
-            if (holder) {
-                return holder.value;
-            }
-        }
-    },
-    removeProp: function (node, name, hint) {
-        set(node, name, hint === HINT_BOOLEAN
-            ? FALSE
-            : EMPTY_STRING, FALSE);
-    },
-    attr: function (node, name, value) {
-        if (isDef(value)) {
-            node.setAttribute(name, value);
-        }
-        else {
-            // value 还可能是 null
-            var value_1 = node.getAttribute(name);
-            if (value_1 != NULL) {
-                return value_1;
-            }
-        }
-    },
-    removeAttr: function (node, name) {
-        node.removeAttribute(name);
-    },
-    before: function (parentNode, node, beforeNode) {
-        parentNode.insertBefore(node, beforeNode);
-    },
-    append: function (parentNode, node) {
-        parentNode.appendChild(node);
-    },
-    replace: function (parentNode, node, oldNode) {
-        parentNode.replaceChild(node, oldNode);
-    },
-    remove: function (parentNode, node) {
-        parentNode.removeChild(node);
-    },
-    parent: function (node) {
-        var parentNode = node.parentNode;
-        if (parentNode) {
-            return parentNode;
-        }
-    },
-    next: function (node) {
-        var nextSibling = node.nextSibling;
-        if (nextSibling) {
-            return nextSibling;
-        }
-    },
-    find: findElement,
-    tag: function (node) {
-        if (node.nodeType === 1) {
-            return lower(node.tagName);
-        }
-    },
-    text: function (node, text, isStyle, isOption) {
-        if (isDef(text)) {
-            {
-                if (isStyle && has$2(node, STYLE_SHEET)) {
-                    node[STYLE_SHEET].cssText = text;
-                }
-                else {
-                    if (isOption) {
-                        node.value = text;
-                    }
-                    node[innerText] = text;
-                }
-            }
-        }
-        else {
-            return node[innerText];
-        }
-    },
-    html: function (node, html, isStyle, isOption) {
-        if (isDef(html)) {
-            {
-                if (isStyle && has$2(node, STYLE_SHEET)) {
-                    node[STYLE_SHEET].cssText = html;
-                }
-                else {
-                    if (isOption) {
-                        node.value = html;
-                    }
-                    node[innerHTML] = html;
-                }
-            }
-        }
-        else {
-            return node[innerHTML];
-        }
-    },
-    addClass: addClass,
-    removeClass: removeClass,
-    on: function (node, type, listener) {
-        var emitter = node[EMITTER] || (node[EMITTER] = new Emitter()), nativeListeners = emitter.nativeListeners || (emitter.nativeListeners = {});
-        // 一个元素，相同的事件，只注册一个 native listener
-        if (!nativeListeners[type]) {
-            // 特殊事件
-            var special = specialEvents[type], 
-            // 唯一的原生监听器
-            nativeListener = function (event) {
-                var customEvent = event instanceof CustomEvent
-                    ? event
-                    : new CustomEvent(event.type, createEvent(event, node));
-                if (customEvent.type !== type) {
-                    customEvent.type = type;
-                }
-                emitter.fire(type, [customEvent]);
-            };
-            nativeListeners[type] = nativeListener;
-            if (special) {
-                special.on(node, nativeListener);
-            }
-            else {
-                addEventListener(node, type, nativeListener);
-            }
-        }
-        emitter.on(type, listener);
-    },
-    off: function (node, type, listener) {
-        var emitter = node[EMITTER], listeners = emitter.listeners, nativeListeners = emitter.nativeListeners;
-        // emitter 会根据 type 和 listener 参数进行适当的删除
-        emitter.off(type, listener);
-        // 如果注册的 type 事件都解绑了，则去掉原生监听器
-        if (nativeListeners && !emitter.has(type)) {
-            var special = specialEvents[type], nativeListener = nativeListeners[type];
-            if (special) {
-                special.off(node, nativeListener);
-            }
-            else {
-                removeEventListener(node, type, nativeListener);
-            }
-            delete nativeListeners[type];
-        }
-        if (falsy$2(listeners)) {
-            node[EMITTER] = UNDEFINED;
-        }
-    },
-    addSpecialEvent: function (type, hooks) {
-        specialEvents[type] = hooks;
-    }
-};
-specialEvents[EVENT_MODEL] = {
-    on: function (node, listener) {
-        var locked = FALSE;
-        domApi.on(node, COMPOSITION_START, listener[COMPOSITION_START] = function () {
-            locked = TRUE;
-        });
-        domApi.on(node, COMPOSITION_END, listener[COMPOSITION_END] = function (event) {
-            locked = FALSE;
-            listener(event);
-        });
-        addEventListener(node, EVENT_INPUT, listener[EVENT_INPUT] = function (event) {
-            if (!locked) {
-                listener(event);
-            }
-        });
-    },
-    off: function (node, listener) {
-        domApi.off(node, COMPOSITION_START, listener[COMPOSITION_START]);
-        domApi.off(node, COMPOSITION_END, listener[COMPOSITION_END]);
-        removeEventListener(node, EVENT_INPUT, listener[EVENT_INPUT]);
-        listener[COMPOSITION_START] =
-            listener[COMPOSITION_END] =
-                listener[EVENT_INPUT] = UNDEFINED;
-    }
-};
-
 /**
  * 节流调用
  *
@@ -5877,41 +5910,44 @@ function debounce (fn, delay, immediate) {
     };
 }
 
-var directive = {
-    bind: function (node, directive, vnode) {
-        var name = directive.name, handler = directive.handler, lazy = vnode.lazy;
-        if (!handler) {
-            return;
-        }
-        if (lazy) {
-            var value = lazy[name] || lazy[EMPTY_STRING];
-            if (value === TRUE) {
-                name = EVENT_CHANGE;
-            }
-            else if (value > 0) {
-                handler = debounce(handler, value, 
-                // 避免连续多次点击，主要用于提交表单场景
-                // 移动端的 tap 事件可自行在业务层打补丁实现
-                name === EVENT_CLICK || name === EVENT_TAP);
-            }
-        }
-        if (vnode.isComponent) {
-            node.on(name, handler);
-            vnode.data[directive.key] = function () {
-                node.off(name, handler);
-            };
-        }
-        else {
-            domApi.on(node, name, handler);
-            vnode.data[directive.key] = function () {
-                domApi.off(node, name, handler);
-            };
-        }
-    },
-    unbind: function (node, directive, vnode) {
-        execute(vnode.data[directive.key]);
+function bind(node, directive, vnode) {
+    var name = directive.name, handler = directive.handler, lazy = vnode.lazy;
+    if (!handler) {
+        return;
     }
-};
+    if (lazy) {
+        var value = lazy[name] || lazy[EMPTY_STRING];
+        if (value === TRUE) {
+            name = EVENT_CHANGE;
+        }
+        else if (value > 0) {
+            handler = debounce(handler, value, 
+            // 避免连续多次点击，主要用于提交表单场景
+            // 移动端的 tap 事件可自行在业务层打补丁实现
+            name === EVENT_CLICK || name === EVENT_TAP);
+        }
+    }
+    if (vnode.isComponent) {
+        node.on(name, handler);
+        vnode.data[directive.key] = function () {
+            node.off(name, handler);
+        };
+    }
+    else {
+        on(node, name, handler);
+        vnode.data[directive.key] = function () {
+            off(node, name, handler);
+        };
+    }
+}
+function unbind(node, directive, vnode) {
+    execute(vnode.data[directive.key]);
+}
+
+var event = /*#__PURE__*/Object.freeze({
+  bind: bind,
+  unbind: unbind
+});
 
 function debounceIfNeeded(fn, lazy) {
     // 应用 lazy
@@ -5990,103 +6026,117 @@ var inputControl = {
 }, inputTypes = {
     radio: radioControl,
     checkbox: checkboxControl
-}, directive$1 = {
-    once: TRUE,
-    bind: function (node, directive, vnode) {
-        var context = vnode.context, lazy = vnode.lazy, isComponent = vnode.isComponent, dataBinding = directive.binding, lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[EMPTY_STRING]), set, sync, unbind;
-        if (isComponent) {
-            var component_1 = node, viewBinding_1 = component_1.$model;
-            set = function (newValue) {
-                if (set) {
-                    component_1.set(viewBinding_1, newValue);
-                }
-            };
-            sync = debounceIfNeeded(function (newValue) {
-                context.set(dataBinding, newValue);
-            }, lazyValue);
-            unbind = function () {
-                component_1.unwatch(viewBinding_1, sync);
-            };
-            component_1.watch(viewBinding_1, sync);
-        }
-        else {
-            var element_1 = node, control_1 = vnode.tag === 'select'
-                ? selectControl
-                : inputControl, 
-            // checkbox,radio,select 监听的是 change 事件
-            eventName_1 = EVENT_CHANGE;
-            if (control_1 === inputControl) {
-                var type_1 = node.type;
-                if (inputTypes[type_1]) {
-                    control_1 = inputTypes[type_1];
-                }
-                // 如果是输入框，则切换成 model 事件
-                // model 事件是个 yox-dom 实现的特殊事件
-                // 不会在输入法组合文字过程中得到触发事件
-                else if (lazyValue !== TRUE) {
-                    eventName_1 = EVENT_MODEL;
-                }
-            }
-            set = function (newValue) {
-                if (set) {
-                    control_1.set(element_1, newValue);
-                }
-            };
-            sync = debounceIfNeeded(function () {
-                control_1.sync(element_1, dataBinding, context);
-            }, lazyValue);
-            unbind = function () {
-                domApi.off(element_1, eventName_1, sync);
-            };
-            domApi.on(element_1, eventName_1, sync);
-            control_1.set(element_1, directive.value);
-        }
-        // 监听数据，修改界面
-        context.watch(dataBinding, set);
-        vnode.data[directive.key] = function () {
-            context.unwatch(dataBinding, set);
-            set = UNDEFINED;
-            unbind();
-        };
-    },
-    unbind: function (node, directive, vnode) {
-        execute(vnode.data[directive.key]);
-    }
 };
+var once = TRUE;
+function bind$1(node, directive, vnode) {
+    var context = vnode.context, lazy = vnode.lazy, isComponent = vnode.isComponent, dataBinding = directive.binding, lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[EMPTY_STRING]), set, sync, unbind;
+    if (isComponent) {
+        var component_1 = node, viewBinding_1 = component_1.$model;
+        set = function (newValue) {
+            if (set) {
+                component_1.set(viewBinding_1, newValue);
+            }
+        };
+        sync = debounceIfNeeded(function (newValue) {
+            context.set(dataBinding, newValue);
+        }, lazyValue);
+        unbind = function () {
+            component_1.unwatch(viewBinding_1, sync);
+        };
+        component_1.watch(viewBinding_1, sync);
+    }
+    else {
+        var element_1 = node, control_1 = vnode.tag === 'select'
+            ? selectControl
+            : inputControl, 
+        // checkbox,radio,select 监听的是 change 事件
+        eventName_1 = EVENT_CHANGE;
+        if (control_1 === inputControl) {
+            var type_1 = node.type;
+            if (inputTypes[type_1]) {
+                control_1 = inputTypes[type_1];
+            }
+            // 如果是输入框，则切换成 model 事件
+            // model 事件是个 yox-dom 实现的特殊事件
+            // 不会在输入法组合文字过程中得到触发事件
+            else if (lazyValue !== TRUE) {
+                eventName_1 = EVENT_MODEL;
+            }
+        }
+        set = function (newValue) {
+            if (set) {
+                control_1.set(element_1, newValue);
+            }
+        };
+        sync = debounceIfNeeded(function () {
+            control_1.sync(element_1, dataBinding, context);
+        }, lazyValue);
+        unbind = function () {
+            off(element_1, eventName_1, sync);
+        };
+        on(element_1, eventName_1, sync);
+        control_1.set(element_1, directive.value);
+    }
+    // 监听数据，修改界面
+    context.watch(dataBinding, set);
+    vnode.data[directive.key] = function () {
+        context.unwatch(dataBinding, set);
+        set = UNDEFINED;
+        unbind();
+    };
+}
+function unbind$1(node, directive, vnode) {
+    execute(vnode.data[directive.key]);
+}
 
-var directive$2 = {
-    once: TRUE,
-    bind: function (node, directive, vnode) {
-        // binding 可能是模糊匹配
-        // 比如延展属性 {{...obj}}，这里 binding 会是 `obj.*`
-        var binding = directive.binding, isFuzzy$1 = isFuzzy(binding), watcher = function (newValue, _, keypath) {
-            if (watcher) {
-                var name = isFuzzy$1
-                    ? matchFuzzy(keypath, binding)
-                    : directive.name;
-                if (vnode.isComponent) {
-                    var component = node;
-                    component.checkProp(name, newValue);
-                    component.set(name, newValue);
-                }
-                else if (isDef(directive.hint)) {
-                    domApi.prop(node, name, newValue);
+var model = /*#__PURE__*/Object.freeze({
+  once: once,
+  bind: bind$1,
+  unbind: unbind$1
+});
+
+var once$1 = TRUE;
+function bind$2(node, directive, vnode) {
+    // binding 可能是模糊匹配
+    // 比如延展属性 {{...obj}}，这里 binding 会是 `obj.*`
+    var binding = directive.binding, 
+    // 提前判断好是否是模糊匹配，避免 watcher 频繁执行判断逻辑
+    isFuzzy$1 = isFuzzy(binding), watcher = function (newValue, _, keypath) {
+        if (watcher) {
+            var name = isFuzzy$1
+                ? matchFuzzy(keypath, binding)
+                : directive.name;
+            if (vnode.isComponent) {
+                var component = node;
+                component.checkProp(name, newValue);
+                component.set(name, newValue);
+            }
+            else {
+                var element = node;
+                if (isDef(directive.hint)) {
+                    prop(element, name, newValue);
                 }
                 else {
-                    domApi.attr(node, name, newValue);
+                    attr(element, name, newValue);
                 }
             }
-        };
-        vnode.context.watch(binding, watcher);
-        vnode.data[directive.key] = function () {
-            vnode.context.unwatch(binding, watcher);
-            watcher = UNDEFINED;
-        };
-    },
-    unbind: function (node, directive, vnode) {
-        execute(vnode.data[directive.key]);
-    }
-};
+        }
+    };
+    vnode.context.watch(binding, watcher);
+    vnode.data[directive.key] = function () {
+        vnode.context.unwatch(binding, watcher);
+        watcher = UNDEFINED;
+    };
+}
+function unbind$2(node, directive, vnode) {
+    execute(vnode.data[directive.key]);
+}
+
+var binding = /*#__PURE__*/Object.freeze({
+  once: once$1,
+  bind: bind$2,
+  unbind: unbind$2
+});
 
 // this type https://jkchao.github.io/typescript-book-chinese/typings/thisType.html
 /**
@@ -6165,9 +6215,9 @@ var Yox = /** @class */ (function () {
             if (string(template)) {
                 // 传了选择器，则取对应元素的 html
                 if (selectorPattern.test(template)) {
-                    placeholder = domApi.find(template);
+                    placeholder = find(template);
                     if (placeholder) {
-                        template = domApi.html(placeholder);
+                        template = html(placeholder);
                         placeholder = UNDEFINED;
                     }
                 }
@@ -6180,14 +6230,14 @@ var Yox = /** @class */ (function () {
                 if (string(el)) {
                     var selector = el;
                     if (selectorPattern.test(selector)) {
-                        placeholder = domApi.find(selector);
+                        placeholder = find(selector);
                     }
                 }
                 else {
                     placeholder = el;
                 }
                 if (!replace) {
-                    domApi.append(placeholder, placeholder = domApi.createComment(EMPTY_STRING));
+                    append(placeholder, placeholder = createComment(EMPTY_STRING));
                 }
             }
             // 根组件
@@ -6714,7 +6764,7 @@ var Yox = /** @class */ (function () {
     /**
      * core 版本
      */
-    Yox.version = "1.0.0-alpha.60";
+    Yox.version = "1.0.0-alpha.61";
     /**
      * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
      */
@@ -6811,7 +6861,7 @@ function setResource(data, name, value, formatValue) {
 {
     Yox['dom'] = domApi;
     // 全局注册内置指令
-    Yox.directive({ event: directive, model: directive$1, binding: directive$2 });
+    Yox.directive({ event: event, model: model, binding: binding });
     // 全局注册内置过滤器
     Yox.filter({ hasSlot: hasSlot });
 }
