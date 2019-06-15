@@ -1,0 +1,1 @@
+{"version":3,"file":"diffWatcher.d.ts","sourceRoot":"","sources":["../../../../../yox-observer/src/function/diffWatcher.ts"],"names":[],"mappings":"AASA,MAAM,CAAC,OAAO,WACZ,OAAO,EAAE,MAAM,EACf,QAAQ,EAAE,GAAG,EACb,QAAQ,EAAE,GAAG,EACb,OAAO,EAAE,MAAM,EAAE,WAAW,EAAE,OAAO,EACrC,QAAQ,EAAE,CAAC,YAAY,EAAE,MAAM,EAAE,OAAO,EAAE,MAAM,EAAE,QAAQ,EAAE,GAAG,EAAE,QAAQ,EAAE,GAAG,KAAK,IAAI,QAiExF"}

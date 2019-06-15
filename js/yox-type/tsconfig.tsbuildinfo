@@ -1,0 +1,589 @@
+{
+  "program": {
+    "fileInfos": {
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es5.d.ts": {
+        "version": "1f753cee573dea40df8a9dc873fef5566957b19ad513874f6643d8dfb14842d0",
+        "signature": "1f753cee573dea40df8a9dc873fef5566957b19ad513874f6643d8dfb14842d0"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2015.d.ts": {
+        "version": "7994d44005046d1413ea31d046577cdda33b8b2470f30281fd9c8b3c99fe2d96",
+        "signature": "7994d44005046d1413ea31d046577cdda33b8b2470f30281fd9c8b3c99fe2d96"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2016.d.ts": {
+        "version": "5f217838d25704474d9ef93774f04164889169ca31475fe423a9de6758f058d1",
+        "signature": "5f217838d25704474d9ef93774f04164889169ca31475fe423a9de6758f058d1"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2017.d.ts": {
+        "version": "459097c7bdd88fc5731367e56591e4f465f2c9de81a35427a7bd473165c34743",
+        "signature": "459097c7bdd88fc5731367e56591e4f465f2c9de81a35427a7bd473165c34743"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2018.d.ts": {
+        "version": "2edd3ddf436ef8e12df876dcae4ecd6a8748577944c477bf4b20d5596e0c9843",
+        "signature": "2edd3ddf436ef8e12df876dcae4ecd6a8748577944c477bf4b20d5596e0c9843"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2019.d.ts": {
+        "version": "0fc0f68d3f4d94aa65fab955592e4a9f2066e6f8ee2f66fcc45adf4037fc167b",
+        "signature": "0fc0f68d3f4d94aa65fab955592e4a9f2066e6f8ee2f66fcc45adf4037fc167b"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.esnext.d.ts": {
+        "version": "1c05c805f62c1c06a60b7812cd8de2dff7a5bda2218ce5edda5d9d298b1c48e1",
+        "signature": "1c05c805f62c1c06a60b7812cd8de2dff7a5bda2218ce5edda5d9d298b1c48e1"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.dom.d.ts": {
+        "version": "973df4e41aea3780ce77073777d37dd5896f684124f4c42409f3a832133837a4",
+        "signature": "973df4e41aea3780ce77073777d37dd5896f684124f4c42409f3a832133837a4"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.dom.iterable.d.ts": {
+        "version": "eb843da29336c7d5840bb439b24cf68a4a1652fd01c6e4e66ec74d8b136e944a",
+        "signature": "eb843da29336c7d5840bb439b24cf68a4a1652fd01c6e4e66ec74d8b136e944a"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.webworker.importscripts.d.ts": {
+        "version": "fe4e59403e34c7ff747abe4ff6abbc7718229556d7c1a5b93473fb53156c913b",
+        "signature": "fe4e59403e34c7ff747abe4ff6abbc7718229556d7c1a5b93473fb53156c913b"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.scripthost.d.ts": {
+        "version": "b9faa17292f17d2ad75e34fac77dd63a6403af1dba02d39cd0cbb9ffdf3de8b9",
+        "signature": "b9faa17292f17d2ad75e34fac77dd63a6403af1dba02d39cd0cbb9ffdf3de8b9"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2015.core.d.ts": {
+        "version": "2a0390a665763bcc90f0670e43c587928d8fefe2a94a11209c1e22cba7b09f52",
+        "signature": "2a0390a665763bcc90f0670e43c587928d8fefe2a94a11209c1e22cba7b09f52"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2015.collection.d.ts": {
+        "version": "dd94d8ef48c562389eb58af8df3a3a34d11367f7c818192aa5f16470d469e3f0",
+        "signature": "dd94d8ef48c562389eb58af8df3a3a34d11367f7c818192aa5f16470d469e3f0"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2015.generator.d.ts": {
+        "version": "828413486bdcaa342558e8e4570b1b287b776cb61b4b70b0214bd10c5d9a94c3",
+        "signature": "828413486bdcaa342558e8e4570b1b287b776cb61b4b70b0214bd10c5d9a94c3"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2015.iterable.d.ts": {
+        "version": "6c9f73334f8bf47aea685ca5b46a8f7e992a223e96fbceb030f26a4d2324ba21",
+        "signature": "6c9f73334f8bf47aea685ca5b46a8f7e992a223e96fbceb030f26a4d2324ba21"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2015.promise.d.ts": {
+        "version": "e6b8ff2798f8ebd7a1c7afd8671f2cb67ee1901c422f5964d74b0b34c6574ea2",
+        "signature": "e6b8ff2798f8ebd7a1c7afd8671f2cb67ee1901c422f5964d74b0b34c6574ea2"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2015.proxy.d.ts": {
+        "version": "5e72f949a89717db444e3bd9433468890068bb21a5638d8ab15a1359e05e54fe",
+        "signature": "5e72f949a89717db444e3bd9433468890068bb21a5638d8ab15a1359e05e54fe"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2015.reflect.d.ts": {
+        "version": "f5b242136ae9bfb1cc99a5971cccc44e99947ae6b5ef6fd8aa54b5ade553b976",
+        "signature": "f5b242136ae9bfb1cc99a5971cccc44e99947ae6b5ef6fd8aa54b5ade553b976"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2015.symbol.d.ts": {
+        "version": "9ae2860252d6b5f16e2026d8a2c2069db7b2a3295e98b6031d01337b96437230",
+        "signature": "9ae2860252d6b5f16e2026d8a2c2069db7b2a3295e98b6031d01337b96437230"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2015.symbol.wellknown.d.ts": {
+        "version": "3e0a459888f32b42138d5a39f706ff2d55d500ab1031e0988b5568b0f67c2303",
+        "signature": "3e0a459888f32b42138d5a39f706ff2d55d500ab1031e0988b5568b0f67c2303"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2016.array.include.d.ts": {
+        "version": "3f96f1e570aedbd97bf818c246727151e873125d0512e4ae904330286c721bc0",
+        "signature": "3f96f1e570aedbd97bf818c246727151e873125d0512e4ae904330286c721bc0"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2017.object.d.ts": {
+        "version": "ff8ad203e83338289b0f5defc1a5b5c253fb7d251b464db497383f915a0df3f4",
+        "signature": "ff8ad203e83338289b0f5defc1a5b5c253fb7d251b464db497383f915a0df3f4"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2017.sharedmemory.d.ts": {
+        "version": "b8667586a618c5cf64523d4e500ae39e781428abfb28f3de441fc66b56144b6f",
+        "signature": "b8667586a618c5cf64523d4e500ae39e781428abfb28f3de441fc66b56144b6f"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2017.string.d.ts": {
+        "version": "21df2e0059f14dcb4c3a0e125859f6b6ff01332ee24b0065a741d121250bc71c",
+        "signature": "21df2e0059f14dcb4c3a0e125859f6b6ff01332ee24b0065a741d121250bc71c"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2017.intl.d.ts": {
+        "version": "c1759cb171c7619af0d2234f2f8fb2a871ee88e956e2ed91bb61778e41f272c6",
+        "signature": "c1759cb171c7619af0d2234f2f8fb2a871ee88e956e2ed91bb61778e41f272c6"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2017.typedarrays.d.ts": {
+        "version": "28569d59e07d4378cb3d54979c4c60f9f06305c9bb6999ffe6cab758957adc46",
+        "signature": "28569d59e07d4378cb3d54979c4c60f9f06305c9bb6999ffe6cab758957adc46"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2018.asynciterable.d.ts": {
+        "version": "42102aaeb1bfec213be1e9777466a6d551eeba8567fed18c0cdbca8c35e3c6e4",
+        "signature": "42102aaeb1bfec213be1e9777466a6d551eeba8567fed18c0cdbca8c35e3c6e4"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2018.intl.d.ts": {
+        "version": "1b820b57379c726f94af50cd60053674af53ff9d079c1563cc70071e8b757dd0",
+        "signature": "1b820b57379c726f94af50cd60053674af53ff9d079c1563cc70071e8b757dd0"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2018.promise.d.ts": {
+        "version": "efe049114bad1035b0aa9a4a0359f50ab776e3897c411521e51d3013079cbd62",
+        "signature": "efe049114bad1035b0aa9a4a0359f50ab776e3897c411521e51d3013079cbd62"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2018.regexp.d.ts": {
+        "version": "e7780d04cd4120ee554c665829db2bbdd6b947cbaa3c150b7d9ea74df3beb2e8",
+        "signature": "e7780d04cd4120ee554c665829db2bbdd6b947cbaa3c150b7d9ea74df3beb2e8"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2019.array.d.ts": {
+        "version": "fc7c02b980e7dda0ed14d57ee71705c09efc51ec6286a10b971a25a3bb29262b",
+        "signature": "fc7c02b980e7dda0ed14d57ee71705c09efc51ec6286a10b971a25a3bb29262b"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2019.object.d.ts": {
+        "version": "989b95205f1189943fab0ce12a39c80570edf8f200aca60e0fdc500afc4d5859",
+        "signature": "989b95205f1189943fab0ce12a39c80570edf8f200aca60e0fdc500afc4d5859"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2019.string.d.ts": {
+        "version": "669427ac10ef9f52b6a7a502a66670eaabba675e0a660eb971041bd73c9894e3",
+        "signature": "669427ac10ef9f52b6a7a502a66670eaabba675e0a660eb971041bd73c9894e3"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2019.symbol.d.ts": {
+        "version": "7a842c21e0fe143eb3ad4d689a1470bab5ed9bc7fd7223fe8b56cbae27038d62",
+        "signature": "7a842c21e0fe143eb3ad4d689a1470bab5ed9bc7fd7223fe8b56cbae27038d62"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.esnext.intl.d.ts": {
+        "version": "f6e0c89daaf72eac38dfb1d5ef0972183f7f26a68da15bfe5bcb7cfccf0c7db8",
+        "signature": "f6e0c89daaf72eac38dfb1d5ef0972183f7f26a68da15bfe5bcb7cfccf0c7db8"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.esnext.bigint.d.ts": {
+        "version": "63b66918290d794f73832a6d0325be5026236674fe8c0cb0b68d162000d7bbe8",
+        "signature": "63b66918290d794f73832a6d0325be5026236674fe8c0cb0b68d162000d7bbe8"
+      },
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.esnext.full.d.ts": {
+        "version": "b209a815904a485328677714ef8c4ddd2dcf4040154fa204d25cbf31cd4ff0f3",
+        "signature": "b209a815904a485328677714ef8c4ddd2dcf4040154fa204d25cbf31cd4ff0f3"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/task.ts": {
+        "version": "93a86a5d2bc80f0d97a6f1f6b4f416470f430ca3c8ac95d82ec064be8e0fd8d1",
+        "signature": "3912c54a32cf5385247b45bcfbc809b0db88474f178ecca5e465da955c539b62"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/options/emitter.ts": {
+        "version": "a8a0b928413eb5afc0249ecbe5ddd315208fe4d3a90ba8840e8266d0a1d6f89a",
+        "signature": "b73e1555d580f89487ce601458c116a3aa1c8e3441b7b741b4758aa6ebf8f9b2"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/event/emitter.ts": {
+        "version": "1c05d322d9a85df8653e2a6633b760e32a5862149d55b8f1fc3a47ba2976a886",
+        "signature": "3b02248a358b05312f815888cb3341c9fd69817a85b4dcbe97148af1803ac3fc"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/watcher/computed.ts": {
+        "version": "a71ca7536d3c0ab67cb95b7a4820ec96cb014db1761d510567fb7c31cf13cec5",
+        "signature": "95590d63d7e53170f05d3c9638d605221c35451a3d93035ed5031d7c411731ac"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/nexttask.ts": {
+        "version": "718033f99438aad1068fbce351d4d3bc9eaa2341e4849ae0452802363a1b8bcb",
+        "signature": "2d36627f782b4542bf10bd00631820dd9d50151cd042c29e4421b11a3ca9dac8"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/options/computed.ts": {
+        "version": "fa2c42d34178c925055ebffe2d7861615ff6656cc58ac65ff5eff186b1f2c34c",
+        "signature": "a70e8f733c91f468074fe2a37551a35b1883f24de3a62c5d5dee3e84d8aa8472"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/options/watcher.ts": {
+        "version": "9db5788cc2078c279cad7753a0b952050bcf9195c5b8697b6b2be42eeb9f8fb6",
+        "signature": "16a0b76fb3c31852e1560a9093b14ee7d312933869ada5ccaa127ff5abecafab"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/watcher/observer.ts": {
+        "version": "e964bebb6547f18d9d4ce4f8ad29adc7d75b7690b8b653a6aec50af6a8aff576",
+        "signature": "0063845c4beb60fdbe7e26e7569f550bc4bf5a136b14c318fe736bc7653c7b1e"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/property.ts": {
+        "version": "c9c93042b5f3c7727388419c404a9a2ceb2a97d9fdc2fe22a9348951e9b187df",
+        "signature": "93c224a364b40a8668be05c7e74b2dcfb41d9dfbe1072ac9e13c384c93af2773"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/attribute.ts": {
+        "version": "ceafba9e88ae385b5ab63f925aa8f5f33c72a664d1bf7fca4ff911b21f737571",
+        "signature": "fa895c77b6a01e16fa734bf1eb5a582b767af85c0fde904cd0508372e4c10e46"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/directive.ts": {
+        "version": "b0157652653cd0ac8844945a4b0558fe4244629f953c1e8db4bd2a7bbc4e8e45",
+        "signature": "c922a29fe19440f8932f1d0d6f829603e82b45f39e5e932e480b855cd30af9da"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/directive.ts": {
+        "version": "97de4b355b9433505b8ef08c70e40aa9b522b216eb965fb1f194fc35b56290c1",
+        "signature": "8c8d7c8476e84320fddc1cbcb87ba6a17e845f338ea866e93aff888b112cd4b6"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/transition.ts": {
+        "version": "ae979eafdbb926db36f0aa1658dd6b1c1420ff71912390c59bbeff397faa6ed1",
+        "signature": "fea7a153ca31f396b0f506d86f93e6186d48ab8a0b6176d8916d9738d4ed0604"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/vnode.ts": {
+        "version": "1349de2978a3382d6cf998e17aba25977f0700461fc01e7b172dd487db2f3cf1",
+        "signature": "c328a71d1771ab27498a0634ecd7765c0d006c760e5f6de2e146fd0d73dfe156"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-config/src/config.ts": {
+        "version": "d8e15eea5dc237ab903779cfea6566291d50772fa3113dff275d67e5f76fbf12",
+        "signature": "d8e15eea5dc237ab903779cfea6566291d50772fa3113dff275d67e5f76fbf12"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/proprule.ts": {
+        "version": "76003cf06d310ea556e05bdd1c9a3455653f4bba09b751c37bbe66458749d330",
+        "signature": "3d53b601d7698ab90193d12e361ddfbb6402888a00d8fc1392c0acd3e16109a4"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/options/yox.ts": {
+        "version": "61a1006ead933ffb38a0fa36f1e0bd37080b32c4d5cba3d6edb42b25f4f746c5",
+        "signature": "0d9460a0fd50e91a6f24589034a9a01c48026cbc02b1d0c3dad67d896ee56cee"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yox.ts": {
+        "version": "82004d68493a4a18dcc2c0b3dbc79b00ff7029e9dbd9581a936ea1e59f57d823",
+        "signature": "5750df9164abdba801e9b1b2c2ff7461a22754a324392c0e0810219205b71f5b"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/event/customevent.ts": {
+        "version": "ade36867bff4265c247d55fe4addfe05ace11836618bd114e214b805e0006423",
+        "signature": "54bd60d4f830b7f6d24588673b5f3b25675a823fa7f5ba60c7e8b75b4d2576be"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/router/location.ts": {
+        "version": "10c41194c104f3f1867be8f11d18ad927dfb2e9ae9b3a3aa16baf4669f207a86",
+        "signature": "d9bdcff95de89d77751027d44dd0511c799de3e44bc328967567d28a488b5221"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/router/routetarget.ts": {
+        "version": "ed67976ab27e5bd768790cf2510677b3a97777b5300003ddf2fe7650448dd72e",
+        "signature": "3d67bb5327adaebf58c12dc2e50cf04a018baaacb952c0806a15a3dcf0fcd7f8"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts": {
+        "version": "540766f7ca14c7d8f8ec83497f402173cc024576d095672d736f959118a24be6",
+        "signature": "bf9541288b6878f742563b4f75dad1cdeea1da6d24b5b9d23b29123f3f8c65ce"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/event/customeventclass.ts": {
+        "version": "ce8664dd42fedace95e09ea3a63d721d3edce512938d7631f3093677380b498e",
+        "signature": "95b1c3e30f78c601b0aa2c0c80420700de6e214e12a1c71dd4bb3e1aadf3a56f"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/event/emitterclass.ts": {
+        "version": "a06f070059aa6ce4c2ad1796d3415b45dc82de2c2d71945a9d7bd04f345fa3f1",
+        "signature": "0fc823cc5854e4d0cd4a2425f249cec6b27c95465a40742640ef6b078d42fef7"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/specialevent.ts": {
+        "version": "dfa92d48e2cbd87e8fedfee4150dc968f24673c93efbf96a208554d7925d3a03",
+        "signature": "fda6083940b63a9fd7a50ed3c1e3336c851e1ff2de176a030b2f95c41987f353"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/api.ts": {
+        "version": "e267637e486c482b150a7b2ddfb2130d43c3e3c97366861efeae3faf94ae409d",
+        "signature": "d4c24bb72fbb9523d16b2f8a5017d628628416d20c19c12ce83c4779c83f63a0"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/valueholder.ts": {
+        "version": "8d87945c0b184700530469d80e81a2258d413b012344c59345c54eaca1bb0fe7",
+        "signature": "3244ea940f74e48b431c45a91ba660d9ece34af9e2d572167e3337131aa930b7"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yoxplugin.ts": {
+        "version": "1bd6840c7ccb2263588a814bfd3373d4b810e76f830fcf41b5334694f7a88373",
+        "signature": "74b21df8002c7a244f817df2acae32d3490d67c255dc0f8b7fe2ae729c5d7d85"
+      },
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yoxclass.ts": {
+        "version": "764bdadcd5a5ff27bf47a4cfab21847a9eefa5d9bb863346519f1aab42d0dae5",
+        "signature": "15ae3ba7c99b0db093e799710d5423c51375f0d37a248fb69c7f12e4b72992f1"
+      }
+    },
+    "options": {
+      "target": 8,
+      "module": 6,
+      "declaration": true,
+      "declarationMap": true,
+      "sourceMap": false,
+      "outDir": "/Users/zhujl/github/browser/yox-core/yox/js/",
+      "rootDir": "/Users/zhujl/github/browser/yox-core/",
+      "strict": true,
+      "noImplicitAny": false,
+      "strictPropertyInitialization": false,
+      "noImplicitThis": false,
+      "noUnusedLocals": true,
+      "composite": true,
+      "configFilePath": "/Users/zhujl/github/browser/yox-core/yox-type/tsconfig.json"
+    },
+    "referencedMap": {
+      "/users/zhujl/github/browser/yox-core/yox-type/src/options/emitter.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/interface/task.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/event/emitter.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/options/emitter.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/options/computed.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/options/watcher.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/watcher/observer.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/watcher/computed.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/interface/nexttask.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/options/computed.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/options/watcher.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/property.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/directive.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/directive.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/directive.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/transition.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/vnode.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/property.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/attribute.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/directive.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yox.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/transition.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/proprule.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/options/yox.ts": [
+        "/users/zhujl/github/browser/yox-core/yox/js/yox-config/src/config.d.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yox.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/interface/proprule.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/vnode.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/directive.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/transition.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/options/computed.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/options/watcher.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yox.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/event/emitter.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/event/customevent.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/watcher/observer.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/watcher/computed.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/vnode.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/directive.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/transition.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/options/computed.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/options/watcher.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/options/yox.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/event/customevent.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yox.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/router/location.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/router/routetarget.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/event/customevent.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/options/yox.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yox.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/vnode.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/directive.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/router/location.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/router/routetarget.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/event/customeventclass.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/event/customevent.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/event/emitterclass.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/event/emitter.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/specialevent.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/api.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/specialevent.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yoxplugin.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yoxclass.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yoxclass.ts": [
+        "/users/zhujl/github/browser/yox-core/yox/js/yox-config/src/config.d.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/directive.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/transition.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/options/yox.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yox.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/interface/api.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/event/emitterclass.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/event/customeventclass.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/interface/valueholder.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yoxplugin.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts"
+      ]
+    },
+    "exportedModulesMap": {
+      "/users/zhujl/github/browser/yox-core/yox-type/src/options/emitter.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/interface/task.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/event/emitter.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/options/emitter.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/event/emitterclass.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/event/emitter.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yoxclass.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/interface/api.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/interface/valueholder.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/event/emitterclass.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/event/customeventclass.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/options/yox.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yox.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yoxplugin.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/directive.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/transition.ts",
+        "/users/zhujl/github/browser/yox-core/yox/js/yox-config/src/config.d.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yoxplugin.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yoxclass.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yox.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/options/yox.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/event/emitter.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/watcher/observer.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/vnode.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/options/computed.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/watcher/computed.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/event/customevent.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/options/watcher.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/directive.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/transition.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/options/yox.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/event/customevent.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yox.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/directive.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/vnode.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/router/location.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/router/routetarget.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/api.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/specialevent.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/specialevent.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/router/routetarget.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/router/location.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/options/yox.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/interface/proprule.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yox.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/vnode.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/options/computed.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/options/watcher.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/transition.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/directive.ts",
+        "/users/zhujl/github/browser/yox-core/yox/js/yox-config/src/config.d.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/proprule.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/vnode.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yox.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/property.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/attribute.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/directive.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/transition.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/transition.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/directive.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/directive.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/directive.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/property.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/watcher/observer.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/interface/nexttask.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/options/computed.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/watcher/computed.ts",
+        "/users/zhujl/github/browser/yox-core/yox-type/src/options/watcher.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/options/watcher.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/options/computed.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/event/customevent.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yox.ts"
+      ],
+      "/users/zhujl/github/browser/yox-core/yox-type/src/event/customeventclass.ts": [
+        "/users/zhujl/github/browser/yox-core/yox-type/src/event/customevent.ts"
+      ]
+    },
+    "semanticDiagnosticsPerFile": [
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es5.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2015.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2016.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2017.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2018.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2019.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.esnext.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.dom.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.dom.iterable.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.webworker.importscripts.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.scripthost.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2015.core.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2015.collection.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2015.generator.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2015.iterable.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2015.promise.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2015.proxy.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2015.reflect.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2015.symbol.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2015.symbol.wellknown.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2016.array.include.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2017.object.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2017.sharedmemory.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2017.string.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2017.intl.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2017.typedarrays.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2018.asynciterable.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2018.intl.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2018.promise.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2018.regexp.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2019.array.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2019.object.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2019.string.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.es2019.symbol.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.esnext.intl.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.esnext.bigint.d.ts",
+      "/users/zhujl/.nvm/versions/node/v8.11.3/lib/node_modules/typescript/lib/lib.esnext.full.d.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/task.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/options/emitter.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/event/emitter.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/watcher/computed.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/nexttask.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/options/computed.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/options/watcher.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/watcher/observer.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/property.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/attribute.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/directive.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/directive.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/transition.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/vnode/vnode.ts",
+      "/users/zhujl/github/browser/yox-core/yox-config/src/config.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/proprule.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/options/yox.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yox.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/event/customevent.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/router/location.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/router/routetarget.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/type.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/event/customeventclass.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/event/emitterclass.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/hooks/specialevent.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/api.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/valueholder.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yoxplugin.ts",
+      "/users/zhujl/github/browser/yox-core/yox-type/src/interface/yoxclass.ts"
+    ]
+  },
+  "version": "3.5.2"
+}

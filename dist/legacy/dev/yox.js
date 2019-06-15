@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.61
+ * yox.js v1.0.0-alpha.62
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -2080,7 +2080,7 @@
           // 如 a.b.c 可以算出 staticKeypath，而 a[b].c 则不行，因为 b 是动态的
           // 优化 2：计算 offset 并智能转成 Identifier
           //
-          // 比如 ../../xx 这样的表达式，应优化成 offset = 2，并转成 Identifier
+          // 比如 xx 这样的表达式，应优化成 offset = 2，并转成 Identifier
           // 处理第一个节点
           if (firstNode.type === IDENTIFIER) {
               var identifier = firstNode;
@@ -2463,7 +2463,7 @@
       /**
        * 扫描路径，如 `./` 和 `../`
        *
-       * 路径必须位于开头，如 ./../ 或 ../../，不存在 a/../b/../c 这样的情况，因为路径是用来切换或指定 context 的
+       * 路径必须位于开头，如 ./../ 或 ，不存在 a/../b/../c 这样的情况，因为路径是用来切换或指定 context 的
        *
        * @param startIndex
        * @param prevNode
@@ -3412,13 +3412,13 @@
           // 校验事件名称
           isEvent = directive.ns === DIRECTIVE_EVENT, 
           // 自定义指令运行不合法的表达式
-          isCustom = directive.ns === DIRECTIVE_CUSTOM;
+          isCustom = directive.ns === DIRECTIVE_CUSTOM, 
           // 指令的值是纯文本，可以预编译表达式，提升性能
-          var expr;
+          expr;
           try {
               expr = compile(text);
           }
-          catch (_a) { }
+          catch (e) { }
           if (expr) {
               {
                   var raw = expr.raw;
@@ -7190,7 +7190,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.61";
+      Yox.version = "1.0.0-alpha.62";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

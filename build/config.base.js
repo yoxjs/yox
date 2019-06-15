@@ -62,25 +62,10 @@ export default function (env, release, minify = false, legacy = false, port = 0)
     {
       input: 'src/Yox.ts',
       output: [
-        // umd
         {
           file: `dist/${dir}/${name}${suffix}`,
           format: 'umd',
           name: 'Yox',
-          banner,
-          sourcemap,
-        },
-        // cjs
-        {
-          file: `dist/${dir}/${name}.cjs${suffix}`,
-          format: 'cjs',
-          banner,
-          sourcemap,
-        },
-        // esm
-        {
-          file: `dist/${dir}/${name}.esm${suffix}`,
-          format: 'es',
           banner,
           sourcemap,
         }

@@ -1,0 +1,1 @@
+{"version":3,"file":"Property.d.ts","sourceRoot":"","sources":["../../../../../yox-type/src/vnode/Property.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,IAAI,MAAM,SAAS,CAAA;AAE/B,MAAM,CAAC,OAAO,WAAW,QAAQ;IAE/B,QAAQ,CAAC,IAAI,EAAE,MAAM,CAAA;IAErB,QAAQ,CAAC,KAAK,EAAE,GAAG,CAAA;IAEnB,QAAQ,CAAC,IAAI,EAAE,IAAI,CAAC,IAAI,CAAA;CAEzB"}

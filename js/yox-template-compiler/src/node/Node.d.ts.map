@@ -1,0 +1,1 @@
+{"version":3,"file":"Node.d.ts","sourceRoot":"","sources":["../../../../../yox-template-compiler/src/node/Node.ts"],"names":[],"mappings":"AAAA;;GAEG;AACH,MAAM,CAAC,OAAO,WAAW,IAAI;IAE3B,IAAI,EAAE,MAAM,CAAA;IAGZ,QAAQ,CAAC,EAAE,OAAO,CAAA;IAQlB,SAAS,CAAC,EAAE,OAAO,CAAA;IAGnB,MAAM,CAAC,EAAE,OAAO,CAAA;CAEjB"}

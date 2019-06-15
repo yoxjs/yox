@@ -1,0 +1,1 @@
+{"version":3,"file":"PropRule.d.ts","sourceRoot":"","sources":["../../../../../yox-type/src/interface/PropRule.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,IAAI,MAAM,SAAS,CAAA;AAE/B,MAAM,CAAC,OAAO,WAAW,QAAQ;IAC/B,IAAI,EAAE,MAAM,GAAG,MAAM,EAAE,GAAG,IAAI,CAAC,QAAQ,CAAA;IACvC,KAAK,CAAC,EAAE,GAAG,GAAG,IAAI,CAAC,SAAS,CAAA;IAC5B,QAAQ,CAAC,EAAE,OAAO,CAAA;CACnB"}

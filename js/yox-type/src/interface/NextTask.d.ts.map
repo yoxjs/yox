@@ -1,0 +1,1 @@
+{"version":3,"file":"NextTask.d.ts","sourceRoot":"","sources":["../../../../../yox-type/src/interface/NextTask.ts"],"names":[],"mappings":"AAAA,MAAM,CAAC,OAAO,WAAW,QAAQ;IAE/B,MAAM,CAAC,IAAI,EAAE,QAAQ,EAAE,OAAO,CAAC,EAAE,GAAG,GAAG,IAAI,CAAA;IAE3C,OAAO,CAAC,IAAI,EAAE,QAAQ,EAAE,OAAO,CAAC,EAAE,GAAG,GAAG,IAAI,CAAA;IAE5C,KAAK,IAAI,IAAI,CAAA;IAEb,GAAG,IAAI,IAAI,CAAA;CAEZ"}

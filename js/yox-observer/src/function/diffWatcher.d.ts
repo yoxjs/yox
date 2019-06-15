@@ -1,0 +1,2 @@
+export default function (keypath: string, newValue: any, oldValue: any, watcher: Object, isRecursive: boolean, callback: (watchKeypath: string, keypath: string, newValue: any, oldValue: any) => void): void;
+//# sourceMappingURL=diffWatcher.d.ts.map

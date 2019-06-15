@@ -1,0 +1,1 @@
+{"version":3,"file":"Directive.d.ts","sourceRoot":"","sources":["../../../../../yox-type/src/hooks/Directive.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,IAAI,MAAM,SAAS,CAAA;AAE/B,MAAM,CAAC,OAAO,WAAW,cAAc;IACrC,IAAI,CAAC,EAAE,IAAI,CAAA;IACX,IAAI,EAAE,IAAI,CAAC,IAAI,CAAA;IACf,MAAM,CAAC,EAAE,IAAI,CAAC,MAAM,CAAA;CACrB"}

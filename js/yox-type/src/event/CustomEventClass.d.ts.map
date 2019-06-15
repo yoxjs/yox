@@ -1,0 +1,1 @@
+{"version":3,"file":"CustomEventClass.d.ts","sourceRoot":"","sources":["../../../../../yox-type/src/event/CustomEventClass.ts"],"names":[],"mappings":"AAAA,OAAO,WAAW,MAAM,eAAe,CAAA;AAEvC,MAAM,CAAC,OAAO,WAAW,gBAAgB;IAEvC,aAAa,EAAE,MAAM,CAAA;IAErB,YAAY,EAAE,MAAM,CAAA;IAEpB,cAAc,EAAE,MAAM,CAAA;IAEtB,KAAI,IAAI,EAAE,MAAM,EAAE,aAAa,CAAC,EAAE,WAAW,GAAG,KAAK,GAAG,WAAW,CAAA;CAEpE"}

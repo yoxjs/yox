@@ -1,0 +1,1 @@
+{"version":3,"file":"Member.d.ts","sourceRoot":"","sources":["../../../../../yox-expression-compiler/src/node/Member.ts"],"names":[],"mappings":"AAAA,OAAO,IAAI,MAAM,QAAQ,CAAA;AACzB,OAAO,OAAO,MAAM,WAAW,CAAA;AAE/B;;GAEG;AACH,MAAM,CAAC,OAAO,WAAW,MAAO,SAAQ,OAAO;IAE7C,IAAI,EAAE,IAAI,CAAA;IAGV,KAAK,EAAE,IAAI,EAAE,GAAG,IAAI,CAAA;IAGpB,OAAO,EAAE,MAAM,GAAG,IAAI,CAAA;CAEvB"}
