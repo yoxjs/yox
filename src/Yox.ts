@@ -57,7 +57,7 @@ compileCache = {},
 
 LOADER_QUEUE = '$queue',
 
-TEMPLATE_COMPUTED = '$' + env.RAW_TEMPLATE,
+TEMPLATE_COMPUTED = '$$',
 
 selectorPattern = /^[#.][-\w+]+$/
 
@@ -133,26 +133,21 @@ export default class Yox implements YoxInterface {
    * 编译模板，暴露出来是为了打包阶段的模板预编译
    */
   public static compile(template: string, stringify?: boolean): Function | string {
-    if (process.env.NODE_ENV !== 'pure') {
-      if (process.env.NODE_ENV !== 'runtime') {
-        if (!templateGenerator.hasGenerated(template)) {
-          // 未编译，常出现在开发阶段
-          if (!compileCache[template]) {
-            const nodes = templateCompiler.compile(template)
-            if (process.env.NODE_ENV === 'development') {
-              if (nodes.length !== 1) {
-                logger.fatal(`"template" should have just one root element.`)
-              }
-            }
-            compileCache[template] = templateGenerator.generate(nodes[0])
-          }
-          template = compileCache[template]
-          if (stringify) {
-            return template
+    if (process.env.NODE_ENV !== 'pure' && process.env.NODE_ENV !== 'runtime') {
+      // 需要编译的都是模板源文件，一旦经过预编译，就成了 render 函数，不会再走进 Yox.compile
+      if (!compileCache[template]) {
+        const nodes = templateCompiler.compile(template)
+        if (process.env.NODE_ENV === 'development') {
+          if (nodes.length !== 1) {
+            logger.fatal(`"template" should have just one root element.`)
           }
         }
+        compileCache[template] = templateGenerator.generate(nodes[0])
       }
-      return new Function(`return ${template}`)()
+      template = compileCache[template]
+      return stringify
+        ? template
+        : new Function(`return ${template}`)()
     }
     else {
       return env.EMPTY_STRING
@@ -460,7 +455,9 @@ export default class Yox implements YoxInterface {
         // 在产品阶段，template 是编译后且经过 stringify 的字符串
         // 当然，这个需要外部自己控制传入的 template 是什么
         // Yox.compile 会自动判断 template 是否经过编译
-        instance.$template = Yox.compile(template) as Function
+        instance.$template = is.string(template)
+          ? Yox.compile(template as string) as Function
+          : template as Function
 
         if (!vnode) {
 

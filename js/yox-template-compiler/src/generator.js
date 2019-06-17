@@ -34,34 +34,6 @@ collectStack = [], nodeGenerator = {}, RENDER_EXPRESSION_IDENTIFIER = 'a', RENDE
 let codePrefix, 
 // 表达式求值是否要求返回字符串类型
 isStringRequired;
-function getCodePrefix() {
-    if (!codePrefix) {
-        codePrefix = `function(${array.join([
-            RENDER_EXPRESSION_IDENTIFIER,
-            RENDER_EXPRESSION_MEMBER_KEYPATH,
-            RENDER_EXPRESSION_MEMBER_LITERAL,
-            RENDER_EXPRESSION_CALL,
-            RENDER_TEXT_VNODE,
-            RENDER_ATTRIBUTE_VNODE,
-            RENDER_PROPERTY_VNODE,
-            RENDER_LAZY_VNODE,
-            RENDER_TRANSITION_VNODE,
-            RENDER_BINDING_VNODE,
-            RENDER_MODEL_VNODE,
-            RENDER_EVENT_METHOD_VNODE,
-            RENDER_EVENT_NAME_VNODE,
-            RENDER_DIRECTIVE_VNODE,
-            RENDER_SPREAD_VNODE,
-            RENDER_ELEMENT_VNODE,
-            RENDER_SLOT,
-            RENDER_PARTIAL,
-            RENDER_IMPORT,
-            RENDER_EACH,
-            TO_STRING,
-        ], generator.COMMA)}){${CODE_RETURN}`;
-    }
-    return codePrefix;
-}
 function renderExpression(expr, holder, depIgnore, stack) {
     return exprGenerator.generate(expr, RENDER_EXPRESSION_IDENTIFIER, RENDER_EXPRESSION_MEMBER_KEYPATH, RENDER_EXPRESSION_MEMBER_LITERAL, RENDER_EXPRESSION_CALL, holder, depIgnore, stack);
 }
@@ -405,8 +377,30 @@ nodeGenerator[nodeType.IMPORT] = function (node) {
     ]);
 };
 export function generate(node) {
-    return getCodePrefix() + nodeGenerator[node.type](node) + '}';
-}
-export function hasGenerated(code) {
-    return string.startsWith(code, getCodePrefix());
+    if (!codePrefix) {
+        codePrefix = `function(${array.join([
+            RENDER_EXPRESSION_IDENTIFIER,
+            RENDER_EXPRESSION_MEMBER_KEYPATH,
+            RENDER_EXPRESSION_MEMBER_LITERAL,
+            RENDER_EXPRESSION_CALL,
+            RENDER_TEXT_VNODE,
+            RENDER_ATTRIBUTE_VNODE,
+            RENDER_PROPERTY_VNODE,
+            RENDER_LAZY_VNODE,
+            RENDER_TRANSITION_VNODE,
+            RENDER_BINDING_VNODE,
+            RENDER_MODEL_VNODE,
+            RENDER_EVENT_METHOD_VNODE,
+            RENDER_EVENT_NAME_VNODE,
+            RENDER_DIRECTIVE_VNODE,
+            RENDER_SPREAD_VNODE,
+            RENDER_ELEMENT_VNODE,
+            RENDER_SLOT,
+            RENDER_PARTIAL,
+            RENDER_IMPORT,
+            RENDER_EACH,
+            TO_STRING,
+        ], generator.COMMA)}){${CODE_RETURN}`;
+    }
+    return codePrefix + nodeGenerator[node.type](node) + '}';
 }

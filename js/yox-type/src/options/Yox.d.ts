@@ -11,7 +11,7 @@ export default interface YoxOptions {
     propTypes?: Record<string, PropRule>;
     el?: string | Node;
     data?: type.data | type.dataGenerator;
-    template?: string;
+    template?: string | Function;
     model?: string;
     props?: type.data;
     root?: Yox;
