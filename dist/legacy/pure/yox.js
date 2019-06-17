@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.62
+ * yox.js v1.0.0-alpha.63
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -2337,7 +2337,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.62";
+      Yox.version = "1.0.0-alpha.63";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.62
+ * yox.js v1.0.0-alpha.63
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -4433,33 +4433,6 @@
   var codePrefix, 
   // 表达式求值是否要求返回字符串类型
   isStringRequired;
-  function getCodePrefix() {
-      if (!codePrefix) {
-          codePrefix = "function(" + join([
-              RENDER_EXPRESSION_IDENTIFIER,
-              RENDER_EXPRESSION_MEMBER_KEYPATH,
-              RENDER_EXPRESSION_MEMBER_LITERAL,
-              RENDER_EXPRESSION_CALL,
-              RENDER_TEXT_VNODE,
-              RENDER_ATTRIBUTE_VNODE,
-              RENDER_PROPERTY_VNODE,
-              RENDER_LAZY_VNODE,
-              RENDER_TRANSITION_VNODE,
-              RENDER_BINDING_VNODE,
-              RENDER_MODEL_VNODE,
-              RENDER_EVENT_METHOD_VNODE,
-              RENDER_EVENT_NAME_VNODE,
-              RENDER_DIRECTIVE_VNODE,
-              RENDER_SPREAD_VNODE,
-              RENDER_ELEMENT_VNODE,
-              RENDER_SLOT,
-              RENDER_PARTIAL,
-              RENDER_IMPORT,
-              RENDER_EACH,
-              TO_STRING ], COMMA) + "){" + CODE_RETURN;
-      }
-      return codePrefix;
-  }
   function renderExpression(expr, holder, depIgnore, stack) {
       return generate(expr, RENDER_EXPRESSION_IDENTIFIER, RENDER_EXPRESSION_MEMBER_KEYPATH, RENDER_EXPRESSION_MEMBER_LITERAL, RENDER_EXPRESSION_CALL, holder, depIgnore, stack);
   }
@@ -4802,10 +4775,31 @@
       ]);
   };
   function generate$1(node) {
-      return getCodePrefix() + nodeGenerator[node.type](node) + '}';
-  }
-  function hasGenerated(code) {
-      return startsWith(code, getCodePrefix());
+      if (!codePrefix) {
+          codePrefix = "function(" + join([
+              RENDER_EXPRESSION_IDENTIFIER,
+              RENDER_EXPRESSION_MEMBER_KEYPATH,
+              RENDER_EXPRESSION_MEMBER_LITERAL,
+              RENDER_EXPRESSION_CALL,
+              RENDER_TEXT_VNODE,
+              RENDER_ATTRIBUTE_VNODE,
+              RENDER_PROPERTY_VNODE,
+              RENDER_LAZY_VNODE,
+              RENDER_TRANSITION_VNODE,
+              RENDER_BINDING_VNODE,
+              RENDER_MODEL_VNODE,
+              RENDER_EVENT_METHOD_VNODE,
+              RENDER_EVENT_NAME_VNODE,
+              RENDER_DIRECTIVE_VNODE,
+              RENDER_SPREAD_VNODE,
+              RENDER_ELEMENT_VNODE,
+              RENDER_SLOT,
+              RENDER_PARTIAL,
+              RENDER_IMPORT,
+              RENDER_EACH,
+              TO_STRING ], COMMA) + "){" + CODE_RETURN;
+      }
+      return codePrefix + nodeGenerator[node.type](node) + '}';
   }
 
   function setPair(target, name, key, value) {
@@ -6506,7 +6500,7 @@
       return isDef(this.get(SLOT_DATA_PREFIX + name));
   }
 
-  var globalDirectives = {}, globalTransitions = {}, globalComponents = {}, globalPartials = {}, globalFilters = {}, compileCache = {}, LOADER_QUEUE = '$queue', TEMPLATE_COMPUTED = '$' + RAW_TEMPLATE, selectorPattern = /^[#.][-\w+]+$/;
+  var globalDirectives = {}, globalTransitions = {}, globalComponents = {}, globalPartials = {}, globalFilters = {}, compileCache = {}, LOADER_QUEUE = '$queue', TEMPLATE_COMPUTED = '$$', selectorPattern = /^[#.][-\w+]+$/;
   var Yox = /** @class */ (function () {
       function Yox(options) {
           var instance = this, $options = options || EMPTY_OBJECT;
@@ -6675,7 +6669,9 @@
                   // 在产品阶段，template 是编译后且经过 stringify 的字符串
                   // 当然，这个需要外部自己控制传入的 template 是什么
                   // Yox.compile 会自动判断 template 是否经过编译
-                  instance.$template = Yox.compile(template);
+                  instance.$template = string(template)
+                      ? Yox.compile(template)
+                      : template;
                   if (!vnode) {
                       {
                           if (!placeholder) {
@@ -6714,25 +6710,20 @@
        */
       Yox.compile = function (template, stringify) {
           {
-              {
-                  if (!hasGenerated(template)) {
-                      // 未编译，常出现在开发阶段
-                      if (!compileCache[template]) {
-                          var nodes = compile$1(template);
-                          {
-                              if (nodes.length !== 1) {
-                                  fatal("\"template\" should have just one root element.");
-                              }
-                          }
-                          compileCache[template] = generate$1(nodes[0]);
-                      }
-                      template = compileCache[template];
-                      if (stringify) {
-                          return template;
+              // 需要编译的都是模板源文件，一旦经过预编译，就成了 render 函数，不会再走进 Yox.compile
+              if (!compileCache[template]) {
+                  var nodes = compile$1(template);
+                  {
+                      if (nodes.length !== 1) {
+                          fatal("\"template\" should have just one root element.");
                       }
                   }
+                  compileCache[template] = generate$1(nodes[0]);
               }
-              return new Function("return " + template)();
+              template = compileCache[template];
+              return stringify
+                  ? template
+                  : new Function("return " + template)();
           }
       };
       Yox.directive = function (name, directive) {
@@ -7190,7 +7181,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.62";
+      Yox.version = "1.0.0-alpha.63";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

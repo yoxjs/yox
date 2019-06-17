@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.62
+ * yox.js v1.0.0-alpha.63
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -26,7 +26,6 @@
   var RAW_VALUE = 'value';
   var RAW_LENGTH = 'length';
   var RAW_FUNCTION = 'function';
-  var RAW_TEMPLATE = 'template';
   var RAW_WILDCARD = '*';
   var RAW_MINUS_ONE = -1;
   /**
@@ -3543,7 +3542,7 @@
       return isDef(this.get(SLOT_DATA_PREFIX + name));
   }
 
-  var globalDirectives = {}, globalTransitions = {}, globalComponents = {}, globalPartials = {}, globalFilters = {}, LOADER_QUEUE = '$queue', TEMPLATE_COMPUTED = '$' + RAW_TEMPLATE, selectorPattern = /^[#.][-\w+]+$/;
+  var globalDirectives = {}, globalTransitions = {}, globalComponents = {}, globalPartials = {}, globalFilters = {}, LOADER_QUEUE = '$queue', TEMPLATE_COMPUTED = '$$', selectorPattern = /^[#.][-\w+]+$/;
   var Yox = /** @class */ (function () {
       function Yox(options) {
           var instance = this, $options = options || EMPTY_OBJECT;
@@ -3682,7 +3681,9 @@
                   // 在产品阶段，template 是编译后且经过 stringify 的字符串
                   // 当然，这个需要外部自己控制传入的 template 是什么
                   // Yox.compile 会自动判断 template 是否经过编译
-                  instance.$template = Yox.compile(template);
+                  instance.$template = string(template)
+                      ? Yox.compile(template)
+                      : template;
                   if (!vnode) {
                       vnode = create(domApi, placeholder, instance, EMPTY_STRING);
                   }
@@ -3711,7 +3712,7 @@
        */
       Yox.compile = function (template, stringify) {
           {
-              return new Function("return " + template)();
+              return EMPTY_STRING;
           }
       };
       Yox.directive = function (name, directive) {
@@ -4146,7 +4147,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.62";
+      Yox.version = "1.0.0-alpha.63";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
