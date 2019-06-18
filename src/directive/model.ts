@@ -11,9 +11,11 @@ import * as domApi from '../../../yox-dom/src/dom'
 import * as config from '../../../yox-config/src/config'
 import * as type from '../../../yox-type/src/type'
 
-import Yox from '../../../yox-type/src/interface/Yox'
-import VNode from '../../../yox-type/src/vnode/VNode'
-import Directive from '../../../yox-type/src/vnode/Directive'
+import { Yox } from '../../../yox-type/src/class'
+import {
+  VNode,
+  Directive,
+} from '../../../yox-type/src/vnode'
 
 interface NativeControl {
 

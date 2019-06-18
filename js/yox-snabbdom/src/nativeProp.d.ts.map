@@ -1,1 +1,1 @@
-{"version":3,"file":"nativeProp.d.ts","sourceRoot":"","sources":["../../../../yox-snabbdom/src/nativeProp.ts"],"names":[],"mappings":"AAGA,OAAO,KAAK,MAAM,gCAAgC,CAAA;AAGlD,wBAAgB,MAAM,CAAC,GAAG,EAAE,GAAG,EAAE,KAAK,EAAE,KAAK,EAAE,QAAQ,CAAC,EAAE,KAAK,QAkC9D"}
+{"version":3,"file":"nativeProp.d.ts","sourceRoot":"","sources":["../../../../yox-snabbdom/src/nativeProp.ts"],"names":[],"mappings":"AAGA,OAAO,EACL,KAAK,EAEN,MAAM,0BAA0B,CAAA;AAEjC,wBAAgB,MAAM,CAAC,GAAG,EAAE,GAAG,EAAE,KAAK,EAAE,KAAK,EAAE,QAAQ,CAAC,EAAE,KAAK,QAkC9D"}

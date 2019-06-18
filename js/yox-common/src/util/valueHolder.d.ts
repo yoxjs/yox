@@ -1,4 +1,4 @@
-import ValueHolder from '../../../yox-type/src/interface/ValueHolder';
+import { ValueHolder } from '../../../yox-type/src/class';
 /**
  * 全局 value holder，避免频繁的创建临时对象
  */

@@ -1,8 +1,5 @@
-import CustomEvent from './event/CustomEvent';
-import YoxOptions from './options/Yox';
-import Yox from './interface/Yox';
-import VNode from './vnode/VNode';
-import Directive from './vnode/Directive';
+import { CustomEvent, YoxOptions, Yox } from './class';
+import { VNode, Directive } from './vnode';
 import Location from './router/Location';
 import RouteTarget from './router/RouteTarget';
 export declare type hint = 1 | 2 | 3;

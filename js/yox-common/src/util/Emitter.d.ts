@@ -1,6 +1,5 @@
 import * as type from '../../../yox-type/src/type';
-import EmitterOptions from '../../../yox-type/src/options/Emitter';
-import EmitterInterface from '../../../yox-type/src/event/Emitter';
+import { EmitterOptions, Emitter as EmitterInterface } from '../../../yox-type/src/class';
 export default class Emitter implements EmitterInterface {
     /**
      * 是否开启命名空间

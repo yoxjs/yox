@@ -1,7 +1,5 @@
 import * as type from '../../yox-type/src/type';
-import ComputedInterface from '../../yox-type/src/watcher/Computed';
-import ObserverInterface from '../../yox-type/src/watcher/Observer';
-import WatcherOptions from '../../yox-type/src/options/Watcher';
+import { WatcherOptions, Computed as ComputedInterface, Observer as ObserverInterface } from '../../yox-type/src/class';
 /**
  * 计算属性
  *

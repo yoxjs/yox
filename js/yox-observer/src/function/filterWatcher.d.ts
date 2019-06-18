@@ -1,4 +1,4 @@
-import EmitterOptions from '../../../yox-type/src/options/Emitter';
+import { EmitterOptions } from '../../../yox-type/src/class';
 /**
  * 触发异步变化时，用此函数过滤下，哪些 listener 应该执行
  *

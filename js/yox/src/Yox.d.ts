@@ -7,14 +7,8 @@ import * as object from '../../yox-common/src/util/object';
 import * as logger from '../../yox-common/src/util/logger';
 import * as type from '../../yox-type/src/type';
 import * as domApi from '../../yox-dom/src/dom';
-import VNode from '../../yox-type/src/vnode/VNode';
-import YoxInterface from '../../yox-type/src/interface/Yox';
-import YoxPluginInterface from '../../yox-type/src/interface/YoxPlugin';
-import YoxOptions from '../../yox-type/src/options/Yox';
-import ComputedOptions from '../../yox-type/src/options/Computed';
-import WatcherOptions from '../../yox-type/src/options/Watcher';
-import DirectiveHooks from '../../yox-type/src/hooks/Directive';
-import TransitionHooks from '../../yox-type/src/hooks/Transition';
+import { VNode } from '../../yox-type/src/vnode';
+import { YoxOptions, ComputedOptions, WatcherOptions, DirectiveHooks, TransitionHooks, Yox as YoxInterface, YoxPlugin as YoxPluginInterface } from '../../yox-type/src/class';
 import Computed from '../../yox-observer/src/Computed';
 import Observer from '../../yox-observer/src/Observer';
 export default class Yox implements YoxInterface {

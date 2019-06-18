@@ -1,5 +1,5 @@
 import * as type from '../../../yox-type/src/type';
-import ValueHolder from '../../../yox-type/src/interface/ValueHolder';
+import { ValueHolder } from '../../../yox-type/src/class';
 /**
  * 获取对象的 key 的数组
  *

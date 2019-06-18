@@ -1,1 +1,1 @@
-{"version":3,"file":"directive.d.ts","sourceRoot":"","sources":["../../../../yox-snabbdom/src/directive.ts"],"names":[],"mappings":"AAGA,OAAO,KAAK,MAAM,gCAAgC,CAAA;AAKlD,wBAAgB,MAAM,CAAC,KAAK,EAAE,KAAK,EAAE,QAAQ,CAAC,EAAE,KAAK,QAiDpD;AAED,wBAAgB,MAAM,CAAC,KAAK,EAAE,KAAK,QAclC"}
+{"version":3,"file":"directive.d.ts","sourceRoot":"","sources":["../../../../yox-snabbdom/src/directive.ts"],"names":[],"mappings":"AAGA,OAAO,EACL,KAAK,EAEN,MAAM,0BAA0B,CAAA;AAIjC,wBAAgB,MAAM,CAAC,KAAK,EAAE,KAAK,EAAE,QAAQ,CAAC,EAAE,KAAK,QAiDpD;AAED,wBAAgB,MAAM,CAAC,KAAK,EAAE,KAAK,QAclC"}

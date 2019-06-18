@@ -2,7 +2,7 @@ import Property from './Property';
 import Attribute from './Attribute';
 import Directive from './Directive';
 import * as type from '../type';
-import Yox from '../interface/Yox';
+import { Yox } from '../class';
 import TransitionHooks from '../hooks/Transition';
 export default interface VNode {
     data: type.data;

@@ -1,5 +1,5 @@
 import * as type from '../../yox-type/src/type';
-import SpecialEventHooks from '../../yox-type/src/hooks/SpecialEvent';
+import { SpecialEventHooks } from '../../yox-type/src/class';
 export declare function createElement(tag: string, isSvg?: boolean): Element;
 export declare function createText(text: string): Text;
 export declare function createComment(text: string): Comment;

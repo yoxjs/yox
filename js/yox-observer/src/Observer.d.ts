@@ -1,9 +1,7 @@
 import Emitter from '../../yox-common/src/util/Emitter';
 import NextTask from '../../yox-common/src/util/NextTask';
 import * as type from '../../yox-type/src/type';
-import ComputedOptions from '../../yox-type/src/options/Computed';
-import WatcherOptions from '../../yox-type/src/options/Watcher';
-import ObserverInterface from '../../yox-type/src/watcher/Observer';
+import { ComputedOptions, WatcherOptions, Observer as ObserverInterface } from '../../yox-type/src/class';
 import Computed from './Computed';
 interface AsyncChange {
     value: any;
