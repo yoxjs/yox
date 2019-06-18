@@ -6,6 +6,7 @@ import * as string from '../../yox-common/src/util/string';
 import * as object from '../../yox-common/src/util/object';
 import * as logger from '../../yox-common/src/util/logger';
 import * as type from '../../yox-type/src/type';
+import * as domApi from '../../yox-dom/src/dom';
 import VNode from '../../yox-type/src/vnode/VNode';
 import YoxInterface from '../../yox-type/src/interface/Yox';
 import YoxPluginInterface from '../../yox-type/src/interface/YoxPlugin';
@@ -48,6 +49,7 @@ export default class Yox implements YoxInterface {
     static logger: typeof logger;
     static Event: typeof CustomEvent;
     static Emitter: typeof Emitter;
+    static dom: typeof domApi;
     /**
      * 安装插件
      *

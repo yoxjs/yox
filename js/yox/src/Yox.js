@@ -720,6 +720,7 @@ Yox.string = string;
 Yox.logger = logger;
 Yox.Event = CustomEvent;
 Yox.Emitter = Emitter;
+Yox.dom = domApi;
 const toString = Object.prototype.toString;
 function matchType(value, type) {
     return type === 'numeric'
@@ -849,7 +850,6 @@ function setResource(data, name, value, formatValue) {
     }
 }
 if (process.env.NODE_ENV !== 'pure') {
-    Yox['dom'] = domApi;
     // 全局注册内置指令
     Yox.directive({ event, model, binding });
     // 全局注册内置过滤器

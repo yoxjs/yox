@@ -25,12 +25,18 @@ let suffix = '.js'
 
 export default function (env, release, minify = false, legacy = false, port = 0) {
 
+  const replaces = {
+    'process.env.NODE_ENV': JSON.stringify(env),
+    'process.env.NODE_VERSION': JSON.stringify(version),
+    'process.env.NODE_LEGACY': legacy
+  }
+
+  if (env === 'pure') {
+    replaces['public static dom = domApi'] = ''
+  }
+
   let plugins = [
-    replace({
-      'process.env.NODE_ENV': JSON.stringify(env),
-      'process.env.NODE_VERSION': JSON.stringify(version),
-      'process.env.NODE_LEGACY': legacy
-    }),
+    replace(replaces),
     typescript(),
     // buble 比 typescript 直接转 ES5 效果更好
     buble()

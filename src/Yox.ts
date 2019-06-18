@@ -112,6 +112,7 @@ export default class Yox implements YoxInterface {
   public static logger = logger
   public static Event = CustomEvent
   public static Emitter = Emitter
+  public static dom = domApi
 
   /**
    * 安装插件
@@ -1275,7 +1276,6 @@ function setResource(data: type.data, name: string | type.data, value?: any, for
 }
 
 if (process.env.NODE_ENV !== 'pure') {
-  Yox['dom'] = domApi
   // 全局注册内置指令
   Yox.directive({ event, model, binding })
   // 全局注册内置过滤器
