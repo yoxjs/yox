@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.66
+ * yox.js v1.0.0-alpha.67
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1246,12 +1246,6 @@
       return NextTask;
   }());
 
-  var NAMESPACE_HOOK = '.hook';
-  var HOOK_BEFORE_CREATE = 'beforeCreate';
-  var HOOK_AFTER_CREATE = 'afterCreate';
-  var HOOK_BEFORE_DESTROY = 'beforeDestroy';
-  var HOOK_AFTER_DESTROY = 'afterDestroy';
-
   // vnode.data 内部使用的几个字段
 
   function toNumber (target, defaultValue) {
@@ -1985,19 +1979,14 @@
   var Yox = /** @class */ (function () {
       function Yox(options) {
           var instance = this, $options = options || EMPTY_OBJECT;
-          var data = $options.data, props = $options.props, vnode = $options.vnode, parent = $options.parent, propTypes = $options.propTypes, computed = $options.computed, events = $options.events, methods = $options.methods, watchers = $options.watchers, extensions = $options.extensions;
           // 为了冒泡 HOOK_BEFORE_CREATE 事件，必须第一时间创建 emitter
           // 监听各种事件
           // 支持命名空间
           instance.$emitter = new Emitter(TRUE);
-          // 当前组件的直接父组件
-          if (parent) {
-              instance.$parent = parent;
+          if ($options.events) {
+              instance.on($options.events);
           }
-          // 建立好父子连接后，立即触发钩子
-          execute($options[HOOK_BEFORE_CREATE], instance, $options);
-          // 冒泡 before create 事件
-          instance.fire(HOOK_BEFORE_CREATE + NAMESPACE_HOOK, $options);
+          var data = $options.data, props = $options.props, vnode = $options.vnode, propTypes = $options.propTypes, computed = $options.computed, methods = $options.methods, watchers = $options.watchers, extensions = $options.extensions;
           instance.$options = $options;
           if (extensions) {
               extend(instance, extensions);
@@ -2022,9 +2011,6 @@
               each$2(methods, function (method, name) {
                   instance[name] = method;
               });
-          }
-          if (events) {
-              instance.on(events);
           }
           afterCreateHook(instance, watchers);
       }
@@ -2221,11 +2207,7 @@
        */
       Yox.prototype.destroy = function () {
           var instance = this, $parent = instance.$parent, $options = instance.$options, $emitter = instance.$emitter, $observer = instance.$observer;
-          execute($options[HOOK_BEFORE_DESTROY], instance);
-          instance.fire(HOOK_BEFORE_DESTROY + NAMESPACE_HOOK);
           $observer.destroy();
-          execute($options[HOOK_AFTER_DESTROY], instance);
-          instance.fire(HOOK_AFTER_DESTROY + NAMESPACE_HOOK);
           // 发完 after destroy 事件再解绑所有事件
           $emitter.off();
           clear(instance);
@@ -2326,7 +2308,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.66";
+      Yox.version = "1.0.0-alpha.67";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
@@ -2343,8 +2325,6 @@
       if (watchers) {
           instance.watch(watchers);
       }
-      execute(instance.$options[HOOK_AFTER_CREATE], instance);
-      instance.fire(HOOK_AFTER_CREATE + NAMESPACE_HOOK);
   }
   function addEvent(instance, type, listener, once) {
       var options = {
