@@ -2,7 +2,7 @@
 
 ### 类型约束
 
-Yox 组件是符合 [YoxOptions](https://github.com/yoxjs/yox-type/blob/master/src/options/Yox.ts) 类型约束的 `Plain Object`，如下：
+Yox 组件是符合 [YoxOptions](https://github.com/yoxjs/yox-type/blob/master/src/class.ts#L92) 类型约束的 `Plain Object`，如下：
 
 ```js
 {
