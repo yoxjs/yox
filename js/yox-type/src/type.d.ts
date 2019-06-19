@@ -26,8 +26,6 @@ export declare type componentLoader = (callback: componentCallback) => void;
 export declare type component = YoxOptions | componentLoader;
 export declare type yoxOptionsBeforeCreateHook = (options: YoxOptions) => void;
 export declare type yoxOptionsOtherHook = () => void;
-export declare type yoxClassBeforeCreateHook = (options: YoxOptions) => void;
-export declare type yoxClassOtherHook = (instance: Yox) => void;
 export declare type yoxRouterBeforeHook = (to: Location, from: Location | void, next: (value?: false | string | RouteTarget) => void) => void;
 export declare type yoxRouterAfterHook = (to: Location, from: Location | void) => void;
 //# sourceMappingURL=type.d.ts.map

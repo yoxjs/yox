@@ -18,6 +18,7 @@ export declare const DIRECTIVE_EVENT = "event";
 export declare const DIRECTIVE_BINDING = "binding";
 export declare const DIRECTIVE_CUSTOM = "o";
 export declare const MODEL_PROP_DEFAULT = "value";
+export declare const NAMESPACE_HOOK = ".hook";
 export declare const HOOK_BEFORE_CREATE = "beforeCreate";
 export declare const HOOK_AFTER_CREATE = "afterCreate";
 export declare const HOOK_BEFORE_MOUNT = "beforeMount";

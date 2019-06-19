@@ -224,16 +224,11 @@ export default class Yox implements YoxInterface {
 
     const instance = this, $options: YoxOptions = options || env.EMPTY_OBJECT
 
-    // 一进来就执行 before create
-    execute($options[config.HOOK_BEFORE_CREATE], instance, $options)
-    execute(Yox[config.HOOK_BEFORE_CREATE], env.UNDEFINED, $options)
-
-    instance.$options = $options
-
     let {
       data,
       props,
       vnode,
+      parent,
       propTypes,
       computed,
       events,
@@ -242,32 +237,51 @@ export default class Yox implements YoxInterface {
       extensions,
     } = $options
 
+    // 为了冒泡 HOOK_BEFORE_CREATE 事件，必须第一时间创建 emitter
+    // 监听各种事件
+    // 支持命名空间
+    instance.$emitter = new Emitter(env.TRUE)
+
+    // 当前组件的直接父组件
+    if (parent) {
+      instance.$parent = parent
+    }
+
+    // 建立好父子连接后，立即触发钩子
+    execute($options[config.HOOK_BEFORE_CREATE], instance, $options)
+    // 冒泡 before create 事件
+    instance.fire(config.HOOK_BEFORE_CREATE + config.NAMESPACE_HOOK, $options)
+
+    instance.$options = $options
+
     if (extensions) {
       object.extend(instance, extensions)
     }
 
     // 数据源，默认值仅在创建组件时启用
     const source = props ? object.copy(props) : {}
-    if (propTypes) {
-      object.each(
-        propTypes,
-        function (rule: PropRule, key: string) {
-          let value = source[key]
-          if (process.env.NODE_ENV === 'development') {
-            checkProp(key, value, rule)
-          }
-          if (isUndef(value)) {
-            value = rule.value
-            if (isDef(value)) {
-              source[key] = rule.type === env.RAW_FUNCTION
-                ? value
-                : is.func(value)
-                  ? (value as type.propValue)()
-                  : value
+    if (process.env.NODE_ENV !== 'pure') {
+      if (propTypes) {
+        object.each(
+          propTypes,
+          function (rule: PropRule, key: string) {
+            let value = source[key]
+            if (process.env.NODE_ENV === 'development') {
+              checkProp(key, value, rule)
+            }
+            if (isUndef(value)) {
+              value = rule.value
+              if (isDef(value)) {
+                source[key] = rule.type === env.RAW_FUNCTION
+                  ? value
+                  : is.func(value)
+                    ? (value as type.propValue)()
+                    : value
+              }
             }
           }
-        }
-      )
+        )
+      }
     }
 
     // 先放 props
@@ -319,10 +333,6 @@ export default class Yox implements YoxInterface {
       )
     }
 
-    // 监听各种事件
-    // 支持命名空间
-    instance.$emitter = new Emitter(env.TRUE)
-
     if (events) {
       instance.on(events)
     }
@@ -335,7 +345,6 @@ export default class Yox implements YoxInterface {
         el,
         root,
         model,
-        parent,
         context,
         replace,
         template,
@@ -407,10 +416,6 @@ export default class Yox implements YoxInterface {
       // 根组件
       if (root) {
         instance.$root = root
-      }
-      // 当前组件的直接父组件
-      if (parent) {
-        instance.$parent = parent
       }
       // 当前组件是被哪个组件渲染出来的
       // 因为有 slot 机制，$context 不一定等于 $parent
@@ -900,13 +905,13 @@ export default class Yox implements YoxInterface {
 
       if ($vnode) {
         execute($options[config.HOOK_BEFORE_UPDATE], instance)
-        execute(Yox[config.HOOK_BEFORE_UPDATE], env.UNDEFINED, instance)
+        instance.fire(config.HOOK_BEFORE_UPDATE + config.NAMESPACE_HOOK)
         snabbdom.patch(domApi, vnode, oldVnode)
         afterHook = config.HOOK_AFTER_UPDATE
       }
       else {
         execute($options[config.HOOK_BEFORE_MOUNT], instance)
-        execute(Yox[config.HOOK_BEFORE_MOUNT], env.UNDEFINED, instance)
+        instance.fire(config.HOOK_BEFORE_MOUNT + config.NAMESPACE_HOOK)
         snabbdom.patch(domApi, vnode, oldVnode)
         instance.$el = vnode.node as HTMLElement
         afterHook = config.HOOK_AFTER_MOUNT
@@ -920,7 +925,7 @@ export default class Yox implements YoxInterface {
         function () {
           if (instance.$vnode) {
             execute($options[afterHook], instance)
-            execute(Yox[afterHook], env.UNDEFINED, instance)
+            instance.fire(afterHook + config.NAMESPACE_HOOK)
           }
         }
       )
@@ -966,7 +971,7 @@ export default class Yox implements YoxInterface {
     { $parent, $options, $emitter, $observer } = instance
 
     execute($options[config.HOOK_BEFORE_DESTROY], instance)
-    execute(Yox[config.HOOK_BEFORE_DESTROY], env.UNDEFINED, instance)
+    instance.fire(config.HOOK_BEFORE_DESTROY + config.NAMESPACE_HOOK)
 
     if (process.env.NODE_ENV !== 'pure') {
 
@@ -984,11 +989,13 @@ export default class Yox implements YoxInterface {
 
     }
 
-    $emitter.off()
     $observer.destroy()
 
     execute($options[config.HOOK_AFTER_DESTROY], instance)
-    execute(Yox[config.HOOK_AFTER_DESTROY], env.UNDEFINED, instance)
+    instance.fire(config.HOOK_AFTER_DESTROY + config.NAMESPACE_HOOK)
+
+    // 发完 after destroy 事件再解绑所有事件
+    $emitter.off()
 
     object.clear(instance)
 
@@ -1170,7 +1177,7 @@ function afterCreateHook(instance: Yox, watchers: Record<string, type.watcher | 
   }
 
   execute(instance.$options[config.HOOK_AFTER_CREATE], instance)
-  execute(Yox[config.HOOK_AFTER_CREATE], env.UNDEFINED, instance)
+  instance.fire(config.HOOK_AFTER_CREATE + config.NAMESPACE_HOOK)
 
 }
 

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.65
+ * yox.js v1.0.0-alpha.66
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -48,10 +48,6 @@
 
   function isDef (target) {
       return target !== UNDEFINED;
-  }
-
-  function isUndef (target) {
-      return target === UNDEFINED;
   }
 
   /**
@@ -1250,6 +1246,7 @@
       return NextTask;
   }());
 
+  var NAMESPACE_HOOK = '.hook';
   var HOOK_BEFORE_CREATE = 'beforeCreate';
   var HOOK_AFTER_CREATE = 'afterCreate';
   var HOOK_BEFORE_DESTROY = 'beforeDestroy';
@@ -1988,31 +1985,25 @@
   var Yox = /** @class */ (function () {
       function Yox(options) {
           var instance = this, $options = options || EMPTY_OBJECT;
-          // 一进来就执行 before create
+          var data = $options.data, props = $options.props, vnode = $options.vnode, parent = $options.parent, propTypes = $options.propTypes, computed = $options.computed, events = $options.events, methods = $options.methods, watchers = $options.watchers, extensions = $options.extensions;
+          // 为了冒泡 HOOK_BEFORE_CREATE 事件，必须第一时间创建 emitter
+          // 监听各种事件
+          // 支持命名空间
+          instance.$emitter = new Emitter(TRUE);
+          // 当前组件的直接父组件
+          if (parent) {
+              instance.$parent = parent;
+          }
+          // 建立好父子连接后，立即触发钩子
           execute($options[HOOK_BEFORE_CREATE], instance, $options);
-          execute(Yox[HOOK_BEFORE_CREATE], UNDEFINED, $options);
+          // 冒泡 before create 事件
+          instance.fire(HOOK_BEFORE_CREATE + NAMESPACE_HOOK, $options);
           instance.$options = $options;
-          var data = $options.data, props = $options.props, vnode = $options.vnode, propTypes = $options.propTypes, computed = $options.computed, events = $options.events, methods = $options.methods, watchers = $options.watchers, extensions = $options.extensions;
           if (extensions) {
               extend(instance, extensions);
           }
           // 数据源，默认值仅在创建组件时启用
           var source = props ? copy(props) : {};
-          if (propTypes) {
-              each$2(propTypes, function (rule, key) {
-                  var value = source[key];
-                  if (isUndef(value)) {
-                      value = rule.value;
-                      if (isDef(value)) {
-                          source[key] = rule.type === RAW_FUNCTION
-                              ? value
-                              : func(value)
-                                  ? value()
-                                  : value;
-                      }
-                  }
-              });
-          }
           // 先放 props
           // 当 data 是函数时，可以通过 this.get() 获取到外部数据
           var observer = instance.$observer = new Observer(source, instance);
@@ -2032,9 +2023,6 @@
                   instance[name] = method;
               });
           }
-          // 监听各种事件
-          // 支持命名空间
-          instance.$emitter = new Emitter(TRUE);
           if (events) {
               instance.on(events);
           }
@@ -2234,11 +2222,12 @@
       Yox.prototype.destroy = function () {
           var instance = this, $parent = instance.$parent, $options = instance.$options, $emitter = instance.$emitter, $observer = instance.$observer;
           execute($options[HOOK_BEFORE_DESTROY], instance);
-          execute(Yox[HOOK_BEFORE_DESTROY], UNDEFINED, instance);
-          $emitter.off();
+          instance.fire(HOOK_BEFORE_DESTROY + NAMESPACE_HOOK);
           $observer.destroy();
           execute($options[HOOK_AFTER_DESTROY], instance);
-          execute(Yox[HOOK_AFTER_DESTROY], UNDEFINED, instance);
+          instance.fire(HOOK_AFTER_DESTROY + NAMESPACE_HOOK);
+          // 发完 after destroy 事件再解绑所有事件
+          $emitter.off();
           clear(instance);
       };
       /**
@@ -2337,7 +2326,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.65";
+      Yox.version = "1.0.0-alpha.66";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
@@ -2355,7 +2344,7 @@
           instance.watch(watchers);
       }
       execute(instance.$options[HOOK_AFTER_CREATE], instance);
-      execute(Yox[HOOK_AFTER_CREATE], UNDEFINED, instance);
+      instance.fire(HOOK_AFTER_CREATE + NAMESPACE_HOOK);
   }
   function addEvent(instance, type, listener, once) {
       var options = {
