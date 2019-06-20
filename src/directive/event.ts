@@ -1,17 +1,16 @@
+import {
+  listener,
+  Yox,
+  VNode,
+  Directive,
+} from '../../../yox-type/src/type'
+
 import execute from '../../../yox-common/src/function/execute'
 import debounce from '../../../yox-common/src/function/debounce'
 
 import * as env from '../../../yox-common/src/util/env'
-
 import * as domApi from '../../../yox-dom/src/dom'
 
-import * as type from '../../../yox-type/src/type'
-
-import { Yox } from '../../../yox-type/src/class'
-import {
-  VNode,
-  Directive,
-} from '../../../yox-type/src/vnode'
 
 export function bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
 
@@ -44,7 +43,7 @@ export function bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode
 
     (node as Yox).on(name, handler)
     vnode.data[directive.key] = function () {
-      (node as Yox).off(name, handler as type.listener)
+      (node as Yox).off(name, handler as listener)
     }
 
   }
@@ -52,7 +51,7 @@ export function bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode
 
     domApi.on(node as HTMLElement, name, handler)
     vnode.data[directive.key] = function () {
-      domApi.off(node as HTMLElement, name, handler as type.listener)
+      domApi.off(node as HTMLElement, name, handler as listener)
     }
 
   }

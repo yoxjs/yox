@@ -20,14 +20,20 @@ import * as templateCompiler from '../../yox-template-compiler/src/compiler'
 import * as templateGenerator from '../../yox-template-compiler/src/generator'
 import * as templateRender from '../../yox-template-compiler/src/renderer'
 
-import * as type from '../../yox-type/src/type'
 import * as domApi from '../../yox-dom/src/dom'
 
 import {
-  VNode
-} from '../../yox-type/src/vnode'
-
-import {
+  data,
+  getter,
+  filter,
+  component,
+  componentCallback,
+  componentLoader,
+  watcher,
+  listener,
+  propType,
+  propValue,
+  VNode,
   PropRule,
   YoxOptions,
   ComputedOptions,
@@ -37,7 +43,7 @@ import {
   TransitionHooks,
   Yox as YoxInterface,
   YoxPlugin as YoxPluginInterface,
-} from '../../yox-type/src/class'
+} from '../../yox-type/src/type'
 
 import Computed from '../../yox-observer/src/Computed'
 import Observer from '../../yox-observer/src/Observer'
@@ -100,7 +106,7 @@ export default class Yox implements YoxInterface {
 
   $partials?: Record<string, Function>
 
-  $filters?: Record<string, type.filter>
+  $filters?: Record<string, filter>
 
   /**
    * core 版本
@@ -185,9 +191,9 @@ export default class Yox implements YoxInterface {
   }
 
   public static component(
-    name: string | Record<string, type.component>,
-    component?: type.component
-  ): type.component | void {
+    name: string | Record<string, component>,
+    component?: component
+  ): component | void {
     if (process.env.NODE_ENV !== 'pure') {
       if (is.string(name) && !component) {
         return getResource(globalComponents, name as string)
@@ -209,9 +215,9 @@ export default class Yox implements YoxInterface {
   }
 
   public static filter(
-    name: string | Record<string, type.filter>,
-    filter?: type.filter
-  ): type.filter | void {
+    name: string | Record<string, filter>,
+    filter?: filter
+  ): filter | void {
     if (process.env.NODE_ENV !== 'pure') {
       if (is.string(name) && !filter) {
         return getResource(globalFilters, name as string)
@@ -281,7 +287,7 @@ export default class Yox implements YoxInterface {
                 source[key] = rule.type === env.RAW_FUNCTION
                   ? value
                   : is.func(value)
-                    ? (value as type.propValue)()
+                    ? (value as propValue)()
                     : value
               }
             }
@@ -297,7 +303,7 @@ export default class Yox implements YoxInterface {
     if (computed) {
       object.each(
         computed,
-        function (options: type.getter | ComputedOptions, keypath: string) {
+        function (options: getter | ComputedOptions, keypath: string) {
           observer.addComputed(keypath, options)
         }
       )
@@ -514,7 +520,7 @@ export default class Yox implements YoxInterface {
    */
   addComputed(
     keypath: string,
-    computed: type.getter | ComputedOptions
+    computed: getter | ComputedOptions
   ): Computed | void {
     return this.$observer.addComputed(keypath, computed)
   }
@@ -543,7 +549,7 @@ export default class Yox implements YoxInterface {
    * 设值
    */
   set(
-    keypath: string | type.data,
+    keypath: string | data,
     value?: any
   ): void {
     // 组件经常有各种异步改值，为了避免组件销毁后依然调用 set
@@ -558,8 +564,8 @@ export default class Yox implements YoxInterface {
    * 监听事件
    */
   on(
-    type: string | Record<string, type.listener>,
-    listener?: type.listener
+    type: string | Record<string, listener>,
+    listener?: listener
   ): YoxInterface {
     return addEvents(this, type, listener)
   }
@@ -568,8 +574,8 @@ export default class Yox implements YoxInterface {
    * 监听一次事件
    */
   once(
-    type: string | Record<string, type.listener>,
-    listener?: type.listener
+    type: string | Record<string, listener>,
+    listener?: listener
   ): YoxInterface {
     return addEvents(this, type, listener, env.TRUE)
   }
@@ -579,7 +585,7 @@ export default class Yox implements YoxInterface {
    */
   off(
     type?: string,
-    listener?: type.listener
+    listener?: listener
   ): YoxInterface {
     this.$emitter.off(type, listener)
     return this
@@ -590,7 +596,7 @@ export default class Yox implements YoxInterface {
    */
   fire(
     type: string | CustomEvent,
-    data?: type.data | boolean,
+    data?: data | boolean,
     downward?: boolean
   ): boolean {
 
@@ -613,7 +619,7 @@ export default class Yox implements YoxInterface {
 
     // 比如 fire('name', true) 直接向下发事件
     if (is.object(data)) {
-      array.push(args, data as type.data)
+      array.push(args, data as data)
     }
     else if (data === env.TRUE) {
       downward = env.TRUE
@@ -647,8 +653,8 @@ export default class Yox implements YoxInterface {
    * 监听数据变化
    */
   watch(
-    keypath: string | Record<string, type.watcher | WatcherOptions>,
-    watcher?: type.watcher | WatcherOptions,
+    keypath: string | Record<string, watcher | WatcherOptions>,
+    watcher?: watcher | WatcherOptions,
     immediate?: boolean
   ): YoxInterface {
     this.$observer.watch(keypath, watcher, immediate)
@@ -660,7 +666,7 @@ export default class Yox implements YoxInterface {
    */
   unwatch(
     keypath?: string,
-    watcher?: type.watcher
+    watcher?: watcher
   ): YoxInterface {
     this.$observer.unwatch(keypath, watcher)
     return this
@@ -672,7 +678,7 @@ export default class Yox implements YoxInterface {
    * @param name 组件名称
    * @param callback 组件加载成功后的回调
    */
-  loadComponent(name: string, callback: type.componentCallback): void {
+  loadComponent(name: string, callback: componentCallback): void {
     if (process.env.NODE_ENV !== 'pure') {
       if (!loadComponent(this.$components, name, callback)) {
         const hasComponent = loadComponent(globalComponents, name, callback)
@@ -781,9 +787,9 @@ export default class Yox implements YoxInterface {
   }
 
   component(
-    name: string | Record<string, type.component>,
-    component?: type.component
-  ): type.component | void {
+    name: string | Record<string, component>,
+    component?: component
+  ): component | void {
     if (process.env.NODE_ENV !== 'pure') {
       const instance = this, { $components } = instance
       if (is.string(name) && !component) {
@@ -816,9 +822,9 @@ export default class Yox implements YoxInterface {
   }
 
   filter(
-    name: string | Record<string, type.filter>,
-    filter?: type.filter
-  ): type.filter | void {
+    name: string | Record<string, filter>,
+    filter?: filter
+  ): filter | void {
     if (process.env.NODE_ENV !== 'pure') {
       const instance = this, { $filters } = instance
       if (is.string(name) && !filter) {
@@ -836,7 +842,7 @@ export default class Yox implements YoxInterface {
    * 对于某些特殊场景，修改了数据，但是模板的依赖中并没有这一项
    * 而你非常确定需要更新模板，强制刷新正是你需要的
    */
-  forceUpdate(data?: type.data): void {
+  forceUpdate(data?: data): void {
     if (process.env.NODE_ENV !== 'pure') {
 
       const instance = this,
@@ -939,7 +945,7 @@ export default class Yox implements YoxInterface {
    *
    * @param props
    */
-  checkProps(props: type.data): void {
+  checkProps(props: data): void {
     if (process.env.NODE_ENV === 'development') {
       const instance = this
       object.each(
@@ -1132,7 +1138,7 @@ function checkProp(key: string, value: any, rule: PropRule) {
       // 自定义函数判断是否匹配类型
       // 自己打印警告信息吧
       if (is.func(type)) {
-        (type as type.propType)(key, value)
+        (type as propType)(key, value)
       }
       else {
 
@@ -1174,7 +1180,7 @@ function checkProp(key: string, value: any, rule: PropRule) {
 
 }
 
-function afterCreateHook(instance: Yox, watchers: Record<string, type.watcher | WatcherOptions> | void) {
+function afterCreateHook(instance: Yox, watchers: Record<string, watcher | WatcherOptions> | void) {
 
   if (watchers) {
     instance.watch(watchers)
@@ -1187,7 +1193,7 @@ function afterCreateHook(instance: Yox, watchers: Record<string, type.watcher | 
 
 }
 
-function setFlexibleOptions(instance: Yox, key: string, value: Function | type.data | void) {
+function setFlexibleOptions(instance: Yox, key: string, value: Function | data | void) {
   if (is.func(value)) {
     instance[key](execute(value, instance))
   }
@@ -1196,7 +1202,7 @@ function setFlexibleOptions(instance: Yox, key: string, value: Function | type.d
   }
 }
 
-function addEvent(instance: Yox, type: string, listener: type.listener, once?: true) {
+function addEvent(instance: Yox, type: string, listener: listener, once?: true) {
   const options: EmitterOptions = {
     fn: listener,
     ctx: instance
@@ -1209,17 +1215,17 @@ function addEvent(instance: Yox, type: string, listener: type.listener, once?: t
 
 function addEvents(
   instance: Yox,
-  type: string | Record<string, type.listener>,
-  listener?: type.listener,
+  type: string | Record<string, listener>,
+  listener?: listener,
   once?: true
 ): Yox {
   if (is.string(type)) {
-    addEvent(instance, type as string, listener as type.listener, once)
+    addEvent(instance, type as string, listener as listener, once)
   }
   else {
     object.each(
-      type as type.data,
-      function (value: type.listener, key: string) {
+      type as data,
+      function (value: listener, key: string) {
         addEvent(instance, key, value, once)
       }
     )
@@ -1227,15 +1233,15 @@ function addEvents(
   return instance
 }
 
-function loadComponent(data: Record<string, type.component> | void, name: string, callback: type.componentCallback): true | void {
+function loadComponent(data: Record<string, component> | void, name: string, callback: componentCallback): true | void {
   if (data && data[name]) {
     const component = data[name]
     // 注册的是异步加载函数
     if (is.func(component)) {
 
-      let loader = component as type.componentLoader,
+      let loader = component as componentLoader,
 
-      queue: type.componentCallback[] = loader[LOADER_QUEUE]
+      queue: componentCallback[] = loader[LOADER_QUEUE]
 
       if (queue) {
         array.push(queue, callback)
@@ -1270,7 +1276,7 @@ function loadComponent(data: Record<string, type.component> | void, name: string
   }
 }
 
-function getResource(data: type.data | void, name: string, lookup?: Function) {
+function getResource(data: data | void, name: string, lookup?: Function) {
   if (data && data[name]) {
     return data[name]
   }
@@ -1279,13 +1285,13 @@ function getResource(data: type.data | void, name: string, lookup?: Function) {
   }
 }
 
-function setResource(data: type.data, name: string | type.data, value?: any, formatValue?: (value: any) => any) {
+function setResource(data: data, name: string | data, value?: any, formatValue?: (value: any) => any) {
   if (is.string(name)) {
     data[name as string] = formatValue ? formatValue(value) : value
   }
   else {
     object.each(
-      name as type.data,
+      name as data,
       function (value, key) {
         data[key] = formatValue ? formatValue(value) : value
       }

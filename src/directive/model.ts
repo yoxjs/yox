@@ -1,3 +1,12 @@
+import {
+  lazy,
+  watcher,
+  listener,
+  Yox,
+  VNode,
+  Directive,
+} from '../../../yox-type/src/type'
+
 import debounce from '../../../yox-common/src/function/debounce'
 import execute from '../../../yox-common/src/function/execute'
 import toString from '../../../yox-common/src/function/toString'
@@ -9,13 +18,6 @@ import * as array from '../../../yox-common/src/util/array'
 import * as domApi from '../../../yox-dom/src/dom'
 
 import * as config from '../../../yox-config/src/config'
-import * as type from '../../../yox-type/src/type'
-
-import { Yox } from '../../../yox-type/src/class'
-import {
-  VNode,
-  Directive,
-} from '../../../yox-type/src/vnode'
 
 interface NativeControl {
 
@@ -27,7 +29,7 @@ interface NativeControl {
 
 }
 
-function debounceIfNeeded(fn: Function, lazy: type.lazy | void): any {
+function debounceIfNeeded(fn: Function, lazy: lazy | void): any {
   // 应用 lazy
   return lazy && lazy !== env.TRUE
     ? debounce(fn, lazy)
@@ -140,9 +142,9 @@ export function bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode
 
   lazyValue = lazy && (lazy[config.DIRECTIVE_MODEL] || lazy[env.EMPTY_STRING]),
 
-  set: type.watcher | void,
+  set: watcher | void,
 
-  sync: type.watcher,
+  sync: watcher,
 
   unbind: Function
 
@@ -210,20 +212,20 @@ export function bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode
     )
 
     unbind = function () {
-      domApi.off(element, eventName, sync as type.listener)
+      domApi.off(element, eventName, sync as listener)
     }
 
-    domApi.on(element, eventName, sync as type.listener)
+    domApi.on(element, eventName, sync as listener)
 
     control.set(element, directive.value)
 
   }
 
   // 监听数据，修改界面
-  context.watch(dataBinding, set as type.watcher)
+  context.watch(dataBinding, set as watcher)
 
   vnode.data[directive.key] = function () {
-    context.unwatch(dataBinding, set as type.watcher)
+    context.unwatch(dataBinding, set as watcher)
     set = env.UNDEFINED
     unbind()
   }

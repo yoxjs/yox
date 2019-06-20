@@ -1,3 +1,10 @@
+import {
+  watcher,
+  Yox,
+  VNode,
+  Directive,
+} from '../../../yox-type/src/type'
+
 import isDef from '../../../yox-common/src/function/isDef'
 import execute from '../../../yox-common/src/function/execute'
 
@@ -5,13 +12,6 @@ import * as env from '../../../yox-common/src/util/env'
 import * as keypathUtil from '../../../yox-common/src/util/keypath'
 
 import * as domApi from '../../../yox-dom/src/dom'
-
-import * as type from '../../../yox-type/src/type'
-import { Yox } from '../../../yox-type/src/class'
-import {
-  VNode,
-  Directive,
-} from '../../../yox-type/src/vnode'
 
 export const once = env.TRUE
 
@@ -24,7 +24,7 @@ export function bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode
   // 提前判断好是否是模糊匹配，避免 watcher 频繁执行判断逻辑
   isFuzzy = keypathUtil.isFuzzy(binding),
 
-  watcher: type.watcher | void = function (newValue: any, _: any, keypath: string) {
+  watcher: watcher | void = function (newValue: any, _: any, keypath: string) {
 
     if (watcher) {
       const name = isFuzzy
@@ -49,10 +49,10 @@ export function bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode
 
   }
 
-  vnode.context.watch(binding, watcher as type.watcher)
+  vnode.context.watch(binding, watcher as watcher)
 
   vnode.data[directive.key] = function () {
-    vnode.context.unwatch(binding, watcher as type.watcher)
+    vnode.context.unwatch(binding, watcher as watcher)
     watcher = env.UNDEFINED
   }
 
