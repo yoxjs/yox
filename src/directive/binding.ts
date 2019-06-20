@@ -4,10 +4,6 @@ import {
   Directive,
 } from '../../../yox-type/src/type'
 
-import {
-  Yox,
-} from '../../../yox-type/src/global'
-
 import isDef from '../../../yox-common/src/function/isDef'
 import execute from '../../../yox-common/src/function/execute'
 
@@ -18,7 +14,7 @@ import * as domApi from '../../../yox-dom/src/dom'
 
 export const once = env.TRUE
 
-export function bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
+export function bind(node: HTMLElement | YoxInterface, directive: Directive, vnode: VNode) {
 
   // binding 可能是模糊匹配
   // 比如延展属性 {{...obj}}，这里 binding 会是 `obj.*`
@@ -35,7 +31,7 @@ export function bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode
         : directive.name
 
       if (vnode.isComponent) {
-        const component = node as Yox
+        const component = node as YoxInterface
         component.checkProp(name, newValue)
         component.set(name, newValue)
       }
@@ -61,7 +57,7 @@ export function bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode
 
 }
 
-export function unbind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
+export function unbind(node: HTMLElement | YoxInterface, directive: Directive, vnode: VNode) {
   execute(vnode.data[directive.key])
 }
 

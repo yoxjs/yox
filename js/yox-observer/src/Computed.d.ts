@@ -1,5 +1,4 @@
-import { getter, setter, watcher, Computed as ComputedInterface, Observer as ObserverInterface } from '../../yox-type/src/type';
-import { WatcherOptions } from '../../yox-type/src/global';
+import { getter, setter, watcher, ComputedInterface, ObserverInterface } from '../../yox-type/src/type';
 /**
  * 计算属性
  *

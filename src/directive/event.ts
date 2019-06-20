@@ -4,10 +4,6 @@ import {
   Directive,
 } from '../../../yox-type/src/type'
 
-import {
-  Yox,
-} from '../../../yox-type/src/global'
-
 import execute from '../../../yox-common/src/function/execute'
 import debounce from '../../../yox-common/src/function/debounce'
 
@@ -15,7 +11,7 @@ import * as env from '../../../yox-common/src/util/env'
 import * as domApi from '../../../yox-dom/src/dom'
 
 
-export function bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
+export function bind(node: HTMLElement | YoxInterface, directive: Directive, vnode: VNode) {
 
   let { name, handler } = directive, { lazy } = vnode
 
@@ -44,9 +40,9 @@ export function bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode
 
   if (vnode.isComponent) {
 
-    (node as Yox).on(name, handler)
+    (node as YoxInterface).on(name, handler)
     vnode.data[directive.key] = function () {
-      (node as Yox).off(name, handler as listener)
+      (node as YoxInterface).off(name, handler as listener)
     }
 
   }
@@ -61,7 +57,7 @@ export function bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode
 
 }
 
-export function unbind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
+export function unbind(node: HTMLElement | YoxInterface, directive: Directive, vnode: VNode) {
   execute(vnode.data[directive.key])
 }
 

@@ -14,16 +14,6 @@ import {
   EmitterOptions,
 } from '../../yox-type/src/type'
 
-import {
-  YoxOptions,
-  ComputedOptions,
-  WatcherOptions,
-  DirectiveHooks,
-  TransitionHooks,
-  Yox as YoxInterface,
-  YoxPlugin as YoxPluginInterface,
-} from '../../yox-type/src/global'
-
 import isDef from '../../yox-common/src/function/isDef'
 import isUndef from '../../yox-common/src/function/isUndef'
 import execute from '../../yox-common/src/function/execute'
@@ -133,7 +123,7 @@ export default class Yox implements YoxInterface {
    *
    * 插件必须暴露 install 方法
    */
-  public static use(plugin: YoxPluginInterface): void {
+  public static use(plugin: YoxPlugin): void {
     plugin.install(Yox)
   }
 

@@ -6,10 +6,6 @@ import {
   Directive,
 } from '../../../yox-type/src/type'
 
-import {
-  Yox,
-} from '../../../yox-type/src/global'
-
 import debounce from '../../../yox-common/src/function/debounce'
 import execute from '../../../yox-common/src/function/execute'
 import toString from '../../../yox-common/src/function/toString'
@@ -26,7 +22,7 @@ interface NativeControl {
 
   set(node: HTMLElement, value: any): void
 
-  sync(node: HTMLElement, keypath: string, context: Yox): void
+  sync(node: HTMLElement, keypath: string, context: YoxInterface): void
 
   name: string
 
@@ -43,7 +39,7 @@ const inputControl: NativeControl = {
   set(node: HTMLInputElement, value: any) {
     node.value = toString(value)
   },
-  sync(node: HTMLInputElement, keypath: string, context: Yox) {
+  sync(node: HTMLInputElement, keypath: string, context: YoxInterface) {
     context.set(keypath, node.value)
   },
   name: env.RAW_VALUE
@@ -53,7 +49,7 @@ radioControl: NativeControl = {
   set(node: HTMLInputElement, value: any) {
     node.checked = node.value === toString(value)
   },
-  sync(node: HTMLInputElement, keypath: string, context: Yox) {
+  sync(node: HTMLInputElement, keypath: string, context: YoxInterface) {
     if (node.checked) {
       context.set(keypath, node.value)
     }
@@ -67,7 +63,7 @@ checkboxControl: NativeControl = {
       ? array.has(value, node.value, env.FALSE)
       : !!value
   },
-  sync(node: HTMLInputElement, keypath: string, context: Yox) {
+  sync(node: HTMLInputElement, keypath: string, context: YoxInterface) {
     const value = context.get(keypath)
     if (is.array(value)) {
       if (node.checked) {
@@ -103,7 +99,7 @@ selectControl: NativeControl = {
         }
     )
   },
-  sync(node: HTMLSelectElement, keypath: string, context: Yox) {
+  sync(node: HTMLSelectElement, keypath: string, context: YoxInterface) {
     const { options } = node
     if (node.multiple) {
       const values: string[] = []
@@ -137,7 +133,7 @@ inputTypes = {
 
 export const once = env.TRUE
 
-export function bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
+export function bind(node: HTMLElement | YoxInterface, directive: Directive, vnode: VNode) {
 
   let { context, lazy, isComponent } = vnode,
 
@@ -153,7 +149,7 @@ export function bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode
 
   if (isComponent) {
 
-    let component = node as Yox,
+    let component = node as YoxInterface,
 
     viewBinding = component.$model as string
 
@@ -235,6 +231,6 @@ export function bind(node: HTMLElement | Yox, directive: Directive, vnode: VNode
 
 }
 
-export function unbind(node: HTMLElement | Yox, directive: Directive, vnode: VNode) {
+export function unbind(node: HTMLElement | YoxInterface, directive: Directive, vnode: VNode) {
   execute(vnode.data[directive.key])
 }

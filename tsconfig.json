@@ -27,6 +27,7 @@
     }
   ],
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "../yox-type/src/*.ts"
   ]
 }

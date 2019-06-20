@@ -1,5 +1,4 @@
 import { data, getter, filter, component, componentCallback, watcher, listener, VNode } from '../../yox-type/src/type';
-import { YoxOptions, ComputedOptions, WatcherOptions, DirectiveHooks, TransitionHooks, Yox as YoxInterface, YoxPlugin as YoxPluginInterface } from '../../yox-type/src/global';
 import CustomEvent from '../../yox-common/src/util/CustomEvent';
 import Emitter from '../../yox-common/src/util/Emitter';
 import * as is from '../../yox-common/src/util/is';
@@ -48,7 +47,7 @@ export default class Yox implements YoxInterface {
      *
      * 插件必须暴露 install 方法
      */
-    static use(plugin: YoxPluginInterface): void;
+    static use(plugin: YoxPlugin): void;
     /**
      * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
      */

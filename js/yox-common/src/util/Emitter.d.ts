@@ -1,4 +1,4 @@
-import { nativeListener, EmitterOptions, Emitter as EmitterInterface } from '../../../yox-type/src/type';
+import { nativeListener, EmitterOptions, EmitterInterface } from '../../../yox-type/src/type';
 export default class Emitter implements EmitterInterface {
     /**
      * 是否开启命名空间

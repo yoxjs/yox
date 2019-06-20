@@ -1,4 +1,4 @@
-import { Task as TaskInterface, NextTask as NextTaskInterface } from '../../../yox-type/src/type';
+import { Task, NextTaskInterface } from '../../../yox-type/src/type';
 export default class NextTask implements NextTaskInterface {
     /**
      * 全局单例
@@ -7,7 +7,7 @@ export default class NextTask implements NextTaskInterface {
     /**
      * 异步队列
      */
-    tasks: TaskInterface[];
+    tasks: Task[];
     constructor();
     /**
      * 在队尾添加异步任务

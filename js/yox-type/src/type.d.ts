@@ -1,4 +1,3 @@
-import { Yox, YoxOptions, ComputedOptions, WatcherOptions, DirectiveHooks, TransitionHooks, SpecialEventHooks } from './global';
 export declare type hint = 1 | 2 | 3;
 export declare type lazy = number | true;
 export declare type propType = (key: string, value: any) => void;
@@ -10,12 +9,12 @@ export declare type setter = (value: any) => void;
 export declare type formater = (...args: any) => string | number | boolean;
 export declare type filter = formater | Record<string, formater>;
 export declare type watcher = (newValue: any, oldValue: any, keypath: string) => void;
-export declare type listener = (event: CustomEvent, data?: data) => false | void;
-export declare type nativeListener = (event: CustomEvent | Event) => false | void;
+export declare type listener = (event: CustomEventInterface, data?: data) => false | void;
+export declare type nativeListener = (event: CustomEventInterface | Event) => false | void;
 export declare type enter = (node: HTMLElement) => void;
 export declare type leave = (node: HTMLElement, done: () => void) => void;
-export declare type bind = (node: HTMLElement | Yox, directive: Directive, vnode: VNode) => void;
-export declare type unbind = (node: HTMLElement | Yox, directive: Directive, vnode: VNode) => void;
+export declare type bind = (node: HTMLElement | YoxInterface, directive: Directive, vnode: VNode) => void;
+export declare type unbind = (node: HTMLElement | YoxInterface, directive: Directive, vnode: VNode) => void;
 export declare type on = (node: HTMLElement | Window | Document, listener: nativeListener) => void;
 export declare type off = (node: HTMLElement | Window | Document, listener: nativeListener) => void;
 export declare type componentCallback = (options: YoxOptions) => void;
@@ -52,10 +51,10 @@ export interface Directive {
 export interface VNode {
     data: data;
     node: Node;
-    parent?: Yox;
+    parent?: YoxInterface;
     slot?: string;
     readonly keypath: string;
-    readonly context: Yox;
+    readonly context: YoxInterface;
     readonly tag?: string | void;
     readonly isComponent?: boolean;
     readonly isComment?: boolean;
@@ -105,7 +104,7 @@ export interface Task {
     fn: Function;
     ctx?: any;
 }
-export interface NextTask {
+export interface NextTaskInterface {
     append(func: Function, context?: any): void;
     prepend(func: Function, context?: any): void;
     clear(): void;
@@ -117,27 +116,27 @@ export interface EmitterOptions extends Task {
     max?: number;
     count?: number;
 }
-export interface CustomEvent {
+export interface CustomEventInterface {
     type: string;
     phase: number;
-    target?: Yox;
-    originalEvent?: CustomEvent | Event;
+    target?: YoxInterface;
+    originalEvent?: CustomEventInterface | Event;
     isPrevented?: true;
     isStoped?: true;
     listener?: Function;
-    preventDefault(): CustomEvent;
-    stopPropagation(): CustomEvent;
-    prevent(): CustomEvent;
-    stop(): CustomEvent;
+    preventDefault(): CustomEventInterface;
+    stopPropagation(): CustomEventInterface;
+    prevent(): CustomEventInterface;
+    stop(): CustomEventInterface;
 }
-export declare var CustomEvent: {
-    prototype: CustomEvent;
+export declare var CustomEventInterface: {
+    prototype: CustomEventInterface;
     PHASE_CURRENT: number;
     PHASE_UPWARD: number;
     PHASE_DOWNWARD: number;
-    new (type: string, originalEvent?: CustomEvent | Event): CustomEvent;
+    new (type: string, originalEvent?: CustomEventInterface | Event): CustomEventInterface;
 };
-export interface Emitter {
+export interface EmitterInterface {
     ns: boolean;
     listeners: Record<string, EmitterOptions[]>;
     nativeListeners?: Record<string, nativeListener>;
@@ -146,15 +145,15 @@ export interface Emitter {
     off(type?: string, listener?: Function): void;
     has(type: string, listener?: Function): boolean;
 }
-export declare var Emitter: {
-    prototype: Emitter;
-    new (ns?: boolean): Emitter;
+export declare var EmitterInterface: {
+    prototype: EmitterInterface;
+    new (ns?: boolean): EmitterInterface;
 };
-export interface Observer {
+export interface ObserverInterface {
     data: data;
     context: any;
-    nextTask: NextTask;
-    addComputed(keypath: string, options: getter | ComputedOptions): Computed | void;
+    nextTask: NextTaskInterface;
+    addComputed(keypath: string, options: getter | ComputedOptions): ComputedInterface | void;
     removeComputed(keypath: string): void;
     diff(keypath: string, newValue: any, oldValue: any): void;
     get(keypath: string, defaultValue?: any, depIgnore?: boolean): any;
@@ -172,19 +171,19 @@ export interface Observer {
     copy<T>(data: T, deep?: boolean): T;
     destroy(): void;
 }
-export declare var Observer: {
-    prototype: Observer;
-    new (data?: data, context?: any): Observer;
+export declare var ObserverInterface: {
+    prototype: ObserverInterface;
+    new (data?: data, context?: any): ObserverInterface;
 };
-export interface Computed {
+export interface ComputedInterface {
     get(force?: boolean): any;
     set(value: any): void;
 }
-export declare var Computed: {
-    prototype: Computed;
-    current?: Computed;
-    build(keypath: string, observer: Observer, options: any): Computed | void;
-    new (keypath: string, sync: boolean, cache: boolean, deps: string[], observer: Observer, getter: getter, setter: setter | void): Computed;
+export declare var ComputedInterface: {
+    prototype: ComputedInterface;
+    current?: ComputedInterface;
+    build(keypath: string, observer: ObserverInterface, options: any): ComputedInterface | void;
+    new (keypath: string, sync: boolean, cache: boolean, deps: string[], observer: ObserverInterface, getter: getter, setter: setter | void): ComputedInterface;
 };
 export interface PropRule {
     type: string | string[] | propType;
