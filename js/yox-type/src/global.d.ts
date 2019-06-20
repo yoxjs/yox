@@ -81,6 +81,7 @@ declare global {
         once?: boolean;
     }
     interface YoxOptions {
+        name?: string;
         propTypes?: Record<string, PropRule>;
         el?: string | Node;
         data?: data | dataGenerator;
