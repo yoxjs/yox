@@ -1,5 +1,4 @@
-import * as type from '../../yox-type/src/type';
-import { SpecialEventHooks } from '../../yox-type/src/class';
+import { listener, SpecialEventHooks } from '../../yox-type/src/type';
 export declare function createElement(tag: string, isSvg?: boolean): Element;
 export declare function createText(text: string): Text;
 export declare function createComment(text: string): Comment;
@@ -19,7 +18,7 @@ export declare function text(node: Node, text?: string, isStyle?: boolean, isOpt
 export declare function html(node: Element, html?: string, isStyle?: boolean, isOption?: boolean): string | void;
 export declare const addClass: (node: HTMLElement, className: string) => void;
 export declare const removeClass: (node: HTMLElement, className: string) => void;
-export declare function on(node: HTMLElement | Window | Document, type: string, listener: type.listener): void;
-export declare function off(node: HTMLElement | Window | Document, type: string, listener: type.listener): void;
+export declare function on(node: HTMLElement | Window | Document, type: string, listener: listener): void;
+export declare function off(node: HTMLElement | Window | Document, type: string, listener: listener): void;
 export declare function addSpecialEvent(type: string, hooks: SpecialEventHooks): void;
 //# sourceMappingURL=dom.d.ts.map

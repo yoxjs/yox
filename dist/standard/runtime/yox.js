@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.67
+ * yox.js v1.0.0-alpha.68
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -691,7 +691,7 @@
   /**
    * 全局 value holder，避免频繁的创建临时对象
    */
-  var valueHolder = {
+  var holder = {
       value: UNDEFINED
   };
 
@@ -815,8 +815,8 @@
               }
               if (isLast) {
                   if (hasValue) {
-                      valueHolder.value = value;
-                      object = valueHolder;
+                      holder.value = value;
+                      object = holder;
                   }
                   else {
                       object = UNDEFINED;
@@ -1885,7 +1885,7 @@
   var KEY_DIRECTIVES = 'directives';
   function render(context, template, filters, partials, directives, transitions) {
       var $scope = { $keypath: EMPTY_STRING }, $stack = [$scope], $vnode, vnodeStack = [], localPartials = {}, findValue = function (stack, index, key, lookup, depIgnore, defaultKeypath) {
-          var scope = stack[index], keypath = join$1(scope.$keypath, key), value = stack, holder = valueHolder;
+          var scope = stack[index], keypath = join$1(scope.$keypath, key), value = stack, holder$1 = holder;
           // 如果最后还是取不到值，用回最初的 keypath
           if (isUndef(defaultKeypath)) {
               defaultKeypath = keypath;
@@ -1918,19 +1918,19 @@
                   // 到头了，最后尝试过滤器
                   var result = get(filters, key);
                   if (result) {
-                      holder = result;
-                      holder.keypath = key;
+                      holder$1 = result;
+                      holder$1.keypath = key;
                   }
                   else {
-                      holder.value = UNDEFINED;
-                      holder.keypath = defaultKeypath;
+                      holder$1.value = UNDEFINED;
+                      holder$1.keypath = defaultKeypath;
                   }
-                  return holder;
+                  return holder$1;
               }
           }
-          holder.value = value;
-          holder.keypath = keypath;
-          return holder;
+          holder$1.value = value;
+          holder$1.keypath = keypath;
+          return holder$1;
       }, createEventListener = function (type) {
           return function (event, data) {
               // 事件名称相同的情况，只可能是监听 DOM 事件，比如写一个 Button 组件
@@ -2107,19 +2107,19 @@
       }, renderExpressionMemberKeypath = function (identifier, runtimeKeypath) {
           unshift(runtimeKeypath, identifier);
           return join(runtimeKeypath, separator);
-      }, renderExpressionMemberLiteral = function (value, staticKeypath, runtimeKeypath, holder) {
+      }, renderExpressionMemberLiteral = function (value, staticKeypath, runtimeKeypath, holder$1) {
           if (isDef(runtimeKeypath)) {
               staticKeypath = join(runtimeKeypath, separator);
           }
           var match = get(value, staticKeypath);
-          valueHolder.keypath = UNDEFINED;
-          valueHolder.value = match ? match.value : UNDEFINED;
-          return holder ? valueHolder : valueHolder.value;
-      }, renderExpressionCall = function (fn, args, holder) {
-          valueHolder.keypath = UNDEFINED;
+          holder.keypath = UNDEFINED;
+          holder.value = match ? match.value : UNDEFINED;
+          return holder$1 ? holder : holder.value;
+      }, renderExpressionCall = function (fn, args, holder$1) {
+          holder.keypath = UNDEFINED;
           // 当 holder 为 true, args 为空时，args 会传入 false
-          valueHolder.value = execute(fn, context, args || UNDEFINED);
-          return holder ? valueHolder : valueHolder.value;
+          holder.value = execute(fn, context, args || UNDEFINED);
+          return holder$1 ? holder : holder.value;
       }, 
       // <slot name="xx"/>
       renderSlot = function (name, defaultRender) {
@@ -2404,7 +2404,7 @@
           // 特殊事件
           var special = specialEvents[type], 
           // 唯一的原生监听器
-          nativeListener = function (event) {
+          nativeListener_1 = function (event) {
               var customEvent = event instanceof CustomEvent
                   ? event
                   : new CustomEvent(event.type, createEvent(event, node));
@@ -2413,12 +2413,12 @@
               }
               emitter.fire(type, [customEvent]);
           };
-          nativeListeners[type] = nativeListener;
+          nativeListeners[type] = nativeListener_1;
           if (special) {
-              special.on(node, nativeListener);
+              special.on(node, nativeListener_1);
           }
           else {
-              addEventListener(node, type, nativeListener);
+              addEventListener(node, type, nativeListener_1);
           }
       }
       emitter.on(type, listener);
@@ -2429,12 +2429,12 @@
       emitter.off(type, listener);
       // 如果注册的 type 事件都解绑了，则去掉原生监听器
       if (nativeListeners && !emitter.has(type)) {
-          var special = specialEvents[type], nativeListener = nativeListeners[type];
+          var special = specialEvents[type], nativeListener_2 = nativeListeners[type];
           if (special) {
-              special.off(node, nativeListener);
+              special.off(node, nativeListener_2);
           }
           else {
-              removeEventListener(node, type, nativeListener);
+              removeEventListener(node, type, nativeListener_2);
           }
           delete nativeListeners[type];
       }
@@ -3351,9 +3351,9 @@
           // checkbox,radio,select 监听的是 change 事件
           eventName_1 = EVENT_CHANGE;
           if (control_1 === inputControl) {
-              var type_1 = node.type;
-              if (inputTypes[type_1]) {
-                  control_1 = inputTypes[type_1];
+              var type = node.type;
+              if (inputTypes[type]) {
+                  control_1 = inputTypes[type];
               }
               // 如果是输入框，则切换成 model 事件
               // model 事件是个 yox-dom 实现的特殊事件
@@ -4061,7 +4061,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.67";
+      Yox.version = "1.0.0-alpha.68";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
@@ -4115,15 +4115,15 @@
   }
   function loadComponent(data, name, callback) {
       if (data && data[name]) {
-          var component = data[name];
+          var component_1 = data[name];
           // 注册的是异步加载函数
-          if (func(component)) {
-              var loader_1 = component, queue_1 = loader_1[LOADER_QUEUE];
+          if (func(component_1)) {
+              var loader_1 = component_1, queue_1 = loader_1[LOADER_QUEUE];
               if (queue_1) {
                   push(queue_1, callback);
               }
               else {
-                  queue_1 = component[LOADER_QUEUE] = [callback];
+                  queue_1 = component_1[LOADER_QUEUE] = [callback];
                   loader_1(function (options) {
                       loader_1[LOADER_QUEUE] = UNDEFINED;
                       data[name] = options;
@@ -4135,7 +4135,7 @@
           }
           // 不是异步加载函数，直接同步返回
           else {
-              callback(component);
+              callback(component_1);
           }
           return TRUE;
       }

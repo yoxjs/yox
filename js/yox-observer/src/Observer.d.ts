@@ -1,7 +1,6 @@
+import { data, getter, watcher, ComputedOptions, WatcherOptions, Observer as ObserverInterface } from '../../yox-type/src/type';
 import Emitter from '../../yox-common/src/util/Emitter';
 import NextTask from '../../yox-common/src/util/NextTask';
-import * as type from '../../yox-type/src/type';
-import { ComputedOptions, WatcherOptions, Observer as ObserverInterface } from '../../yox-type/src/class';
 import Computed from './Computed';
 interface AsyncChange {
     value: any;
@@ -19,7 +18,7 @@ interface AsyncChange {
  * 对于外部调用 observer.watch('keypath', listener)，属于异步监听，它只关心是否变了，而不关心是否是立即触发的
  */
 export default class Observer implements ObserverInterface {
-    data: type.data;
+    data: data;
     context: any;
     nextTask: NextTask;
     computed?: Record<string, Computed>;
@@ -28,7 +27,7 @@ export default class Observer implements ObserverInterface {
     asyncEmitter: Emitter;
     asyncChanges: Record<string, AsyncChange>;
     pending?: boolean;
-    constructor(data?: type.data, context?: any);
+    constructor(data?: data, context?: any);
     /**
      * 获取数据
      *
@@ -44,7 +43,7 @@ export default class Observer implements ObserverInterface {
      * @param keypath
      * @param value
      */
-    set(keypath: string | type.data, value?: any): void;
+    set(keypath: string | data, value?: any): void;
     /**
      * 同步调用的 diff，用于触发 syncEmitter，以及唤醒 asyncEmitter
      *
@@ -63,7 +62,7 @@ export default class Observer implements ObserverInterface {
      * @param keypath
      * @param computed
      */
-    addComputed(keypath: string, options: type.getter | ComputedOptions): Computed | void;
+    addComputed(keypath: string, options: getter | ComputedOptions): Computed | void;
     /**
      * 移除计算属性
      *
@@ -77,14 +76,14 @@ export default class Observer implements ObserverInterface {
      * @param watcher
      * @param immediate
      */
-    watch(keypath: string | Record<string, type.watcher | WatcherOptions>, watcher?: type.watcher | WatcherOptions, immediate?: boolean): void;
+    watch(keypath: string | Record<string, watcher | WatcherOptions>, watcher?: watcher | WatcherOptions, immediate?: boolean): void;
     /**
      * 取消监听数据变化
      *
      * @param keypath
      * @param watcher
      */
-    unwatch(keypath?: string, watcher?: type.watcher): void;
+    unwatch(keypath?: string, watcher?: watcher): void;
     /**
      * 取反 keypath 对应的数据
      *

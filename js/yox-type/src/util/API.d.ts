@@ -1,11 +1,10 @@
-import * as type from '../type';
-import { SpecialEventHooks } from '../class';
+import { hint, listener, SpecialEventHooks } from '../type';
 export default interface API {
     createElement(tag: string, isSvg?: boolean): Element;
     createText(text: string): Text;
     createComment(text: string): Comment;
     prop(node: HTMLElement, name: string, value?: string | number | boolean): string | number | boolean | void;
-    removeProp(node: HTMLElement, name: string, hint?: type.hint): void;
+    removeProp(node: HTMLElement, name: string, hint?: hint): void;
     attr(node: HTMLElement, name: string, value?: string): string | void;
     removeAttr(node: HTMLElement, name: string): void;
     before(parentNode: Node, node: Node, beforeNode: Node): void;
@@ -20,8 +19,8 @@ export default interface API {
     html(node: Element, html?: string, isStyle?: boolean, isOption?: boolean): string | void;
     addClass(node: HTMLElement, className: string): void;
     removeClass(node: HTMLElement, className: string): void;
-    on(node: HTMLElement | Window | Document, type: string, listener: type.listener): void;
-    off(node: HTMLElement | Window | Document, type: string, listener: type.listener): void;
+    on(node: HTMLElement | Window | Document, type: string, listener: listener): void;
+    off(node: HTMLElement | Window | Document, type: string, listener: listener): void;
     addSpecialEvent(type: string, hooks: SpecialEventHooks): void;
 }
 //# sourceMappingURL=API.d.ts.map

@@ -9,7 +9,7 @@ import * as array from '../../yox-common/src/util/array';
 import * as object from '../../yox-common/src/util/object';
 import * as logger from '../../yox-common/src/util/logger';
 import * as keypathUtil from '../../yox-common/src/util/keypath';
-import valueHolder from '../../yox-common/src/util/valueHolder';
+import globalHolder from '../../yox-common/src/util/holder';
 import CustomEvent from '../../yox-common/src/util/CustomEvent';
 function setPair(target, name, key, value) {
     const data = target[name] || (target[name] = {});
@@ -18,7 +18,7 @@ function setPair(target, name, key, value) {
 const KEY_DIRECTIVES = 'directives';
 export function render(context, template, filters, partials, directives, transitions) {
     let $scope = { $keypath: env.EMPTY_STRING }, $stack = [$scope], $vnode, vnodeStack = [], localPartials = {}, findValue = function (stack, index, key, lookup, depIgnore, defaultKeypath) {
-        let scope = stack[index], keypath = keypathUtil.join(scope.$keypath, key), value = stack, holder = valueHolder;
+        let scope = stack[index], keypath = keypathUtil.join(scope.$keypath, key), value = stack, holder = globalHolder;
         // 如果最后还是取不到值，用回最初的 keypath
         if (isUndef(defaultKeypath)) {
             defaultKeypath = keypath;
@@ -263,14 +263,14 @@ export function render(context, template, filters, partials, directives, transit
             staticKeypath = array.join(runtimeKeypath, keypathUtil.separator);
         }
         const match = object.get(value, staticKeypath);
-        valueHolder.keypath = env.UNDEFINED;
-        valueHolder.value = match ? match.value : env.UNDEFINED;
-        return holder ? valueHolder : valueHolder.value;
+        globalHolder.keypath = env.UNDEFINED;
+        globalHolder.value = match ? match.value : env.UNDEFINED;
+        return holder ? globalHolder : globalHolder.value;
     }, renderExpressionCall = function (fn, args, holder) {
-        valueHolder.keypath = env.UNDEFINED;
+        globalHolder.keypath = env.UNDEFINED;
         // 当 holder 为 true, args 为空时，args 会传入 false
-        valueHolder.value = execute(fn, context, args || env.UNDEFINED);
-        return holder ? valueHolder : valueHolder.value;
+        globalHolder.value = execute(fn, context, args || env.UNDEFINED);
+        return holder ? globalHolder : globalHolder.value;
     }, 
     // <slot name="xx"/>
     renderSlot = function (name, defaultRender) {

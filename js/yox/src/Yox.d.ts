@@ -5,10 +5,8 @@ import * as array from '../../yox-common/src/util/array';
 import * as string from '../../yox-common/src/util/string';
 import * as object from '../../yox-common/src/util/object';
 import * as logger from '../../yox-common/src/util/logger';
-import * as type from '../../yox-type/src/type';
 import * as domApi from '../../yox-dom/src/dom';
-import { VNode } from '../../yox-type/src/vnode';
-import { YoxOptions, ComputedOptions, WatcherOptions, DirectiveHooks, TransitionHooks, Yox as YoxInterface, YoxPlugin as YoxPluginInterface } from '../../yox-type/src/class';
+import { data, getter, filter, component, componentCallback, watcher, listener, VNode, YoxOptions, ComputedOptions, WatcherOptions, DirectiveHooks, TransitionHooks, Yox as YoxInterface, YoxPlugin as YoxPluginInterface } from '../../yox-type/src/type';
 import Computed from '../../yox-observer/src/Computed';
 import Observer from '../../yox-observer/src/Observer';
 export default class Yox implements YoxInterface {
@@ -28,7 +26,7 @@ export default class Yox implements YoxInterface {
     $components?: Record<string, YoxOptions>;
     $transitions?: Record<string, TransitionHooks>;
     $partials?: Record<string, Function>;
-    $filters?: Record<string, type.filter>;
+    $filters?: Record<string, filter>;
     /**
      * core 版本
      */
@@ -60,14 +58,14 @@ export default class Yox implements YoxInterface {
     static compile(template: string, stringify?: boolean): Function | string;
     static directive(name: string | Record<string, DirectiveHooks>, directive?: DirectiveHooks): DirectiveHooks | void;
     static transition(name: string | Record<string, TransitionHooks>, transition?: TransitionHooks): TransitionHooks | void;
-    static component(name: string | Record<string, type.component>, component?: type.component): type.component | void;
+    static component(name: string | Record<string, component>, component?: component): component | void;
     static partial(name: string | Record<string, string>, partial?: string): Function | void;
-    static filter(name: string | Record<string, type.filter>, filter?: type.filter): type.filter | void;
+    static filter(name: string | Record<string, filter>, filter?: filter): filter | void;
     constructor(options: YoxOptions | void);
     /**
      * 添加计算属性
      */
-    addComputed(keypath: string, computed: type.getter | ComputedOptions): Computed | void;
+    addComputed(keypath: string, computed: getter | ComputedOptions): Computed | void;
     /**
      * 删除计算属性
      */
@@ -79,38 +77,38 @@ export default class Yox implements YoxInterface {
     /**
      * 设值
      */
-    set(keypath: string | type.data, value?: any): void;
+    set(keypath: string | data, value?: any): void;
     /**
      * 监听事件
      */
-    on(type: string | Record<string, type.listener>, listener?: type.listener): YoxInterface;
+    on(type: string | Record<string, listener>, listener?: listener): YoxInterface;
     /**
      * 监听一次事件
      */
-    once(type: string | Record<string, type.listener>, listener?: type.listener): YoxInterface;
+    once(type: string | Record<string, listener>, listener?: listener): YoxInterface;
     /**
      * 取消监听事件
      */
-    off(type?: string, listener?: type.listener): YoxInterface;
+    off(type?: string, listener?: listener): YoxInterface;
     /**
      * 发射事件
      */
-    fire(type: string | CustomEvent, data?: type.data | boolean, downward?: boolean): boolean;
+    fire(type: string | CustomEvent, data?: data | boolean, downward?: boolean): boolean;
     /**
      * 监听数据变化
      */
-    watch(keypath: string | Record<string, type.watcher | WatcherOptions>, watcher?: type.watcher | WatcherOptions, immediate?: boolean): YoxInterface;
+    watch(keypath: string | Record<string, watcher | WatcherOptions>, watcher?: watcher | WatcherOptions, immediate?: boolean): YoxInterface;
     /**
      * 取消监听数据变化
      */
-    unwatch(keypath?: string, watcher?: type.watcher): YoxInterface;
+    unwatch(keypath?: string, watcher?: watcher): YoxInterface;
     /**
      * 加载组件，组件可以是同步或异步，最后会调用 callback
      *
      * @param name 组件名称
      * @param callback 组件加载成功后的回调
      */
-    loadComponent(name: string, callback: type.componentCallback): void;
+    loadComponent(name: string, callback: componentCallback): void;
     /**
      * 创建子组件
      *
@@ -120,14 +118,14 @@ export default class Yox implements YoxInterface {
     createComponent(options: YoxOptions, vnode: VNode): YoxInterface;
     directive(name: string | Record<string, DirectiveHooks>, directive?: DirectiveHooks): DirectiveHooks | void;
     transition(name: string | Record<string, TransitionHooks>, transition?: TransitionHooks): TransitionHooks | void;
-    component(name: string | Record<string, type.component>, component?: type.component): type.component | void;
+    component(name: string | Record<string, component>, component?: component): component | void;
     partial(name: string | Record<string, string>, partial?: string): Function | void;
-    filter(name: string | Record<string, type.filter>, filter?: type.filter): type.filter | void;
+    filter(name: string | Record<string, filter>, filter?: filter): filter | void;
     /**
      * 对于某些特殊场景，修改了数据，但是模板的依赖中并没有这一项
      * 而你非常确定需要更新模板，强制刷新正是你需要的
      */
-    forceUpdate(data?: type.data): void;
+    forceUpdate(data?: data): void;
     /**
      * 把模板抽象语法树渲染成 virtual dom
      */
@@ -144,7 +142,7 @@ export default class Yox implements YoxInterface {
      *
      * @param props
      */
-    checkProps(props: type.data): void;
+    checkProps(props: data): void;
     checkProp(key: string, value: any): void;
     /**
      * 销毁组件

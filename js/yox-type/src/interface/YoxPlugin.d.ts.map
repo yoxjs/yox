@@ -1,1 +1,0 @@
-{"version":3,"file":"YoxPlugin.d.ts","sourceRoot":"","sources":["../../../../../yox-type/src/interface/YoxPlugin.ts"],"names":[],"mappings":"AAAA,OAAO,QAAQ,MAAM,YAAY,CAAA;AAEjC,MAAM,CAAC,OAAO,WAAW,SAAS;IAChC,OAAO,EAAE,MAAM,CAAA;IACf,OAAO,CAAC,GAAG,EAAE,QAAQ,GAAG,IAAI,CAAA;CAC7B"}

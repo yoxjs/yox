@@ -2,7 +2,7 @@ import * as is from './is';
 import * as env from './env';
 import * as array from './array';
 import * as keypathUtil from './keypath';
-import valueHolder from './valueHolder';
+import holder from './holder';
 import isDef from '../function/isDef';
 /**
  * 获取对象的 key 的数组
@@ -124,8 +124,8 @@ export function get(object, keypath) {
             }
             if (isLast) {
                 if (hasValue) {
-                    valueHolder.value = value;
-                    object = valueHolder;
+                    holder.value = value;
+                    object = holder;
                 }
                 else {
                     object = env.UNDEFINED;

@@ -1,1 +1,0 @@
-{"version":3,"file":"Watcher.d.ts","sourceRoot":"","sources":["../../../../../yox-type/src/options/Watcher.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,IAAI,MAAM,SAAS,CAAA;AAE/B,MAAM,CAAC,OAAO,WAAW,cAAc;IAGrC,OAAO,EAAE,IAAI,CAAC,OAAO,CAAA;IAGrB,SAAS,CAAC,EAAE,OAAO,CAAA;IAGnB,IAAI,CAAC,EAAE,OAAO,CAAA;IAGd,IAAI,CAAC,EAAE,OAAO,CAAA;CAEf"}

@@ -1,4 +1,4 @@
-import { Task as TaskInterface, NextTask as NextTaskInterface } from '../../../yox-type/src/class';
+import { Task as TaskInterface, NextTask as NextTaskInterface } from '../../../yox-type/src/type';
 export default class NextTask implements NextTaskInterface {
     /**
      * 全局单例

@@ -1,5 +1,5 @@
 import * as type from '../../../yox-type/src/type';
-import { WatcherOptions } from '../../../yox-type/src/class';
+import { WatcherOptions } from '../../../yox-type/src/type';
 /**
  * 格式化 watch options
  *

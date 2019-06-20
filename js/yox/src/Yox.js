@@ -25,19 +25,24 @@ const globalDirectives = {}, globalTransitions = {}, globalComponents = {}, glob
 export default class Yox {
     constructor(options) {
         const instance = this, $options = options || env.EMPTY_OBJECT;
-        let { data, props, vnode, parent, propTypes, computed, events, methods, watchers, extensions, } = $options;
         // 为了冒泡 HOOK_BEFORE_CREATE 事件，必须第一时间创建 emitter
         // 监听各种事件
         // 支持命名空间
         instance.$emitter = new Emitter(env.TRUE);
-        // 当前组件的直接父组件
-        if (parent) {
-            instance.$parent = parent;
+        if ($options.events) {
+            instance.on($options.events);
         }
-        // 建立好父子连接后，立即触发钩子
-        execute($options[config.HOOK_BEFORE_CREATE], instance, $options);
-        // 冒泡 before create 事件
-        instance.fire(config.HOOK_BEFORE_CREATE + config.NAMESPACE_HOOK, $options);
+        if (process.env.NODE_ENV !== 'pure') {
+            // 当前组件的直接父组件
+            if ($options.parent) {
+                instance.$parent = $options.parent;
+            }
+            // 建立好父子连接后，立即触发钩子
+            execute($options[config.HOOK_BEFORE_CREATE], instance, $options);
+            // 冒泡 before create 事件
+            instance.fire(config.HOOK_BEFORE_CREATE + config.NAMESPACE_HOOK, $options);
+        }
+        let { data, props, vnode, propTypes, computed, methods, watchers, extensions, } = $options;
         instance.$options = $options;
         if (extensions) {
             object.extend(instance, extensions);
@@ -98,9 +103,6 @@ export default class Yox {
                 }
                 instance[name] = method;
             });
-        }
-        if (events) {
-            instance.on(events);
         }
         if (process.env.NODE_ENV !== 'pure') {
             let placeholder = env.UNDEFINED, { el, root, model, context, replace, template, transitions, components, directives, partials, filters, slots, } = $options;
@@ -597,9 +599,9 @@ export default class Yox {
      */
     destroy() {
         const instance = this, { $parent, $options, $emitter, $observer } = instance;
-        execute($options[config.HOOK_BEFORE_DESTROY], instance);
-        instance.fire(config.HOOK_BEFORE_DESTROY + config.NAMESPACE_HOOK);
         if (process.env.NODE_ENV !== 'pure') {
+            execute($options[config.HOOK_BEFORE_DESTROY], instance);
+            instance.fire(config.HOOK_BEFORE_DESTROY + config.NAMESPACE_HOOK);
             const { $vnode } = instance;
             if ($parent && $parent.$children) {
                 array.remove($parent.$children, instance);
@@ -611,8 +613,10 @@ export default class Yox {
             }
         }
         $observer.destroy();
-        execute($options[config.HOOK_AFTER_DESTROY], instance);
-        instance.fire(config.HOOK_AFTER_DESTROY + config.NAMESPACE_HOOK);
+        if (process.env.NODE_ENV !== 'pure') {
+            execute($options[config.HOOK_AFTER_DESTROY], instance);
+            instance.fire(config.HOOK_AFTER_DESTROY + config.NAMESPACE_HOOK);
+        }
         // 发完 after destroy 事件再解绑所有事件
         $emitter.off();
         object.clear(instance);
@@ -777,8 +781,10 @@ function afterCreateHook(instance, watchers) {
     if (watchers) {
         instance.watch(watchers);
     }
-    execute(instance.$options[config.HOOK_AFTER_CREATE], instance);
-    instance.fire(config.HOOK_AFTER_CREATE + config.NAMESPACE_HOOK);
+    if (process.env.NODE_ENV !== 'pure') {
+        execute(instance.$options[config.HOOK_AFTER_CREATE], instance);
+        instance.fire(config.HOOK_AFTER_CREATE + config.NAMESPACE_HOOK);
+    }
 }
 function setFlexibleOptions(instance, key, value) {
     if (is.func(value)) {

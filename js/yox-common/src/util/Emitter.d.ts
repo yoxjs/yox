@@ -1,5 +1,4 @@
-import * as type from '../../../yox-type/src/type';
-import { EmitterOptions, Emitter as EmitterInterface } from '../../../yox-type/src/class';
+import { nativeListener, EmitterOptions, Emitter as EmitterInterface } from '../../../yox-type/src/type';
 export default class Emitter implements EmitterInterface {
     /**
      * 是否开启命名空间
@@ -12,7 +11,7 @@ export default class Emitter implements EmitterInterface {
     /**
      * 原生事件监听，一个事件对应一个 listener
      */
-    nativeListeners?: Record<string, type.nativeListener>;
+    nativeListeners?: Record<string, nativeListener>;
     constructor(ns?: boolean);
     /**
      * 发射事件

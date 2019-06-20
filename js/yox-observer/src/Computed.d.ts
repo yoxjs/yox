@@ -1,5 +1,4 @@
-import * as type from '../../yox-type/src/type';
-import { WatcherOptions, Computed as ComputedInterface, Observer as ObserverInterface } from '../../yox-type/src/class';
+import { getter, setter, watcher, WatcherOptions, Computed as ComputedInterface, Observer as ObserverInterface } from '../../yox-type/src/type';
 /**
  * 计算属性
  *
@@ -22,9 +21,9 @@ export default class Computed implements ComputedInterface {
     fixed: boolean;
     context: any;
     observer: ObserverInterface;
-    getter: type.getter;
-    setter: type.setter | void;
-    watcher: type.watcher;
+    getter: getter;
+    setter: setter | void;
+    watcher: watcher;
     watcherOptions: WatcherOptions;
     unique: Record<string, boolean>;
     private constructor();
