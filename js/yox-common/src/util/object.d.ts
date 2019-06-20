@@ -1,4 +1,4 @@
-import { data, valueHolder } from '../../../yox-type/src/type';
+import { data, ValueHolder } from '../../../yox-type/src/type';
 /**
  * 获取对象的 key 的数组
  *
@@ -56,7 +56,7 @@ export declare function copy(object: any, deep?: boolean): any;
  * @param keypath
  * @return
  */
-export declare function get(object: any, keypath: string): valueHolder | undefined;
+export declare function get(object: any, keypath: string): ValueHolder | undefined;
 /**
  * 为对象设置一个键值对
  *

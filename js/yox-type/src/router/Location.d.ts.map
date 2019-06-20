@@ -1,1 +1,0 @@
-{"version":3,"file":"Location.d.ts","sourceRoot":"","sources":["../../../../../yox-type/src/router/Location.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,IAAI,MAAM,SAAS,CAAA;AAE/B,MAAM,CAAC,OAAO,WAAW,QAAQ;IAC/B,IAAI,EAAE,MAAM,CAAA;IACZ,GAAG,CAAC,EAAE,MAAM,CAAA;IACZ,MAAM,CAAC,EAAE,IAAI,CAAC,IAAI,CAAA;IAClB,KAAK,CAAC,EAAE,IAAI,CAAC,IAAI,CAAA;CAClB"}

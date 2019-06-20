@@ -2,10 +2,13 @@ import {
   lazy,
   watcher,
   listener,
-  Yox,
   VNode,
   Directive,
 } from '../../../yox-type/src/type'
+
+import {
+  Yox,
+} from '../../../yox-type/src/global'
 
 import debounce from '../../../yox-common/src/function/debounce'
 import execute from '../../../yox-common/src/function/execute'

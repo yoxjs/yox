@@ -1,3 +1,29 @@
+import {
+  data,
+  getter,
+  filter,
+  component,
+  componentCallback,
+  componentLoader,
+  watcher,
+  listener,
+  propType,
+  propValue,
+  PropRule,
+  VNode,
+  EmitterOptions,
+} from '../../yox-type/src/type'
+
+import {
+  YoxOptions,
+  ComputedOptions,
+  WatcherOptions,
+  DirectiveHooks,
+  TransitionHooks,
+  Yox as YoxInterface,
+  YoxPlugin as YoxPluginInterface,
+} from '../../yox-type/src/global'
+
 import isDef from '../../yox-common/src/function/isDef'
 import isUndef from '../../yox-common/src/function/isUndef'
 import execute from '../../yox-common/src/function/execute'
@@ -21,29 +47,6 @@ import * as templateGenerator from '../../yox-template-compiler/src/generator'
 import * as templateRender from '../../yox-template-compiler/src/renderer'
 
 import * as domApi from '../../yox-dom/src/dom'
-
-import {
-  data,
-  getter,
-  filter,
-  component,
-  componentCallback,
-  componentLoader,
-  watcher,
-  listener,
-  propType,
-  propValue,
-  VNode,
-  PropRule,
-  YoxOptions,
-  ComputedOptions,
-  WatcherOptions,
-  EmitterOptions,
-  DirectiveHooks,
-  TransitionHooks,
-  Yox as YoxInterface,
-  YoxPlugin as YoxPluginInterface,
-} from '../../yox-type/src/type'
 
 import Computed from '../../yox-observer/src/Computed'
 import Observer from '../../yox-observer/src/Observer'

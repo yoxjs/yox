@@ -1,3 +1,5 @@
+import { data, getter, filter, component, componentCallback, watcher, listener, VNode } from '../../yox-type/src/type';
+import { YoxOptions, ComputedOptions, WatcherOptions, DirectiveHooks, TransitionHooks, Yox as YoxInterface, YoxPlugin as YoxPluginInterface } from '../../yox-type/src/global';
 import CustomEvent from '../../yox-common/src/util/CustomEvent';
 import Emitter from '../../yox-common/src/util/Emitter';
 import * as is from '../../yox-common/src/util/is';
@@ -6,7 +8,6 @@ import * as string from '../../yox-common/src/util/string';
 import * as object from '../../yox-common/src/util/object';
 import * as logger from '../../yox-common/src/util/logger';
 import * as domApi from '../../yox-dom/src/dom';
-import { data, getter, filter, component, componentCallback, watcher, listener, VNode, YoxOptions, ComputedOptions, WatcherOptions, DirectiveHooks, TransitionHooks, Yox as YoxInterface, YoxPlugin as YoxPluginInterface } from '../../yox-type/src/type';
 import Computed from '../../yox-observer/src/Computed';
 import Observer from '../../yox-observer/src/Observer';
 export default class Yox implements YoxInterface {

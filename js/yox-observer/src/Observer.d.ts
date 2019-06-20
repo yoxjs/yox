@@ -1,4 +1,5 @@
-import { data, getter, watcher, ComputedOptions, WatcherOptions, Observer as ObserverInterface } from '../../yox-type/src/type';
+import { data, getter, watcher, Observer as ObserverInterface } from '../../yox-type/src/type';
+import { ComputedOptions, WatcherOptions } from '../../yox-type/src/global';
 import Emitter from '../../yox-common/src/util/Emitter';
 import NextTask from '../../yox-common/src/util/NextTask';
 import Computed from './Computed';

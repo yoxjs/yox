@@ -1,1 +1,0 @@
-{"version":3,"file":"RouteTarget.d.ts","sourceRoot":"","sources":["../../../../../yox-type/src/router/RouteTarget.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,IAAI,MAAM,SAAS,CAAA;AAE/B,MAAM,CAAC,OAAO,WAAW,WAAW;IAClC,IAAI,CAAC,EAAE,MAAM,CAAA;IACb,IAAI,CAAC,EAAE,MAAM,CAAA;IACb,MAAM,CAAC,EAAE,IAAI,CAAC,IAAI,CAAA;IAClB,KAAK,CAAC,EAAE,IAAI,CAAC,IAAI,CAAA;CAClB"}

@@ -1,9 +1,12 @@
 import {
   watcher,
-  Yox,
   VNode,
   Directive,
 } from '../../../yox-type/src/type'
+
+import {
+  Yox,
+} from '../../../yox-type/src/global'
 
 import isDef from '../../../yox-common/src/function/isDef'
 import execute from '../../../yox-common/src/function/execute'

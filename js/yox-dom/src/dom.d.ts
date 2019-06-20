@@ -1,4 +1,5 @@
-import { listener, SpecialEventHooks } from '../../yox-type/src/type';
+import { listener } from '../../yox-type/src/type';
+import { SpecialEventHooks } from '../../yox-type/src/global';
 export declare function createElement(tag: string, isSvg?: boolean): Element;
 export declare function createText(text: string): Text;
 export declare function createComment(text: string): Comment;
