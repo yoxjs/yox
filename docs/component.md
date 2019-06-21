@@ -92,19 +92,6 @@ Yox 组件是符合 [YoxOptions](https://github.com/yoxjs/yox-type/blob/master/s
 }
 ```
 
-### 类型约束
-
-为了方便 TS 类型检查，可用 `Yox.create()` 方法创建组件，如下：
-
-```js
-const options = Yox.create({
-  template: '<div></div>',
-  ...
-})
-```
-
-> 如果不用 TS，直接用 Plain Object 即可
-
 ### 组件名称
 
 有了组件对象，还需要给它取个名字，这样才能在模板中通过组件名称创建组件，如下：
@@ -129,6 +116,19 @@ Yox.component('CustomComponent', { ... })
 渲染模板时，Yox 通过 `组件标签` 获得组件名称，然后按照 `本地` => `全局` 的顺序去查找已注册的组件。
 
 > 如果你喜欢写 `<DIV></DIV>`，那我只能送你离开。
+
+### Yox.create()
+
+为了方便 TS 类型检查，可用 `Yox.create()` 方法创建组件，如下：
+
+```js
+const options = Yox.create({
+  template: '<div></div>',
+  ...
+})
+```
+
+如果不需要类型检查，可以直接用 `Plain Object`。
 
 ## 注册组件
 
