@@ -2,7 +2,7 @@
 
 ### 类型约束
 
-Yox 组件是符合 [YoxOptions](https://github.com/yoxjs/yox-type/blob/master/src/class.ts#L92) 类型约束的 `Plain Object`，如下：
+Yox 组件是符合 [YoxOptions](https://github.com/yoxjs/yox-type/blob/master/src/global.ts#L204) 类型约束的 `Plain Object`，如下：
 
 ```js
 {
@@ -91,6 +91,19 @@ Yox 组件是符合 [YoxOptions](https://github.com/yoxjs/yox-type/blob/master/s
   afterDestroy: function
 }
 ```
+
+### 类型约束
+
+为了方便 TS 类型检查，可用 `Yox.create()` 方法创建组件，如下：
+
+```js
+const options = Yox.create({
+  template: '<div></div>',
+  ...
+})
+```
+
+> 如果不用 TS，直接用 Plain Object 即可
 
 ### 组件名称
 
