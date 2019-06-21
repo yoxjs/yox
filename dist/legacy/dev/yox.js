@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.72
+ * yox.js v1.0.0-alpha.73
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -6706,6 +6706,12 @@
           plugin.install(Yox);
       };
       /**
+       * 创建组件对象
+       */
+      Yox.create = function (options) {
+          return options;
+      };
+      /**
        * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
        */
       Yox.nextTick = function (task, context) {
@@ -7190,7 +7196,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.72";
+      Yox.version = "1.0.0-alpha.73";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

@@ -6,6 +6,10 @@ import {
   Directive,
 } from '../../../yox-type/src/type'
 
+import {
+  YoxInterface,
+} from '../../../yox-type/src/global'
+
 import debounce from '../../../yox-common/src/function/debounce'
 import execute from '../../../yox-common/src/function/execute'
 import toString from '../../../yox-common/src/function/toString'

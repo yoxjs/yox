@@ -14,6 +14,16 @@ import {
   EmitterOptions,
 } from '../../yox-type/src/type'
 
+import {
+  WatcherOptions,
+  ComputedOptions,
+  YoxOptions,
+  YoxInterface,
+  YoxPlugin,
+  DirectiveHooks,
+  TransitionHooks,
+} from '../../yox-type/src/global'
+
 import isDef from '../../yox-common/src/function/isDef'
 import isUndef from '../../yox-common/src/function/isUndef'
 import execute from '../../yox-common/src/function/execute'
@@ -125,6 +135,13 @@ export default class Yox implements YoxInterface {
    */
   public static use(plugin: YoxPlugin): void {
     plugin.install(Yox)
+  }
+
+  /**
+   * 创建组件对象
+   */
+  public static create(options: YoxOptions): YoxOptions {
+    return options
   }
 
   /**
@@ -1298,4 +1315,3 @@ if (process.env.NODE_ENV !== 'pure') {
   // 全局注册内置过滤器
   Yox.filter({ hasSlot })
 }
-

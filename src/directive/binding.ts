@@ -4,6 +4,10 @@ import {
   Directive,
 } from '../../../yox-type/src/type'
 
+import {
+  YoxInterface,
+} from '../../../yox-type/src/global'
+
 import isDef from '../../../yox-common/src/function/isDef'
 import execute from '../../../yox-common/src/function/execute'
 
