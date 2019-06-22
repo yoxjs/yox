@@ -2,10 +2,15 @@
 
 ### 类型约束
 
-Yox 组件是符合 [YoxOptions](https://github.com/yoxjs/yox-type/blob/master/src/global.ts#L204) 类型约束的 `Plain Object`，如下：
+Yox 组件是符合 [YoxOptions](https://github.com/yoxjs/yox-type/blob/master/src/global.ts#L194) 类型约束的 `Plain Object`，如下：
 
 ```js
 {
+
+  // 通常用不上
+  // 如果你要写组件库，估计会用到，主要用于解决 ts 类型检查错误
+  name: '组件名称',
+
   // 通常只有根组件需要配置 el，支持元素节点和选择器
   // 如果只想用纯粹的数据观察者，可不传
   // 如果没传 el，但是传了 template，创建的组件只存在内存中，而不存在 DOM 树中
