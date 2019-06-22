@@ -77,8 +77,6 @@ globalFilters = {},
 
 compileCache = {},
 
-LOADER_QUEUE = '$queue',
-
 TEMPLATE_COMPUTED = '$$',
 
 selectorPattern = /^[#.][-\w+]+$/
@@ -594,7 +592,7 @@ export default class Yox implements YoxInterface {
   }
 
   /**
-   * 监听事件
+   * 监听事件，支持链式调用
    */
   on(
     type: string | Record<string, listener>,
@@ -604,7 +602,7 @@ export default class Yox implements YoxInterface {
   }
 
   /**
-   * 监听一次事件
+   * 监听一次事件，支持链式调用
    */
   once(
     type: string | Record<string, listener>,
@@ -614,7 +612,7 @@ export default class Yox implements YoxInterface {
   }
 
   /**
-   * 取消监听事件
+   * 取消监听事件，支持链式调用
    */
   off(
     type?: string,
@@ -683,7 +681,7 @@ export default class Yox implements YoxInterface {
   }
 
   /**
-   * 监听数据变化
+   * 监听数据变化，支持链式调用
    */
   watch(
     keypath: string | Record<string, watcher | WatcherOptions>,
@@ -695,7 +693,7 @@ export default class Yox implements YoxInterface {
   }
 
   /**
-   * 取消监听数据变化
+   * 取消监听数据变化，支持链式调用
    */
   unwatch(
     keypath?: string,
@@ -714,11 +712,13 @@ export default class Yox implements YoxInterface {
   loadComponent(name: string, callback: componentCallback): void {
     if (process.env.NODE_ENV !== 'pure') {
       if (!loadComponent(this.$components, name, callback)) {
-        const hasComponent = loadComponent(globalComponents, name, callback)
         if (process.env.NODE_ENV === 'development') {
-          if (!hasComponent) {
-            logger.error(`Component [${name}] is not found.`)
+          if (!loadComponent(globalComponents, name, callback)) {
+            logger.error(`Component "${name}" is not found.`)
           }
+        }
+        else {
+          loadComponent(globalComponents, name, callback)
         }
       }
     }
@@ -1281,40 +1281,48 @@ function addEvents(
   return instance
 }
 
-function loadComponent(data: Record<string, component> | void, name: string, callback: componentCallback): true | void {
-  if (data && data[name]) {
-    const component = data[name]
+function loadComponent(
+  registry: Record<string, component | componentCallback[]> | void,
+  name: string,
+  callback: componentCallback
+): true | void {
+
+  if (registry && registry[name]) {
+
+    const component = registry[name]
+
     // 注册的是异步加载函数
     if (is.func(component)) {
 
-      let loader = component as componentLoader,
+      registry[name] = [callback]
 
-      queue: componentCallback[] = loader[LOADER_QUEUE]
+      const componentCallback = function (result: YoxOptions) {
 
-      if (queue) {
-        array.push(queue, callback)
-      }
-      else {
-        queue = component[LOADER_QUEUE] = [callback]
+        const queue = registry[name], options = result['default'] || result
 
-        loader(
-          function (options: YoxOptions) {
+        registry[name] = options
 
-            loader[LOADER_QUEUE] = env.UNDEFINED
-
-            data[name] = options
-
-            array.each(
-              queue,
-              function (callback) {
-                callback(options)
-              }
-            )
-
+        array.each(
+          queue as componentCallback[],
+          function (callback) {
+            callback(options)
           }
         )
+
+      },
+
+      promise = (component as componentLoader)(componentCallback)
+      if (promise) {
+        promise.then(componentCallback)
       }
 
+    }
+    // 正在加载中
+    else if (is.array(component)) {
+      array.push(
+        component as componentCallback[],
+        callback
+      )
     }
     // 不是异步加载函数，直接同步返回
     else {
@@ -1322,26 +1330,27 @@ function loadComponent(data: Record<string, component> | void, name: string, cal
     }
     return env.TRUE
   }
+
 }
 
-function getResource(data: data | void, name: string, lookup?: Function) {
-  if (data && data[name]) {
-    return data[name]
+function getResource(registry: data | void, name: string, lookup?: Function) {
+  if (registry && registry[name]) {
+    return registry[name]
   }
   else if (lookup) {
     return lookup(name)
   }
 }
 
-function setResource(data: data, name: string | data, value?: any, formatValue?: (value: any) => any) {
+function setResource(registry: data, name: string | data, value?: any, formatValue?: (value: any) => any) {
   if (is.string(name)) {
-    data[name as string] = formatValue ? formatValue(value) : value
+    registry[name as string] = formatValue ? formatValue(value) : value
   }
   else {
     object.each(
       name as data,
       function (value, key) {
-        data[key] = formatValue ? formatValue(value) : value
+        registry[key] = formatValue ? formatValue(value) : value
       }
     )
   }

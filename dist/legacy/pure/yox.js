@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.74
+ * yox.js v1.0.0-alpha.75
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -2097,19 +2097,19 @@
           }
       };
       /**
-       * 监听事件
+       * 监听事件，支持链式调用
        */
       Yox.prototype.on = function (type, listener) {
           return addEvents(this, type, listener);
       };
       /**
-       * 监听一次事件
+       * 监听一次事件，支持链式调用
        */
       Yox.prototype.once = function (type, listener) {
           return addEvents(this, type, listener, TRUE);
       };
       /**
-       * 取消监听事件
+       * 取消监听事件，支持链式调用
        */
       Yox.prototype.off = function (type, listener) {
           this.$emitter.off(type, listener);
@@ -2153,14 +2153,14 @@
           return isComplete;
       };
       /**
-       * 监听数据变化
+       * 监听数据变化，支持链式调用
        */
       Yox.prototype.watch = function (keypath, watcher, immediate) {
           this.$observer.watch(keypath, watcher, immediate);
           return this;
       };
       /**
-       * 取消监听数据变化
+       * 取消监听数据变化，支持链式调用
        */
       Yox.prototype.unwatch = function (keypath, watcher) {
           this.$observer.unwatch(keypath, watcher);
@@ -2344,7 +2344,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.74";
+      Yox.version = "1.0.0-alpha.75";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

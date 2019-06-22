@@ -208,7 +208,7 @@ export declare type unbind = (node: HTMLElement | YoxInterface, directive: Direc
 export declare type on = (node: HTMLElement | Window | Document, listener: nativeListener) => void;
 export declare type off = (node: HTMLElement | Window | Document, listener: nativeListener) => void;
 export declare type componentCallback = (options: YoxOptions) => void;
-export declare type componentLoader = (callback: componentCallback) => void;
+export declare type componentLoader = (callback: componentCallback) => Promise<YoxOptions> | void;
 export declare type component = YoxOptions | componentLoader;
 export declare type optionsBeforeCreateHook = (options: YoxOptions) => void;
 export declare type optionsOtherHook = () => void;
@@ -800,15 +800,15 @@ export default class Yox implements YoxInterface {
 	 */
 	set(keypath: string | data, value?: any): void;
 	/**
-	 * 监听事件
+	 * 监听事件，支持链式调用
 	 */
 	on(type: string | Record<string, listener>, listener?: listener): YoxInterface;
 	/**
-	 * 监听一次事件
+	 * 监听一次事件，支持链式调用
 	 */
 	once(type: string | Record<string, listener>, listener?: listener): YoxInterface;
 	/**
-	 * 取消监听事件
+	 * 取消监听事件，支持链式调用
 	 */
 	off(type?: string, listener?: listener): YoxInterface;
 	/**
@@ -816,11 +816,11 @@ export default class Yox implements YoxInterface {
 	 */
 	fire(type: string | CustomEvent, data?: data | boolean, downward?: boolean): boolean;
 	/**
-	 * 监听数据变化
+	 * 监听数据变化，支持链式调用
 	 */
 	watch(keypath: string | Record<string, watcher | WatcherOptions>, watcher?: watcher | WatcherOptions, immediate?: boolean): YoxInterface;
 	/**
-	 * 取消监听数据变化
+	 * 取消监听数据变化，支持链式调用
 	 */
 	unwatch(keypath?: string, watcher?: watcher): YoxInterface;
 	/**

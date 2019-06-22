@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.74
+ * yox.js v1.0.0-alpha.75
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -3447,7 +3447,7 @@
       return isDef(this.get(SLOT_DATA_PREFIX + name));
   }
 
-  var globalDirectives = {}, globalTransitions = {}, globalComponents = {}, globalPartials = {}, globalFilters = {}, LOADER_QUEUE = '$queue', TEMPLATE_COMPUTED = '$$', selectorPattern = /^[#.][-\w+]+$/;
+  var globalDirectives = {}, globalTransitions = {}, globalComponents = {}, globalPartials = {}, globalFilters = {}, TEMPLATE_COMPUTED = '$$', selectorPattern = /^[#.][-\w+]+$/;
   var Yox = /** @class */ (function () {
       function Yox(options) {
           var instance = this, $options = options || EMPTY_OBJECT;
@@ -3717,19 +3717,19 @@
           }
       };
       /**
-       * 监听事件
+       * 监听事件，支持链式调用
        */
       Yox.prototype.on = function (type, listener) {
           return addEvents(this, type, listener);
       };
       /**
-       * 监听一次事件
+       * 监听一次事件，支持链式调用
        */
       Yox.prototype.once = function (type, listener) {
           return addEvents(this, type, listener, TRUE);
       };
       /**
-       * 取消监听事件
+       * 取消监听事件，支持链式调用
        */
       Yox.prototype.off = function (type, listener) {
           this.$emitter.off(type, listener);
@@ -3773,14 +3773,14 @@
           return isComplete;
       };
       /**
-       * 监听数据变化
+       * 监听数据变化，支持链式调用
        */
       Yox.prototype.watch = function (keypath, watcher, immediate) {
           this.$observer.watch(keypath, watcher, immediate);
           return this;
       };
       /**
-       * 取消监听数据变化
+       * 取消监听数据变化，支持链式调用
        */
       Yox.prototype.unwatch = function (keypath, watcher) {
           this.$observer.unwatch(keypath, watcher);
@@ -3795,7 +3795,9 @@
       Yox.prototype.loadComponent = function (name, callback) {
           {
               if (!loadComponent(this.$components, name, callback)) {
-                  var hasComponent = loadComponent(globalComponents, name, callback);
+                  {
+                      loadComponent(globalComponents, name, callback);
+                  }
               }
           }
       };
@@ -4097,7 +4099,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.74";
+      Yox.version = "1.0.0-alpha.75";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
@@ -4149,25 +4151,26 @@
       }
       return instance;
   }
-  function loadComponent(data, name, callback) {
-      if (data && data[name]) {
-          var component_1 = data[name];
+  function loadComponent(registry, name, callback) {
+      if (registry && registry[name]) {
+          var component_1 = registry[name];
           // 注册的是异步加载函数
           if (func(component_1)) {
-              var loader_1 = component_1, queue_1 = loader_1[LOADER_QUEUE];
-              if (queue_1) {
-                  push(queue_1, callback);
-              }
-              else {
-                  queue_1 = component_1[LOADER_QUEUE] = [callback];
-                  loader_1(function (options) {
-                      loader_1[LOADER_QUEUE] = UNDEFINED;
-                      data[name] = options;
-                      each(queue_1, function (callback) {
-                          callback(options);
-                      });
+              registry[name] = [callback];
+              var componentCallback_1 = function (result) {
+                  var queue = registry[name], options = result['default'] || result;
+                  registry[name] = options;
+                  each(queue, function (callback) {
+                      callback(options);
                   });
+              }, promise = component_1(componentCallback_1);
+              if (promise) {
+                  promise.then(componentCallback_1);
               }
+          }
+          // 正在加载中
+          else if (array(component_1)) {
+              push(component_1, callback);
           }
           // 不是异步加载函数，直接同步返回
           else {
@@ -4176,21 +4179,21 @@
           return TRUE;
       }
   }
-  function getResource(data, name, lookup) {
-      if (data && data[name]) {
-          return data[name];
+  function getResource(registry, name, lookup) {
+      if (registry && registry[name]) {
+          return registry[name];
       }
       else if (lookup) {
           return lookup(name);
       }
   }
-  function setResource(data, name, value, formatValue) {
+  function setResource(registry, name, value, formatValue) {
       if (string(name)) {
-          data[name] = formatValue ? formatValue(value) : value;
+          registry[name] = formatValue ? formatValue(value) : value;
       }
       else {
           each$2(name, function (value, key) {
-              data[key] = formatValue ? formatValue(value) : value;
+              registry[key] = formatValue ? formatValue(value) : value;
           });
       }
   }

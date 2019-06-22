@@ -179,6 +179,15 @@ Yox.component('AsyncComponent', function (callback) {
 })
 ```
 
+如果你的项目支持 `Promise`，也可以返回一个 `Promise`，如下：
+
+```js
+Yox.component('AsyncComponent', function () {
+  // 如果你使用 webpack 打包，可以为这个异步模块命名
+  return import(/* webpackChunkName: 'AsyncComponent' */ 'AsyncComponent')
+})
+```
+
 ## 生命周期
 
 ### beforeCreate
