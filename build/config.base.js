@@ -32,7 +32,7 @@ export default function (env, release, minify = false, legacy = false, port = 0)
   }
 
   if (env === 'pure') {
-    replaces['public static dom = domApi'] = ''
+    replaces['public static dom: DomUtil = domApi'] = ''
   }
 
   let plugins = [

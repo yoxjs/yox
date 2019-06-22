@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.73
+ * yox.js v1.0.0-alpha.74
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -3632,6 +3632,9 @@
               return EMPTY_STRING;
           }
       };
+      /**
+       * 注册全局指令
+       */
       Yox.directive = function (name, directive) {
           {
               if (string(name) && !directive) {
@@ -3640,6 +3643,9 @@
               setResource(globalDirectives, name, directive);
           }
       };
+      /**
+       * 注册全局过渡动画
+       */
       Yox.transition = function (name, transition) {
           {
               if (string(name) && !transition) {
@@ -3648,6 +3654,9 @@
               setResource(globalTransitions, name, transition);
           }
       };
+      /**
+       * 注册全局组件
+       */
       Yox.component = function (name, component) {
           {
               if (string(name) && !component) {
@@ -3656,6 +3665,9 @@
               setResource(globalComponents, name, component);
           }
       };
+      /**
+       * 注册全局子模板
+       */
       Yox.partial = function (name, partial) {
           {
               if (string(name) && !partial) {
@@ -3664,6 +3676,9 @@
               setResource(globalPartials, name, partial, Yox.compile);
           }
       };
+      /**
+       * 注册全局过滤器
+       */
       Yox.filter = function (name, filter) {
           {
               if (string(name) && !filter) {
@@ -3823,6 +3838,9 @@
               return child;
           }
       };
+      /**
+       * 注册当前组件级别的指令
+       */
       Yox.prototype.directive = function (name, directive) {
           {
               var instance = this, $directives = instance.$directives;
@@ -3832,6 +3850,9 @@
               setResource($directives || (instance.$directives = {}), name, directive);
           }
       };
+      /**
+       * 注册当前组件级别的过渡动画
+       */
       Yox.prototype.transition = function (name, transition) {
           {
               var instance = this, $transitions = instance.$transitions;
@@ -3841,6 +3862,9 @@
               setResource($transitions || (instance.$transitions = {}), name, transition);
           }
       };
+      /**
+       * 注册当前组件级别的组件
+       */
       Yox.prototype.component = function (name, component) {
           {
               var instance = this, $components = instance.$components;
@@ -3850,6 +3874,9 @@
               setResource($components || (instance.$components = {}), name, component);
           }
       };
+      /**
+       * 注册当前组件级别的子模板
+       */
       Yox.prototype.partial = function (name, partial) {
           {
               var instance = this, $partials = instance.$partials;
@@ -3859,6 +3886,9 @@
               setResource($partials || (instance.$partials = {}), name, partial, Yox.compile);
           }
       };
+      /**
+       * 注册当前组件级别的过滤器
+       */
       Yox.prototype.filter = function (name, filter) {
           {
               var instance = this, $filters = instance.$filters;
@@ -4067,18 +4097,18 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.73";
+      Yox.version = "1.0.0-alpha.74";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
       Yox.is = is;
+      Yox.dom = domApi;
       Yox.array = array$1;
       Yox.object = object$1;
       Yox.string = string$1;
       Yox.logger = logger;
       Yox.Event = CustomEvent;
       Yox.Emitter = Emitter;
-      Yox.dom = domApi;
       return Yox;
   }());
   function afterCreateHook(instance, watchers) {

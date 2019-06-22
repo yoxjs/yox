@@ -5,23 +5,31 @@ import {
   component,
   componentCallback,
   componentLoader,
-  watcher,
-  listener,
   propType,
   propValue,
   PropRule,
   VNode,
-  EmitterOptions,
+  IsUtil,
+  DomUtil,
+  ArrayUtil,
+  StringUtil,
+  ObjectUtil,
+  LoggerUtil,
 } from '../../yox-type/src/type'
 
 import {
+  watcher,
+  listener,
   WatcherOptions,
   ComputedOptions,
+  EmitterOptions,
   YoxOptions,
   YoxInterface,
   YoxPlugin,
   DirectiveHooks,
   TransitionHooks,
+  EmitterClass,
+  CustomEventClass,
 } from '../../yox-type/src/global'
 
 import isDef from '../../yox-common/src/function/isDef'
@@ -119,14 +127,14 @@ export default class Yox implements YoxInterface {
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
-  public static is = is
-  public static array = array
-  public static object = object
-  public static string = string
-  public static logger = logger
-  public static Event = CustomEvent
-  public static Emitter = Emitter
-  public static dom = domApi
+  public static is: IsUtil = is
+  public static dom: DomUtil = domApi
+  public static array: ArrayUtil = array
+  public static object: ObjectUtil = object
+  public static string: StringUtil = string
+  public static logger: LoggerUtil = logger
+  public static Event: CustomEventClass = CustomEvent
+  public static Emitter: EmitterClass = Emitter
 
   /**
    * 安装插件
@@ -176,6 +184,9 @@ export default class Yox implements YoxInterface {
     }
   }
 
+  /**
+   * 注册全局指令
+   */
   public static directive(
     name: string | Record<string, DirectiveHooks>,
     directive?: DirectiveHooks
@@ -188,6 +199,9 @@ export default class Yox implements YoxInterface {
     }
   }
 
+  /**
+   * 注册全局过渡动画
+   */
   public static transition(
     name: string | Record<string, TransitionHooks>,
     transition?: TransitionHooks
@@ -200,6 +214,9 @@ export default class Yox implements YoxInterface {
     }
   }
 
+  /**
+   * 注册全局组件
+   */
   public static component(
     name: string | Record<string, component>,
     component?: component
@@ -212,6 +229,9 @@ export default class Yox implements YoxInterface {
     }
   }
 
+  /**
+   * 注册全局子模板
+   */
   public static partial(
     name: string | Record<string, string>,
     partial?: string
@@ -224,6 +244,9 @@ export default class Yox implements YoxInterface {
     }
   }
 
+  /**
+   * 注册全局过滤器
+   */
   public static filter(
     name: string | Record<string, filter>,
     filter?: filter
@@ -762,6 +785,9 @@ export default class Yox implements YoxInterface {
     }
   }
 
+  /**
+   * 注册当前组件级别的指令
+   */
   directive(
     name: string | Record<string, DirectiveHooks>,
     directive?: DirectiveHooks
@@ -779,6 +805,9 @@ export default class Yox implements YoxInterface {
     }
   }
 
+  /**
+   * 注册当前组件级别的过渡动画
+   */
   transition(
     name: string | Record<string, TransitionHooks>,
     transition?: TransitionHooks
@@ -796,6 +825,9 @@ export default class Yox implements YoxInterface {
     }
   }
 
+  /**
+   * 注册当前组件级别的组件
+   */
   component(
     name: string | Record<string, component>,
     component?: component
@@ -813,6 +845,9 @@ export default class Yox implements YoxInterface {
     }
   }
 
+  /**
+   * 注册当前组件级别的子模板
+   */
   partial(
     name: string | Record<string, string>,
     partial?: string
@@ -831,6 +866,9 @@ export default class Yox implements YoxInterface {
     }
   }
 
+  /**
+   * 注册当前组件级别的过滤器
+   */
   filter(
     name: string | Record<string, filter>,
     filter?: filter

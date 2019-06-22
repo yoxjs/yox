@@ -1,10 +1,10 @@
 import {
-  watcher,
   VNode,
   Directive,
 } from '../../../yox-type/src/type'
 
 import {
+  watcher,
   YoxInterface,
 } from '../../../yox-type/src/global'
 

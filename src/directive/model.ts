@@ -1,12 +1,12 @@
 import {
   lazy,
-  watcher,
-  listener,
   VNode,
   Directive,
 } from '../../../yox-type/src/type'
 
 import {
+  watcher,
+  listener,
   YoxInterface,
 } from '../../../yox-type/src/global'
 

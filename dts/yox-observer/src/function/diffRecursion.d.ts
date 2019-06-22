@@ -1,2 +1,0 @@
-export default function diffRecursion(keypath: string, newValue: any, oldValue: any, watchFuzzyKeypaths: string[], callback: (watchKeypath: string, keypath: string, newValue: any, oldValue: any) => void): void;
-//# sourceMappingURL=diffRecursion.d.ts.map

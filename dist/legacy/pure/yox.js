@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.73
+ * yox.js v1.0.0-alpha.74
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -2042,14 +2042,29 @@
               return EMPTY_STRING;
           }
       };
+      /**
+       * 注册全局指令
+       */
       Yox.directive = function (name, directive) {
       };
+      /**
+       * 注册全局过渡动画
+       */
       Yox.transition = function (name, transition) {
       };
+      /**
+       * 注册全局组件
+       */
       Yox.component = function (name, component) {
       };
+      /**
+       * 注册全局子模板
+       */
       Yox.partial = function (name, partial) {
       };
+      /**
+       * 注册全局过滤器
+       */
       Yox.filter = function (name, filter) {
       };
       /**
@@ -2170,14 +2185,29 @@
               return this;
           }
       };
+      /**
+       * 注册当前组件级别的指令
+       */
       Yox.prototype.directive = function (name, directive) {
       };
+      /**
+       * 注册当前组件级别的过渡动画
+       */
       Yox.prototype.transition = function (name, transition) {
       };
+      /**
+       * 注册当前组件级别的组件
+       */
       Yox.prototype.component = function (name, component) {
       };
+      /**
+       * 注册当前组件级别的子模板
+       */
       Yox.prototype.partial = function (name, partial) {
       };
+      /**
+       * 注册当前组件级别的过滤器
+       */
       Yox.prototype.filter = function (name, filter) {
       };
       /**
@@ -2314,7 +2344,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.73";
+      Yox.version = "1.0.0-alpha.74";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
