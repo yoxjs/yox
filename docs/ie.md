@@ -1,4 +1,4 @@
-低端浏览器请使用 `dist/legacy/` 目录下的文件。
+低端浏览器请使用 [legacy](https://github.com/yoxjs/yox/tree/master/dist/legacy) 目录下的文件。
 
 > 注意：IE6 和 IE7 不支持 `querySelector`，为了避免兼容选择器而增加体积，仅支持 `"#id"` 选择器。
 
@@ -15,7 +15,7 @@ Yox 用了以下高级 API，它们都可以打补丁实现。
 
 > IE8 已内置 JSON 对象，IE6、7 需要打补丁
 
-如果不想自己实现这些函数，建议加上以下三个脚本，从此拥抱 ES5 特性：
+如果不想自己实现这些函数，建议加上以下三个脚本，从此拥抱 ES5 全特性：
 
 ```html
 <!--[if lt IE 9]>

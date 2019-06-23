@@ -418,9 +418,6 @@ export default class Yox implements YoxInterface {
           }
         }
       }
-      else {
-        template = env.UNDEFINED
-      }
 
       // 检查 el
       if (el) {
