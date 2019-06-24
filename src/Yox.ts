@@ -1,6 +1,6 @@
 import {
   data,
-  getter,
+  computedGetter,
   filter,
   component,
   componentCallback,
@@ -334,7 +334,7 @@ export default class Yox implements YoxInterface {
     if (computed) {
       object.each(
         computed,
-        function (options: getter | ComputedOptions, keypath: string) {
+        function (options: computedGetter | ComputedOptions, keypath: string) {
           observer.addComputed(keypath, options)
         }
       )
@@ -548,7 +548,7 @@ export default class Yox implements YoxInterface {
    */
   addComputed(
     keypath: string,
-    computed: getter | ComputedOptions
+    computed: computedGetter | ComputedOptions
   ): Computed | void {
     return this.$observer.addComputed(keypath, computed)
   }
