@@ -1,12 +1,12 @@
 import {
   data,
-  computedGetter,
   filter,
+  computedGetter,
   component,
   componentCallback,
   componentLoader,
-  propType,
-  propValue,
+  propTypeFunction,
+  propValueFunction,
   PropRule,
   VNode,
   IsUtil,
@@ -318,7 +318,7 @@ export default class Yox implements YoxInterface {
                 source[key] = rule.type === env.RAW_FUNCTION
                   ? value
                   : is.func(value)
-                    ? (value as propValue)()
+                    ? (value as propValueFunction)()
                     : value
               }
             }
@@ -1183,7 +1183,7 @@ function checkProp(key: string, value: any, rule: PropRule) {
       // 自定义函数判断是否匹配类型
       // 自己打印警告信息吧
       if (is.func(type)) {
-        (type as propType)(key, value)
+        (type as propTypeFunction)(key, value)
       }
       else {
 
