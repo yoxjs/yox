@@ -16,8 +16,8 @@ export declare type watcher = (newValue: any, oldValue: any, keypath: string) =>
 export declare type listener = (event: CustomEventInterface, data?: data) => false | void;
 export declare type nativeListener = (event: CustomEventInterface | Event) => false | void;
 export interface ComputedOptions {
-	get: getter;
-	set?: setter;
+	get: computedGetter;
+	set?: computedSetter;
 	cache?: boolean;
 	sync?: boolean;
 	deps?: string[];
@@ -81,7 +81,7 @@ export interface YoxOptions {
 	replace?: true;
 	vnode?: VNode;
 	slots?: Record<string, VNode[]>;
-	computed?: Record<string, getter | ComputedOptions>;
+	computed?: Record<string, computedGetter | ComputedOptions>;
 	watchers?: Record<string, watcher | WatcherOptions>;
 	transitions?: Record<string, TransitionHooks>;
 	components?: Record<string, YoxOptions>;
@@ -118,7 +118,7 @@ export interface YoxInterface {
 	$context?: YoxInterface;
 	$children?: YoxInterface[];
 	$refs?: Record<string, YoxInterface | HTMLElement>;
-	addComputed(keypath: string, computed: getter | ComputedOptions): ComputedInterface | void;
+	addComputed(keypath: string, computed: computedGetter | ComputedOptions): ComputedInterface | void;
 	removeComputed(keypath: string): void;
 	get(keypath: string, defaultValue?: any, depIgnore?: boolean): any;
 	set(keypath: string | data, value?: any): void;
@@ -177,36 +177,30 @@ export interface YoxPlugin {
 }
 export interface DirectiveHooks {
 	once?: true;
-	bind: bind;
-	unbind?: unbind;
+	bind: (node: HTMLElement | YoxInterface, directive: Directive, vnode: VNode) => void;
+	unbind?: (node: HTMLElement | YoxInterface, directive: Directive, vnode: VNode) => void;
 }
 export interface SpecialEventHooks {
-	on: on;
-	off: off;
+	on: (node: HTMLElement | Window | Document, listener: nativeListener) => void;
+	off: (node: HTMLElement | Window | Document, listener: nativeListener) => void;
 }
 export interface TransitionHooks {
-	enter?: enter;
-	leave?: leave;
+	enter?: (node: HTMLElement) => void;
+	leave?: (node: HTMLElement, done: () => void) => void;
 }
 export declare type YoxClass = typeof YoxInterface;
 export declare type EmitterClass = typeof EmitterInterface;
 export declare type CustomEventClass = typeof CustomEventInterface;
-export declare type hint = 1 | 2 | 3;
-export declare type lazy = number | true;
-export declare type propType = (key: string, value: any) => void;
-export declare type propValue = () => any;
 export declare type data = Record<string, any>;
 export declare type dataGenerator = (options: YoxOptions) => data;
-export declare type getter = () => any;
-export declare type setter = (value: any) => void;
-export declare type formater = (...args: any) => string | number | boolean;
-export declare type filter = formater | Record<string, formater>;
-export declare type enter = (node: HTMLElement) => void;
-export declare type leave = (node: HTMLElement, done: () => void) => void;
-export declare type bind = (node: HTMLElement | YoxInterface, directive: Directive, vnode: VNode) => void;
-export declare type unbind = (node: HTMLElement | YoxInterface, directive: Directive, vnode: VNode) => void;
-export declare type on = (node: HTMLElement | Window | Document, listener: nativeListener) => void;
-export declare type off = (node: HTMLElement | Window | Document, listener: nativeListener) => void;
+export declare type lazyValue = number | true;
+export declare type propTypeFunction = (key: string, value: any) => void;
+export declare type propValueFunction = () => any;
+export declare type propertyHint = 1 | 2 | 3;
+export declare type computedGetter = () => any;
+export declare type computedSetter = (value: any) => void;
+export declare type filterFunction = (...args: any) => string | number | boolean;
+export declare type filter = filterFunction | Record<string, filterFunction>;
 export declare type componentCallback = (options: YoxOptions) => void;
 export declare type componentLoader = (callback: componentCallback) => Promise<YoxOptions> | void;
 export declare type component = YoxOptions | componentLoader;
@@ -225,7 +219,7 @@ export interface Attribute {
 export interface Property {
 	readonly name: string;
 	readonly value: any;
-	readonly hint: hint;
+	readonly hint: propertyHint;
 }
 export interface Directive {
 	readonly ns: string;
@@ -233,10 +227,10 @@ export interface Directive {
 	readonly key: string;
 	readonly value?: string | number | boolean;
 	readonly hooks: DirectiveHooks;
-	readonly getter?: getter | void;
+	readonly getter?: () => any | void;
 	readonly handler?: listener | void;
 	readonly binding?: string | void;
-	readonly hint?: hint | void;
+	readonly hint?: propertyHint | void;
 }
 export interface VNode {
 	data: data;
@@ -258,7 +252,7 @@ export interface VNode {
 	readonly nativeProps?: Record<string, Property>;
 	readonly nativeAttrs?: Record<string, Attribute>;
 	readonly directives?: Record<string, Directive>;
-	readonly lazy?: Record<string, lazy>;
+	readonly lazy?: Record<string, lazyValue>;
 	readonly transition?: TransitionHooks;
 	readonly ref?: string;
 	readonly key?: string;
@@ -271,7 +265,7 @@ export interface DomUtil {
 	createText(text: string): Text;
 	createComment(text: string): Comment;
 	prop(node: HTMLElement, name: string, value?: string | number | boolean): string | number | boolean | void;
-	removeProp(node: HTMLElement, name: string, hint?: hint): void;
+	removeProp(node: HTMLElement, name: string, hint?: propertyHint): void;
 	attr(node: HTMLElement, name: string, value?: string): string | void;
 	removeAttr(node: HTMLElement, name: string): void;
 	before(parentNode: Node, node: Node, beforeNode: Node): void;
@@ -369,7 +363,7 @@ export interface ObserverInterface {
 	data: data;
 	context: any;
 	nextTask: NextTaskInterface;
-	addComputed(keypath: string, options: getter | ComputedOptions): ComputedInterface | void;
+	addComputed(keypath: string, options: computedGetter | ComputedOptions): ComputedInterface | void;
 	removeComputed(keypath: string): void;
 	diff(keypath: string, newValue: any, oldValue: any): void;
 	get(keypath: string, defaultValue?: any, depIgnore?: boolean): any;
@@ -399,11 +393,11 @@ declare var ComputedInterface: {
 	prototype: ComputedInterface;
 	current?: ComputedInterface;
 	build(keypath: string, observer: ObserverInterface, options: any): ComputedInterface | void;
-	new (keypath: string, sync: boolean, cache: boolean, deps: string[], observer: ObserverInterface, getter: getter, setter: setter | void): ComputedInterface;
+	new (keypath: string, sync: boolean, cache: boolean, deps: string[], observer: ObserverInterface, getter: computedGetter, setter: computedSetter | void): ComputedInterface;
 };
 export interface PropRule {
-	type: string | string[] | propType;
-	value?: any | propValue;
+	type: string | string[] | propTypeFunction;
+	value?: any | propValueFunction;
 	required?: boolean;
 }
 export interface Location {
@@ -506,8 +500,8 @@ declare class Computed implements ComputedInterface {
 	fixed: boolean;
 	context: any;
 	observer: ObserverInterface;
-	getter: getter;
-	setter: setter | void;
+	getter: computedGetter;
+	setter: computedSetter | void;
 	watcher: watcher;
 	watcherOptions: WatcherOptions;
 	unique: Record<string, boolean>;
@@ -612,7 +606,7 @@ declare class Observer implements ObserverInterface {
 	 * @param keypath
 	 * @param computed
 	 */
-	addComputed(keypath: string, options: getter | ComputedOptions): Computed | void;
+	addComputed(keypath: string, options: computedGetter | ComputedOptions): Computed | void;
 	/**
 	 * 移除计算属性
 	 *
@@ -786,7 +780,7 @@ export default class Yox implements YoxInterface {
 	/**
 	 * 添加计算属性
 	 */
-	addComputed(keypath: string, computed: getter | ComputedOptions): Computed | void;
+	addComputed(keypath: string, computed: computedGetter | ComputedOptions): Computed | void;
 	/**
 	 * 删除计算属性
 	 */

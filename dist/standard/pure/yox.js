@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.76
+ * yox.js v1.0.0-alpha.77
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1248,6 +1248,10 @@
 
   // vnode.data 内部使用的几个字段
 
+  /**
+   * 元素 节点
+   */
+
   function toNumber (target, defaultValue) {
       return numeric(target)
           ? +target
@@ -1258,10 +1262,6 @@
 
   /**
    * 字面量
-   */
-
-  /**
-   * 元素 节点
    */
 
   /**
@@ -2344,7 +2344,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.76";
+      Yox.version = "1.0.0-alpha.77";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
