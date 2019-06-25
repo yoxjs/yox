@@ -1,4 +1,5 @@
 * [简介]()
+* [缘起](why)
 * [安装](install)
 * [起步](start)
 * [表达式](expression)
