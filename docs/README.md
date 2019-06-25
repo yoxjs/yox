@@ -1,12 +1,12 @@
-# 简介
-
 轻量、简单、好用、灵活的 MVVM 框架。
+
+> 读音 [哟西] 或者随意
 
 ## 特性
 
 * 比 Vue 更低的学习门槛，比 Vue 更小的文件体积（`runtime` 版本：Vue [63KB](https://github.com/vuejs/vue/blob/dev/dist/vue.runtime.min.js) Yox [31KB](https://github.com/yoxjs/yox/blob/master/dist/standard/runtime/yox.min.js)）
 * 采用 `TypeScript` 开发，带来更好的工程化开发体验
-* 设计上保持克制，没有语法糖，没有多余功能
+* 设计上保持克制，没有语法糖，没有多余功能，可脱离文档开发
 * 高仿 [Handlebars](http://handlebarsjs.com/) 风格的模板引擎
 * 提供面向指令的扩展机制
 * 支持所有 `JavaScript` 环境，比如低版本 IE、各种小程序、React Native
