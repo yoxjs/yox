@@ -19,12 +19,12 @@ import {
 
 import {
   watcher,
-  listener,
   WatcherOptions,
   ComputedOptions,
   EmitterOptions,
   YoxOptions,
   YoxInterface,
+  YoxListener,
   YoxPlugin,
   DirectiveHooks,
   TransitionHooks,
@@ -592,8 +592,8 @@ export default class Yox implements YoxInterface {
    * 监听事件，支持链式调用
    */
   on(
-    type: string | Record<string, listener>,
-    listener?: listener
+    type: string | Record<string, YoxListener>,
+    listener?: YoxListener
   ): YoxInterface {
     return addEvents(this, type, listener)
   }
@@ -602,8 +602,8 @@ export default class Yox implements YoxInterface {
    * 监听一次事件，支持链式调用
    */
   once(
-    type: string | Record<string, listener>,
-    listener?: listener
+    type: string | Record<string, YoxListener>,
+    listener?: YoxListener
   ): YoxInterface {
     return addEvents(this, type, listener, env.TRUE)
   }
@@ -613,7 +613,7 @@ export default class Yox implements YoxInterface {
    */
   off(
     type?: string,
-    listener?: listener
+    listener?: YoxListener
   ): YoxInterface {
     this.$emitter.off(type, listener)
     return this
@@ -1247,7 +1247,7 @@ function setFlexibleOptions(instance: Yox, key: string, value: Function | data |
   }
 }
 
-function addEvent(instance: Yox, type: string, listener: listener, once?: true) {
+function addEvent(instance: Yox, type: string, listener: YoxListener, once?: true) {
   const options: EmitterOptions = {
     fn: listener,
     ctx: instance
@@ -1260,17 +1260,17 @@ function addEvent(instance: Yox, type: string, listener: listener, once?: true) 
 
 function addEvents(
   instance: Yox,
-  type: string | Record<string, listener>,
-  listener?: listener,
+  type: string | Record<string, YoxListener>,
+  listener?: YoxListener,
   once?: true
 ): Yox {
   if (is.string(type)) {
-    addEvent(instance, type as string, listener as listener, once)
+    addEvent(instance, type as string, listener as YoxListener, once)
   }
   else {
     object.each(
       type as data,
-      function (value: listener, key: string) {
+      function (value: YoxListener, key: string) {
         addEvent(instance, key, value, once)
       }
     )

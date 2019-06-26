@@ -6,7 +6,7 @@ import {
 
 import {
   watcher,
-  listener,
+  Listener,
   YoxInterface,
 } from '../../../yox-type/src/global'
 
@@ -215,10 +215,10 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
     )
 
     unbind = function () {
-      domApi.off(element, eventName, sync as listener)
+      domApi.off(element, eventName, sync as Listener)
     }
 
-    domApi.on(element, eventName, sync as listener)
+    domApi.on(element, eventName, sync as Listener)
 
     control.set(element, directive.value)
 

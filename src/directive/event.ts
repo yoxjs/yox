@@ -4,7 +4,7 @@ import {
 } from '../../../yox-type/src/type'
 
 import {
-  listener,
+  Listener,
   YoxInterface,
 } from '../../../yox-type/src/global'
 
@@ -46,7 +46,7 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
 
     (node as YoxInterface).on(name, handler)
     vnode.data[directive.key] = function () {
-      (node as YoxInterface).off(name, handler as listener)
+      (node as YoxInterface).off(name, handler as Listener)
     }
 
   }
@@ -54,7 +54,7 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
 
     domApi.on(node as HTMLElement, name, handler)
     vnode.data[directive.key] = function () {
-      domApi.off(node as HTMLElement, name, handler as listener)
+      domApi.off(node as HTMLElement, name, handler as Listener)
     }
 
   }
