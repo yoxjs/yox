@@ -85,7 +85,7 @@ export default class Yox implements YoxInterface {
 
   $options: YoxOptions
 
-  $observer: Observer
+  $observer: Observer<YoxInterface>
 
   $emitter: Emitter
 
@@ -549,7 +549,7 @@ export default class Yox implements YoxInterface {
   addComputed(
     keypath: string,
     computed: computedGetter | ComputedOptions
-  ): Computed | void {
+  ): Computed<YoxInterface> | void {
     return this.$observer.addComputed(keypath, computed)
   }
 
