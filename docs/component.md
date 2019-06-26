@@ -313,7 +313,7 @@ Yox.component('AsyncComponent', function () {
 `propTypes` 为每个字段提供三个配置项，如下：
 
 * `type`: 数据类型，必填
-* `required`: 是否必需，可选
+* `required`: 是否必传，可选
 * `value`: 默认值，可选
 
 ### type
