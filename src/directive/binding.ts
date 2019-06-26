@@ -4,7 +4,7 @@ import {
 } from '../../../yox-type/src/type'
 
 import {
-  watcher,
+  Watcher,
   YoxInterface,
 } from '../../../yox-type/src/global'
 
@@ -27,7 +27,7 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
   // 提前判断好是否是模糊匹配，避免 watcher 频繁执行判断逻辑
   isFuzzy = keypathUtil.isFuzzy(binding),
 
-  watcher: watcher | void = function (newValue: any, _: any, keypath: string) {
+  watcher: Watcher | void = function (newValue: any, _: any, keypath: string) {
 
     if (watcher) {
       const name = isFuzzy
@@ -52,10 +52,10 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
 
   }
 
-  vnode.context.watch(binding, watcher as watcher)
+  vnode.context.watch(binding, watcher as Watcher)
 
   vnode.data[directive.key] = function () {
-    vnode.context.unwatch(binding, watcher as watcher)
+    vnode.context.unwatch(binding, watcher as Watcher)
     watcher = env.UNDEFINED
   }
 
