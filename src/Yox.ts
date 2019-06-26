@@ -18,13 +18,13 @@ import {
 } from '../../yox-type/src/type'
 
 import {
+  Watcher,
+  WatcherOptions,
   ComputedOptions,
   EmitterOptions,
   YoxOptions,
   YoxInterface,
   YoxListener,
-  YoxWatcher,
-  YoxWatcherOptions,
   YoxPlugin,
   DirectiveHooks,
   TransitionHooks,
@@ -681,8 +681,8 @@ export default class Yox implements YoxInterface {
    * 监听数据变化，支持链式调用
    */
   watch(
-    keypath: string | Record<string, YoxWatcher | YoxWatcherOptions>,
-    watcher?: YoxWatcher | YoxWatcherOptions,
+    keypath: string | Record<string, Watcher<YoxInterface> | WatcherOptions<YoxInterface>>,
+    watcher?: Watcher<YoxInterface> | WatcherOptions<YoxInterface>,
     immediate?: boolean
   ): YoxInterface {
     this.$observer.watch(keypath, watcher, immediate)
@@ -694,7 +694,7 @@ export default class Yox implements YoxInterface {
    */
   unwatch(
     keypath?: string,
-    watcher?: YoxWatcher
+    watcher?: Watcher<YoxInterface>
   ): YoxInterface {
     this.$observer.unwatch(keypath, watcher)
     return this
@@ -1225,7 +1225,7 @@ function checkProp(key: string, value: any, rule: PropRule) {
 
 }
 
-function afterCreateHook(instance: Yox, watchers: Record<string, YoxWatcher | YoxWatcherOptions> | void) {
+function afterCreateHook(instance: Yox, watchers: Record<string, Watcher<YoxInterface> | WatcherOptions<YoxInterface>> | void) {
 
   if (watchers) {
     instance.watch(watchers)
