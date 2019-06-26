@@ -15,20 +15,25 @@ Yox 用了以下高级 API，它们都可以打补丁实现。
 
 > IE8 已内置 JSON 对象，IE6、7 需要打补丁
 
-如果不想自己实现这些函数，建议加上以下三个脚本，从此拥抱 ES5 全特性：
+如果不想自己实现这些函数，建议加上以下脚本，从此拥抱 ES5 全特性（建议加上 Promise）：
 
 ```html
+<!--[if IE]>
+<script src="https://cdn.bootcss.com/es6-promise/4.1.1/es6-promise.auto.min.js"></script>
+<![endif]-->
+
 <!--[if lt IE 9]>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/es5-shim/4.5.13/es5-shim.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/es5-shim/4.5.13/es5-sham.min.js"></script>
+<script src="https://cdn.bootcss.com/es5-shim/4.5.13/es5-shim.min.js"></script>
+<script src="https://cdn.bootcss.com/es5-shim/4.5.13/es5-sham.min.js"></script>
 <![endif]-->
 
 <!--[if lt IE 8]>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/json3/3.3.2/json3.min.js"></script>
+<script src="https://cdn.bootcss.com/json3/3.3.3/json3.min.js"></script>
 <![endif]-->
 
 <!-- 在此加载 yoxjs -->
 ```
+
 
 
 
