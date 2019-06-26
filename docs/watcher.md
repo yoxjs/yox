@@ -7,7 +7,7 @@
 
 ## options
 
-数据监听支持以下配置项：
+两种监听方式本质上都是 `options` 在起作用，我们来看下它有哪些配置项：
 
 * `watcher`: 监听函数，参数列表是 `(newValue, oldValue, keypath)`
 * `immediate`: 是否立即执行一次监听函数，默认为 `false`
