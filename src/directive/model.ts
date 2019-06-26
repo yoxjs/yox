@@ -6,7 +6,6 @@ import {
 
 import {
   Watcher,
-  Listener,
   YoxInterface,
 } from '../../../yox-type/src/global'
 
@@ -32,10 +31,10 @@ interface NativeControl {
 
 }
 
-function debounceIfNeeded(fn: Function, lazy: lazyValue | void): any {
+function debounceIfNeeded<T extends Function>(fn: T, lazy: lazyValue | void): T {
   // 应用 lazy
   return lazy && lazy !== env.TRUE
-    ? debounce(fn, lazy)
+    ? debounce(fn as Function, lazy) as any
     : fn
 }
 
@@ -147,15 +146,20 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
 
   set: Watcher<YoxInterface> | void,
 
-  sync: Watcher<YoxInterface>,
-
   unbind: Function
 
   if (isComponent) {
 
     let component = node as YoxInterface,
 
-    viewBinding = component.$model as string
+    viewBinding = component.$model as string,
+
+    viewSyncing = debounceIfNeeded(
+      function (newValue: any) {
+        context.set(dataBinding, newValue)
+      },
+      lazyValue
+    )
 
     set = function (newValue: any) {
       if (set) {
@@ -163,18 +167,11 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
       }
     }
 
-    sync = debounceIfNeeded(
-      function (newValue: any) {
-        context.set(dataBinding, newValue)
-      },
-      lazyValue
-    )
-
     unbind = function () {
-      component.unwatch(viewBinding, sync)
+      component.unwatch(viewBinding, viewSyncing)
     }
 
-    component.watch(viewBinding, sync)
+    component.watch(viewBinding, viewSyncing)
 
   }
   else {
@@ -207,7 +204,7 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
       }
     }
 
-    sync = debounceIfNeeded(
+    const sync = debounceIfNeeded(
       function () {
         control.sync(element, dataBinding, context)
       },
@@ -215,10 +212,10 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
     )
 
     unbind = function () {
-      domApi.off(element, eventName, sync as Listener<any>)
+      domApi.off(element, eventName, sync)
     }
 
-    domApi.on(element, eventName, sync as Listener<any>)
+    domApi.on(element, eventName, sync)
 
     control.set(element, directive.value)
 
