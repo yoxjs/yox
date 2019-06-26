@@ -18,13 +18,13 @@ import {
 } from '../../yox-type/src/type'
 
 import {
+  Listener,
   Watcher,
   WatcherOptions,
   ComputedOptions,
   EmitterOptions,
   YoxOptions,
   YoxInterface,
-  YoxListener,
   YoxPlugin,
   DirectiveHooks,
   TransitionHooks,
@@ -87,7 +87,7 @@ export default class Yox implements YoxInterface {
 
   $observer: Observer<YoxInterface>
 
-  $emitter: Emitter
+  $emitter: Emitter<YoxInterface>
 
   $el?: HTMLElement
 
@@ -592,8 +592,8 @@ export default class Yox implements YoxInterface {
    * 监听事件，支持链式调用
    */
   on(
-    type: string | Record<string, YoxListener>,
-    listener?: YoxListener
+    type: string | Record<string, Listener<YoxInterface>>,
+    listener?: Listener<YoxInterface>
   ): YoxInterface {
     return addEvents(this, type, listener)
   }
@@ -602,8 +602,8 @@ export default class Yox implements YoxInterface {
    * 监听一次事件，支持链式调用
    */
   once(
-    type: string | Record<string, YoxListener>,
-    listener?: YoxListener
+    type: string | Record<string, Listener<YoxInterface>>,
+    listener?: Listener<YoxInterface>
   ): YoxInterface {
     return addEvents(this, type, listener, env.TRUE)
   }
@@ -613,7 +613,7 @@ export default class Yox implements YoxInterface {
    */
   off(
     type?: string,
-    listener?: YoxListener
+    listener?: Listener<YoxInterface>
   ): YoxInterface {
     this.$emitter.off(type, listener)
     return this
@@ -1247,7 +1247,7 @@ function setFlexibleOptions(instance: Yox, key: string, value: Function | data |
   }
 }
 
-function addEvent(instance: Yox, type: string, listener: YoxListener, once?: true) {
+function addEvent(instance: Yox, type: string, listener: Listener<YoxInterface>, once?: true) {
   const options: EmitterOptions = {
     fn: listener,
     ctx: instance
@@ -1260,17 +1260,17 @@ function addEvent(instance: Yox, type: string, listener: YoxListener, once?: tru
 
 function addEvents(
   instance: Yox,
-  type: string | Record<string, YoxListener>,
-  listener?: YoxListener,
+  type: string | Record<string, Listener<YoxInterface>>,
+  listener?: Listener<YoxInterface>,
   once?: true
 ): Yox {
   if (is.string(type)) {
-    addEvent(instance, type as string, listener as YoxListener, once)
+    addEvent(instance, type as string, listener as Listener<YoxInterface>, once)
   }
   else {
     object.each(
       type as data,
-      function (value: YoxListener, key: string) {
+      function (value: Listener<YoxInterface>, key: string) {
         addEvent(instance, key, value, once)
       }
     )
@@ -1359,3 +1359,4 @@ if (process.env.NODE_ENV !== 'pure') {
   // 全局注册内置过滤器
   Yox.filter({ hasSlot })
 }
+

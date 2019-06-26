@@ -215,10 +215,10 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
     )
 
     unbind = function () {
-      domApi.off(element, eventName, sync as Listener)
+      domApi.off(element, eventName, sync as Listener<any>)
     }
 
-    domApi.on(element, eventName, sync as Listener)
+    domApi.on(element, eventName, sync as Listener<any>)
 
     control.set(element, directive.value)
 
