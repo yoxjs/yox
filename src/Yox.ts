@@ -334,7 +334,7 @@ export default class Yox implements YoxInterface {
     if (computed) {
       object.each(
         computed,
-        function (options: ComputedGetter<YoxInterface> | ComputedOptions<YoxInterface>, keypath: string) {
+        function (options: ComputedGetter<YoxInterface> | ComputedOptions<YoxInterface, any>, keypath: string) {
           observer.addComputed(keypath, options)
         }
       )
@@ -548,7 +548,7 @@ export default class Yox implements YoxInterface {
    */
   addComputed(
     keypath: string,
-    computed: ComputedGetter<YoxInterface> | ComputedOptions<YoxInterface>
+    computed: ComputedGetter<YoxInterface> | ComputedOptions<YoxInterface, any>
   ): Computed<YoxInterface> | void {
     return this.$observer.addComputed(keypath, computed)
   }
@@ -1359,4 +1359,3 @@ if (process.env.NODE_ENV !== 'pure') {
   // 全局注册内置过滤器
   Yox.filter({ hasSlot })
 }
-
