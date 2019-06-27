@@ -5,7 +5,6 @@ import {
   TypedListener,
   Watcher,
   TypedWatcher,
-  TypedComputedGetter,
   Component,
   ComponentCallback,
   ComponentLoader,
@@ -19,10 +18,6 @@ import {
 } from '../../yox-type/src/vnode'
 
 import {
-  ComputedInterface,
-} from '../../yox-type/src/observer'
-
-import {
   DirectiveHooks,
   TransitionHooks,
 } from '../../yox-type/src/hooks'
@@ -30,7 +25,6 @@ import {
 import {
   WatcherOptions,
   TypedWatcherOptions,
-  TypedComputedOptions,
   EmitterOptions,
   YoxOptions,
   YoxTypedOptions,
@@ -569,25 +563,6 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
 
     afterCreateHook(instance, watchers)
 
-  }
-
-  /**
-   * 添加计算属性
-   */
-  addComputed(
-    keypath: string,
-    computed: TypedComputedGetter<this> | TypedComputedOptions<this>
-  ): ComputedInterface | void {
-    return this.$observer.addComputed(keypath, computed)
-  }
-
-  /**
-   * 删除计算属性
-   */
-  removeComputed(
-    keypath: string
-  ): void {
-    this.$observer.removeComputed(keypath)
   }
 
   /**
@@ -1283,7 +1258,7 @@ function addEvent(instance: YoxInterface, type: string, listener: Listener, once
   if (once) {
     options.max = 1
   }
-  instance.$emitter.on(type, options)
+  (instance as any).$emitter.on(type, options)
 }
 
 function addEvents(
