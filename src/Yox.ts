@@ -94,9 +94,9 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
 
   $options: YoxTypedOptions
 
-  $observer: Observer<YoxInterface>
+  $observer: Observer
 
-  $emitter: Emitter<YoxInterface>
+  $emitter: Emitter
 
   $el?: HTMLElement
 
@@ -562,7 +562,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
   addComputed(
     keypath: string,
     computed: ComputedGetter | ComputedOptions
-  ): ComputedInterface<YoxInterface> | void {
+  ): ComputedInterface | void {
     return this.$observer.addComputed(keypath, computed)
   }
 
@@ -1380,61 +1380,73 @@ if (process.env.NODE_ENV !== 'pure') {
   })
 }
 
-Yox.define({
-  events: {
-    a(event, data) {
-      this.say()
-      return false
-    }
-  },
-  watchers: {
-    a(newValue, oldValue, keypath) {
-      this.say()
-    },
-    b: {
-      watcher(newValue, oldValue, keypath) {
-        this.get('')
-      },
-      sync: true,
-      immediate: true,
-    }
-  },
+// Yox.define({
+//   events: {
+//     a(event, data) {
+//       this.say()
+//       return false
+//     }
+//   },
+//   watchers: {
+//     a(newValue, oldValue, keypath) {
+//       this.say()
+//     },
+//     b: {
+//       watcher(newValue, oldValue, keypath) {
+//         this.get('')
+//       },
+//       sync: true,
+//       immediate: true,
+//     }
+//   },
 
-  computed: {
-    a(): any {
-      this.say()
-      var a = this.get('asd')
-      return a
-    },
-    b: {
-      get() {
-        this
-        return 1
-      },
-      set(value) {
-        this.get('')
-      },
-      cache: true,
-      deps: ['']
-    }
-  },
-  methods: {
-    say() {
-      this.good()
-    },
-    good() {
-      this.toggle('')
-    }
-  }
-})
+//   computed: {
+//     a(): any {
+//       this.say()
+//       var a = this.get('asd')
+//       return a
+//     },
+//     b: {
+//       get() {
+//         this
+//         return 1
+//       },
+//       set(value) {
+//         this.get('')
+//       },
+//       cache: true,
+//       deps: ['']
+//     }
+//   },
+//   methods: {
+//     say() {
+//       this.good()
+//     },
+//     good() {
+//       this.toggle('')
+//     }
+//   }
+// })
 
-new Yox({
-  methods: {
-    a() {
+// var a = new Yox({
+//   methods: {
+//     a() {
 
-    },
-    b() {
+//     },
+//     b() {
 
-    }
-  }
-})
+//     }
+//   }
+// })
+
+// a.addComputed('xx', function () {
+//   return this.get('')
+// })
+
+// a.watch('xx', function () {
+//   this.get()
+// })
+
+// a.on('xx', function (event, data) {
+//   this.get('')
+// })
