@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.79
+ * yox.js v1.0.0-alpha.80
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1317,40 +1317,6 @@
           }
       }
       /**
-       * 对外的构造器，把用户配置的计算属性对象转换成内部对象
-       *
-       * @param keypath
-       * @param observer
-       * @param options
-       */
-      Computed.build = function (keypath, observer, options) {
-          var cache = TRUE, sync = TRUE, deps = [], getter, setter;
-          if (func(options)) {
-              getter = options;
-          }
-          else if (object(options)) {
-              if (boolean(options.cache)) {
-                  cache = options.cache;
-              }
-              if (boolean(options.sync)) {
-                  sync = options.sync;
-              }
-              // 因为可能会修改 deps，所以这里创建一个新的 deps，避免影响外部传入的 deps
-              if (array(options.deps)) {
-                  deps = copy(options.deps);
-              }
-              if (func(options.get)) {
-                  getter = options.get;
-              }
-              if (func(options.set)) {
-                  setter = options.set;
-              }
-          }
-          if (getter) {
-              return new Computed(keypath, sync, cache, deps, observer, getter, setter);
-          }
-      };
-      /**
        * 读取计算属性的值
        *
        * @param force 是否强制刷新缓存
@@ -1783,8 +1749,31 @@
        * @param computed
        */
       Observer.prototype.addComputed = function (keypath, options) {
-          var instance = this, computed = Computed.build(keypath, instance, options);
-          if (computed) {
+          var cache = TRUE, sync = TRUE, deps = [], getter, setter;
+          if (func(options)) {
+              getter = options;
+          }
+          else if (object(options)) {
+              var computedOptions = options;
+              if (boolean(computedOptions.cache)) {
+                  cache = computedOptions.cache;
+              }
+              if (boolean(computedOptions.sync)) {
+                  sync = computedOptions.sync;
+              }
+              // 因为可能会修改 deps，所以这里创建一个新的 deps，避免影响外部传入的 deps
+              if (array(computedOptions.deps)) {
+                  deps = copy(computedOptions.deps);
+              }
+              if (func(computedOptions.get)) {
+                  getter = computedOptions.get;
+              }
+              if (func(computedOptions.set)) {
+                  setter = computedOptions.set;
+              }
+          }
+          if (getter) {
+              var instance = this, computed = new Computed(keypath, sync, cache, deps, instance, getter, setter);
               if (!instance.computed) {
                   instance.computed = {};
               }
@@ -2042,9 +2031,9 @@
           plugin.install(Yox);
       };
       /**
-       * 创建组件对象
+       * 定义组件对象
        */
-      Yox.create = function (options) {
+      Yox.define = function (options) {
           return options;
       };
       /**
@@ -2363,7 +2352,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.79";
+      Yox.version = "1.0.0-alpha.80";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

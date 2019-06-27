@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.79
+ * yox.js v1.0.0-alpha.80
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -2487,40 +2487,6 @@ var domApi = /*#__PURE__*/Object.freeze({
  * 可配置 cache、deps、get、set 等
  */
 class Computed {
-    /**
-     * 对外的构造器，把用户配置的计算属性对象转换成内部对象
-     *
-     * @param keypath
-     * @param observer
-     * @param options
-     */
-    static build(keypath, observer, options) {
-        let cache = TRUE, sync = TRUE, deps = [], getter, setter;
-        if (func(options)) {
-            getter = options;
-        }
-        else if (object(options)) {
-            if (boolean(options.cache)) {
-                cache = options.cache;
-            }
-            if (boolean(options.sync)) {
-                sync = options.sync;
-            }
-            // 因为可能会修改 deps，所以这里创建一个新的 deps，避免影响外部传入的 deps
-            if (array(options.deps)) {
-                deps = copy(options.deps);
-            }
-            if (func(options.get)) {
-                getter = options.get;
-            }
-            if (func(options.set)) {
-                setter = options.set;
-            }
-        }
-        if (getter) {
-            return new Computed(keypath, sync, cache, deps, observer, getter, setter);
-        }
-    }
     constructor(keypath, sync, cache, deps, observer, getter, setter) {
         const instance = this;
         instance.keypath = keypath;
@@ -2980,8 +2946,31 @@ class Observer {
      * @param computed
      */
     addComputed(keypath, options) {
-        const instance = this, computed = Computed.build(keypath, instance, options);
-        if (computed) {
+        let cache = TRUE, sync = TRUE, deps = [], getter, setter;
+        if (func(options)) {
+            getter = options;
+        }
+        else if (object(options)) {
+            const computedOptions = options;
+            if (boolean(computedOptions.cache)) {
+                cache = computedOptions.cache;
+            }
+            if (boolean(computedOptions.sync)) {
+                sync = computedOptions.sync;
+            }
+            // 因为可能会修改 deps，所以这里创建一个新的 deps，避免影响外部传入的 deps
+            if (array(computedOptions.deps)) {
+                deps = copy(computedOptions.deps);
+            }
+            if (func(computedOptions.get)) {
+                getter = computedOptions.get;
+            }
+            if (func(computedOptions.set)) {
+                setter = computedOptions.set;
+            }
+        }
+        if (getter) {
+            const instance = this, computed = new Computed(keypath, sync, cache, deps, instance, getter, setter);
             if (!instance.computed) {
                 instance.computed = {};
             }
@@ -3336,21 +3325,20 @@ const inputControl = {
 };
 const once = TRUE;
 function bind$1(node, directive, vnode) {
-    let { context, lazy, isComponent } = vnode, dataBinding = directive.binding, lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[EMPTY_STRING]), set, sync, unbind;
+    let { context, lazy, isComponent } = vnode, dataBinding = directive.binding, lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[EMPTY_STRING]), set, unbind;
     if (isComponent) {
-        let component = node, viewBinding = component.$model;
+        let component = node, viewBinding = component.$model, viewSyncing = debounceIfNeeded(function (newValue) {
+            context.set(dataBinding, newValue);
+        }, lazyValue);
         set = function (newValue) {
             if (set) {
                 component.set(viewBinding, newValue);
             }
         };
-        sync = debounceIfNeeded(function (newValue) {
-            context.set(dataBinding, newValue);
-        }, lazyValue);
         unbind = function () {
-            component.unwatch(viewBinding, sync);
+            component.unwatch(viewBinding, viewSyncing);
         };
-        component.watch(viewBinding, sync);
+        component.watch(viewBinding, viewSyncing);
     }
     else {
         let element = node, control = vnode.tag === 'select'
@@ -3375,7 +3363,7 @@ function bind$1(node, directive, vnode) {
                 control.set(element, newValue);
             }
         };
-        sync = debounceIfNeeded(function () {
+        const sync = debounceIfNeeded(function () {
             control.sync(element, dataBinding, context);
         }, lazyValue);
         unbind = function () {
@@ -3444,16 +3432,6 @@ var binding = /*#__PURE__*/Object.freeze({
   bind: bind$2,
   unbind: unbind$2
 });
-
-// this type https://jkchao.github.io/typescript-book-chinese/typings/thisType.html
-/**
- * 组件是否存在某个 slot
- *
- * @param name
- */
-function hasSlot (name) {
-    return isDef(this.get(SLOT_DATA_PREFIX + name));
-}
 
 const globalDirectives = {}, globalTransitions = {}, globalComponents = {}, globalPartials = {}, globalFilters = {}, TEMPLATE_COMPUTED = '$$', selectorPattern = /^[#.][-\w+]+$/;
 class Yox {
@@ -3618,9 +3596,9 @@ class Yox {
         plugin.install(Yox);
     }
     /**
-     * 创建组件对象
+     * 定义组件对象
      */
-    static create(options) {
+    static define(options) {
         return options;
     }
     /**
@@ -4105,7 +4083,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.79";
+Yox.version = "1.0.0-alpha.80";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
@@ -4205,7 +4183,14 @@ function setResource(registry, name, value, formatValue) {
     // 全局注册内置指令
     Yox.directive({ event, model, binding });
     // 全局注册内置过滤器
-    Yox.filter({ hasSlot });
+    Yox.filter({
+        hasSlot(name) {
+            // 不鼓励在过滤器使用 this
+            // 因此过滤器没有 this 的类型声明
+            // 这个内置过滤器是不得不用 this
+            return isDef(this.get(SLOT_DATA_PREFIX + name));
+        }
+    });
 }
 
 export default Yox;

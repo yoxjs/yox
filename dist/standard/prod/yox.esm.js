@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.79
+ * yox.js v1.0.0-alpha.80
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -2009,17 +2009,12 @@ function createEach(from, to, equal, index) {
         isComplex: TRUE,
     };
 }
-function createElement(tag, isSvg, isComponent) {
-    // 是 svg 就不可能是组件
-    // 加这个判断的原因是，svg 某些标签含有 连字符 和 大写字母，比较蛋疼
-    if (isSvg) {
-        isComponent = FALSE;
-    }
+function createElement(tag, isSvg, isStyle, isComponent) {
     return {
         type: ELEMENT,
         tag,
         isSvg,
-        isStyle: tag === 'style',
+        isStyle,
         // 只有 <option> 没有 value 属性时才为 true
         isOption: FALSE,
         isComponent,
@@ -2083,8 +2078,10 @@ function createText(text) {
     };
 }
 
+// 首字母大写，或中间包含 -
+const componentNamePattern = /^[$A-Z]|-/, 
 // 常见的自闭合标签
-const selfClosingTagNames = 'area,base,embed,track,source,param,input,col,img,br,hr'.split(','), 
+selfClosingTagNames = 'area,base,embed,track,source,param,input,col,img,br,hr'.split(','), 
 // 常见的 svg 标签
 svgTagNames = 'svg,g,defs,desc,metadata,symbol,use,image,path,rect,circle,line,ellipse,polyline,polygon,text,tspan,tref,textpath,marker,pattern,clippath,mask,filter,cursor,view,animate,font,font-face,glyph,missing-glyph,foreignObject'.split(','), 
 // 常见的字符串类型的属性
@@ -2108,9 +2105,6 @@ attr2Prop['minlength'] = 'minLength';
 attr2Prop['maxlength'] = 'maxLength';
 function isSelfClosing(tagName) {
     return has(selfClosingTagNames, tagName);
-}
-function isSvg(tagName) {
-    return has(svgTagNames, tagName);
 }
 function createAttribute$1(element, name) {
     // 组件用驼峰格式
@@ -2150,6 +2144,15 @@ function getAttributeDefaultValue(element, name) {
             ? EMPTY_STRING
             : name;
     }
+}
+function createElement$1(tagName) {
+    let isSvg = has(svgTagNames, tagName), isComponent = FALSE;
+    // 是 svg 就不可能是组件
+    // 加这个判断的原因是，svg 某些标签含有 连字符 和 大写字母，比较蛋疼
+    if (!isSvg && componentNamePattern.test(tagName)) {
+        isComponent = TRUE;
+    }
+    return createElement(tagName, isSvg, tagName === 'style', isComponent);
 }
 function compatElement(element) {
     let { tag, attrs } = element, hasType = FALSE, hasValue = FALSE;
@@ -3122,8 +3125,6 @@ closeCommentPattern = /-->([\s\S]*?)$/,
 // 属性的 name
 // 支持 on-click.namespace="" 或 on-get-out="" 或 xml:xx=""
 attributePattern = /^\s*([-.:\w]+)(['"])?(?:=(['"]))?/, 
-// 首字母大写，或中间包含 -
-componentNamePattern = /^[$A-Z]|-/, 
 // 自闭合标签
 selfClosingTagPattern = /^\s*(\/)?>/;
 /**
@@ -3573,7 +3574,7 @@ function compile$1(content) {
                         popStack(ELEMENT, tag);
                     }
                     else {
-                        const node = createElement(tag, isSvg(tag), componentNamePattern.test(tag));
+                        const node = createElement$1(tag);
                         addChild(node);
                         currentElement = node;
                     }
@@ -4937,7 +4938,7 @@ specialEvents[EVENT_MODEL] = {
                 listener[EVENT_INPUT] = UNDEFINED;
     }
 };
-function createElement$1(tag, isSvg) {
+function createElement$2(tag, isSvg) {
     return isSvg
         ? DOCUMENT.createElementNS(namespaces.svg, tag)
         : DOCUMENT.createElement(tag);
@@ -5081,7 +5082,7 @@ function addSpecialEvent(type, hooks) {
 }
 
 var domApi = /*#__PURE__*/Object.freeze({
-  createElement: createElement$1,
+  createElement: createElement$2,
   createText: createText$1,
   createComment: createComment,
   prop: prop,
@@ -5111,40 +5112,6 @@ var domApi = /*#__PURE__*/Object.freeze({
  * 可配置 cache、deps、get、set 等
  */
 class Computed {
-    /**
-     * 对外的构造器，把用户配置的计算属性对象转换成内部对象
-     *
-     * @param keypath
-     * @param observer
-     * @param options
-     */
-    static build(keypath, observer, options) {
-        let cache = TRUE, sync = TRUE, deps = [], getter, setter;
-        if (func(options)) {
-            getter = options;
-        }
-        else if (object(options)) {
-            if (boolean(options.cache)) {
-                cache = options.cache;
-            }
-            if (boolean(options.sync)) {
-                sync = options.sync;
-            }
-            // 因为可能会修改 deps，所以这里创建一个新的 deps，避免影响外部传入的 deps
-            if (array(options.deps)) {
-                deps = copy(options.deps);
-            }
-            if (func(options.get)) {
-                getter = options.get;
-            }
-            if (func(options.set)) {
-                setter = options.set;
-            }
-        }
-        if (getter) {
-            return new Computed(keypath, sync, cache, deps, observer, getter, setter);
-        }
-    }
     constructor(keypath, sync, cache, deps, observer, getter, setter) {
         const instance = this;
         instance.keypath = keypath;
@@ -5604,8 +5571,31 @@ class Observer {
      * @param computed
      */
     addComputed(keypath, options) {
-        const instance = this, computed = Computed.build(keypath, instance, options);
-        if (computed) {
+        let cache = TRUE, sync = TRUE, deps = [], getter, setter;
+        if (func(options)) {
+            getter = options;
+        }
+        else if (object(options)) {
+            const computedOptions = options;
+            if (boolean(computedOptions.cache)) {
+                cache = computedOptions.cache;
+            }
+            if (boolean(computedOptions.sync)) {
+                sync = computedOptions.sync;
+            }
+            // 因为可能会修改 deps，所以这里创建一个新的 deps，避免影响外部传入的 deps
+            if (array(computedOptions.deps)) {
+                deps = copy(computedOptions.deps);
+            }
+            if (func(computedOptions.get)) {
+                getter = computedOptions.get;
+            }
+            if (func(computedOptions.set)) {
+                setter = computedOptions.set;
+            }
+        }
+        if (getter) {
+            const instance = this, computed = new Computed(keypath, sync, cache, deps, instance, getter, setter);
             if (!instance.computed) {
                 instance.computed = {};
             }
@@ -5960,21 +5950,20 @@ const inputControl = {
 };
 const once = TRUE;
 function bind$1(node, directive, vnode) {
-    let { context, lazy, isComponent } = vnode, dataBinding = directive.binding, lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[EMPTY_STRING]), set, sync, unbind;
+    let { context, lazy, isComponent } = vnode, dataBinding = directive.binding, lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[EMPTY_STRING]), set, unbind;
     if (isComponent) {
-        let component = node, viewBinding = component.$model;
+        let component = node, viewBinding = component.$model, viewSyncing = debounceIfNeeded(function (newValue) {
+            context.set(dataBinding, newValue);
+        }, lazyValue);
         set = function (newValue) {
             if (set) {
                 component.set(viewBinding, newValue);
             }
         };
-        sync = debounceIfNeeded(function (newValue) {
-            context.set(dataBinding, newValue);
-        }, lazyValue);
         unbind = function () {
-            component.unwatch(viewBinding, sync);
+            component.unwatch(viewBinding, viewSyncing);
         };
-        component.watch(viewBinding, sync);
+        component.watch(viewBinding, viewSyncing);
     }
     else {
         let element = node, control = vnode.tag === 'select'
@@ -5999,7 +5988,7 @@ function bind$1(node, directive, vnode) {
                 control.set(element, newValue);
             }
         };
-        sync = debounceIfNeeded(function () {
+        const sync = debounceIfNeeded(function () {
             control.sync(element, dataBinding, context);
         }, lazyValue);
         unbind = function () {
@@ -6068,16 +6057,6 @@ var binding = /*#__PURE__*/Object.freeze({
   bind: bind$2,
   unbind: unbind$2
 });
-
-// this type https://jkchao.github.io/typescript-book-chinese/typings/thisType.html
-/**
- * 组件是否存在某个 slot
- *
- * @param name
- */
-function hasSlot (name) {
-    return isDef(this.get(SLOT_DATA_PREFIX + name));
-}
 
 const globalDirectives = {}, globalTransitions = {}, globalComponents = {}, globalPartials = {}, globalFilters = {}, compileCache = {}, TEMPLATE_COMPUTED = '$$', selectorPattern = /^[#.][-\w+]+$/;
 class Yox {
@@ -6242,9 +6221,9 @@ class Yox {
         plugin.install(Yox);
     }
     /**
-     * 创建组件对象
+     * 定义组件对象
      */
-    static create(options) {
+    static define(options) {
         return options;
     }
     /**
@@ -6737,7 +6716,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.79";
+Yox.version = "1.0.0-alpha.80";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
@@ -6837,7 +6816,14 @@ function setResource(registry, name, value, formatValue) {
     // 全局注册内置指令
     Yox.directive({ event, model, binding });
     // 全局注册内置过滤器
-    Yox.filter({ hasSlot });
+    Yox.filter({
+        hasSlot(name) {
+            // 不鼓励在过滤器使用 this
+            // 因此过滤器没有 this 的类型声明
+            // 这个内置过滤器是不得不用 this
+            return isDef(this.get(SLOT_DATA_PREFIX + name));
+        }
+    });
 }
 
 export default Yox;

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.79
+ * yox.js v1.0.0-alpha.80
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -2519,7 +2519,7 @@
           // 特殊事件
           var special = specialEvents[type], 
           // 唯一的原生监听器
-          nativeListener_1 = function (event) {
+          nativeListener = function (event) {
               var customEvent = event instanceof CustomEvent
                   ? event
                   : new CustomEvent(event.type, createEvent(event, node));
@@ -2528,12 +2528,12 @@
               }
               emitter.fire(type, [customEvent]);
           };
-          nativeListeners[type] = nativeListener_1;
+          nativeListeners[type] = nativeListener;
           if (special) {
-              special.on(node, nativeListener_1);
+              special.on(node, nativeListener);
           }
           else {
-              addEventListener(node, type, nativeListener_1);
+              addEventListener(node, type, nativeListener);
           }
       }
       emitter.on(type, listener);
@@ -2544,12 +2544,12 @@
       emitter.off(type, listener);
       // 如果注册的 type 事件都解绑了，则去掉原生监听器
       if (nativeListeners && !emitter.has(type)) {
-          var special = specialEvents[type], nativeListener_2 = nativeListeners[type];
+          var special = specialEvents[type], nativeListener = nativeListeners[type];
           if (special) {
-              special.off(node, nativeListener_2);
+              special.off(node, nativeListener);
           }
           else {
-              removeEventListener(node, type, nativeListener_2);
+              removeEventListener(node, type, nativeListener);
           }
           delete nativeListeners[type];
       }
@@ -2619,40 +2619,6 @@
               });
           }
       }
-      /**
-       * 对外的构造器，把用户配置的计算属性对象转换成内部对象
-       *
-       * @param keypath
-       * @param observer
-       * @param options
-       */
-      Computed.build = function (keypath, observer, options) {
-          var cache = TRUE, sync = TRUE, deps = [], getter, setter;
-          if (func(options)) {
-              getter = options;
-          }
-          else if (object(options)) {
-              if (boolean(options.cache)) {
-                  cache = options.cache;
-              }
-              if (boolean(options.sync)) {
-                  sync = options.sync;
-              }
-              // 因为可能会修改 deps，所以这里创建一个新的 deps，避免影响外部传入的 deps
-              if (array(options.deps)) {
-                  deps = copy(options.deps);
-              }
-              if (func(options.get)) {
-                  getter = options.get;
-              }
-              if (func(options.set)) {
-                  setter = options.set;
-              }
-          }
-          if (getter) {
-              return new Computed(keypath, sync, cache, deps, observer, getter, setter);
-          }
-      };
       /**
        * 读取计算属性的值
        *
@@ -3086,8 +3052,31 @@
        * @param computed
        */
       Observer.prototype.addComputed = function (keypath, options) {
-          var instance = this, computed = Computed.build(keypath, instance, options);
-          if (computed) {
+          var cache = TRUE, sync = TRUE, deps = [], getter, setter;
+          if (func(options)) {
+              getter = options;
+          }
+          else if (object(options)) {
+              var computedOptions = options;
+              if (boolean(computedOptions.cache)) {
+                  cache = computedOptions.cache;
+              }
+              if (boolean(computedOptions.sync)) {
+                  sync = computedOptions.sync;
+              }
+              // 因为可能会修改 deps，所以这里创建一个新的 deps，避免影响外部传入的 deps
+              if (array(computedOptions.deps)) {
+                  deps = copy(computedOptions.deps);
+              }
+              if (func(computedOptions.get)) {
+                  getter = computedOptions.get;
+              }
+              if (func(computedOptions.set)) {
+                  setter = computedOptions.set;
+              }
+          }
+          if (getter) {
+              var instance = this, computed = new Computed(keypath, sync, cache, deps, instance, getter, setter);
               if (!instance.computed) {
                   instance.computed = {};
               }
@@ -3443,21 +3432,20 @@
   };
   var once = TRUE;
   function bind$1(node, directive, vnode) {
-      var context = vnode.context, lazy = vnode.lazy, isComponent = vnode.isComponent, dataBinding = directive.binding, lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[EMPTY_STRING]), set, sync, unbind;
+      var context = vnode.context, lazy = vnode.lazy, isComponent = vnode.isComponent, dataBinding = directive.binding, lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[EMPTY_STRING]), set, unbind;
       if (isComponent) {
-          var component_1 = node, viewBinding_1 = component_1.$model;
+          var component_1 = node, viewBinding_1 = component_1.$model, viewSyncing_1 = debounceIfNeeded(function (newValue) {
+              context.set(dataBinding, newValue);
+          }, lazyValue);
           set = function (newValue) {
               if (set) {
                   component_1.set(viewBinding_1, newValue);
               }
           };
-          sync = debounceIfNeeded(function (newValue) {
-              context.set(dataBinding, newValue);
-          }, lazyValue);
           unbind = function () {
-              component_1.unwatch(viewBinding_1, sync);
+              component_1.unwatch(viewBinding_1, viewSyncing_1);
           };
-          component_1.watch(viewBinding_1, sync);
+          component_1.watch(viewBinding_1, viewSyncing_1);
       }
       else {
           var element_1 = node, control_1 = vnode.tag === 'select'
@@ -3482,13 +3470,13 @@
                   control_1.set(element_1, newValue);
               }
           };
-          sync = debounceIfNeeded(function () {
+          var sync_1 = debounceIfNeeded(function () {
               control_1.sync(element_1, dataBinding, context);
           }, lazyValue);
           unbind = function () {
-              off(element_1, eventName_1, sync);
+              off(element_1, eventName_1, sync_1);
           };
-          on(element_1, eventName_1, sync);
+          on(element_1, eventName_1, sync_1);
           control_1.set(element_1, directive.value);
       }
       // 监听数据，修改界面
@@ -3551,16 +3539,6 @@
     bind: bind$2,
     unbind: unbind$2
   });
-
-  // this type https://jkchao.github.io/typescript-book-chinese/typings/thisType.html
-  /**
-   * 组件是否存在某个 slot
-   *
-   * @param name
-   */
-  function hasSlot (name) {
-      return isDef(this.get(SLOT_DATA_PREFIX + name));
-  }
 
   var globalDirectives = {}, globalTransitions = {}, globalComponents = {}, globalPartials = {}, globalFilters = {}, TEMPLATE_COMPUTED = '$$', selectorPattern = /^[#.][-\w+]+$/;
   var Yox = /** @class */ (function () {
@@ -3725,9 +3703,9 @@
           plugin.install(Yox);
       };
       /**
-       * 创建组件对象
+       * 定义组件对象
        */
-      Yox.create = function (options) {
+      Yox.define = function (options) {
           return options;
       };
       /**
@@ -4211,7 +4189,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.79";
+      Yox.version = "1.0.0-alpha.80";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
@@ -4265,28 +4243,28 @@
   }
   function loadComponent(registry, name, callback) {
       if (registry && registry[name]) {
-          var component_1 = registry[name];
+          var component = registry[name];
           // 注册的是异步加载函数
-          if (func(component_1)) {
+          if (func(component)) {
               registry[name] = [callback];
-              var componentCallback_1 = function (result) {
+              var componentCallback = function (result) {
                   var queue = registry[name], options = result['default'] || result;
                   registry[name] = options;
                   each(queue, function (callback) {
                       callback(options);
                   });
-              }, promise = component_1(componentCallback_1);
+              }, promise = component(componentCallback);
               if (promise) {
-                  promise.then(componentCallback_1);
+                  promise.then(componentCallback);
               }
           }
           // 正在加载中
-          else if (array(component_1)) {
-              push(component_1, callback);
+          else if (array(component)) {
+              push(component, callback);
           }
           // 不是异步加载函数，直接同步返回
           else {
-              callback(component_1);
+              callback(component);
           }
           return TRUE;
       }
@@ -4313,7 +4291,14 @@
       // 全局注册内置指令
       Yox.directive({ event: event, model: model, binding: binding });
       // 全局注册内置过滤器
-      Yox.filter({ hasSlot: hasSlot });
+      Yox.filter({
+          hasSlot: function (name) {
+              // 不鼓励在过滤器使用 this
+              // 因此过滤器没有 this 的类型声明
+              // 这个内置过滤器是不得不用 this
+              return isDef(this.get(SLOT_DATA_PREFIX + name));
+          }
+      });
   }
 
   return Yox;
