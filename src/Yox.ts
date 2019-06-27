@@ -15,15 +15,6 @@ import {
 } from '../../yox-type/src/type'
 
 import {
-  IsUtil,
-  DomUtil,
-  ArrayUtil,
-  StringUtil,
-  ObjectUtil,
-  LoggerUtil,
-} from '../../yox-type/src/util'
-
-import {
   VNode,
 } from '../../yox-type/src/vnode'
 
@@ -97,6 +88,12 @@ TEMPLATE_COMPUTED = '$$',
 selectorPattern = /^[#.][-\w+]+$/
 
 
+type IsUtil = typeof is
+type DomUtil = typeof domApi
+type ArrayUtil = typeof array
+type ObjectUtil = typeof object
+type StringUtil = typeof string
+type LoggerUtil = typeof logger
 
 type YoxClass = typeof Yox
 type EmitterClass = typeof Emitter
