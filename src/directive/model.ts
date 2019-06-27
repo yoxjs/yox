@@ -1,7 +1,7 @@
 import {
-  LazyValue,
   VNode,
   Directive,
+  LazyValue,
 } from '../../../yox-type/src/type'
 
 import {

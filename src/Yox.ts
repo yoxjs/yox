@@ -1,6 +1,5 @@
 import {
   Data,
-  ComputedGetter,
   Component,
   ComponentCallback,
   ComponentLoader,
@@ -23,7 +22,10 @@ import {
   TypedListener,
   Watcher,
   WatcherOptions,
-  ComputedOptions,
+  TypedWatcher,
+  TypedWatcherOptions,
+  TypedComputedGetter,
+  TypedComputedOptions,
   EmitterOptions,
   YoxOptions,
   YoxTypedOptions,
@@ -348,7 +350,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
     if (computed) {
       object.each(
         computed,
-        function (options: ComputedGetter | ComputedOptions, keypath: string) {
+        function (options, keypath) {
           observer.addComputed(keypath, options)
         }
       )
@@ -562,7 +564,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
    */
   addComputed(
     keypath: string,
-    computed: ComputedGetter | ComputedOptions
+    computed: TypedComputedGetter<this> | TypedComputedOptions<this>
   ): ComputedInterface | void {
     return this.$observer.addComputed(keypath, computed)
   }
@@ -695,8 +697,8 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
    * 监听数据变化，支持链式调用
    */
   watch(
-    keypath: string | Record<string, Watcher | WatcherOptions>,
-    watcher?: Watcher | WatcherOptions,
+    keypath: string | Record<string, TypedWatcher<this> | TypedWatcherOptions<this>>,
+    watcher?: TypedWatcher<this> | TypedWatcherOptions<this>,
     immediate?: boolean
   ): YoxInterface {
     this.$observer.watch(keypath, watcher, immediate)
@@ -1380,133 +1382,3 @@ if (process.env.NODE_ENV !== 'pure') {
     }
   })
 }
-
-// Yox.define({
-//   events: {
-//     a(event, data) {
-//       this.say()
-//       return false
-//     }
-//   },
-//   watchers: {
-//     a(newValue, oldValue, keypath) {
-//       this.say()
-//     },
-//     b: {
-//       watcher(newValue, oldValue, keypath) {
-//         this.get('')
-//       },
-//       sync: true,
-//       immediate: true,
-//     }
-//   },
-
-//   computed: {
-//     a(): any {
-//       this.say()
-//       var a = this.get('asd')
-//       return a
-//     },
-//     b: {
-//       get() {
-//         this
-//         return 1
-//       },
-//       set(value) {
-//         this.get('')
-//       },
-//       cache: true,
-//       deps: ['']
-//     }
-//   },
-//   methods: {
-//     say() {
-//       this.good()
-//     },
-//     good() {
-//       this.toggle('')
-//     }
-//   },
-// })
-
-var a = new Yox({
-  events: {
-    a(event, data) {
-      this.say()
-      return false
-    }
-  },
-  watchers: {
-    a(newValue, oldValue, keypath) {
-      this.say()
-    },
-    b: {
-      watcher(newValue, oldValue, keypath) {
-        this.get('')
-      },
-      sync: true,
-      immediate: true,
-    }
-  },
-
-  computed: {
-    a(): any {
-      this.say()
-      var a = this.get('asd')
-      return a
-    },
-    b: {
-      get() {
-        this
-        return 1
-      },
-      set(value) {
-        this.get('')
-      },
-      cache: true,
-      deps: ['']
-    }
-  },
-  methods: {
-    say() {
-      this.good()
-    },
-    good() {
-      this.toggle('')
-    }
-  },
-
-  beforeCreate() {
-    this.get('')
-
-    this.say()
-
-    // this.addComputed('xx', function () {
-    //   return this.get('')
-    // })
-
-    // this.watch('xx', function () {
-    //   this.get()
-    // })
-
-    this.on('xx', function (event, data) {
-      this.get('')
-      this.say()
-    })
-  },
-
-})
-
-
-// a.addComputed('xx', function () {
-//   return this.get('')
-// })
-
-// a.watch('xx', function () {
-//   this.get()
-// })
-
-// a.on('xx', function (event, data) {
-//   this.get('')
-//   this.say()
-// })
