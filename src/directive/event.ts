@@ -44,17 +44,17 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
 
   if (vnode.isComponent) {
 
-    (node as YoxInterface).on(name, handler as Listener<YoxInterface>)
+    (node as YoxInterface).on(name, handler as Listener)
     vnode.data[directive.key] = function () {
-      (node as YoxInterface).off(name, handler as Listener<YoxInterface>)
+      (node as YoxInterface).off(name, handler as Listener)
     }
 
   }
   else {
 
-    domApi.on(node as HTMLElement, name, handler as Listener<null>)
+    domApi.on(node as HTMLElement, name, handler as Listener)
     vnode.data[directive.key] = function () {
-      domApi.off(node as HTMLElement, name, handler as Listener<null>)
+      domApi.off(node as HTMLElement, name, handler as Listener)
     }
 
   }

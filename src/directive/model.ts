@@ -144,7 +144,7 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
 
   lazyValue = lazy && (lazy[config.DIRECTIVE_MODEL] || lazy[env.EMPTY_STRING]),
 
-  set: Watcher<YoxInterface> | void,
+  set: Watcher | void,
 
   unbind: Function
 
@@ -222,10 +222,10 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
   }
 
   // 监听数据，修改界面
-  context.watch(dataBinding, set as Watcher<YoxInterface>)
+  context.watch(dataBinding, set as Watcher)
 
   vnode.data[directive.key] = function () {
-    context.unwatch(dataBinding, set as Watcher<YoxInterface>)
+    context.unwatch(dataBinding, set as Watcher)
     set = env.UNDEFINED
     unbind()
   }

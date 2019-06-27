@@ -14,6 +14,7 @@ import {
   StringUtil,
   ObjectUtil,
   LoggerUtil,
+  ComputedInterface,
 } from '../../yox-type/src/type'
 
 import {
@@ -24,6 +25,7 @@ import {
   ComputedOptions,
   EmitterOptions,
   YoxOptions,
+  YoxTypedOptions,
   YoxInterface,
   DirectiveHooks,
   TransitionHooks,
@@ -53,7 +55,6 @@ import * as templateRender from '../../yox-template-compiler/src/renderer'
 
 import * as domApi from '../../yox-dom/src/dom'
 
-import Computed from '../../yox-observer/src/Computed'
 import Observer from '../../yox-observer/src/Observer'
 
 import * as event from './directive/event'
@@ -89,9 +90,9 @@ export interface YoxPlugin {
 }
 
 
-export default class Yox<Methods> implements YoxInterface {
+export default class Yox<Computed, Watchers, Events, Methods> implements YoxInterface {
 
-  $options: YoxOptions<any>
+  $options: YoxTypedOptions
 
   $observer: Observer<YoxInterface>
 
@@ -117,7 +118,7 @@ export default class Yox<Methods> implements YoxInterface {
 
   $directives?: Record<string, DirectiveHooks>
 
-  $components?: Record<string, YoxOptions<any>>
+  $components?: Record<string, YoxTypedOptions>
 
   $transitions?: Record<string, TransitionHooks>
 
@@ -154,8 +155,8 @@ export default class Yox<Methods> implements YoxInterface {
   /**
    * 定义组件对象
    */
-  public static define<Methods>(
-    options: YoxOptions<Methods> & ThisType<Methods & YoxInterface>
+  public static define<Computed, Watchers, Events, Methods>(
+    options: YoxOptions<Computed, Watchers, Events, Methods> & ThisType<Methods & YoxInterface>
   ): Methods & YoxInterface {
     return options as (Methods & YoxInterface)
   }
@@ -268,10 +269,10 @@ export default class Yox<Methods> implements YoxInterface {
   }
 
   constructor(
-    options?: YoxOptions<Methods> & ThisType<Methods & YoxInterface>
+    options?: YoxOptions<Computed, Watchers, Events, Methods> & ThisType<Methods & YoxInterface>
   ) {
 
-    const instance = this, $options: YoxOptions<any> = options || env.EMPTY_OBJECT
+    const instance = this, $options: YoxTypedOptions = options || env.EMPTY_OBJECT
 
     // 为了冒泡 HOOK_BEFORE_CREATE 事件，必须第一时间创建 emitter
     // 监听各种事件
@@ -346,7 +347,7 @@ export default class Yox<Methods> implements YoxInterface {
     if (computed) {
       object.each(
         computed,
-        function (options: ComputedGetter<YoxInterface> | ComputedOptions<YoxInterface, any>, keypath: string) {
+        function (options: ComputedGetter | ComputedOptions, keypath: string) {
           observer.addComputed(keypath, options)
         }
       )
@@ -560,8 +561,8 @@ export default class Yox<Methods> implements YoxInterface {
    */
   addComputed(
     keypath: string,
-    computed: ComputedGetter<YoxInterface> | ComputedOptions<YoxInterface, any>
-  ): Computed<YoxInterface> | void {
+    computed: ComputedGetter | ComputedOptions
+  ): ComputedInterface<YoxInterface> | void {
     return this.$observer.addComputed(keypath, computed)
   }
 
@@ -604,8 +605,8 @@ export default class Yox<Methods> implements YoxInterface {
    * 监听事件，支持链式调用
    */
   on(
-    type: string | Record<string, Listener<YoxInterface>>,
-    listener?: Listener<YoxInterface>
+    type: string | Record<string, Listener>,
+    listener?: Listener
   ): YoxInterface {
     return addEvents(this, type, listener)
   }
@@ -614,8 +615,8 @@ export default class Yox<Methods> implements YoxInterface {
    * 监听一次事件，支持链式调用
    */
   once(
-    type: string | Record<string, Listener<YoxInterface>>,
-    listener?: Listener<YoxInterface>
+    type: string | Record<string, Listener>,
+    listener?: Listener
   ): YoxInterface {
     return addEvents(this, type, listener, env.TRUE)
   }
@@ -625,7 +626,7 @@ export default class Yox<Methods> implements YoxInterface {
    */
   off(
     type?: string,
-    listener?: Listener<YoxInterface>
+    listener?: Listener
   ): YoxInterface {
     this.$emitter.off(type, listener)
     return this
@@ -693,8 +694,8 @@ export default class Yox<Methods> implements YoxInterface {
    * 监听数据变化，支持链式调用
    */
   watch(
-    keypath: string | Record<string, Watcher<YoxInterface> | WatcherOptions<YoxInterface>>,
-    watcher?: Watcher<YoxInterface> | WatcherOptions<YoxInterface>,
+    keypath: string | Record<string, Watcher | WatcherOptions>,
+    watcher?: Watcher | WatcherOptions,
     immediate?: boolean
   ): YoxInterface {
     this.$observer.watch(keypath, watcher, immediate)
@@ -706,7 +707,7 @@ export default class Yox<Methods> implements YoxInterface {
    */
   unwatch(
     keypath?: string,
-    watcher?: Watcher<YoxInterface>
+    watcher?: Watcher
   ): YoxInterface {
     this.$observer.unwatch(keypath, watcher)
     return this
@@ -739,7 +740,7 @@ export default class Yox<Methods> implements YoxInterface {
    * @param options 组件配置
    * @param vnode 虚拟节点
    */
-  createComponent(options: YoxOptions<any>, vnode: VNode): YoxInterface {
+  createComponent(options: YoxTypedOptions, vnode: VNode): YoxInterface {
     if (process.env.NODE_ENV !== 'pure') {
 
       const instance = this
@@ -1237,7 +1238,7 @@ function checkProp(key: string, value: any, rule: PropRule) {
 
 }
 
-function afterCreateHook(instance: Yox<any>, watchers: Record<string, Watcher<YoxInterface> | WatcherOptions<YoxInterface>> | void) {
+function afterCreateHook(instance: YoxInterface, watchers: Record<string, Watcher | WatcherOptions> | void) {
 
   if (watchers) {
     instance.watch(watchers)
@@ -1250,7 +1251,7 @@ function afterCreateHook(instance: Yox<any>, watchers: Record<string, Watcher<Yo
 
 }
 
-function setFlexibleOptions(instance: Yox<any>, key: string, value: Function | Data | void) {
+function setFlexibleOptions(instance: YoxInterface, key: string, value: Function | Data | void) {
   if (is.func(value)) {
     instance[key](execute(value, instance))
   }
@@ -1259,7 +1260,7 @@ function setFlexibleOptions(instance: Yox<any>, key: string, value: Function | D
   }
 }
 
-function addEvent(instance: Yox<any>, type: string, listener: Listener<YoxInterface>, once?: true) {
+function addEvent(instance: YoxInterface, type: string, listener: Listener, once?: true) {
   const options: EmitterOptions = {
     fn: listener,
     ctx: instance
@@ -1271,18 +1272,18 @@ function addEvent(instance: Yox<any>, type: string, listener: Listener<YoxInterf
 }
 
 function addEvents(
-  instance: Yox<any>,
-  type: string | Record<string, Listener<YoxInterface>>,
-  listener?: Listener<YoxInterface>,
+  instance: YoxInterface,
+  type: string | Record<string, Listener>,
+  listener?: Listener,
   once?: true
-): Yox<any> {
+): YoxInterface {
   if (is.string(type)) {
-    addEvent(instance, type as string, listener as Listener<YoxInterface>, once)
+    addEvent(instance, type as string, listener as Listener, once)
   }
   else {
     object.each(
       type as Data,
-      function (value: Listener<YoxInterface>, key: string) {
+      function (value: Listener, key: string) {
         addEvent(instance, key, value, once)
       }
     )
@@ -1305,7 +1306,7 @@ function loadComponent(
 
       registry[name] = [callback]
 
-      const componentCallback = function (result: YoxOptions<any>) {
+      const componentCallback = function (result: YoxTypedOptions) {
 
         const queue = registry[name], options = result['default'] || result
 
@@ -1335,7 +1336,7 @@ function loadComponent(
     }
     // 不是异步加载函数，直接同步返回
     else {
-      callback(component as YoxOptions<any>)
+      callback(component as YoxTypedOptions)
     }
     return env.TRUE
   }
@@ -1371,34 +1372,69 @@ if (process.env.NODE_ENV !== 'pure') {
   // 全局注册内置过滤器
   Yox.filter({
     hasSlot(name: string): boolean {
-      return isDef(this.get(config.SLOT_DATA_PREFIX + name))
+      // 不鼓励在过滤器使用 this
+      // 因此过滤器没有 this 的类型声明
+      // 这个内置过滤器是不得不用 this
+      return isDef((this as YoxInterface).get(config.SLOT_DATA_PREFIX + name))
     }
   })
 }
 
-// var a = new Yox({
+Yox.define({
+  events: {
+    a(event, data) {
+      this.say()
+      return false
+    }
+  },
+  watchers: {
+    a(newValue, oldValue, keypath) {
+      this.say()
+    },
+    b: {
+      watcher(newValue, oldValue, keypath) {
+        this.get('')
+      },
+      sync: true,
+      immediate: true,
+    }
+  },
 
-// })
+  computed: {
+    a(): any {
+      this.say()
+      var a = this.get('asd')
+      return a
+    },
+    b: {
+      get() {
+        this
+        return 1
+      },
+      set(value) {
+        this.get('')
+      },
+      cache: true,
+      deps: ['']
+    }
+  },
+  methods: {
+    say() {
+      this.good()
+    },
+    good() {
+      this.toggle('')
+    }
+  }
+})
 
+new Yox({
+  methods: {
+    a() {
 
-// Yox.define({
-//   methods: {
-//     say() {
-//       this.good()
-//     },
-//     good() {
-//       this.toggle('')
-//     }
-//   }
-// })
+    },
+    b() {
 
-// new Yox({
-//   methods: {
-//     a() {
-
-//     },
-//     b() {
-
-//     }
-//   }
-// })
+    }
+  }
+})
