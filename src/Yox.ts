@@ -20,6 +20,7 @@ import {
 import {
   Filter,
   Listener,
+  TypedListener,
   Watcher,
   WatcherOptions,
   ComputedOptions,
@@ -605,8 +606,8 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
    * 监听事件，支持链式调用
    */
   on(
-    type: string | Record<string, Listener>,
-    listener?: Listener
+    type: string | Record<string, TypedListener<this>>,
+    listener?: TypedListener<this>
   ): YoxInterface {
     return addEvents(this, type, listener)
   }
@@ -615,8 +616,8 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
    * 监听一次事件，支持链式调用
    */
   once(
-    type: string | Record<string, Listener>,
-    listener?: Listener
+    type: string | Record<string, TypedListener<this>>,
+    listener?: TypedListener<this>
   ): YoxInterface {
     return addEvents(this, type, listener, env.TRUE)
   }
@@ -626,7 +627,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
    */
   off(
     type?: string,
-    listener?: Listener
+    listener?: TypedListener<this>
   ): YoxInterface {
     this.$emitter.off(type, listener)
     return this
@@ -1428,16 +1429,53 @@ if (process.env.NODE_ENV !== 'pure') {
 //   }
 // })
 
-// var a = new Yox({
-//   methods: {
-//     a() {
+var a = new Yox({
+  events: {
+    a(event, data) {
+      this.say()
+      return false
+    }
+  },
+  watchers: {
+    a(newValue, oldValue, keypath) {
+      this.say()
+    },
+    b: {
+      watcher(newValue, oldValue, keypath) {
+        this.get('')
+      },
+      sync: true,
+      immediate: true,
+    }
+  },
 
-//     },
-//     b() {
-
-//     }
-//   }
-// })
+  computed: {
+    a(): any {
+      this.say()
+      var a = this.get('asd')
+      return a
+    },
+    b: {
+      get() {
+        this
+        return 1
+      },
+      set(value) {
+        this.get('')
+      },
+      cache: true,
+      deps: ['']
+    }
+  },
+  methods: {
+    say() {
+      this.good()
+    },
+    good() {
+      this.toggle('')
+    }
+  }
+})
 
 // a.addComputed('xx', function () {
 //   return this.get('')
@@ -1449,4 +1487,5 @@ if (process.env.NODE_ENV !== 'pure') {
 
 // a.on('xx', function (event, data) {
 //   this.get('')
+//   this.say()
 // })
