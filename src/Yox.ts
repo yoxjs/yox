@@ -158,8 +158,8 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
    */
   public static define<Computed, Watchers, Events, Methods>(
     options: YoxOptions<Computed, Watchers, Events, Methods> & ThisType<Methods & YoxInterface>
-  ): Methods & YoxInterface {
-    return options as (Methods & YoxInterface)
+  ) {
+    return options
   }
 
   /**
@@ -1426,7 +1426,7 @@ if (process.env.NODE_ENV !== 'pure') {
 //     good() {
 //       this.toggle('')
 //     }
-//   }
+//   },
 // })
 
 var a = new Yox({
@@ -1474,8 +1474,29 @@ var a = new Yox({
     good() {
       this.toggle('')
     }
-  }
+  },
+
+  beforeCreate() {
+    this.get('')
+
+    this.say()
+
+    // this.addComputed('xx', function () {
+    //   return this.get('')
+    // })
+
+    // this.watch('xx', function () {
+    //   this.get()
+    // })
+
+    this.on('xx', function (event, data) {
+      this.get('')
+      this.say()
+    })
+  },
+
 })
+
 
 // a.addComputed('xx', function () {
 //   return this.get('')
