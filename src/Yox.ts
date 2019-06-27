@@ -1258,6 +1258,8 @@ function addEvent(instance: YoxInterface, type: string, listener: Listener, once
   if (once) {
     options.max = 1
   }
+  // YoxInterface 没有声明 $emitter，因为不想让外部访问，
+  // 但是这里要用一次，所以加了 as any
   (instance as any).$emitter.on(type, options)
 }
 
