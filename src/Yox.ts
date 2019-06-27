@@ -1,6 +1,5 @@
 import {
   Data,
-  Filter,
   ComputedGetter,
   Component,
   ComponentCallback,
@@ -18,6 +17,7 @@ import {
 } from '../../yox-type/src/type'
 
 import {
+  Filter,
   Listener,
   Watcher,
   WatcherOptions,
@@ -89,9 +89,9 @@ export interface YoxPlugin {
 }
 
 
-export default class Yox implements YoxInterface {
+export default class Yox<Methods> implements YoxInterface {
 
-  $options: YoxOptions<YoxInterface>
+  $options: YoxOptions<any>
 
   $observer: Observer<YoxInterface>
 
@@ -117,7 +117,7 @@ export default class Yox implements YoxInterface {
 
   $directives?: Record<string, DirectiveHooks>
 
-  $components?: Record<string, YoxOptions<YoxInterface>>
+  $components?: Record<string, YoxOptions<any>>
 
   $transitions?: Record<string, TransitionHooks>
 
@@ -267,9 +267,11 @@ export default class Yox implements YoxInterface {
     }
   }
 
-  constructor(options?: YoxOptions<YoxInterface> & ThisType<YoxInterface>) {
+  constructor(
+    options?: YoxOptions<Methods> & ThisType<Methods & YoxInterface>
+  ) {
 
-    const instance = this, $options: YoxOptions<YoxInterface> = options || env.EMPTY_OBJECT
+    const instance = this, $options: YoxOptions<any> = options || env.EMPTY_OBJECT
 
     // 为了冒泡 HOOK_BEFORE_CREATE 事件，必须第一时间创建 emitter
     // 监听各种事件
@@ -737,7 +739,7 @@ export default class Yox implements YoxInterface {
    * @param options 组件配置
    * @param vnode 虚拟节点
    */
-  createComponent(options: YoxOptions<YoxInterface>, vnode: VNode): YoxInterface {
+  createComponent(options: YoxOptions<any>, vnode: VNode): YoxInterface {
     if (process.env.NODE_ENV !== 'pure') {
 
       const instance = this
@@ -1235,7 +1237,7 @@ function checkProp(key: string, value: any, rule: PropRule) {
 
 }
 
-function afterCreateHook(instance: Yox, watchers: Record<string, Watcher<YoxInterface> | WatcherOptions<YoxInterface>> | void) {
+function afterCreateHook(instance: Yox<any>, watchers: Record<string, Watcher<YoxInterface> | WatcherOptions<YoxInterface>> | void) {
 
   if (watchers) {
     instance.watch(watchers)
@@ -1248,7 +1250,7 @@ function afterCreateHook(instance: Yox, watchers: Record<string, Watcher<YoxInte
 
 }
 
-function setFlexibleOptions(instance: Yox, key: string, value: Function | Data | void) {
+function setFlexibleOptions(instance: Yox<any>, key: string, value: Function | Data | void) {
   if (is.func(value)) {
     instance[key](execute(value, instance))
   }
@@ -1257,7 +1259,7 @@ function setFlexibleOptions(instance: Yox, key: string, value: Function | Data |
   }
 }
 
-function addEvent(instance: Yox, type: string, listener: Listener<YoxInterface>, once?: true) {
+function addEvent(instance: Yox<any>, type: string, listener: Listener<YoxInterface>, once?: true) {
   const options: EmitterOptions = {
     fn: listener,
     ctx: instance
@@ -1269,11 +1271,11 @@ function addEvent(instance: Yox, type: string, listener: Listener<YoxInterface>,
 }
 
 function addEvents(
-  instance: Yox,
+  instance: Yox<any>,
   type: string | Record<string, Listener<YoxInterface>>,
   listener?: Listener<YoxInterface>,
   once?: true
-): Yox {
+): Yox<any> {
   if (is.string(type)) {
     addEvent(instance, type as string, listener as Listener<YoxInterface>, once)
   }
@@ -1303,7 +1305,7 @@ function loadComponent(
 
       registry[name] = [callback]
 
-      const componentCallback = function (result: YoxOptions<YoxInterface>) {
+      const componentCallback = function (result: YoxOptions<any>) {
 
         const queue = registry[name], options = result['default'] || result
 
@@ -1333,7 +1335,7 @@ function loadComponent(
     }
     // 不是异步加载函数，直接同步返回
     else {
-      callback(component as YoxOptions<YoxInterface>)
+      callback(component as YoxOptions<any>)
     }
     return env.TRUE
   }
@@ -1373,6 +1375,11 @@ if (process.env.NODE_ENV !== 'pure') {
     }
   })
 }
+
+// var a = new Yox({
+
+// })
+
 
 // Yox.define({
 //   methods: {
