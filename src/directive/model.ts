@@ -1,5 +1,5 @@
 import {
-  lazyValue,
+  LazyValue,
   VNode,
   Directive,
 } from '../../../yox-type/src/type'
@@ -31,7 +31,7 @@ interface NativeControl {
 
 }
 
-function debounceIfNeeded<T extends Function>(fn: T, lazy: lazyValue | void): T {
+function debounceIfNeeded<T extends Function>(fn: T, lazy: LazyValue | void): T {
   // 应用 lazy
   return lazy && lazy !== env.TRUE
     ? debounce(fn as Function, lazy) as any

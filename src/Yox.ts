@@ -1,12 +1,12 @@
 import {
-  data,
-  filter,
+  Data,
+  Filter,
   ComputedGetter,
-  component,
-  componentCallback,
-  componentLoader,
-  propTypeFunction,
-  propValueFunction,
+  Component,
+  ComponentCallback,
+  ComponentLoader,
+  PropTypeFunction,
+  PropValueFunction,
   PropRule,
   VNode,
   IsUtil,
@@ -59,7 +59,6 @@ import Observer from '../../yox-observer/src/Observer'
 import * as event from './directive/event'
 import * as model from './directive/model'
 import * as binding from './directive/binding'
-import hasSlot from './filter/hasSlot'
 
 
 const globalDirectives = {},
@@ -92,7 +91,7 @@ export interface YoxPlugin {
 
 export default class Yox implements YoxInterface {
 
-  $options: YoxOptions
+  $options: YoxOptions<YoxInterface>
 
   $observer: Observer<YoxInterface>
 
@@ -118,13 +117,13 @@ export default class Yox implements YoxInterface {
 
   $directives?: Record<string, DirectiveHooks>
 
-  $components?: Record<string, YoxOptions>
+  $components?: Record<string, YoxOptions<YoxInterface>>
 
   $transitions?: Record<string, TransitionHooks>
 
   $partials?: Record<string, Function>
 
-  $filters?: Record<string, filter>
+  $filters?: Record<string, Filter>
 
   /**
    * core 版本
@@ -153,10 +152,12 @@ export default class Yox implements YoxInterface {
   }
 
   /**
-   * 创建组件对象
+   * 定义组件对象
    */
-  public static create(options: YoxOptions): YoxOptions {
-    return options
+  public static define<Methods>(
+    options: YoxOptions<Methods> & ThisType<Methods & YoxInterface>
+  ): Methods & YoxInterface {
+    return options as (Methods & YoxInterface)
   }
 
   /**
@@ -225,9 +226,9 @@ export default class Yox implements YoxInterface {
    * 注册全局组件
    */
   public static component(
-    name: string | Record<string, component>,
-    component?: component
-  ): component | void {
+    name: string | Record<string, Component>,
+    component?: Component
+  ): Component | void {
     if (process.env.NODE_ENV !== 'pure') {
       if (is.string(name) && !component) {
         return getResource(globalComponents, name as string)
@@ -255,9 +256,9 @@ export default class Yox implements YoxInterface {
    * 注册全局过滤器
    */
   public static filter(
-    name: string | Record<string, filter>,
-    filter?: filter
-  ): filter | void {
+    name: string | Record<string, Filter>,
+    filter?: Filter
+  ): Filter | void {
     if (process.env.NODE_ENV !== 'pure') {
       if (is.string(name) && !filter) {
         return getResource(globalFilters, name as string)
@@ -266,9 +267,9 @@ export default class Yox implements YoxInterface {
     }
   }
 
-  constructor(options: YoxOptions | void) {
+  constructor(options?: YoxOptions<YoxInterface> & ThisType<YoxInterface>) {
 
-    const instance = this, $options: YoxOptions = options || env.EMPTY_OBJECT
+    const instance = this, $options: YoxOptions<YoxInterface> = options || env.EMPTY_OBJECT
 
     // 为了冒泡 HOOK_BEFORE_CREATE 事件，必须第一时间创建 emitter
     // 监听各种事件
@@ -327,7 +328,7 @@ export default class Yox implements YoxInterface {
                 source[key] = rule.type === env.RAW_FUNCTION
                   ? value
                   : is.func(value)
-                    ? (value as propValueFunction)()
+                    ? (value as PropValueFunction)()
                     : value
               }
             }
@@ -586,7 +587,7 @@ export default class Yox implements YoxInterface {
    * 设值
    */
   set(
-    keypath: string | data,
+    keypath: string | Data,
     value?: any
   ): void {
     // 组件经常有各种异步改值，为了避免组件销毁后依然调用 set
@@ -633,7 +634,7 @@ export default class Yox implements YoxInterface {
    */
   fire(
     type: string | CustomEvent,
-    data?: data | boolean,
+    data?: Data | boolean,
     downward?: boolean
   ): boolean {
 
@@ -656,7 +657,7 @@ export default class Yox implements YoxInterface {
 
     // 比如 fire('name', true) 直接向下发事件
     if (is.object(data)) {
-      array.push(args, data as data)
+      array.push(args, data as Data)
     }
     else if (data === env.TRUE) {
       downward = env.TRUE
@@ -715,7 +716,7 @@ export default class Yox implements YoxInterface {
    * @param name 组件名称
    * @param callback 组件加载成功后的回调
    */
-  loadComponent(name: string, callback: componentCallback): void {
+  loadComponent(name: string, callback: ComponentCallback): void {
     if (process.env.NODE_ENV !== 'pure') {
       if (!loadComponent(this.$components, name, callback)) {
         if (process.env.NODE_ENV === 'development') {
@@ -736,7 +737,7 @@ export default class Yox implements YoxInterface {
    * @param options 组件配置
    * @param vnode 虚拟节点
    */
-  createComponent(options: YoxOptions, vnode: VNode): YoxInterface {
+  createComponent(options: YoxOptions<YoxInterface>, vnode: VNode): YoxInterface {
     if (process.env.NODE_ENV !== 'pure') {
 
       const instance = this
@@ -835,9 +836,9 @@ export default class Yox implements YoxInterface {
    * 注册当前组件级别的组件
    */
   component(
-    name: string | Record<string, component>,
-    component?: component
-  ): component | void {
+    name: string | Record<string, Component>,
+    component?: Component
+  ): Component | void {
     if (process.env.NODE_ENV !== 'pure') {
       const instance = this, { $components } = instance
       if (is.string(name) && !component) {
@@ -876,9 +877,9 @@ export default class Yox implements YoxInterface {
    * 注册当前组件级别的过滤器
    */
   filter(
-    name: string | Record<string, filter>,
-    filter?: filter
-  ): filter | void {
+    name: string | Record<string, Filter>,
+    filter?: Filter
+  ): Filter | void {
     if (process.env.NODE_ENV !== 'pure') {
       const instance = this, { $filters } = instance
       if (is.string(name) && !filter) {
@@ -896,7 +897,7 @@ export default class Yox implements YoxInterface {
    * 对于某些特殊场景，修改了数据，但是模板的依赖中并没有这一项
    * 而你非常确定需要更新模板，强制刷新正是你需要的
    */
-  forceUpdate(data?: data): void {
+  forceUpdate(data?: Data): void {
     if (process.env.NODE_ENV !== 'pure') {
 
       const instance = this,
@@ -999,7 +1000,7 @@ export default class Yox implements YoxInterface {
    *
    * @param props
    */
-  checkProps(props: data): void {
+  checkProps(props: Data): void {
     if (process.env.NODE_ENV === 'development') {
       const instance = this
       object.each(
@@ -1192,7 +1193,7 @@ function checkProp(key: string, value: any, rule: PropRule) {
       // 自定义函数判断是否匹配类型
       // 自己打印警告信息吧
       if (is.func(type)) {
-        (type as propTypeFunction)(key, value)
+        (type as PropTypeFunction)(key, value)
       }
       else {
 
@@ -1247,7 +1248,7 @@ function afterCreateHook(instance: Yox, watchers: Record<string, Watcher<YoxInte
 
 }
 
-function setFlexibleOptions(instance: Yox, key: string, value: Function | data | void) {
+function setFlexibleOptions(instance: Yox, key: string, value: Function | Data | void) {
   if (is.func(value)) {
     instance[key](execute(value, instance))
   }
@@ -1278,7 +1279,7 @@ function addEvents(
   }
   else {
     object.each(
-      type as data,
+      type as Data,
       function (value: Listener<YoxInterface>, key: string) {
         addEvent(instance, key, value, once)
       }
@@ -1288,9 +1289,9 @@ function addEvents(
 }
 
 function loadComponent(
-  registry: Record<string, component | componentCallback[]> | void,
+  registry: Record<string, Component | ComponentCallback[]> | void,
   name: string,
-  callback: componentCallback
+  callback: ComponentCallback
 ): true | void {
 
   if (registry && registry[name]) {
@@ -1302,14 +1303,14 @@ function loadComponent(
 
       registry[name] = [callback]
 
-      const componentCallback = function (result: YoxOptions) {
+      const componentCallback = function (result: YoxOptions<YoxInterface>) {
 
         const queue = registry[name], options = result['default'] || result
 
         registry[name] = options
 
         array.each(
-          queue as componentCallback[],
+          queue as ComponentCallback[],
           function (callback) {
             callback(options)
           }
@@ -1317,7 +1318,7 @@ function loadComponent(
 
       },
 
-      promise = (component as componentLoader)(componentCallback)
+      promise = (component as ComponentLoader)(componentCallback)
       if (promise) {
         promise.then(componentCallback)
       }
@@ -1326,20 +1327,20 @@ function loadComponent(
     // 正在加载中
     else if (is.array(component)) {
       array.push(
-        component as componentCallback[],
+        component as ComponentCallback[],
         callback
       )
     }
     // 不是异步加载函数，直接同步返回
     else {
-      callback(component as YoxOptions)
+      callback(component as YoxOptions<YoxInterface>)
     }
     return env.TRUE
   }
 
 }
 
-function getResource(registry: data | void, name: string, lookup?: Function) {
+function getResource(registry: Data | void, name: string, lookup?: Function) {
   if (registry && registry[name]) {
     return registry[name]
   }
@@ -1348,13 +1349,13 @@ function getResource(registry: data | void, name: string, lookup?: Function) {
   }
 }
 
-function setResource(registry: data, name: string | data, value?: any, formatValue?: (value: any) => any) {
+function setResource(registry: Data, name: string | Data, value?: any, formatValue?: (value: any) => any) {
   if (is.string(name)) {
     registry[name as string] = formatValue ? formatValue(value) : value
   }
   else {
     object.each(
-      name as data,
+      name as Data,
       function (value, key) {
         registry[key] = formatValue ? formatValue(value) : value
       }
@@ -1366,5 +1367,31 @@ if (process.env.NODE_ENV !== 'pure') {
   // 全局注册内置指令
   Yox.directive({ event, model, binding })
   // 全局注册内置过滤器
-  Yox.filter({ hasSlot })
+  Yox.filter({
+    hasSlot(name: string): boolean {
+      return isDef(this.get(config.SLOT_DATA_PREFIX + name))
+    }
+  })
 }
+
+// Yox.define({
+//   methods: {
+//     say() {
+//       this.good()
+//     },
+//     good() {
+//       this.toggle('')
+//     }
+//   }
+// })
+
+// new Yox({
+//   methods: {
+//     a() {
+
+//     },
+//     b() {
+
+//     }
+//   }
+// })
