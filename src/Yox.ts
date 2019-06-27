@@ -25,11 +25,8 @@ import {
   EmitterOptions,
   YoxOptions,
   YoxInterface,
-  YoxPlugin,
   DirectiveHooks,
   TransitionHooks,
-  EmitterClass,
-  CustomEventClass,
 } from '../../yox-type/src/global'
 
 import isDef from '../../yox-common/src/function/isDef'
@@ -80,6 +77,18 @@ compileCache = {},
 TEMPLATE_COMPUTED = '$$',
 
 selectorPattern = /^[#.][-\w+]+$/
+
+
+
+type YoxClass = typeof Yox
+type EmitterClass = typeof Emitter
+type CustomEventClass = typeof CustomEvent
+
+export interface YoxPlugin {
+  version: string
+  install(Yox: YoxClass): void
+}
+
 
 export default class Yox implements YoxInterface {
 
