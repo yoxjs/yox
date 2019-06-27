@@ -1,13 +1,16 @@
 import {
-  VNode,
-  Directive,
+  Watcher,
   LazyValue,
 } from '../../../yox-type/src/type'
 
 import {
-  Watcher,
+  VNode,
+  Directive,
+} from '../../../yox-type/src/vnode'
+
+import {
   YoxInterface,
-} from '../../../yox-type/src/global'
+} from '../../../yox-type/src/yox'
 
 import debounce from '../../../yox-common/src/function/debounce'
 import execute from '../../../yox-common/src/function/execute'

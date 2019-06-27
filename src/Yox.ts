@@ -1,38 +1,53 @@
 import {
   Data,
+  Filter,
+  Listener,
+  TypedListener,
+  Watcher,
+  TypedWatcher,
+  TypedComputedGetter,
   Component,
   ComponentCallback,
   ComponentLoader,
   PropTypeFunction,
   PropValueFunction,
   PropRule,
-  VNode,
+} from '../../yox-type/src/type'
+
+import {
   IsUtil,
   DomUtil,
   ArrayUtil,
   StringUtil,
   ObjectUtil,
   LoggerUtil,
-  ComputedInterface,
-} from '../../yox-type/src/type'
+} from '../../yox-type/src/util'
 
 import {
-  Filter,
-  Listener,
-  TypedListener,
-  Watcher,
+  VNode,
+} from '../../yox-type/src/vnode'
+
+import {
+  ComputedInterface,
+} from '../../yox-type/src/observer'
+
+import {
+  DirectiveHooks,
+  TransitionHooks,
+} from '../../yox-type/src/hooks'
+
+import {
   WatcherOptions,
-  TypedWatcher,
   TypedWatcherOptions,
-  TypedComputedGetter,
   TypedComputedOptions,
   EmitterOptions,
   YoxOptions,
   YoxTypedOptions,
+} from '../../yox-type/src/options'
+
+import {
   YoxInterface,
-  DirectiveHooks,
-  TransitionHooks,
-} from '../../yox-type/src/global'
+} from '../../yox-type/src/yox'
 
 import isDef from '../../yox-common/src/function/isDef'
 import isUndef from '../../yox-common/src/function/isUndef'
@@ -87,11 +102,11 @@ type YoxClass = typeof Yox
 type EmitterClass = typeof Emitter
 type CustomEventClass = typeof CustomEvent
 
+
 export interface YoxPlugin {
   version: string
   install(Yox: YoxClass): void
 }
-
 
 export default class Yox<Computed, Watchers, Events, Methods> implements YoxInterface {
 

@@ -1,12 +1,15 @@
 import {
-  VNode,
-  Directive,
+  Listener,
 } from '../../../yox-type/src/type'
 
 import {
-  Listener,
+  VNode,
+  Directive,
+} from '../../../yox-type/src/vnode'
+
+import {
   YoxInterface,
-} from '../../../yox-type/src/global'
+} from '../../../yox-type/src/yox'
 
 import execute from '../../../yox-common/src/function/execute'
 import debounce from '../../../yox-common/src/function/debounce'
