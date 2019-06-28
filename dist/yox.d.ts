@@ -12,46 +12,6 @@ declare const HOOK_BEFORE_ROUTE_UPDATE = "beforeRouteUpdate";
 declare const HOOK_AFTER_ROUTE_UPDATE = "afterRouteUpdate";
 declare const HOOK_BEFORE_ROUTE_LEAVE = "beforeRouteLeave";
 declare const HOOK_AFTER_ROUTE_LEAVE = "afterRouteLeave";
-export declare type Accessors<T, V> = {
-	[K in keyof T]: V;
-};
-export declare type FilterFunction = (this: any, ...args: any) => string | number | boolean;
-export declare type Filter = FilterFunction | Record<string, FilterFunction>;
-export declare type TypedWatcher<T> = (this: T, newValue: any, oldValue: any, keypath: string) => void;
-export declare type Watcher = (newValue: any, oldValue: any, keypath: string) => void;
-export declare type TypedListener<T> = (this: T, event: CustomEventInterface, data?: Data) => false | void;
-export declare type Listener = (event: CustomEventInterface, data?: Data) => false | void;
-export declare type NativeListener = (event: CustomEventInterface | Event) => false | void;
-export declare type ComputedGetter = () => any;
-export declare type ComputedSetter = (value: any) => void;
-export declare type TypedComputedGetter<T> = (this: T) => any;
-export declare type TypedComputedSetter<T> = (this: T, value: any) => void;
-export interface ComputedOptions {
-	get: ComputedGetter;
-	set?: ComputedSetter;
-	cache?: boolean;
-	sync?: boolean;
-	deps?: string[];
-}
-export interface TypedComputedOptions<T> extends ComputedOptions {
-	get: TypedComputedGetter<T>;
-	set?: TypedComputedSetter<T>;
-}
-export interface WatcherOptions {
-	watcher: Watcher;
-	immediate?: boolean;
-	sync?: boolean;
-	once?: boolean;
-}
-export interface TypedWatcherOptions<T> extends WatcherOptions {
-	watcher: TypedWatcher<T>;
-}
-export interface EmitterOptions extends Task {
-	ns?: string;
-	num?: number;
-	max?: number;
-	count?: number;
-}
 export interface EmitterInterface {
 	ns: boolean;
 	listeners: Record<string, EmitterOptions[]>;
@@ -74,50 +34,14 @@ export interface CustomEventInterface {
 	prevent(): CustomEventInterface;
 	stop(): CustomEventInterface;
 }
-export interface YoxOptions<Computed, Watchers, Events, Methods> {
-	name?: string;
-	propTypes?: Record<string, PropRule>;
-	el?: string | Node;
-	data?: Data | DataGenerator;
-	template?: string | Function;
-	model?: string;
-	props?: Data;
-	root?: YoxInterface;
-	parent?: YoxInterface;
-	context?: YoxInterface;
-	replace?: true;
-	vnode?: VNode;
-	slots?: Record<string, VNode[]>;
-	computed?: Accessors<Computed, ComputedGetter | ComputedOptions>;
-	watchers?: Accessors<Watchers, Watcher | WatcherOptions>;
-	events?: Accessors<Events, Listener>;
-	methods?: Methods;
-	transitions?: Record<string, TransitionHooks>;
-	components?: Record<string, YoxOptions<Computed, Watchers, Events, Methods>>;
-	directives?: Record<string, DirectiveHooks>;
-	partials?: Record<string, string>;
-	filters?: Record<string, Filter>;
-	extensions?: Data;
-	[HOOK_BEFORE_CREATE]?: OptionsBeforeCreateHook;
-	[HOOK_AFTER_CREATE]?: OptionsOtherHook;
-	[HOOK_BEFORE_MOUNT]?: OptionsOtherHook;
-	[HOOK_AFTER_MOUNT]?: OptionsOtherHook;
-	[HOOK_BEFORE_UPDATE]?: OptionsOtherHook;
-	[HOOK_AFTER_UPDATE]?: OptionsOtherHook;
-	[HOOK_BEFORE_DESTROY]?: OptionsOtherHook;
-	[HOOK_AFTER_DESTROY]?: OptionsOtherHook;
-	[HOOK_BEFORE_ROUTE_ENTER]?: RouterBeforeHook;
-	[HOOK_AFTER_ROUTE_ENTER]?: RouterAfterHook;
-	[HOOK_BEFORE_ROUTE_UPDATE]?: RouterBeforeHook;
-	[HOOK_AFTER_ROUTE_UPDATE]?: RouterAfterHook;
-	[HOOK_BEFORE_ROUTE_LEAVE]?: RouterBeforeHook;
-	[HOOK_AFTER_ROUTE_LEAVE]?: RouterAfterHook;
+export interface NextTaskInterface {
+	append(func: Function, context?: any): void;
+	prepend(func: Function, context?: any): void;
+	clear(): void;
+	run(): void;
 }
-export declare type YoxTypedOptions = YoxOptions<any, any, any, any>;
 export interface YoxInterface {
-	$options: YoxTypedOptions;
-	$emitter: EmitterInterface;
-	$observer: ObserverInterface;
+	$options: TypedComponentOptions;
 	$el?: HTMLElement;
 	$vnode?: VNode;
 	$model?: string;
@@ -126,8 +50,6 @@ export interface YoxInterface {
 	$context?: YoxInterface;
 	$children?: YoxInterface[];
 	$refs?: Record<string, YoxInterface | HTMLElement>;
-	addComputed(keypath: string, computed: TypedComputedGetter<this> | TypedComputedOptions<this>): ComputedInterface | void;
-	removeComputed(keypath: string): void;
 	get(keypath: string, defaultValue?: any, depIgnore?: boolean): any;
 	set(keypath: string | Data, value?: any): void;
 	on(type: string | Record<string, TypedListener<this>>, listener?: TypedListener<this>): YoxInterface;
@@ -137,7 +59,7 @@ export interface YoxInterface {
 	watch(keypath: string | Record<string, TypedWatcher<this> | TypedWatcherOptions<this>>, watcher?: TypedWatcher<this> | TypedWatcherOptions<this>, immediate?: boolean): YoxInterface;
 	unwatch(keypath?: string, watcher?: TypedWatcher<this>): YoxInterface;
 	loadComponent(name: string, callback: ComponentCallback): void;
-	createComponent(options: YoxTypedOptions, vnode: VNode): YoxInterface;
+	createComponent(options: TypedComponentOptions, vnode: VNode): YoxInterface;
 	directive(name: string | Record<string, DirectiveHooks>, directive?: DirectiveHooks): DirectiveHooks | void;
 	transition(name: string | Record<string, TransitionHooks>, transition?: TransitionHooks): TransitionHooks | void;
 	component(name: string | Record<string, Component>, component?: Component): Component | void;
@@ -170,23 +92,6 @@ export interface SpecialEventHooks {
 export interface TransitionHooks {
 	enter?: (node: HTMLElement) => void;
 	leave?: (node: HTMLElement, done: () => void) => void;
-}
-export declare type Data = Record<string, any>;
-export declare type DataGenerator = (options: YoxTypedOptions) => Data;
-export declare type LazyValue = number | true;
-export declare type PropTypeFunction = (key: string, value: any) => void;
-export declare type PropValueFunction = () => any;
-export declare type PropertyHint = 1 | 2 | 3;
-export declare type ComponentCallback = (options: YoxTypedOptions) => void;
-export declare type ComponentLoader = (callback: ComponentCallback) => Promise<YoxTypedOptions> | void;
-export declare type Component = YoxTypedOptions | ComponentLoader;
-export declare type OptionsBeforeCreateHook = (options: YoxTypedOptions) => void;
-export declare type OptionsOtherHook = () => void;
-export declare type RouterBeforeHook = (to: Location, from: Location | void, next: (value?: false | string | RouteTarget) => void) => void;
-export declare type RouterAfterHook = (to: Location, from: Location | void) => void;
-export interface ValueHolder {
-	keypath?: string;
-	value: any;
 }
 export interface Attribute {
 	readonly name: string;
@@ -236,7 +141,119 @@ export interface VNode {
 	readonly html?: string;
 	readonly children?: VNode[];
 }
-export interface DomUtil {
+export declare type Accessors<T, V> = {
+	[K in keyof T]: V;
+};
+export interface ComputedOptions {
+	get: ComputedGetter;
+	set?: ComputedSetter;
+	cache?: boolean;
+	sync?: boolean;
+	deps?: string[];
+}
+export interface WatcherOptions {
+	watcher: Watcher;
+	immediate?: boolean;
+	sync?: boolean;
+	once?: boolean;
+}
+export interface TypedWatcherOptions<T> extends WatcherOptions {
+	watcher: TypedWatcher<T>;
+}
+export interface EmitterOptions extends Task {
+	ns?: string;
+	num?: number;
+	max?: number;
+	count?: number;
+}
+export declare type DataGenerator = (this: YoxInterface, options: TypedComponentOptions) => Data;
+export interface ComponentOptions<Computed, Watchers, Events, Methods> {
+	name?: string;
+	propTypes?: Record<string, PropRule>;
+	el?: string | Node;
+	data?: Data | DataGenerator;
+	template?: string | Function;
+	model?: string;
+	props?: Data;
+	root?: YoxInterface;
+	parent?: YoxInterface;
+	context?: YoxInterface;
+	replace?: true;
+	vnode?: VNode;
+	slots?: Record<string, VNode[]>;
+	computed?: Accessors<Computed, ComputedGetter | ComputedOptions>;
+	watchers?: Accessors<Watchers, Watcher | WatcherOptions>;
+	events?: Accessors<Events, Listener>;
+	methods?: Methods;
+	transitions?: Record<string, TransitionHooks>;
+	components?: Record<string, ComponentOptions<Computed, Watchers, Events, Methods>>;
+	directives?: Record<string, DirectiveHooks>;
+	partials?: Record<string, string>;
+	filters?: Record<string, Filter>;
+	extensions?: Data;
+	[HOOK_BEFORE_CREATE]?: OptionsBeforeCreateHook;
+	[HOOK_AFTER_CREATE]?: OptionsOtherHook;
+	[HOOK_BEFORE_MOUNT]?: OptionsOtherHook;
+	[HOOK_AFTER_MOUNT]?: OptionsOtherHook;
+	[HOOK_BEFORE_UPDATE]?: OptionsOtherHook;
+	[HOOK_AFTER_UPDATE]?: OptionsOtherHook;
+	[HOOK_BEFORE_DESTROY]?: OptionsOtherHook;
+	[HOOK_AFTER_DESTROY]?: OptionsOtherHook;
+	[HOOK_BEFORE_ROUTE_ENTER]?: RouterBeforeHook;
+	[HOOK_AFTER_ROUTE_ENTER]?: RouterAfterHook;
+	[HOOK_BEFORE_ROUTE_UPDATE]?: RouterBeforeHook;
+	[HOOK_AFTER_ROUTE_UPDATE]?: RouterAfterHook;
+	[HOOK_BEFORE_ROUTE_LEAVE]?: RouterBeforeHook;
+	[HOOK_AFTER_ROUTE_LEAVE]?: RouterAfterHook;
+}
+export declare type TypedComponentOptions = ComponentOptions<any, any, any, any>;
+export interface Location {
+	path: string;
+	url?: string;
+	params?: Data;
+	query?: Data;
+}
+export interface RouteTarget {
+	name?: string;
+	path?: string;
+	params?: Data;
+	query?: Data;
+}
+export declare type Data = Record<string, any>;
+export declare type LazyValue = number | true;
+export declare type PropTypeFunction = (key: string, value: any) => void;
+export declare type PropValueFunction = () => any;
+export declare type PropertyHint = 1 | 2 | 3;
+export declare type ComponentCallback = (options: TypedComponentOptions) => void;
+export declare type ComponentLoader = (callback: ComponentCallback) => Promise<TypedComponentOptions> | void;
+export declare type Component = TypedComponentOptions | ComponentLoader;
+export declare type FilterFunction = (this: any, ...args: any) => string | number | boolean;
+export declare type Filter = FilterFunction | Record<string, FilterFunction>;
+export declare type TypedWatcher<T> = (this: T, newValue: any, oldValue: any, keypath: string) => void;
+export declare type Watcher = (newValue: any, oldValue: any, keypath: string) => void;
+export declare type TypedListener<T> = (this: T, event: CustomEventInterface, data?: Data) => false | void;
+export declare type Listener = (event: CustomEventInterface, data?: Data) => false | void;
+export declare type NativeListener = (event: CustomEventInterface | Event) => false | void;
+export declare type ComputedGetter = () => any;
+export declare type ComputedSetter = (value: any) => void;
+export declare type OptionsBeforeCreateHook = (options: TypedComponentOptions) => void;
+export declare type OptionsOtherHook = () => void;
+export declare type RouterBeforeHook = (to: Location, from: Location | void, next: (value?: false | string | RouteTarget) => void) => void;
+export declare type RouterAfterHook = (to: Location, from: Location | void) => void;
+export declare type ValueHolder = {
+	keypath?: string;
+	value: any;
+};
+export declare type Task = {
+	fn: Function;
+	ctx?: any;
+};
+export declare type PropRule = {
+	type: string | string[] | PropTypeFunction;
+	value?: any | PropValueFunction;
+	required?: boolean;
+};
+export interface DomApi {
 	createElement(tag: string, isSvg?: boolean): Element;
 	createText(text: string): Text;
 	createComment(text: string): Comment;
@@ -260,7 +277,7 @@ export interface DomUtil {
 	off(node: HTMLElement | Window | Document, type: string, listener: Listener): void;
 	addSpecialEvent(type: string, hooks: SpecialEventHooks): void;
 }
-export interface ArrayUtil {
+export interface ArrayApi {
 	each<T>(array: T[], callback: (item: T, index: number, length: number) => boolean | void, reversed?: boolean): void;
 	push<T>(array: T[], target: T | T[]): void;
 	unshift<T>(array: T[], target: T | T[]): void;
@@ -270,11 +287,11 @@ export interface ArrayUtil {
 	remove<T>(array: T[], target: T, strict?: boolean): number;
 	has<T>(array: T[], target: T, strict?: boolean): boolean;
 	toArray<T>(array: T[] | ArrayLike<T>): T[];
-	toObject(array: any[], key?: string | null, value?: any): Object;
+	toObject(array: any[], key?: string | null, value?: any): object;
 	join(array: string[], separator: string): string;
 	falsy(array: any): boolean;
 }
-export interface IsUtil {
+export interface IsApi {
 	func(value: any): boolean;
 	array(value: any): boolean;
 	object(value: any): boolean;
@@ -283,7 +300,7 @@ export interface IsUtil {
 	boolean(value: any): boolean;
 	numeric(value: any): boolean;
 }
-export interface LoggerUtil {
+export interface LoggerApi {
 	DEBUG: number;
 	INFO: number;
 	WARN: number;
@@ -295,7 +312,7 @@ export interface LoggerUtil {
 	error(msg: string, tag?: string): void;
 	fatal(msg: string, tag?: string): void;
 }
-export interface ObjectUtil {
+export interface ObjectApi {
 	keys(object: Data): string[];
 	sort(object: Data, desc?: boolean): string[];
 	each(object: Data, callback: (value: any, key: string) => boolean | void): void;
@@ -308,7 +325,7 @@ export interface ObjectUtil {
 	has(object: Data, key: string | number): boolean;
 	falsy(object: any): boolean;
 }
-export interface StringUtil {
+export interface StringApi {
 	camelize(str: string): string;
 	hyphenate(str: string): string;
 	capitalize(str: string): string;
@@ -324,59 +341,6 @@ export interface StringUtil {
 	lower(str: string): string;
 	has(str: string, part: string): boolean;
 	falsy(str: any): boolean;
-}
-export interface Task {
-	fn: Function;
-	ctx?: any;
-}
-export interface NextTaskInterface {
-	append(func: Function, context?: any): void;
-	prepend(func: Function, context?: any): void;
-	clear(): void;
-	run(): void;
-}
-export interface ObserverInterface {
-	data: Data;
-	context: any;
-	nextTask: NextTaskInterface;
-	addComputed(keypath: string, options: ComputedGetter | ComputedOptions): ComputedInterface | void;
-	removeComputed(keypath: string): void;
-	diff(keypath: string, newValue: any, oldValue: any): void;
-	get(keypath: string, defaultValue?: any, depIgnore?: boolean): any;
-	set(keypath: string | Data, value?: any): void;
-	watch(keypath: string | Record<string, Watcher | WatcherOptions>, watcher?: Watcher | WatcherOptions, immediate?: boolean): void;
-	unwatch(keypath?: string, watcher?: Watcher): void;
-	toggle(keypath: string): boolean;
-	increase(keypath: string, step?: number, max?: number): number | void;
-	decrease(keypath: string, step: number, min?: number): number | void;
-	insert(keypath: string, item: any, index: number | boolean): true | void;
-	append(keypath: string, item: any): true | void;
-	prepend(keypath: string, item: any): true | void;
-	removeAt(keypath: string, index: number): true | void;
-	remove(keypath: string, item: any): true | void;
-	copy<T>(data: T, deep?: boolean): T;
-	destroy(): void;
-}
-export interface ComputedInterface {
-	get(force?: boolean): any;
-	set(value: any): void;
-}
-export interface PropRule {
-	type: string | string[] | PropTypeFunction;
-	value?: any | PropValueFunction;
-	required?: boolean;
-}
-export interface Location {
-	path: string;
-	url?: string;
-	params?: Data;
-	query?: Data;
-}
-export interface RouteTarget {
-	name?: string;
-	path?: string;
-	params?: Data;
-	query?: Data;
 }
 declare class CustomEvent implements CustomEventInterface {
 	static PHASE_CURRENT: number;
@@ -476,7 +440,7 @@ declare class NextTask implements NextTaskInterface {
 	 */
 	run(): void;
 }
-declare class Computed implements ComputedInterface {
+declare class Computed {
 	static current?: Computed;
 	keypath: string;
 	value: any;
@@ -484,13 +448,13 @@ declare class Computed implements ComputedInterface {
 	cache: boolean;
 	fixed: boolean;
 	context: any;
-	observer: ObserverInterface;
+	observer: Observer;
 	getter: ComputedGetter;
 	setter: ComputedSetter | void;
 	watcher: Watcher;
 	watcherOptions: WatcherOptions;
 	unique: Record<string, boolean>;
-	constructor(keypath: string, sync: boolean, cache: boolean, deps: string[], observer: ObserverInterface, getter: ComputedGetter, setter: ComputedSetter | void);
+	constructor(keypath: string, sync: boolean, cache: boolean, deps: string[], observer: Observer, getter: ComputedGetter, setter: ComputedSetter | void);
 	/**
 	 * 读取计算属性的值
 	 *
@@ -519,7 +483,7 @@ export interface AsyncChange {
 	value: any;
 	keypaths: string[];
 }
-declare class Observer implements ObserverInterface {
+declare class Observer {
 	data: Data;
 	context: any;
 	nextTask: NextTask;
@@ -666,12 +630,12 @@ declare class Observer implements ObserverInterface {
 export declare type YoxClass = typeof Yox;
 export declare type EmitterClass = typeof Emitter;
 export declare type CustomEventClass = typeof CustomEvent;
-export interface YoxPlugin {
+export declare type YoxPlugin = {
 	version: string;
 	install(Yox: YoxClass): void;
-}
+};
 export default class Yox<Computed, Watchers, Events, Methods> implements YoxInterface {
-	$options: YoxTypedOptions;
+	$options: TypedComponentOptions;
 	$observer: Observer;
 	$emitter: Emitter;
 	$el?: HTMLElement;
@@ -684,7 +648,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
 	$children?: YoxInterface[];
 	$vnode: VNode | undefined;
 	$directives?: Record<string, DirectiveHooks>;
-	$components?: Record<string, YoxTypedOptions>;
+	$components?: Record<string, TypedComponentOptions>;
 	$transitions?: Record<string, TransitionHooks>;
 	$partials?: Record<string, Function>;
 	$filters?: Record<string, Filter>;
@@ -695,12 +659,12 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
 	/**
 	 * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
 	 */
-	static is: IsUtil;
-	static dom: DomUtil;
-	static array: ArrayUtil;
-	static object: ObjectUtil;
-	static string: StringUtil;
-	static logger: LoggerUtil;
+	static is: IsApi;
+	static dom: DomApi;
+	static array: ArrayApi;
+	static object: ObjectApi;
+	static string: StringApi;
+	static logger: LoggerApi;
 	static Event: CustomEventClass;
 	static Emitter: EmitterClass;
 	/**
@@ -712,7 +676,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
 	/**
 	 * 定义组件对象
 	 */
-	static define<Computed, Watchers, Events, Methods>(options: YoxOptions<Computed, Watchers, Events, Methods> & ThisType<Methods & YoxInterface>): YoxOptions<Computed, Watchers, Events, Methods> & ThisType<Methods & YoxInterface>;
+	static define<Computed, Watchers, Events, Methods>(options: ComponentOptions<Computed, Watchers, Events, Methods> & ThisType<Methods & YoxInterface>): ComponentOptions<Computed, Watchers, Events, Methods> & ThisType<Methods & YoxInterface>;
 	/**
 	 * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
 	 */
@@ -741,15 +705,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
 	 * 注册全局过滤器
 	 */
 	static filter(name: string | Record<string, Filter>, filter?: Filter): Filter | void;
-	constructor(options?: YoxOptions<Computed, Watchers, Events, Methods> & ThisType<Methods & YoxInterface>);
-	/**
-	 * 添加计算属性
-	 */
-	addComputed(keypath: string, computed: TypedComputedGetter<this> | TypedComputedOptions<this>): ComputedInterface | void;
-	/**
-	 * 删除计算属性
-	 */
-	removeComputed(keypath: string): void;
+	constructor(options?: ComponentOptions<Computed, Watchers, Events, Methods> & ThisType<Methods & YoxInterface>);
 	/**
 	 * 取值
 	 */
@@ -795,7 +751,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
 	 * @param options 组件配置
 	 * @param vnode 虚拟节点
 	 */
-	createComponent(options: YoxTypedOptions, vnode: VNode): YoxInterface;
+	createComponent(options: TypedComponentOptions, vnode: VNode): YoxInterface;
 	/**
 	 * 注册当前组件级别的指令
 	 */

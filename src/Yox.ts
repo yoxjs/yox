@@ -1374,33 +1374,3 @@ if (process.env.NODE_ENV !== 'pure') {
     }
   })
 }
-
-Yox.component('aa', {
-  data() {
-    this.$children
-  },
-  methods: {
-    say() {
-      this.say()
-    },
-    haha() {
-      this.say()
-    }
-  }
-})
-
-Yox.component({
-  'aa': {
-    data() {
-      this.$children
-    },
-    methods: {
-      say() {
-        this.say()
-      },
-      haha() {
-        this.say()
-      }
-    }
-  }
-})

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.80
+ * yox.js v1.0.0-alpha.81
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1611,6 +1611,8 @@
               // 执行到这时，组件还没有挂载到 DOM 树
               // 如果此时直接触发 enter，外部还需要做多余的工作，比如 setTimeout
               // 索性这里直接等挂载到 DOM 数之后再触发
+              // 注意：YoxInterface 没有声明 $observer，因为不想让外部访问，
+              // 但是这里要用一次，所以加了 as any
               context.$observer.nextTask.prepend(enter);
           }
       }
@@ -6311,18 +6313,6 @@
           }
       };
       /**
-       * 添加计算属性
-       */
-      Yox.prototype.addComputed = function (keypath, computed) {
-          return this.$observer.addComputed(keypath, computed);
-      };
-      /**
-       * 删除计算属性
-       */
-      Yox.prototype.removeComputed = function (keypath) {
-          this.$observer.removeComputed(keypath);
-      };
-      /**
        * 取值
        */
       Yox.prototype.get = function (keypath, defaultValue, depIgnore) {
@@ -6722,7 +6712,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.80";
+      Yox.version = "1.0.0-alpha.81";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
@@ -6761,6 +6751,8 @@
       if (once) {
           options.max = 1;
       }
+      // YoxInterface 没有声明 $emitter，因为不想让外部访问，
+      // 但是这里要用一次，所以加了 as any
       instance.$emitter.on(type, options);
   }
   function addEvents(instance, type, listener, once) {

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.80
+ * yox.js v1.0.0-alpha.81
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -2065,18 +2065,6 @@ class Yox {
     static filter(name, filter) {
     }
     /**
-     * 添加计算属性
-     */
-    addComputed(keypath, computed) {
-        return this.$observer.addComputed(keypath, computed);
-    }
-    /**
-     * 删除计算属性
-     */
-    removeComputed(keypath) {
-        this.$observer.removeComputed(keypath);
-    }
-    /**
      * 取值
      */
     get(keypath, defaultValue, depIgnore) {
@@ -2342,7 +2330,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.80";
+Yox.version = "1.0.0-alpha.81";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
@@ -2366,6 +2354,8 @@ function addEvent(instance, type, listener, once) {
     if (once) {
         options.max = 1;
     }
+    // YoxInterface 没有声明 $emitter，因为不想让外部访问，
+    // 但是这里要用一次，所以加了 as any
     instance.$emitter.on(type, options);
 }
 function addEvents(instance, type, listener, once) {
