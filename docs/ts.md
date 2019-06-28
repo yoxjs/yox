@@ -24,6 +24,34 @@ export default Yox.define({
       // this 指向 Yox 实例
     }
   },
+  computed: {
+    xxx() {
+      // this 指向 Yox 实例
+    },
+    yyy: {
+      get() {
+        // this 指向 Yox 实例
+      },
+      set() {
+        // this 指向 Yox 实例
+      }
+    }
+  },
+  events: {
+    xxx(event, data) {
+      // this 指向 Yox 实例
+    }
+  },
+  watchers: {
+    xxx(newValue, oldValue) {
+      // this 指向 Yox 实例
+    },
+    yyy: {
+      watcher(newValue, oldValue) {
+        // this 指向 Yox 实例
+      }
+    }
+  },
   template,
   ...
 })
