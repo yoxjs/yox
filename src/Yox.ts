@@ -23,11 +23,11 @@ import {
 } from '../../yox-type/src/hooks'
 
 import {
+  EmitterOptions,
   WatcherOptions,
   TypedWatcherOptions,
-  EmitterOptions,
-  YoxOptions,
-  YoxTypedOptions,
+  ComponentOptions,
+  TypedComponentOptions,
 } from '../../yox-type/src/options'
 
 import {
@@ -100,7 +100,7 @@ selectorPattern = /^[#.][-\w+]+$/
 
 export default class Yox<Computed, Watchers, Events, Methods> implements YoxInterface {
 
-  $options: YoxTypedOptions
+  $options: TypedComponentOptions
 
   $observer: Observer
 
@@ -126,7 +126,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
 
   $directives?: Record<string, DirectiveHooks>
 
-  $components?: Record<string, YoxTypedOptions>
+  $components?: Record<string, TypedComponentOptions>
 
   $transitions?: Record<string, TransitionHooks>
 
@@ -165,7 +165,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
    * 定义组件对象
    */
   public static define<Computed, Watchers, Events, Methods>(
-    options: YoxOptions<Computed, Watchers, Events, Methods> & ThisType<Methods & YoxInterface>
+    options: ComponentOptions<Computed, Watchers, Events, Methods> & ThisType<Methods & YoxInterface>
   ) {
     return options
   }
@@ -278,10 +278,10 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
   }
 
   constructor(
-    options?: YoxOptions<Computed, Watchers, Events, Methods> & ThisType<Methods & YoxInterface>
+    options?: ComponentOptions<Computed, Watchers, Events, Methods> & ThisType<Methods & YoxInterface>
   ) {
 
-    const instance = this, $options: YoxTypedOptions = options || env.EMPTY_OBJECT
+    const instance = this, $options: TypedComponentOptions = options || env.EMPTY_OBJECT
 
     // 为了冒泡 HOOK_BEFORE_CREATE 事件，必须第一时间创建 emitter
     // 监听各种事件
@@ -730,7 +730,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
    * @param options 组件配置
    * @param vnode 虚拟节点
    */
-  createComponent(options: YoxTypedOptions, vnode: VNode): YoxInterface {
+  createComponent(options: TypedComponentOptions, vnode: VNode): YoxInterface {
     if (process.env.NODE_ENV !== 'pure') {
 
       const instance = this
@@ -1298,7 +1298,7 @@ function loadComponent(
 
       registry[name] = [callback]
 
-      const componentCallback = function (result: YoxTypedOptions) {
+      const componentCallback = function (result: TypedComponentOptions) {
 
         const queue = registry[name], options = result['default'] || result
 
@@ -1328,7 +1328,7 @@ function loadComponent(
     }
     // 不是异步加载函数，直接同步返回
     else {
-      callback(component as YoxTypedOptions)
+      callback(component as TypedComponentOptions)
     }
     return env.TRUE
   }
@@ -1372,3 +1372,32 @@ if (process.env.NODE_ENV !== 'pure') {
   })
 }
 
+Yox.component('aa', {
+  data() {
+    this.$children
+  },
+  methods: {
+    say() {
+      this.say()
+    },
+    haha() {
+      this.say()
+    }
+  }
+})
+
+Yox.component({
+  'aa': {
+    data() {
+      this.$children
+    },
+    methods: {
+      say() {
+        this.say()
+      },
+      haha() {
+        this.say()
+      }
+    }
+  }
+})
