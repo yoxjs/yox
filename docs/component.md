@@ -8,7 +8,7 @@ Yox 组件是符合 [ComponentOptions](https://github.com/yoxjs/yox-type/blob/ma
 {
 
   // 通常用不上
-  // 如果你要写组件库，估计会用到，主要用于解决 ts 类型检查错误
+  // 如果你要写组件库，估计会用到
   name: '组件名称',
 
   // 通常只有根组件需要配置 el，支持元素节点和选择器
