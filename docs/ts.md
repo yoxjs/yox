@@ -4,7 +4,7 @@ Yox 采用 `TypeScript` 开发，代码质量相比旧版（`JavaScript` 版本�
 
 ### 定义组件
 
-我们为 `TypeScript` 添加了一个 `Yox.define` 方法用于组件定义，它能正确地处理 `this`，并且可以识别 `methods` 中的定义的实例方法。
+我们为 `TypeScript` 添加了一个 `Yox.define` 方法用于组件定义，它能正确地处理 `this`，并且可以识别 `methods` 定义的实例方法。
 
 以 `Button.ts` 组件举例，如下：
 
