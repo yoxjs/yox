@@ -65,6 +65,23 @@ import * as model from './directive/model'
 import * as binding from './directive/binding'
 
 
+type IsUtil = typeof is
+type DomUtil = typeof domApi
+type ArrayUtil = typeof array
+type ObjectUtil = typeof object
+type StringUtil = typeof string
+type LoggerUtil = typeof logger
+
+type YoxClass = typeof Yox
+type EmitterClass = typeof Emitter
+type CustomEventClass = typeof CustomEvent
+
+type YoxPlugin = {
+  version: string
+  install(Yox: YoxClass): void
+}
+
+
 const globalDirectives = {},
 
 globalTransitions = {},
@@ -80,24 +97,6 @@ compileCache = {},
 TEMPLATE_COMPUTED = '$$',
 
 selectorPattern = /^[#.][-\w+]+$/
-
-
-type IsUtil = typeof is
-type DomUtil = typeof domApi
-type ArrayUtil = typeof array
-type ObjectUtil = typeof object
-type StringUtil = typeof string
-type LoggerUtil = typeof logger
-
-type YoxClass = typeof Yox
-type EmitterClass = typeof Emitter
-type CustomEventClass = typeof CustomEvent
-
-
-export interface YoxPlugin {
-  version: string
-  install(Yox: YoxClass): void
-}
 
 export default class Yox<Computed, Watchers, Events, Methods> implements YoxInterface {
 
@@ -149,6 +148,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
   public static object: ObjectUtil = object
   public static string: StringUtil = string
   public static logger: LoggerUtil = logger
+
   public static Event: CustomEventClass = CustomEvent
   public static Emitter: EmitterClass = Emitter
 
@@ -1371,3 +1371,4 @@ if (process.env.NODE_ENV !== 'pure') {
     }
   })
 }
+
