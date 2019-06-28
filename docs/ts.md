@@ -20,8 +20,9 @@ export default Yox.define({
 
   },
   data() {
+    // this 指向 Yox 实例
     return {
-      // this 指向 Yox 实例
+
     }
   },
   computed: {
