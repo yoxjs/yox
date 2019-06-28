@@ -7,3 +7,7 @@ node_modules
 package-lock.json
 yarn.lock
 tsconfig.tsbuildinfo
+
+src
+tsconfig.json
+rollup.config.js
