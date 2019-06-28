@@ -273,7 +273,7 @@ export interface DomApi {
 	html(node: Element, html?: string, isStyle?: boolean, isOption?: boolean): string | void;
 	addClass(node: HTMLElement, className: string): void;
 	removeClass(node: HTMLElement, className: string): void;
-	on(node: HTMLElement | Window | Document, type: string, listener: Listener): void;
+	on(node: HTMLElement | Window | Document, type: string, listener: Listener, context?: any): void;
 	off(node: HTMLElement | Window | Document, type: string, listener: Listener): void;
 	addSpecialEvent(type: string, hooks: SpecialEventHooks): void;
 }

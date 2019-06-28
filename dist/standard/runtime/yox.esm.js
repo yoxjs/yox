@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.81
+ * yox.js v1.0.0-alpha.82
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -2409,7 +2409,7 @@ function html(node, html, isStyle, isOption) {
 }
 const addClass = addElementClass;
 const removeClass = removeElementClass;
-function on(node, type, listener) {
+function on(node, type, listener, context) {
     const emitter = node[EMITTER] || (node[EMITTER] = new Emitter()), nativeListeners = emitter.nativeListeners || (emitter.nativeListeners = {});
     // 一个元素，相同的事件，只注册一个 native listener
     if (!nativeListeners[type]) {
@@ -2433,7 +2433,10 @@ function on(node, type, listener) {
             addEventListener(node, type, nativeListener);
         }
     }
-    emitter.on(type, listener);
+    emitter.on(type, {
+        fn: listener,
+        ctx: context,
+    });
 }
 function off(node, type, listener) {
     const emitter = node[EMITTER], { listeners, nativeListeners } = emitter;
@@ -4073,7 +4076,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.81";
+Yox.version = "1.0.0-alpha.82";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
