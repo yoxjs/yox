@@ -122,19 +122,6 @@ Yox.component('CustomComponent', { ... })
 
 > 如果你喜欢写 `<DIV></DIV>`，那我只能送你离开。
 
-### Yox.define()
-
-为了方便 TS 类型检查，可用 `Yox.define()` 方法定义组件对象，如下：
-
-```js
-const options = Yox.define({
-  template: '<div></div>',
-  ...
-})
-```
-
-如果不需要类型检查，可以直接用 `Plain Object`。
-
 ## 注册组件
 
 ### 全局注册

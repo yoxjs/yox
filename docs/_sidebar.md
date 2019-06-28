@@ -17,4 +17,5 @@
 * [API](api-yox)
 * [特别声明](notice)
 * [适配低端浏览器](ie)
+* [TypeScript](ts)
 * [周边生态](ecosystem)
