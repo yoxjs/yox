@@ -34,6 +34,16 @@ import {
   YoxInterface,
 } from '../../yox-type/src/yox'
 
+import {
+  IsApi,
+  DomApi,
+  ArrayApi,
+  ObjectApi,
+  StringApi,
+  LoggerApi,
+} from '../../yox-type/src/api'
+
+
 import isDef from '../../yox-common/src/function/isDef'
 import isUndef from '../../yox-common/src/function/isUndef'
 import execute from '../../yox-common/src/function/execute'
@@ -64,13 +74,6 @@ import * as event from './directive/event'
 import * as model from './directive/model'
 import * as binding from './directive/binding'
 
-
-type IsUtil = typeof is
-type DomUtil = typeof domApi
-type ArrayUtil = typeof array
-type ObjectUtil = typeof object
-type StringUtil = typeof string
-type LoggerUtil = typeof logger
 
 type YoxClass = typeof Yox
 type EmitterClass = typeof Emitter
@@ -142,12 +145,12 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
-  public static is: IsUtil = is
-  public static dom: DomUtil = domApi
-  public static array: ArrayUtil = array
-  public static object: ObjectUtil = object
-  public static string: StringUtil = string
-  public static logger: LoggerUtil = logger
+  public static is: IsApi = is
+  public static dom: DomApi = domApi
+  public static array: ArrayApi = array
+  public static object: ObjectApi = object
+  public static string: StringApi = string
+  public static logger: LoggerApi = logger
 
   public static Event: CustomEventClass = CustomEvent
   public static Emitter: EmitterClass = Emitter

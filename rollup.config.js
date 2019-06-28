@@ -36,7 +36,7 @@ const replaces = {
 }
 
 if (env === 'pure') {
-  replaces['public static dom: DomUtil = domApi'] = ''
+  replaces['public static dom: DomApi = domApi'] = ''
 }
 
 let plugins = [
