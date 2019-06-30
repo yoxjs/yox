@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.83
+ * yox.js v1.0.0-alpha.84
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -4146,7 +4146,7 @@
   // 是否要执行 join 操作
   var joinStack = [], 
   // 是否正在收集子节点
-  collectStack = [], nodeGenerator = {}, RENDER_EXPRESSION_IDENTIFIER = 'a', RENDER_EXPRESSION_MEMBER_KEYPATH = 'b', RENDER_EXPRESSION_MEMBER_LITERAL = 'c', RENDER_EXPRESSION_CALL = 'd', RENDER_TEXT_VNODE = 'e', RENDER_ATTRIBUTE_VNODE = 'f', RENDER_PROPERTY_VNODE = 'g', RENDER_LAZY_VNODE = 'h', RENDER_TRANSITION_VNODE = 'i', RENDER_BINDING_VNODE = 'j', RENDER_MODEL_VNODE = 'k', RENDER_EVENT_METHOD_VNODE = 'l', RENDER_EVENT_NAME_VNODE = 'm', RENDER_DIRECTIVE_VNODE = 'n', RENDER_SPREAD_VNODE = 'o', RENDER_ELEMENT_VNODE = 'p', RENDER_SLOT = 'q', RENDER_PARTIAL = 'r', RENDER_IMPORT = 's', RENDER_EACH = 't', TO_STRING = 'u', ARG_STACK = 'v', CODE_RETURN = 'return ';
+  collectStack = [], nodeGenerator = {}, RENDER_EXPRESSION_IDENTIFIER = 'a', RENDER_EXPRESSION_MEMBER_KEYPATH = 'b', RENDER_EXPRESSION_MEMBER_LITERAL = 'c', RENDER_EXPRESSION_CALL = 'd', RENDER_TEXT_VNODE = 'e', RENDER_ATTRIBUTE_VNODE = 'f', RENDER_PROPERTY_VNODE = 'g', RENDER_LAZY_VNODE = 'h', RENDER_TRANSITION_VNODE = 'i', RENDER_BINDING_VNODE = 'j', RENDER_MODEL_VNODE = 'k', RENDER_EVENT_METHOD_VNODE = 'l', RENDER_EVENT_NAME_VNODE = 'm', RENDER_DIRECTIVE_VNODE = 'n', RENDER_SPREAD_VNODE = 'o', RENDER_ELEMENT_VNODE = 'p', RENDER_SLOT = 'q', RENDER_PARTIAL = 'r', RENDER_IMPORT = 's', RENDER_EACH = 't', RENDER_RANGE = 'u', TO_STRING = 'v', ARG_STACK = 'w', CODE_RETURN = 'return ';
   // 序列化代码的前缀
   var codePrefix, 
   // 表达式求值是否要求返回字符串类型
@@ -4471,12 +4471,22 @@
       return stringifyIf(node, node.stub);
   };
   nodeGenerator[EACH] = function (node) {
+      // compiler 保证了 children 一定有值
+      var children = stringifyFunction(stringifyChildren(node.children, node.isComplex));
+      // 遍历区间
+      if (node.to) {
+          return toCall(RENDER_RANGE, [
+              children,
+              renderExpression(node.from),
+              renderExpression(node.to),
+              node.equal ? TRUE$1 : UNDEFINED,
+              node.index ? toString$1(node.index) : UNDEFINED
+          ]);
+      }
+      // 遍历数组和对象
       return toCall(RENDER_EACH, [
-          // compiler 保证了 children 一定有值
-          stringifyFunction(stringifyChildren(node.children, node.isComplex)),
+          children,
           renderExpression(node.from, TRUE),
-          node.to ? renderExpression(node.to, TRUE) : UNDEFINED,
-          node.equal ? TRUE$1 : UNDEFINED,
           node.index ? toString$1(node.index) : UNDEFINED
       ]);
   };
@@ -4515,6 +4525,7 @@
               RENDER_PARTIAL,
               RENDER_IMPORT,
               RENDER_EACH,
+              RENDER_RANGE,
               TO_STRING ], COMMA) + "){" + CODE_RETURN;
       }
       return codePrefix + nodeGenerator[node.type](node) + '}';
@@ -4793,7 +4804,7 @@
           else {
               var partial = partials[name];
               if (partial) {
-                  partial(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, toString);
+                  partial(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, toString);
               }
           }
       }, eachHandler = function (generate, item, key, keypath, index, length) {
@@ -4817,53 +4828,50 @@
           generate();
           $scope = lastScope;
           $stack = lastStack;
-      }, renderEach = function (generate, from, to, equal, index) {
-          var fromValue = from.value, fromKeypath = from.keypath;
-          if (to) {
-              var toValue = to.value, count = 0;
-              if (fromValue < toValue) {
-                  if (equal) {
-                      for (var i = fromValue; i <= toValue; i++) {
-                          eachHandler(generate, i, count++, EMPTY_STRING, index);
-                      }
-                  }
-                  else {
-                      for (var i = fromValue; i < toValue; i++) {
-                          eachHandler(generate, i, count++, EMPTY_STRING, index);
-                      }
+      }, renderEach = function (generate, holder, index) {
+          var keypath = holder.keypath, value = holder.value;
+          if (array(value)) {
+              for (var i = 0, length = value.length; i < length; i++) {
+                  eachHandler(generate, value[i], i, keypath
+                      ? join$1(keypath, EMPTY_STRING + i)
+                      : EMPTY_STRING, index, length);
+              }
+          }
+          else if (object(value)) {
+              for (var key in value) {
+                  eachHandler(generate, value[key], key, keypath
+                      ? join$1(keypath, key)
+                      : EMPTY_STRING, index);
+              }
+          }
+      }, renderRange = function (generate, from, to, equal, index) {
+          var count = 0;
+          if (from < to) {
+              if (equal) {
+                  for (var i = from; i <= to; i++) {
+                      eachHandler(generate, i, count++, EMPTY_STRING, index);
                   }
               }
               else {
-                  if (equal) {
-                      for (var i = fromValue; i >= toValue; i--) {
-                          eachHandler(generate, i, count++, EMPTY_STRING, index);
-                      }
-                  }
-                  else {
-                      for (var i = fromValue; i > toValue; i--) {
-                          eachHandler(generate, i, count++, EMPTY_STRING, index);
-                      }
+                  for (var i = from; i < to; i++) {
+                      eachHandler(generate, i, count++, EMPTY_STRING, index);
                   }
               }
           }
           else {
-              if (array(fromValue)) {
-                  for (var i = 0, length = fromValue.length; i < length; i++) {
-                      eachHandler(generate, fromValue[i], i, fromKeypath
-                          ? join$1(fromKeypath, EMPTY_STRING + i)
-                          : EMPTY_STRING, index, length);
+              if (equal) {
+                  for (var i = from; i >= to; i--) {
+                      eachHandler(generate, i, count++, EMPTY_STRING, index);
                   }
               }
-              else if (object(fromValue)) {
-                  for (var key in fromValue) {
-                      eachHandler(generate, fromValue[key], key, fromKeypath
-                          ? join$1(fromKeypath, key)
-                          : EMPTY_STRING, index);
+              else {
+                  for (var i = from; i > to; i--) {
+                      eachHandler(generate, i, count++, EMPTY_STRING, index);
                   }
               }
           }
       };
-      return template(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, toString);
+      return template(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, toString);
   }
 
   // 这里先写 IE9 支持的接口
@@ -6715,7 +6723,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.83";
+      Yox.version = "1.0.0-alpha.84";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

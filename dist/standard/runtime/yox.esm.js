@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.83
+ * yox.js v1.0.0-alpha.84
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -2163,7 +2163,7 @@ function render(context, template, filters, partials, directives, transitions) {
         else {
             const partial = partials[name];
             if (partial) {
-                partial(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, toString);
+                partial(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, toString);
             }
         }
     }, eachHandler = function (generate, item, key, keypath, index, length) {
@@ -2187,53 +2187,50 @@ function render(context, template, filters, partials, directives, transitions) {
         generate();
         $scope = lastScope;
         $stack = lastStack;
-    }, renderEach = function (generate, from, to, equal, index) {
-        const fromValue = from.value, fromKeypath = from.keypath;
-        if (to) {
-            let toValue = to.value, count = 0;
-            if (fromValue < toValue) {
-                if (equal) {
-                    for (let i = fromValue; i <= toValue; i++) {
-                        eachHandler(generate, i, count++, EMPTY_STRING, index);
-                    }
-                }
-                else {
-                    for (let i = fromValue; i < toValue; i++) {
-                        eachHandler(generate, i, count++, EMPTY_STRING, index);
-                    }
+    }, renderEach = function (generate, holder, index) {
+        const { keypath, value } = holder;
+        if (array(value)) {
+            for (let i = 0, length = value.length; i < length; i++) {
+                eachHandler(generate, value[i], i, keypath
+                    ? join$1(keypath, EMPTY_STRING + i)
+                    : EMPTY_STRING, index, length);
+            }
+        }
+        else if (object(value)) {
+            for (let key in value) {
+                eachHandler(generate, value[key], key, keypath
+                    ? join$1(keypath, key)
+                    : EMPTY_STRING, index);
+            }
+        }
+    }, renderRange = function (generate, from, to, equal, index) {
+        let count = 0;
+        if (from < to) {
+            if (equal) {
+                for (let i = from; i <= to; i++) {
+                    eachHandler(generate, i, count++, EMPTY_STRING, index);
                 }
             }
             else {
-                if (equal) {
-                    for (let i = fromValue; i >= toValue; i--) {
-                        eachHandler(generate, i, count++, EMPTY_STRING, index);
-                    }
-                }
-                else {
-                    for (let i = fromValue; i > toValue; i--) {
-                        eachHandler(generate, i, count++, EMPTY_STRING, index);
-                    }
+                for (let i = from; i < to; i++) {
+                    eachHandler(generate, i, count++, EMPTY_STRING, index);
                 }
             }
         }
         else {
-            if (array(fromValue)) {
-                for (let i = 0, length = fromValue.length; i < length; i++) {
-                    eachHandler(generate, fromValue[i], i, fromKeypath
-                        ? join$1(fromKeypath, EMPTY_STRING + i)
-                        : EMPTY_STRING, index, length);
+            if (equal) {
+                for (let i = from; i >= to; i--) {
+                    eachHandler(generate, i, count++, EMPTY_STRING, index);
                 }
             }
-            else if (object(fromValue)) {
-                for (let key in fromValue) {
-                    eachHandler(generate, fromValue[key], key, fromKeypath
-                        ? join$1(fromKeypath, key)
-                        : EMPTY_STRING, index);
+            else {
+                for (let i = from; i > to; i--) {
+                    eachHandler(generate, i, count++, EMPTY_STRING, index);
                 }
             }
         }
     };
-    return template(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, toString);
+    return template(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, toString);
 }
 
 // 这里先写 IE9 支持的接口
@@ -4076,7 +4073,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.83";
+Yox.version = "1.0.0-alpha.84";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
