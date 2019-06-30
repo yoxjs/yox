@@ -1,8 +1,8 @@
 # Yox
 
-Just like Vue, but it is more lightweight and easy than Vue.
+Just like Vue, but it is more lightweight and easy to use than Vue.
 
-The key is that yox supports IE6.
+The key feature is that Yox supports IE6.
 
 
 > QQ 群 232021930，**可用于生产环境，没有 Vue 使用经验不建议使用，谢谢**。
