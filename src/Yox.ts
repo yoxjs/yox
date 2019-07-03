@@ -27,7 +27,6 @@ import {
   WatcherOptions,
   TypedWatcherOptions,
   ComponentOptions,
-  TypedComponentOptions,
 } from '../../yox-type/src/options'
 
 import {
@@ -103,7 +102,7 @@ selectorPattern = /^[#.][-\w+]+$/
 
 export default class Yox<Computed, Watchers, Events, Methods> implements YoxInterface {
 
-  $options: TypedComponentOptions
+  $options: ComponentOptions
 
   $observer: Observer
 
@@ -129,7 +128,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
 
   $directives?: Record<string, DirectiveHooks>
 
-  $components?: Record<string, TypedComponentOptions>
+  $components?: Record<string, ComponentOptions>
 
   $transitions?: Record<string, TransitionHooks>
 
@@ -284,7 +283,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
     options?: ComponentOptions<Computed, Watchers, Events, Methods> & ThisType<Methods & YoxInterface>
   ) {
 
-    const instance = this, $options: TypedComponentOptions = options || env.EMPTY_OBJECT
+    const instance = this, $options: ComponentOptions = options || env.EMPTY_OBJECT
 
     // 为了冒泡 HOOK_BEFORE_CREATE 事件，必须第一时间创建 emitter
     // 监听各种事件
@@ -733,7 +732,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
    * @param options 组件配置
    * @param vnode 虚拟节点
    */
-  createComponent(options: TypedComponentOptions, vnode: VNode): YoxInterface {
+  createComponent(options: ComponentOptions, vnode: VNode): YoxInterface {
     if (process.env.NODE_ENV !== 'pure') {
 
       const instance = this
@@ -1301,7 +1300,7 @@ function loadComponent(
 
       registry[name] = [callback]
 
-      const componentCallback = function (result: TypedComponentOptions) {
+      const componentCallback = function (result: ComponentOptions) {
 
         const queue = registry[name], options = result['default'] || result
 
@@ -1331,7 +1330,7 @@ function loadComponent(
     }
     // 不是异步加载函数，直接同步返回
     else {
-      callback(component as TypedComponentOptions)
+      callback(component as ComponentOptions)
     }
     return env.TRUE
   }
