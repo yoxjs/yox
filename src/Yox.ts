@@ -599,7 +599,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
   on(
     type: string | Record<string, TypedListener<this>>,
     listener?: TypedListener<this>
-  ): YoxInterface {
+  ): this {
     return addEvents(this, type, listener)
   }
 
@@ -609,7 +609,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
   once(
     type: string | Record<string, TypedListener<this>>,
     listener?: TypedListener<this>
-  ): YoxInterface {
+  ): this {
     return addEvents(this, type, listener, env.TRUE)
   }
 
@@ -619,7 +619,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
   off(
     type?: string,
     listener?: TypedListener<this>
-  ): YoxInterface {
+  ): this {
     this.$emitter.off(type, listener)
     return this
   }
@@ -689,7 +689,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
     keypath: string | Record<string, TypedWatcher<this> | TypedWatcherOptions<this>>,
     watcher?: TypedWatcher<this> | TypedWatcherOptions<this>,
     immediate?: boolean
-  ): YoxInterface {
+  ): this {
     this.$observer.watch(keypath, watcher, immediate)
     return this
   }
@@ -700,7 +700,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
   unwatch(
     keypath?: string,
     watcher?: Watcher
-  ): YoxInterface {
+  ): this {
     this.$observer.unwatch(keypath, watcher)
     return this
   }
