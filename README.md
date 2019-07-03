@@ -30,9 +30,6 @@ yarn add yox
 ## Example
 
 * [Hello World](https://jsrun.net/YxyKp/edit)
-
-#### Render
-
 * [Comment](http://jsrun.net/2xyKp/edit)
 * [Filter](https://jsrun.net/IxyKp/edit)
 * [Partial](http://jsrun.net/9xyKp/edit)

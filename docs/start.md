@@ -1,8 +1,5 @@
 
 * [Hello World](https://jsrun.net/YxyKp/edit)
-
-## 渲染模板
-
 * [注释](http://jsrun.net/2xyKp/edit)
 * [过滤器](https://jsrun.net/IxyKp/edit)
 * [子模板](http://jsrun.net/9xyKp/edit)
