@@ -482,17 +482,19 @@ Yox.filter({
 
 区间，表示从一个数到另一个数，比如从 5 到 10，或者反过来，从 10 到 5。
 
+> 仅支持整数区间循环，因为内部实现为 `for` 循环配合 `i++` 或 `i--`，强用小数出现浮点精度问题不要怪 Yox。
+
 ```html
 <div>
   // 包含 to
   {{#each from => to:index}}
     ...
-  {{/each
+  {{/each}}
 
   // 不包含 to
   {{#each from -> to:index}}
     ...
-  {{/each
+  {{/each}}
 </div>
 ```
 
@@ -516,7 +518,7 @@ Yox.filter({
 <div>
   {{#each stars:index}}
     <Star value="{{index + 1}}" />
-  {{/each
+  {{/each}}
 </div>
 ```
 
@@ -526,7 +528,7 @@ Yox.filter({
 <div>
   {{#each 1 => 5}}
     <Star value="{{this}}" />
-  {{/each
+  {{/each}}
 </div>
 ```
 
