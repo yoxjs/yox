@@ -4,8 +4,7 @@ Just like Vue, but it is more lightweight and easy to use than Vue.
 
 The key feature is that Yox supports IE6.
 
-
-> QQ 群 232021930，**可用于生产环境，没有 Vue 使用经验不建议使用，谢谢**。
+> QQ Group: 232021930
 
 ## Install
 
@@ -48,7 +47,8 @@ yarn add yox
 #### Event Handle
 
 * [Fire Event](https://jsrun.net/vxyKp/edit)
-* [Call Method](https://jsrun.net/LxyKp/edit)
+* [Invoke Method With No Params](https://jsrun.net/LxyKp/edit)
+* [Invoke Method With Params](https://jsrun.net/ICyKp/edit)
 * [Custom DOM Event](https://jsrun.net/XCyKp/edit)
 
 #### Data Binding
