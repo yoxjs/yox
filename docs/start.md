@@ -27,7 +27,7 @@
 * [绑定表单元素](https://jsrun.net/wxyKp/edit)
 * [绑定组件 - Input](https://jsrun.net/NxyKp/edit)
 * [绑定组件 - Checkbox](https://jsrun.net/LCyKp/edit)
-*
+
 ## 组件
 
 * [Button](https://jsrun.net/axyKp/edit)
