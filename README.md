@@ -54,7 +54,8 @@ yarn add yox
 #### Data Binding
 
 * [Form Element](https://jsrun.net/wxyKp/edit)
-* [Component](https://jsrun.net/NxyKp/edit)
+* [Component - Input](https://jsrun.net/NxyKp/edit)
+* [Component - Checkbox](https://jsrun.net/LCyKp/edit)
 
 #### Component
 
