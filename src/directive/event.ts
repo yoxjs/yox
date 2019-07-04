@@ -20,7 +20,7 @@ import * as domApi from '../../../yox-dom/src/dom'
 
 export function bind(node: HTMLElement | YoxInterface, directive: Directive, vnode: VNode) {
 
-  let { name, handler } = directive, { lazy } = vnode
+  let { key, name, handler, isNative } = directive, { lazy } = vnode
 
   if (!handler) {
     return
@@ -45,21 +45,33 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
 
   }
 
+  let element: HTMLElement
+
   if (vnode.isComponent) {
+    const component = node as YoxInterface
 
-    (node as YoxInterface).on(name, handler as Listener)
-    vnode.data[directive.key] = function () {
-      (node as YoxInterface).off(name, handler as Listener)
+    if (isNative) {
+      element = component.$el as HTMLElement
+
+      domApi.on(element, name, handler)
+      vnode.data[key] = function () {
+        domApi.off(element, name, handler as Listener)
+      }
     }
-
+    else {
+      component.on(name, handler)
+      vnode.data[key] = function () {
+        component.off(name, handler as Listener)
+      }
+    }
   }
   else {
+    element = node as HTMLElement
 
-    domApi.on(node as HTMLElement, name, handler as Listener)
-    vnode.data[directive.key] = function () {
-      domApi.off(node as HTMLElement, name, handler as Listener)
+    domApi.on(element, name, handler)
+    vnode.data[key] = function () {
+      domApi.off(element, name, handler as Listener)
     }
-
   }
 
 }
