@@ -11,6 +11,10 @@ import {
   YoxInterface,
 } from '../../../yox-type/src/yox'
 
+import {
+  DIRECTIVE_EVENT_MODIFER_NATIVE,
+} from '../../../yox-config/src/config'
+
 import execute from '../../../yox-common/src/function/execute'
 import debounce from '../../../yox-common/src/function/debounce'
 
@@ -20,7 +24,7 @@ import * as domApi from '../../../yox-dom/src/dom'
 
 export function bind(node: HTMLElement | YoxInterface, directive: Directive, vnode: VNode) {
 
-  let { key, name, handler, isNative } = directive, { lazy } = vnode
+  let { key, name, handler, modifier } = directive, { lazy } = vnode
 
   if (!handler) {
     return
@@ -50,7 +54,7 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
   if (vnode.isComponent) {
     const component = node as YoxInterface
 
-    if (isNative) {
+    if (modifier === DIRECTIVE_EVENT_MODIFER_NATIVE) {
       element = component.$el as HTMLElement
 
       domApi.on(element, name, handler)
@@ -59,6 +63,10 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
       }
     }
     else {
+      // 还原命名空间
+      if (modifier) {
+        name += env.RAW_DOT + modifier
+      }
       component.on(name, handler)
       vnode.data[key] = function () {
         component.off(name, handler as Listener)
