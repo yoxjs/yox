@@ -49,6 +49,7 @@ yarn add yox
 
 * [Fire Event](https://jsrun.net/vxyKp/edit)
 * [Call Method](https://jsrun.net/LxyKp/edit)
+* [Custom DOM Event](https://jsrun.net/XCyKp/edit)
 
 #### Data Binding
 
