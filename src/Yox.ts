@@ -600,7 +600,8 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
     type: string | Record<string, TypedListener<this>>,
     listener?: TypedListener<this>
   ): this {
-    return addEvents(this, type, listener)
+    addEvents(this, type, listener)
+    return this
   }
 
   /**
@@ -610,7 +611,8 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
     type: string | Record<string, TypedListener<this>>,
     listener?: TypedListener<this>
   ): this {
-    return addEvents(this, type, listener, env.TRUE)
+    addEvents(this, type, listener, env.TRUE)
+    return this
   }
 
   /**
@@ -1270,7 +1272,7 @@ function addEvents(
   type: string | Record<string, Listener>,
   listener?: Listener,
   once?: true
-): YoxInterface {
+) {
   if (is.string(type)) {
     addEvent(instance, type as string, listener as Listener, once)
   }
@@ -1282,7 +1284,6 @@ function addEvents(
       }
     )
   }
-  return instance
 }
 
 function loadComponent(
