@@ -659,6 +659,8 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
 
     event = type instanceof CustomEvent ? type : new CustomEvent(type),
 
+    namespace = event.ns || (event.ns = $emitter.parse(event.type)),
+
     args: any[] = [event],
 
     isComplete: boolean
@@ -675,8 +677,6 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
     else if (data === env.TRUE) {
       downward = env.TRUE
     }
-
-    const namespace = $emitter.parse(event.type)
 
     // 如果手动 fire 带上了事件命名空间
     // 则命名空间不能是 native，因为 native 有特殊用处
