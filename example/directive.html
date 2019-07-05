@@ -10,13 +10,13 @@
     <script id="template" type="plain/text">
 
         <div>
-            <button o-click3="{name: {{name}} }">
+            <button o-click="{name: name }">
                 33
             </button>
         </div>
 
     </script>
-    <script src="../dist/yox.js"></script>
+    <script src="../dist/standard/dev/yox.js"></script>
     <script>
         var instance = new Yox({
             el: '#app',
@@ -26,14 +26,10 @@
                 disabled: true
             },
             directives: {
-                click1: function (options) {
-                    console.log('1', options);
-                },
-                click2: function (options) {
-                    console.log('2', options);
-                },
-                click3: function (options) {
-                    console.log('3', options);
+                click: {
+                  bind: function (node, directive, vnode) {
+                    console.log('click', node, directive, vnode);
+                  }
                 }
             }
         });

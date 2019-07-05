@@ -1,8 +1,26 @@
 /**
- * yox.js v1.0.0-alpha.84
+ * yox.js v1.0.0-alpha.85
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
+
+const SLOT_DATA_PREFIX = '$slot_';
+const HINT_BOOLEAN = 3;
+const DIRECTIVE_MODEL = 'model';
+const DIRECTIVE_EVENT = 'event';
+const DIRECTIVE_BINDING = 'binding';
+const DIRECTIVE_CUSTOM = 'o';
+const MODIFER_NATIVE = 'native';
+const MODEL_PROP_DEFAULT = 'value';
+const NAMESPACE_HOOK = '.hook';
+const HOOK_BEFORE_CREATE = 'beforeCreate';
+const HOOK_AFTER_CREATE = 'afterCreate';
+const HOOK_BEFORE_MOUNT = 'beforeMount';
+const HOOK_AFTER_MOUNT = 'afterMount';
+const HOOK_BEFORE_UPDATE = 'beforeUpdate';
+const HOOK_AFTER_UPDATE = 'afterUpdate';
+const HOOK_BEFORE_DESTROY = 'beforeDestroy';
+const HOOK_AFTER_DESTROY = 'afterDestroy';
 
 /**
  * 为了压缩，定义的常量
@@ -11,6 +29,7 @@ const TRUE = true;
 const FALSE = false;
 const NULL = null;
 const UNDEFINED = void 0;
+const MINUS_ONE = -1;
 const RAW_UNDEFINED = 'undefined';
 const RAW_FILTER = 'filter';
 const RAW_PARTIAL = 'partial';
@@ -21,7 +40,7 @@ const RAW_VALUE = 'value';
 const RAW_LENGTH = 'length';
 const RAW_FUNCTION = 'function';
 const RAW_WILDCARD = '*';
-const RAW_MINUS_ONE = -1;
+const RAW_DOT = '.';
 /**
  * Single instance for window in browser
  */
@@ -41,7 +60,7 @@ const GLOBAL = typeof global !== RAW_UNDEFINED ? global : WINDOW;
  *
  * 这样只需 on-tap="handler" 就可以完美兼容各端
  *
- * 框架未实现此事件，通过 Yox.dom.specialEvents 提供给外部扩展
+ * 框架未实现此事件，通过 Yox.dom.addSpecialEvent 提供给外部扩展
  *
  */
 const EVENT_TAP = 'tap';
@@ -234,7 +253,7 @@ class CustomEvent {
 }
 CustomEvent.PHASE_CURRENT = 0;
 CustomEvent.PHASE_UPWARD = 1;
-CustomEvent.PHASE_DOWNWARD = RAW_MINUS_ONE;
+CustomEvent.PHASE_DOWNWARD = MINUS_ONE;
 
 /**
  * 遍历数组
@@ -248,14 +267,14 @@ function each(array, callback, reversed) {
     if (length) {
         if (reversed) {
             for (let i = length - 1; i >= 0; i--) {
-                if (callback(array[i], i, length) === FALSE) {
+                if (callback(array[i], i) === FALSE) {
                     break;
                 }
             }
         }
         else {
             for (let i = 0; i < length; i++) {
-                if (callback(array[i], i, length) === FALSE) {
+                if (callback(array[i], i) === FALSE) {
                     break;
                 }
             }
@@ -312,7 +331,7 @@ function unshift(array, target) {
  * @return 如果未找到，返回 -1
  */
 function indexOf(array, target, strict) {
-    let result = RAW_MINUS_ONE;
+    let result = MINUS_ONE;
     each(array, function (item, index) {
         if (strict === FALSE ? item == target : item === target) {
             result = index;
@@ -610,7 +629,6 @@ var string$1 = /*#__PURE__*/Object.freeze({
 });
 
 const dotPattern = /\./g, asteriskPattern = /\*/g, doubleAsteriskPattern = /\*\*/g, splitCache = {}, patternCache = {};
-const separator = '.';
 /**
  * 判断 keypath 是否以 prefix 开头，如果是，返回匹配上的前缀长度，否则返回 -1
  *
@@ -622,10 +640,10 @@ function match(keypath, prefix) {
     if (keypath === prefix) {
         return prefix.length;
     }
-    prefix += separator;
+    prefix += RAW_DOT;
     return startsWith(keypath, prefix)
         ? prefix.length
-        : RAW_MINUS_ONE;
+        : MINUS_ONE;
 }
 /**
  * 遍历 keypath 的每个部分
@@ -638,7 +656,7 @@ function each$1(keypath, callback) {
     // 而 splitCache.toString 是个函数
     const list = isDef(splitCache[keypath])
         ? splitCache[keypath]
-        : (splitCache[keypath] = keypath.split(separator));
+        : (splitCache[keypath] = keypath.split(RAW_DOT));
     for (let i = 0, lastIndex = list.length - 1; i <= lastIndex; i++) {
         if (callback(list[i], i === lastIndex) === FALSE) {
             break;
@@ -653,7 +671,7 @@ function each$1(keypath, callback) {
  */
 function join$1(keypath1, keypath2) {
     return keypath1 && keypath2
-        ? keypath1 + separator + keypath2
+        ? keypath1 + RAW_DOT + keypath2
         : keypath1 || keypath2;
 }
 /**
@@ -1022,7 +1040,7 @@ class Emitter {
      * @param data 事件数据
      */
     fire(type, args, filter) {
-        let instance = this, { name, ns } = parseNamespace(instance.ns, type), list = instance.listeners[name], isComplete = TRUE;
+        let instance = this, namespace = string(type) ? instance.parse(type) : type, list = instance.listeners[namespace.name], isComplete = TRUE;
         if (list) {
             // 避免遍历过程中，数组发生变化，比如增删了
             list = copy(list);
@@ -1032,13 +1050,13 @@ class Emitter {
             const event = args && args[0] instanceof CustomEvent
                 ? args[0]
                 : UNDEFINED;
-            each(list, function (options, _) {
+            each(list, function (options) {
                 // 命名空间不匹配
-                if (!matchNamespace(ns, options)
+                if (!matchNamespace(namespace.ns, options)
                     // 在 fire 过程中被移除了
                     || !has(list, options)
                     // 传了 filter，则用 filter 判断是否过滤此 options
-                    || (filter && !filter(type, args, options))) {
+                    || (filter && !filter(namespace, args, options))) {
                     return;
                 }
                 // 为 event 对象加上当前正在处理的 listener
@@ -1058,7 +1076,7 @@ class Emitter {
                 options.num = options.num ? (options.num + 1) : 1;
                 // 注册的 listener 可以指定最大执行次数
                 if (options.num === options.max) {
-                    instance.off(type, options.fn);
+                    instance.off(namespace.key, options.fn);
                 }
                 // 如果没有返回 false，而是调用了 event.stop 也算是返回 false
                 if (event) {
@@ -1087,7 +1105,7 @@ class Emitter {
             ? { fn: listener }
             : listener;
         if (object(options) && func(options.fn)) {
-            const { name, ns } = parseNamespace(instance.ns, type);
+            const { name, ns } = instance.parse(type);
             options.ns = ns;
             push(listeners[name] || (listeners[name] = []), options);
         }
@@ -1101,7 +1119,7 @@ class Emitter {
     off(type, listener) {
         const instance = this, { listeners } = instance;
         if (type) {
-            const { name, ns } = parseNamespace(instance.ns, type), matchListener = createMatchListener(listener), each$1 = function (list, name) {
+            const { name, ns } = instance.parse(type), matchListener = createMatchListener(listener), each$1 = function (list, name) {
                 each(list, function (options, index) {
                     if (matchListener(options) && matchNamespace(ns, options)) {
                         list.splice(index, 1);
@@ -1132,7 +1150,7 @@ class Emitter {
      * @param listener
      */
     has(type, listener) {
-        let instance = this, { listeners } = instance, { name, ns } = parseNamespace(instance.ns, type), result = TRUE, matchListener = createMatchListener(listener), each$1 = function (list) {
+        let instance = this, { listeners } = instance, { name, ns } = instance.parse(type), result = TRUE, matchListener = createMatchListener(listener), each$1 = function (list) {
             each(list, function (options) {
                 if (matchListener(options) && matchNamespace(ns, options)) {
                     return result = FALSE;
@@ -1150,28 +1168,28 @@ class Emitter {
         }
         return !result;
     }
-}
-/**
- * 把事件类型解析成命名空间格式
- *
- * @param ns
- * @param type
- */
-function parseNamespace(ns, type) {
-    const result = {
-        name: type,
-        ns: EMPTY_STRING,
-    };
-    if (ns) {
-        const index = indexOf$1(type, '.');
-        if (index >= 0) {
-            result.name = slice(type, 0, index);
-            result.ns = slice(type, index + 1);
+    /**
+     * 把事件类型解析成命名空间格式
+     *
+     * @param type
+     */
+    parse(type) {
+        const result = {
+            key: type,
+            name: type,
+            ns: EMPTY_STRING,
+        };
+        if (this.ns) {
+            const index = indexOf$1(type, RAW_DOT);
+            if (index >= 0) {
+                result.name = slice(type, 0, index);
+                result.ns = slice(type, index + 1);
+            }
         }
+        return result;
     }
-    return result;
 }
-function matchTrue(options) {
+function matchTrue() {
     return TRUE;
 }
 /**
@@ -1295,23 +1313,6 @@ class NextTask {
         }
     }
 }
-
-const SLOT_DATA_PREFIX = '$slot_';
-const HINT_BOOLEAN = 3;
-const DIRECTIVE_MODEL = 'model';
-const DIRECTIVE_EVENT = 'event';
-const DIRECTIVE_BINDING = 'binding';
-const DIRECTIVE_CUSTOM = 'o';
-const MODEL_PROP_DEFAULT = 'value';
-const NAMESPACE_HOOK = '.hook';
-const HOOK_BEFORE_CREATE = 'beforeCreate';
-const HOOK_AFTER_CREATE = 'afterCreate';
-const HOOK_BEFORE_MOUNT = 'beforeMount';
-const HOOK_AFTER_MOUNT = 'afterMount';
-const HOOK_BEFORE_UPDATE = 'beforeUpdate';
-const HOOK_AFTER_UPDATE = 'afterUpdate';
-const HOOK_BEFORE_DESTROY = 'beforeDestroy';
-const HOOK_AFTER_DESTROY = 'afterDestroy';
 
 let guid = 0;
 function guid$1 () {
@@ -2016,8 +2017,8 @@ function render(context, template, filters, partials, directives, transitions) {
             ns: DIRECTIVE_BINDING,
             name,
             key,
+            modifier: holder.keypath,
             hooks: directives[DIRECTIVE_BINDING],
-            binding: holder.keypath,
             hint,
         });
         return holder.value;
@@ -2027,28 +2028,30 @@ function render(context, template, filters, partials, directives, transitions) {
             name: EMPTY_STRING,
             key: DIRECTIVE_MODEL,
             value: holder.value,
-            binding: holder.keypath,
+            modifier: holder.keypath,
             hooks: directives[DIRECTIVE_MODEL]
         });
-    }, renderEventMethodVnode = function (name, key, value, method, args) {
+    }, renderEventMethodVnode = function (name, key, modifier, value, method, args) {
         setPair($vnode, KEY_DIRECTIVES, key, {
             ns: DIRECTIVE_EVENT,
             name,
             key,
             value,
+            modifier,
             hooks: directives[DIRECTIVE_EVENT],
-            handler: createMethodListener(method, args, $stack)
+            handler: createMethodListener(method, args, $stack),
         });
-    }, renderEventNameVnode = function (name, key, value, event) {
+    }, renderEventNameVnode = function (name, key, modifier, value, event) {
         setPair($vnode, KEY_DIRECTIVES, key, {
             ns: DIRECTIVE_EVENT,
             name,
             key,
             value,
+            modifier,
             hooks: directives[DIRECTIVE_EVENT],
-            handler: createEventListener(event)
+            handler: createEventListener(event),
         });
-    }, renderDirectiveVnode = function (name, key, value, method, args, getter) {
+    }, renderDirectiveVnode = function (name, key, modifier, value, method, args, getter) {
         const hooks = directives[name];
         setPair($vnode, KEY_DIRECTIVES, key, {
             ns: DIRECTIVE_CUSTOM,
@@ -2056,6 +2059,7 @@ function render(context, template, filters, partials, directives, transitions) {
             key,
             value,
             hooks,
+            modifier,
             getter: getter ? createGetter(getter, $stack) : UNDEFINED,
             handler: method ? createMethodListener(method, args, $stack) : UNDEFINED,
         });
@@ -2074,8 +2078,8 @@ function render(context, template, filters, partials, directives, transitions) {
                         ns: DIRECTIVE_BINDING,
                         name: EMPTY_STRING,
                         key,
+                        modifier: join$1(keypath, RAW_WILDCARD),
                         hooks: directives[DIRECTIVE_BINDING],
-                        binding: join$1(keypath, RAW_WILDCARD),
                     });
                 }
             }
@@ -2118,10 +2122,10 @@ function render(context, template, filters, partials, directives, transitions) {
         return holder ? result : result.value;
     }, renderExpressionMemberKeypath = function (identifier, runtimeKeypath) {
         unshift(runtimeKeypath, identifier);
-        return join(runtimeKeypath, separator);
+        return join(runtimeKeypath, RAW_DOT);
     }, renderExpressionMemberLiteral = function (value, staticKeypath, runtimeKeypath, holder$1) {
         if (isDef(runtimeKeypath)) {
-            staticKeypath = join(runtimeKeypath, separator);
+            staticKeypath = join(runtimeKeypath, RAW_DOT);
         }
         const match = get(value, staticKeypath);
         holder.keypath = UNDEFINED;
@@ -3209,7 +3213,7 @@ function debounce (fn, delay, immediate) {
 }
 
 function bind(node, directive, vnode) {
-    let { name, handler } = directive, { lazy } = vnode;
+    let { key, name, modifier, handler } = directive, { lazy } = vnode;
     if (!handler) {
         return;
     }
@@ -3225,16 +3229,32 @@ function bind(node, directive, vnode) {
             name === EVENT_CLICK || name === EVENT_TAP);
         }
     }
+    let element;
     if (vnode.isComponent) {
-        node.on(name, handler);
-        vnode.data[directive.key] = function () {
-            node.off(name, handler);
-        };
+        const component = node;
+        if (modifier === MODIFER_NATIVE) {
+            element = component.$el;
+            on(element, name, handler);
+            vnode.data[key] = function () {
+                off(element, name, handler);
+            };
+        }
+        else {
+            // 还原命名空间
+            if (modifier) {
+                name += RAW_DOT + modifier;
+            }
+            component.on(name, handler);
+            vnode.data[key] = function () {
+                component.off(name, handler);
+            };
+        }
     }
     else {
-        on(node, name, handler);
-        vnode.data[directive.key] = function () {
-            off(node, name, handler);
+        element = node;
+        on(element, name, handler);
+        vnode.data[key] = function () {
+            off(element, name, handler);
         };
     }
 }
@@ -3321,13 +3341,10 @@ const inputControl = {
         }
     },
     name: RAW_VALUE
-}, inputTypes = {
-    radio: radioControl,
-    checkbox: checkboxControl,
 };
 const once = TRUE;
 function bind$1(node, directive, vnode) {
-    let { context, lazy, isComponent } = vnode, dataBinding = directive.binding, lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[EMPTY_STRING]), set, unbind;
+    let { context, lazy, isComponent } = vnode, dataBinding = directive.modifier, lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[EMPTY_STRING]), set, unbind;
     if (isComponent) {
         let component = node, viewBinding = component.$model, viewSyncing = debounceIfNeeded(function (newValue) {
             context.set(dataBinding, newValue);
@@ -3350,8 +3367,11 @@ function bind$1(node, directive, vnode) {
         eventName = EVENT_CHANGE;
         if (control === inputControl) {
             const type = node.type;
-            if (inputTypes[type]) {
-                control = inputTypes[type];
+            if (type === 'radio') {
+                control = radioControl;
+            }
+            else if (type === 'checkbox') {
+                control = checkboxControl;
             }
             // 如果是输入框，则切换成 model 事件
             // model 事件是个 yox-dom 实现的特殊事件
@@ -3396,7 +3416,7 @@ const once$1 = TRUE;
 function bind$2(node, directive, vnode) {
     // binding 可能是模糊匹配
     // 比如延展属性 {{...obj}}，这里 binding 会是 `obj.*`
-    let binding = directive.binding, 
+    let binding = directive.modifier, 
     // 提前判断好是否是模糊匹配，避免 watcher 频繁执行判断逻辑
     isFuzzy$1 = isFuzzy(binding), watcher = function (newValue, _, keypath) {
         if (watcher) {
@@ -3693,13 +3713,15 @@ class Yox {
      * 监听事件，支持链式调用
      */
     on(type, listener) {
-        return addEvents(this, type, listener);
+        addEvents(this, type, listener);
+        return this;
     }
     /**
      * 监听一次事件，支持链式调用
      */
     once(type, listener) {
-        return addEvents(this, type, listener, TRUE);
+        addEvents(this, type, listener, TRUE);
+        return this;
     }
     /**
      * 取消监听事件，支持链式调用
@@ -3715,7 +3737,7 @@ class Yox {
         // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
         // 内部为了保持格式统一
         // 需要转成 Event，这样还能知道 target 是哪个组件
-        let instance = this, event = type instanceof CustomEvent ? type : new CustomEvent(type), args = [event], isComplete;
+        let instance = this, { $emitter, $parent, $children } = instance, event = type instanceof CustomEvent ? type : new CustomEvent(type), namespace = event.ns || (event.ns = $emitter.parse(event.type)), args = [event], isComplete;
         // 告诉外部是谁发出的事件
         if (!event.target) {
             event.target = instance;
@@ -3727,9 +3749,8 @@ class Yox {
         else if (data === TRUE) {
             downward = TRUE;
         }
-        isComplete = instance.$emitter.fire(event.type, args);
+        isComplete = $emitter.fire(namespace, args);
         if (isComplete) {
-            const { $parent, $children } = instance;
             if (downward) {
                 if ($children) {
                     event.phase = CustomEvent.PHASE_DOWNWARD;
@@ -4073,7 +4094,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.84";
+Yox.version = "1.0.0-alpha.85";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
@@ -4123,7 +4144,6 @@ function addEvents(instance, type, listener, once) {
             addEvent(instance, key, value, once);
         });
     }
-    return instance;
 }
 function loadComponent(registry, name, callback) {
     if (registry && registry[name]) {

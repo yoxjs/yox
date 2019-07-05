@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.84
+ * yox.js v1.0.0-alpha.85
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -17,12 +17,13 @@
   var FALSE = false;
   var NULL = null;
   var UNDEFINED = void 0;
+  var MINUS_ONE = -1;
   var RAW_UNDEFINED = 'undefined';
   var RAW_VALUE = 'value';
   var RAW_LENGTH = 'length';
   var RAW_FUNCTION = 'function';
   var RAW_WILDCARD = '*';
-  var RAW_MINUS_ONE = -1;
+  var RAW_DOT = '.';
   /**
    * Single instance for window in browser
    */
@@ -199,7 +200,7 @@
       };
       CustomEvent.PHASE_CURRENT = 0;
       CustomEvent.PHASE_UPWARD = 1;
-      CustomEvent.PHASE_DOWNWARD = RAW_MINUS_ONE;
+      CustomEvent.PHASE_DOWNWARD = MINUS_ONE;
       return CustomEvent;
   }());
 
@@ -215,14 +216,14 @@
       if (length) {
           if (reversed) {
               for (var i = length - 1; i >= 0; i--) {
-                  if (callback(array[i], i, length) === FALSE) {
+                  if (callback(array[i], i) === FALSE) {
                       break;
                   }
               }
           }
           else {
               for (var i = 0; i < length; i++) {
-                  if (callback(array[i], i, length) === FALSE) {
+                  if (callback(array[i], i) === FALSE) {
                       break;
                   }
               }
@@ -279,7 +280,7 @@
    * @return 如果未找到，返回 -1
    */
   function indexOf(array, target, strict) {
-      var result = RAW_MINUS_ONE;
+      var result = MINUS_ONE;
       each(array, function (item, index) {
           if (strict === FALSE ? item == target : item === target) {
               result = index;
@@ -577,7 +578,6 @@
   });
 
   var dotPattern = /\./g, asteriskPattern = /\*/g, doubleAsteriskPattern = /\*\*/g, splitCache = {}, patternCache = {};
-  var separator = '.';
   /**
    * 判断 keypath 是否以 prefix 开头，如果是，返回匹配上的前缀长度，否则返回 -1
    *
@@ -589,10 +589,10 @@
       if (keypath === prefix) {
           return prefix.length;
       }
-      prefix += separator;
+      prefix += RAW_DOT;
       return startsWith(keypath, prefix)
           ? prefix.length
-          : RAW_MINUS_ONE;
+          : MINUS_ONE;
   }
   /**
    * 遍历 keypath 的每个部分
@@ -605,7 +605,7 @@
       // 而 splitCache.toString 是个函数
       var list = isDef(splitCache[keypath])
           ? splitCache[keypath]
-          : (splitCache[keypath] = keypath.split(separator));
+          : (splitCache[keypath] = keypath.split(RAW_DOT));
       for (var i = 0, lastIndex = list.length - 1; i <= lastIndex; i++) {
           if (callback(list[i], i === lastIndex) === FALSE) {
               break;
@@ -620,7 +620,7 @@
    */
   function join$1(keypath1, keypath2) {
       return keypath1 && keypath2
-          ? keypath1 + separator + keypath2
+          ? keypath1 + RAW_DOT + keypath2
           : keypath1 || keypath2;
   }
   /**
@@ -989,7 +989,7 @@
        * @param data 事件数据
        */
       Emitter.prototype.fire = function (type, args, filter) {
-          var instance = this, _a = parseNamespace(instance.ns, type), name = _a.name, ns = _a.ns, list = instance.listeners[name], isComplete = TRUE;
+          var instance = this, namespace = string(type) ? instance.parse(type) : type, list = instance.listeners[namespace.name], isComplete = TRUE;
           if (list) {
               // 避免遍历过程中，数组发生变化，比如增删了
               list = copy(list);
@@ -999,13 +999,13 @@
               var event_1 = args && args[0] instanceof CustomEvent
                   ? args[0]
                   : UNDEFINED;
-              each(list, function (options, _) {
+              each(list, function (options) {
                   // 命名空间不匹配
-                  if (!matchNamespace(ns, options)
+                  if (!matchNamespace(namespace.ns, options)
                       // 在 fire 过程中被移除了
                       || !has(list, options)
                       // 传了 filter，则用 filter 判断是否过滤此 options
-                      || (filter && !filter(type, args, options))) {
+                      || (filter && !filter(namespace, args, options))) {
                       return;
                   }
                   // 为 event 对象加上当前正在处理的 listener
@@ -1025,7 +1025,7 @@
                   options.num = options.num ? (options.num + 1) : 1;
                   // 注册的 listener 可以指定最大执行次数
                   if (options.num === options.max) {
-                      instance.off(type, options.fn);
+                      instance.off(namespace.key, options.fn);
                   }
                   // 如果没有返回 false，而是调用了 event.stop 也算是返回 false
                   if (event_1) {
@@ -1054,7 +1054,7 @@
               ? { fn: listener }
               : listener;
           if (object(options) && func(options.fn)) {
-              var _a = parseNamespace(instance.ns, type), name = _a.name, ns = _a.ns;
+              var _a = instance.parse(type), name = _a.name, ns = _a.ns;
               options.ns = ns;
               push(listeners[name] || (listeners[name] = []), options);
           }
@@ -1068,7 +1068,7 @@
       Emitter.prototype.off = function (type, listener) {
           var instance = this, listeners = instance.listeners;
           if (type) {
-              var _a = parseNamespace(instance.ns, type), name = _a.name, ns_1 = _a.ns, matchListener_1 = createMatchListener(listener), each$1 = function (list, name) {
+              var _a = instance.parse(type), name = _a.name, ns_1 = _a.ns, matchListener_1 = createMatchListener(listener), each$1 = function (list, name) {
                   each(list, function (options, index) {
                       if (matchListener_1(options) && matchNamespace(ns_1, options)) {
                           list.splice(index, 1);
@@ -1099,7 +1099,7 @@
        * @param listener
        */
       Emitter.prototype.has = function (type, listener) {
-          var instance = this, listeners = instance.listeners, _a = parseNamespace(instance.ns, type), name = _a.name, ns = _a.ns, result = TRUE, matchListener = createMatchListener(listener), each$1 = function (list) {
+          var instance = this, listeners = instance.listeners, _a = instance.parse(type), name = _a.name, ns = _a.ns, result = TRUE, matchListener = createMatchListener(listener), each$1 = function (list) {
               each(list, function (options) {
                   if (matchListener(options) && matchNamespace(ns, options)) {
                       return result = FALSE;
@@ -1117,29 +1117,29 @@
           }
           return !result;
       };
+      /**
+       * 把事件类型解析成命名空间格式
+       *
+       * @param type
+       */
+      Emitter.prototype.parse = function (type) {
+          var result = {
+              key: type,
+              name: type,
+              ns: EMPTY_STRING
+          };
+          if (this.ns) {
+              var index = indexOf$1(type, RAW_DOT);
+              if (index >= 0) {
+                  result.name = slice(type, 0, index);
+                  result.ns = slice(type, index + 1);
+              }
+          }
+          return result;
+      };
       return Emitter;
   }());
-  /**
-   * 把事件类型解析成命名空间格式
-   *
-   * @param ns
-   * @param type
-   */
-  function parseNamespace(ns, type) {
-      var result = {
-          name: type,
-          ns: EMPTY_STRING
-      };
-      if (ns) {
-          var index = indexOf$1(type, '.');
-          if (index >= 0) {
-              result.name = slice(type, 0, index);
-              result.ns = slice(type, index + 1);
-          }
-      }
-      return result;
-  }
-  function matchTrue(options) {
+  function matchTrue() {
       return TRUE;
   }
   /**
@@ -2096,13 +2096,15 @@
        * 监听事件，支持链式调用
        */
       Yox.prototype.on = function (type, listener) {
-          return addEvents(this, type, listener);
+          addEvents(this, type, listener);
+          return this;
       };
       /**
        * 监听一次事件，支持链式调用
        */
       Yox.prototype.once = function (type, listener) {
-          return addEvents(this, type, listener, TRUE);
+          addEvents(this, type, listener, TRUE);
+          return this;
       };
       /**
        * 取消监听事件，支持链式调用
@@ -2118,7 +2120,7 @@
           // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
           // 内部为了保持格式统一
           // 需要转成 Event，这样还能知道 target 是哪个组件
-          var instance = this, event = type instanceof CustomEvent ? type : new CustomEvent(type), args = [event], isComplete;
+          var instance = this, $emitter = instance.$emitter, $parent = instance.$parent, $children = instance.$children, event = type instanceof CustomEvent ? type : new CustomEvent(type), namespace = event.ns || (event.ns = $emitter.parse(event.type)), args = [event], isComplete;
           // 告诉外部是谁发出的事件
           if (!event.target) {
               event.target = instance;
@@ -2130,9 +2132,8 @@
           else if (data === TRUE) {
               downward = TRUE;
           }
-          isComplete = instance.$emitter.fire(event.type, args);
+          isComplete = $emitter.fire(namespace, args);
           if (isComplete) {
-              var $parent = instance.$parent, $children = instance.$children;
               if (downward) {
                   if ($children) {
                       event.phase = CustomEvent.PHASE_DOWNWARD;
@@ -2340,7 +2341,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.84";
+      Yox.version = "1.0.0-alpha.85";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
@@ -2379,7 +2380,6 @@
               addEvent(instance, key, value, once);
           });
       }
-      return instance;
   }
 
   return Yox;

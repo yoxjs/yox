@@ -682,7 +682,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
     // 则命名空间不能是 native，因为 native 有特殊用处
     if (process.env.NODE_ENV === 'development') {
       if (namespace.ns === MODIFER_NATIVE) {
-        logger.error(`${MODIFER_NATIVE} can't be used in "${event.type}".`)
+        logger.error(`"${event.type}": namespace "${MODIFER_NATIVE}" can't be used externally.`)
       }
     }
 

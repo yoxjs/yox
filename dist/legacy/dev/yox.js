@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.84
+ * yox.js v1.0.0-alpha.85
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -10,6 +10,37 @@
   (global = global || self, global.Yox = factory());
 }(this, function () { 'use strict';
 
+  var SYNTAX_IF = '#if';
+  var SYNTAX_ELSE = 'else';
+  var SYNTAX_ELSE_IF = 'else if';
+  var SYNTAX_EACH = '#each';
+  var SYNTAX_PARTIAL = '#partial';
+  var SYNTAX_IMPORT = '>';
+  var SYNTAX_SPREAD = '...';
+  var SYNTAX_COMMENT = /^!\s/;
+  var SLOT_DATA_PREFIX = '$slot_';
+  var SLOT_NAME_DEFAULT = 'children';
+  var HINT_STRING = 1;
+  var HINT_NUMBER = 2;
+  var HINT_BOOLEAN = 3;
+  var DIRECTIVE_ON = 'on';
+  var DIRECTIVE_LAZY = 'lazy';
+  var DIRECTIVE_MODEL = 'model';
+  var DIRECTIVE_EVENT = 'event';
+  var DIRECTIVE_BINDING = 'binding';
+  var DIRECTIVE_CUSTOM = 'o';
+  var MODIFER_NATIVE = 'native';
+  var MODEL_PROP_DEFAULT = 'value';
+  var NAMESPACE_HOOK = '.hook';
+  var HOOK_BEFORE_CREATE = 'beforeCreate';
+  var HOOK_AFTER_CREATE = 'afterCreate';
+  var HOOK_BEFORE_MOUNT = 'beforeMount';
+  var HOOK_AFTER_MOUNT = 'afterMount';
+  var HOOK_BEFORE_UPDATE = 'beforeUpdate';
+  var HOOK_AFTER_UPDATE = 'afterUpdate';
+  var HOOK_BEFORE_DESTROY = 'beforeDestroy';
+  var HOOK_AFTER_DESTROY = 'afterDestroy';
+
   /**
    * 为了压缩，定义的常量
    */
@@ -17,6 +48,7 @@
   var FALSE = false;
   var NULL = null;
   var UNDEFINED = void 0;
+  var MINUS_ONE = -1;
   var RAW_TRUE = 'true';
   var RAW_FALSE = 'false';
   var RAW_NULL = 'null';
@@ -36,9 +68,9 @@
   var RAW_FUNCTION = 'function';
   var RAW_TEMPLATE = 'template';
   var RAW_WILDCARD = '*';
+  var RAW_DOT = '.';
   var KEYPATH_PARENT = '..';
   var KEYPATH_CURRENT = RAW_THIS;
-  var RAW_MINUS_ONE = -1;
   /**
    * Single instance for window in browser
    */
@@ -58,7 +90,7 @@
    *
    * 这样只需 on-tap="handler" 就可以完美兼容各端
    *
-   * 框架未实现此事件，通过 Yox.dom.specialEvents 提供给外部扩展
+   * 框架未实现此事件，通过 Yox.dom.addSpecialEvent 提供给外部扩展
    *
    */
   var EVENT_TAP = 'tap';
@@ -250,7 +282,7 @@
       };
       CustomEvent.PHASE_CURRENT = 0;
       CustomEvent.PHASE_UPWARD = 1;
-      CustomEvent.PHASE_DOWNWARD = RAW_MINUS_ONE;
+      CustomEvent.PHASE_DOWNWARD = MINUS_ONE;
       return CustomEvent;
   }());
 
@@ -266,14 +298,14 @@
       if (length) {
           if (reversed) {
               for (var i = length - 1; i >= 0; i--) {
-                  if (callback(array[i], i, length) === FALSE) {
+                  if (callback(array[i], i) === FALSE) {
                       break;
                   }
               }
           }
           else {
               for (var i = 0; i < length; i++) {
-                  if (callback(array[i], i, length) === FALSE) {
+                  if (callback(array[i], i) === FALSE) {
                       break;
                   }
               }
@@ -330,7 +362,7 @@
    * @return 如果未找到，返回 -1
    */
   function indexOf(array, target, strict) {
-      var result = RAW_MINUS_ONE;
+      var result = MINUS_ONE;
       each(array, function (item, index) {
           if (strict === FALSE ? item == target : item === target) {
               result = index;
@@ -628,7 +660,6 @@
   });
 
   var dotPattern = /\./g, asteriskPattern = /\*/g, doubleAsteriskPattern = /\*\*/g, splitCache = {}, patternCache = {};
-  var separator = '.';
   /**
    * 判断 keypath 是否以 prefix 开头，如果是，返回匹配上的前缀长度，否则返回 -1
    *
@@ -640,10 +671,10 @@
       if (keypath === prefix) {
           return prefix.length;
       }
-      prefix += separator;
+      prefix += RAW_DOT;
       return startsWith(keypath, prefix)
           ? prefix.length
-          : RAW_MINUS_ONE;
+          : MINUS_ONE;
   }
   /**
    * 遍历 keypath 的每个部分
@@ -656,7 +687,7 @@
       // 而 splitCache.toString 是个函数
       var list = isDef(splitCache[keypath])
           ? splitCache[keypath]
-          : (splitCache[keypath] = keypath.split(separator));
+          : (splitCache[keypath] = keypath.split(RAW_DOT));
       for (var i = 0, lastIndex = list.length - 1; i <= lastIndex; i++) {
           if (callback(list[i], i === lastIndex) === FALSE) {
               break;
@@ -671,7 +702,7 @@
    */
   function join$1(keypath1, keypath2) {
       return keypath1 && keypath2
-          ? keypath1 + separator + keypath2
+          ? keypath1 + RAW_DOT + keypath2
           : keypath1 || keypath2;
   }
   /**
@@ -1040,7 +1071,7 @@
        * @param data 事件数据
        */
       Emitter.prototype.fire = function (type, args, filter) {
-          var instance = this, _a = parseNamespace(instance.ns, type), name = _a.name, ns = _a.ns, list = instance.listeners[name], isComplete = TRUE;
+          var instance = this, namespace = string(type) ? instance.parse(type) : type, list = instance.listeners[namespace.name], isComplete = TRUE;
           if (list) {
               // 避免遍历过程中，数组发生变化，比如增删了
               list = copy(list);
@@ -1050,13 +1081,13 @@
               var event_1 = args && args[0] instanceof CustomEvent
                   ? args[0]
                   : UNDEFINED;
-              each(list, function (options, _) {
+              each(list, function (options) {
                   // 命名空间不匹配
-                  if (!matchNamespace(ns, options)
+                  if (!matchNamespace(namespace.ns, options)
                       // 在 fire 过程中被移除了
                       || !has(list, options)
                       // 传了 filter，则用 filter 判断是否过滤此 options
-                      || (filter && !filter(type, args, options))) {
+                      || (filter && !filter(namespace, args, options))) {
                       return;
                   }
                   // 为 event 对象加上当前正在处理的 listener
@@ -1076,7 +1107,7 @@
                   options.num = options.num ? (options.num + 1) : 1;
                   // 注册的 listener 可以指定最大执行次数
                   if (options.num === options.max) {
-                      instance.off(type, options.fn);
+                      instance.off(namespace.key, options.fn);
                   }
                   // 如果没有返回 false，而是调用了 event.stop 也算是返回 false
                   if (event_1) {
@@ -1105,7 +1136,7 @@
               ? { fn: listener }
               : listener;
           if (object(options) && func(options.fn)) {
-              var _a = parseNamespace(instance.ns, type), name = _a.name, ns = _a.ns;
+              var _a = instance.parse(type), name = _a.name, ns = _a.ns;
               options.ns = ns;
               push(listeners[name] || (listeners[name] = []), options);
           }
@@ -1122,7 +1153,7 @@
       Emitter.prototype.off = function (type, listener) {
           var instance = this, listeners = instance.listeners;
           if (type) {
-              var _a = parseNamespace(instance.ns, type), name = _a.name, ns_1 = _a.ns, matchListener_1 = createMatchListener(listener), each$1 = function (list, name) {
+              var _a = instance.parse(type), name = _a.name, ns_1 = _a.ns, matchListener_1 = createMatchListener(listener), each$1 = function (list, name) {
                   each(list, function (options, index) {
                       if (matchListener_1(options) && matchNamespace(ns_1, options)) {
                           list.splice(index, 1);
@@ -1160,7 +1191,7 @@
        * @param listener
        */
       Emitter.prototype.has = function (type, listener) {
-          var instance = this, listeners = instance.listeners, _a = parseNamespace(instance.ns, type), name = _a.name, ns = _a.ns, result = TRUE, matchListener = createMatchListener(listener), each$1 = function (list) {
+          var instance = this, listeners = instance.listeners, _a = instance.parse(type), name = _a.name, ns = _a.ns, result = TRUE, matchListener = createMatchListener(listener), each$1 = function (list) {
               each(list, function (options) {
                   if (matchListener(options) && matchNamespace(ns, options)) {
                       return result = FALSE;
@@ -1178,29 +1209,29 @@
           }
           return !result;
       };
+      /**
+       * 把事件类型解析成命名空间格式
+       *
+       * @param type
+       */
+      Emitter.prototype.parse = function (type) {
+          var result = {
+              key: type,
+              name: type,
+              ns: EMPTY_STRING
+          };
+          if (this.ns) {
+              var index = indexOf$1(type, RAW_DOT);
+              if (index >= 0) {
+                  result.name = slice(type, 0, index);
+                  result.ns = slice(type, index + 1);
+              }
+          }
+          return result;
+      };
       return Emitter;
   }());
-  /**
-   * 把事件类型解析成命名空间格式
-   *
-   * @param ns
-   * @param type
-   */
-  function parseNamespace(ns, type) {
-      var result = {
-          name: type,
-          ns: EMPTY_STRING
-      };
-      if (ns) {
-          var index = indexOf$1(type, '.');
-          if (index >= 0) {
-              result.name = slice(type, 0, index);
-              result.ns = slice(type, index + 1);
-          }
-      }
-      return result;
-  }
-  function matchTrue(options) {
+  function matchTrue() {
       return TRUE;
   }
   /**
@@ -1325,36 +1356,6 @@
       };
       return NextTask;
   }());
-
-  var SYNTAX_IF = '#if';
-  var SYNTAX_ELSE = 'else';
-  var SYNTAX_ELSE_IF = 'else if';
-  var SYNTAX_EACH = '#each';
-  var SYNTAX_PARTIAL = '#partial';
-  var SYNTAX_IMPORT = '>';
-  var SYNTAX_SPREAD = '...';
-  var SYNTAX_COMMENT = /^!\s/;
-  var SLOT_DATA_PREFIX = '$slot_';
-  var SLOT_NAME_DEFAULT = 'children';
-  var HINT_STRING = 1;
-  var HINT_NUMBER = 2;
-  var HINT_BOOLEAN = 3;
-  var DIRECTIVE_ON = 'on';
-  var DIRECTIVE_LAZY = 'lazy';
-  var DIRECTIVE_MODEL = 'model';
-  var DIRECTIVE_EVENT = 'event';
-  var DIRECTIVE_BINDING = 'binding';
-  var DIRECTIVE_CUSTOM = 'o';
-  var MODEL_PROP_DEFAULT = 'value';
-  var NAMESPACE_HOOK = '.hook';
-  var HOOK_BEFORE_CREATE = 'beforeCreate';
-  var HOOK_AFTER_CREATE = 'afterCreate';
-  var HOOK_BEFORE_MOUNT = 'beforeMount';
-  var HOOK_AFTER_MOUNT = 'afterMount';
-  var HOOK_BEFORE_UPDATE = 'beforeUpdate';
-  var HOOK_AFTER_UPDATE = 'afterUpdate';
-  var HOOK_BEFORE_DESTROY = 'beforeDestroy';
-  var HOOK_AFTER_DESTROY = 'afterDestroy';
 
   var guid = 0;
   function guid$1 () {
@@ -2001,15 +2002,13 @@
           name: name
       };
   }
-  function createDirective(ns, name, value, expr, children) {
+  function createDirective(name, ns, modifier) {
       return {
           type: DIRECTIVE,
           ns: ns,
           name: name,
           key: join$1(ns, name),
-          value: value,
-          expr: expr,
-          children: children
+          modifier: modifier
       };
   }
   function createProperty(name, hint, value, expr, children) {
@@ -2401,7 +2400,7 @@
               // a.b.c
               if (isLiteral_1) {
                   // 转成 Identifier
-                  name = join(staticNodes_1, separator);
+                  name = join(staticNodes_1, RAW_DOT);
                   firstNode = createIdentifierInner(name, name, lookup, offset);
               }
               // a[b]
@@ -2413,7 +2412,7 @@
               // "xxx".length
               // format().a.b
               if (isLiteral_1) {
-                  firstNode = createMemberInner(raw, firstNode, join(staticNodes_1, separator), UNDEFINED, lookup, offset);
+                  firstNode = createMemberInner(raw, firstNode, join(staticNodes_1, RAW_DOT), UNDEFINED, lookup, offset);
               }
               // "xxx"[length]
               // format()[a]
@@ -2467,7 +2466,7 @@
   var Parser = /** @class */ (function () {
       function Parser(content) {
           var instance = this, length = content.length;
-          instance.index = RAW_MINUS_ONE;
+          instance.index = MINUS_ONE;
           instance.end = length;
           instance.code = CODE_EOF;
           instance.content = content;
@@ -2485,7 +2484,7 @@
           }
           else {
               instance.code = CODE_EOF;
-              instance.index = index < 0 ? RAW_MINUS_ONE : end;
+              instance.index = index < 0 ? MINUS_ONE : end;
           }
       };
       /**
@@ -2588,12 +2587,12 @@
                       var value = node.value;
                       if (number(value)) {
                           // 类似 ' -1 ' 这样的右侧有空格，需要撤回来
-                          instance.skip(RAW_MINUS_ONE);
+                          instance.skip(MINUS_ONE);
                           return createLiteral(-value, instance.pick(index));
                       }
                   }
                   // 类似 ' -a ' 这样的右侧有空格，需要撤回来
-                  instance.skip(RAW_MINUS_ONE);
+                  instance.skip(MINUS_ONE);
                   return createUnary(operator, node, instance.pick(index));
               }
               {
@@ -3082,7 +3081,7 @@
               }
               if (test && yes && no) {
                   // 类似 ' a ? 1 : 0 ' 这样的右侧有空格，需要撤回来
-                  instance.skip(RAW_MINUS_ONE);
+                  instance.skip(MINUS_ONE);
                   test = createTernary(test, yes, no, instance.pick(index));
               }
               else {
@@ -3388,7 +3387,7 @@
           // 类似 <!-- xx {{name}} yy {{age}} zz --> 这样的注释里包含插值
           // 按照目前的解析逻辑，是根据定界符进行模板分拆
           // 一旦出现插值，children 长度必然大于 1
-          var openIndex = RAW_MINUS_ONE, openText = EMPTY_STRING, closeIndex = RAW_MINUS_ONE, closeText = EMPTY_STRING;
+          var openIndex = MINUS_ONE, openText = EMPTY_STRING, closeIndex = MINUS_ONE, closeText = EMPTY_STRING;
           each(children, function (child, index) {
               if (child.type === TEXT) {
                   if (closeIndex >= 0) {
@@ -3411,7 +3410,7 @@
                               closeIndex--;
                           }
                           children.splice(openIndex, closeIndex - openIndex + 1);
-                          openIndex = closeIndex = RAW_MINUS_ONE;
+                          openIndex = closeIndex = MINUS_ONE;
                       }
                   }
                   else {
@@ -3496,6 +3495,7 @@
           // lazy 的值必须是大于 0 的数字
           isLazy = directive.ns === DIRECTIVE_LAZY, 
           // 校验事件名称
+          // 且命名空间不能用 native
           isEvent = directive.ns === DIRECTIVE_EVENT, 
           // 自定义指令运行不合法的表达式
           isCustom = directive.ns === DIRECTIVE_CUSTOM, 
@@ -3524,13 +3524,21 @@
                   // 上面检测过方法调用，接下来事件指令只需要判断是否以下两种格式：
                   // on-click="name" 或 on-click="name.namespace"
                   else if (isEvent) {
-                      if (!eventPattern.test(raw) && !eventNamespacePattern.test(raw)) {
-                          fatal$1('事件转换名称只能是 [name] 或 [name.namespace] 格式');
+                      if (eventPattern.test(raw) || eventNamespacePattern.test(raw)) {
+                          // native 有特殊用处，不能给业务层用
+                          if (eventNamespacePattern.test(raw)
+                              && raw.split(RAW_DOT)[1] === MODIFER_NATIVE) {
+                              fatal$1("\u4E8B\u4EF6\u8F6C\u6362\u540D\u79F0\u7684\u547D\u540D\u7A7A\u95F4\u4E0D\u80FD\u4F7F\u7528 " + MODIFER_NATIVE);
+                          }
+                          // <Button on-click="click"> 这种写法没有意义
+                          if (currentElement
+                              && currentElement.isComponent
+                              && directive.name === raw) {
+                              fatal$1('转换组件事件的名称不能相同');
+                          }
                       }
-                      else if (currentElement
-                          && currentElement.isComponent
-                          && directive.name === raw) {
-                          fatal$1('转换组件事件的名称不能相同');
+                      else {
+                          fatal$1('事件转换名称只能是 [name] 或 [name.namespace] 格式');
                       }
                   }
                   if (isModel && expr.type !== IDENTIFIER) {
@@ -3852,7 +3860,7 @@
                       }
                       var node = void 0, name = match[1];
                       if (name === DIRECTIVE_MODEL || name === RAW_TRANSITION) {
-                          node = createDirective(camelize(name), EMPTY_STRING);
+                          node = createDirective(EMPTY_STRING, name);
                       }
                       // 这里要用 on- 判断前缀，否则 on 太容易重名了
                       else if (startsWith(name, DIRECTIVE_ON + directiveSeparator)) {
@@ -3862,7 +3870,8 @@
                                   fatal$1('缺少事件名称');
                               }
                           }
-                          node = createDirective(DIRECTIVE_EVENT, camelize(event));
+                          var _a = camelize(event).split(RAW_DOT), directiveName = _a[0], diectiveModifier = _a[1];
+                          node = createDirective(directiveName, DIRECTIVE_EVENT, diectiveModifier);
                       }
                       // 当一个元素绑定了多个事件时，可分别指定每个事件的 lazy
                       // 当只有一个事件时，可简写成 lazy
@@ -3872,7 +3881,7 @@
                           if (startsWith(lazy, directiveSeparator)) {
                               lazy = slicePrefix(lazy, directiveSeparator);
                           }
-                          node = createDirective(DIRECTIVE_LAZY, lazy ? camelize(lazy) : EMPTY_STRING);
+                          node = createDirective(lazy ? camelize(lazy) : EMPTY_STRING, DIRECTIVE_LAZY);
                       }
                       // 这里要用 o- 判断前缀，否则 o 太容易重名了
                       else if (startsWith(name, DIRECTIVE_CUSTOM + directiveSeparator)) {
@@ -3882,7 +3891,8 @@
                                   fatal$1('缺少自定义指令名称');
                               }
                           }
-                          node = createDirective(DIRECTIVE_CUSTOM, camelize(custom));
+                          var _b = camelize(custom).split(RAW_DOT), directiveName = _b[0], diectiveModifier = _b[1];
+                          node = createDirective(directiveName, DIRECTIVE_CUSTOM, diectiveModifier);
                       }
                       else {
                           node = createAttribute$1(currentElement, name);
@@ -4278,6 +4288,7 @@
       return nodeList;
   }
 
+  var UNDEFINED$1 = 'z';
   var TRUE$1 = '!0';
   var FALSE$1 = '!1';
   var COMMA = ',';
@@ -4287,6 +4298,7 @@
   var QUESTION = '?';
   var NOT = '!';
   var EMPTY = '""';
+  var RETURN = 'return ';
   /**
    * 目的是 保证调用参数顺序稳定，减少运行时判断
    */
@@ -4298,7 +4310,7 @@
               unshift(args, arg);
           }
           else if (!removable) {
-              unshift(args, FALSE$1);
+              unshift(args, UNDEFINED$1);
           }
       }, TRUE);
       return args;
@@ -4315,8 +4327,12 @@
   function toString$1(value) {
       return JSON.stringify(value);
   }
+  function toFunction(args, code) {
+      return RAW_FUNCTION + "(" + args + "){var " + UNDEFINED$1 + "=void 0;" + RETURN + code + "}";
+  }
 
   var generator = /*#__PURE__*/Object.freeze({
+    UNDEFINED: UNDEFINED$1,
     TRUE: TRUE$1,
     FALSE: FALSE$1,
     COMMA: COMMA,
@@ -4326,10 +4342,12 @@
     QUESTION: QUESTION,
     NOT: NOT,
     EMPTY: EMPTY,
+    RETURN: RETURN,
     toObject: toObject$1,
     toArray: toArray$1,
     toCall: toCall,
-    toString: toString$1
+    toString: toString$1,
+    toFunction: toFunction
   });
 
   function generate(node, renderIdentifier, renderMemberKeypath, renderMemberLiteral, renderCall, holder, depIgnore, stack, inner) {
@@ -4436,7 +4454,7 @@
       // 内部的临时值，且 holder 为 true
       if (inner) {
           return isSpecialNode
-              ? value + '.' + RAW_VALUE
+              ? value + RAW_DOT + RAW_VALUE
               : value;
       }
       // 最外层的值，且 holder 为 true
@@ -4465,9 +4483,9 @@
   // 是否要执行 join 操作
   var joinStack = [], 
   // 是否正在收集子节点
-  collectStack = [], nodeGenerator = {}, RENDER_EXPRESSION_IDENTIFIER = 'a', RENDER_EXPRESSION_MEMBER_KEYPATH = 'b', RENDER_EXPRESSION_MEMBER_LITERAL = 'c', RENDER_EXPRESSION_CALL = 'd', RENDER_TEXT_VNODE = 'e', RENDER_ATTRIBUTE_VNODE = 'f', RENDER_PROPERTY_VNODE = 'g', RENDER_LAZY_VNODE = 'h', RENDER_TRANSITION_VNODE = 'i', RENDER_BINDING_VNODE = 'j', RENDER_MODEL_VNODE = 'k', RENDER_EVENT_METHOD_VNODE = 'l', RENDER_EVENT_NAME_VNODE = 'm', RENDER_DIRECTIVE_VNODE = 'n', RENDER_SPREAD_VNODE = 'o', RENDER_ELEMENT_VNODE = 'p', RENDER_SLOT = 'q', RENDER_PARTIAL = 'r', RENDER_IMPORT = 's', RENDER_EACH = 't', RENDER_RANGE = 'u', TO_STRING = 'v', ARG_STACK = 'w', CODE_RETURN = 'return ';
-  // 序列化代码的前缀
-  var codePrefix, 
+  collectStack = [], nodeGenerator = {}, RENDER_EXPRESSION_IDENTIFIER = 'a', RENDER_EXPRESSION_MEMBER_KEYPATH = 'b', RENDER_EXPRESSION_MEMBER_LITERAL = 'c', RENDER_EXPRESSION_CALL = 'd', RENDER_TEXT_VNODE = 'e', RENDER_ATTRIBUTE_VNODE = 'f', RENDER_PROPERTY_VNODE = 'g', RENDER_LAZY_VNODE = 'h', RENDER_TRANSITION_VNODE = 'i', RENDER_BINDING_VNODE = 'j', RENDER_MODEL_VNODE = 'k', RENDER_EVENT_METHOD_VNODE = 'l', RENDER_EVENT_NAME_VNODE = 'm', RENDER_DIRECTIVE_VNODE = 'n', RENDER_SPREAD_VNODE = 'o', RENDER_ELEMENT_VNODE = 'p', RENDER_SLOT = 'q', RENDER_PARTIAL = 'r', RENDER_IMPORT = 's', RENDER_EACH = 't', RENDER_RANGE = 'u', TO_STRING = 'v', ARG_STACK = 'w';
+  // 序列化代码的参数列表
+  var codeArgs, 
   // 表达式求值是否要求返回字符串类型
   isStringRequired;
   function renderExpression(expr, holder, depIgnore, stack) {
@@ -4704,7 +4722,7 @@
       ]);
   };
   nodeGenerator[DIRECTIVE] = function (node) {
-      var ns = node.ns, name = node.name, key = node.key, value = node.value, expr = node.expr;
+      var ns = node.ns, name = node.name, key = node.key, value = node.value, expr = node.expr, modifier = node.modifier;
       if (ns === DIRECTIVE_LAZY) {
           return toCall(RENDER_LAZY_VNODE, [
               toString$1(name),
@@ -4726,6 +4744,7 @@
       var renderName = RENDER_DIRECTIVE_VNODE, args = [
           toString$1(name),
           toString$1(key),
+          toString$1(modifier),
           toString$1(value) ];
       // 尽可能把表达式编译成函数，这样对外界最友好
       //
@@ -4744,7 +4763,7 @@
               // 为了实现运行时动态收集参数，这里序列化成函数
               if (!falsy(expr.args)) {
                   // args 函数在触发事件时调用，调用时会传入它的作用域，因此这里要加一个参数
-                  push(args, stringifyFunction(CODE_RETURN + toArray$1(expr.args.map(stringifyExpressionArg)), ARG_STACK));
+                  push(args, stringifyFunction(RETURN + toArray$1(expr.args.map(stringifyExpressionArg)), ARG_STACK));
               }
           }
           // 不是调用方法，就是事件转换
@@ -4758,7 +4777,7 @@
               if (expr.type !== LITERAL) {
                   push(args, UNDEFINED); // method
                   push(args, UNDEFINED); // args
-                  push(args, stringifyFunction(CODE_RETURN + stringifyExpressionArg(expr), ARG_STACK));
+                  push(args, stringifyFunction(RETURN + stringifyExpressionArg(expr), ARG_STACK));
               }
           }
       }
@@ -4822,8 +4841,8 @@
       ]);
   };
   function generate$1(node) {
-      if (!codePrefix) {
-          codePrefix = "function(" + join([
+      if (!codeArgs) {
+          codeArgs = join([
               RENDER_EXPRESSION_IDENTIFIER,
               RENDER_EXPRESSION_MEMBER_KEYPATH,
               RENDER_EXPRESSION_MEMBER_LITERAL,
@@ -4845,9 +4864,9 @@
               RENDER_IMPORT,
               RENDER_EACH,
               RENDER_RANGE,
-              TO_STRING ], COMMA) + "){" + CODE_RETURN;
+              TO_STRING ], COMMA);
       }
-      return codePrefix + nodeGenerator[node.type](node) + '}';
+      return toFunction(codeArgs, nodeGenerator[node.type](node));
   }
 
   function setPair(target, name, key, value) {
@@ -4984,8 +5003,8 @@
               ns: DIRECTIVE_BINDING,
               name: name,
               key: key,
+              modifier: holder.keypath,
               hooks: directives[DIRECTIVE_BINDING],
-              binding: holder.keypath,
               hint: hint
           });
           return holder.value;
@@ -4995,28 +5014,30 @@
               name: EMPTY_STRING,
               key: DIRECTIVE_MODEL,
               value: holder.value,
-              binding: holder.keypath,
+              modifier: holder.keypath,
               hooks: directives[DIRECTIVE_MODEL]
           });
-      }, renderEventMethodVnode = function (name, key, value, method, args) {
+      }, renderEventMethodVnode = function (name, key, modifier, value, method, args) {
           setPair($vnode, KEY_DIRECTIVES, key, {
               ns: DIRECTIVE_EVENT,
               name: name,
               key: key,
               value: value,
+              modifier: modifier,
               hooks: directives[DIRECTIVE_EVENT],
               handler: createMethodListener(method, args, $stack)
           });
-      }, renderEventNameVnode = function (name, key, value, event) {
+      }, renderEventNameVnode = function (name, key, modifier, value, event) {
           setPair($vnode, KEY_DIRECTIVES, key, {
               ns: DIRECTIVE_EVENT,
               name: name,
               key: key,
               value: value,
+              modifier: modifier,
               hooks: directives[DIRECTIVE_EVENT],
               handler: createEventListener(event)
           });
-      }, renderDirectiveVnode = function (name, key, value, method, args, getter) {
+      }, renderDirectiveVnode = function (name, key, modifier, value, method, args, getter) {
           var hooks = directives[name];
           {
               if (!hooks) {
@@ -5029,6 +5050,7 @@
               key: key,
               value: value,
               hooks: hooks,
+              modifier: modifier,
               getter: getter ? createGetter(getter, $stack) : UNDEFINED,
               handler: method ? createMethodListener(method, args, $stack) : UNDEFINED
           });
@@ -5047,8 +5069,8 @@
                           ns: DIRECTIVE_BINDING,
                           name: EMPTY_STRING,
                           key: key,
-                          hooks: directives[DIRECTIVE_BINDING],
-                          binding: join$1(keypath, RAW_WILDCARD)
+                          modifier: join$1(keypath, RAW_WILDCARD),
+                          hooks: directives[DIRECTIVE_BINDING]
                       });
                   }
               }
@@ -5096,10 +5118,10 @@
           return holder ? result : result.value;
       }, renderExpressionMemberKeypath = function (identifier, runtimeKeypath) {
           unshift(runtimeKeypath, identifier);
-          return join(runtimeKeypath, separator);
+          return join(runtimeKeypath, RAW_DOT);
       }, renderExpressionMemberLiteral = function (value, staticKeypath, runtimeKeypath, holder$1) {
           if (isDef(runtimeKeypath)) {
-              staticKeypath = join(runtimeKeypath, separator);
+              staticKeypath = join(runtimeKeypath, RAW_DOT);
           }
           var match = get(value, staticKeypath);
           holder.keypath = UNDEFINED;
@@ -6300,7 +6322,7 @@
   }
 
   function bind(node, directive, vnode) {
-      var name = directive.name, handler = directive.handler, lazy = vnode.lazy;
+      var key = directive.key, name = directive.name, modifier = directive.modifier, handler = directive.handler, lazy = vnode.lazy;
       if (!handler) {
           return;
       }
@@ -6316,16 +6338,32 @@
               name === EVENT_CLICK || name === EVENT_TAP);
           }
       }
+      var element;
       if (vnode.isComponent) {
-          node.on(name, handler);
-          vnode.data[directive.key] = function () {
-              node.off(name, handler);
-          };
+          var component_1 = node;
+          if (modifier === MODIFER_NATIVE) {
+              element = component_1.$el;
+              on(element, name, handler);
+              vnode.data[key] = function () {
+                  off(element, name, handler);
+              };
+          }
+          else {
+              // 还原命名空间
+              if (modifier) {
+                  name += RAW_DOT + modifier;
+              }
+              component_1.on(name, handler);
+              vnode.data[key] = function () {
+                  component_1.off(name, handler);
+              };
+          }
       }
       else {
-          on(node, name, handler);
-          vnode.data[directive.key] = function () {
-              off(node, name, handler);
+          element = node;
+          on(element, name, handler);
+          vnode.data[key] = function () {
+              off(element, name, handler);
           };
       }
   }
@@ -6412,13 +6450,10 @@
           }
       },
       name: RAW_VALUE
-  }, inputTypes = {
-      radio: radioControl,
-      checkbox: checkboxControl
   };
   var once = TRUE;
   function bind$1(node, directive, vnode) {
-      var context = vnode.context, lazy = vnode.lazy, isComponent = vnode.isComponent, dataBinding = directive.binding, lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[EMPTY_STRING]), set, unbind;
+      var context = vnode.context, lazy = vnode.lazy, isComponent = vnode.isComponent, dataBinding = directive.modifier, lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[EMPTY_STRING]), set, unbind;
       if (isComponent) {
           var component_1 = node, viewBinding_1 = component_1.$model, viewSyncing_1 = debounceIfNeeded(function (newValue) {
               context.set(dataBinding, newValue);
@@ -6441,8 +6476,11 @@
           eventName_1 = EVENT_CHANGE;
           if (control_1 === inputControl) {
               var type = node.type;
-              if (inputTypes[type]) {
-                  control_1 = inputTypes[type];
+              if (type === 'radio') {
+                  control_1 = radioControl;
+              }
+              else if (type === 'checkbox') {
+                  control_1 = checkboxControl;
               }
               // 如果是输入框，则切换成 model 事件
               // model 事件是个 yox-dom 实现的特殊事件
@@ -6487,7 +6525,7 @@
   function bind$2(node, directive, vnode) {
       // binding 可能是模糊匹配
       // 比如延展属性 {{...obj}}，这里 binding 会是 `obj.*`
-      var binding = directive.binding, 
+      var binding = directive.modifier, 
       // 提前判断好是否是模糊匹配，避免 watcher 频繁执行判断逻辑
       isFuzzy$1 = isFuzzy(binding), watcher = function (newValue, _, keypath) {
           if (watcher) {
@@ -6837,13 +6875,15 @@
        * 监听事件，支持链式调用
        */
       Yox.prototype.on = function (type, listener) {
-          return addEvents(this, type, listener);
+          addEvents(this, type, listener);
+          return this;
       };
       /**
        * 监听一次事件，支持链式调用
        */
       Yox.prototype.once = function (type, listener) {
-          return addEvents(this, type, listener, TRUE);
+          addEvents(this, type, listener, TRUE);
+          return this;
       };
       /**
        * 取消监听事件，支持链式调用
@@ -6859,7 +6899,7 @@
           // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
           // 内部为了保持格式统一
           // 需要转成 Event，这样还能知道 target 是哪个组件
-          var instance = this, event = type instanceof CustomEvent ? type : new CustomEvent(type), args = [event], isComplete;
+          var instance = this, $emitter = instance.$emitter, $parent = instance.$parent, $children = instance.$children, event = type instanceof CustomEvent ? type : new CustomEvent(type), namespace = event.ns || (event.ns = $emitter.parse(event.type)), args = [event], isComplete;
           // 告诉外部是谁发出的事件
           if (!event.target) {
               event.target = instance;
@@ -6871,9 +6911,15 @@
           else if (data === TRUE) {
               downward = TRUE;
           }
-          isComplete = instance.$emitter.fire(event.type, args);
+          // 如果手动 fire 带上了事件命名空间
+          // 则命名空间不能是 native，因为 native 有特殊用处
+          {
+              if (namespace.ns === MODIFER_NATIVE) {
+                  error("\"" + event.type + "\": namespace \"" + MODIFER_NATIVE + "\" can't be used externally.");
+              }
+          }
+          isComplete = $emitter.fire(namespace, args);
           if (isComplete) {
-              var $parent = instance.$parent, $children = instance.$children;
               if (downward) {
                   if ($children) {
                       event.phase = CustomEvent.PHASE_DOWNWARD;
@@ -7236,7 +7282,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.84";
+      Yox.version = "1.0.0-alpha.85";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
@@ -7335,7 +7381,6 @@
               addEvent(instance, key, value, once);
           });
       }
-      return instance;
   }
   function loadComponent(registry, name, callback) {
       if (registry && registry[name]) {
