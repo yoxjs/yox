@@ -97,10 +97,10 @@ selectControl: NativeControl = {
     array.each(
       array.toArray(node.options),
       node.multiple
-        ? function (option: HTMLOptionElement) {
+        ? function (option) {
           option.selected = array.has(value, option.value, env.FALSE)
         }
-        : function (option: HTMLOptionElement, index: number) {
+        : function (option, index) {
           if (option.value == value) {
             node.selectedIndex = index
             return env.FALSE
@@ -114,7 +114,7 @@ selectControl: NativeControl = {
       const values: string[] = []
       array.each(
         array.toArray(options),
-        function (option: HTMLOptionElement) {
+        function (option) {
           if (option.selected) {
             array.push(
               values,

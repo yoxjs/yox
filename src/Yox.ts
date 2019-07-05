@@ -1229,7 +1229,7 @@ function checkProp(key: string, value: any, rule: PropRule) {
         else if (!array.falsy(type)) {
           array.each(
             type as string[],
-            function (item: string) {
+            function (item) {
               if (matchType(value, item)) {
                 matched = env.TRUE
                 return env.FALSE
