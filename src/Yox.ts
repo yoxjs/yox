@@ -55,6 +55,7 @@ import {
   DIRECTIVE_MODEL,
   MODEL_PROP_DEFAULT,
   SLOT_DATA_PREFIX,
+  MODIFER_NATIVE,
 } from '../../yox-config/src/config'
 
 import isDef from '../../yox-common/src/function/isDef'
@@ -654,6 +655,8 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
 
     let instance = this,
 
+    { $emitter, $parent, $children } = instance,
+
     event = type instanceof CustomEvent ? type : new CustomEvent(type),
 
     args: any[] = [event],
@@ -673,9 +676,18 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
       downward = env.TRUE
     }
 
-    isComplete = instance.$emitter.fire(event.type, args)
+    const namespace = $emitter.parse(event.type)
+
+    // 如果手动 fire 带上了事件命名空间
+    // 则命名空间不能是 native，因为 native 有特殊用处
+    if (process.env.NODE_ENV === 'development') {
+      if (namespace.ns === MODIFER_NATIVE) {
+        logger.error(`${MODIFER_NATIVE} can't be used in "${event.type}".`)
+      }
+    }
+
+    isComplete = $emitter.fire(namespace, args)
     if (isComplete) {
-      const { $parent, $children } = instance
       if (downward) {
         if ($children) {
           event.phase = CustomEvent.PHASE_DOWNWARD
