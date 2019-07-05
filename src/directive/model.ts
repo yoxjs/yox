@@ -12,6 +12,10 @@ import {
   YoxInterface,
 } from '../../../yox-type/src/yox'
 
+import {
+  DIRECTIVE_MODEL,
+} from '../../../yox-config/src/config'
+
 import debounce from '../../../yox-common/src/function/debounce'
 import execute from '../../../yox-common/src/function/execute'
 import toString from '../../../yox-common/src/function/toString'
@@ -22,7 +26,6 @@ import * as array from '../../../yox-common/src/util/array'
 
 import * as domApi from '../../../yox-dom/src/dom'
 
-import * as config from '../../../yox-config/src/config'
 
 interface NativeControl {
 
@@ -145,7 +148,7 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
 
   dataBinding = directive.binding as string,
 
-  lazyValue = lazy && (lazy[config.DIRECTIVE_MODEL] || lazy[env.EMPTY_STRING]),
+  lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[env.EMPTY_STRING]),
 
   set: Watcher | void,
 

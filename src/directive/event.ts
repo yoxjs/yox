@@ -12,7 +12,7 @@ import {
 } from '../../../yox-type/src/yox'
 
 import {
-  DIRECTIVE_EVENT_MODIFER_NATIVE,
+  MODIFER_NATIVE,
 } from '../../../yox-config/src/config'
 
 import execute from '../../../yox-common/src/function/execute'
@@ -54,7 +54,7 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
   if (vnode.isComponent) {
     const component = node as YoxInterface
 
-    if (modifier === DIRECTIVE_EVENT_MODIFER_NATIVE) {
+    if (modifier === MODIFER_NATIVE) {
       element = component.$el as HTMLElement
 
       domApi.on(element, name, handler)

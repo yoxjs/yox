@@ -42,6 +42,20 @@ import {
   LoggerApi,
 } from '../../yox-type/src/api'
 
+import {
+  HOOK_BEFORE_CREATE,
+  HOOK_AFTER_CREATE,
+  HOOK_BEFORE_MOUNT,
+  HOOK_AFTER_MOUNT,
+  HOOK_BEFORE_UPDATE,
+  HOOK_AFTER_UPDATE,
+  HOOK_BEFORE_DESTROY,
+  HOOK_AFTER_DESTROY,
+  NAMESPACE_HOOK,
+  DIRECTIVE_MODEL,
+  MODEL_PROP_DEFAULT,
+  SLOT_DATA_PREFIX,
+} from '../../yox-config/src/config'
 
 import isDef from '../../yox-common/src/function/isDef'
 import isUndef from '../../yox-common/src/function/isUndef'
@@ -58,7 +72,6 @@ import * as string from '../../yox-common/src/util/string'
 import * as object from '../../yox-common/src/util/object'
 import * as logger from '../../yox-common/src/util/logger'
 
-import * as config from '../../yox-config/src/config'
 import * as snabbdom from '../../yox-snabbdom/src/snabbdom'
 
 import * as templateCompiler from '../../yox-template-compiler/src/compiler'
@@ -302,9 +315,9 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
       }
 
       // 建立好父子连接后，立即触发钩子
-      execute($options[config.HOOK_BEFORE_CREATE], instance, $options)
+      execute($options[HOOK_BEFORE_CREATE], instance, $options)
       // 冒泡 before create 事件
-      instance.fire(config.HOOK_BEFORE_CREATE + config.NAMESPACE_HOOK, $options)
+      instance.fire(HOOK_BEFORE_CREATE + NAMESPACE_HOOK, $options)
 
     }
 
@@ -748,13 +761,13 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
 
       let { props, slots, directives } = vnode,
 
-      model = directives && directives[config.DIRECTIVE_MODEL]
+      model = directives && directives[DIRECTIVE_MODEL]
 
       if (model) {
         if (!props) {
           props = {}
         }
-        const key = options.model || config.MODEL_PROP_DEFAULT
+        const key = options.model || MODEL_PROP_DEFAULT
         props[key] = model.value
         options.model = key
       }
@@ -964,17 +977,17 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
       instance.$refs = {}
 
       if ($vnode) {
-        execute($options[config.HOOK_BEFORE_UPDATE], instance)
-        instance.fire(config.HOOK_BEFORE_UPDATE + config.NAMESPACE_HOOK)
+        execute($options[HOOK_BEFORE_UPDATE], instance)
+        instance.fire(HOOK_BEFORE_UPDATE + NAMESPACE_HOOK)
         snabbdom.patch(domApi, vnode, oldVnode)
-        afterHook = config.HOOK_AFTER_UPDATE
+        afterHook = HOOK_AFTER_UPDATE
       }
       else {
-        execute($options[config.HOOK_BEFORE_MOUNT], instance)
-        instance.fire(config.HOOK_BEFORE_MOUNT + config.NAMESPACE_HOOK)
+        execute($options[HOOK_BEFORE_MOUNT], instance)
+        instance.fire(HOOK_BEFORE_MOUNT + NAMESPACE_HOOK)
         snabbdom.patch(domApi, vnode, oldVnode)
         instance.$el = vnode.node as HTMLElement
-        afterHook = config.HOOK_AFTER_MOUNT
+        afterHook = HOOK_AFTER_MOUNT
       }
 
       instance.$vnode = vnode
@@ -985,7 +998,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
         function () {
           if (instance.$vnode) {
             execute($options[afterHook], instance)
-            instance.fire(afterHook + config.NAMESPACE_HOOK)
+            instance.fire(afterHook + NAMESPACE_HOOK)
           }
         }
       )
@@ -1032,8 +1045,8 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
 
     if (process.env.NODE_ENV !== 'pure') {
 
-      execute($options[config.HOOK_BEFORE_DESTROY], instance)
-      instance.fire(config.HOOK_BEFORE_DESTROY + config.NAMESPACE_HOOK)
+      execute($options[HOOK_BEFORE_DESTROY], instance)
+      instance.fire(HOOK_BEFORE_DESTROY + NAMESPACE_HOOK)
 
       const { $vnode } = instance
 
@@ -1052,8 +1065,8 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
     $observer.destroy()
 
     if (process.env.NODE_ENV !== 'pure') {
-      execute($options[config.HOOK_AFTER_DESTROY], instance)
-      instance.fire(config.HOOK_AFTER_DESTROY + config.NAMESPACE_HOOK)
+      execute($options[HOOK_AFTER_DESTROY], instance)
+      instance.fire(HOOK_AFTER_DESTROY + NAMESPACE_HOOK)
     }
 
     // 发完 after destroy 事件再解绑所有事件
@@ -1239,8 +1252,8 @@ function afterCreateHook(instance: YoxInterface, watchers: Record<string, Watche
   }
 
   if (process.env.NODE_ENV !== 'pure') {
-    execute(instance.$options[config.HOOK_AFTER_CREATE], instance)
-    instance.fire(config.HOOK_AFTER_CREATE + config.NAMESPACE_HOOK)
+    execute(instance.$options[HOOK_AFTER_CREATE], instance)
+    instance.fire(HOOK_AFTER_CREATE + NAMESPACE_HOOK)
   }
 
 }
@@ -1370,7 +1383,7 @@ if (process.env.NODE_ENV !== 'pure') {
       // 不鼓励在过滤器使用 this
       // 因此过滤器没有 this 的类型声明
       // 这个内置过滤器是不得不用 this
-      return isDef((this as YoxInterface).get(config.SLOT_DATA_PREFIX + name))
+      return isDef((this as YoxInterface).get(SLOT_DATA_PREFIX + name))
     }
   })
 }
