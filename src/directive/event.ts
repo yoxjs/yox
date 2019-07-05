@@ -24,7 +24,7 @@ import * as domApi from '../../../yox-dom/src/dom'
 
 export function bind(node: HTMLElement | YoxInterface, directive: Directive, vnode: VNode) {
 
-  let { key, name, handler, modifier } = directive, { lazy } = vnode
+  let { key, name, modifier, handler } = directive, { lazy } = vnode
 
   if (!handler) {
     return

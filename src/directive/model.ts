@@ -133,11 +133,6 @@ selectControl: NativeControl = {
     }
   },
   name: env.RAW_VALUE
-},
-
-inputTypes = {
-  radio: radioControl,
-  checkbox: checkboxControl,
 }
 
 export const once = env.TRUE
@@ -146,7 +141,7 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
 
   let { context, lazy, isComponent } = vnode,
 
-  dataBinding = directive.binding as string,
+  dataBinding = directive.modifier as string,
 
   lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[env.EMPTY_STRING]),
 
@@ -193,8 +188,11 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
 
     if (control === inputControl) {
       const type = (node as HTMLInputElement).type
-      if (inputTypes[type]) {
-        control = inputTypes[type]
+      if (type === 'radio') {
+        control = radioControl
+      }
+      else if (type === 'checkbox') {
+        control = checkboxControl
       }
       // 如果是输入框，则切换成 model 事件
       // model 事件是个 yox-dom 实现的特殊事件

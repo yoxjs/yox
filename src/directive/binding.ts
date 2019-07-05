@@ -25,7 +25,7 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
 
   // binding 可能是模糊匹配
   // 比如延展属性 {{...obj}}，这里 binding 会是 `obj.*`
-  let binding = directive.binding as string,
+  let binding = directive.modifier as string,
 
   // 提前判断好是否是模糊匹配，避免 watcher 频繁执行判断逻辑
   isFuzzy = keypathUtil.isFuzzy(binding),
