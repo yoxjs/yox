@@ -1,12 +1,18 @@
 如果内置指令不满足需求，Yox 还支持自定义指令，它的前缀是 `o-`，如下：
 
 ```html
-<div o-[name]="value"></div>
+<div o-[name]="[value]"></div>
+```
+
+为了实现更高级的功能，自定义指令还支持 `修饰符`，如下：
+
+```html
+<div o-[name].[modifier]="[value]"></div>
 ```
 
 > 用 o 开头是因为 `o-` 有点像刀柄，蜜汁决策...
 
-## 名称格式
+## 指令名称
 
 `o-[name]` 中的 `name` 会经过 `camelize` 处理，也就是说，不论 `name` 怎么写，最终都不会是 `连字符` 格式。
 
@@ -15,6 +21,20 @@
 ```
 
 这两个自定义指令的名称分别是 `standUp` 和  `getOut`，注册指令时，千万别写错了哦。
+
+## 指令修饰符
+
+修饰符是专门为复杂指令设计的特性，它的格式有些类似事件指令的 `命名空间`，如下：
+
+```html
+<div o-[name].[modifier]="[value]"></div>
+```
+
+> 不论内置指令还是自定义指令，它的格式都是 `name.modifier`，只是在事件指令中，把 `modifier` 叫作命名空间更符合大部分人的认知。
+
+如果你写了修饰符，`[modifier]` 会设置到指令对象的 `modifier` 属性上；如果没有写修饰符，那么 `modifier` 属性将是 `undefined`。
+
+为了方便理解，我们特地准备了一个在线示例：[传送门](https://jsrun.net/8jyKp/edit)。
 
 
 ## 钩子函数
@@ -64,7 +84,7 @@ Yox 的指令是一个由两个钩子函数组成的对象，如下：
 <Component o-custom="value" />
 ```
 
-判断方式如下：
+判断方式非常简单，如下：
 
 ```js
 if (vnode.isComponent) {
@@ -98,13 +118,17 @@ else {
 
 #### name
 
-对于自定义指令来说，这个值是 `o-[name]="xx"` 中的 `name`。
+对于自定义指令来说，这个值是 `o-[name]="[value]"` 中的 `name`。
 
 #### key
 
 `key` 是 `节点` 级别每个指令的 `unique key`。
 
 我们可以通过 `key` 在 `vnode.data` 上设置指令的数据，比如解绑事件需要的 `event handler`。
+
+#### modifier
+
+对于自定义指令来说，这个值是 `o-[name].[modifier]="[value]"` 中的 `modifier`，如果没写修饰符，它的值是 `undefined`。
 
 #### value
 
@@ -118,7 +142,13 @@ else {
 
 #### getter
 
-如果 `value` 是一个合法表达式，且 `不是` 基本类型的字面量，Yox 会把它编译成 `getter` 函数，取值非常简单，如下：
+如果 `value` 是一个合法表达式，且 `不是` 基本类型的字面量，Yox 会把它编译成 `getter` 函数，如下：
+
+```html
+<div o-custom="a + b"></div>
+```
+
+为表达式求值非常简单，如下：
 
 ```js
 var value = directive.getter()
@@ -128,7 +158,7 @@ var value = directive.getter()
 
 如果 `value` 是一个合法表达式，且是一个 `函数调用`，比如常见的 `on-click="submit()"`，Yox 会把它编译成 `handler` 函数，你需要做的就是在合适的时机调用它。
 
-注意，只能调用 Yox 的实例方法。
+需要注意，指令只能调用 Yox 组件的实例方法，比如 `methods` 注册的业务方法，或是 Yox 内置的实例方法，常见的有 `set`、`fire`、`toggle` 等。
 
 ## 全局注册
 
