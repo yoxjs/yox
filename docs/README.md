@@ -79,7 +79,7 @@ store.fire('logout')
 
 * 不想用三大框架，觉得难学、难用、难记、难配
 * 正在用三大框架，但是下个项目不想再用
-* 有过 `Mustache` 或类似模板引擎使用经验
+* 用过 `Handlebars`、`Hogan`、`BlazeJS`、`art-template` 等模板引擎
 * 为了少学框架概念（Yox 没太多概念），多学真正有用的知识（靠自己）
 * 为了兼容低版本 IE
 
