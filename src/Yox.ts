@@ -537,9 +537,8 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
 
         // 编译模板
         // 在开发阶段，template 是原始的 html 模板
-        // 在产品阶段，template 是编译后且经过 stringify 的字符串
-        // 当然，这个需要外部自己控制传入的 template 是什么
-        // Yox.compile 会自动判断 template 是否经过编译
+        // 在产品阶段，template 是编译后的渲染函数
+        // 当然，具体是什么需要外部自己控制
         instance.$template = is.string(template)
           ? Yox.compile(template as string) as Function
           : template as Function
