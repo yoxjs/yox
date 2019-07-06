@@ -109,9 +109,27 @@ Yox 内置了一个非常强大的表达式引擎，不仅支持常见的 `一�
 
 ## 函数调用
 
-函数调用有两种使用场景。
+函数调用有两种使用场景：
 
-第一种是调用 `过滤器` 获得一个更符合需求的数据格式，比如格式化日期：
+* 指令
+* 过滤器
+
+### 指令
+
+Yox 的指令支持函数调用，如下：
+
+```html
+<div o-name="invoke()"></div>
+```
+
+`invoke()` 可调用的函数来自当前模板所属组件实例的 `method`。
+
+> 更多内容，参考 **事件处理** - **调用方法** 和 **自定义指令**
+
+
+### 过滤器
+
+`过滤器` 指的是一个 `Function`，通过调用该函数，获得一个更符合展示需求的数据格式，比如格式化日期：
 
 ```html
 <div>
@@ -119,20 +137,23 @@ Yox 内置了一个非常强大的表达式引擎，不仅支持常见的 `一�
 </div>
 ```
 
-> 更多内容，参考 **模板** - **过滤器**
-
-第二种是在 `指令` 中调用 Yox 的实例方法，比如监听事件：
-
-```html
-<button on-click="submit()">
-  Submit
-</button>
+```js
+{
+  filters: {
+    formatDate: function (value) {
+      var month = value.getMonth() + 1
+      var date = value.getDate()
+      return [
+        value.getFullYear(),
+        month < 10 ? '0' + month : month,
+        date < 10 ? '0' + date : date
+      ].join('-')
+    }
+  }
+}
 ```
 
-> 更多内容，参考 **事件处理** - **调用方法**
-
-
-除了 `指令` 可以调用 Yox 的实例方法，表达式中的其他函数调用都被视为调用 `filter`，举个例子：
+与其他框架不同的是，Yox 不支持调用对象自身的方法，如下：
 
 ```html
 <div>
@@ -140,13 +161,13 @@ Yox 内置了一个非常强大的表达式引擎，不仅支持常见的 `一�
 </div>
 ```
 
-你希望把 `name` 转换成大写格式，Yox 却认为你在调用名为 `name` 的工具库中的 `toUpperCase` 函数，最终能否正确输出，无关技术，纯靠人品。
+你希望把 `name` 转换成大写格式，Yox 却认为你在调用名为 `name` 的函数库中的 `toUpperCase` 函数，最终能否正确输出，无关技术，纯靠人品。
 
-`Yox` 没有采用 `{{name|upper}}` 形式的过滤器，它不够直观，尤其是多参数的场景，如下：
+`Yox` 没有采用 `{{ name | upper }}` 方案的过滤器，它不够直观，尤其是多参数的场景，如下：
 
 ```html
 <div>
-  {{birthday|formatDate true false}}
+  {{ birthday | formatDate true false }}
 </div>
 ```
 
@@ -154,21 +175,19 @@ Yox 内置了一个非常强大的表达式引擎，不仅支持常见的 `一�
 
 ```html
 <div>
-  {{birthday|formatDate true, false}}
+  {{ birthday | formatDate true, false }}
 </div>
 ```
 
-> 你觉得上面两个例子有什么明显不同吗？
+是不是觉得这两种语法并没有什么区别呢？作为开发者，可能你总是想不起到底应该用哪一种。
 
-我们认为它远没有调用函数简单直接，不信比比看：
+Yox 采用了更为简单直白的过滤器方案：`JavaScript` 式的函数调用。如果你会 `JavaScript`，那么 Yox 的过滤器对你来说学习成本为零。
 
 ```html
 <div>
-  {{formatDate(birthday, true, false)}}
+  {{ formatDate(birthday, true, false) }}
 </div>
 ```
-
-如果你会 `JavaScript`，Yox 过滤器对你来说，学习成本为零。
 
 ## 全局函数
 
