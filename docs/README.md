@@ -1,7 +1,5 @@
 轻量、简单、好用、灵活的 MVVM 框架。
 
-> Yox 读作 [哟西]，哈哈哈
-
 ## 特性
 
 * 比 Vue 更低的学习门槛，比 Vue 更好的兼容性，比 Vue 更小的文件体积（`runtime` 版本：Vue [63KB](https://github.com/vuejs/vue/blob/dev/dist/vue.runtime.min.js) Yox [31KB](https://github.com/yoxjs/yox/blob/master/dist/standard/runtime/yox.min.js)）
@@ -81,12 +79,11 @@ store.fire('logout')
 
 * 不想用三大框架，觉得难学、难用、难记、难配
 * 正在用三大框架，但是下个项目不想再用
-* 有 `Mustache` 或类似模板引擎使用经验
+* 有过 `Mustache` 或类似模板引擎使用经验
 * 为了少学框架概念（Yox 没太多概念），多学真正有用的知识（靠自己）
 * 为了兼容低版本 IE
 
 ## 劝退人群
 
-* 三大框架死忠粉
-* `Mustache` 一生黑
-* `喷子`、`脑残`、`傻逼`、`智障` 等标签用户
+* 三大框架死忠粉（用的爽没必要换对吧）
+* `Mustache` 一生黑（取向问题掰不过来）
