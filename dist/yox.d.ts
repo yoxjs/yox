@@ -279,7 +279,7 @@ export interface DomApi {
 	addClass(node: HTMLElement, className: string): void;
 	removeClass(node: HTMLElement, className: string): void;
 	on(node: HTMLElement | Window | Document, type: string, listener: Listener, context?: any): void;
-	off(node: HTMLElement | Window | Document, type: string, listener: Listener): void;
+	off(node: HTMLElement | Window | Document, type: string, listener: Function): void;
 	addSpecialEvent(type: string, hooks: SpecialEventHooks): void;
 }
 export interface ArrayApi {

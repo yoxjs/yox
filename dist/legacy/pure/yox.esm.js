@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.85
+ * yox.js v1.0.0-alpha.86
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -74,7 +74,7 @@ function array(value) {
  * @return
  */
 function object(value) {
-    // 低版本 IE 会把 null 和 undefined 当作 object
+    // 低版本 IE 会把 null 当作 object
     return value !== NULL && typeof value === 'object';
 }
 /**
@@ -2331,7 +2331,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.85";
+Yox.version = "1.0.0-alpha.86";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

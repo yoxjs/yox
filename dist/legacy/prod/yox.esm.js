@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.85
+ * yox.js v1.0.0-alpha.86
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -156,7 +156,7 @@ function array(value) {
  * @return
  */
 function object(value) {
-    // 低版本 IE 会把 null 和 undefined 当作 object
+    // 低版本 IE 会把 null 当作 object
     return value !== NULL && typeof value === 'object';
 }
 /**
@@ -2081,6 +2081,8 @@ function createText(text) {
 
 // 首字母大写，或中间包含 -
 const componentNamePattern = /^[$A-Z]|-/, 
+// HTML 实体（中间最多 6 位，没见过更长的）
+htmlEntityPattern = /&[#\w\d]{2,6};/, 
 // 常见的自闭合标签
 selfClosingTagNames = 'area,base,embed,track,source,param,input,col,img,br,hr'.split(','), 
 // 常见的 svg 标签
@@ -2179,6 +2181,12 @@ function compatElement(element) {
     // 低版本 IE 需要给 option 标签强制加 value
     else if (tag === 'option' && !hasValue) {
         element.isOption = TRUE;
+    }
+}
+function setElementText(element, text) {
+    if (htmlEntityPattern.test(text)) {
+        element.html = text;
+        return TRUE;
     }
 }
 
@@ -3199,7 +3207,9 @@ function compile$1(content) {
                     case TEXT:
                         // 属性的值如果是纯文本，直接获取文本值
                         // 减少渲染时的遍历
-                        if (isElement) ;
+                        if (isElement) {
+                            processElementSingleText(node, child);
+                        }
                         else if (isAttribute) {
                             processAttributeSingleText(node, child);
                         }
@@ -3304,6 +3314,16 @@ function compile$1(content) {
                 }
             }
         }, TRUE);
+    }, processElementSingleText = function (element, child) {
+        // processElementSingleText 和 processElementSingleExpression
+        // 不把元素子节点智能转换为 textContent property
+        // 因为子节点还有 <div>1{{a}}{{b}}</div> 这样的情况
+        // 还是在序列化的时候统一处理比较好
+        // 唯独需要在这特殊处理的是 html 实体
+        // 但这只是 WEB 平台的特殊逻辑，所以丢给 platform 处理
+        if (setElementText(element, child.text)) {
+            element.children = UNDEFINED;
+        }
     }, processElementSingleExpression = function (element, child) {
         if (!element.isComponent && !element.slot && !child.safe) {
             element.html = child.expr;
@@ -4335,7 +4355,9 @@ nodeGenerator[ELEMENT] = function (node) {
         data.key = stringifyValue(key.value, key.expr, key.children);
     }
     if (html) {
-        data.html = stringifyExpression(html, TRUE);
+        data.html = string(html)
+            ? toString$1(html)
+            : stringifyExpression(html, TRUE);
     }
     if (isComponent) {
         data.isComponent = TRUE$1;
@@ -6335,9 +6357,8 @@ class Yox {
                 afterCreateHook(instance, newWatchers);
                 // 编译模板
                 // 在开发阶段，template 是原始的 html 模板
-                // 在产品阶段，template 是编译后且经过 stringify 的字符串
-                // 当然，这个需要外部自己控制传入的 template 是什么
-                // Yox.compile 会自动判断 template 是否经过编译
+                // 在产品阶段，template 是编译后的渲染函数
+                // 当然，具体是什么需要外部自己控制
                 instance.$template = string(template)
                     ? Yox.compile(template)
                     : template;
@@ -6843,7 +6864,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.85";
+Yox.version = "1.0.0-alpha.86";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

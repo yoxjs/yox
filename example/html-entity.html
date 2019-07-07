@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>html entity</title>
+</head>
+
+<body>
+  <div id="app"></div>
+  <script id="template" type="plain/text">
+
+    <div>
+        <p>&#xe313;</p>
+        <p>{{'&#xe313;'}}</p>
+        <p>{{{'&#xe313;'}}}</p>
+
+        <p>-&nbsp;-</p>
+    </div>
+
+  </script>
+
+  <script src="../dist/standard/dev/yox.js"></script>
+  <script>
+    var instance = new Yox({
+      el: '#app',
+      template: '#template'
+    });
+
+  </script>
+</body>
+
+</html>
