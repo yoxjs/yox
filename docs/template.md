@@ -249,6 +249,50 @@ Yox 会自动识别常见属性的类型，如下：
 
 > 例子本身没有意义，纯粹演示功能。
 
+在 `Mustache` 的语法中，`[]` 被认为是 `false`，这个特性严重违反直觉，为了避免歧义和保持代码逻辑清晰，我们并未采用。
+
+如何判断是否违反直觉呢？尝试执行以下 `JavaScript` 代码，你会懂的。
+
+```js
+if ([]) {
+  console.log('[] is true')
+}
+```
+
+Yox 判断非空数组的方式如下：
+
+```html
+<div>
+  {{#if !list || !list.length}}
+    没有数据
+  {{else}}
+    ...
+  {{/if}}
+</div>
+```
+
+如果觉得麻烦，可以先注册一个 `isFalsyArray` 过滤器。
+
+```js
+Yox.filter({
+  isFalsyArray: Yox.array.falsy
+})
+```
+
+> Yox 暴露了一些 core 用到的工具库，比如 `Yox.array`
+
+改进版
+
+```html
+<div>
+  {{#if isFalsyArray(list)}}
+    没有数据
+  {{else}}
+    ...
+  {{/if}}
+</div>
+```
+
 ## 循环数组
 
 循环数组，一般有两种设计风格，一种是 `item in array`，一种是 `each`。
@@ -276,6 +320,20 @@ Yox 会自动识别常见属性的类型，如下：
 ```
 
 对于 Yox 来说，判断数组的最后一项非常简单，只需 `if` 一下。
+
+```html
+<div>
+  {{#each array:index}}
+    {{#if index === array.length - 1}}
+        ...
+    {{/if}}
+  {{/each}}
+</div>
+```
+
+这样写有一点 `瑕疵`，循环体每次都会读取 `array.length`。
+
+为了性能考虑，我们特意提供了一个特殊变量：`$length`，改进版如下：
 
 ```html
 <div>
@@ -323,20 +381,29 @@ Yox 会自动识别常见属性的类型，如下：
 
 进入 `each` 之后，`context` 会切换成当前正在遍历的列表项，因此我们可以直接用 `{{name}}` 获取当前项的 `name` 属性。
 
+> 这样写会触发 `自动向上查找`，具体参考下一节。
+
 这时你肯定会好奇，怎么获取**当前项**自身呢？
 
 `Mustache` 原本设计了 `.` 语法获取当前 `context`，可是我们觉得不够自然，于是把 `.` 改成了 `this`。
 
+数据
+
+```js
+{
+  list: [ 1, 2, 3, 4 ]
+}
+```
+
+模板
+
 ```html
 <div>
-  {{#each list}}
-    name: {{this.name}}<br>
-    age: {{this.age}}
+  {{#each list:index}}
+    {{index}} is {{this}}.
   {{/each}}
 </div>
 ```
-
-> 对于基本类型的数组来说，`this` 简直是唯一的救命稻草。
 
 ### 自动向上查找
 
@@ -404,7 +471,7 @@ Yox 会自动识别常见属性的类型，如下：
 
 在这个例子中，数据被 `wrapper` 包了一层，且 `each` 直接用了 `wrapper.list`。
 
-外层 `context` 只有一个 `wrapper` 对象，内层 `context` 则直接是列表项。当列表项找不到 `selectedIndex` 时，自动向外查找一层，也没有找到（因为只有一个 `wrapper` 对象）。
+外层 `context` 只有一个 `wrapper` 对象，内层 `context` 则直接是列表项。当列表项找不到 `selectedIndex` 时，自动向上查找一层，也没有找到（因为只有一个 `wrapper` 对象）。
 
 > 正确写法是 `index === wrapper.selectedIndex`。
 
@@ -429,7 +496,7 @@ Yox 会自动识别常见属性的类型，如下：
 
 ```html
 <div>
-  {{#each list:index}}
+  {{#each list}}
     <input type="checkbox" model="checked">
   {{/each}}
 </div>
@@ -441,7 +508,7 @@ Yox 会自动识别常见属性的类型，如下：
 
 ```html
 <div>
-  {{#each list:index}}
+  {{#each list}}
     <input type="checkbox" model="this.checked">
   {{/each}}
 </div>
@@ -453,14 +520,31 @@ Yox 会自动识别常见属性的类型，如下：
 
 ```html
 <div>
-  {{#each list:index}}
+  {{#each list}}
     <input type="checkbox" model="../checked">
   {{/each}}
 </div>
 ```
 
+### 列表性能优化
+
+我们在 `Virtual DOM` 层面为渲染列表提供了性能优化的支持，如果你的列表项包含数据的唯一标识符（常见如 `id`），建议为节点加上 `key` 属性，如下：
+
+```html
+<div>
+  {{#each list}}
+    <div key="{{this.id}}">
+      ...
+    </div>
+  {{/each}}
+</div>
+```
+
+这样可以最大程度复用已有的 DOM 元素，减少 DOM API 的调用。
 
 ## 循环对象
+
+循环对象和循环数组的逻辑完全一致。
 
 ```html
 <div>
@@ -470,18 +554,13 @@ Yox 会自动识别常见属性的类型，如下：
 </div>
 ```
 
-> 更多内容，参考**循环数组**
-
-
 ## 循环区间
 
 区间，表示从一个数到另一个数，比如从 5 到 10，或者反过来，从 10 到 5。
 
-> 仅支持整数区间循环，因为内部实现为 `for` 循环配合 `i++` 或 `i--`，强用小数出现浮点精度问题不要怪 Yox。
-
 ```html
 <div>
-  // 包含 to
+  // 包含 to（有等号当然表示包含啦）
   {{#each from => to:index}}
     ...
   {{/each}}
@@ -493,9 +572,11 @@ Yox 会自动识别常见属性的类型，如下：
 </div>
 ```
 
-> `from` 是起始的数字，`to` 是结束的数字，如果 `from` 大于 `to`，则递减循环，如果 `from` 小于 `to`，则递增循环。
+`from` 是起始的数字，`to` 是结束的数字，如果 `from` 大于 `to`，则递减循环，如果 `from` 小于 `to`，则递增循环。
 
-当我们遇到一些特殊需求，循环区间比循环数组更自然 ，举个例子：
+**注意**：`from` 和 `to` 仅支持整数，因为内部实现为 `for` 循环配合 `i++` 或 `i--`，强用小数出现浮点精度问题请自己背锅。
+
+当我们遇到一些特殊需求，循环区间比循环数组更加自然 ，举个例子：
 
 创建 5 颗星星，如果没有循环区间，只能先创建一个数组，再循环该数组。
 
@@ -585,7 +666,7 @@ Yox.partial({
 
 ```js
 {
-   partials: {
+  partials: {
     name1: '<div>...</div>',
     name2: '<div>...</div>',
   }
@@ -627,9 +708,26 @@ Yox 的过滤器采用了 `函数调用` 的方式，如下：
 
 ```html
 <div>
-    日期：{{formatDate(date)}}
+  生日：{{formatDate(birthday)}}
+  性别：{{formatGender(gender)}}
 </div>
 ```
+
+```js
+{
+  filters: {
+    formatDate: function (value) {
+      // 写吐了，自己写吧
+      return 'balabala'
+    },
+    formatGender: function (value) {
+      return value === 1 ? '男' : '女'
+    }
+  }
+}
+```
+
+> 更多内容，参考 **表达式** - **函数调用** - **过滤器**
 
 ### 全局注册
 
@@ -652,11 +750,13 @@ Yox.filter({
 })
 ```
 
-如果项目用了 `underscore` 或 `lodash`，甚至可以注册整个库，如下：
+如果项目用了 `lodash`，甚至可以注册整个库，如下：
 
 ```js
 Yox.filter(_)
 ```
+
+> 全局注册非常容易出现命名冲突，请自己保证不会发生这种事。
 
 ### 本地注册
 
