@@ -8,7 +8,7 @@ Yox 采用了 `Mustache` 的定界符： `{{` 和 `}}`。
 </div>
 ```
 
-> 目前不支持自定义定界符，如果对自定义定界符有刚需，请通过 [Issue](https://github.com/yoxjs/yox/issues/new) 清晰地描述使用场景。
+> 目前不支持自定义定界符，如果你对自定义定界符有强烈需求，请通过 [Issue](https://github.com/yoxjs/yox/issues/new) 清晰地描述使用场景。
 
 ## 注释
 
@@ -28,7 +28,7 @@ Yox 采用了 `Mustache` 的定界符： `{{` 和 `}}`。
 </div>
 ```
 
-有时候，你会碰到需要注释属性的情况，如下：
+有时候，你会碰到无法使用 `HTML` 注释的情况，比如注释属性，如下：
 
 ```html
 <div
@@ -61,7 +61,7 @@ Yox 采用了 `Mustache` 的定界符： `{{` 和 `}}`。
 </div>
 ```
 
-需要注意，`{{!` 后面必须紧跟一个空白符，可以是空格，也可以是换行符，如下：
+**注意**：`{{!` 后面必须紧跟一个空白符，可以是空格，也可以是换行符，如下：
 
 ```html
 <div>
@@ -145,19 +145,25 @@ Yox 会自动识别常见属性的类型，如下：
   按照 HTML 的游戏规则，boolean 属性不写属性值表示 true
   作为扩展，值为字面量 true 也表示 true
 -->
-<input type="checkbox" disabled checked="true">
+<input type="checkbox" disabled checked="true" required="{{true}}">
 ```
 
 #### 插值数量
 
-如果属性值只有一个插值，表达式的值会直接赋给属性值，即值的类型保持不变。
-
-如果属性值包含 `多个插值` 或 `插值与字面量混用`，Yox 会把它们的值拼接起来，形成一个字符串，再赋给属性值，举例如下：
+如果属性值只有一个插值，表达式的值会原样赋给属性值，即值的类型保持不变。
 
 ```html
-<div class="{{class1}} {{class2}}" title="hello, {{name}}">
-  balabala
-</div>
+<input type="checkbox" required="{{true}}">
+```
+
+如果属性值包含 `多个插值` 或 `插值与字面量混用`，Yox 会把它们的值拼接起来，形成一个字符串，再赋给属性值。
+
+```html
+<!--
+  class = class1 + ' ' + class2
+  title = 'hello, ' + name
+-->
+<div class="{{class1}} {{class2}}" title="hello, {{name}}"></div>
 ```
 
 ### 子节点
@@ -166,7 +172,7 @@ Yox 会自动识别常见属性的类型，如下：
 
 #### 安全插值
 
-安全插值，表示值最终会设置到 `元素节点` 或 `文本节点` 的 `textContent` 属性上，因此它是**安全**的。
+安全插值（`{{` 和 `}}`），表示值最终会设置到 `元素节点` 或 `文本节点` 的 `textContent` 属性上，因此它是**安全**的。
 
 ```html
 <div>
@@ -177,7 +183,7 @@ Yox 会自动识别常见属性的类型，如下：
 
 #### 危险插值
 
-危险插值，表示值最终会设置到 `元素节点` 的 `innerHTML` 属性上，常用于渲染富文本。
+危险插值（`{{{` 和 `}}}`），表示值最终会设置到 `元素节点` 的 `innerHTML` 属性上，常用于渲染富文本。
 
 ```html
 <div>
@@ -186,7 +192,7 @@ Yox 会自动识别常见属性的类型，如下：
 </div>
 ```
 
-危险插值必须独享一个 `元素节点`，如下：
+危险插值**必须**独享一个 `元素节点`，如下：
 
 ```html
 <div>
@@ -208,7 +214,7 @@ Yox 会自动识别常见属性的类型，如下：
 
 ## 条件判断
 
-`if` 或 `else if` 后面紧跟一个表达式，语法和 `JavaScript` 完全一致。
+`if` 或 `else if` 后面紧跟一个表达式，语法设计和判断逻辑完全照搬 `JavaScript`，上手零成本。
 
 ```html
 <div>
@@ -225,49 +231,23 @@ Yox 会自动识别常见属性的类型，如下：
 此外，还可以在 `元素节点` 或 `组件节点` 的**属性**层级使用条件判断，如下：
 
 ```html
-<div {{#if id}}id="{{id}}"{{/if}}
-  class="{{#if class}}{{class}}{{else}}default{{/if}}">
+<div
+  {{#if id}}
+    id="{{id}}"
+  {{/if}}
+
+  class="
+  {{#if class}}
+    {{class}}
+  {{else}}
+    default
+  {{/if}}"
+>
   xxx
 </div>
 ```
 
 > 例子本身没有意义，纯粹演示功能。
-
-在 `Mustache` 的语法中，`[]` 被认为是 `false`，这个特性严重违反直觉，为了避免歧义和保持代码逻辑清晰，我们并未采用。
-
-Yox 判断非空数组的方式如下：
-
-```html
-<div>
-  {{#if !list || !list.length}}
-    没有数据
-  {{else}}
-    ...
-  {{/if}}
-</div>
-```
-
-如果觉得麻烦，可以先注册一个 `isFalsyArray` 过滤器。
-
-```js
-Yox.filter({
-  isFalsyArray: Yox.array.falsy
-})
-```
-
-> Yox 暴露了一些 core 用到的工具库，比如 `Yox.array`
-
-改进版
-
-```html
-<div>
-  {{#if isFalsyArray(list)}}
-    没有数据
-  {{else}}
-    ...
-  {{/if}}
-</div>
-```
 
 ## 循环数组
 
