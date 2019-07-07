@@ -32,9 +32,18 @@
 
 ## 双向绑定
 
-* [绑定表单元素](https://jsrun.net/wxyKp/edit)
-* [绑定组件 - Input](https://jsrun.net/NxyKp/edit)
-* [绑定组件 - Checkbox](https://jsrun.net/LCyKp/edit)
+### 表单元素
+
+* [input](https://jsrun.net/qByKp/edit)
+* [textarea](https://jsrun.net/ZByKp/edit)
+* [radio](https://jsrun.net/gByKp/edit)
+* [checkbox](https://jsrun.net/hByKp/edit)
+* [select](https://jsrun.net/XByKp/edit)
+
+### 组件
+
+* [Input](https://jsrun.net/NxyKp/edit)
+* [Checkbox](https://jsrun.net/LCyKp/edit)
 
 ## 组件
 

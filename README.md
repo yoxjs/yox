@@ -62,9 +62,18 @@ yarn add yox
 
 #### Data Binding
 
-* [Form Element](https://jsrun.net/wxyKp/edit)
-* [Component - Input](https://jsrun.net/NxyKp/edit)
-* [Component - Checkbox](https://jsrun.net/LCyKp/edit)
+##### Form Element
+
+* [input](https://jsrun.net/qByKp/edit)
+* [textarea](https://jsrun.net/ZByKp/edit)
+* [radio](https://jsrun.net/gByKp/edit)
+* [checkbox](https://jsrun.net/hByKp/edit)
+* [select](https://jsrun.net/XByKp/edit)
+
+##### Component
+
+* [Input](https://jsrun.net/NxyKp/edit)
+* [Checkbox](https://jsrun.net/LCyKp/edit)
 
 #### Component
 
