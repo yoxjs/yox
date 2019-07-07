@@ -2,7 +2,7 @@ Yox 采用 `get()` 和 `set()` 的方式读写数据。
 
 我们认为这将带来以下好处：
 
-1. 兼容所有运行环境
+1. 支持所有 `JavaScript` 环境
 2. 保持数据的纯粹性，无需 `defineProperty` 或任何形式的改写
 3. 无需预设默认值即可响应数据变化
 4. `get('a.b.c.d.e.f.g')` 无需担心空异常
@@ -46,7 +46,7 @@ this.get('users[0]name')
 ```js
 // a、b、c、d、e、f 任何一个为空都不会报错
 this.get('a.b.c.d.e.f.g')
-// 如果这么写，空异常只能怪自己了
+// 像下面这样写，发生空异常请自己背锅
 this.get('a.b.c.d.e.f').g
 ```
 
@@ -155,7 +155,7 @@ this.set('user', user)
 修改 `引用类型` 的数据（比如 `Object` 和 `Array`），顺序是先 `拷贝` 再 `修改`，如下：
 
 ```js
-// 拷贝，改变 user 的引用
+// 浅拷贝，改变 user 的引用
 var user = this.copy(this.get('user'))
 // 修改拷贝后的数据
 user.name = 'new name'

@@ -62,6 +62,8 @@ this.watch({
 })
 ```
 
+非特殊场景，不建议使用 `sync`。
+
 > 友情提示：`sync` 是调试神器
 
 ### once
@@ -157,6 +159,8 @@ this.watch({
 this.unwatch(?keypath, ?watcher)
 ```
 
+> `watcher` 是监听函数，不是 `options`。
+
 如果不传 `watcher`，则解除该 `keypath` 绑定的所有监听器，如下：
 
 ```js
@@ -169,15 +173,13 @@ this.unwatch('keypath')
 this.unwatch()
 ```
 
-> `watcher` 是监听函数，不是 `options`。
-
 ## Keypath
 
 `keypath` 的分隔符是 `.`，一个典型的例子是 `users.0.name`，可见即使是数组下标，最终也是通过 `.` 来访问。
 
 所有的数据变化都是通过 `keypath` 进行分发，也就是说，如果你希望响应 `数组` 的变化，请用 `.` 的方式监听。
 
-> 不要写成 `this.watch('list[0].name', function)`
+> 不要写成 `this.watch('list[0].name', function)` 哦
 
 ## 通配符
 
@@ -186,7 +188,7 @@ this.unwatch()
 * `*`：匹配一个段
 * `**`：匹配任意长度的段
 
-下面，我们用几个例子加深印象：
+下面我们用几个例子加深印象：
 
 * `user.*`：匹配 `user` 的任意属性，如 `user.name`、`user.age`，但无法匹配 `user.name.familyName`
 * `user.**`：匹配 `user` 的任意属性，且不限深度
