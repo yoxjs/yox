@@ -46,10 +46,19 @@ yarn add yox
 
 #### Event Handle
 
+### DOM Event
+
 * [Fire Event](https://jsrun.net/vxyKp/edit)
 * [Invoke Method With No Params](https://jsrun.net/LxyKp/edit)
 * [Invoke Method With Params](https://jsrun.net/ICyKp/edit)
 * [Custom DOM Event](https://jsrun.net/XCyKp/edit)
+
+### Component Event
+
+* [Event Bubble Up](https://jsrun.net/YByKp/edit)
+* [Invoke Method](https://jsrun.net/kByKp/edit)
+* [Bind DOM Event On Component Root Element](https://jsrun.net/iByKp/edit)
+
 
 #### Data Binding
 

@@ -17,10 +17,18 @@
 
 ## 事件处理
 
+### DOM 事件
+
 * [事件转换](https://jsrun.net/vxyKp/edit)
 * [调用方法 - 无参](https://jsrun.net/LxyKp/edit)
 * [调用方法 - 传参](https://jsrun.net/ICyKp/edit)
 * [自定义 DOM 事件](https://jsrun.net/XCyKp/edit)
+
+### 组件事件
+
+* [事件冒泡](https://jsrun.net/YByKp/edit)
+* [调用方法](https://jsrun.net/kByKp/edit)
+* [监听组件根元素的 DOM 事件](https://jsrun.net/iByKp/edit)
 
 ## 双向绑定
 
