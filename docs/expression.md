@@ -122,14 +122,35 @@ Yox 的指令支持函数调用，如下：
 <div o-name="invoke()"></div>
 ```
 
-`invoke()` 可调用的函数来自当前模板所属组件的实例方法。实例方法既可以是组件自定义的 `methods`，也可以是 Yox 内置的一些组件实例方法，如 `set`、`fire` 等。
+`invoke()` 可调用的函数来自当前模板所属组件的 `实例方法`。
+
+`实例方法` 既可以是组件自定义的 `methods`，也可以是 Yox 内置的一些组件实例方法，如 `set`、`fire`、`toggle` 等，举个例子：
+
+```html
+<div
+  on-click="submit()"
+  on-mouseenter="set('hover', true)"
+  on-mouseleave="set('hover', false)"
+>
+</div>
+```
+
+```js
+{
+  methods: {
+    submit: function () {
+
+    }
+  }
+}
+```
 
 > 更多内容，参考 **事件处理** - **调用方法** 和 **自定义指令**
 
 
 ### 过滤器
 
-`过滤器` 指的是一个 `Function`，通过调用该函数，获得一个更符合展示需求的数据格式，比如格式化日期：
+`过滤器` 指的是一个 `Function`，通过调用该函数，获得一个更符合 `展示需求` 的数据格式，比如格式化日期：
 
 ```html
 <div>
