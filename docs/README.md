@@ -6,6 +6,7 @@
 * 采用 `TypeScript` 开发，带来更好的工程化开发体验
 * 无需记忆繁冗的语法糖和 API，脱离文档开发不是梦
 * 高仿 [Handlebars](http://handlebarsjs.com/) 风格的模板引擎，借力 `.hbs` 文件的语法高亮
+* 魔改 `Snabbdom` 实现的 `Virtual DOM`
 * 提供面向指令的扩展机制
 * 支持所有 `JavaScript` 环境，比如低版本 IE、各种小程序、React Native、NodeJS
 * 作者前端生涯沉淀之作，纯个人作品，非 KPI 产物，长期维护，放心使用
