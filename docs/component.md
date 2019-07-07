@@ -291,11 +291,11 @@ Yox.component('AsyncComponent', function () {
 </div>
 ```
 
-> 参考 **模板** - **延展属性**
-
 ## 数据校验
 
-如果定义的组件配置了 `propTypes`，当它接收到传入的 `props` 后，会立即进行数据校验，它会根据配置的 `propTypes`，告诉你哪些数据不符合要求。
+如果组件配置了 `propTypes`，当它接收到传入的 `props` 后，会立即进行数据校验。
+
+Yox 会根据配置的 `propTypes`，告诉你哪些数据不符合要求。
 
 `propTypes` 为每个字段提供三个配置项，如下：
 
@@ -323,8 +323,8 @@ Yox.component('AsyncComponent', function () {
 `type` 的可选值来自下面这个函数：
 
 ```js
-function (prop) {
-  return Object.prototype.toString.call(prop).slice(8, -1).toLowerCase()
+function (value) {
+  return Object.prototype.toString.call(value).slice(8, -1).toLowerCase()
 }
 ```
 
@@ -332,13 +332,13 @@ function (prop) {
 
 此外还有一个特殊值 `numeric`，表示字符串类型的数字。
 
-为了进行更 `严谨` 的数据校验，`type` 还支持函数，这样你就可以实现 `oneOf` 之类的校验函数，如下：
+为了进行更 `严谨` 的数据校验，`type` 还支持函数，这样你就可以自行实现 `oneOf` 之类的校验函数，如下：
 
 ```js
 function oneOf(values) {
   return function (key, value) {
     if (!Yox.array.has(values, value)) {
-      Yox.logger.warn('error message')
+      Yox.logger.warn('warn message')
     }
   }
 }
@@ -377,7 +377,7 @@ function oneOf(values) {
 
 如果外部没有传入此项数据（即值为 `undefined`），则可设置默认值。
 
-> 在低版本 IE 中，`default` 是关键字，因此选择了 `value` 而不是 `default`
+> 在低版本 IE 中，`default` 是关键字，因此选择了 `value` 而不是 `default`。
 
 ```js
 {
@@ -407,8 +407,13 @@ function oneOf(values) {
 }
 ```
 
-如果不使用函数，而是直接配置固定的引用类型，所有组件实例都会持有相同的引用，这在大部分场景下都是不符合预期的。
+如果不使用函数，而是直接配置固定的引用类型，则所有组件实例都会持有相同的引用，这在大部分场景都是不符合预期的。
 
+## 单向数据流
+
+前面两节介绍了如何给子组件传递数据，作为子组件，建议只能读取这些数据，而不要去修改它，因为这样会产生数据的混乱。
+
+> 鉴于我的理论功底较差，无法解释清楚，请自行了解 **单向数据流** 的概念吧。
 
 ## 传递节点
 

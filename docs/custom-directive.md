@@ -103,7 +103,7 @@ else {
 
 * `isComponent`: 是否是组件节点
 * `context`: 渲染节点的上下文环境，这是一个 `Yox` 实例
-* `lazy`: 如果在节点上设置了 `lazy`，这是一个 `Object`，否则为空
+* `lazy`: 参考 **Lazy** - **自定义指令**
 * `data`: `vnode` 生命周期内读写自定义数据的容器
 
 ### directive
