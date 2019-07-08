@@ -15,9 +15,10 @@
 
 ## Each
 
-* [遍历数组](https://jsrun.net/hxyKp/edit)
-* [遍历对象](https://jsrun.net/yxyKp/edit)
-* [遍历区间](https://jsrun.net/fxyKp/edit)
+* [数组 - 数组项是对象类型](https://jsrun.net/hxyKp/edit)
+* [数组 - 数组项是基本类型](https://jsrun.net/eByKp/edit)
+* [对象](https://jsrun.net/yxyKp/edit)
+* [区间](https://jsrun.net/fxyKp/edit)
 
 ## 事件处理
 

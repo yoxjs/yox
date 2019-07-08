@@ -44,7 +44,8 @@ yarn add yox
 
 #### Each
 
-* [Array](https://jsrun.net/hxyKp/edit)
+* [Array With Object Type](https://jsrun.net/hxyKp/edit)
+* [Array With Primitive Type](https://jsrun.net/eByKp/edit)
 * [Object](https://jsrun.net/yxyKp/edit)
 * [Range](https://jsrun.net/fxyKp/edit)
 
