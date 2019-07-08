@@ -17,9 +17,9 @@ export interface EmitterInterface {
 	listeners: Record<string, EmitterOptions[]>;
 	nativeListeners?: Record<string, NativeListener>;
 	fire(type: string | Namespace, args: any[] | void, filter?: (namespace: Namespace, args: any[] | void, options: EmitterOptions) => boolean | void): boolean;
-	on(type: string, listener?: Listener | EmitterOptions): void;
-	off(type?: string, listener?: Listener): void;
-	has(type: string, listener?: Listener): boolean;
+	on(type: string, listener: Function | EmitterOptions): void;
+	off(type?: string, listener?: Function): void;
+	has(type: string, listener?: Function): boolean;
 	parse(type: string): Namespace;
 }
 export interface CustomEventInterface {
@@ -52,14 +52,14 @@ export interface YoxInterface {
 	$context?: YoxInterface;
 	$children?: YoxInterface[];
 	$refs?: Record<string, YoxInterface | HTMLElement>;
-	get(keypath: string, defaultValue?: any, depIgnore?: boolean): any;
+	get(keypath: string, defaultValue?: any): any;
 	set(keypath: string | Data, value?: any): void;
-	on(type: string | Record<string, TypedListener<this>>, listener?: TypedListener<this>): this;
-	once(type: string | Record<string, TypedListener<this>>, listener?: TypedListener<this>): this;
-	off(type?: string, listener?: TypedListener<this>): this;
+	on(type: string | Record<string, Listener<this>>, listener?: Listener<this>): this;
+	once(type: string | Record<string, Listener<this>>, listener?: Listener<this>): this;
+	off(type?: string, listener?: Listener<this>): this;
 	fire(type: string | CustomEventInterface, data?: Data | boolean, downward?: boolean): boolean;
-	watch(keypath: string | Record<string, TypedWatcher<this> | TypedWatcherOptions<this>>, watcher?: TypedWatcher<this> | TypedWatcherOptions<this>, immediate?: boolean): this;
-	unwatch(keypath?: string, watcher?: TypedWatcher<this>): this;
+	watch(keypath: string | Record<string, Watcher<this> | WatcherOptions<this>>, watcher?: Watcher<this> | WatcherOptions<this>, immediate?: boolean): this;
+	unwatch(keypath?: string, watcher?: Watcher<this>): this;
 	loadComponent(name: string, callback: ComponentCallback): void;
 	createComponent(options: ComponentOptions, vnode: VNode): YoxInterface;
 	directive(name: string | Record<string, DirectiveHooks>, directive?: DirectiveHooks): DirectiveHooks | void;
@@ -67,7 +67,6 @@ export interface YoxInterface {
 	component(name: string | Record<string, Component>, component?: Component): Component | void;
 	partial(name: string | Record<string, string>, partial?: string): Function | void;
 	filter(name: string | Record<string, Filter>, filter?: Filter): Filter | void;
-	checkProps(props: Data): void;
 	checkProp(key: string, value: any): void;
 	forceUpdate(data?: Data): void;
 	destroy(): void;
@@ -147,14 +146,11 @@ export interface ComputedOptions {
 	sync?: boolean;
 	deps?: string[];
 }
-export interface WatcherOptions {
-	watcher: Watcher;
+export interface WatcherOptions<T = any> {
+	watcher: Watcher<T>;
 	immediate?: boolean;
 	sync?: boolean;
 	once?: boolean;
-}
-export interface TypedWatcherOptions<T> extends WatcherOptions {
-	watcher: TypedWatcher<T>;
 }
 export interface EmitterOptions extends Task {
 	ns?: string;
@@ -229,10 +225,8 @@ export declare type ComponentLoader = (callback: ComponentCallback) => Promise<C
 export declare type Component = ComponentOptions | ComponentLoader;
 export declare type FilterFunction = (this: any, ...args: any) => string | number | boolean;
 export declare type Filter = FilterFunction | Record<string, FilterFunction>;
-export declare type TypedWatcher<T> = (this: T, newValue: any, oldValue: any, keypath: string) => void;
-export declare type Watcher = (newValue: any, oldValue: any, keypath: string) => void;
-export declare type TypedListener<T> = (this: T, event: CustomEventInterface, data?: Data) => false | void;
-export declare type Listener = (event: CustomEventInterface, data?: Data) => false | void;
+export declare type Watcher<T = any> = (this: T, newValue: any, oldValue: any, keypath: string) => void;
+export declare type Listener<T = any> = (this: T, event: CustomEventInterface, data?: Data) => false | void;
 export declare type NativeListener = (event: CustomEventInterface | Event) => false | void;
 export declare type ComputedGetter = () => any;
 export declare type ComputedSetter = (value: any) => void;
@@ -393,8 +387,9 @@ declare class Emitter implements EmitterInterface {
 	/**
 	 * 发射事件
 	 *
-	 * @param bullet 事件或事件名称
-	 * @param data 事件数据
+	 * @param type 事件名称或命名空间
+	 * @param args 事件处理函数的参数列表
+	 * @param filter 自定义过滤器
 	 */
 	fire(type: string | Namespace, args: any[] | void, filter?: (namespace: Namespace, args: any[] | void, options: EmitterOptions) => boolean | void): boolean;
 	/**
@@ -403,7 +398,7 @@ declare class Emitter implements EmitterInterface {
 	 * @param type
 	 * @param listener
 	 */
-	on(type: string, listener?: Function | EmitterOptions): void;
+	on(type: string, listener: Function | EmitterOptions): void;
 	/**
 	 * 取消监听
 	 *
@@ -721,7 +716,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
 	/**
 	 * 取值
 	 */
-	get(keypath: string, defaultValue?: any, depIgnore?: boolean): any;
+	get(keypath: string, defaultValue?: any): any;
 	/**
 	 * 设值
 	 */
@@ -729,15 +724,15 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
 	/**
 	 * 监听事件，支持链式调用
 	 */
-	on(type: string | Record<string, TypedListener<this>>, listener?: TypedListener<this>): this;
+	on(type: string | Record<string, Listener<this>>, listener?: Listener<this>): this;
 	/**
 	 * 监听一次事件，支持链式调用
 	 */
-	once(type: string | Record<string, TypedListener<this>>, listener?: TypedListener<this>): this;
+	once(type: string | Record<string, Listener<this>>, listener?: Listener<this>): this;
 	/**
 	 * 取消监听事件，支持链式调用
 	 */
-	off(type?: string, listener?: TypedListener<this>): this;
+	off(type?: string, listener?: Listener<this>): this;
 	/**
 	 * 发射事件
 	 */
@@ -745,7 +740,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
 	/**
 	 * 监听数据变化，支持链式调用
 	 */
-	watch(keypath: string | Record<string, TypedWatcher<this> | TypedWatcherOptions<this>>, watcher?: TypedWatcher<this> | TypedWatcherOptions<this>, immediate?: boolean): this;
+	watch(keypath: string | Record<string, Watcher<this> | WatcherOptions<this>>, watcher?: Watcher<this> | WatcherOptions<this>, immediate?: boolean): this;
 	/**
 	 * 取消监听数据变化，支持链式调用
 	 */
@@ -805,7 +800,6 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
 	 *
 	 * @param props
 	 */
-	checkProps(props: Data): void;
 	checkProp(key: string, value: any): void;
 	/**
 	 * 销毁组件

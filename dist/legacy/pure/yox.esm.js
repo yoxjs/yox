@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.86
+ * yox.js v1.0.0-alpha.87
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -978,8 +978,9 @@ class Emitter {
     /**
      * 发射事件
      *
-     * @param bullet 事件或事件名称
-     * @param data 事件数据
+     * @param type 事件名称或命名空间
+     * @param args 事件处理函数的参数列表
+     * @param filter 自定义过滤器
      */
     fire(type, args, filter) {
         let instance = this, namespace = string(type) ? instance.parse(type) : type, list = instance.listeners[namespace.name], isComplete = TRUE;
@@ -1005,7 +1006,7 @@ class Emitter {
                 // 这样方便业务层移除事件绑定
                 // 比如 on('xx', function) 这样定义了匿名 listener
                 // 在这个 listener 里面获取不到当前 listener 的引用
-                // 为了能引用到，有时候会先定义 var listener = function,
+                // 为了能引用到，有时候会先定义 var listener = function
                 // 然后再 on('xx', listener) 这样其实是没有必要的
                 if (event) {
                     event.listener = options.fn;
@@ -2067,8 +2068,8 @@ class Yox {
     /**
      * 取值
      */
-    get(keypath, defaultValue, depIgnore) {
-        return this.$observer.get(keypath, defaultValue, depIgnore);
+    get(keypath, defaultValue) {
+        return this.$observer.get(keypath, defaultValue);
     }
     /**
      * 设值
@@ -2220,8 +2221,6 @@ class Yox {
      *
      * @param props
      */
-    checkProps(props) {
-    }
     checkProp(key, value) {
     }
     /**
@@ -2331,7 +2330,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.86";
+Yox.version = "1.0.0-alpha.87";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

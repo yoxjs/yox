@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.86
+ * yox.js v1.0.0-alpha.87
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1043,8 +1043,9 @@
       /**
        * 发射事件
        *
-       * @param bullet 事件或事件名称
-       * @param data 事件数据
+       * @param type 事件名称或命名空间
+       * @param args 事件处理函数的参数列表
+       * @param filter 自定义过滤器
        */
       Emitter.prototype.fire = function (type, args, filter) {
           var instance = this, namespace = string(type) ? instance.parse(type) : type, list = instance.listeners[namespace.name], isComplete = TRUE;
@@ -1070,7 +1071,7 @@
                   // 这样方便业务层移除事件绑定
                   // 比如 on('xx', function) 这样定义了匿名 listener
                   // 在这个 listener 里面获取不到当前 listener 的引用
-                  // 为了能引用到，有时候会先定义 var listener = function,
+                  // 为了能引用到，有时候会先定义 var listener = function
                   // 然后再 on('xx', listener) 这样其实是没有必要的
                   if (event_1) {
                       event_1.listener = options.fn;
@@ -1425,9 +1426,6 @@
                       props = {};
                   }
                   props[node.$model] = model.value;
-              }
-              if (props) {
-                  node.checkProps(props);
               }
               var result = merge(props, slots);
               if (result) {
@@ -1905,7 +1903,7 @@
       data[key] = value;
   }
   var KEY_DIRECTIVES = 'directives';
-  function render(context, template, filters, partials, directives, transitions) {
+  function render(context, observer, template, filters, partials, directives, transitions) {
       var $scope = { $keypath: EMPTY_STRING }, $stack = [$scope], $vnode, vnodeStack = [], localPartials = {}, findValue = function (stack, index, key, lookup, depIgnore, defaultKeypath) {
           var scope = stack[index], keypath = join$1(scope.$keypath, key), value = stack, holder$1 = holder;
           // 如果最后还是取不到值，用回最初的 keypath
@@ -1932,7 +1930,7 @@
           }
           if (value === stack) {
               // 正常取数据
-              value = context.get(keypath, stack, depIgnore);
+              value = observer.get(keypath, stack, depIgnore);
               if (value === stack) {
                   if (lookup && index > 0) {
                       return findValue(stack, index - 1, key, lookup, depIgnore, defaultKeypath);
@@ -2095,7 +2093,7 @@
           }
       }, renderElementVnode = function (vnode, tag, attrs, childs, slots) {
           if (tag) {
-              var componentName = context.get(tag);
+              var componentName = observer.get(tag);
               vnode.tag = componentName;
           }
           if (attrs) {
@@ -3801,8 +3799,8 @@
       /**
        * 取值
        */
-      Yox.prototype.get = function (keypath, defaultValue, depIgnore) {
-          return this.$observer.get(keypath, defaultValue, depIgnore);
+      Yox.prototype.get = function (keypath, defaultValue) {
+          return this.$observer.get(keypath, defaultValue);
       };
       /**
        * 设值
@@ -4027,7 +4025,7 @@
       Yox.prototype.render = function () {
           {
               var instance = this;
-              return render(instance, instance.$template, merge(instance.$filters, globalFilters), merge(instance.$partials, globalPartials), merge(instance.$directives, globalDirectives), merge(instance.$transitions, globalTransitions));
+              return render(instance, instance.$observer, instance.$template, merge(instance.$filters, globalFilters), merge(instance.$partials, globalPartials), merge(instance.$directives, globalDirectives), merge(instance.$transitions, globalTransitions));
           }
       };
       /**
@@ -4072,8 +4070,6 @@
        *
        * @param props
        */
-      Yox.prototype.checkProps = function (props) {
-      };
       Yox.prototype.checkProp = function (key, value) {
       };
       /**
@@ -4199,7 +4195,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.86";
+      Yox.version = "1.0.0-alpha.87";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

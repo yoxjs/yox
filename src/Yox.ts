@@ -1,10 +1,8 @@
 import {
   Data,
   Filter,
-  Listener,
-  TypedListener,
   Watcher,
-  TypedWatcher,
+  Listener,
   Component,
   ComponentCallback,
   ComponentLoader,
@@ -25,7 +23,6 @@ import {
 import {
   EmitterOptions,
   WatcherOptions,
-  TypedWatcherOptions,
   ComponentOptions,
 } from '../../yox-type/src/options'
 
@@ -585,10 +582,9 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
    */
   get(
     keypath: string,
-    defaultValue?: any,
-    depIgnore?: boolean
+    defaultValue?: any
   ): any {
-    return this.$observer.get(keypath, defaultValue, depIgnore)
+    return this.$observer.get(keypath, defaultValue)
   }
 
   /**
@@ -610,8 +606,8 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
    * 监听事件，支持链式调用
    */
   on(
-    type: string | Record<string, TypedListener<this>>,
-    listener?: TypedListener<this>
+    type: string | Record<string, Listener<this>>,
+    listener?: Listener<this>
   ): this {
     addEvents(this, type, listener)
     return this
@@ -621,8 +617,8 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
    * 监听一次事件，支持链式调用
    */
   once(
-    type: string | Record<string, TypedListener<this>>,
-    listener?: TypedListener<this>
+    type: string | Record<string, Listener<this>>,
+    listener?: Listener<this>
   ): this {
     addEvents(this, type, listener, env.TRUE)
     return this
@@ -633,7 +629,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
    */
   off(
     type?: string,
-    listener?: TypedListener<this>
+    listener?: Listener<this>
   ): this {
     this.$emitter.off(type, listener)
     return this
@@ -712,8 +708,8 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
    * 监听数据变化，支持链式调用
    */
   watch(
-    keypath: string | Record<string, TypedWatcher<this> | TypedWatcherOptions<this>>,
-    watcher?: TypedWatcher<this> | TypedWatcherOptions<this>,
+    keypath: string | Record<string, Watcher<this> | WatcherOptions<this>>,
+    watcher?: Watcher<this> | WatcherOptions<this>,
     immediate?: boolean
   ): this {
     this.$observer.watch(keypath, watcher, immediate)
@@ -959,6 +955,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
       const instance = this
       return templateRender.render(
         instance,
+        instance.$observer,
         instance.$template as Function,
         object.merge(instance.$filters, globalFilters) as Record<string, Function>,
         object.merge(instance.$partials, globalPartials) as Record<string, Function>,
@@ -1021,18 +1018,6 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
    *
    * @param props
    */
-  checkProps(props: Data): void {
-    if (process.env.NODE_ENV === 'development') {
-      const instance = this
-      object.each(
-        props,
-        function (value, key) {
-          instance.checkProp(key, value)
-        }
-      )
-    }
-  }
-
   checkProp(key: string, value: any): void {
     if (process.env.NODE_ENV === 'development') {
       const { propTypes } = this.$options

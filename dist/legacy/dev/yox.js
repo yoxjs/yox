@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.86
+ * yox.js v1.0.0-alpha.87
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1067,8 +1067,9 @@
       /**
        * 发射事件
        *
-       * @param bullet 事件或事件名称
-       * @param data 事件数据
+       * @param type 事件名称或命名空间
+       * @param args 事件处理函数的参数列表
+       * @param filter 自定义过滤器
        */
       Emitter.prototype.fire = function (type, args, filter) {
           var instance = this, namespace = string(type) ? instance.parse(type) : type, list = instance.listeners[namespace.name], isComplete = TRUE;
@@ -1094,7 +1095,7 @@
                   // 这样方便业务层移除事件绑定
                   // 比如 on('xx', function) 这样定义了匿名 listener
                   // 在这个 listener 里面获取不到当前 listener 的引用
-                  // 为了能引用到，有时候会先定义 var listener = function,
+                  // 为了能引用到，有时候会先定义 var listener = function
                   // 然后再 on('xx', listener) 这样其实是没有必要的
                   if (event_1) {
                       event_1.listener = options.fn;
@@ -1141,7 +1142,7 @@
               push(listeners[name] || (listeners[name] = []), options);
           }
           else {
-              fatal("Invoke emitter.on(type, listener) failed.");
+              fatal("emitter.on(type, listener) invoke failed\uFF1A\n\n\"listener\" is expected to be a Function or an EmitterOptions.\n");
           }
       };
       /**
@@ -1179,7 +1180,7 @@
               // 但你不知道它是空值
               {
                   if (arguments.length > 0) {
-                      warn("emitter.off(type) is invoked, but the \"type\" argument is undefined or null.");
+                      warn("emitter.off(type) is invoked, but \"type\" is " + type + ".");
                   }
               }
           }
@@ -1460,8 +1461,12 @@
                   }
                   props[node.$model] = model.value;
               }
-              if (props) {
-                  node.checkProps(props);
+              {
+                  if (props) {
+                      each$2(props, function (value, key) {
+                          node.checkProp(key, value);
+                      });
+                  }
               }
               var result = merge(props, slots);
               if (result) {
@@ -2539,8 +2544,6 @@
       };
       /**
        * 截取一段字符串
-       *
-       * @param startIndex
        */
       Parser.prototype.pick = function (startIndex, endIndex) {
           return slice(this.content, startIndex, isDef(endIndex) ? endIndex : this.index);
@@ -3093,7 +3096,8 @@
                   test = createTernary(test, yes, no, instance.pick(index));
               }
               else {
-                  instance.fatal(index, "\u4E09\u5143\u8868\u8FBE\u5F0F\u5199\u6CD5\u9519\u8BEF");
+                  // 三元表达式语法错误
+                  instance.fatal(index, "ternary expression syntax error");
               }
           }
           // 过掉结束字符
@@ -4896,7 +4900,7 @@
       data[key] = value;
   }
   var KEY_DIRECTIVES = 'directives';
-  function render(context, template, filters, partials, directives, transitions) {
+  function render(context, observer, template, filters, partials, directives, transitions) {
       var $scope = { $keypath: EMPTY_STRING }, $stack = [$scope], $vnode, vnodeStack = [], localPartials = {}, findValue = function (stack, index, key, lookup, depIgnore, defaultKeypath) {
           var scope = stack[index], keypath = join$1(scope.$keypath, key), value = stack, holder$1 = holder;
           // 如果最后还是取不到值，用回最初的 keypath
@@ -4923,7 +4927,7 @@
           }
           if (value === stack) {
               // 正常取数据
-              value = context.get(keypath, stack, depIgnore);
+              value = observer.get(keypath, stack, depIgnore);
               if (value === stack) {
                   if (lookup && index > 0) {
                       {
@@ -5099,7 +5103,7 @@
           }
       }, renderElementVnode = function (vnode, tag, attrs, childs, slots) {
           if (tag) {
-              var componentName = context.get(tag);
+              var componentName = observer.get(tag);
               {
                   if (!componentName) {
                       warn("Dynamic component \"" + tag + "\" can't be found.");
@@ -6878,8 +6882,8 @@
       /**
        * 取值
        */
-      Yox.prototype.get = function (keypath, defaultValue, depIgnore) {
-          return this.$observer.get(keypath, defaultValue, depIgnore);
+      Yox.prototype.get = function (keypath, defaultValue) {
+          return this.$observer.get(keypath, defaultValue);
       };
       /**
        * 设值
@@ -7116,7 +7120,7 @@
       Yox.prototype.render = function () {
           {
               var instance = this;
-              return render(instance, instance.$template, merge(instance.$filters, globalFilters), merge(instance.$partials, globalPartials), merge(instance.$directives, globalDirectives), merge(instance.$transitions, globalTransitions));
+              return render(instance, instance.$observer, instance.$template, merge(instance.$filters, globalFilters), merge(instance.$partials, globalPartials), merge(instance.$directives, globalDirectives), merge(instance.$transitions, globalTransitions));
           }
       };
       /**
@@ -7161,14 +7165,6 @@
        *
        * @param props
        */
-      Yox.prototype.checkProps = function (props) {
-          {
-              var instance_2 = this;
-              each$2(props, function (value, key) {
-                  instance_2.checkProp(key, value);
-              });
-          }
-      };
       Yox.prototype.checkProp = function (key, value) {
           {
               var propTypes = this.$options.propTypes;
@@ -7303,7 +7299,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.86";
+      Yox.version = "1.0.0-alpha.87";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
