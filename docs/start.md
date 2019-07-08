@@ -50,6 +50,11 @@
 * [Input](https://jsrun.net/NxyKp/edit)
 * [Checkbox](https://jsrun.net/LCyKp/edit)
 
+## 自定义指令
+
+* [日志上报](https://jsrun.net/QByKp/edit)
+* [修饰符](https://jsrun.net/8jyKp/edit)
+
 ## 组件
 
 * [Button](https://jsrun.net/axyKp/edit)
