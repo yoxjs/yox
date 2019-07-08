@@ -29,8 +29,13 @@ yarn add yox
 ## Example
 
 * [Hello World](https://jsrun.net/YxyKp/edit)
-* [Filter](https://jsrun.net/IxyKp/edit)
 * [Partial](https://jsrun.net/9xyKp/edit)
+
+#### Filter
+
+* [Format Date](https://jsrun.net/IxyKp/edit)
+* [Global Function Is Disabled](https://jsrun.net/zByKp/edit)
+* [Object Method Is Disabled](https://jsrun.net/FByKp/edit)
 
 #### Comment
 

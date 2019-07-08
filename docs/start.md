@@ -1,7 +1,12 @@
 
 * [Hello World](https://jsrun.net/YxyKp/edit)
-* [过滤器](https://jsrun.net/IxyKp/edit)
 * [子模板](https://jsrun.net/9xyKp/edit)
+
+## 过滤器
+
+* [格式化日期](https://jsrun.net/IxyKp/edit)
+* [无法调用全局函数](https://jsrun.net/zByKp/edit)
+* [无法调用对象方法](https://jsrun.net/FByKp/edit)
 
 ## 注释
 
