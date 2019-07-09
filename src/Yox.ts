@@ -629,7 +629,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
    */
   off(
     type?: string,
-    listener?: Listener<this>
+    listener?: Function
   ): this {
     this.$emitter.off(type, listener)
     return this
