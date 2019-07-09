@@ -65,16 +65,24 @@ yarn add yox
 ##### DOM Event
 
 * [Fire Event](https://jsrun.net/vxyKp/edit)
+* [Fire Event With Namespace](https://jsrun.net/DRyKp/edit)
 * [Invoke Method With No Params](https://jsrun.net/LxyKp/edit)
 * [Invoke Method With Params](https://jsrun.net/ICyKp/edit)
 * [Custom DOM Event](https://jsrun.net/XCyKp/edit)
 
 ##### Component Event
 
-* [Event Bubble Up](https://jsrun.net/YByKp/edit)
+* [Bubble Up Event](https://jsrun.net/YByKp/edit)
+* [Transform Event](https://jsrun.net/nRyKp/edit)
 * [Invoke Method](https://jsrun.net/kByKp/edit)
-* [Bind DOM Event On Component Root Element](https://jsrun.net/iByKp/edit)
 
+* [Bubble Up Event With Namespace](https://jsrun.net/tRyKp/edit)
+* [Transform Event With Namespace](https://jsrun.net/CRyKp/edit)
+* [Invoke Method With Namespace](https://jsrun.net/mRyKp/edit)
+
+* [Event Data](https://jsrun.net/jRyKp/edit)
+* [Fire Event Downward](https://jsrun.net/kuyKp/edit)
+* [Bind DOM Event On Component Root Element](https://jsrun.net/iByKp/edit)
 
 #### Data Binding
 
