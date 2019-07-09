@@ -200,7 +200,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
         const nodes = templateCompiler.compile(template)
         if (process.env.NODE_ENV === 'development') {
           if (nodes.length !== 1) {
-            logger.fatal(`"template" should have just one root element.`)
+            logger.fatal(`The "template" option should have just one root element.`)
           }
         }
         compileCache[template] = templateGenerator.generate(nodes[0])
@@ -378,7 +378,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
     // 后放 data
     if (process.env.NODE_ENV === 'development') {
       if (vnode && is.object(data)) {
-        logger.warn(`child component's data should be a function which return an object.`)
+        logger.warn(`The "data" option of child component should be a function which return an object.`)
       }
     }
 
