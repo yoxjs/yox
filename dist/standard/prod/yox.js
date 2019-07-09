@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.87
+ * yox.js v1.0.0-alpha.88
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -2688,6 +2688,7 @@
                           instance.skip();
                           push(values, node);
                       }
+                      // 类似这样 { key: }
                       else {
                           break loop;
                       }
@@ -3399,7 +3400,8 @@
           try {
               expr = compile(text);
           }
-          catch (e) { }
+          catch (e) {
+          }
           if (expr) {
               directive.expr = expr;
               directive.value = expr.type === LITERAL
@@ -4172,7 +4174,7 @@
   // 是否要执行 join 操作
   var joinStack = [], 
   // 是否正在收集子节点
-  collectStack = [], nodeGenerator = {}, RENDER_EXPRESSION_IDENTIFIER = 'a', RENDER_EXPRESSION_MEMBER_KEYPATH = 'b', RENDER_EXPRESSION_MEMBER_LITERAL = 'c', RENDER_EXPRESSION_CALL = 'd', RENDER_TEXT_VNODE = 'e', RENDER_ATTRIBUTE_VNODE = 'f', RENDER_PROPERTY_VNODE = 'g', RENDER_LAZY_VNODE = 'h', RENDER_TRANSITION_VNODE = 'i', RENDER_BINDING_VNODE = 'j', RENDER_MODEL_VNODE = 'k', RENDER_EVENT_METHOD_VNODE = 'l', RENDER_EVENT_NAME_VNODE = 'm', RENDER_DIRECTIVE_VNODE = 'n', RENDER_SPREAD_VNODE = 'o', RENDER_ELEMENT_VNODE = 'p', RENDER_SLOT = 'q', RENDER_PARTIAL = 'r', RENDER_IMPORT = 's', RENDER_EACH = 't', RENDER_RANGE = 'u', TO_STRING = 'v', ARG_STACK = 'w';
+  collectStack = [], nodeGenerator = {}, RENDER_EXPRESSION_IDENTIFIER = 'a', RENDER_EXPRESSION_MEMBER_KEYPATH = 'b', RENDER_EXPRESSION_MEMBER_LITERAL = 'c', RENDER_EXPRESSION_CALL = 'd', RENDER_TEXT_VNODE = 'e', RENDER_ATTRIBUTE_VNODE = 'f', RENDER_PROPERTY_VNODE = 'g', RENDER_LAZY_VNODE = 'h', RENDER_TRANSITION_VNODE = 'i', RENDER_BINDING_VNODE = 'j', RENDER_MODEL_VNODE = 'k', RENDER_EVENT_METHOD_VNODE = 'l', RENDER_EVENT_NAME_VNODE = 'm', RENDER_DIRECTIVE_VNODE = 'n', RENDER_SPREAD_VNODE = 'o', RENDER_ELEMENT_VNODE = 'p', RENDER_SLOT = 'q', RENDER_PARTIAL = 'r', RENDER_IMPORT = 's', RENDER_EACH = 't', RENDER_RANGE = 'u', RENDER_EQUAL_RANGE = 'v', TO_STRING = 'w', ARG_STACK = 'x';
   // 序列化代码的参数列表
   var codeArgs, 
   // 表达式求值是否要求返回字符串类型
@@ -4504,11 +4506,18 @@
       var children = stringifyFunction(stringifyChildren(node.children, node.isComplex));
       // 遍历区间
       if (node.to) {
+          if (node.equal) {
+              return toCall(RENDER_EQUAL_RANGE, [
+                  children,
+                  renderExpression(node.from),
+                  renderExpression(node.to),
+                  node.index ? toString$1(node.index) : UNDEFINED
+              ]);
+          }
           return toCall(RENDER_RANGE, [
               children,
               renderExpression(node.from),
               renderExpression(node.to),
-              node.equal ? TRUE$1 : UNDEFINED,
               node.index ? toString$1(node.index) : UNDEFINED
           ]);
       }
@@ -4555,6 +4564,7 @@
               RENDER_IMPORT,
               RENDER_EACH,
               RENDER_RANGE,
+              RENDER_EQUAL_RANGE,
               TO_STRING ], COMMA);
       }
       return toFunction(codeArgs, nodeGenerator[node.type](node));
@@ -4836,7 +4846,7 @@
           else {
               var partial = partials[name];
               if (partial) {
-                  partial(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, toString);
+                  partial(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange, toString);
               }
           }
       }, eachHandler = function (generate, item, key, keypath, index, length) {
@@ -4876,34 +4886,32 @@
                       : EMPTY_STRING, index);
               }
           }
-      }, renderRange = function (generate, from, to, equal, index) {
+      }, renderRange = function (generate, from, to, index) {
           var count = 0;
           if (from < to) {
-              if (equal) {
-                  for (var i = from; i <= to; i++) {
-                      eachHandler(generate, i, count++, EMPTY_STRING, index);
-                  }
-              }
-              else {
-                  for (var i = from; i < to; i++) {
-                      eachHandler(generate, i, count++, EMPTY_STRING, index);
-                  }
+              for (var i = from; i < to; i++) {
+                  eachHandler(generate, i, count++, EMPTY_STRING, index);
               }
           }
           else {
-              if (equal) {
-                  for (var i = from; i >= to; i--) {
-                      eachHandler(generate, i, count++, EMPTY_STRING, index);
-                  }
+              for (var i = from; i > to; i--) {
+                  eachHandler(generate, i, count++, EMPTY_STRING, index);
               }
-              else {
-                  for (var i = from; i > to; i--) {
-                      eachHandler(generate, i, count++, EMPTY_STRING, index);
-                  }
+          }
+      }, renderEqualRange = function (generate, from, to, index) {
+          var count = 0;
+          if (from < to) {
+              for (var i = from; i <= to; i++) {
+                  eachHandler(generate, i, count++, EMPTY_STRING, index);
+              }
+          }
+          else {
+              for (var i = from; i >= to; i--) {
+                  eachHandler(generate, i, count++, EMPTY_STRING, index);
               }
           }
       };
-      return template(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, toString);
+      return template(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange, toString);
   }
 
   // 这里先写 IE9 支持的接口
@@ -6769,7 +6777,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.87";
+      Yox.version = "1.0.0-alpha.88";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

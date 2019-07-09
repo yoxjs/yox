@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.87
+ * yox.js v1.0.0-alpha.88
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1172,6 +1172,13 @@
               else if (ns_1) {
                   each$2(listeners, each$1);
               }
+              // 在开发阶段进行警告，比如传了 listener 进来，listener 是个空值
+              // 但你不知道它是空值
+              {
+                  if (arguments.length > 1 && listener == NULL) {
+                      warn("emitter.off(type, listener) is invoked, but \"listener\" is " + listener + ".");
+                  }
+              }
           }
           else {
               // 清空
@@ -1918,7 +1925,7 @@
               removeVnode(api, parentNode, vnode);
           }
           else {
-              fatal("Can't destroy vnode without parent node.");
+              fatal("The vnode can't be destroyed without a parent node.");
           }
       }
       else {
@@ -2607,7 +2614,8 @@
                   return createUnary(operator, node, instance.pick(index));
               }
               {
-                  instance.fatal(index, "\u4E00\u5143\u8FD0\u7B97\u53EA\u6709\u64CD\u4F5C\u7B26\u6CA1\u6709\u8868\u8FBE\u5F0F\uFF1F");
+                  // 一元运算只有操作符没有表达式？
+                  instance.fatal(index, "Expression expected.");
               }
           }
       };
@@ -2630,7 +2638,7 @@
               return createLiteral(+raw, raw);
           }
           {
-              instance.fatal(startIndex, "\u6570\u5B57\u5199\u9519\u4E86\u77E5\u9053\u5417\uFF1F");
+              instance.fatal(startIndex, "Number expected.");
           }
       };
       /**
@@ -2658,7 +2666,8 @@
                       break loop;
                   case CODE_EOF:
                       {
-                          instance.fatal(startIndex, "\u5230\u5934\u4E86\uFF0C\u5B57\u7B26\u4E32\u8FD8\u6CA1\u89E3\u6790\u5B8C\u5462\uFF1F");
+                          // 到头了，字符串还没解析完呢？
+                          instance.fatal(startIndex, 'Unexpected end of text.');
                       }
                       break loop;
               }
@@ -2681,14 +2690,16 @@
                   case CODE_CBRACE:
                       instance.go();
                       {
+                          // 对象的 keys 和 values 的长度不一致
                           if (keys.length !== values.length) {
-                              instance.fatal(startIndex, "\u5BF9\u8C61\u7684 keys \u548C values \u7684\u957F\u5EA6\u4E0D\u4E00\u81F4");
+                              instance.fatal(startIndex, 'The number of keys and values must be equal.');
                           }
                       }
                       break loop;
                   case CODE_EOF:
                       {
-                          instance.fatal(startIndex, "\u5230\u5934\u4E86\uFF0C\u5BF9\u8C61\u8FD8\u6CA1\u89E3\u6790\u5B8C\u5462\uFF1F");
+                          // 到头了，对象还没解析完呢？
+                          instance.fatal(startIndex, 'Unexpected end of text.');
                       }
                       break loop;
                   // :
@@ -2717,7 +2728,8 @@
                               }
                               else {
                                   {
-                                      instance.fatal(startIndex, "\u5BF9\u8C61\u7684 key \u5FC5\u987B\u662F\u5B57\u9762\u91CF\u6216\u6807\u8BC6\u7B26");
+                                      // 对象的 key 必须是字面量或标识符
+                                      instance.fatal(startIndex, 'The key of an object must be a literal or identifier.');
                                   }
                                   break loop;
                               }
@@ -2728,9 +2740,11 @@
                           instance.skip();
                           push(values, node);
                       }
+                      // 类似这样 { key: }
                       else {
                           {
-                              instance.fatal(startIndex, "\u5BF9\u8C61\u7684\u503C\u6CA1\u627E\u5230");
+                              // 对象的值没找到
+                              instance.fatal(startIndex, "The value of the object was not found.");
                           }
                           break loop;
                       }
@@ -2755,7 +2769,8 @@
                       break loop;
                   case CODE_EOF:
                       {
-                          instance.fatal(startIndex, "\u5230\u5934\u4E86\uFF0Ctuple \u8FD8\u6CA1\u89E3\u6790\u5B8C\u5462\uFF1F");
+                          // 到头了，tuple 还没解析完呢？
+                          instance.fatal(startIndex, 'Unexpected end of text.');
                       }
                       break loop;
                   case CODE_COMMA:
@@ -2814,7 +2829,7 @@
                   else {
                       // 类似 ./ 或 ../ 这样后面不跟标识符是想干嘛？报错可好？
                       {
-                          instance.fatal(startIndex, "path \u5199\u6CD5\u9519\u8BEF");
+                          instance.fatal(startIndex, last(nodes).raw + "/ must be followed by an identifier.");
                       }
                       break;
                   }
@@ -2860,7 +2875,8 @@
                       }
                       else {
                           {
-                              instance.fatal(startIndex, ". \u540E\u9762\u8DDF\u7684\u90FD\u662F\u5565\u73A9\u610F\u554A");
+                              // . 后面跟的都是啥玩意啊
+                              instance.fatal(startIndex, 'Identifier or number expected.');
                           }
                           break loop;
                       }
@@ -2874,8 +2890,9 @@
                           break;
                       }
                       else {
+                          // [] 内部不能为空
                           {
-                              instance.fatal(startIndex, "[] \u5185\u90E8\u4E0D\u80FD\u4E3A\u7A7A");
+                              instance.fatal(startIndex, "[] is not allowed.");
                           }
                           break loop;
                       }
@@ -2927,7 +2944,7 @@
                   {
                       // ++
                       if (instance.is(CODE_PLUS)) {
-                          instance.fatal(startIndex, "\u4E0D\u652F\u6301\u8BE5\u8BED\u6CD5");
+                          instance.fatal(startIndex, '++ is not supported.');
                       }
                   }
                   break;
@@ -2937,7 +2954,7 @@
                   {
                       // --
                       if (instance.is(CODE_MINUS)) {
-                          instance.fatal(startIndex, "\u4E0D\u652F\u6301\u8BE5\u8BED\u6CD5");
+                          instance.fatal(startIndex, '-- is not supported.');
                       }
                   }
                   break;
@@ -2979,7 +2996,7 @@
                   }
                   // 一个等号要报错
                   else {
-                      instance.fatal(startIndex, "\u4E0D\u652F\u6301\u4E00\u4E2A\u7B49\u53F7\u8FD9\u79CD\u8D4B\u503C\u5199\u6CD5");
+                      instance.fatal(startIndex, 'Assignment statements are not supported.');
                   }
                   break;
               // <、<=、<<
@@ -3047,7 +3064,7 @@
               // 比如不支持的表达式，a++ 之类的
               else {
                   if (operator) {
-                      instance.fatal(startIndex, '表达式错误');
+                      instance.fatal(startIndex, 'Invalid syntax.');
                   }
               }
               // 没匹配到 token 或 operator 则跳出循环
@@ -3097,7 +3114,7 @@
               }
               else {
                   // 三元表达式语法错误
-                  instance.fatal(index, "ternary expression syntax error");
+                  instance.fatal(index, "Invalid ternary syntax.");
               }
           }
           // 过掉结束字符
@@ -3108,14 +3125,14 @@
               }
               // 没匹配到结束字符要报错
               else {
-                  instance.fatal(index, "\u7ED3\u675F\u5B57\u7B26\u5339\u914D\u9519\u8BEF\uFF0C\u671F\u5F85[" + String.fromCharCode(endCode) + "]\uFF0C\u5374\u53D1\u73B0[" + String.fromCharCode(instance.code) + "]");
+                  instance.fatal(index, "\"" + String.fromCharCode(endCode) + "\" expected, \"" + String.fromCharCode(instance.code) + "\" actually.");
               }
           }
           return test;
       };
       Parser.prototype.fatal = function (start, message) {
           {
-              fatal("Error compiling expression:\n" + this.content + "\n- " + message);
+              fatal("Error compiling expression\n\n" + this.content + "\n\nmessage: " + message + "\n");
           }
       };
       return Parser;
@@ -3258,7 +3275,7 @@
       // mustache 注释可能出现嵌套插值的情况
       blockStack = [], indexList = [], code, startQuote, fatal$1 = function (msg) {
           {
-              fatal("Error compiling " + RAW_TEMPLATE + ":\n" + content + "\n- " + msg);
+              fatal("Error compiling template\n\n" + content + "\n\nmessage: " + msg);
           }
       }, 
       /**
@@ -3308,7 +3325,7 @@
                   if (isElement) {
                       var element = node;
                       if (tagName && element.tag !== tagName) {
-                          fatal$1("\u7ED3\u675F\u6807\u7B7E\u662F" + tagName + "\uFF0C\u5F00\u59CB\u6807\u7B7E\u5374\u662F" + element.tag);
+                          fatal$1("End tag is \"" + tagName + "\"\uFF0Cbut start tag is \"" + element.tag + "\".");
                       }
                   }
               }
@@ -3394,8 +3411,9 @@
               }
               return node;
           }
+          // 出栈节点类型不匹配
           {
-              fatal$1("\u51FA\u6808\u8282\u70B9\u7C7B\u578B\u4E0D\u5339\u914D");
+              fatal$1("The poping node type is not as expected.");
           }
       }, removeComment = function (children) {
           // 类似 <!-- xx {{name}} yy {{age}} zz --> 这样的注释里包含插值
@@ -3443,7 +3461,7 @@
           // 2. 全局搜索不到事件名，不利于代码维护
           // 3. 不利于编译成静态函数
           {
-              fatal$1("\u6307\u4EE4\u7684\u503C\u4E0D\u80FD\u7528\u63D2\u503C\u6216 if \u8BED\u6CD5");
+              fatal$1("{{ and }} are not allowed in directive.");
           }
       }, processElementSingleText = function (element, child) {
           // processElementSingleText 和 processElementSingleExpression
@@ -3492,7 +3510,7 @@
       }, processAttributeEmptyChildren = function (element, attr) {
           if (isSpecialAttr(element, attr)) {
               {
-                  fatal$1(attr.name + " \u5FD8\u4E86\u5199\u503C\u5427\uFF1F");
+                  fatal$1("The value of \"" + attr.name + "\" is empty.");
               }
           }
           else {
@@ -3524,11 +3542,13 @@
           // 自定义指令运行不合法的表达式
           isCustom = directive.ns === DIRECTIVE_CUSTOM, 
           // 指令的值是纯文本，可以预编译表达式，提升性能
-          expr;
+          expr, error;
           try {
               expr = compile(text);
           }
-          catch (e) { }
+          catch (e) {
+              error = e;
+          }
           if (expr) {
               {
                   var raw = expr.raw;
@@ -3536,13 +3556,13 @@
                       if (expr.type !== LITERAL
                           || !number(expr.value)
                           || expr.value <= 0) {
-                          fatal$1("lazy \u6307\u4EE4\u7684\u503C [" + raw + "] \u5FC5\u987B\u662F\u5927\u4E8E 0 \u7684\u6570\u5B57");
+                          fatal$1("The value of lazy must be a number greater than 0.");
                       }
                   }
                   // 如果指令表达式是函数调用，则只能调用方法（难道还有别的可以调用的吗？）
                   else if (expr.type === CALL) {
                       if (expr.name.type !== IDENTIFIER) {
-                          fatal$1('指令表达式的类型如果是函数调用，则只能调用方法');
+                          fatal$1('The method name that appear on directive must be an identifier.');
                       }
                   }
                   // 上面检测过方法调用，接下来事件指令只需要判断是否以下两种格式：
@@ -3552,21 +3572,22 @@
                           // native 有特殊用处，不能给业务层用
                           if (eventNamespacePattern.test(raw)
                               && raw.split(RAW_DOT)[1] === MODIFER_NATIVE) {
-                              fatal$1("\u4E8B\u4EF6\u8F6C\u6362\u540D\u79F0\u7684\u547D\u540D\u7A7A\u95F4\u4E0D\u80FD\u4F7F\u7528 " + MODIFER_NATIVE);
+                              fatal$1("The event namespace \"" + MODIFER_NATIVE + "\" is not permitted.");
                           }
                           // <Button on-click="click"> 这种写法没有意义
                           if (currentElement
                               && currentElement.isComponent
                               && directive.name === raw) {
-                              fatal$1('转换组件事件的名称不能相同');
+                              fatal$1("The event name listened and fired can't be the same.");
                           }
                       }
+                      // 事件转换名称只能是 [name] 或 [name.namespace] 格式
                       else {
-                          fatal$1('事件转换名称只能是 [name] 或 [name.namespace] 格式');
+                          fatal$1('The event name and namespace must be an identifier.');
                       }
                   }
                   if (isModel && expr.type !== IDENTIFIER) {
-                      fatal$1("model \u6307\u4EE4\u7684\u503C\u683C\u5F0F\u9519\u8BEF: [" + raw + "]");
+                      fatal$1("The value of the model must be an identifier.");
                   }
               }
               directive.expr = expr;
@@ -3577,7 +3598,7 @@
           else {
               {
                   if (!isCustom) {
-                      fatal$1(directive.ns + " \u6307\u4EE4\u7684\u8868\u8FBE\u5F0F\u9519\u8BEF: [" + text + "]");
+                      throw error;
                   }
               }
               directive.value = text;
@@ -3585,7 +3606,7 @@
           directive.children = UNDEFINED;
       }, processDirectiveSingleExpression = function (directive, child) {
           {
-              fatal$1("\u6307\u4EE4\u7684\u8868\u8FBE\u5F0F\u4E0D\u80FD\u7528\u63D2\u503C\u8BED\u6CD5");
+              fatal$1("{{ and }} are not allowed in a directive value.");
           }
       }, checkCondition = function (condition) {
           var currentNode = condition, prevNode, hasChildren, hasNext;
@@ -3628,16 +3649,16 @@
           {
               if (isTemplate) {
                   if (element.key) {
-                      fatal$1("<template> \u4E0D\u652F\u6301 key");
+                      fatal$1("The \"key\" is not supported in <template>.");
                   }
                   else if (element.ref) {
-                      fatal$1("<template> \u4E0D\u652F\u6301 ref");
+                      fatal$1("The \"ref\" is not supported in <template>.");
                   }
                   else if (element.attrs) {
-                      fatal$1("<template> \u4E0D\u652F\u6301\u5C5E\u6027\u6216\u6307\u4EE4");
+                      fatal$1("The attributes and directives are not supported in <template>.");
                   }
                   else if (!slot) {
-                      fatal$1("<template> \u4E0D\u5199 slot \u5C5E\u6027\u662F\u51E0\u4E2A\u610F\u601D\uFF1F");
+                      fatal$1("The \"slot\" is required in <template>.");
                   }
               }
           }
@@ -3657,7 +3678,7 @@
               // model 不能写在 if 里，影响节点的静态结构
               if (directive.ns === DIRECTIVE_MODEL) {
                   if (last(nodeStack) !== element) {
-                      fatal$1("model \u4E0D\u80FD\u5199\u5728 if \u5185");
+                      fatal$1("The \"model\" can't be used in an if block.");
                   }
               }
           }
@@ -3668,14 +3689,14 @@
           {
               // 因为要拎出来给 element，所以不能用 if
               if (last(nodeStack) !== element) {
-                  fatal$1(name + " \u4E0D\u80FD\u5199\u5728 if \u5185");
+                  fatal$1("The \"" + name + "\" can't be used in an if block.");
               }
               // 对于所有特殊属性来说，空字符串是肯定不行的，没有任何意义
               if (value === EMPTY_STRING) {
-                  fatal$1(name + " \u7684\u503C\u4E0D\u80FD\u662F\u7A7A\u5B57\u7B26\u4E32");
+                  fatal$1("The value of \"" + name + "\" is empty.");
               }
               else if (isStringValueRequired && falsy$1(value)) {
-                  fatal$1(name + " \u7684\u503C\u53EA\u80FD\u662F\u5B57\u7B26\u4E32\u5B57\u9762\u91CF");
+                  fatal$1("The value of \"" + name + "\" can only be a string literal.");
               }
           }
           element[name] = isStringValueRequired ? value : attr;
@@ -3742,15 +3763,15 @@
                   }
                   else if (type === ELSE_IF) {
                       {
-                          fatal$1('else 后面不能跟 else if 啊');
+                          fatal$1('The "else" block must not be followed by an "else if" block.');
                       }
                   }
                   else {
-                      fatal$1('只能写一个 else 啊');
+                      fatal$1("The \"else\" block can't appear more than once in a conditional statement.");
                   }
               }
               else {
-                  fatal$1('不写 if 是几个意思');
+                  fatal$1('The "if" block is required.');
               }
           }
           else {
@@ -3841,7 +3862,7 @@
                               if (tag === RAW_TEMPLATE) {
                                   var lastNode = last(nodeStack);
                                   if (!lastNode || !lastNode.isComponent) {
-                                      fatal$1('<template> 只能写在组件标签内');
+                                      fatal$1('<template> can only be used within an component children.');
                                   }
                               }
                           }
@@ -3879,7 +3900,7 @@
                       // 这里会匹配上 xxx"，match[2] 就是那个引号
                       {
                           if (match[2]) {
-                              fatal$1("\u4E0A\u4E00\u4E2A\u5C5E\u6027\u4F3C\u4E4E\u6CA1\u6709\u6B63\u5E38\u7ED3\u675F");
+                              fatal$1("The previous attribute is not end.");
                           }
                       }
                       var node = void 0, name = match[1];
@@ -3891,7 +3912,7 @@
                           var event = slicePrefix(name, DIRECTIVE_ON + directiveSeparator);
                           {
                               if (!event) {
-                                  fatal$1('缺少事件名称');
+                                  fatal$1('The event name is required.');
                               }
                           }
                           var _a = camelize(event).split(RAW_DOT), directiveName = _a[0], diectiveModifier = _a[1];
@@ -3912,7 +3933,7 @@
                           var custom = slicePrefix(name, DIRECTIVE_CUSTOM + directiveSeparator);
                           {
                               if (!custom) {
-                                  fatal$1('缺少自定义指令名称');
+                                  fatal$1('The directive name is required.');
                               }
                           }
                           var _b = camelize(custom).split(RAW_DOT), directiveName = _b[0], diectiveModifier = _b[1];
@@ -3960,8 +3981,9 @@
                       text = content;
                       addTextChild(text);
                   }
+                  // 没找到结束引号
                   else {
-                      fatal$1(currentAttribute.name + " \u6CA1\u6709\u627E\u5230\u7ED3\u675F\u5F15\u53F7");
+                      fatal$1("Unterminated quoted string in \"" + currentAttribute.name + "\".");
                   }
               }
               // 如果不加判断，类似 <div {{...obj}}> 这样写，会把空格当做一个属性
@@ -3985,7 +4007,7 @@
               else {
                   {
                       if (trim(content)) {
-                          fatal$1("<" + currentElement.tag + "> \u5C5E\u6027\u91CC\u4E0D\u8981\u5199\u4E71\u4E03\u516B\u7CDF\u7684\u5B57\u7B26");
+                          fatal$1("Invalid character is found in <" + currentElement.tag + "> attribute level.");
                       }
                   }
                   text = content;
@@ -3998,8 +4020,8 @@
                   {
                       if (currentElement) {
                           fatal$1(currentAttribute
-                              ? "each \u4E0D\u80FD\u5199\u5728\u5C5E\u6027\u7684\u503C\u91CC"
-                              : "each \u4E0D\u80FD\u5199\u5728\u5C5E\u6027\u5C42\u7EA7");
+                              ? "The \"each\" block can't be appear in an attribute value."
+                              : "The \"each\" block can't be appear in attribute level.");
                       }
                   }
                   source = slicePrefix(source, SYNTAX_EACH);
@@ -4020,7 +4042,7 @@
                       }
                   }
                   {
-                      fatal$1("\u65E0\u6548\u7684 each");
+                      fatal$1("Invalid each");
                   }
               }
           },
@@ -4034,12 +4056,12 @@
                       }
                       else {
                           fatal$1(currentAttribute
-                              ? "import \u4E0D\u80FD\u5199\u5728\u5C5E\u6027\u7684\u503C\u91CC"
-                              : "import \u4E0D\u80FD\u5199\u5728\u5C5E\u6027\u5C42\u7EA7");
+                              ? "The \"import\" block can't be appear in an attribute value."
+                              : "The \"import\" block can't be appear in attribute level.");
                       }
                   }
                   {
-                      fatal$1("\u65E0\u6548\u7684 import");
+                      fatal$1("Invalid import");
                   }
               }
           },
@@ -4053,12 +4075,12 @@
                       }
                       else {
                           fatal$1(currentAttribute
-                              ? "partial \u4E0D\u80FD\u5199\u5728\u5C5E\u6027\u7684\u503C\u91CC"
-                              : "partial \u4E0D\u80FD\u5199\u5728\u5C5E\u6027\u5C42\u7EA7");
+                              ? "The \"partial\" block can't be appear in an attribute value."
+                              : "The \"partial\" block can't be appear in attribute level.");
                       }
                   }
                   {
-                      fatal$1("\u65E0\u6548\u7684 partial");
+                      fatal$1("Invalid partial");
                   }
               }
           },
@@ -4071,7 +4093,7 @@
                       return createIf(expr);
                   }
                   {
-                      fatal$1("\u65E0\u6548\u7684 if");
+                      fatal$1("Invalid if");
                   }
               }
           },
@@ -4084,7 +4106,7 @@
                       return createElseIf(expr);
                   }
                   {
-                      fatal$1("\u65E0\u6548\u7684 else if");
+                      fatal$1("Invalid else if");
                   }
               }
           },
@@ -4096,7 +4118,7 @@
                       return createElse();
                   }
                   {
-                      fatal$1("else \u540E\u9762\u4E0D\u8981\u5199\u4E71\u4E03\u516B\u7CDF\u7684\u4E1C\u897F");
+                      fatal$1("The \"else\" must not be followed by anything.");
                   }
               }
           },
@@ -4110,11 +4132,11 @@
                           return createSpread(expr, expr.type === IDENTIFIER);
                       }
                       else {
-                          fatal$1("\u5EF6\u5C55\u5C5E\u6027\u53EA\u80FD\u7528\u4E8E\u7EC4\u4EF6\u5C5E\u6027");
+                          fatal$1("The spread can only be used by a component.");
                       }
                   }
                   {
-                      fatal$1("\u65E0\u6548\u7684 spread");
+                      fatal$1("Invalid spread");
                   }
               }
           },
@@ -4127,7 +4149,7 @@
                       return createExpression(expr, blockMode === BLOCK_MODE_SAFE);
                   }
                   {
-                      fatal$1("\u65E0\u6548\u7684 expression");
+                      fatal$1("Invalid expression");
                   }
               }
           } ], parseHtml = function (code) {
@@ -4159,7 +4181,7 @@
                       isCondition = TRUE;
                   }
                   else {
-                      fatal$1("if \u8FD8\u6CA1\u5F00\u59CB\u5C31\u7ED3\u675F\u4E86\uFF1F");
+                      fatal$1("The \"if\" block is closing, but it does't opened.");
                   }
               }
               var node = popStack(type);
@@ -4188,7 +4210,7 @@
                       nextIndex = index + 1;
                   }
                   else {
-                      fatal$1("{{ \u548C }}} \u65E0\u6CD5\u914D\u5BF9");
+                      fatal$1("{{ and }}} is not a pair.");
                   }
               }
               else {
@@ -4196,7 +4218,7 @@
                       nextIndex = index;
                   }
                   else {
-                      fatal$1("{{{ \u548C }} \u65E0\u6CD5\u914D\u5BF9");
+                      fatal$1("{{{ and }} is not a pair.");
                   }
               }
               pop(blockStack);
@@ -4255,15 +4277,17 @@
                           }
                       }
                       else {
-                          fatal$1('找不到结束定界符');
+                          fatal$1('The end delimiter is not found.');
                       }
                   }
                   else {
-                      fatal$1('{{{ 后面没字符串了？');
+                      // {{{ 后面没字符串了？
+                      fatal$1('Unterminated template literal.');
                   }
               }
               else {
-                  fatal$1('{{ 后面没字符串了？');
+                  // {{ 后面没字符串了？
+                  fatal$1('Unterminated template literal.');
               }
           }
           else {
@@ -4302,7 +4326,7 @@
           popSelfClosingElementIfNeeded();
           {
               if (nodeStack.length) {
-                  fatal$1('还有节点未出栈');
+                  fatal$1('Some nodes is still in the stack.');
               }
           }
       }
@@ -4507,7 +4531,7 @@
   // 是否要执行 join 操作
   var joinStack = [], 
   // 是否正在收集子节点
-  collectStack = [], nodeGenerator = {}, RENDER_EXPRESSION_IDENTIFIER = 'a', RENDER_EXPRESSION_MEMBER_KEYPATH = 'b', RENDER_EXPRESSION_MEMBER_LITERAL = 'c', RENDER_EXPRESSION_CALL = 'd', RENDER_TEXT_VNODE = 'e', RENDER_ATTRIBUTE_VNODE = 'f', RENDER_PROPERTY_VNODE = 'g', RENDER_LAZY_VNODE = 'h', RENDER_TRANSITION_VNODE = 'i', RENDER_BINDING_VNODE = 'j', RENDER_MODEL_VNODE = 'k', RENDER_EVENT_METHOD_VNODE = 'l', RENDER_EVENT_NAME_VNODE = 'm', RENDER_DIRECTIVE_VNODE = 'n', RENDER_SPREAD_VNODE = 'o', RENDER_ELEMENT_VNODE = 'p', RENDER_SLOT = 'q', RENDER_PARTIAL = 'r', RENDER_IMPORT = 's', RENDER_EACH = 't', RENDER_RANGE = 'u', TO_STRING = 'v', ARG_STACK = 'w';
+  collectStack = [], nodeGenerator = {}, RENDER_EXPRESSION_IDENTIFIER = 'a', RENDER_EXPRESSION_MEMBER_KEYPATH = 'b', RENDER_EXPRESSION_MEMBER_LITERAL = 'c', RENDER_EXPRESSION_CALL = 'd', RENDER_TEXT_VNODE = 'e', RENDER_ATTRIBUTE_VNODE = 'f', RENDER_PROPERTY_VNODE = 'g', RENDER_LAZY_VNODE = 'h', RENDER_TRANSITION_VNODE = 'i', RENDER_BINDING_VNODE = 'j', RENDER_MODEL_VNODE = 'k', RENDER_EVENT_METHOD_VNODE = 'l', RENDER_EVENT_NAME_VNODE = 'm', RENDER_DIRECTIVE_VNODE = 'n', RENDER_SPREAD_VNODE = 'o', RENDER_ELEMENT_VNODE = 'p', RENDER_SLOT = 'q', RENDER_PARTIAL = 'r', RENDER_IMPORT = 's', RENDER_EACH = 't', RENDER_RANGE = 'u', RENDER_EQUAL_RANGE = 'v', TO_STRING = 'w', ARG_STACK = 'x';
   // 序列化代码的参数列表
   var codeArgs, 
   // 表达式求值是否要求返回字符串类型
@@ -4839,11 +4863,18 @@
       var children = stringifyFunction(stringifyChildren(node.children, node.isComplex));
       // 遍历区间
       if (node.to) {
+          if (node.equal) {
+              return toCall(RENDER_EQUAL_RANGE, [
+                  children,
+                  renderExpression(node.from),
+                  renderExpression(node.to),
+                  node.index ? toString$1(node.index) : UNDEFINED
+              ]);
+          }
           return toCall(RENDER_RANGE, [
               children,
               renderExpression(node.from),
               renderExpression(node.to),
-              node.equal ? TRUE$1 : UNDEFINED,
               node.index ? toString$1(node.index) : UNDEFINED
           ]);
       }
@@ -4890,6 +4921,7 @@
               RENDER_IMPORT,
               RENDER_EACH,
               RENDER_RANGE,
+              RENDER_EQUAL_RANGE,
               TO_STRING ], COMMA);
       }
       return toFunction(codeArgs, nodeGenerator[node.type](node));
@@ -4931,7 +4963,7 @@
               if (value === stack) {
                   if (lookup && index > 0) {
                       {
-                          debug("\"" + keypath + "\" can't be found in the current context, start looking up.");
+                          debug("The data \"" + keypath + "\" can't be found in the current context, start looking up.");
                       }
                       return findValue(stack, index - 1, key, lookup, depIgnore, defaultKeypath);
                   }
@@ -5020,7 +5052,7 @@
           $vnode.transition = transitions[name];
           {
               if (!$vnode.transition) {
-                  fatal("Transition \"" + name + "\" can't be found.");
+                  fatal("The transition \"" + name + "\" can't be found.");
               }
           }
       }, renderBindingVnode = function (name, holder, hint) {
@@ -5067,7 +5099,7 @@
           var hooks = directives[name];
           {
               if (!hooks) {
-                  fatal("Directive " + name + " can't be found.");
+                  fatal("The directive " + name + " can't be found.");
               }
           }
           setPair($vnode, KEY_DIRECTIVES, key, {
@@ -5106,7 +5138,7 @@
               var componentName = observer.get(tag);
               {
                   if (!componentName) {
-                      warn("Dynamic component \"" + tag + "\" can't be found.");
+                      warn("The dynamic component \"" + tag + "\" can't be found.");
                   }
               }
               vnode.tag = componentName;
@@ -5189,10 +5221,10 @@
           else {
               var partial = partials[name];
               if (partial) {
-                  partial(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, toString);
+                  partial(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange, toString);
               }
               else {
-                  fatal("Partial \"" + name + "\" can't be found.");
+                  fatal("The partial \"" + name + "\" can't be found.");
               }
           }
       }, eachHandler = function (generate, item, key, keypath, index, length) {
@@ -5232,34 +5264,32 @@
                       : EMPTY_STRING, index);
               }
           }
-      }, renderRange = function (generate, from, to, equal, index) {
+      }, renderRange = function (generate, from, to, index) {
           var count = 0;
           if (from < to) {
-              if (equal) {
-                  for (var i = from; i <= to; i++) {
-                      eachHandler(generate, i, count++, EMPTY_STRING, index);
-                  }
-              }
-              else {
-                  for (var i = from; i < to; i++) {
-                      eachHandler(generate, i, count++, EMPTY_STRING, index);
-                  }
+              for (var i = from; i < to; i++) {
+                  eachHandler(generate, i, count++, EMPTY_STRING, index);
               }
           }
           else {
-              if (equal) {
-                  for (var i = from; i >= to; i--) {
-                      eachHandler(generate, i, count++, EMPTY_STRING, index);
-                  }
+              for (var i = from; i > to; i--) {
+                  eachHandler(generate, i, count++, EMPTY_STRING, index);
               }
-              else {
-                  for (var i = from; i > to; i--) {
-                      eachHandler(generate, i, count++, EMPTY_STRING, index);
-                  }
+          }
+      }, renderEqualRange = function (generate, from, to, index) {
+          var count = 0;
+          if (from < to) {
+              for (var i = from; i <= to; i++) {
+                  eachHandler(generate, i, count++, EMPTY_STRING, index);
+              }
+          }
+          else {
+              for (var i = from; i >= to; i--) {
+                  eachHandler(generate, i, count++, EMPTY_STRING, index);
               }
           }
       };
-      return template(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, toString);
+      return template(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange, toString);
   }
 
   // 这里先写 IE9 支持的接口
@@ -5486,9 +5516,9 @@
   function addSpecialEvent(type, hooks) {
       {
           if (specialEvents[type]) {
-              error("Special event \"" + type + "\" is existed.");
+              fatal("The special event \"" + type + "\" is existed.");
           }
-          info("Special event \"" + type + "\" add success.");
+          info("The special event \"" + type + "\" is added successfully.");
       }
       specialEvents[type] = hooks;
   }
@@ -6550,7 +6580,7 @@
           // 后放 data
           {
               if (vnode && object(data)) {
-                  warn("child component's data should be a function which return an object.");
+                  warn("The \"data\" option of child component should be a function which return an object.");
               }
           }
           var extend$1 = func(data) ? execute(data, instance, options) : data;
@@ -6558,7 +6588,7 @@
               each$2(extend$1, function (value, key) {
                   {
                       if (has$2(source, key)) {
-                          warn("\"" + key + "\" is already defined as a prop. Use prop default value instead.");
+                          warn("The data \"" + key + "\" is already used as a prop.");
                       }
                   }
                   source[key] = value;
@@ -6568,7 +6598,7 @@
               each$2(methods, function (method, name) {
                   {
                       if (instance[name]) {
-                          fatal("method \"" + name + "\" is conflicted with built-in methods.");
+                          fatal("The method \"" + name + "\" is conflicted with built-in methods.");
                       }
                   }
                   instance[name] = method;
@@ -6593,7 +6623,7 @@
                           placeholder = UNDEFINED;
                       }
                       else {
-                          fatal("selector \"" + template + "\" can't match an element.");
+                          fatal("The selector \"" + template + "\" can't match an element.");
                       }
                   }
               }
@@ -6605,12 +6635,12 @@
                           placeholder = find(selector);
                           {
                               if (!placeholder) {
-                                  fatal("selector \"" + selector + "\" can't match an element.");
+                                  fatal("The selector \"" + selector + "\" can't match an element.");
                               }
                           }
                       }
                       else {
-                          fatal("\"el\" option should be a selector.");
+                          fatal("The \"el\" option should be a selector.");
                       }
                   }
                   else {
@@ -6668,7 +6698,7 @@
                   if (!vnode) {
                       {
                           if (!placeholder) {
-                              fatal('"el" option is required for root component.');
+                              fatal('The "el" option is required for root component.');
                           }
                       }
                       vnode = create(domApi, placeholder, instance, EMPTY_STRING);
@@ -6678,7 +6708,7 @@
               }
               else {
                   if (placeholder || vnode) {
-                      fatal('"template" option is required.');
+                      fatal('The "template" option is required.');
                   }
               }
           }
@@ -6714,7 +6744,7 @@
                   var nodes = compile$1(template);
                   {
                       if (nodes.length !== 1) {
-                          fatal("\"template\" should have just one root element.");
+                          fatal("The \"template\" option should have just one root element.");
                       }
                   }
                   compileCache[template] = generate$1(nodes[0]);
@@ -6841,7 +6871,7 @@
           // 则命名空间不能是 native，因为 native 有特殊用处
           {
               if (namespace.ns === MODIFER_NATIVE) {
-                  error("\"" + event.type + "\": namespace \"" + MODIFER_NATIVE + "\" can't be used externally.");
+                  error("\"" + event.type + "\": The namespace \"" + MODIFER_NATIVE + "\" is not permitted.");
               }
           }
           isComplete = $emitter.fire(namespace, args);
@@ -6886,7 +6916,7 @@
               if (!loadComponent(this.$components, name, callback)) {
                   {
                       if (!loadComponent(globalComponents, name, callback)) {
-                          error("Component \"" + name + "\" is not found.");
+                          error("The component \"" + name + "\" is not found.");
                       }
                   }
               }
@@ -6929,7 +6959,7 @@
                   vnode.node = node;
               }
               else {
-                  fatal("The root element of [Component " + vnode.tag + "] is not found.");
+                  fatal("The root element of component \"" + vnode.tag + "\" is not found.");
               }
               return child;
           }
@@ -7200,7 +7230,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.87";
+      Yox.version = "1.0.0-alpha.88";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

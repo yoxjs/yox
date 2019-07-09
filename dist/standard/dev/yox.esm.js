@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.87
+ * yox.js v1.0.0-alpha.88
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1165,6 +1165,13 @@ class Emitter {
             else if (ns) {
                 each$2(listeners, each$1);
             }
+            // 在开发阶段进行警告，比如传了 listener 进来，listener 是个空值
+            // 但你不知道它是空值
+            {
+                if (arguments.length > 1 && listener == NULL) {
+                    warn(`emitter.off(type, listener) is invoked, but "listener" is ${listener}.`);
+                }
+            }
         }
         else {
             // 清空
@@ -1909,7 +1916,7 @@ function destroy(api, vnode, isRemove) {
             removeVnode(api, parentNode, vnode);
         }
         else {
-            fatal(`Can't destroy vnode without parent node.`);
+            fatal(`The vnode can't be destroyed without a parent node.`);
         }
     }
     else {
@@ -2598,7 +2605,8 @@ class Parser {
                 return createUnary(operator, node, instance.pick(index));
             }
             {
-                instance.fatal(index, `一元运算只有操作符没有表达式？`);
+                // 一元运算只有操作符没有表达式？
+                instance.fatal(index, `Expression expected.`);
             }
         }
     }
@@ -2621,7 +2629,7 @@ class Parser {
             return createLiteral(+raw, raw);
         }
         {
-            instance.fatal(startIndex, `数字写错了知道吗？`);
+            instance.fatal(startIndex, `Number expected.`);
         }
     }
     /**
@@ -2649,7 +2657,8 @@ class Parser {
                     break loop;
                 case CODE_EOF:
                     {
-                        instance.fatal(startIndex, `到头了，字符串还没解析完呢？`);
+                        // 到头了，字符串还没解析完呢？
+                        instance.fatal(startIndex, 'Unexpected end of text.');
                     }
                     break loop;
             }
@@ -2672,14 +2681,16 @@ class Parser {
                 case CODE_CBRACE:
                     instance.go();
                     {
+                        // 对象的 keys 和 values 的长度不一致
                         if (keys.length !== values.length) {
-                            instance.fatal(startIndex, `对象的 keys 和 values 的长度不一致`);
+                            instance.fatal(startIndex, 'The number of keys and values must be equal.');
                         }
                     }
                     break loop;
                 case CODE_EOF:
                     {
-                        instance.fatal(startIndex, `到头了，对象还没解析完呢？`);
+                        // 到头了，对象还没解析完呢？
+                        instance.fatal(startIndex, 'Unexpected end of text.');
                     }
                     break loop;
                 // :
@@ -2708,7 +2719,8 @@ class Parser {
                             }
                             else {
                                 {
-                                    instance.fatal(startIndex, `对象的 key 必须是字面量或标识符`);
+                                    // 对象的 key 必须是字面量或标识符
+                                    instance.fatal(startIndex, 'The key of an object must be a literal or identifier.');
                                 }
                                 break loop;
                             }
@@ -2719,9 +2731,11 @@ class Parser {
                         instance.skip();
                         push(values, node);
                     }
+                    // 类似这样 { key: }
                     else {
                         {
-                            instance.fatal(startIndex, `对象的值没找到`);
+                            // 对象的值没找到
+                            instance.fatal(startIndex, `The value of the object was not found.`);
                         }
                         break loop;
                     }
@@ -2746,7 +2760,8 @@ class Parser {
                     break loop;
                 case CODE_EOF:
                     {
-                        instance.fatal(startIndex, `到头了，tuple 还没解析完呢？`);
+                        // 到头了，tuple 还没解析完呢？
+                        instance.fatal(startIndex, 'Unexpected end of text.');
                     }
                     break loop;
                 case CODE_COMMA:
@@ -2805,7 +2820,7 @@ class Parser {
                 else {
                     // 类似 ./ 或 ../ 这样后面不跟标识符是想干嘛？报错可好？
                     {
-                        instance.fatal(startIndex, `path 写法错误`);
+                        instance.fatal(startIndex, `${last(nodes).raw}/ must be followed by an identifier.`);
                     }
                     break;
                 }
@@ -2851,7 +2866,8 @@ class Parser {
                     }
                     else {
                         {
-                            instance.fatal(startIndex, `. 后面跟的都是啥玩意啊`);
+                            // . 后面跟的都是啥玩意啊
+                            instance.fatal(startIndex, 'Identifier or number expected.');
                         }
                         break loop;
                     }
@@ -2865,8 +2881,9 @@ class Parser {
                         break;
                     }
                     else {
+                        // [] 内部不能为空
                         {
-                            instance.fatal(startIndex, `[] 内部不能为空`);
+                            instance.fatal(startIndex, `[] is not allowed.`);
                         }
                         break loop;
                     }
@@ -2918,7 +2935,7 @@ class Parser {
                 {
                     // ++
                     if (instance.is(CODE_PLUS)) {
-                        instance.fatal(startIndex, `不支持该语法`);
+                        instance.fatal(startIndex, '++ is not supported.');
                     }
                 }
                 break;
@@ -2928,7 +2945,7 @@ class Parser {
                 {
                     // --
                     if (instance.is(CODE_MINUS)) {
-                        instance.fatal(startIndex, `不支持该语法`);
+                        instance.fatal(startIndex, '-- is not supported.');
                     }
                 }
                 break;
@@ -2970,7 +2987,7 @@ class Parser {
                 }
                 // 一个等号要报错
                 else {
-                    instance.fatal(startIndex, `不支持一个等号这种赋值写法`);
+                    instance.fatal(startIndex, 'Assignment statements are not supported.');
                 }
                 break;
             // <、<=、<<
@@ -3038,7 +3055,7 @@ class Parser {
             // 比如不支持的表达式，a++ 之类的
             else {
                 if (operator) {
-                    instance.fatal(startIndex, '表达式错误');
+                    instance.fatal(startIndex, 'Invalid syntax.');
                 }
             }
             // 没匹配到 token 或 operator 则跳出循环
@@ -3088,7 +3105,7 @@ class Parser {
             }
             else {
                 // 三元表达式语法错误
-                instance.fatal(index, `ternary expression syntax error`);
+                instance.fatal(index, `Invalid ternary syntax.`);
             }
         }
         // 过掉结束字符
@@ -3099,14 +3116,14 @@ class Parser {
             }
             // 没匹配到结束字符要报错
             else {
-                instance.fatal(index, `结束字符匹配错误，期待[${String.fromCharCode(endCode)}]，却发现[${String.fromCharCode(instance.code)}]`);
+                instance.fatal(index, `"${String.fromCharCode(endCode)}" expected, "${String.fromCharCode(instance.code)}" actually.`);
             }
         }
         return test;
     }
     fatal(start, message) {
         {
-            fatal(`Error compiling expression:\n${this.content}\n- ${message}`);
+            fatal(`Error compiling expression\n\n${this.content}\n\nmessage: ${message}\n`);
         }
     }
 }
@@ -3248,7 +3265,7 @@ function compile$1(content) {
     // mustache 注释可能出现嵌套插值的情况
     blockStack = [], indexList = [], code, startQuote, fatal$1 = function (msg) {
         {
-            fatal(`Error compiling ${RAW_TEMPLATE}:\n${content}\n- ${msg}`);
+            fatal(`Error compiling template\n\n${content}\n\nmessage: ${msg}`);
         }
     }, 
     /**
@@ -3298,7 +3315,7 @@ function compile$1(content) {
                 if (isElement) {
                     const element = node;
                     if (tagName && element.tag !== tagName) {
-                        fatal$1(`结束标签是${tagName}，开始标签却是${element.tag}`);
+                        fatal$1(`End tag is "${tagName}"，but start tag is "${element.tag}".`);
                     }
                 }
             }
@@ -3384,8 +3401,9 @@ function compile$1(content) {
             }
             return node;
         }
+        // 出栈节点类型不匹配
         {
-            fatal$1(`出栈节点类型不匹配`);
+            fatal$1(`The poping node type is not as expected.`);
         }
     }, removeComment = function (children) {
         // 类似 <!-- xx {{name}} yy {{age}} zz --> 这样的注释里包含插值
@@ -3433,7 +3451,7 @@ function compile$1(content) {
         // 2. 全局搜索不到事件名，不利于代码维护
         // 3. 不利于编译成静态函数
         {
-            fatal$1(`指令的值不能用插值或 if 语法`);
+            fatal$1(`{{ and }} are not allowed in directive.`);
         }
     }, processElementSingleText = function (element, child) {
         // processElementSingleText 和 processElementSingleExpression
@@ -3482,7 +3500,7 @@ function compile$1(content) {
     }, processAttributeEmptyChildren = function (element, attr) {
         if (isSpecialAttr(element, attr)) {
             {
-                fatal$1(`${attr.name} 忘了写值吧？`);
+                fatal$1(`The value of "${attr.name}" is empty.`);
             }
         }
         else {
@@ -3514,11 +3532,13 @@ function compile$1(content) {
         // 自定义指令运行不合法的表达式
         isCustom = directive.ns === DIRECTIVE_CUSTOM, 
         // 指令的值是纯文本，可以预编译表达式，提升性能
-        expr;
+        expr, error;
         try {
             expr = compile(text);
         }
-        catch (e) { }
+        catch (e) {
+            error = e;
+        }
         if (expr) {
             {
                 const { raw } = expr;
@@ -3526,13 +3546,13 @@ function compile$1(content) {
                     if (expr.type !== LITERAL
                         || !number(expr.value)
                         || expr.value <= 0) {
-                        fatal$1(`lazy 指令的值 [${raw}] 必须是大于 0 的数字`);
+                        fatal$1(`The value of lazy must be a number greater than 0.`);
                     }
                 }
                 // 如果指令表达式是函数调用，则只能调用方法（难道还有别的可以调用的吗？）
                 else if (expr.type === CALL) {
                     if (expr.name.type !== IDENTIFIER) {
-                        fatal$1('指令表达式的类型如果是函数调用，则只能调用方法');
+                        fatal$1('The method name that appear on directive must be an identifier.');
                     }
                 }
                 // 上面检测过方法调用，接下来事件指令只需要判断是否以下两种格式：
@@ -3542,21 +3562,22 @@ function compile$1(content) {
                         // native 有特殊用处，不能给业务层用
                         if (eventNamespacePattern.test(raw)
                             && raw.split(RAW_DOT)[1] === MODIFER_NATIVE) {
-                            fatal$1(`事件转换名称的命名空间不能使用 ${MODIFER_NATIVE}`);
+                            fatal$1(`The event namespace "${MODIFER_NATIVE}" is not permitted.`);
                         }
                         // <Button on-click="click"> 这种写法没有意义
                         if (currentElement
                             && currentElement.isComponent
                             && directive.name === raw) {
-                            fatal$1('转换组件事件的名称不能相同');
+                            fatal$1(`The event name listened and fired can't be the same.`);
                         }
                     }
+                    // 事件转换名称只能是 [name] 或 [name.namespace] 格式
                     else {
-                        fatal$1('事件转换名称只能是 [name] 或 [name.namespace] 格式');
+                        fatal$1('The event name and namespace must be an identifier.');
                     }
                 }
                 if (isModel && expr.type !== IDENTIFIER) {
-                    fatal$1(`model 指令的值格式错误: [${raw}]`);
+                    fatal$1(`The value of the model must be an identifier.`);
                 }
             }
             directive.expr = expr;
@@ -3567,7 +3588,7 @@ function compile$1(content) {
         else {
             {
                 if (!isCustom) {
-                    fatal$1(`${directive.ns} 指令的表达式错误: [${text}]`);
+                    throw error;
                 }
             }
             directive.value = text;
@@ -3575,7 +3596,7 @@ function compile$1(content) {
         directive.children = UNDEFINED;
     }, processDirectiveSingleExpression = function (directive, child) {
         {
-            fatal$1(`指令的表达式不能用插值语法`);
+            fatal$1(`{{ and }} are not allowed in a directive value.`);
         }
     }, checkCondition = function (condition) {
         let currentNode = condition, prevNode, hasChildren, hasNext;
@@ -3618,16 +3639,16 @@ function compile$1(content) {
         {
             if (isTemplate) {
                 if (element.key) {
-                    fatal$1(`<template> 不支持 key`);
+                    fatal$1(`The "key" is not supported in <template>.`);
                 }
                 else if (element.ref) {
-                    fatal$1(`<template> 不支持 ref`);
+                    fatal$1(`The "ref" is not supported in <template>.`);
                 }
                 else if (element.attrs) {
-                    fatal$1(`<template> 不支持属性或指令`);
+                    fatal$1(`The attributes and directives are not supported in <template>.`);
                 }
                 else if (!slot) {
-                    fatal$1(`<template> 不写 slot 属性是几个意思？`);
+                    fatal$1(`The "slot" is required in <template>.`);
                 }
             }
         }
@@ -3647,7 +3668,7 @@ function compile$1(content) {
             // model 不能写在 if 里，影响节点的静态结构
             if (directive.ns === DIRECTIVE_MODEL) {
                 if (last(nodeStack) !== element) {
-                    fatal$1(`model 不能写在 if 内`);
+                    fatal$1(`The "model" can't be used in an if block.`);
                 }
             }
         }
@@ -3658,14 +3679,14 @@ function compile$1(content) {
         {
             // 因为要拎出来给 element，所以不能用 if
             if (last(nodeStack) !== element) {
-                fatal$1(`${name} 不能写在 if 内`);
+                fatal$1(`The "${name}" can't be used in an if block.`);
             }
             // 对于所有特殊属性来说，空字符串是肯定不行的，没有任何意义
             if (value === EMPTY_STRING) {
-                fatal$1(`${name} 的值不能是空字符串`);
+                fatal$1(`The value of "${name}" is empty.`);
             }
             else if (isStringValueRequired && falsy$1(value)) {
-                fatal$1(`${name} 的值只能是字符串字面量`);
+                fatal$1(`The value of "${name}" can only be a string literal.`);
             }
         }
         element[name] = isStringValueRequired ? value : attr;
@@ -3732,15 +3753,15 @@ function compile$1(content) {
                 }
                 else if (type === ELSE_IF) {
                     {
-                        fatal$1('else 后面不能跟 else if 啊');
+                        fatal$1('The "else" block must not be followed by an "else if" block.');
                     }
                 }
                 else {
-                    fatal$1('只能写一个 else 啊');
+                    fatal$1(`The "else" block can't appear more than once in a conditional statement.`);
                 }
             }
             else {
-                fatal$1('不写 if 是几个意思');
+                fatal$1('The "if" block is required.');
             }
         }
         else {
@@ -3831,7 +3852,7 @@ function compile$1(content) {
                             if (tag === RAW_TEMPLATE) {
                                 const lastNode = last(nodeStack);
                                 if (!lastNode || !lastNode.isComponent) {
-                                    fatal$1('<template> 只能写在组件标签内');
+                                    fatal$1('<template> can only be used within an component children.');
                                 }
                             }
                         }
@@ -3869,7 +3890,7 @@ function compile$1(content) {
                     // 这里会匹配上 xxx"，match[2] 就是那个引号
                     {
                         if (match[2]) {
-                            fatal$1(`上一个属性似乎没有正常结束`);
+                            fatal$1(`The previous attribute is not end.`);
                         }
                     }
                     let node, name = match[1];
@@ -3881,7 +3902,7 @@ function compile$1(content) {
                         let event = slicePrefix(name, DIRECTIVE_ON + directiveSeparator);
                         {
                             if (!event) {
-                                fatal$1('缺少事件名称');
+                                fatal$1('The event name is required.');
                             }
                         }
                         const [directiveName, diectiveModifier] = camelize(event).split(RAW_DOT);
@@ -3902,7 +3923,7 @@ function compile$1(content) {
                         const custom = slicePrefix(name, DIRECTIVE_CUSTOM + directiveSeparator);
                         {
                             if (!custom) {
-                                fatal$1('缺少自定义指令名称');
+                                fatal$1('The directive name is required.');
                             }
                         }
                         const [directiveName, diectiveModifier] = camelize(custom).split(RAW_DOT);
@@ -3950,8 +3971,9 @@ function compile$1(content) {
                     text = content;
                     addTextChild(text);
                 }
+                // 没找到结束引号
                 else {
-                    fatal$1(`${currentAttribute.name} 没有找到结束引号`);
+                    fatal$1(`Unterminated quoted string in "${currentAttribute.name}".`);
                 }
             }
             // 如果不加判断，类似 <div {{...obj}}> 这样写，会把空格当做一个属性
@@ -3975,7 +3997,7 @@ function compile$1(content) {
             else {
                 {
                     if (trim(content)) {
-                        fatal$1(`<${currentElement.tag}> 属性里不要写乱七八糟的字符`);
+                        fatal$1(`Invalid character is found in <${currentElement.tag}> attribute level.`);
                     }
                 }
                 text = content;
@@ -3989,8 +4011,8 @@ function compile$1(content) {
                 {
                     if (currentElement) {
                         fatal$1(currentAttribute
-                            ? `each 不能写在属性的值里`
-                            : `each 不能写在属性层级`);
+                            ? `The "each" block can't be appear in an attribute value.`
+                            : `The "each" block can't be appear in attribute level.`);
                     }
                 }
                 source = slicePrefix(source, SYNTAX_EACH);
@@ -4011,7 +4033,7 @@ function compile$1(content) {
                     }
                 }
                 {
-                    fatal$1(`无效的 each`);
+                    fatal$1(`Invalid each`);
                 }
             }
         },
@@ -4025,12 +4047,12 @@ function compile$1(content) {
                     }
                     else {
                         fatal$1(currentAttribute
-                            ? `import 不能写在属性的值里`
-                            : `import 不能写在属性层级`);
+                            ? `The "import" block can't be appear in an attribute value.`
+                            : `The "import" block can't be appear in attribute level.`);
                     }
                 }
                 {
-                    fatal$1(`无效的 import`);
+                    fatal$1(`Invalid import`);
                 }
             }
         },
@@ -4044,12 +4066,12 @@ function compile$1(content) {
                     }
                     else {
                         fatal$1(currentAttribute
-                            ? `partial 不能写在属性的值里`
-                            : `partial 不能写在属性层级`);
+                            ? `The "partial" block can't be appear in an attribute value.`
+                            : `The "partial" block can't be appear in attribute level.`);
                     }
                 }
                 {
-                    fatal$1(`无效的 partial`);
+                    fatal$1(`Invalid partial`);
                 }
             }
         },
@@ -4062,7 +4084,7 @@ function compile$1(content) {
                     return createIf(expr);
                 }
                 {
-                    fatal$1(`无效的 if`);
+                    fatal$1(`Invalid if`);
                 }
             }
         },
@@ -4075,7 +4097,7 @@ function compile$1(content) {
                     return createElseIf(expr);
                 }
                 {
-                    fatal$1(`无效的 else if`);
+                    fatal$1(`Invalid else if`);
                 }
             }
         },
@@ -4087,7 +4109,7 @@ function compile$1(content) {
                     return createElse();
                 }
                 {
-                    fatal$1(`else 后面不要写乱七八糟的东西`);
+                    fatal$1(`The "else" must not be followed by anything.`);
                 }
             }
         },
@@ -4101,11 +4123,11 @@ function compile$1(content) {
                         return createSpread(expr, expr.type === IDENTIFIER);
                     }
                     else {
-                        fatal$1(`延展属性只能用于组件属性`);
+                        fatal$1(`The spread can only be used by a component.`);
                     }
                 }
                 {
-                    fatal$1(`无效的 spread`);
+                    fatal$1(`Invalid spread`);
                 }
             }
         },
@@ -4118,7 +4140,7 @@ function compile$1(content) {
                     return createExpression(expr, blockMode === BLOCK_MODE_SAFE);
                 }
                 {
-                    fatal$1(`无效的 expression`);
+                    fatal$1(`Invalid expression`);
                 }
             }
         },
@@ -4151,7 +4173,7 @@ function compile$1(content) {
                     isCondition = TRUE;
                 }
                 else {
-                    fatal$1(`if 还没开始就结束了？`);
+                    fatal$1(`The "if" block is closing, but it does't opened.`);
                 }
             }
             const node = popStack(type);
@@ -4180,7 +4202,7 @@ function compile$1(content) {
                     nextIndex = index + 1;
                 }
                 else {
-                    fatal$1(`{{ 和 }}} 无法配对`);
+                    fatal$1(`{{ and }}} is not a pair.`);
                 }
             }
             else {
@@ -4188,7 +4210,7 @@ function compile$1(content) {
                     nextIndex = index;
                 }
                 else {
-                    fatal$1(`{{{ 和 }} 无法配对`);
+                    fatal$1(`{{{ and }} is not a pair.`);
                 }
             }
             pop(blockStack);
@@ -4247,15 +4269,17 @@ function compile$1(content) {
                         }
                     }
                     else {
-                        fatal$1('找不到结束定界符');
+                        fatal$1('The end delimiter is not found.');
                     }
                 }
                 else {
-                    fatal$1('{{{ 后面没字符串了？');
+                    // {{{ 后面没字符串了？
+                    fatal$1('Unterminated template literal.');
                 }
             }
             else {
-                fatal$1('{{ 后面没字符串了？');
+                // {{ 后面没字符串了？
+                fatal$1('Unterminated template literal.');
             }
         }
         else {
@@ -4294,7 +4318,7 @@ function compile$1(content) {
         popSelfClosingElementIfNeeded();
         {
             if (nodeStack.length) {
-                fatal$1('还有节点未出栈');
+                fatal$1('Some nodes is still in the stack.');
             }
         }
     }
@@ -4500,7 +4524,7 @@ function generate(node, renderIdentifier, renderMemberKeypath, renderMemberLiter
 // 是否要执行 join 操作
 const joinStack = [], 
 // 是否正在收集子节点
-collectStack = [], nodeGenerator = {}, RENDER_EXPRESSION_IDENTIFIER = 'a', RENDER_EXPRESSION_MEMBER_KEYPATH = 'b', RENDER_EXPRESSION_MEMBER_LITERAL = 'c', RENDER_EXPRESSION_CALL = 'd', RENDER_TEXT_VNODE = 'e', RENDER_ATTRIBUTE_VNODE = 'f', RENDER_PROPERTY_VNODE = 'g', RENDER_LAZY_VNODE = 'h', RENDER_TRANSITION_VNODE = 'i', RENDER_BINDING_VNODE = 'j', RENDER_MODEL_VNODE = 'k', RENDER_EVENT_METHOD_VNODE = 'l', RENDER_EVENT_NAME_VNODE = 'm', RENDER_DIRECTIVE_VNODE = 'n', RENDER_SPREAD_VNODE = 'o', RENDER_ELEMENT_VNODE = 'p', RENDER_SLOT = 'q', RENDER_PARTIAL = 'r', RENDER_IMPORT = 's', RENDER_EACH = 't', RENDER_RANGE = 'u', TO_STRING = 'v', ARG_STACK = 'w';
+collectStack = [], nodeGenerator = {}, RENDER_EXPRESSION_IDENTIFIER = 'a', RENDER_EXPRESSION_MEMBER_KEYPATH = 'b', RENDER_EXPRESSION_MEMBER_LITERAL = 'c', RENDER_EXPRESSION_CALL = 'd', RENDER_TEXT_VNODE = 'e', RENDER_ATTRIBUTE_VNODE = 'f', RENDER_PROPERTY_VNODE = 'g', RENDER_LAZY_VNODE = 'h', RENDER_TRANSITION_VNODE = 'i', RENDER_BINDING_VNODE = 'j', RENDER_MODEL_VNODE = 'k', RENDER_EVENT_METHOD_VNODE = 'l', RENDER_EVENT_NAME_VNODE = 'm', RENDER_DIRECTIVE_VNODE = 'n', RENDER_SPREAD_VNODE = 'o', RENDER_ELEMENT_VNODE = 'p', RENDER_SLOT = 'q', RENDER_PARTIAL = 'r', RENDER_IMPORT = 's', RENDER_EACH = 't', RENDER_RANGE = 'u', RENDER_EQUAL_RANGE = 'v', TO_STRING = 'w', ARG_STACK = 'x';
 // 序列化代码的参数列表
 let codeArgs, 
 // 表达式求值是否要求返回字符串类型
@@ -4833,11 +4857,18 @@ nodeGenerator[EACH] = function (node) {
     const children = stringifyFunction(stringifyChildren(node.children, node.isComplex));
     // 遍历区间
     if (node.to) {
+        if (node.equal) {
+            return toCall(RENDER_EQUAL_RANGE, [
+                children,
+                renderExpression(node.from),
+                renderExpression(node.to),
+                node.index ? toString$1(node.index) : UNDEFINED
+            ]);
+        }
         return toCall(RENDER_RANGE, [
             children,
             renderExpression(node.from),
             renderExpression(node.to),
-            node.equal ? TRUE$1 : UNDEFINED,
             node.index ? toString$1(node.index) : UNDEFINED
         ]);
     }
@@ -4884,6 +4915,7 @@ function generate$1(node) {
             RENDER_IMPORT,
             RENDER_EACH,
             RENDER_RANGE,
+            RENDER_EQUAL_RANGE,
             TO_STRING,
         ], COMMA);
     }
@@ -4926,7 +4958,7 @@ function render(context, observer, template, filters, partials, directives, tran
             if (value === stack) {
                 if (lookup && index > 0) {
                     {
-                        debug(`"${keypath}" can't be found in the current context, start looking up.`);
+                        debug(`The data "${keypath}" can't be found in the current context, start looking up.`);
                     }
                     return findValue(stack, index - 1, key, lookup, depIgnore, defaultKeypath);
                 }
@@ -5015,7 +5047,7 @@ function render(context, observer, template, filters, partials, directives, tran
         $vnode.transition = transitions[name];
         {
             if (!$vnode.transition) {
-                fatal(`Transition "${name}" can't be found.`);
+                fatal(`The transition "${name}" can't be found.`);
             }
         }
     }, renderBindingVnode = function (name, holder, hint) {
@@ -5062,7 +5094,7 @@ function render(context, observer, template, filters, partials, directives, tran
         const hooks = directives[name];
         {
             if (!hooks) {
-                fatal(`Directive ${name} can't be found.`);
+                fatal(`The directive ${name} can't be found.`);
             }
         }
         setPair($vnode, KEY_DIRECTIVES, key, {
@@ -5101,7 +5133,7 @@ function render(context, observer, template, filters, partials, directives, tran
             const componentName = observer.get(tag);
             {
                 if (!componentName) {
-                    warn(`Dynamic component "${tag}" can't be found.`);
+                    warn(`The dynamic component "${tag}" can't be found.`);
                 }
             }
             vnode.tag = componentName;
@@ -5184,10 +5216,10 @@ function render(context, observer, template, filters, partials, directives, tran
         else {
             const partial = partials[name];
             if (partial) {
-                partial(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, toString);
+                partial(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange, toString);
             }
             else {
-                fatal(`Partial "${name}" can't be found.`);
+                fatal(`The partial "${name}" can't be found.`);
             }
         }
     }, eachHandler = function (generate, item, key, keypath, index, length) {
@@ -5227,34 +5259,32 @@ function render(context, observer, template, filters, partials, directives, tran
                     : EMPTY_STRING, index);
             }
         }
-    }, renderRange = function (generate, from, to, equal, index) {
+    }, renderRange = function (generate, from, to, index) {
         let count = 0;
         if (from < to) {
-            if (equal) {
-                for (let i = from; i <= to; i++) {
-                    eachHandler(generate, i, count++, EMPTY_STRING, index);
-                }
-            }
-            else {
-                for (let i = from; i < to; i++) {
-                    eachHandler(generate, i, count++, EMPTY_STRING, index);
-                }
+            for (let i = from; i < to; i++) {
+                eachHandler(generate, i, count++, EMPTY_STRING, index);
             }
         }
         else {
-            if (equal) {
-                for (let i = from; i >= to; i--) {
-                    eachHandler(generate, i, count++, EMPTY_STRING, index);
-                }
+            for (let i = from; i > to; i--) {
+                eachHandler(generate, i, count++, EMPTY_STRING, index);
             }
-            else {
-                for (let i = from; i > to; i--) {
-                    eachHandler(generate, i, count++, EMPTY_STRING, index);
-                }
+        }
+    }, renderEqualRange = function (generate, from, to, index) {
+        let count = 0;
+        if (from < to) {
+            for (let i = from; i <= to; i++) {
+                eachHandler(generate, i, count++, EMPTY_STRING, index);
+            }
+        }
+        else {
+            for (let i = from; i >= to; i--) {
+                eachHandler(generate, i, count++, EMPTY_STRING, index);
             }
         }
     };
-    return template(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, toString);
+    return template(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange, toString);
 }
 
 // 这里先写 IE9 支持的接口
@@ -5481,9 +5511,9 @@ function off(node, type, listener) {
 function addSpecialEvent(type, hooks) {
     {
         if (specialEvents[type]) {
-            error(`Special event "${type}" is existed.`);
+            fatal(`The special event "${type}" is existed.`);
         }
-        info(`Special event "${type}" add success.`);
+        info(`The special event "${type}" is added successfully.`);
     }
     specialEvents[type] = hooks;
 }
@@ -6543,7 +6573,7 @@ class Yox {
         // 后放 data
         {
             if (vnode && object(data)) {
-                warn(`child component's data should be a function which return an object.`);
+                warn(`The "data" option of child component should be a function which return an object.`);
             }
         }
         const extend$1 = func(data) ? execute(data, instance, options) : data;
@@ -6551,7 +6581,7 @@ class Yox {
             each$2(extend$1, function (value, key) {
                 {
                     if (has$2(source, key)) {
-                        warn(`"${key}" is already defined as a prop. Use prop default value instead.`);
+                        warn(`The data "${key}" is already used as a prop.`);
                     }
                 }
                 source[key] = value;
@@ -6561,7 +6591,7 @@ class Yox {
             each$2(methods, function (method, name) {
                 {
                     if (instance[name]) {
-                        fatal(`method "${name}" is conflicted with built-in methods.`);
+                        fatal(`The method "${name}" is conflicted with built-in methods.`);
                     }
                 }
                 instance[name] = method;
@@ -6586,7 +6616,7 @@ class Yox {
                         placeholder = UNDEFINED;
                     }
                     else {
-                        fatal(`selector "${template}" can't match an element.`);
+                        fatal(`The selector "${template}" can't match an element.`);
                     }
                 }
             }
@@ -6598,12 +6628,12 @@ class Yox {
                         placeholder = find(selector);
                         {
                             if (!placeholder) {
-                                fatal(`selector "${selector}" can't match an element.`);
+                                fatal(`The selector "${selector}" can't match an element.`);
                             }
                         }
                     }
                     else {
-                        fatal(`"el" option should be a selector.`);
+                        fatal(`The "el" option should be a selector.`);
                     }
                 }
                 else {
@@ -6661,7 +6691,7 @@ class Yox {
                 if (!vnode) {
                     {
                         if (!placeholder) {
-                            fatal('"el" option is required for root component.');
+                            fatal('The "el" option is required for root component.');
                         }
                     }
                     vnode = create(domApi, placeholder, instance, EMPTY_STRING);
@@ -6671,7 +6701,7 @@ class Yox {
             }
             else {
                 if (placeholder || vnode) {
-                    fatal('"template" option is required.');
+                    fatal('The "template" option is required.');
                 }
             }
         }
@@ -6707,7 +6737,7 @@ class Yox {
                 const nodes = compile$1(template);
                 {
                     if (nodes.length !== 1) {
-                        fatal(`"template" should have just one root element.`);
+                        fatal(`The "template" option should have just one root element.`);
                     }
                 }
                 compileCache[template] = generate$1(nodes[0]);
@@ -6834,7 +6864,7 @@ class Yox {
         // 则命名空间不能是 native，因为 native 有特殊用处
         {
             if (namespace.ns === MODIFER_NATIVE) {
-                error(`"${event.type}": namespace "${MODIFER_NATIVE}" can't be used externally.`);
+                error(`"${event.type}": The namespace "${MODIFER_NATIVE}" is not permitted.`);
             }
         }
         isComplete = $emitter.fire(namespace, args);
@@ -6879,7 +6909,7 @@ class Yox {
             if (!loadComponent(this.$components, name, callback)) {
                 {
                     if (!loadComponent(globalComponents, name, callback)) {
-                        error(`Component "${name}" is not found.`);
+                        error(`The component "${name}" is not found.`);
                     }
                 }
             }
@@ -6922,7 +6952,7 @@ class Yox {
                 vnode.node = node;
             }
             else {
-                fatal(`The root element of [Component ${vnode.tag}] is not found.`);
+                fatal(`The root element of component "${vnode.tag}" is not found.`);
             }
             return child;
         }
@@ -7194,7 +7224,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.87";
+Yox.version = "1.0.0-alpha.88";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

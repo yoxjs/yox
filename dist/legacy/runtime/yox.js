@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.87
+ * yox.js v1.0.0-alpha.88
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -2174,7 +2174,7 @@
           else {
               var partial = partials[name];
               if (partial) {
-                  partial(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, toString);
+                  partial(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange, toString);
               }
           }
       }, eachHandler = function (generate, item, key, keypath, index, length) {
@@ -2214,34 +2214,32 @@
                       : EMPTY_STRING, index);
               }
           }
-      }, renderRange = function (generate, from, to, equal, index) {
+      }, renderRange = function (generate, from, to, index) {
           var count = 0;
           if (from < to) {
-              if (equal) {
-                  for (var i = from; i <= to; i++) {
-                      eachHandler(generate, i, count++, EMPTY_STRING, index);
-                  }
-              }
-              else {
-                  for (var i = from; i < to; i++) {
-                      eachHandler(generate, i, count++, EMPTY_STRING, index);
-                  }
+              for (var i = from; i < to; i++) {
+                  eachHandler(generate, i, count++, EMPTY_STRING, index);
               }
           }
           else {
-              if (equal) {
-                  for (var i = from; i >= to; i--) {
-                      eachHandler(generate, i, count++, EMPTY_STRING, index);
-                  }
+              for (var i = from; i > to; i--) {
+                  eachHandler(generate, i, count++, EMPTY_STRING, index);
               }
-              else {
-                  for (var i = from; i > to; i--) {
-                      eachHandler(generate, i, count++, EMPTY_STRING, index);
-                  }
+          }
+      }, renderEqualRange = function (generate, from, to, index) {
+          var count = 0;
+          if (from < to) {
+              for (var i = from; i <= to; i++) {
+                  eachHandler(generate, i, count++, EMPTY_STRING, index);
+              }
+          }
+          else {
+              for (var i = from; i >= to; i--) {
+                  eachHandler(generate, i, count++, EMPTY_STRING, index);
               }
           }
       };
-      return template(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, toString);
+      return template(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange, toString);
   }
 
   // 这里先写 IE9 支持的接口
@@ -4195,7 +4193,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.87";
+      Yox.version = "1.0.0-alpha.88";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

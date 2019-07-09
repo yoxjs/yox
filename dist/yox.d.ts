@@ -56,7 +56,7 @@ export interface YoxInterface {
 	set(keypath: string | Data, value?: any): void;
 	on(type: string | Record<string, Listener<this>>, listener?: Listener<this>): this;
 	once(type: string | Record<string, Listener<this>>, listener?: Listener<this>): this;
-	off(type?: string, listener?: Listener<this>): this;
+	off(type?: string, listener?: Function): this;
 	fire(type: string | CustomEventInterface, data?: Data | boolean, downward?: boolean): boolean;
 	watch(keypath: string | Record<string, Watcher<this> | WatcherOptions<this>>, watcher?: Watcher<this> | WatcherOptions<this>, immediate?: boolean): this;
 	unwatch(keypath?: string, watcher?: Watcher<this>): this;
@@ -732,7 +732,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
 	/**
 	 * 取消监听事件，支持链式调用
 	 */
-	off(type?: string, listener?: Listener<this>): this;
+	off(type?: string, listener?: Function): this;
 	/**
 	 * 发射事件
 	 */
