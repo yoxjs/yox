@@ -3,7 +3,8 @@
 
 ## 过滤器
 
-* [格式化日期](https://jsrun.net/IxyKp/edit)
+* [全局注册](https://jsrun.net/xRyKp/edit)
+* [本地注册](https://jsrun.net/IxyKp/edit)
 * [无法调用全局函数](https://jsrun.net/zByKp/edit)
 * [无法调用对象方法](https://jsrun.net/FByKp/edit)
 

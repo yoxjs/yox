@@ -32,7 +32,8 @@ yarn add yox
 
 #### Filter
 
-* [Format Date](https://jsrun.net/IxyKp/edit)
+* [Global Filter](https://jsrun.net/xRyKp/edit)
+* [Component Filter](https://jsrun.net/IxyKp/edit)
 * [Global Function Is Disabled](https://jsrun.net/zByKp/edit)
 * [Object Method Is Disabled](https://jsrun.net/FByKp/edit)
 
