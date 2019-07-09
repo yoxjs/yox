@@ -46,11 +46,9 @@
 * [事件冒泡](https://jsrun.net/YByKp/edit)
 * [事件转换](https://jsrun.net/nRyKp/edit)
 * [调用方法](https://jsrun.net/kByKp/edit)
-
-* [命名空间事件冒泡](https://jsrun.net/tRyKp/edit)
-* [命名空间事件转换](https://jsrun.net/CRyKp/edit)
-* [命名空间事件调用方法](https://jsrun.net/mRyKp/edit)
-
+* [事件冒泡（命名空间）](https://jsrun.net/tRyKp/edit)
+* [事件转换（命名空间）](https://jsrun.net/CRyKp/edit)
+* [调用方法（命名空间）](https://jsrun.net/mRyKp/edit)
 * [事件数据](https://jsrun.net/jRyKp/edit)
 * [向下发事件](https://jsrun.net/kuyKp/edit)
 * [监听组件根元素的 DOM 事件](https://jsrun.net/iByKp/edit)
