@@ -389,7 +389,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
         function (value, key) {
           if (process.env.NODE_ENV === 'development') {
             if (object.has(source, key)) {
-              logger.warn(`"${key}" is already defined as a prop. Use prop default value instead.`)
+              logger.warn(`The data "${key}" is already used as a prop.`)
             }
           }
           source[key] = value
@@ -403,7 +403,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
         function (method: Function, name: string) {
           if (process.env.NODE_ENV === 'development') {
             if (instance[name]) {
-              logger.fatal(`method "${name}" is conflicted with built-in methods.`)
+              logger.fatal(`The method "${name}" is conflicted with built-in methods.`)
             }
           }
           instance[name] = method
@@ -449,7 +449,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
             placeholder = env.UNDEFINED
           }
           else if (process.env.NODE_ENV === 'development') {
-            logger.fatal(`selector "${template}" can't match an element.`)
+            logger.fatal(`The selector "${template}" can't match an element.`)
           }
         }
       }
@@ -463,12 +463,12 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
             placeholder = domApi.find(selector)
             if (process.env.NODE_ENV === 'development') {
               if (!placeholder) {
-                logger.fatal(`selector "${selector}" can't match an element.`)
+                logger.fatal(`The selector "${selector}" can't match an element.`)
               }
             }
           }
           else if (process.env.NODE_ENV === 'development') {
-            logger.fatal(`"el" option should be a selector.`)
+            logger.fatal(`The "el" option should be a selector.`)
           }
         }
         else {
@@ -544,7 +544,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
 
           if (process.env.NODE_ENV === 'development') {
             if (!placeholder) {
-              logger.fatal('"el" option is required for root component.')
+              logger.fatal('The "el" option is required for root component.')
             }
           }
 
@@ -567,7 +567,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
       }
       else if (process.env.NODE_ENV === 'development') {
         if (placeholder || vnode) {
-          logger.fatal('"template" option is required.')
+          logger.fatal('The "template" option is required.')
         }
       }
 
@@ -677,7 +677,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
     // 则命名空间不能是 native，因为 native 有特殊用处
     if (process.env.NODE_ENV === 'development') {
       if (namespace.ns === MODIFER_NATIVE) {
-        logger.error(`"${event.type}": namespace "${MODIFER_NATIVE}" can't be used externally.`)
+        logger.error(`"${event.type}": The namespace "${MODIFER_NATIVE}" is not permitted.`)
       }
     }
 
@@ -738,7 +738,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
       if (!loadComponent(this.$components, name, callback)) {
         if (process.env.NODE_ENV === 'development') {
           if (!loadComponent(globalComponents, name, callback)) {
-            logger.error(`Component "${name}" is not found.`)
+            logger.error(`The component "${name}" is not found.`)
           }
         }
         else {
@@ -799,7 +799,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
         vnode.node = node
       }
       else if (process.env.NODE_ENV === 'development') {
-        logger.fatal(`The root element of [Component ${vnode.tag}] is not found.`)
+        logger.fatal(`The root element of component "${vnode.tag}" is not found.`)
       }
 
       return child
