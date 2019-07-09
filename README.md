@@ -29,7 +29,6 @@ yarn add yox
 ## Example
 
 * [Hello World](https://jsrun.net/YxyKp/edit)
-* [Partial](https://jsrun.net/9xyKp/edit)
 
 #### Filter
 
@@ -53,6 +52,12 @@ yarn add yox
 * [Array With Primitive Type](https://jsrun.net/eByKp/edit)
 * [Object](https://jsrun.net/yxyKp/edit)
 * [Range](https://jsrun.net/fxyKp/edit)
+
+#### Partial
+
+* [Global Partial](https://jsrun.net/FRyKp/edit)
+* [Component Partial](https://jsrun.net/JRyKp/edit)
+* [Local Partial](https://jsrun.net/9xyKp/edit)
 
 #### Event Handle
 

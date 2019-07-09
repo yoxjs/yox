@@ -1,6 +1,5 @@
 
 * [Hello World](https://jsrun.net/YxyKp/edit)
-* [子模板](https://jsrun.net/9xyKp/edit)
 
 ## 过滤器
 
@@ -24,6 +23,12 @@
 * [数组 - 数组项是基本类型](https://jsrun.net/eByKp/edit)
 * [对象](https://jsrun.net/yxyKp/edit)
 * [区间](https://jsrun.net/fxyKp/edit)
+
+## 子模板
+
+* [全局注册](https://jsrun.net/FRyKp/edit)
+* [本地注册](https://jsrun.net/JRyKp/edit)
+* [用时定义](https://jsrun.net/9xyKp/edit)
 
 ## 事件处理
 
