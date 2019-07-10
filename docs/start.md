@@ -36,6 +36,11 @@
 * [HTML 元素](https://jsrun.net/sMyKp/edit)
 * [组件实例](https://jsrun.net/FMyKp/edit)
 
+## 计算属性
+
+* [自动收集依赖](https://jsrun.net/y4yKp/edit)
+* [手动设置依赖](https://jsrun.net/b4yKp/edit)
+
 ## 事件处理
 
 ### DOM 事件

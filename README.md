@@ -65,6 +65,11 @@ yarn add yox
 * [HTML Element](https://jsrun.net/sMyKp/edit)
 * [Component Instance](https://jsrun.net/FMyKp/edit)
 
+#### Computed
+
+* [Collect Deps Automatic](https://jsrun.net/y4yKp/edit)
+* [Set Deps Manually](https://jsrun.net/b4yKp/edit)
+
 #### Event Handle
 
 ##### DOM Event
