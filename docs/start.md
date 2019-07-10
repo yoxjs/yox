@@ -31,6 +31,11 @@
 * [本地注册](https://jsrun.net/JRyKp/edit)
 * [用时定义](https://jsrun.net/9xyKp/edit)
 
+## 引用
+
+* [HTML 元素](https://jsrun.net/sMyKp/edit)
+* [组件实例](https://jsrun.net/FMyKp/edit)
+
 ## 事件处理
 
 ### DOM 事件

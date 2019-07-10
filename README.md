@@ -60,6 +60,11 @@ yarn add yox
 * [Component Partial](https://jsrun.net/JRyKp/edit)
 * [Local Partial](https://jsrun.net/9xyKp/edit)
 
+#### Ref
+
+* [HTML Element](https://jsrun.net/sMyKp/edit)
+* [Component Instance](https://jsrun.net/FMyKp/edit)
+
 #### Event Handle
 
 ##### DOM Event
