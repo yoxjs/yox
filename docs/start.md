@@ -41,6 +41,10 @@
 * [自动收集依赖](https://jsrun.net/y4yKp/edit)
 * [手动设置依赖](https://jsrun.net/b4yKp/edit)
 
+#### Keypath
+
+* [Keypath](https://jsrun.net/W4yKp/edit)
+
 ## 事件处理
 
 ### DOM 事件

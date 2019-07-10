@@ -70,6 +70,10 @@ yarn add yox
 * [Collect Deps Automatic](https://jsrun.net/y4yKp/edit)
 * [Set Deps Manually](https://jsrun.net/b4yKp/edit)
 
+#### Keypath
+
+* [Keypath](https://jsrun.net/W4yKp/edit)
+
 #### Event Handle
 
 ##### DOM Event
