@@ -1,7 +1,7 @@
 你可以使用 `on` 指令在 `元素节点` 或 `组件节点` 绑定事件，如下：
 
 ```html
-<button on-click="submit">
+<button on-[type]="handle">
   Submit
 </button>
 ```
@@ -87,6 +87,14 @@
 
 ```html
 <button on-click="submit($event)">
+  Submit
+</button>
+```
+
+如果没有传入参数，默认会把 `$event` 传入，也就是说，下面这种写法和上面的写法是一样的。
+
+```html
+<button on-click="submit()">
   Submit
 </button>
 ```
