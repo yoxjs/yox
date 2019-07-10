@@ -90,10 +90,8 @@ type EmitterClass = typeof Emitter
 type CustomEventClass = typeof CustomEvent
 
 type YoxPlugin = {
-  version: string
   install(Yox: YoxClass): void
 }
-
 
 const globalDirectives = {},
 

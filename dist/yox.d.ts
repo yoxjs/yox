@@ -638,7 +638,6 @@ export declare type YoxClass = typeof Yox;
 export declare type EmitterClass = typeof Emitter;
 export declare type CustomEventClass = typeof CustomEvent;
 export declare type YoxPlugin = {
-	version: string;
 	install(Yox: YoxClass): void;
 };
 export default class Yox<Computed, Watchers, Events, Methods> implements YoxInterface {
