@@ -39,7 +39,25 @@
 
 ## 调用方法
 
-如果你想简单一点，也可以调用 Yox 的实例方法，除了 `methods` 定义的业务方法，还包括 Yox 内置的方法。
+如果你想简单一点，也可以调用 Yox 的实例方法。
+
+```js
+{
+  methods: {
+    submit: function (event) {
+
+    }
+  }
+}
+```
+
+```html
+<button on-click="submit()">
+  Submit
+</button>
+```
+
+除了调用 `methods` 定义的业务方法，还可以调用 Yox 内置的方法。
 
 ```html
 <button on-click="toggle('isHidden')">
@@ -52,8 +70,6 @@
 ### 参数
 
 参数支持从 `data` 直接读取，如下：
-
-数据
 
 ```js
 {
@@ -70,8 +86,6 @@
   }
 }
 ```
-
-模板
 
 ```html
 <div>
