@@ -76,3 +76,22 @@
 
 > 没用过，没法比较。
 
+## jQuery
+
+既然跳过了 `Angular`，那就再补一个上古神器：`jQuery`。
+
+`jQuery` 和 `Yox` 没什么可比性，下面说说如何在 `Yox` 中使用 `jQuery`。
+
+在 `Yox` 中使用 `jQuery` 很简单，我们推崇组件有一个固定的根元素，因此如果你需要用一些 `jQuery` 插件，可以在生命周期钩子函数中进行初始化和销毁，如下：
+
+```js
+{
+  afterMount: function () {
+    // 在 afterMount 中初始化 jQuery 插件
+    $(this.$el).xxx()
+  },
+  beforeDestroy: function () {
+    // 销毁在 afterMount 中创建的 jQuery 插件
+  }
+}
+```
