@@ -12,20 +12,22 @@ declare const HOOK_BEFORE_ROUTE_UPDATE = "beforeRouteUpdate";
 declare const HOOK_AFTER_ROUTE_UPDATE = "afterRouteUpdate";
 declare const HOOK_BEFORE_ROUTE_LEAVE = "beforeRouteLeave";
 declare const HOOK_AFTER_ROUTE_LEAVE = "afterRouteLeave";
+export declare type Namespace = {
+	type: string;
+	ns?: string;
+};
 export interface EmitterInterface {
 	ns: boolean;
 	listeners: Record<string, EmitterOptions[]>;
 	nativeListeners?: Record<string, NativeListener>;
 	fire(type: string | Namespace, args: any[] | void, filter?: (namespace: Namespace, args: any[] | void, options: EmitterOptions) => boolean | void): boolean;
-	on(type: string, listener: Function | EmitterOptions): void;
-	off(type?: string, listener?: Function): void;
-	has(type: string, listener?: Function): boolean;
+	on(type: string | Namespace, listener: Function | EmitterOptions): void;
+	off(type?: string | Namespace, listener?: Function): void;
+	has(type: string | Namespace, listener?: Function): boolean;
 	parse(type: string): Namespace;
 }
-export interface CustomEventInterface {
-	type: string;
+export interface CustomEventInterface extends Namespace {
 	phase: number;
-	ns?: Namespace;
 	target?: YoxInterface;
 	originalEvent?: CustomEventInterface | Event;
 	isPrevented?: true;
@@ -103,7 +105,10 @@ export interface Property {
 	readonly value: any;
 	readonly hint: PropertyHint;
 }
-export interface Directive extends Namespace {
+export interface Directive {
+	key: string;
+	name: string;
+	ns: string;
 	readonly modifier: string | void;
 	readonly value?: string | number | boolean;
 	readonly hooks: DirectiveHooks;
@@ -242,11 +247,6 @@ export declare type Task = {
 	fn: Function;
 	ctx?: any;
 };
-export declare type Namespace = {
-	key: string;
-	name: string;
-	ns: string;
-};
 export declare type PropRule = {
 	type: string | string[] | PropTypeFunction;
 	value?: any | PropValueFunction;
@@ -347,7 +347,7 @@ declare class CustomEvent implements CustomEventInterface {
 	static PHASE_DOWNWARD: number;
 	type: string;
 	phase: number;
-	ns?: Namespace;
+	ns?: string;
 	target?: YoxInterface;
 	originalEvent?: CustomEventInterface | Event;
 	isPrevented?: true;
@@ -398,21 +398,21 @@ declare class Emitter implements EmitterInterface {
 	 * @param type
 	 * @param listener
 	 */
-	on(type: string, listener: Function | EmitterOptions): void;
+	on(type: string | Namespace, listener: Function | EmitterOptions): void;
 	/**
 	 * 取消监听
 	 *
 	 * @param type
 	 * @param listener
 	 */
-	off(type?: string, listener?: Function): void;
+	off(type?: string | Namespace, listener?: Function): void;
 	/**
 	 * 是否已监听某个事件
 	 *
 	 * @param type
 	 * @param listener
 	 */
-	has(type: string, listener?: Function): boolean;
+	has(type: string | Namespace, listener?: Function): boolean;
 	/**
 	 * 把事件类型解析成命名空间格式
 	 *

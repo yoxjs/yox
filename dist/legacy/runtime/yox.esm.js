@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.89
+ * yox.js v1.0.0-alpha.90
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -210,6 +210,9 @@ class CustomEvent {
      * 可以传事件名称，也可以传原生事件对象
      */
     constructor(type, originalEvent) {
+        // 这里不设置命名空间
+        // 因为有没有命名空间取决于 Emitter 的构造函数有没有传 true
+        // CustomEvent 自己无法决定
         this.type = type;
         this.phase = CustomEvent.PHASE_CURRENT;
         if (originalEvent) {
@@ -1041,7 +1044,7 @@ class Emitter {
      * @param filter 自定义过滤器
      */
     fire(type, args, filter) {
-        let instance = this, namespace = string(type) ? instance.parse(type) : type, list = instance.listeners[namespace.name], isComplete = TRUE;
+        let instance = this, namespace = string(type) ? instance.parse(type) : type, list = instance.listeners[namespace.type], isComplete = TRUE;
         if (list) {
             // 避免遍历过程中，数组发生变化，比如增删了
             list = copy(list);
@@ -1077,7 +1080,7 @@ class Emitter {
                 options.num = options.num ? (options.num + 1) : 1;
                 // 注册的 listener 可以指定最大执行次数
                 if (options.num === options.max) {
-                    instance.off(namespace.key, options.fn);
+                    instance.off(namespace, options.fn);
                 }
                 // 如果没有返回 false，而是调用了 event.stop 也算是返回 false
                 if (event) {
@@ -1102,13 +1105,13 @@ class Emitter {
      * @param listener
      */
     on(type, listener) {
-        const instance = this, { listeners } = instance, options = func(listener)
+        const instance = this, listeners = instance.listeners, options = func(listener)
             ? { fn: listener }
             : listener;
         if (object(options) && func(options.fn)) {
-            const { name, ns } = instance.parse(type);
-            options.ns = ns;
-            push(listeners[name] || (listeners[name] = []), options);
+            const namespace = string(type) ? instance.parse(type) : type;
+            options.ns = namespace.ns;
+            push(listeners[namespace.type] || (listeners[namespace.type] = []), options);
         }
     }
     /**
@@ -1118,9 +1121,9 @@ class Emitter {
      * @param listener
      */
     off(type, listener) {
-        const instance = this, { listeners } = instance;
+        const instance = this, listeners = instance.listeners;
         if (type) {
-            const { name, ns } = instance.parse(type), matchListener = createMatchListener(listener), each$1 = function (list, name) {
+            const namespace = string(type) ? instance.parse(type) : type, name = namespace.type, ns = namespace.ns, matchListener = createMatchListener(listener), each$1 = function (list, name) {
                 each(list, function (options, index) {
                     if (matchListener(options) && matchNamespace(ns, options)) {
                         list.splice(index, 1);
@@ -1151,7 +1154,7 @@ class Emitter {
      * @param listener
      */
     has(type, listener) {
-        let instance = this, { listeners } = instance, { name, ns } = instance.parse(type), result = TRUE, matchListener = createMatchListener(listener), each$1 = function (list) {
+        let instance = this, listeners = instance.listeners, namespace = string(type) ? instance.parse(type) : type, name = namespace.type, ns = namespace.ns, result = TRUE, matchListener = createMatchListener(listener), each$1 = function (list) {
             each(list, function (options) {
                 if (matchListener(options) && matchNamespace(ns, options)) {
                     return result = FALSE;
@@ -1175,15 +1178,17 @@ class Emitter {
      * @param type
      */
     parse(type) {
+        // 这里 ns 必须为字符串
+        // 用于区分 event 对象是否已完成命名空间的解析
         const result = {
-            key: type,
-            name: type,
+            type,
             ns: EMPTY_STRING,
         };
+        // 是否开启命名空间
         if (this.ns) {
             const index = indexOf$1(type, RAW_DOT);
             if (index >= 0) {
-                result.name = slice(type, 0, index);
+                result.type = slice(type, 0, index);
                 result.ns = slice(type, index + 1);
             }
         }
@@ -3827,7 +3832,15 @@ class Yox {
         // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
         // 内部为了保持格式统一
         // 需要转成 Event，这样还能知道 target 是哪个组件
-        let instance = this, { $emitter, $parent, $children } = instance, event = type instanceof CustomEvent ? type : new CustomEvent(type), namespace = event.ns || (event.ns = $emitter.parse(event.type)), args = [event], isComplete;
+        let instance = this, { $emitter, $parent, $children } = instance, event = type instanceof CustomEvent ? type : new CustomEvent(type), args = [event], isComplete;
+        // 创建完 CustomEvent，如果没有人为操作
+        // 它的 ns 为 undefined
+        // 这里先解析出命名空间，避免每次 fire 都要解析
+        if (isUndef(event.ns)) {
+            const namespace = $emitter.parse(event.type);
+            event.type = namespace.type;
+            event.ns = namespace.ns;
+        }
         // 告诉外部是谁发出的事件
         if (!event.target) {
             event.target = instance;
@@ -3839,7 +3852,7 @@ class Yox {
         else if (data === TRUE) {
             downward = TRUE;
         }
-        isComplete = $emitter.fire(namespace, args);
+        isComplete = $emitter.fire(event, args);
         if (isComplete) {
             if (downward) {
                 if ($children) {
@@ -4182,7 +4195,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.89";
+Yox.version = "1.0.0-alpha.90";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

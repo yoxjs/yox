@@ -344,7 +344,8 @@ this.off('.button')
 
 `event` 是 `Yox.Event` 的实例，它有如下属性：
 
-* `type`: 事件名称 + 事件命名空间（如果有的话）
+* `type`: 事件名称
+* `ns`: 事件命名空间
 * `phase`: 事件处于什么阶段
 * `target`: 是哪个组件发出的事件
 * `originalEvent`: 被封装的原始事件
@@ -360,11 +361,15 @@ this.off('.button')
 this.fire('click')
 ```
 
-如果指定了命名空间，它的格式为 `name.namespace`，如下：
+### ns
+
+如果事件带有命名空间，则 `ns` 为 `[name].[namespace]` 中的 `namespace`，如下：
 
 ```js
 this.fire('click.button')
 ```
+
+此例中，`type` 为 `click`，`ns` 为 `button`。
 
 ### phase
 

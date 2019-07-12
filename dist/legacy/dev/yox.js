@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.89
+ * yox.js v1.0.0-alpha.90
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -240,6 +240,9 @@
        * 可以传事件名称，也可以传原生事件对象
        */
       function CustomEvent(type, originalEvent) {
+          // 这里不设置命名空间
+          // 因为有没有命名空间取决于 Emitter 的构造函数有没有传 true
+          // CustomEvent 自己无法决定
           this.type = type;
           this.phase = CustomEvent.PHASE_CURRENT;
           if (originalEvent) {
@@ -1072,7 +1075,7 @@
        * @param filter 自定义过滤器
        */
       Emitter.prototype.fire = function (type, args, filter) {
-          var instance = this, namespace = string(type) ? instance.parse(type) : type, list = instance.listeners[namespace.name], isComplete = TRUE;
+          var instance = this, namespace = string(type) ? instance.parse(type) : type, list = instance.listeners[namespace.type], isComplete = TRUE;
           if (list) {
               // 避免遍历过程中，数组发生变化，比如增删了
               list = copy(list);
@@ -1108,7 +1111,7 @@
                   options.num = options.num ? (options.num + 1) : 1;
                   // 注册的 listener 可以指定最大执行次数
                   if (options.num === options.max) {
-                      instance.off(namespace.key, options.fn);
+                      instance.off(namespace, options.fn);
                   }
                   // 如果没有返回 false，而是调用了 event.stop 也算是返回 false
                   if (event_1) {
@@ -1137,9 +1140,9 @@
               ? { fn: listener }
               : listener;
           if (object(options) && func(options.fn)) {
-              var _a = instance.parse(type), name = _a.name, ns = _a.ns;
-              options.ns = ns;
-              push(listeners[name] || (listeners[name] = []), options);
+              var namespace = string(type) ? instance.parse(type) : type;
+              options.ns = namespace.ns;
+              push(listeners[namespace.type] || (listeners[namespace.type] = []), options);
           }
           else {
               fatal("emitter.on(type, listener) invoke failed\uFF1A\n\n\"listener\" is expected to be a Function or an EmitterOptions.\n");
@@ -1154,7 +1157,7 @@
       Emitter.prototype.off = function (type, listener) {
           var instance = this, listeners = instance.listeners;
           if (type) {
-              var _a = instance.parse(type), name = _a.name, ns_1 = _a.ns, matchListener_1 = createMatchListener(listener), each$1 = function (list, name) {
+              var namespace = string(type) ? instance.parse(type) : type, name = namespace.type, ns_1 = namespace.ns, matchListener_1 = createMatchListener(listener), each$1 = function (list, name) {
                   each(list, function (options, index) {
                       if (matchListener_1(options) && matchNamespace(ns_1, options)) {
                           list.splice(index, 1);
@@ -1199,7 +1202,7 @@
        * @param listener
        */
       Emitter.prototype.has = function (type, listener) {
-          var instance = this, listeners = instance.listeners, _a = instance.parse(type), name = _a.name, ns = _a.ns, result = TRUE, matchListener = createMatchListener(listener), each$1 = function (list) {
+          var instance = this, listeners = instance.listeners, namespace = string(type) ? instance.parse(type) : type, name = namespace.type, ns = namespace.ns, result = TRUE, matchListener = createMatchListener(listener), each$1 = function (list) {
               each(list, function (options) {
                   if (matchListener(options) && matchNamespace(ns, options)) {
                       return result = FALSE;
@@ -1223,15 +1226,17 @@
        * @param type
        */
       Emitter.prototype.parse = function (type) {
+          // 这里 ns 必须为字符串
+          // 用于区分 event 对象是否已完成命名空间的解析
           var result = {
-              key: type,
-              name: type,
+              type: type,
               ns: EMPTY_STRING
           };
+          // 是否开启命名空间
           if (this.ns) {
               var index = indexOf$1(type, RAW_DOT);
               if (index >= 0) {
-                  result.name = slice(type, 0, index);
+                  result.type = slice(type, 0, index);
                   result.ns = slice(type, index + 1);
               }
           }
@@ -6954,7 +6959,15 @@
           // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
           // 内部为了保持格式统一
           // 需要转成 Event，这样还能知道 target 是哪个组件
-          var instance = this, $emitter = instance.$emitter, $parent = instance.$parent, $children = instance.$children, event = type instanceof CustomEvent ? type : new CustomEvent(type), namespace = event.ns || (event.ns = $emitter.parse(event.type)), args = [event], isComplete;
+          var instance = this, $emitter = instance.$emitter, $parent = instance.$parent, $children = instance.$children, event = type instanceof CustomEvent ? type : new CustomEvent(type), args = [event], isComplete;
+          // 创建完 CustomEvent，如果没有人为操作
+          // 它的 ns 为 undefined
+          // 这里先解析出命名空间，避免每次 fire 都要解析
+          if (isUndef(event.ns)) {
+              var namespace = $emitter.parse(event.type);
+              event.type = namespace.type;
+              event.ns = namespace.ns;
+          }
           // 告诉外部是谁发出的事件
           if (!event.target) {
               event.target = instance;
@@ -6969,11 +6982,11 @@
           // 如果手动 fire 带上了事件命名空间
           // 则命名空间不能是 native，因为 native 有特殊用处
           {
-              if (namespace.ns === MODIFER_NATIVE) {
-                  error("\"" + event.type + "\": The namespace \"" + MODIFER_NATIVE + "\" is not permitted.");
+              if (event.ns === MODIFER_NATIVE) {
+                  error("The namespace \"" + MODIFER_NATIVE + "\" is not permitted.");
               }
           }
-          isComplete = $emitter.fire(namespace, args);
+          isComplete = $emitter.fire(event, args);
           if (isComplete) {
               if (downward) {
                   if ($children) {
@@ -7329,7 +7342,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.89";
+      Yox.version = "1.0.0-alpha.90";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

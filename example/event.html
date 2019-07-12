@@ -95,6 +95,11 @@
               submitNamespaceMethod: function (event, data) {
                 console.log('root', 'submitNamespaceMethod', event, data)
               }
+            },
+            afterMount: function () {
+              this.once('click', function (event) {
+                console.log(event)
+              })
             }
         });
 
