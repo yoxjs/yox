@@ -652,11 +652,18 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
 
     event = type instanceof CustomEvent ? type : new CustomEvent(type),
 
-    namespace = event.ns || (event.ns = $emitter.parse(event.type)),
-
     args: any[] = [event],
 
     isComplete: boolean
+
+    // 创建完 CustomEvent，如果没有人为操作
+    // 它的 ns 为 undefined
+    // 这里先解析出命名空间，避免每次 fire 都要解析
+    if (isUndef(event.ns)) {
+      const namespace = $emitter.parse(event.type)
+      event.type = namespace.type
+      event.ns = namespace.ns
+    }
 
     // 告诉外部是谁发出的事件
     if (!event.target) {
@@ -674,12 +681,12 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
     // 如果手动 fire 带上了事件命名空间
     // 则命名空间不能是 native，因为 native 有特殊用处
     if (process.env.NODE_ENV === 'development') {
-      if (namespace.ns === MODIFER_NATIVE) {
-        logger.error(`"${event.type}": The namespace "${MODIFER_NATIVE}" is not permitted.`)
+      if (event.ns === MODIFER_NATIVE) {
+        logger.error(`The namespace "${MODIFER_NATIVE}" is not permitted.`)
       }
     }
 
-    isComplete = $emitter.fire(namespace, args)
+    isComplete = $emitter.fire(event, args)
     if (isComplete) {
       if (downward) {
         if ($children) {
