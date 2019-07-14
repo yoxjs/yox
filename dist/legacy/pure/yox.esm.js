@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.90
+ * yox.js v1.0.0-alpha.91
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -601,9 +601,9 @@ function match(keypath, prefix) {
  * @param callback 返回 false 可中断遍历
  */
 function each$1(keypath, callback) {
-    // 判断字符串是因为 keypath 有可能是 toString
-    // 而 splitCache.toString 是个函数
-    const list = isDef(splitCache[keypath])
+    // 如果 keypath 是 toString 之类的原型字段
+    // splitCache[keypath] 会取到原型链上的对象
+    const list = splitCache.hasOwnProperty(keypath)
         ? splitCache[keypath]
         : (splitCache[keypath] = keypath.split(RAW_DOT));
     for (let i = 0, lastIndex = list.length - 1; i <= lastIndex; i++) {
@@ -1182,7 +1182,8 @@ function matchNamespace(namespace, options) {
 }
 
 function isNative (target) {
-    return func(target) && /native code/.test(toString(target));
+    return func(target)
+        && has$1(toString(target), '[native code]');
 }
 
 let nextTick;
@@ -2347,7 +2348,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.90";
+Yox.version = "1.0.0-alpha.91";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

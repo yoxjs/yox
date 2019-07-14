@@ -163,9 +163,7 @@ export interface EmitterOptions extends Task {
 	max?: number;
 	count?: number;
 }
-export declare type DataGenerator = (this: {
-	get(keypath: string, defaultValue?: any): any;
-}, options: ComponentOptions) => Data;
+export declare type DataGenerator = (this: YoxInterface, options: ComponentOptions) => Data;
 export declare type Accessors<T, V> = {
 	[K in keyof T]: V;
 };
