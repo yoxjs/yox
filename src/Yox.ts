@@ -9,26 +9,26 @@ import {
   PropTypeFunction,
   PropValueFunction,
   PropRule,
-} from 'yox-type/src/type'
+} from 'yox-common/src/type/type'
 
 import {
   VNode,
-} from 'yox-type/src/vnode'
+} from 'yox-common/src/type/vnode'
 
 import {
   DirectiveHooks,
   TransitionHooks,
-} from 'yox-type/src/hooks'
+} from 'yox-common/src/type/hooks'
 
 import {
   EmitterOptions,
   WatcherOptions,
   ComponentOptions,
-} from 'yox-type/src/options'
+} from 'yox-common/src/type/options'
 
 import {
   YoxInterface,
-} from 'yox-type/src/yox'
+} from 'yox-common/src/type/yox'
 
 import {
   IsApi,
@@ -37,7 +37,7 @@ import {
   ObjectApi,
   StringApi,
   LoggerApi,
-} from 'yox-type/src/api'
+} from 'yox-common/src/type/api'
 
 import {
   HOOK_BEFORE_CREATE,

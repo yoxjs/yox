@@ -1,15 +1,15 @@
 import {
   Watcher,
-} from 'yox-type/src/type'
+} from 'yox-common/src/type/type'
 
 import {
   VNode,
   Directive,
-} from 'yox-type/src/vnode'
+} from 'yox-common/src/type/vnode'
 
 import {
   YoxInterface,
-} from 'yox-type/src/yox'
+} from 'yox-common/src/type/yox'
 
 import isDef from 'yox-common/src/function/isDef'
 import execute from 'yox-common/src/function/execute'

@@ -20,9 +20,6 @@
       "path": "../yox-common"
     },
     {
-      "path": "../yox-type"
-    },
-    {
       "path": "../yox-config"
     }
   ],
