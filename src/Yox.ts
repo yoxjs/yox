@@ -109,7 +109,7 @@ TEMPLATE_COMPUTED = '$$',
 
 selectorPattern = /^[#.][-\w+]+$/
 
-export default class Yox<Computed, Watchers, Events, Methods> implements YoxInterface {
+export default class Yox implements YoxInterface {
 
   $options: ComponentOptions
 
@@ -170,15 +170,6 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
    */
   public static use(plugin: YoxPlugin): void {
     plugin.install(Yox)
-  }
-
-  /**
-   * 定义组件对象
-   */
-  public static define<Computed, Watchers, Events, Methods>(
-    options: ComponentOptions<Computed, Watchers, Events, Methods> & ThisType<Methods & YoxInterface>
-  ) {
-    return options
   }
 
   /**
@@ -288,9 +279,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
     }
   }
 
-  constructor(
-    options?: ComponentOptions<Computed, Watchers, Events, Methods> & ThisType<Methods & YoxInterface>
-  ) {
+  constructor(options?: ComponentOptions) {
 
     const instance = this, $options: ComponentOptions = options || env.EMPTY_OBJECT
 
@@ -1387,4 +1376,13 @@ if (process.env.NODE_ENV !== 'pure') {
       return isDef((this as YoxInterface).get(SLOT_DATA_PREFIX + name))
     }
   })
+}
+
+/**
+ * 定义组件对象
+ */
+export function defineComponent<Computed, Watchers, Events, Methods>(
+  options: ComponentOptions<Computed, Watchers, Events, Methods> & ThisType<Methods & YoxInterface>
+) {
+  return options
 }
