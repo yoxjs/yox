@@ -9,26 +9,26 @@ import {
   PropTypeFunction,
   PropValueFunction,
   PropRule,
-} from '../../yox-type/src/type'
+} from 'yox-type/src/type'
 
 import {
   VNode,
-} from '../../yox-type/src/vnode'
+} from 'yox-type/src/vnode'
 
 import {
   DirectiveHooks,
   TransitionHooks,
-} from '../../yox-type/src/hooks'
+} from 'yox-type/src/hooks'
 
 import {
   EmitterOptions,
   WatcherOptions,
   ComponentOptions,
-} from '../../yox-type/src/options'
+} from 'yox-type/src/options'
 
 import {
   YoxInterface,
-} from '../../yox-type/src/yox'
+} from 'yox-type/src/yox'
 
 import {
   IsApi,
@@ -37,7 +37,7 @@ import {
   ObjectApi,
   StringApi,
   LoggerApi,
-} from '../../yox-type/src/api'
+} from 'yox-type/src/api'
 
 import {
   HOOK_BEFORE_CREATE,
@@ -53,32 +53,32 @@ import {
   MODEL_PROP_DEFAULT,
   SLOT_DATA_PREFIX,
   MODIFER_NATIVE,
-} from '../../yox-config/src/config'
+} from 'yox-config/src/config'
 
-import isDef from '../../yox-common/src/function/isDef'
-import isUndef from '../../yox-common/src/function/isUndef'
-import execute from '../../yox-common/src/function/execute'
+import isDef from 'yox-common/src/function/isDef'
+import isUndef from 'yox-common/src/function/isUndef'
+import execute from 'yox-common/src/function/execute'
 
-import CustomEvent from '../../yox-common/src/util/CustomEvent'
-import Emitter from '../../yox-common/src/util/Emitter'
-import NextTask from '../../yox-common/src/util/NextTask'
+import CustomEvent from 'yox-common/src/util/CustomEvent'
+import Emitter from 'yox-common/src/util/Emitter'
+import NextTask from 'yox-common/src/util/NextTask'
 
-import * as is from '../../yox-common/src/util/is'
-import * as env from '../../yox-common/src/util/env'
-import * as array from '../../yox-common/src/util/array'
-import * as string from '../../yox-common/src/util/string'
-import * as object from '../../yox-common/src/util/object'
-import * as logger from '../../yox-common/src/util/logger'
+import * as is from 'yox-common/src/util/is'
+import * as env from 'yox-common/src/util/env'
+import * as array from 'yox-common/src/util/array'
+import * as string from 'yox-common/src/util/string'
+import * as object from 'yox-common/src/util/object'
+import * as logger from 'yox-common/src/util/logger'
 
-import * as snabbdom from '../../yox-snabbdom/src/snabbdom'
+import * as snabbdom from 'yox-snabbdom/src/snabbdom'
 
-import * as templateCompiler from '../../yox-template-compiler/src/compiler'
-import * as templateGenerator from '../../yox-template-compiler/src/generator'
-import * as templateRender from '../../yox-template-compiler/src/renderer'
+import * as templateCompiler from 'yox-template-compiler/src/compiler'
+import * as templateGenerator from 'yox-template-compiler/src/generator'
+import * as templateRender from 'yox-template-compiler/src/renderer'
 
-import * as domApi from '../../yox-dom/src/dom'
+import * as domApi from 'yox-dom/src/dom'
 
-import Observer from '../../yox-observer/src/Observer'
+import Observer from 'yox-observer/src/Observer'
 
 import * as event from './directive/event'
 import * as model from './directive/model'

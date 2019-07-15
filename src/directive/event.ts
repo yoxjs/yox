@@ -1,25 +1,25 @@
 import {
   Listener,
-} from '../../../yox-type/src/type'
+} from 'yox-type/src/type'
 
 import {
   VNode,
   Directive,
-} from '../../../yox-type/src/vnode'
+} from 'yox-type/src/vnode'
 
 import {
   YoxInterface,
-} from '../../../yox-type/src/yox'
+} from 'yox-type/src/yox'
 
 import {
   MODIFER_NATIVE,
-} from '../../../yox-config/src/config'
+} from 'yox-config/src/config'
 
-import execute from '../../../yox-common/src/function/execute'
-import debounce from '../../../yox-common/src/function/debounce'
+import execute from 'yox-common/src/function/execute'
+import debounce from 'yox-common/src/function/debounce'
 
-import * as env from '../../../yox-common/src/util/env'
-import * as domApi from '../../../yox-dom/src/dom'
+import * as env from 'yox-common/src/util/env'
+import * as domApi from 'yox-dom/src/dom'
 
 
 export function bind(node: HTMLElement | YoxInterface, directive: Directive, vnode: VNode) {

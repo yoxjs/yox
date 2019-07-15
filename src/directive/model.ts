@@ -1,30 +1,30 @@
 import {
   Watcher,
   LazyValue,
-} from '../../../yox-type/src/type'
+} from 'yox-type/src/type'
 
 import {
   VNode,
   Directive,
-} from '../../../yox-type/src/vnode'
+} from 'yox-type/src/vnode'
 
 import {
   YoxInterface,
-} from '../../../yox-type/src/yox'
+} from 'yox-type/src/yox'
 
 import {
   DIRECTIVE_MODEL,
-} from '../../../yox-config/src/config'
+} from 'yox-config/src/config'
 
-import debounce from '../../../yox-common/src/function/debounce'
-import execute from '../../../yox-common/src/function/execute'
-import toString from '../../../yox-common/src/function/toString'
+import debounce from 'yox-common/src/function/debounce'
+import execute from 'yox-common/src/function/execute'
+import toString from 'yox-common/src/function/toString'
 
-import * as is from '../../../yox-common/src/util/is'
-import * as env from '../../../yox-common/src/util/env'
-import * as array from '../../../yox-common/src/util/array'
+import * as is from 'yox-common/src/util/is'
+import * as env from 'yox-common/src/util/env'
+import * as array from 'yox-common/src/util/array'
 
-import * as domApi from '../../../yox-dom/src/dom'
+import * as domApi from 'yox-dom/src/dom'
 
 
 interface NativeControl {
