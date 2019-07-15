@@ -1,24 +1,25 @@
 import {
   Listener,
-} from 'yox-common/src/type/type'
+} from 'yox-type/src/type'
 
 import {
   VNode,
   Directive,
-} from 'yox-common/src/type/vnode'
+} from 'yox-type/src/vnode'
 
 import {
   YoxInterface,
-} from 'yox-common/src/type/yox'
+} from 'yox-type/src/yox'
 
 import {
   MODIFER_NATIVE,
 } from 'yox-config/src/config'
 
+import * as constant from 'yox-type/src/constant'
+
 import execute from 'yox-common/src/function/execute'
 import debounce from 'yox-common/src/function/debounce'
 
-import * as env from 'yox-common/src/util/env'
 import * as domApi from 'yox-dom/src/dom'
 
 
@@ -32,10 +33,10 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
 
   if (lazy) {
 
-    const value = lazy[name] || lazy[env.EMPTY_STRING]
+    const value = lazy[name] || lazy[constant.EMPTY_STRING]
 
-    if (value === env.TRUE) {
-      name = env.EVENT_CHANGE
+    if (value === constant.TRUE) {
+      name = constant.EVENT_CHANGE
     }
     else if (value > 0) {
       handler = debounce(
@@ -43,7 +44,7 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
         value,
         // 避免连续多次点击，主要用于提交表单场景
         // 移动端的 tap 事件可自行在业务层打补丁实现
-        name === env.EVENT_CLICK || name === env.EVENT_TAP
+        name === constant.EVENT_CLICK || name === constant.EVENT_TAP
       )
     }
 
@@ -65,7 +66,7 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
     else {
       // 还原命名空间
       if (modifier) {
-        name += env.RAW_DOT + modifier
+        name += constant.RAW_DOT + modifier
       }
       component.on(name, handler)
       vnode.data[key] = function () {

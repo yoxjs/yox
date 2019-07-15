@@ -9,26 +9,27 @@ import {
   PropTypeFunction,
   PropValueFunction,
   PropRule,
-} from 'yox-common/src/type/type'
+} from 'yox-type/src/type'
 
 import {
   VNode,
-} from 'yox-common/src/type/vnode'
+} from 'yox-type/src/vnode'
 
 import {
   DirectiveHooks,
   TransitionHooks,
-} from 'yox-common/src/type/hooks'
+} from 'yox-type/src/hooks'
 
 import {
   EmitterOptions,
   WatcherOptions,
   ComponentOptions,
-} from 'yox-common/src/type/options'
+} from 'yox-type/src/options'
 
 import {
   YoxInterface,
-} from 'yox-common/src/type/yox'
+  CustomEvent,
+} from 'yox-type/src/yox'
 
 import {
   IsApi,
@@ -37,7 +38,7 @@ import {
   ObjectApi,
   StringApi,
   LoggerApi,
-} from 'yox-common/src/type/api'
+} from 'yox-type/src/api'
 
 import {
   HOOK_BEFORE_CREATE,
@@ -55,16 +56,16 @@ import {
   MODIFER_NATIVE,
 } from 'yox-config/src/config'
 
+import * as constant from 'yox-type/src/constant'
+
 import isDef from 'yox-common/src/function/isDef'
 import isUndef from 'yox-common/src/function/isUndef'
 import execute from 'yox-common/src/function/execute'
 
-import CustomEvent from 'yox-common/src/util/CustomEvent'
 import Emitter from 'yox-common/src/util/Emitter'
 import NextTask from 'yox-common/src/util/NextTask'
 
 import * as is from 'yox-common/src/util/is'
-import * as env from 'yox-common/src/util/env'
 import * as array from 'yox-common/src/util/array'
 import * as string from 'yox-common/src/util/string'
 import * as object from 'yox-common/src/util/object'
@@ -202,7 +203,7 @@ export default class Yox implements YoxInterface {
         : new Function(`return ${template}`)()
     }
     else {
-      return env.EMPTY_STRING
+      return constant.EMPTY_STRING
     }
   }
 
@@ -283,12 +284,12 @@ export default class Yox implements YoxInterface {
 
   constructor(options?: ComponentOptions) {
 
-    const instance = this, $options: ComponentOptions = options || env.EMPTY_OBJECT
+    const instance = this, $options: ComponentOptions = options || constant.EMPTY_OBJECT
 
     // 为了冒泡 HOOK_BEFORE_CREATE 事件，必须第一时间创建 emitter
     // 监听各种事件
     // 支持命名空间
-    instance.$emitter = new Emitter(env.TRUE)
+    instance.$emitter = new Emitter(constant.TRUE)
 
     if ($options.events) {
       instance.on($options.events)
@@ -339,7 +340,7 @@ export default class Yox implements YoxInterface {
             if (isUndef(value)) {
               value = rule.value
               if (isDef(value)) {
-                source[key] = rule.type === env.RAW_FUNCTION
+                source[key] = rule.type === constant.RAW_FUNCTION
                   ? value
                   : is.func(value)
                     ? (value as PropValueFunction)()
@@ -402,7 +403,7 @@ export default class Yox implements YoxInterface {
 
     if (process.env.NODE_ENV !== 'pure') {
 
-      let placeholder: Node | void = env.UNDEFINED,
+      let placeholder: Node | void = constant.UNDEFINED,
 
       {
         el,
@@ -435,7 +436,7 @@ export default class Yox implements YoxInterface {
           placeholder = domApi.find(template as string)
           if (placeholder) {
             template = domApi.html(placeholder as Element) as string
-            placeholder = env.UNDEFINED
+            placeholder = constant.UNDEFINED
           }
           else if (process.env.NODE_ENV === 'development') {
             logger.fatal(`The selector "${template}" can't match an element.`)
@@ -467,7 +468,7 @@ export default class Yox implements YoxInterface {
         if (!replace) {
           domApi.append(
             placeholder as Node,
-            placeholder = domApi.createComment(env.EMPTY_STRING)
+            placeholder = domApi.createComment(constant.EMPTY_STRING)
           )
         }
 
@@ -483,11 +484,11 @@ export default class Yox implements YoxInterface {
         instance.$context = context
       }
 
-      setFlexibleOptions(instance, env.RAW_TRANSITION, transitions)
-      setFlexibleOptions(instance, env.RAW_COMPONENT, components)
-      setFlexibleOptions(instance, env.RAW_DIRECTIVE, directives)
-      setFlexibleOptions(instance, env.RAW_PARTIAL, partials)
-      setFlexibleOptions(instance, env.RAW_FILTER, filters)
+      setFlexibleOptions(instance, constant.RAW_TRANSITION, transitions)
+      setFlexibleOptions(instance, constant.RAW_COMPONENT, components)
+      setFlexibleOptions(instance, constant.RAW_DIRECTIVE, directives)
+      setFlexibleOptions(instance, constant.RAW_PARTIAL, partials)
+      setFlexibleOptions(instance, constant.RAW_FILTER, filters)
 
       // 当存在模板和计算属性时
       // 因为这里把模板当做一种特殊的计算属性
@@ -501,7 +502,7 @@ export default class Yox implements YoxInterface {
 
         newWatchers[TEMPLATE_COMPUTED] = {
           // 模板一旦变化，立即刷新
-          sync: env.TRUE,
+          sync: constant.TRUE,
           watcher: function (vnode: VNode) {
             instance.update(vnode, instance.$vnode as VNode)
           }
@@ -512,7 +513,7 @@ export default class Yox implements YoxInterface {
           TEMPLATE_COMPUTED,
           {
             // 当模板依赖变化时，异步通知模板更新
-            sync: env.FALSE,
+            sync: constant.FALSE,
             get: function () {
               return instance.render()
             }
@@ -541,7 +542,7 @@ export default class Yox implements YoxInterface {
             domApi,
             placeholder as Node,
             instance,
-            env.EMPTY_STRING
+            constant.EMPTY_STRING
           )
 
         }
@@ -609,7 +610,7 @@ export default class Yox implements YoxInterface {
     type: string | Record<string, Listener<this>>,
     listener?: Listener<this>
   ): this {
-    addEvents(this, type, listener, env.TRUE)
+    addEvents(this, type, listener, constant.TRUE)
     return this
   }
 
@@ -628,7 +629,7 @@ export default class Yox implements YoxInterface {
    * 发射事件
    */
   fire(
-    type: string | CustomEvent<this>,
+    type: string | CustomEvent,
     data?: Data | boolean,
     downward?: boolean
   ): boolean {
@@ -641,7 +642,7 @@ export default class Yox implements YoxInterface {
 
     { $emitter, $parent, $children } = instance,
 
-    event = type instanceof CustomEvent ? type : new CustomEvent<this>(type),
+    event = type instanceof CustomEvent ? type : new CustomEvent(type),
 
     args: any[] = [event],
 
@@ -665,8 +666,8 @@ export default class Yox implements YoxInterface {
     if (is.object(data)) {
       array.push(args, data as Data)
     }
-    else if (data === env.TRUE) {
-      downward = env.TRUE
+    else if (data === constant.TRUE) {
+      downward = constant.TRUE
     }
 
     // 如果手动 fire 带上了事件命名空间
@@ -685,7 +686,7 @@ export default class Yox implements YoxInterface {
           array.each(
             $children,
             function (child) {
-              return isComplete = child.fire(event, data, env.TRUE)
+              return isComplete = child.fire(event, data, constant.TRUE)
             }
           )
         }
@@ -760,7 +761,7 @@ export default class Yox implements YoxInterface {
       options.parent = instance
       options.context = vnode.context
       options.vnode = vnode
-      options.replace = env.TRUE
+      options.replace = constant.TRUE
 
       let { props, slots, directives } = vnode,
 
@@ -935,7 +936,7 @@ export default class Yox implements YoxInterface {
         // 没有更新模板，强制刷新
         if (!data && oldValue === template.get()) {
           instance.update(
-            template.get(env.TRUE),
+            template.get(constant.TRUE),
             $vnode
           )
         }
@@ -1048,7 +1049,7 @@ export default class Yox implements YoxInterface {
 
       if ($vnode) {
         // virtual dom 通过判断 parent.$vnode 知道宿主组件是否正在销毁
-        instance.$vnode = env.UNDEFINED
+        instance.$vnode = constant.UNDEFINED
         snabbdom.destroy(domApi, $vnode, !$parent)
       }
 
@@ -1199,7 +1200,7 @@ function checkProp(key: string, value: any, rule: PropRule) {
       }
       else {
 
-        let matched = env.FALSE
+        let matched = constant.FALSE
 
         // type: 'string'
         if (!string.falsy(type)) {
@@ -1211,8 +1212,8 @@ function checkProp(key: string, value: any, rule: PropRule) {
             type as string[],
             function (item) {
               if (matchType(value, item)) {
-                matched = env.TRUE
-                return env.FALSE
+                matched = constant.TRUE
+                return constant.FALSE
               }
             }
           )
@@ -1338,7 +1339,7 @@ function loadComponent(
     else {
       callback(component as ComponentOptions)
     }
-    return env.TRUE
+    return constant.TRUE
   }
 
 }

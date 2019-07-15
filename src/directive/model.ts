@@ -1,27 +1,28 @@
 import {
   Watcher,
   LazyValue,
-} from 'yox-common/src/type/type'
+} from 'yox-type/src/type'
 
 import {
   VNode,
   Directive,
-} from 'yox-common/src/type/vnode'
+} from 'yox-type/src/vnode'
 
 import {
   YoxInterface,
-} from 'yox-common/src/type/yox'
+} from 'yox-type/src/yox'
 
 import {
   DIRECTIVE_MODEL,
 } from 'yox-config/src/config'
+
+import * as constant from 'yox-type/src/constant'
 
 import debounce from 'yox-common/src/function/debounce'
 import execute from 'yox-common/src/function/execute'
 import toString from 'yox-common/src/function/toString'
 
 import * as is from 'yox-common/src/util/is'
-import * as env from 'yox-common/src/util/env'
 import * as array from 'yox-common/src/util/array'
 
 import * as domApi from 'yox-dom/src/dom'
@@ -39,7 +40,7 @@ interface NativeControl {
 
 function debounceIfNeeded<T extends Function>(fn: T, lazy: LazyValue | void): T {
   // 应用 lazy
-  return lazy && lazy !== env.TRUE
+  return lazy && lazy !== constant.TRUE
     ? debounce(fn as Function, lazy) as any
     : fn
 }
@@ -51,7 +52,7 @@ const inputControl: NativeControl = {
   sync(node: HTMLInputElement, keypath: string, context: YoxInterface) {
     context.set(keypath, node.value)
   },
-  name: env.RAW_VALUE
+  name: constant.RAW_VALUE
 },
 
 radioControl: NativeControl = {
@@ -69,7 +70,7 @@ radioControl: NativeControl = {
 checkboxControl: NativeControl = {
   set(node: HTMLInputElement, value: any) {
     node.checked = is.array(value)
-      ? array.has(value, node.value, env.FALSE)
+      ? array.has(value, node.value, constant.FALSE)
       : !!value
   },
   sync(node: HTMLInputElement, keypath: string, context: YoxInterface) {
@@ -81,7 +82,7 @@ checkboxControl: NativeControl = {
       else {
         context.removeAt(
           keypath,
-          array.indexOf(value, node.value, env.FALSE)
+          array.indexOf(value, node.value, constant.FALSE)
         )
       }
     }
@@ -98,12 +99,12 @@ selectControl: NativeControl = {
       array.toArray(node.options),
       node.multiple
         ? function (option) {
-          option.selected = array.has(value, option.value, env.FALSE)
+          option.selected = array.has(value, option.value, constant.FALSE)
         }
         : function (option, index) {
           if (option.value == value) {
             node.selectedIndex = index
-            return env.FALSE
+            return constant.FALSE
           }
         }
     )
@@ -132,10 +133,10 @@ selectControl: NativeControl = {
       )
     }
   },
-  name: env.RAW_VALUE
+  name: constant.RAW_VALUE
 }
 
-export const once = env.TRUE
+export const once = constant.TRUE
 
 export function bind(node: HTMLElement | YoxInterface, directive: Directive, vnode: VNode) {
 
@@ -143,7 +144,7 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
 
   dataBinding = directive.modifier as string,
 
-  lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[env.EMPTY_STRING]),
+  lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[constant.EMPTY_STRING]),
 
   set: Watcher | void,
 
@@ -184,7 +185,7 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
       : inputControl,
 
     // checkbox,radio,select 监听的是 change 事件
-    eventName = env.EVENT_CHANGE
+    eventName = constant.EVENT_CHANGE
 
     if (control === inputControl) {
       const type = (node as HTMLInputElement).type
@@ -197,8 +198,8 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
       // 如果是输入框，则切换成 model 事件
       // model 事件是个 yox-dom 实现的特殊事件
       // 不会在输入法组合文字过程中得到触发事件
-      else if (lazyValue !== env.TRUE) {
-        eventName = env.EVENT_MODEL
+      else if (lazyValue !== constant.TRUE) {
+        eventName = constant.EVENT_MODEL
       }
     }
 
@@ -230,7 +231,7 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
 
   vnode.data[directive.key] = function () {
     context.unwatch(dataBinding, set as Watcher)
-    set = env.UNDEFINED
+    set = constant.UNDEFINED
     unbind()
   }
 

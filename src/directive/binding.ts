@@ -1,25 +1,26 @@
 import {
   Watcher,
-} from 'yox-common/src/type/type'
+} from 'yox-type/src/type'
 
 import {
   VNode,
   Directive,
-} from 'yox-common/src/type/vnode'
+} from 'yox-type/src/vnode'
 
 import {
   YoxInterface,
-} from 'yox-common/src/type/yox'
+} from 'yox-type/src/yox'
+
+import * as constant from 'yox-type/src/constant'
 
 import isDef from 'yox-common/src/function/isDef'
 import execute from 'yox-common/src/function/execute'
 
-import * as env from 'yox-common/src/util/env'
 import * as keypathUtil from 'yox-common/src/util/keypath'
 
 import * as domApi from 'yox-dom/src/dom'
 
-export const once = env.TRUE
+export const once = constant.TRUE
 
 export function bind(node: HTMLElement | YoxInterface, directive: Directive, vnode: VNode) {
 
@@ -59,7 +60,7 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
 
   vnode.data[directive.key] = function () {
     vnode.context.unwatch(binding, watcher as Watcher)
-    watcher = env.UNDEFINED
+    watcher = constant.UNDEFINED
   }
 
 }
