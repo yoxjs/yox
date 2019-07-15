@@ -628,7 +628,7 @@ export default class Yox implements YoxInterface {
    * 发射事件
    */
   fire(
-    type: string | CustomEvent<YoxInterface>,
+    type: string | CustomEvent<this>,
     data?: Data | boolean,
     downward?: boolean
   ): boolean {
@@ -641,7 +641,7 @@ export default class Yox implements YoxInterface {
 
     { $emitter, $parent, $children } = instance,
 
-    event = type instanceof CustomEvent ? type : new CustomEvent<YoxInterface>(type),
+    event = type instanceof CustomEvent ? type : new CustomEvent<this>(type),
 
     args: any[] = [event],
 
