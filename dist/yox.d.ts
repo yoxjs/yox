@@ -6,7 +6,7 @@ declare const HOOK_BEFORE_UPDATE = "beforeUpdate";
 declare const HOOK_AFTER_UPDATE = "afterUpdate";
 declare const HOOK_BEFORE_DESTROY = "beforeDestroy";
 declare const HOOK_AFTER_DESTROY = "afterDestroy";
-declare class CustomEvent {
+export declare class CustomEvent {
 	static PHASE_CURRENT: number;
 	static PHASE_UPWARD: number;
 	static PHASE_DOWNWARD: number;
@@ -314,7 +314,7 @@ export declare type Namespace = {
 	type: string;
 	ns?: string;
 };
-declare class Emitter {
+export declare class Emitter {
 	/**
 	 * 是否开启命名空间
 	 */
