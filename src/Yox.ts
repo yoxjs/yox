@@ -87,8 +87,6 @@ import * as binding from './directive/binding'
 
 
 type YoxClass = typeof Yox
-type EmitterClass = typeof Emitter
-type CustomEventClass = typeof CustomEvent
 
 type YoxPlugin = {
   install(Yox: YoxClass): void
@@ -163,8 +161,18 @@ export default class Yox implements YoxInterface {
   public static string: StringApi = string
   public static logger: LoggerApi = logger
 
-  public static Event: CustomEventClass = CustomEvent
-  public static Emitter: EmitterClass = Emitter
+  public static Event = CustomEvent
+  public static Emitter = Emitter
+
+  /**
+   * 定义组件对象
+   */
+  public static define<Computed, Watchers, Events, Methods>(
+    options: ComponentOptions<Computed, Watchers, Events, Methods> & ThisType<Methods & YoxInterface>
+  ) {
+    return options
+  }
+
 
   /**
    * 安装插件
@@ -1379,13 +1387,4 @@ if (process.env.NODE_ENV !== 'pure') {
       return isDef((this as YoxInterface).get(SLOT_DATA_PREFIX + name))
     }
   })
-}
-
-/**
- * 定义组件对象
- */
-export function defineComponent<Computed, Watchers, Events, Methods>(
-  options: ComponentOptions<Computed, Watchers, Events, Methods> & ThisType<Methods & YoxInterface>
-) {
-  return options
 }

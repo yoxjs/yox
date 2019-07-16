@@ -13,7 +13,7 @@
   "scripts": {
     "doc": "docsify serve docs",
     "dev": "cross-env NODE_ENV=development NODE_RELEASE=dev NODE_PORT=8080 node_modules/.bin/rollup -c ./rollup.config.js",
-    "dts": "./node_modules/.bin/dts-bundle-generator -o dist/yox.d.ts ../dist/yox/src/Yox.d.ts",
+    "dts": "./node_modules/.bin/dts-bundle-generator -o dist/yox.d.ts ../../dist/packages/yox/src/Yox.d.ts",
 
     "dev-standard-source": "cross-env NODE_ENV=development NODE_RELEASE=dev NODE_FORMAT=es node_modules/.bin/rollup -c ./rollup.config.js && cross-env NODE_ENV=development NODE_RELEASE=dev node_modules/.bin/rollup -c ./rollup.config.js",
     "prod-standard-source": "cross-env NODE_ENV=production NODE_RELEASE=prod NODE_FORMAT=es node_modules/.bin/rollup -c ./rollup.config.js && cross-env NODE_ENV=production NODE_RELEASE=prod node_modules/.bin/rollup -c ./rollup.config.js",
@@ -73,6 +73,7 @@
     "yox-config": "^0.2.1",
     "yox-template-compiler": "^0.28.1",
     "yox-dom": "^0.1.0",
+    "yox-type": "^0.1.0",
     "yox-snabbdom": "^0.20.0"
   }
 }

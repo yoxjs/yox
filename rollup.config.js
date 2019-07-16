@@ -66,7 +66,10 @@ if (process.env.NODE_FORMAT === 'es') {
 }
 else {
   plugins.push(
-    typescript(),
+    // rollup 貌似有 bug，非得加个 include 才行
+    typescript({
+      include: []
+    }),
     buble()
   )
   output.push({
