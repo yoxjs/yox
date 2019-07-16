@@ -138,7 +138,7 @@ export default class Yox implements YoxInterface {
 
   $vnode: VNode | undefined
 
-  $directives?: Record<string, DirectiveHooks<YoxInterface>>
+  $directives?: Record<string, DirectiveHooks>
 
   $components?: Record<string, ComponentOptions>
 
@@ -211,9 +211,9 @@ export default class Yox implements YoxInterface {
    * 注册全局指令
    */
   public static directive(
-    name: string | Record<string, DirectiveHooks<YoxInterface>>,
-    directive?: DirectiveHooks<YoxInterface>
-  ): DirectiveHooks<YoxInterface> | void {
+    name: string | Record<string, DirectiveHooks>,
+    directive?: DirectiveHooks
+  ): DirectiveHooks | void {
     if (process.env.NODE_ENV !== 'pure') {
       if (is.string(name) && !directive) {
         return getResource(globalDirectives, name as string)
@@ -810,9 +810,9 @@ export default class Yox implements YoxInterface {
    * 注册当前组件级别的指令
    */
   directive(
-    name: string | Record<string, DirectiveHooks<YoxInterface>>,
-    directive?: DirectiveHooks<YoxInterface>
-  ): DirectiveHooks<YoxInterface> | void {
+    name: string | Record<string, DirectiveHooks>,
+    directive?: DirectiveHooks
+  ): DirectiveHooks | void {
     if (process.env.NODE_ENV !== 'pure') {
       const instance = this, { $directives } = instance
       if (is.string(name) && !directive) {
@@ -956,7 +956,7 @@ export default class Yox implements YoxInterface {
         instance.$template as Function,
         object.merge(instance.$filters, globalFilters) as Record<string, Function>,
         object.merge(instance.$partials, globalPartials) as Record<string, Function>,
-        object.merge(instance.$directives, globalDirectives) as Record<string, DirectiveHooks<YoxInterface>>,
+        object.merge(instance.$directives, globalDirectives) as Record<string, DirectiveHooks>,
         object.merge(instance.$transitions, globalTransitions) as Record<string, TransitionHooks>
       )
     }
