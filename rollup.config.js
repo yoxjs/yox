@@ -54,7 +54,8 @@ const output = []
 if (process.env.NODE_FORMAT === 'es') {
   plugins.push(
     typescript({
-      target: 'es6'
+      target: 'es6',
+      include: []
     })
   )
   output.push({

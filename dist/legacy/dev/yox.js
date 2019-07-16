@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.91
+ * yox.js v1.0.0-alpha.92
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -9,37 +9,6 @@
   typeof define === 'function' && define.amd ? define(factory) :
   (global = global || self, global.Yox = factory());
 }(this, function () { 'use strict';
-
-  var SYNTAX_IF = '#if';
-  var SYNTAX_ELSE = 'else';
-  var SYNTAX_ELSE_IF = 'else if';
-  var SYNTAX_EACH = '#each';
-  var SYNTAX_PARTIAL = '#partial';
-  var SYNTAX_IMPORT = '>';
-  var SYNTAX_SPREAD = '...';
-  var SYNTAX_COMMENT = /^!\s/;
-  var SLOT_DATA_PREFIX = '$slot_';
-  var SLOT_NAME_DEFAULT = 'children';
-  var HINT_STRING = 1;
-  var HINT_NUMBER = 2;
-  var HINT_BOOLEAN = 3;
-  var DIRECTIVE_ON = 'on';
-  var DIRECTIVE_LAZY = 'lazy';
-  var DIRECTIVE_MODEL = 'model';
-  var DIRECTIVE_EVENT = 'event';
-  var DIRECTIVE_BINDING = 'binding';
-  var DIRECTIVE_CUSTOM = 'o';
-  var MODIFER_NATIVE = 'native';
-  var MODEL_PROP_DEFAULT = 'value';
-  var NAMESPACE_HOOK = '.hook';
-  var HOOK_BEFORE_CREATE = 'beforeCreate';
-  var HOOK_AFTER_CREATE = 'afterCreate';
-  var HOOK_BEFORE_MOUNT = 'beforeMount';
-  var HOOK_AFTER_MOUNT = 'afterMount';
-  var HOOK_BEFORE_UPDATE = 'beforeUpdate';
-  var HOOK_AFTER_UPDATE = 'afterUpdate';
-  var HOOK_BEFORE_DESTROY = 'beforeDestroy';
-  var HOOK_AFTER_DESTROY = 'afterDestroy';
 
   /**
    * 为了压缩，定义的常量
@@ -129,6 +98,93 @@
    * 空字符串
    */
   var EMPTY_STRING = '';
+
+  var CustomEvent = /** @class */ (function () {
+      /**
+       * 构造函数
+       *
+       * 可以传事件名称，也可以传原生事件对象
+       */
+      function CustomEvent(type, originalEvent) {
+          // 这里不设置命名空间
+          // 因为有没有命名空间取决于 Emitter 的构造函数有没有传 true
+          // CustomEvent 自己无法决定
+          this.type = type;
+          this.phase = CustomEvent.PHASE_CURRENT;
+          if (originalEvent) {
+              this.originalEvent = originalEvent;
+          }
+      }
+      /**
+       * 阻止事件的默认行为
+       */
+      CustomEvent.prototype.preventDefault = function () {
+          var instance = this;
+          if (!instance.isPrevented) {
+              var originalEvent = instance.originalEvent;
+              if (originalEvent) {
+                  originalEvent.preventDefault();
+              }
+              instance.isPrevented = TRUE;
+          }
+          return instance;
+      };
+      /**
+       * 停止事件广播
+       */
+      CustomEvent.prototype.stopPropagation = function () {
+          var instance = this;
+          if (!instance.isStoped) {
+              var originalEvent = instance.originalEvent;
+              if (originalEvent) {
+                  originalEvent.stopPropagation();
+              }
+              instance.isStoped = TRUE;
+          }
+          return instance;
+      };
+      CustomEvent.prototype.prevent = function () {
+          return this.preventDefault();
+      };
+      CustomEvent.prototype.stop = function () {
+          return this.stopPropagation();
+      };
+      CustomEvent.PHASE_CURRENT = 0;
+      CustomEvent.PHASE_UPWARD = 1;
+      CustomEvent.PHASE_DOWNWARD = MINUS_ONE;
+      return CustomEvent;
+  }());
+
+  var SYNTAX_IF = '#if';
+  var SYNTAX_ELSE = 'else';
+  var SYNTAX_ELSE_IF = 'else if';
+  var SYNTAX_EACH = '#each';
+  var SYNTAX_PARTIAL = '#partial';
+  var SYNTAX_IMPORT = '>';
+  var SYNTAX_SPREAD = '...';
+  var SYNTAX_COMMENT = /^!\s/;
+  var SLOT_DATA_PREFIX = '$slot_';
+  var SLOT_NAME_DEFAULT = 'children';
+  var HINT_STRING = 1;
+  var HINT_NUMBER = 2;
+  var HINT_BOOLEAN = 3;
+  var DIRECTIVE_ON = 'on';
+  var DIRECTIVE_LAZY = 'lazy';
+  var DIRECTIVE_MODEL = 'model';
+  var DIRECTIVE_EVENT = 'event';
+  var DIRECTIVE_BINDING = 'binding';
+  var DIRECTIVE_CUSTOM = 'o';
+  var MODIFER_NATIVE = 'native';
+  var MODEL_PROP_DEFAULT = 'value';
+  var NAMESPACE_HOOK = '.hook';
+  var HOOK_BEFORE_CREATE = 'beforeCreate';
+  var HOOK_AFTER_CREATE = 'afterCreate';
+  var HOOK_BEFORE_MOUNT = 'beforeMount';
+  var HOOK_AFTER_MOUNT = 'afterMount';
+  var HOOK_BEFORE_UPDATE = 'beforeUpdate';
+  var HOOK_AFTER_UPDATE = 'afterUpdate';
+  var HOOK_BEFORE_DESTROY = 'beforeDestroy';
+  var HOOK_AFTER_DESTROY = 'afterDestroy';
 
   function isDef (target) {
       return target !== UNDEFINED;
@@ -233,62 +289,6 @@
                       : fn();
       }
   }
-
-  var CustomEvent = /** @class */ (function () {
-      /**
-       * 构造函数
-       *
-       * 可以传事件名称，也可以传原生事件对象
-       */
-      function CustomEvent(type, originalEvent) {
-          // 这里不设置命名空间
-          // 因为有没有命名空间取决于 Emitter 的构造函数有没有传 true
-          // CustomEvent 自己无法决定
-          this.type = type;
-          this.phase = CustomEvent.PHASE_CURRENT;
-          if (originalEvent) {
-              this.originalEvent = originalEvent;
-          }
-      }
-      /**
-       * 阻止事件的默认行为
-       */
-      CustomEvent.prototype.preventDefault = function () {
-          var instance = this;
-          if (!instance.isPrevented) {
-              var originalEvent = instance.originalEvent;
-              if (originalEvent) {
-                  originalEvent.preventDefault();
-              }
-              instance.isPrevented = TRUE;
-          }
-          return instance;
-      };
-      /**
-       * 停止事件广播
-       */
-      CustomEvent.prototype.stopPropagation = function () {
-          var instance = this;
-          if (!instance.isStoped) {
-              var originalEvent = instance.originalEvent;
-              if (originalEvent) {
-                  originalEvent.stopPropagation();
-              }
-              instance.isStoped = TRUE;
-          }
-          return instance;
-      };
-      CustomEvent.prototype.prevent = function () {
-          return this.preventDefault();
-      };
-      CustomEvent.prototype.stop = function () {
-          return this.stopPropagation();
-      };
-      CustomEvent.PHASE_CURRENT = 0;
-      CustomEvent.PHASE_UPWARD = 1;
-      CustomEvent.PHASE_DOWNWARD = MINUS_ONE;
-      return CustomEvent;
-  }());
 
   /**
    * 遍历数组
@@ -963,8 +963,9 @@
   var nativeConsole = typeof console !== RAW_UNDEFINED ? console : NULL, 
   /**
    * 当前是否是源码调试，如果开启了代码压缩，empty function 里的注释会被干掉
+   * 源码模式默认选 INFO，因为 DEBUG 输出的日志太多，会导致性能急剧下降
    */
-  defaultLogLevel = /yox/.test(toString(EMPTY_FUNCTION)) ? DEBUG : WARN, 
+  defaultLogLevel = /yox/.test(toString(EMPTY_FUNCTION)) ? INFO : WARN, 
   /**
    * console 样式前缀
    * ie 和 edge 不支持 console.log 样式
@@ -2007,12 +2008,6 @@
   name2Type['if'] = IF;
   name2Type['each'] = EACH;
   name2Type['partial'] = PARTIAL;
-
-  var helper = /*#__PURE__*/Object.freeze({
-    specialTags: specialTags,
-    specialAttrs: specialAttrs,
-    name2Type: name2Type
-  });
 
   function createAttribute(name) {
       return {
@@ -3401,7 +3396,7 @@
                               processPropertySingleExpression(node, child);
                           }
                           else if (isDirective) {
-                              processDirectiveSingleExpression(node, child);
+                              processDirectiveSingleExpression();
                           }
                           break;
                   }
@@ -4425,7 +4420,6 @@
 
   var UNDEFINED$1 = '$';
   var TRUE$1 = '!0';
-  var FALSE$1 = '!1';
   var COMMA = ',';
   var COLON = ':';
   var PLUS = '+';
@@ -4468,25 +4462,6 @@
   function toFunction(args, code) {
       return RAW_FUNCTION + "(" + args + "){var " + UNDEFINED$1 + "=void 0;" + RETURN + code + "}";
   }
-
-  var generator = /*#__PURE__*/Object.freeze({
-    UNDEFINED: UNDEFINED$1,
-    TRUE: TRUE$1,
-    FALSE: FALSE$1,
-    COMMA: COMMA,
-    COLON: COLON,
-    PLUS: PLUS,
-    AND: AND,
-    QUESTION: QUESTION,
-    NOT: NOT,
-    EMPTY: EMPTY,
-    RETURN: RETURN,
-    toObject: toObject$1,
-    toArray: toArray$1,
-    toCall: toCall,
-    toString: toString$1,
-    toFunction: toFunction
-  });
 
   function generate(node, renderIdentifier, renderMemberKeypath, renderMemberLiteral, renderCall, holder, depIgnore, stack, inner) {
       var value, isSpecialNode = FALSE, generateChildNode = function (node) {
@@ -5299,7 +5274,7 @@
           // 不能重复输出相同名称的 slot
           {
               if (renderedSlots[name]) {
-                  fatal("The slot \"" + name + "\" is rendered.");
+                  fatal("The slot \"" + slice(name, SLOT_DATA_PREFIX.length) + "\" can't render more than one time.");
               }
               renderedSlots[name] = TRUE;
           }
@@ -6911,18 +6886,18 @@
           afterCreateHook(instance, watchers);
       }
       /**
+       * 定义组件对象
+       */
+      Yox.define = function (options) {
+          return options;
+      };
+      /**
        * 安装插件
        *
        * 插件必须暴露 install 方法
        */
       Yox.use = function (plugin) {
           plugin.install(Yox);
-      };
-      /**
-       * 定义组件对象
-       */
-      Yox.define = function (options) {
-          return options;
       };
       /**
        * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
@@ -7434,7 +7409,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.91";
+      Yox.version = "1.0.0-alpha.92";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

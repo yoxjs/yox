@@ -1,26 +1,8 @@
 /**
- * yox.js v1.0.0-alpha.91
+ * yox.js v1.0.0-alpha.92
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
-
-const SLOT_DATA_PREFIX = '$slot_';
-const HINT_BOOLEAN = 3;
-const DIRECTIVE_MODEL = 'model';
-const DIRECTIVE_EVENT = 'event';
-const DIRECTIVE_BINDING = 'binding';
-const DIRECTIVE_CUSTOM = 'o';
-const MODIFER_NATIVE = 'native';
-const MODEL_PROP_DEFAULT = 'value';
-const NAMESPACE_HOOK = '.hook';
-const HOOK_BEFORE_CREATE = 'beforeCreate';
-const HOOK_AFTER_CREATE = 'afterCreate';
-const HOOK_BEFORE_MOUNT = 'beforeMount';
-const HOOK_AFTER_MOUNT = 'afterMount';
-const HOOK_BEFORE_UPDATE = 'beforeUpdate';
-const HOOK_AFTER_UPDATE = 'afterUpdate';
-const HOOK_BEFORE_DESTROY = 'beforeDestroy';
-const HOOK_AFTER_DESTROY = 'afterDestroy';
 
 /**
  * 为了压缩，定义的常量
@@ -98,6 +80,79 @@ const EMPTY_ARRAY = Object.freeze([]);
  * 空字符串
  */
 const EMPTY_STRING = '';
+
+class CustomEvent {
+    /**
+     * 构造函数
+     *
+     * 可以传事件名称，也可以传原生事件对象
+     */
+    constructor(type, originalEvent) {
+        // 这里不设置命名空间
+        // 因为有没有命名空间取决于 Emitter 的构造函数有没有传 true
+        // CustomEvent 自己无法决定
+        this.type = type;
+        this.phase = CustomEvent.PHASE_CURRENT;
+        if (originalEvent) {
+            this.originalEvent = originalEvent;
+        }
+    }
+    /**
+     * 阻止事件的默认行为
+     */
+    preventDefault() {
+        const instance = this;
+        if (!instance.isPrevented) {
+            const { originalEvent } = instance;
+            if (originalEvent) {
+                originalEvent.preventDefault();
+            }
+            instance.isPrevented = TRUE;
+        }
+        return instance;
+    }
+    /**
+     * 停止事件广播
+     */
+    stopPropagation() {
+        const instance = this;
+        if (!instance.isStoped) {
+            const { originalEvent } = instance;
+            if (originalEvent) {
+                originalEvent.stopPropagation();
+            }
+            instance.isStoped = TRUE;
+        }
+        return instance;
+    }
+    prevent() {
+        return this.preventDefault();
+    }
+    stop() {
+        return this.stopPropagation();
+    }
+}
+CustomEvent.PHASE_CURRENT = 0;
+CustomEvent.PHASE_UPWARD = 1;
+CustomEvent.PHASE_DOWNWARD = MINUS_ONE;
+
+const SLOT_DATA_PREFIX = '$slot_';
+const HINT_BOOLEAN = 3;
+const DIRECTIVE_MODEL = 'model';
+const DIRECTIVE_EVENT = 'event';
+const DIRECTIVE_BINDING = 'binding';
+const DIRECTIVE_CUSTOM = 'o';
+const MODIFER_NATIVE = 'native';
+const MODEL_PROP_DEFAULT = 'value';
+const NAMESPACE_HOOK = '.hook';
+const HOOK_BEFORE_CREATE = 'beforeCreate';
+const HOOK_AFTER_CREATE = 'afterCreate';
+const HOOK_BEFORE_MOUNT = 'beforeMount';
+const HOOK_AFTER_MOUNT = 'afterMount';
+const HOOK_BEFORE_UPDATE = 'beforeUpdate';
+const HOOK_AFTER_UPDATE = 'afterUpdate';
+const HOOK_BEFORE_DESTROY = 'beforeDestroy';
+const HOOK_AFTER_DESTROY = 'afterDestroy';
 
 function isDef (target) {
     return target !== UNDEFINED;
@@ -202,61 +257,6 @@ function execute (fn, context, args) {
                     : fn();
     }
 }
-
-class CustomEvent {
-    /**
-     * 构造函数
-     *
-     * 可以传事件名称，也可以传原生事件对象
-     */
-    constructor(type, originalEvent) {
-        // 这里不设置命名空间
-        // 因为有没有命名空间取决于 Emitter 的构造函数有没有传 true
-        // CustomEvent 自己无法决定
-        this.type = type;
-        this.phase = CustomEvent.PHASE_CURRENT;
-        if (originalEvent) {
-            this.originalEvent = originalEvent;
-        }
-    }
-    /**
-     * 阻止事件的默认行为
-     */
-    preventDefault() {
-        const instance = this;
-        if (!instance.isPrevented) {
-            const { originalEvent } = instance;
-            if (originalEvent) {
-                originalEvent.preventDefault();
-            }
-            instance.isPrevented = TRUE;
-        }
-        return instance;
-    }
-    /**
-     * 停止事件广播
-     */
-    stopPropagation() {
-        const instance = this;
-        if (!instance.isStoped) {
-            const { originalEvent } = instance;
-            if (originalEvent) {
-                originalEvent.stopPropagation();
-            }
-            instance.isStoped = TRUE;
-        }
-        return instance;
-    }
-    prevent() {
-        return this.preventDefault();
-    }
-    stop() {
-        return this.stopPropagation();
-    }
-}
-CustomEvent.PHASE_CURRENT = 0;
-CustomEvent.PHASE_UPWARD = 1;
-CustomEvent.PHASE_DOWNWARD = MINUS_ONE;
 
 /**
  * 遍历数组
@@ -931,8 +931,9 @@ const FATAL = 5;
 const nativeConsole = typeof console !== RAW_UNDEFINED ? console : NULL, 
 /**
  * 当前是否是源码调试，如果开启了代码压缩，empty function 里的注释会被干掉
+ * 源码模式默认选 INFO，因为 DEBUG 输出的日志太多，会导致性能急剧下降
  */
-defaultLogLevel = /yox/.test(toString(EMPTY_FUNCTION)) ? DEBUG : WARN, 
+defaultLogLevel = /yox/.test(toString(EMPTY_FUNCTION)) ? INFO : WARN, 
 /**
  * console 样式前缀
  * ie 和 edge 不支持 console.log 样式
@@ -1879,10 +1880,6 @@ function destroy(api, vnode, isRemove) {
     }
 }
 
-/**
- * 元素 节点
- */
-
 function toNumber (target, defaultValue) {
     return numeric(target)
         ? +target
@@ -1890,10 +1887,6 @@ function toNumber (target, defaultValue) {
             ? defaultValue
             : 0;
 }
-
-/**
- * 字面量
- */
 
 function setPair(target, name, key, value) {
     const data = target[name] || (target[name] = {});
@@ -3611,18 +3604,18 @@ class Yox {
         afterCreateHook(instance, watchers);
     }
     /**
+     * 定义组件对象
+     */
+    static define(options) {
+        return options;
+    }
+    /**
      * 安装插件
      *
      * 插件必须暴露 install 方法
      */
     static use(plugin) {
         plugin.install(Yox);
-    }
-    /**
-     * 定义组件对象
-     */
-    static define(options) {
-        return options;
     }
     /**
      * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
@@ -4101,7 +4094,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.91";
+Yox.version = "1.0.0-alpha.92";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

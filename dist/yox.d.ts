@@ -6,43 +6,34 @@ declare const HOOK_BEFORE_UPDATE = "beforeUpdate";
 declare const HOOK_AFTER_UPDATE = "afterUpdate";
 declare const HOOK_BEFORE_DESTROY = "beforeDestroy";
 declare const HOOK_AFTER_DESTROY = "afterDestroy";
-declare const HOOK_BEFORE_ROUTE_ENTER = "beforeRouteEnter";
-declare const HOOK_AFTER_ROUTE_ENTER = "afterRouteEnter";
-declare const HOOK_BEFORE_ROUTE_UPDATE = "beforeRouteUpdate";
-declare const HOOK_AFTER_ROUTE_UPDATE = "afterRouteUpdate";
-declare const HOOK_BEFORE_ROUTE_LEAVE = "beforeRouteLeave";
-declare const HOOK_AFTER_ROUTE_LEAVE = "afterRouteLeave";
-export declare type Namespace = {
+declare class CustomEvent {
+	static PHASE_CURRENT: number;
+	static PHASE_UPWARD: number;
+	static PHASE_DOWNWARD: number;
 	type: string;
-	ns?: string;
-};
-export interface EmitterInterface {
-	ns: boolean;
-	listeners: Record<string, EmitterOptions[]>;
-	nativeListeners?: Record<string, NativeListener>;
-	fire(type: string | Namespace, args: any[] | void, filter?: (namespace: Namespace, args: any[] | void, options: EmitterOptions) => boolean | void): boolean;
-	on(type: string | Namespace, listener: Function | EmitterOptions): void;
-	off(type?: string | Namespace, listener?: Function): void;
-	has(type: string | Namespace, listener?: Function): boolean;
-	parse(type: string): Namespace;
-}
-export interface CustomEventInterface extends Namespace {
 	phase: number;
+	ns?: string;
 	target?: YoxInterface;
-	originalEvent?: CustomEventInterface | Event;
+	originalEvent?: CustomEvent | Event;
 	isPrevented?: true;
 	isStoped?: true;
 	listener?: Function;
+	/**
+	 * 构造函数
+	 *
+	 * 可以传事件名称，也可以传原生事件对象
+	 */
+	constructor(type: string, originalEvent?: CustomEvent | Event);
+	/**
+	 * 阻止事件的默认行为
+	 */
 	preventDefault(): this;
+	/**
+	 * 停止事件广播
+	 */
 	stopPropagation(): this;
 	prevent(): this;
 	stop(): this;
-}
-export interface NextTaskInterface {
-	append(func: Function, context?: any): void;
-	prepend(func: Function, context?: any): void;
-	clear(): void;
-	run(): void;
 }
 export interface YoxInterface {
 	$options: ComponentOptions;
@@ -59,7 +50,7 @@ export interface YoxInterface {
 	on(type: string | Record<string, Listener<this>>, listener?: Listener<this>): this;
 	once(type: string | Record<string, Listener<this>>, listener?: Listener<this>): this;
 	off(type?: string, listener?: Function): this;
-	fire(type: string | CustomEventInterface, data?: Data | boolean, downward?: boolean): boolean;
+	fire(type: string | CustomEvent, data?: Data | boolean, downward?: boolean): boolean;
 	watch(keypath: string | Record<string, Watcher<this> | WatcherOptions<this>>, watcher?: Watcher<this> | WatcherOptions<this>, immediate?: boolean): this;
 	unwatch(keypath?: string, watcher?: Watcher<this>): this;
 	loadComponent(name: string, callback: ComponentCallback): void;
@@ -151,8 +142,8 @@ export interface ComputedOptions {
 	sync?: boolean;
 	deps?: string[];
 }
-export interface WatcherOptions<T = any> {
-	watcher: Watcher<T>;
+export interface WatcherOptions<This = any> {
+	watcher: Watcher<This>;
 	immediate?: boolean;
 	sync?: boolean;
 	once?: boolean;
@@ -163,15 +154,17 @@ export interface EmitterOptions extends Task {
 	max?: number;
 	count?: number;
 }
-export declare type DataGenerator = (this: YoxInterface, options: ComponentOptions) => Data;
+export declare type DataGenerator<T> = (options: ComponentOptions<T>) => Data;
 export declare type Accessors<T, V> = {
 	[K in keyof T]: V;
 };
+export declare type OptionsBeforeCreateHook = (options: ComponentOptions) => void;
+export declare type OptionsOtherHook = () => void;
 export interface ComponentOptions<Computed = any, Watchers = any, Events = any, Methods = any> {
 	name?: string;
 	propTypes?: Record<string, PropRule>;
 	el?: string | Node;
-	data?: Data | DataGenerator;
+	data?: Data | DataGenerator<YoxInterface>;
 	template?: string | Function;
 	model?: string;
 	props?: Data;
@@ -199,24 +192,6 @@ export interface ComponentOptions<Computed = any, Watchers = any, Events = any, 
 	[HOOK_AFTER_UPDATE]?: OptionsOtherHook;
 	[HOOK_BEFORE_DESTROY]?: OptionsOtherHook;
 	[HOOK_AFTER_DESTROY]?: OptionsOtherHook;
-	[HOOK_BEFORE_ROUTE_ENTER]?: RouterBeforeHook;
-	[HOOK_AFTER_ROUTE_ENTER]?: RouterAfterHook;
-	[HOOK_BEFORE_ROUTE_UPDATE]?: RouterBeforeHook;
-	[HOOK_AFTER_ROUTE_UPDATE]?: RouterAfterHook;
-	[HOOK_BEFORE_ROUTE_LEAVE]?: RouterBeforeHook;
-	[HOOK_AFTER_ROUTE_LEAVE]?: RouterAfterHook;
-}
-export interface Location {
-	path: string;
-	url?: string;
-	params?: Data;
-	query?: Data;
-}
-export interface RouteTarget {
-	name?: string;
-	path?: string;
-	params?: Data;
-	query?: Data;
 }
 export declare type Data = Record<string, any>;
 export declare type LazyValue = number | true;
@@ -226,17 +201,13 @@ export declare type PropertyHint = 1 | 2 | 3;
 export declare type ComponentCallback = (options: ComponentOptions) => void;
 export declare type ComponentLoader = (callback: ComponentCallback) => Promise<ComponentOptions> | void;
 export declare type Component = ComponentOptions | ComponentLoader;
-export declare type FilterFunction = (this: any, ...args: any) => string | number | boolean;
-export declare type Filter = FilterFunction | Record<string, FilterFunction>;
-export declare type Watcher<T = any> = (this: T, newValue: any, oldValue: any, keypath: string) => void;
-export declare type Listener<T = any> = (this: T, event: CustomEventInterface, data?: Data) => false | void;
-export declare type NativeListener = (event: CustomEventInterface | Event) => false | void;
+export declare type FilterFunction<This = any> = (this: This, ...args: any) => string | number | boolean;
+export declare type Filter<This = any> = FilterFunction<This> | Record<string, FilterFunction<This>>;
+export declare type Watcher<This = any> = (this: This, newValue: any, oldValue: any, keypath: string) => void;
+export declare type Listener<This = any> = (this: This, event: CustomEvent, data?: Data) => false | void;
+export declare type NativeListener = (event: CustomEvent | Event) => false | void;
 export declare type ComputedGetter = () => any;
 export declare type ComputedSetter = (value: any) => void;
-export declare type OptionsBeforeCreateHook = (options: ComponentOptions) => void;
-export declare type OptionsOtherHook = () => void;
-export declare type RouterBeforeHook = (to: Location, from: Location | void, next: (value?: false | string | RouteTarget) => void) => void;
-export declare type RouterAfterHook = (to: Location, from: Location | void) => void;
 export declare type ValueHolder = {
 	keypath?: string;
 	value: any;
@@ -339,36 +310,11 @@ export interface StringApi {
 	has(str: string, part: string): boolean;
 	falsy(str: any): boolean;
 }
-declare class CustomEvent implements CustomEventInterface {
-	static PHASE_CURRENT: number;
-	static PHASE_UPWARD: number;
-	static PHASE_DOWNWARD: number;
+export declare type Namespace = {
 	type: string;
-	phase: number;
 	ns?: string;
-	target?: YoxInterface;
-	originalEvent?: CustomEventInterface | Event;
-	isPrevented?: true;
-	isStoped?: true;
-	listener?: Function;
-	/**
-	 * 构造函数
-	 *
-	 * 可以传事件名称，也可以传原生事件对象
-	 */
-	constructor(type: string, originalEvent?: CustomEventInterface | Event);
-	/**
-	 * 阻止事件的默认行为
-	 */
-	preventDefault(): this;
-	/**
-	 * 停止事件广播
-	 */
-	stopPropagation(): this;
-	prevent(): this;
-	stop(): this;
-}
-declare class Emitter implements EmitterInterface {
+};
+declare class Emitter {
 	/**
 	 * 是否开启命名空间
 	 */
@@ -418,7 +364,7 @@ declare class Emitter implements EmitterInterface {
 	 */
 	parse(type: string): Namespace;
 }
-declare class NextTask implements NextTaskInterface {
+declare class NextTask {
 	/**
 	 * 全局单例
 	 */
@@ -633,12 +579,10 @@ declare class Observer {
 	destroy(): void;
 }
 export declare type YoxClass = typeof Yox;
-export declare type EmitterClass = typeof Emitter;
-export declare type CustomEventClass = typeof CustomEvent;
 export declare type YoxPlugin = {
 	install(Yox: YoxClass): void;
 };
-export default class Yox<Computed, Watchers, Events, Methods> implements YoxInterface {
+export default class Yox implements YoxInterface {
 	$options: ComponentOptions;
 	$observer: Observer;
 	$emitter: Emitter;
@@ -669,18 +613,18 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
 	static object: ObjectApi;
 	static string: StringApi;
 	static logger: LoggerApi;
-	static Event: CustomEventClass;
-	static Emitter: EmitterClass;
+	static Event: typeof CustomEvent;
+	static Emitter: typeof Emitter;
+	/**
+	 * 定义组件对象
+	 */
+	static define<Computed, Watchers, Events, Methods>(options: ComponentOptions<Computed, Watchers, Events, Methods> & ThisType<Methods & YoxInterface>): ComponentOptions<Computed, Watchers, Events, Methods> & ThisType<Methods & YoxInterface>;
 	/**
 	 * 安装插件
 	 *
 	 * 插件必须暴露 install 方法
 	 */
 	static use(plugin: YoxPlugin): void;
-	/**
-	 * 定义组件对象
-	 */
-	static define<Computed, Watchers, Events, Methods>(options: ComponentOptions<Computed, Watchers, Events, Methods> & ThisType<Methods & YoxInterface>): ComponentOptions<Computed, Watchers, Events, Methods> & ThisType<Methods & YoxInterface>;
 	/**
 	 * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
 	 */
@@ -709,7 +653,7 @@ export default class Yox<Computed, Watchers, Events, Methods> implements YoxInte
 	 * 注册全局过滤器
 	 */
 	static filter(name: string | Record<string, Filter>, filter?: Filter): Filter | void;
-	constructor(options?: ComponentOptions<Computed, Watchers, Events, Methods> & ThisType<Methods & YoxInterface>);
+	constructor(options?: ComponentOptions);
 	/**
 	 * 取值
 	 */

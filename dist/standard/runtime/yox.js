@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.91
+ * yox.js v1.0.0-alpha.92
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -9,24 +9,6 @@
   typeof define === 'function' && define.amd ? define(factory) :
   (global = global || self, global.Yox = factory());
 }(this, function () { 'use strict';
-
-  var SLOT_DATA_PREFIX = '$slot_';
-  var HINT_BOOLEAN = 3;
-  var DIRECTIVE_MODEL = 'model';
-  var DIRECTIVE_EVENT = 'event';
-  var DIRECTIVE_BINDING = 'binding';
-  var DIRECTIVE_CUSTOM = 'o';
-  var MODIFER_NATIVE = 'native';
-  var MODEL_PROP_DEFAULT = 'value';
-  var NAMESPACE_HOOK = '.hook';
-  var HOOK_BEFORE_CREATE = 'beforeCreate';
-  var HOOK_AFTER_CREATE = 'afterCreate';
-  var HOOK_BEFORE_MOUNT = 'beforeMount';
-  var HOOK_AFTER_MOUNT = 'afterMount';
-  var HOOK_BEFORE_UPDATE = 'beforeUpdate';
-  var HOOK_AFTER_UPDATE = 'afterUpdate';
-  var HOOK_BEFORE_DESTROY = 'beforeDestroy';
-  var HOOK_AFTER_DESTROY = 'afterDestroy';
 
   /**
    * 为了压缩，定义的常量
@@ -104,6 +86,80 @@
    * 空字符串
    */
   var EMPTY_STRING = '';
+
+  var CustomEvent = /** @class */ (function () {
+      /**
+       * 构造函数
+       *
+       * 可以传事件名称，也可以传原生事件对象
+       */
+      function CustomEvent(type, originalEvent) {
+          // 这里不设置命名空间
+          // 因为有没有命名空间取决于 Emitter 的构造函数有没有传 true
+          // CustomEvent 自己无法决定
+          this.type = type;
+          this.phase = CustomEvent.PHASE_CURRENT;
+          if (originalEvent) {
+              this.originalEvent = originalEvent;
+          }
+      }
+      /**
+       * 阻止事件的默认行为
+       */
+      CustomEvent.prototype.preventDefault = function () {
+          var instance = this;
+          if (!instance.isPrevented) {
+              var originalEvent = instance.originalEvent;
+              if (originalEvent) {
+                  originalEvent.preventDefault();
+              }
+              instance.isPrevented = TRUE;
+          }
+          return instance;
+      };
+      /**
+       * 停止事件广播
+       */
+      CustomEvent.prototype.stopPropagation = function () {
+          var instance = this;
+          if (!instance.isStoped) {
+              var originalEvent = instance.originalEvent;
+              if (originalEvent) {
+                  originalEvent.stopPropagation();
+              }
+              instance.isStoped = TRUE;
+          }
+          return instance;
+      };
+      CustomEvent.prototype.prevent = function () {
+          return this.preventDefault();
+      };
+      CustomEvent.prototype.stop = function () {
+          return this.stopPropagation();
+      };
+      CustomEvent.PHASE_CURRENT = 0;
+      CustomEvent.PHASE_UPWARD = 1;
+      CustomEvent.PHASE_DOWNWARD = MINUS_ONE;
+      return CustomEvent;
+  }());
+
+  var SLOT_DATA_PREFIX = '$slot_';
+  var HINT_BOOLEAN = 3;
+  var DIRECTIVE_MODEL = 'model';
+  var DIRECTIVE_EVENT = 'event';
+  var DIRECTIVE_BINDING = 'binding';
+  var DIRECTIVE_CUSTOM = 'o';
+  var MODIFER_NATIVE = 'native';
+  var MODEL_PROP_DEFAULT = 'value';
+  var NAMESPACE_HOOK = '.hook';
+  var HOOK_BEFORE_CREATE = 'beforeCreate';
+  var HOOK_AFTER_CREATE = 'afterCreate';
+  var HOOK_BEFORE_MOUNT = 'beforeMount';
+  var HOOK_AFTER_MOUNT = 'afterMount';
+  var HOOK_BEFORE_UPDATE = 'beforeUpdate';
+  var HOOK_AFTER_UPDATE = 'afterUpdate';
+  var HOOK_BEFORE_DESTROY = 'beforeDestroy';
+  var HOOK_AFTER_DESTROY = 'afterDestroy';
 
   function isDef (target) {
       return target !== UNDEFINED;
@@ -208,62 +264,6 @@
                       : fn();
       }
   }
-
-  var CustomEvent = /** @class */ (function () {
-      /**
-       * 构造函数
-       *
-       * 可以传事件名称，也可以传原生事件对象
-       */
-      function CustomEvent(type, originalEvent) {
-          // 这里不设置命名空间
-          // 因为有没有命名空间取决于 Emitter 的构造函数有没有传 true
-          // CustomEvent 自己无法决定
-          this.type = type;
-          this.phase = CustomEvent.PHASE_CURRENT;
-          if (originalEvent) {
-              this.originalEvent = originalEvent;
-          }
-      }
-      /**
-       * 阻止事件的默认行为
-       */
-      CustomEvent.prototype.preventDefault = function () {
-          var instance = this;
-          if (!instance.isPrevented) {
-              var originalEvent = instance.originalEvent;
-              if (originalEvent) {
-                  originalEvent.preventDefault();
-              }
-              instance.isPrevented = TRUE;
-          }
-          return instance;
-      };
-      /**
-       * 停止事件广播
-       */
-      CustomEvent.prototype.stopPropagation = function () {
-          var instance = this;
-          if (!instance.isStoped) {
-              var originalEvent = instance.originalEvent;
-              if (originalEvent) {
-                  originalEvent.stopPropagation();
-              }
-              instance.isStoped = TRUE;
-          }
-          return instance;
-      };
-      CustomEvent.prototype.prevent = function () {
-          return this.preventDefault();
-      };
-      CustomEvent.prototype.stop = function () {
-          return this.stopPropagation();
-      };
-      CustomEvent.PHASE_CURRENT = 0;
-      CustomEvent.PHASE_UPWARD = 1;
-      CustomEvent.PHASE_DOWNWARD = MINUS_ONE;
-      return CustomEvent;
-  }());
 
   /**
    * 遍历数组
@@ -938,8 +938,9 @@
   var nativeConsole = typeof console !== RAW_UNDEFINED ? console : NULL, 
   /**
    * 当前是否是源码调试，如果开启了代码压缩，empty function 里的注释会被干掉
+   * 源码模式默认选 INFO，因为 DEBUG 输出的日志太多，会导致性能急剧下降
    */
-  defaultLogLevel = /yox/.test(toString(EMPTY_FUNCTION)) ? DEBUG : WARN, 
+  defaultLogLevel = /yox/.test(toString(EMPTY_FUNCTION)) ? INFO : WARN, 
   /**
    * console 样式前缀
    * ie 和 edge 不支持 console.log 样式
@@ -1888,10 +1889,6 @@
       }
   }
 
-  /**
-   * 元素 节点
-   */
-
   function toNumber (target, defaultValue) {
       return numeric(target)
           ? +target
@@ -1899,10 +1896,6 @@
               ? defaultValue
               : 0;
   }
-
-  /**
-   * 字面量
-   */
 
   function setPair(target, name, key, value) {
       var data = target[name] || (target[name] = {});
@@ -3622,18 +3615,18 @@
           afterCreateHook(instance, watchers);
       }
       /**
+       * 定义组件对象
+       */
+      Yox.define = function (options) {
+          return options;
+      };
+      /**
        * 安装插件
        *
        * 插件必须暴露 install 方法
        */
       Yox.use = function (plugin) {
           plugin.install(Yox);
-      };
-      /**
-       * 定义组件对象
-       */
-      Yox.define = function (options) {
-          return options;
       };
       /**
        * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
@@ -4111,7 +4104,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.91";
+      Yox.version = "1.0.0-alpha.92";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
