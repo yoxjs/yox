@@ -6,24 +6,18 @@ declare const HOOK_BEFORE_UPDATE = "beforeUpdate";
 declare const HOOK_AFTER_UPDATE = "afterUpdate";
 declare const HOOK_BEFORE_DESTROY = "beforeDestroy";
 declare const HOOK_AFTER_DESTROY = "afterDestroy";
-export declare class CustomEvent {
-	static PHASE_CURRENT: number;
-	static PHASE_UPWARD: number;
-	static PHASE_DOWNWARD: number;
+/**
+ * Yox 事件系统的事件类型
+ */
+export interface CustomEventInterface {
 	type: string;
 	phase: number;
 	ns?: string;
 	target?: YoxInterface;
-	originalEvent?: CustomEvent | Event;
+	originalEvent?: CustomEventInterface | Event;
 	isPrevented?: true;
 	isStoped?: true;
 	listener?: Function;
-	/**
-	 * 构造函数
-	 *
-	 * 可以传事件名称，也可以传原生事件对象
-	 */
-	constructor(type: string, originalEvent?: CustomEvent | Event);
 	/**
 	 * 阻止事件的默认行为
 	 */
@@ -35,6 +29,9 @@ export declare class CustomEvent {
 	prevent(): this;
 	stop(): this;
 }
+/**
+ * Yox 接口类型
+ */
 export interface YoxInterface {
 	$options: ComponentOptions;
 	$el?: HTMLElement;
@@ -47,12 +44,12 @@ export interface YoxInterface {
 	$refs?: Record<string, YoxInterface | HTMLElement>;
 	get(keypath: string, defaultValue?: any): any;
 	set(keypath: string | Data, value?: any): void;
-	on(type: string | Record<string, Listener<this>>, listener?: Listener<this>): this;
-	once(type: string | Record<string, Listener<this>>, listener?: Listener<this>): this;
+	on(type: string | Record<string, ThisListener<this>>, listener?: ThisListener<this>): this;
+	once(type: string | Record<string, ThisListener<this>>, listener?: ThisListener<this>): this;
 	off(type?: string, listener?: Function): this;
-	fire(type: string | CustomEvent, data?: Data | boolean, downward?: boolean): boolean;
-	watch(keypath: string | Record<string, Watcher<this> | WatcherOptions<this>>, watcher?: Watcher<this> | WatcherOptions<this>, immediate?: boolean): this;
-	unwatch(keypath?: string, watcher?: Watcher<this>): this;
+	fire(type: string | CustomEventInterface, data?: Data | boolean, downward?: boolean): boolean;
+	watch(keypath: string | Record<string, ThisWatcher<this> | ThisWatcherOptions<this>>, watcher?: ThisWatcher<this> | ThisWatcherOptions<this>, immediate?: boolean): this;
+	unwatch(keypath?: string, watcher?: ThisWatcher<this>): this;
 	loadComponent(name: string, callback: ComponentCallback): void;
 	createComponent(options: ComponentOptions, vnode: VNode): YoxInterface;
 	directive(name: string | Record<string, DirectiveHooks>, directive?: DirectiveHooks): DirectiveHooks | void;
@@ -142,8 +139,14 @@ export interface ComputedOptions {
 	sync?: boolean;
 	deps?: string[];
 }
-export interface WatcherOptions<This = any> {
-	watcher: Watcher<This>;
+export interface WatcherOptions {
+	watcher: Watcher;
+	immediate?: boolean;
+	sync?: boolean;
+	once?: boolean;
+}
+export interface ThisWatcherOptions<This = any> {
+	watcher: ThisWatcher<This>;
 	immediate?: boolean;
 	sync?: boolean;
 	once?: boolean;
@@ -158,8 +161,8 @@ export declare type DataGenerator<T> = (options: ComponentOptions<T>) => Data;
 export declare type Accessors<T, V> = {
 	[K in keyof T]: V;
 };
-export declare type OptionsBeforeCreateHook = (options: ComponentOptions) => void;
-export declare type OptionsOtherHook = () => void;
+export declare type ComponentOptionsBeforeCreateHook = (options: ComponentOptions) => void;
+export declare type ComponentOptionsOtherHook = () => void;
 export interface ComponentOptions<Computed = any, Watchers = any, Events = any, Methods = any> {
 	name?: string;
 	propTypes?: Record<string, PropRule>;
@@ -184,14 +187,14 @@ export interface ComponentOptions<Computed = any, Watchers = any, Events = any, 
 	partials?: Record<string, string>;
 	filters?: Record<string, Filter>;
 	extensions?: Data;
-	[HOOK_BEFORE_CREATE]?: OptionsBeforeCreateHook;
-	[HOOK_AFTER_CREATE]?: OptionsOtherHook;
-	[HOOK_BEFORE_MOUNT]?: OptionsOtherHook;
-	[HOOK_AFTER_MOUNT]?: OptionsOtherHook;
-	[HOOK_BEFORE_UPDATE]?: OptionsOtherHook;
-	[HOOK_AFTER_UPDATE]?: OptionsOtherHook;
-	[HOOK_BEFORE_DESTROY]?: OptionsOtherHook;
-	[HOOK_AFTER_DESTROY]?: OptionsOtherHook;
+	[HOOK_BEFORE_CREATE]?: ComponentOptionsBeforeCreateHook;
+	[HOOK_AFTER_CREATE]?: ComponentOptionsOtherHook;
+	[HOOK_BEFORE_MOUNT]?: ComponentOptionsOtherHook;
+	[HOOK_AFTER_MOUNT]?: ComponentOptionsOtherHook;
+	[HOOK_BEFORE_UPDATE]?: ComponentOptionsOtherHook;
+	[HOOK_AFTER_UPDATE]?: ComponentOptionsOtherHook;
+	[HOOK_BEFORE_DESTROY]?: ComponentOptionsOtherHook;
+	[HOOK_AFTER_DESTROY]?: ComponentOptionsOtherHook;
 }
 export declare type Data = Record<string, any>;
 export declare type LazyValue = number | true;
@@ -201,11 +204,13 @@ export declare type PropertyHint = 1 | 2 | 3;
 export declare type ComponentCallback = (options: ComponentOptions) => void;
 export declare type ComponentLoader = (callback: ComponentCallback) => Promise<ComponentOptions> | void;
 export declare type Component = ComponentOptions | ComponentLoader;
-export declare type FilterFunction<This = any> = (this: This, ...args: any) => string | number | boolean;
-export declare type Filter<This = any> = FilterFunction<This> | Record<string, FilterFunction<This>>;
-export declare type Watcher<This = any> = (this: This, newValue: any, oldValue: any, keypath: string) => void;
-export declare type Listener<This = any> = (this: This, event: CustomEvent, data?: Data) => false | void;
-export declare type NativeListener = (event: CustomEvent | Event) => false | void;
+export declare type FilterFunction = (this: any, ...args: any) => string | number | boolean;
+export declare type Filter = FilterFunction | Record<string, FilterFunction>;
+export declare type ThisWatcher<This> = (this: This, newValue: any, oldValue: any, keypath: string) => void;
+export declare type Watcher = (newValue: any, oldValue: any, keypath: string) => void;
+export declare type ThisListener<This> = (this: This, event: CustomEventInterface, data?: Data) => false | void;
+export declare type Listener = (event: CustomEventInterface, data?: Data) => false | void;
+export declare type NativeListener = (event: CustomEventInterface | Event) => false | void;
 export declare type ComputedGetter = () => any;
 export declare type ComputedSetter = (value: any) => void;
 export declare type ValueHolder = {
@@ -314,7 +319,7 @@ export declare type Namespace = {
 	type: string;
 	ns?: string;
 };
-export declare class Emitter {
+declare class Emitter {
 	/**
 	 * 是否开启命名空间
 	 */
@@ -363,6 +368,35 @@ export declare class Emitter {
 	 * @param type
 	 */
 	parse(type: string): Namespace;
+}
+declare class CustomEvent implements CustomEventInterface {
+	static PHASE_CURRENT: number;
+	static PHASE_UPWARD: number;
+	static PHASE_DOWNWARD: number;
+	type: string;
+	phase: number;
+	ns?: string;
+	target?: YoxInterface;
+	originalEvent?: CustomEventInterface | Event;
+	isPrevented?: true;
+	isStoped?: true;
+	listener?: Function;
+	/**
+	 * 构造函数
+	 *
+	 * 可以传事件名称，也可以传原生事件对象
+	 */
+	constructor(type: string, originalEvent?: CustomEventInterface | Event);
+	/**
+	 * 阻止事件的默认行为
+	 */
+	preventDefault(): this;
+	/**
+	 * 停止事件广播
+	 */
+	stopPropagation(): this;
+	prevent(): this;
+	stop(): this;
 }
 declare class NextTask {
 	/**
@@ -665,11 +699,11 @@ export default class Yox implements YoxInterface {
 	/**
 	 * 监听事件，支持链式调用
 	 */
-	on(type: string | Record<string, Listener<this>>, listener?: Listener<this>): this;
+	on(type: string | Record<string, ThisListener<this>>, listener?: ThisListener<this>): this;
 	/**
 	 * 监听一次事件，支持链式调用
 	 */
-	once(type: string | Record<string, Listener<this>>, listener?: Listener<this>): this;
+	once(type: string | Record<string, ThisListener<this>>, listener?: ThisListener<this>): this;
 	/**
 	 * 取消监听事件，支持链式调用
 	 */
@@ -681,11 +715,11 @@ export default class Yox implements YoxInterface {
 	/**
 	 * 监听数据变化，支持链式调用
 	 */
-	watch(keypath: string | Record<string, Watcher<this> | WatcherOptions<this>>, watcher?: Watcher<this> | WatcherOptions<this>, immediate?: boolean): this;
+	watch(keypath: string | Record<string, ThisWatcher<this> | ThisWatcherOptions<this>>, watcher?: ThisWatcher<this> | ThisWatcherOptions<this>, immediate?: boolean): this;
 	/**
 	 * 取消监听数据变化，支持链式调用
 	 */
-	unwatch(keypath?: string, watcher?: Watcher): this;
+	unwatch(keypath?: string, watcher?: ThisWatcher<this>): this;
 	/**
 	 * 加载组件，组件可以是同步或异步，最后会调用 callback
 	 *

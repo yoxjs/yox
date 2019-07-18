@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.93
+ * yox.js v1.0.0-alpha.94
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -50,62 +50,6 @@
    * 空字符串
    */
   var EMPTY_STRING = '';
-
-  var CustomEvent = /** @class */ (function () {
-      /**
-       * 构造函数
-       *
-       * 可以传事件名称，也可以传原生事件对象
-       */
-      function CustomEvent(type, originalEvent) {
-          // 这里不设置命名空间
-          // 因为有没有命名空间取决于 Emitter 的构造函数有没有传 true
-          // CustomEvent 自己无法决定
-          this.type = type;
-          this.phase = CustomEvent.PHASE_CURRENT;
-          if (originalEvent) {
-              this.originalEvent = originalEvent;
-          }
-      }
-      /**
-       * 阻止事件的默认行为
-       */
-      CustomEvent.prototype.preventDefault = function () {
-          var instance = this;
-          if (!instance.isPrevented) {
-              var originalEvent = instance.originalEvent;
-              if (originalEvent) {
-                  originalEvent.preventDefault();
-              }
-              instance.isPrevented = TRUE;
-          }
-          return instance;
-      };
-      /**
-       * 停止事件广播
-       */
-      CustomEvent.prototype.stopPropagation = function () {
-          var instance = this;
-          if (!instance.isStoped) {
-              var originalEvent = instance.originalEvent;
-              if (originalEvent) {
-                  originalEvent.stopPropagation();
-              }
-              instance.isStoped = TRUE;
-          }
-          return instance;
-      };
-      CustomEvent.prototype.prevent = function () {
-          return this.preventDefault();
-      };
-      CustomEvent.prototype.stop = function () {
-          return this.stopPropagation();
-      };
-      CustomEvent.PHASE_CURRENT = 0;
-      CustomEvent.PHASE_UPWARD = 1;
-      CustomEvent.PHASE_DOWNWARD = MINUS_ONE;
-      return CustomEvent;
-  }());
 
   function isDef (target) {
       return target !== UNDEFINED;
@@ -210,6 +154,62 @@
                       : fn();
       }
   }
+
+  var CustomEvent = /** @class */ (function () {
+      /**
+       * 构造函数
+       *
+       * 可以传事件名称，也可以传原生事件对象
+       */
+      function CustomEvent(type, originalEvent) {
+          // 这里不设置命名空间
+          // 因为有没有命名空间取决于 Emitter 的构造函数有没有传 true
+          // CustomEvent 自己无法决定
+          this.type = type;
+          this.phase = CustomEvent.PHASE_CURRENT;
+          if (originalEvent) {
+              this.originalEvent = originalEvent;
+          }
+      }
+      /**
+       * 阻止事件的默认行为
+       */
+      CustomEvent.prototype.preventDefault = function () {
+          var instance = this;
+          if (!instance.isPrevented) {
+              var originalEvent = instance.originalEvent;
+              if (originalEvent) {
+                  originalEvent.preventDefault();
+              }
+              instance.isPrevented = TRUE;
+          }
+          return instance;
+      };
+      /**
+       * 停止事件广播
+       */
+      CustomEvent.prototype.stopPropagation = function () {
+          var instance = this;
+          if (!instance.isStoped) {
+              var originalEvent = instance.originalEvent;
+              if (originalEvent) {
+                  originalEvent.stopPropagation();
+              }
+              instance.isStoped = TRUE;
+          }
+          return instance;
+      };
+      CustomEvent.prototype.prevent = function () {
+          return this.preventDefault();
+      };
+      CustomEvent.prototype.stop = function () {
+          return this.stopPropagation();
+      };
+      CustomEvent.PHASE_CURRENT = 0;
+      CustomEvent.PHASE_UPWARD = 1;
+      CustomEvent.PHASE_DOWNWARD = MINUS_ONE;
+      return CustomEvent;
+  }());
 
   /**
    * 遍历数组
@@ -2022,7 +2022,9 @@
                   instance[name] = method;
               });
           }
-          afterCreateHook(instance, watchers);
+          if (watchers) {
+              instance.watch(watchers);
+          }
       }
       /**
        * 定义组件对象
@@ -2349,7 +2351,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.93";
+      Yox.version = "1.0.0-alpha.94";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
@@ -2362,11 +2364,6 @@
       Yox.Emitter = Emitter;
       return Yox;
   }());
-  function afterCreateHook(instance, watchers) {
-      if (watchers) {
-          instance.watch(watchers);
-      }
-  }
   function addEvent(instance, type, listener, once) {
       var options = {
           fn: listener,

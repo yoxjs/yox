@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.93
+ * yox.js v1.0.0-alpha.94
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -44,61 +44,6 @@ const EMPTY_ARRAY = Object.freeze([]);
  * 空字符串
  */
 const EMPTY_STRING = '';
-
-class CustomEvent {
-    /**
-     * 构造函数
-     *
-     * 可以传事件名称，也可以传原生事件对象
-     */
-    constructor(type, originalEvent) {
-        // 这里不设置命名空间
-        // 因为有没有命名空间取决于 Emitter 的构造函数有没有传 true
-        // CustomEvent 自己无法决定
-        this.type = type;
-        this.phase = CustomEvent.PHASE_CURRENT;
-        if (originalEvent) {
-            this.originalEvent = originalEvent;
-        }
-    }
-    /**
-     * 阻止事件的默认行为
-     */
-    preventDefault() {
-        const instance = this;
-        if (!instance.isPrevented) {
-            const { originalEvent } = instance;
-            if (originalEvent) {
-                originalEvent.preventDefault();
-            }
-            instance.isPrevented = TRUE;
-        }
-        return instance;
-    }
-    /**
-     * 停止事件广播
-     */
-    stopPropagation() {
-        const instance = this;
-        if (!instance.isStoped) {
-            const { originalEvent } = instance;
-            if (originalEvent) {
-                originalEvent.stopPropagation();
-            }
-            instance.isStoped = TRUE;
-        }
-        return instance;
-    }
-    prevent() {
-        return this.preventDefault();
-    }
-    stop() {
-        return this.stopPropagation();
-    }
-}
-CustomEvent.PHASE_CURRENT = 0;
-CustomEvent.PHASE_UPWARD = 1;
-CustomEvent.PHASE_DOWNWARD = MINUS_ONE;
 
 function isDef (target) {
     return target !== UNDEFINED;
@@ -203,6 +148,61 @@ function execute (fn, context, args) {
                     : fn();
     }
 }
+
+class CustomEvent {
+    /**
+     * 构造函数
+     *
+     * 可以传事件名称，也可以传原生事件对象
+     */
+    constructor(type, originalEvent) {
+        // 这里不设置命名空间
+        // 因为有没有命名空间取决于 Emitter 的构造函数有没有传 true
+        // CustomEvent 自己无法决定
+        this.type = type;
+        this.phase = CustomEvent.PHASE_CURRENT;
+        if (originalEvent) {
+            this.originalEvent = originalEvent;
+        }
+    }
+    /**
+     * 阻止事件的默认行为
+     */
+    preventDefault() {
+        const instance = this;
+        if (!instance.isPrevented) {
+            const { originalEvent } = instance;
+            if (originalEvent) {
+                originalEvent.preventDefault();
+            }
+            instance.isPrevented = TRUE;
+        }
+        return instance;
+    }
+    /**
+     * 停止事件广播
+     */
+    stopPropagation() {
+        const instance = this;
+        if (!instance.isStoped) {
+            const { originalEvent } = instance;
+            if (originalEvent) {
+                originalEvent.stopPropagation();
+            }
+            instance.isStoped = TRUE;
+        }
+        return instance;
+    }
+    prevent() {
+        return this.preventDefault();
+    }
+    stop() {
+        return this.stopPropagation();
+    }
+}
+CustomEvent.PHASE_CURRENT = 0;
+CustomEvent.PHASE_UPWARD = 1;
+CustomEvent.PHASE_DOWNWARD = MINUS_ONE;
 
 /**
  * 遍历数组
@@ -2011,7 +2011,9 @@ class Yox {
                 instance[name] = method;
             });
         }
-        afterCreateHook(instance, watchers);
+        if (watchers) {
+            instance.watch(watchers);
+        }
     }
     /**
      * 定义组件对象
@@ -2339,7 +2341,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.93";
+Yox.version = "1.0.0-alpha.94";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
@@ -2350,11 +2352,6 @@ Yox.string = string$1;
 Yox.logger = logger;
 Yox.Event = CustomEvent;
 Yox.Emitter = Emitter;
-function afterCreateHook(instance, watchers) {
-    if (watchers) {
-        instance.watch(watchers);
-    }
-}
 function addEvent(instance, type, listener, once) {
     const options = {
         fn: listener,
