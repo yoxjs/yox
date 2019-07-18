@@ -21,6 +21,7 @@ export default Yox.define({
   propTypes: {
 
   },
+  template,
   data() {
     // this 指向 Yox 实例
     return {
@@ -55,7 +56,6 @@ export default Yox.define({
       }
     }
   },
-  template,
   ...
 })
 ```
