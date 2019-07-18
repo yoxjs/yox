@@ -29,6 +29,7 @@
     "prod-legacy-source": "cross-env NODE_ENV=production NODE_RELEASE=prod NODE_LEGACY=true NODE_FORMAT=es node_modules/.bin/rollup -c ./rollup.config.js && cross-env NODE_ENV=production NODE_RELEASE=prod NODE_LEGACY=true node_modules/.bin/rollup -c ./rollup.config.js",
     "runtime-legacy-source": "cross-env NODE_ENV=runtime NODE_RELEASE=runtime NODE_LEGACY=true NODE_FORMAT=es node_modules/.bin/rollup -c ./rollup.config.js && cross-env NODE_ENV=runtime NODE_RELEASE=runtime NODE_LEGACY=true node_modules/.bin/rollup -c ./rollup.config.js",
     "pure-legacy-source": "cross-env NODE_ENV=pure NODE_RELEASE=pure NODE_LEGACY=true NODE_FORMAT=es node_modules/.bin/rollup -c ./rollup.config.js && cross-env NODE_ENV=pure NODE_RELEASE=pure NODE_LEGACY=true node_modules/.bin/rollup -c ./rollup.config.js",
+
     "dev-legacy-min": "cross-env NODE_ENV=development NODE_RELEASE=dev NODE_LEGACY=true NODE_FORMAT=es NODE_MINIFY=true node_modules/.bin/rollup -c ./rollup.config.js && cross-env NODE_ENV=development NODE_RELEASE=dev NODE_LEGACY=true NODE_MINIFY=true node_modules/.bin/rollup -c ./rollup.config.js",
     "prod-legacy-min": "cross-env NODE_ENV=production NODE_RELEASE=prod NODE_LEGACY=true NODE_FORMAT=es NODE_MINIFY=true node_modules/.bin/rollup -c ./rollup.config.js && cross-env NODE_ENV=production NODE_RELEASE=prod NODE_LEGACY=true NODE_MINIFY=true node_modules/.bin/rollup -c ./rollup.config.js",
     "runtime-legacy-min": "cross-env NODE_ENV=runtime NODE_RELEASE=runtime NODE_LEGACY=true NODE_FORMAT=es NODE_MINIFY=true node_modules/.bin/rollup -c ./rollup.config.js && cross-env NODE_ENV=runtime NODE_RELEASE=runtime NODE_LEGACY=true NODE_MINIFY=true node_modules/.bin/rollup -c ./rollup.config.js",
@@ -45,9 +46,9 @@
     "simple",
     "lightweight",
     "mvvm",
-    "typescript",
-    "framework",
-    "vue"
+    "ts",
+    "vue",
+    "ie"
   ],
   "author": "musicode",
   "license": "MIT",
@@ -66,6 +67,6 @@
     "rollup-plugin-terser": "^5.0.0",
     "rollup-plugin-typescript": "^1.0.1",
     "tslib": "^1.10.0",
-    "typescript": "^3.5.2"
+    "typescript": "^3.5.3"
   }
 }

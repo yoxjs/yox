@@ -1,8 +1,8 @@
 import {
   Data,
   Filter,
-  Watcher,
-  Listener,
+  ThisWatcher,
+  ThisListener,
   Component,
   ComponentCallback,
   ComponentLoader,
@@ -22,13 +22,12 @@ import {
 
 import {
   EmitterOptions,
-  WatcherOptions,
   ComponentOptions,
+  ThisWatcherOptions,
 } from 'yox-type/src/options'
 
 import {
   YoxInterface,
-  CustomEvent,
 } from 'yox-type/src/yox'
 
 import {
@@ -64,6 +63,7 @@ import execute from 'yox-common/src/function/execute'
 
 import Emitter from 'yox-common/src/util/Emitter'
 import NextTask from 'yox-common/src/util/NextTask'
+import CustomEvent from 'yox-common/src/util/CustomEvent'
 
 import * as is from 'yox-common/src/util/is'
 import * as array from 'yox-common/src/util/array'
@@ -528,7 +528,12 @@ export default class Yox implements YoxInterface {
           }
         )
 
-        afterCreateHook(instance, newWatchers)
+        instance.watch(newWatchers)
+
+        if (process.env.NODE_ENV !== 'pure') {
+          execute(instance.$options[HOOK_AFTER_CREATE], instance)
+          instance.fire(HOOK_AFTER_CREATE + NAMESPACE_HOOK)
+        }
 
         // 编译模板
         // 在开发阶段，template 是原始的 html 模板
@@ -571,7 +576,14 @@ export default class Yox implements YoxInterface {
 
     }
 
-    afterCreateHook(instance, watchers)
+    if (watchers) {
+      instance.watch(watchers)
+    }
+
+    if (process.env.NODE_ENV !== 'pure') {
+      execute(instance.$options[HOOK_AFTER_CREATE], instance)
+      instance.fire(HOOK_AFTER_CREATE + NAMESPACE_HOOK)
+    }
 
   }
 
@@ -604,8 +616,8 @@ export default class Yox implements YoxInterface {
    * 监听事件，支持链式调用
    */
   on(
-    type: string | Record<string, Listener<this>>,
-    listener?: Listener<this>
+    type: string | Record<string, ThisListener<this>>,
+    listener?: ThisListener<this>
   ): this {
     addEvents(this, type, listener)
     return this
@@ -615,8 +627,8 @@ export default class Yox implements YoxInterface {
    * 监听一次事件，支持链式调用
    */
   once(
-    type: string | Record<string, Listener<this>>,
-    listener?: Listener<this>
+    type: string | Record<string, ThisListener<this>>,
+    listener?: ThisListener<this>
   ): this {
     addEvents(this, type, listener, constant.TRUE)
     return this
@@ -713,8 +725,8 @@ export default class Yox implements YoxInterface {
    * 监听数据变化，支持链式调用
    */
   watch(
-    keypath: string | Record<string, Watcher<this> | WatcherOptions<this>>,
-    watcher?: Watcher<this> | WatcherOptions<this>,
+    keypath: string | Record<string, ThisWatcher<this> | ThisWatcherOptions<this>>,
+    watcher?: ThisWatcher<this> | ThisWatcherOptions<this>,
     immediate?: boolean
   ): this {
     this.$observer.watch(keypath, watcher, immediate)
@@ -726,7 +738,7 @@ export default class Yox implements YoxInterface {
    */
   unwatch(
     keypath?: string,
-    watcher?: Watcher
+    watcher?: ThisWatcher<this>
   ): this {
     this.$observer.unwatch(keypath, watcher)
     return this
@@ -1246,19 +1258,6 @@ function checkProp(key: string, value: any, rule: PropRule) {
 
 }
 
-function afterCreateHook(instance: YoxInterface, watchers: Record<string, Watcher | WatcherOptions> | void) {
-
-  if (watchers) {
-    instance.watch(watchers)
-  }
-
-  if (process.env.NODE_ENV !== 'pure') {
-    execute(instance.$options[HOOK_AFTER_CREATE], instance)
-    instance.fire(HOOK_AFTER_CREATE + NAMESPACE_HOOK)
-  }
-
-}
-
 function setFlexibleOptions(instance: YoxInterface, key: string, value: Function | Data | void) {
   if (is.func(value)) {
     instance[key](execute(value, instance))
@@ -1268,7 +1267,7 @@ function setFlexibleOptions(instance: YoxInterface, key: string, value: Function
   }
 }
 
-function addEvent(instance: YoxInterface, type: string, listener: Listener, once?: true) {
+function addEvent(instance: YoxInterface, type: string, listener: Function, once?: true) {
   const options: EmitterOptions = {
     fn: listener,
     ctx: instance
@@ -1283,17 +1282,17 @@ function addEvent(instance: YoxInterface, type: string, listener: Listener, once
 
 function addEvents(
   instance: YoxInterface,
-  type: string | Record<string, Listener>,
-  listener?: Listener,
+  type: string | Record<string, Function>,
+  listener?: Function,
   once?: true
 ) {
   if (is.string(type)) {
-    addEvent(instance, type as string, listener as Listener, once)
+    addEvent(instance, type as string, listener as Function, once)
   }
   else {
     object.each(
       type as Data,
-      function (value: Listener, key: string) {
+      function (value: Function, key: string) {
         addEvent(instance, key, value, once)
       }
     )
