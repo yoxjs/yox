@@ -6,6 +6,8 @@ MVVM 最大的特点是内部有一套完整的响应式机制，也就是观察
 
 也就是说，你可以把 Yox 用于任何 `JavaScript` 环境，包括 `NodeJS`、`React Native`、各种小程序，甚至是最近新出的 `QuickJS` 和 `Hermes` 引擎。
 
+> 为此，我们特地提供了 `pure` 版本，它不包含任何视图层代码。
+
 ```js
 // 全局事件管理器
 var eventEmitter = new Yox()
