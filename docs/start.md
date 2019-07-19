@@ -55,7 +55,12 @@
 * [阻止事件默认行为](http://jsrun.pro/CSyKp/edit)
 * [阻止事件冒泡](http://jsrun.pro/rSyKp/edit)
 * [事件命名空间](http://jsrun.pro/DRyKp/edit)
-* [自定义 DOM 事件](http://jsrun.pro/XCyKp/edit)
+
+### 自定义 DOM 事件
+
+* [Tap](http://jsrun.pro/XCyKp/edit)
+* [Hover](http://jsrun.pro/cZbKp/edit)
+* [CamelCase](http://jsrun.pro/7ZbKp/edit)
 
 ### 组件事件
 

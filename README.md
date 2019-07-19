@@ -84,7 +84,12 @@ yarn add yox
 * [Prevent Default Behavior](http://jsrun.pro/CSyKp/edit)
 * [Stop Propagation](http://jsrun.pro/rSyKp/edit)
 * [Event Namespace](http://jsrun.pro/DRyKp/edit)
-* [Custom DOM Event](http://jsrun.pro/XCyKp/edit)
+
+##### Custom DOM Event
+
+* [Tap](http://jsrun.pro/XCyKp/edit)
+* [Hover](http://jsrun.pro/cZbKp/edit)
+* [CamelCase](http://jsrun.pro/7ZbKp/edit)
 
 ##### Component Event
 
