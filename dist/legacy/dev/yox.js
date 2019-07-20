@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.94
+ * yox.js v1.0.0-alpha.95
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -3519,11 +3519,15 @@
           // 还是在序列化的时候统一处理比较好
           // 唯独需要在这特殊处理的是 html 实体
           // 但这只是 WEB 平台的特殊逻辑，所以丢给 platform 处理
-          if (setElementText(element, child.text)) {
+          if (!element.isComponent
+              && !specialTags[element.tag]
+              && setElementText(element, child.text)) {
               element.children = UNDEFINED;
           }
       }, processElementSingleExpression = function (element, child) {
-          if (!element.isComponent && !element.slot && !child.safe) {
+          if (!element.isComponent
+              && !specialTags[element.tag]
+              && !child.safe) {
               element.html = child.expr;
               element.children = UNDEFINED;
           }
@@ -5366,7 +5370,9 @@
   }
 
   // 这里先写 IE9 支持的接口
-  var innerText = 'textContent', innerHTML = 'innerHTML', findElement = function (selector) {
+  var innerText = 'textContent', innerHTML = 'innerHTML', createEvent = function (event, node) {
+      return event;
+  }, findElement = function (selector) {
       var node = DOCUMENT.querySelector(selector);
       if (node) {
           return node;
@@ -5381,8 +5387,6 @@
       node.classList.add(className);
   }, removeElementClass = function (node, className) {
       node.classList.remove(className);
-  }, createEvent = function (event, node) {
-      return event;
   };
   {
       if (DOCUMENT) {
@@ -5405,44 +5409,7 @@
           // 为 IE9 以下浏览器打补丁
           {
               if (!DOCUMENT.addEventListener) {
-                  var PROPERTY_CHANGE_1 = 'propertychange';
-                  addEventListener = function (node, type, listener) {
-                      if (type === EVENT_INPUT) {
-                          addEventListener(node, PROPERTY_CHANGE_1, 
-                          // 借用 EMITTER，反正只是内部临时用一下...
-                          listener[EMITTER] = function (event) {
-                              if (event.propertyName === RAW_VALUE) {
-                                  event = new CustomEvent(event);
-                                  event.type = EVENT_INPUT;
-                                  execute(listener, this, event);
-                              }
-                          });
-                      }
-                      else if (type === EVENT_CHANGE && isBoxElement_1(node)) {
-                          addEventListener(node, EVENT_CLICK, listener[EMITTER] = function (event) {
-                              event = new CustomEvent(event);
-                              event.type = EVENT_CHANGE;
-                              execute(listener, this, event);
-                          });
-                      }
-                      else {
-                          node.attachEvent("on" + type, listener);
-                      }
-                  };
-                  removeEventListener = function (node, type, listener) {
-                      if (type === EVENT_INPUT) {
-                          removeEventListener(node, PROPERTY_CHANGE_1, listener[EMITTER]);
-                          delete listener[EMITTER];
-                      }
-                      else if (type === EVENT_CHANGE && isBoxElement_1(node)) {
-                          removeEventListener(node, EVENT_CLICK, listener[EMITTER]);
-                          delete listener[EMITTER];
-                      }
-                      else {
-                          node.detachEvent("on" + type, listener);
-                      }
-                  };
-                  var isBoxElement_1 = function (node) {
+                  var PROPERTY_CHANGE_1 = 'propertychange', isBoxElement_1 = function (node) {
                       return node.tagName === 'INPUT'
                           && (node.type === 'radio' || node.type === 'checkbox');
                   };
@@ -5477,6 +5444,42 @@
                       var node = DOCUMENT.getElementById(selector);
                       if (node) {
                           return node;
+                      }
+                  };
+                  addEventListener = function (node, type, listener) {
+                      if (type === EVENT_INPUT) {
+                          addEventListener(node, PROPERTY_CHANGE_1, 
+                          // 借用 EMITTER，反正只是内部临时用一下...
+                          listener[EMITTER] = function (event) {
+                              if (event.propertyName === RAW_VALUE) {
+                                  event = new CustomEvent(event);
+                                  event.type = EVENT_INPUT;
+                                  execute(listener, this, event);
+                              }
+                          });
+                      }
+                      else if (type === EVENT_CHANGE && isBoxElement_1(node)) {
+                          addEventListener(node, EVENT_CLICK, listener[EMITTER] = function (event) {
+                              event = new CustomEvent(event);
+                              event.type = EVENT_CHANGE;
+                              execute(listener, this, event);
+                          });
+                      }
+                      else {
+                          node.attachEvent("on" + type, listener);
+                      }
+                  };
+                  removeEventListener = function (node, type, listener) {
+                      if (type === EVENT_INPUT) {
+                          removeEventListener(node, PROPERTY_CHANGE_1, listener[EMITTER]);
+                          delete listener[EMITTER];
+                      }
+                      else if (type === EVENT_CHANGE && isBoxElement_1(node)) {
+                          removeEventListener(node, EVENT_CLICK, listener[EMITTER]);
+                          delete listener[EMITTER];
+                      }
+                      else {
+                          node.detachEvent("on" + type, listener);
                       }
                   };
               }
@@ -5552,7 +5555,9 @@
   function removeProp(node, name, hint) {
       set(node, name, hint === HINT_BOOLEAN
           ? FALSE
-          : EMPTY_STRING, FALSE);
+          : hint === HINT_NUMBER
+              ? 0
+              : EMPTY_STRING, FALSE);
   }
   function attr(node, name, value) {
       if (isDef(value)) {
@@ -5688,7 +5693,7 @@
   function addSpecialEvent(type, hooks) {
       {
           if (specialEvents[type]) {
-              fatal("The special event \"" + type + "\" is existed.");
+              fatal("The special event \"" + type + "\" already exists.");
           }
           info("The special event \"" + type + "\" is added successfully.");
       }
@@ -7420,7 +7425,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.94";
+      Yox.version = "1.0.0-alpha.95";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

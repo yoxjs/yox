@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.94
+ * yox.js v1.0.0-alpha.95
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -3509,11 +3509,15 @@ function compile$1(content) {
         // 还是在序列化的时候统一处理比较好
         // 唯独需要在这特殊处理的是 html 实体
         // 但这只是 WEB 平台的特殊逻辑，所以丢给 platform 处理
-        if (setElementText(element, child.text)) {
+        if (!element.isComponent
+            && !specialTags[element.tag]
+            && setElementText(element, child.text)) {
             element.children = UNDEFINED;
         }
     }, processElementSingleExpression = function (element, child) {
-        if (!element.isComponent && !element.slot && !child.safe) {
+        if (!element.isComponent
+            && !specialTags[element.tag]
+            && !child.safe) {
             element.html = child.expr;
             element.children = UNDEFINED;
         }
@@ -5361,7 +5365,9 @@ function render(context, observer, template, filters, partials, directives, tran
 }
 
 // 这里先写 IE9 支持的接口
-let innerText = 'textContent', innerHTML = 'innerHTML', findElement = function (selector) {
+let innerText = 'textContent', innerHTML = 'innerHTML', createEvent = function (event, node) {
+    return event;
+}, findElement = function (selector) {
     const node = DOCUMENT.querySelector(selector);
     if (node) {
         return node;
@@ -5376,8 +5382,6 @@ addElementClass = function (node, className) {
     node.classList.add(className);
 }, removeElementClass = function (node, className) {
     node.classList.remove(className);
-}, createEvent = function (event, node) {
-    return event;
 };
 {
     if (DOCUMENT) {
@@ -5464,7 +5468,9 @@ function prop(node, name, value) {
 function removeProp(node, name, hint) {
     set(node, name, hint === HINT_BOOLEAN
         ? FALSE
-        : EMPTY_STRING, FALSE);
+        : hint === HINT_NUMBER
+            ? 0
+            : EMPTY_STRING, FALSE);
 }
 function attr(node, name, value) {
     if (isDef(value)) {
@@ -5584,7 +5590,7 @@ function off(node, type, listener) {
 function addSpecialEvent(type, hooks) {
     {
         if (specialEvents[type]) {
-            fatal(`The special event "${type}" is existed.`);
+            fatal(`The special event "${type}" already exists.`);
         }
         info(`The special event "${type}" is added successfully.`);
     }
@@ -7315,7 +7321,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.94";
+Yox.version = "1.0.0-alpha.95";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

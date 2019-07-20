@@ -1,10 +1,11 @@
 /**
- * yox.js v1.0.0-alpha.94
+ * yox.js v1.0.0-alpha.95
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
 
 const SLOT_DATA_PREFIX = '$slot_';
+const HINT_NUMBER = 2;
 const HINT_BOOLEAN = 3;
 const DIRECTIVE_MODEL = 'model';
 const DIRECTIVE_EVENT = 'event';
@@ -2233,7 +2234,9 @@ function render(context, observer, template, filters, partials, directives, tran
 }
 
 // 这里先写 IE9 支持的接口
-let innerText = 'textContent', innerHTML = 'innerHTML', findElement = function (selector) {
+let innerText = 'textContent', innerHTML = 'innerHTML', createEvent = function (event, node) {
+    return event;
+}, findElement = function (selector) {
     const node = DOCUMENT.querySelector(selector);
     if (node) {
         return node;
@@ -2248,8 +2251,6 @@ addElementClass = function (node, className) {
     node.classList.add(className);
 }, removeElementClass = function (node, className) {
     node.classList.remove(className);
-}, createEvent = function (event, node) {
-    return event;
 };
 {
     if (DOCUMENT) {
@@ -2336,7 +2337,9 @@ function prop(node, name, value) {
 function removeProp(node, name, hint) {
     set(node, name, hint === HINT_BOOLEAN
         ? FALSE
-        : EMPTY_STRING, FALSE);
+        : hint === HINT_NUMBER
+            ? 0
+            : EMPTY_STRING, FALSE);
 }
 function attr(node, name, value) {
     if (isDef(value)) {
@@ -4104,7 +4107,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.94";
+Yox.version = "1.0.0-alpha.95";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

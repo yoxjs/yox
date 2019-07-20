@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.94
+ * yox.js v1.0.0-alpha.95
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -11,6 +11,7 @@
 }(this, function () { 'use strict';
 
   var SLOT_DATA_PREFIX = '$slot_';
+  var HINT_NUMBER = 2;
   var HINT_BOOLEAN = 3;
   var DIRECTIVE_MODEL = 'model';
   var DIRECTIVE_EVENT = 'event';
@@ -2242,7 +2243,9 @@
   }
 
   // 这里先写 IE9 支持的接口
-  var innerText = 'textContent', innerHTML = 'innerHTML', findElement = function (selector) {
+  var innerText = 'textContent', innerHTML = 'innerHTML', createEvent = function (event, node) {
+      return event;
+  }, findElement = function (selector) {
       var node = DOCUMENT.querySelector(selector);
       if (node) {
           return node;
@@ -2257,8 +2260,6 @@
       node.classList.add(className);
   }, removeElementClass = function (node, className) {
       node.classList.remove(className);
-  }, createEvent = function (event, node) {
-      return event;
   };
   {
       if (DOCUMENT) {
@@ -2345,7 +2346,9 @@
   function removeProp(node, name, hint) {
       set(node, name, hint === HINT_BOOLEAN
           ? FALSE
-          : EMPTY_STRING, FALSE);
+          : hint === HINT_NUMBER
+              ? 0
+              : EMPTY_STRING, FALSE);
   }
   function attr(node, name, value) {
       if (isDef(value)) {
@@ -4114,7 +4117,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.94";
+      Yox.version = "1.0.0-alpha.95";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
