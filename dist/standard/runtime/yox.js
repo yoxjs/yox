@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.95
+ * yox.js v1.0.0-alpha.96
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -11,8 +11,6 @@
 }(this, function () { 'use strict';
 
   var SLOT_DATA_PREFIX = '$slot_';
-  var HINT_NUMBER = 2;
-  var HINT_BOOLEAN = 3;
   var DIRECTIVE_MODEL = 'model';
   var DIRECTIVE_EVENT = 'event';
   var DIRECTIVE_BINDING = 'binding';
@@ -1347,77 +1345,77 @@
   function update(api, vnode, oldVnode) {
       var node = vnode.node, nativeAttrs = vnode.nativeAttrs, oldNativeAttrs = oldVnode && oldVnode.nativeAttrs;
       if (nativeAttrs || oldNativeAttrs) {
-          var newValue_1 = nativeAttrs || EMPTY_OBJECT, oldValue_1 = oldNativeAttrs || EMPTY_OBJECT;
-          each$2(newValue_1, function (attr, name) {
-              if (!oldValue_1[name]
-                  || attr.value !== oldValue_1[name].value) {
-                  api.attr(node, name, attr.value);
+          var newValue = nativeAttrs || EMPTY_OBJECT, oldValue = oldNativeAttrs || EMPTY_OBJECT;
+          for (var name in newValue) {
+              if (!oldValue[name]
+                  || newValue[name] !== oldValue[name]) {
+                  api.attr(node, name, newValue[name]);
               }
-          });
-          each$2(oldValue_1, function (_, name) {
-              if (!newValue_1[name]) {
+          }
+          for (var name in oldValue) {
+              if (!newValue[name]) {
                   api.removeAttr(node, name);
               }
-          });
+          }
       }
   }
 
   function update$1(api, vnode, oldVnode) {
       var node = vnode.node, nativeProps = vnode.nativeProps, oldNativeProps = oldVnode && oldVnode.nativeProps;
       if (nativeProps || oldNativeProps) {
-          var newValue_1 = nativeProps || EMPTY_OBJECT, oldValue_1 = oldNativeProps || EMPTY_OBJECT;
-          each$2(newValue_1, function (prop, name) {
-              if (!oldValue_1[name]
-                  || prop.value !== oldValue_1[name].value) {
-                  api.prop(node, name, prop.value);
+          var newValue = nativeProps || EMPTY_OBJECT, oldValue = oldNativeProps || EMPTY_OBJECT;
+          for (var name in newValue) {
+              if (!oldValue[name]
+                  || newValue[name] !== oldValue[name]) {
+                  api.prop(node, name, newValue[name]);
               }
-          });
-          each$2(oldValue_1, function (prop, name) {
-              if (!newValue_1[name]) {
-                  api.removeProp(node, name, prop.hint);
+          }
+          for (var name in oldValue) {
+              if (!newValue[name]) {
+                  api.removeProp(node, name);
               }
-          });
+          }
       }
   }
 
   function update$2(vnode, oldVnode) {
       var data = vnode.data, directives = vnode.directives, oldDirectives = oldVnode && oldVnode.directives;
       if (directives || oldDirectives) {
-          var node_1 = data[COMPONENT] || vnode.node, isKeypathChange_1 = oldVnode && vnode.keypath !== oldVnode.keypath, newValue_1 = directives || EMPTY_OBJECT, oldValue_1 = oldDirectives || EMPTY_OBJECT;
-          each$2(newValue_1, function (directive, name) {
-              var _a = directive.hooks, once = _a.once, bind = _a.bind, unbind = _a.unbind;
-              if (!oldValue_1[name]) {
-                  bind(node_1, directive, vnode);
+          var node = data[COMPONENT] || vnode.node, isKeypathChange = oldVnode && vnode.keypath !== oldVnode.keypath, newValue = directives || EMPTY_OBJECT, oldValue = oldDirectives || EMPTY_OBJECT;
+          for (var name in newValue) {
+              var directive = newValue[name], _a = directive.hooks, once = _a.once, bind = _a.bind, unbind = _a.unbind;
+              if (!oldValue[name]) {
+                  bind(node, directive, vnode);
               }
               else if (once
-                  || directive.value !== oldValue_1[name].value
-                  || isKeypathChange_1) {
+                  || directive.value !== oldValue[name].value
+                  || isKeypathChange) {
                   if (unbind) {
-                      unbind(node_1, oldValue_1[name], oldVnode);
+                      unbind(node, oldValue[name], oldVnode);
                   }
-                  bind(node_1, directive, vnode);
+                  bind(node, directive, vnode);
               }
-          });
-          each$2(oldValue_1, function (directive, name) {
-              if (!newValue_1[name]) {
-                  var unbind = directive.hooks.unbind;
+          }
+          for (var name in oldValue) {
+              if (!newValue[name]) {
+                  var unbind = oldValue[name].hooks.unbind;
                   if (unbind) {
-                      unbind(node_1, directive, oldVnode);
+                      unbind(node, oldValue[name], oldVnode);
                   }
               }
-          });
+          }
       }
   }
   function remove$1(vnode) {
       var directives = vnode.directives;
       if (directives) {
-          var node_2 = vnode.data[COMPONENT] || vnode.node;
-          each$2(directives, function (directive) {
-              var unbind = directive.hooks.unbind;
+          var node = vnode.data[COMPONENT] || vnode.node;
+          for (var name in directives) {
+              var unbind = directives[name].hooks.unbind;
               if (unbind) {
-                  unbind(node_2, directive, vnode);
+                  unbind(node, directives[name], vnode);
               }
-          });
+          }
       }
   }
 
@@ -2006,14 +2004,9 @@
               }
           }
       }, renderAttributeVnode = function (name, value) {
-          if ($vnode.isComponent) {
-              setPair($vnode, 'props', name, value);
-          }
-          else {
-              setPair($vnode, 'nativeAttrs', name, { name: name, value: value });
-          }
-      }, renderPropertyVnode = function (name, hint, value) {
-          setPair($vnode, 'nativeProps', name, { name: name, value: value, hint: hint });
+          setPair($vnode, $vnode.isComponent ? 'props' : 'nativeAttrs', name, value);
+      }, renderPropertyVnode = function (name, value) {
+          setPair($vnode, 'nativeProps', name, value);
       }, renderLazyVnode = function (name, value) {
           setPair($vnode, 'lazy', name, value);
       }, renderTransitionVnode = function (name) {
@@ -2072,60 +2065,95 @@
           });
       }, renderSpreadVnode = function (holder) {
           var value = holder.value, keypath = holder.keypath;
-          // 如果为 null 或 undefined，则不需要 warn
-          if (value != NULL) {
-              // 数组也算一种对象，要排除掉
-              if (object(value) && !array(value)) {
-                  each$2(value, function (value, key) {
-                      setPair($vnode, 'props', key, value);
+          if (object(value)) {
+              for (var key in value) {
+                  setPair($vnode, 'props', key, value[key]);
+              }
+              if (keypath) {
+                  var key = join$1(DIRECTIVE_BINDING, keypath);
+                  setPair($vnode, KEY_DIRECTIVES, key, {
+                      ns: DIRECTIVE_BINDING,
+                      name: EMPTY_STRING,
+                      key: key,
+                      modifier: join$1(keypath, RAW_WILDCARD),
+                      hooks: directives[DIRECTIVE_BINDING]
                   });
-                  if (keypath) {
-                      var key = join$1(DIRECTIVE_BINDING, keypath);
-                      setPair($vnode, KEY_DIRECTIVES, key, {
-                          ns: DIRECTIVE_BINDING,
-                          name: EMPTY_STRING,
-                          key: key,
-                          modifier: join$1(keypath, RAW_WILDCARD),
-                          hooks: directives[DIRECTIVE_BINDING]
-                      });
-                  }
               }
           }
-      }, renderElementVnode = function (vnode, tag, attrs, childs, slots) {
-          if (tag) {
-              var componentName = observer.get(tag);
-              vnode.tag = componentName;
-          }
-          if (attrs) {
-              $vnode = vnode;
-              attrs();
-              $vnode = UNDEFINED;
-          }
-          // childs 和 slots 不可能同时存在
-          if (childs) {
-              vnodeStack.push(vnode.children = []);
-              childs();
-              pop(vnodeStack);
-          }
-          else if (slots) {
-              var renderSlots_1 = {};
-              each$2(slots, function (slot, name) {
-                  vnodeStack.push([]);
-                  slot();
-                  var vnodes = pop(vnodeStack);
-                  renderSlots_1[name] = vnodes.length ? vnodes : UNDEFINED;
-              });
-              vnode.slots = renderSlots_1;
-          }
-          vnode.context = context;
-          vnode.keypath = $scope.$keypath;
+      }, appendVnode = function (vnode) {
           var vnodeList = last(vnodeStack);
           if (vnodeList) {
               push(vnodeList, vnode);
           }
           return vnode;
+      }, renderCommentVnode = function () {
+          return appendVnode({
+              isComment: TRUE,
+              text: EMPTY_STRING,
+              keypath: $scope.$keypath,
+              context: context
+          });
+      }, renderElementVnode = function (tag, attrs, childs, text, isStatic, isOption, isStyle, isSvg, html, ref, key) {
+          var vnode = {
+              tag: tag,
+              text: text,
+              html: html,
+              isStatic: isStatic,
+              isOption: isOption,
+              isStyle: isStyle,
+              isSvg: isSvg,
+              ref: ref,
+              key: key,
+              context: context,
+              keypath: $scope.$keypath
+          };
+          if (attrs) {
+              $vnode = vnode;
+              attrs();
+              $vnode = UNDEFINED;
+          }
+          if (childs) {
+              vnodeStack.push(vnode.children = []);
+              childs();
+              pop(vnodeStack);
+          }
+          return appendVnode(vnode);
+      }, renderComponentVnode = function (staticTag, attrs, slots, ref, key, dynamicTag) {
+          var tag;
+          // 组件支持动态名称
+          if (dynamicTag) {
+              var componentName = observer.get(dynamicTag);
+              tag = componentName;
+          }
+          else {
+              tag = staticTag;
+          }
+          var vnode = {
+              tag: tag,
+              ref: ref,
+              key: key,
+              context: context,
+              keypath: $scope.$keypath,
+              isComponent: TRUE
+          };
+          if (attrs) {
+              $vnode = vnode;
+              attrs();
+              $vnode = UNDEFINED;
+          }
+          if (slots) {
+              var vnodeSlots = {};
+              for (var name in slots) {
+                  vnodeStack.push([]);
+                  slots[name]();
+                  var vnodes = pop(vnodeStack);
+                  vnodeSlots[name] = vnodes.length ? vnodes : UNDEFINED;
+              }
+              vnode.slots = vnodeSlots;
+          }
+          return appendVnode(vnode);
       }, renderExpressionIdentifier = function (name, lookup, offset, holder, depIgnore, stack) {
-          var myStack = stack || $stack, result = findValue(myStack, myStack.length - ((offset || 0) + 1), name, lookup, depIgnore);
+          var myStack = stack || $stack, result = findValue(myStack, myStack.length - 1 - (offset || 0), name, lookup, depIgnore);
           return holder ? result : result.value;
       }, renderExpressionMemberKeypath = function (identifier, runtimeKeypath) {
           unshift(runtimeKeypath, identifier);
@@ -2149,11 +2177,11 @@
           var vnodeList = last(vnodeStack), vnodes = context.get(name);
           if (vnodeList) {
               if (vnodes) {
-                  each(vnodes, function (vnode) {
-                      push(vnodeList, vnode);
-                      vnode.slot = name;
-                      vnode.parent = context;
-                  });
+                  for (var i = 0, length = vnodes.length; i < length; i++) {
+                      push(vnodeList, vnodes[i]);
+                      vnodes[i].slot = name;
+                      vnodes[i].parent = context;
+                  }
               }
               else if (defaultRender) {
                   defaultRender();
@@ -2174,7 +2202,7 @@
           else {
               var partial = partials[name];
               if (partial) {
-                  partial(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange, toString);
+                  partial(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderCommentVnode, renderElementVnode, renderComponentVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange, toString);
               }
           }
       }, eachHandler = function (generate, item, key, keypath, index, length) {
@@ -2239,7 +2267,7 @@
               }
           }
       };
-      return template(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange, toString);
+      return template(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderCommentVnode, renderElementVnode, renderComponentVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange, toString);
   }
 
   // 这里先写 IE9 支持的接口
@@ -2343,12 +2371,8 @@
           }
       }
   }
-  function removeProp(node, name, hint) {
-      set(node, name, hint === HINT_BOOLEAN
-          ? FALSE
-          : hint === HINT_NUMBER
-              ? 0
-              : EMPTY_STRING, FALSE);
+  function removeProp(node, name) {
+      set(node, name, UNDEFINED);
   }
   function attr(node, name, value) {
       if (isDef(value)) {
@@ -4117,7 +4141,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.95";
+      Yox.version = "1.0.0-alpha.96";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

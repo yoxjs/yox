@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.95
+ * yox.js v1.0.0-alpha.96
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1388,77 +1388,77 @@
   function update(api, vnode, oldVnode) {
       var node = vnode.node, nativeAttrs = vnode.nativeAttrs, oldNativeAttrs = oldVnode && oldVnode.nativeAttrs;
       if (nativeAttrs || oldNativeAttrs) {
-          var newValue_1 = nativeAttrs || EMPTY_OBJECT, oldValue_1 = oldNativeAttrs || EMPTY_OBJECT;
-          each$2(newValue_1, function (attr, name) {
-              if (!oldValue_1[name]
-                  || attr.value !== oldValue_1[name].value) {
-                  api.attr(node, name, attr.value);
+          var newValue = nativeAttrs || EMPTY_OBJECT, oldValue = oldNativeAttrs || EMPTY_OBJECT;
+          for (var name in newValue) {
+              if (!oldValue[name]
+                  || newValue[name] !== oldValue[name]) {
+                  api.attr(node, name, newValue[name]);
               }
-          });
-          each$2(oldValue_1, function (_, name) {
-              if (!newValue_1[name]) {
+          }
+          for (var name in oldValue) {
+              if (!newValue[name]) {
                   api.removeAttr(node, name);
               }
-          });
+          }
       }
   }
 
   function update$1(api, vnode, oldVnode) {
       var node = vnode.node, nativeProps = vnode.nativeProps, oldNativeProps = oldVnode && oldVnode.nativeProps;
       if (nativeProps || oldNativeProps) {
-          var newValue_1 = nativeProps || EMPTY_OBJECT, oldValue_1 = oldNativeProps || EMPTY_OBJECT;
-          each$2(newValue_1, function (prop, name) {
-              if (!oldValue_1[name]
-                  || prop.value !== oldValue_1[name].value) {
-                  api.prop(node, name, prop.value);
+          var newValue = nativeProps || EMPTY_OBJECT, oldValue = oldNativeProps || EMPTY_OBJECT;
+          for (var name in newValue) {
+              if (!oldValue[name]
+                  || newValue[name] !== oldValue[name]) {
+                  api.prop(node, name, newValue[name]);
               }
-          });
-          each$2(oldValue_1, function (prop, name) {
-              if (!newValue_1[name]) {
-                  api.removeProp(node, name, prop.hint);
+          }
+          for (var name in oldValue) {
+              if (!newValue[name]) {
+                  api.removeProp(node, name);
               }
-          });
+          }
       }
   }
 
   function update$2(vnode, oldVnode) {
       var data = vnode.data, directives = vnode.directives, oldDirectives = oldVnode && oldVnode.directives;
       if (directives || oldDirectives) {
-          var node_1 = data[COMPONENT] || vnode.node, isKeypathChange_1 = oldVnode && vnode.keypath !== oldVnode.keypath, newValue_1 = directives || EMPTY_OBJECT, oldValue_1 = oldDirectives || EMPTY_OBJECT;
-          each$2(newValue_1, function (directive, name) {
-              var _a = directive.hooks, once = _a.once, bind = _a.bind, unbind = _a.unbind;
-              if (!oldValue_1[name]) {
-                  bind(node_1, directive, vnode);
+          var node = data[COMPONENT] || vnode.node, isKeypathChange = oldVnode && vnode.keypath !== oldVnode.keypath, newValue = directives || EMPTY_OBJECT, oldValue = oldDirectives || EMPTY_OBJECT;
+          for (var name in newValue) {
+              var directive = newValue[name], _a = directive.hooks, once = _a.once, bind = _a.bind, unbind = _a.unbind;
+              if (!oldValue[name]) {
+                  bind(node, directive, vnode);
               }
               else if (once
-                  || directive.value !== oldValue_1[name].value
-                  || isKeypathChange_1) {
+                  || directive.value !== oldValue[name].value
+                  || isKeypathChange) {
                   if (unbind) {
-                      unbind(node_1, oldValue_1[name], oldVnode);
+                      unbind(node, oldValue[name], oldVnode);
                   }
-                  bind(node_1, directive, vnode);
+                  bind(node, directive, vnode);
               }
-          });
-          each$2(oldValue_1, function (directive, name) {
-              if (!newValue_1[name]) {
-                  var unbind = directive.hooks.unbind;
+          }
+          for (var name in oldValue) {
+              if (!newValue[name]) {
+                  var unbind = oldValue[name].hooks.unbind;
                   if (unbind) {
-                      unbind(node_1, directive, oldVnode);
+                      unbind(node, oldValue[name], oldVnode);
                   }
               }
-          });
+          }
       }
   }
   function remove$1(vnode) {
       var directives = vnode.directives;
       if (directives) {
-          var node_2 = vnode.data[COMPONENT] || vnode.node;
-          each$2(directives, function (directive) {
-              var unbind = directive.hooks.unbind;
+          var node = vnode.data[COMPONENT] || vnode.node;
+          for (var name in directives) {
+              var unbind = directives[name].hooks.unbind;
               if (unbind) {
-                  unbind(node_2, directive, vnode);
+                  unbind(node, directives[name], vnode);
               }
-          });
+          }
       }
   }
 
@@ -2422,14 +2422,6 @@
               }
               // 转成 Identifier
               firstName = join(staticNodes_1, RAW_DOT);
-              // 当 isLiteral 为 false 时
-              // 需要为 lead 节点创建合适的 raw
-              var firstRaw = firstNode.raw;
-              if (staticRaw_1) {
-                  firstRaw += (firstRaw === KEYPATH_PARENT
-                      ? RAW_SLASH
-                      : RAW_DOT) + staticRaw_1;
-              }
               // a.b.c
               if (isLiteral_1) {
                   firstNode = createIdentifierInner(raw, firstName, lookup, offset);
@@ -2437,6 +2429,14 @@
               // a[b]
               // this.a[b]
               else {
+                  // 当 isLiteral 为 false 时
+                  // 需要为 lead 节点创建合适的 raw
+                  var firstRaw = firstNode.raw;
+                  if (staticRaw_1) {
+                      firstRaw += (firstRaw === KEYPATH_PARENT
+                          ? RAW_SLASH
+                          : RAW_DOT) + staticRaw_1;
+                  }
                   firstNode = createMemberInner(raw, createIdentifierInner(firstRaw, firstName, lookup, offset), UNDEFINED, dynamicNodes_1, lookup, offset);
               }
           }
@@ -3285,7 +3285,7 @@
   closeCommentPattern = /-->([\s\S]*?)$/, 
   // 属性的 name
   // 支持 on-click.namespace="" 或 on-get-out="" 或 xml:xx=""
-  attributePattern = /^\s*([-.:\w]+)(['"])?(?:=(['"]))?/, 
+  attributePattern = /^\s*([-$.:\w]+)(['"])?(?:=(['"]))?/, 
   // 自闭合标签
   selfClosingTagPattern = /^\s*(\/)?>/;
   /**
@@ -3842,9 +3842,15 @@
                   //
                   // 当 name 属性结束后，条件满足，但此时已不是元素属性层级了
                   if (currentElement && currentBranch.type === ELEMENT) {
-                      var attrs = currentElement.attrs || (currentElement.attrs = []);
+                      // 属性层级不能使用危险插值
+                      {
+                          if (type === EXPRESSION
+                              && !node.safe) {
+                              fatal$1('The dangerous interpolation must be the only child of a HTML element.');
+                          }
+                      }
                       // node 没法转型，一堆可能的类型怎么转啊...
-                      push(attrs, node);
+                      push(currentElement.attrs || (currentElement.attrs = []), node);
                   }
                   else {
                       var children = currentBranch.children || (currentBranch.children = []), lastChild = last(children);
@@ -3856,11 +3862,38 @@
                           return;
                       }
                       else {
+                          {
+                              if (type === EXPRESSION
+                                  && !node.safe) {
+                                  // 前面不能有别的 child，危险插值必须独占父元素
+                                  if (lastChild) {
+                                      fatal$1('The dangerous interpolation must be the only child of a HTML element.');
+                                  }
+                                  // 危险插值的父节点必须是 html element
+                                  else if (currentBranch.type !== ELEMENT
+                                      || currentBranch.isComponent
+                                      || specialTags[currentBranch.tag]) {
+                                      fatal$1('The dangerous interpolation must be the only child of a HTML element.');
+                                  }
+                              }
+                              // 后面不能有别的 child，危险插值必须独占父元素
+                              else if (lastChild
+                                  && lastChild.type === EXPRESSION
+                                  && !lastChild.safe) {
+                                  fatal$1('The dangerous interpolation must be the only child of a HTML element.');
+                              }
+                          }
                           push(children, node);
                       }
                   }
               }
               else {
+                  {
+                      if (type === EXPRESSION
+                          && !node.safe) {
+                          fatal$1('The dangerous interpolation must be under a HTML element.');
+                      }
+                  }
                   push(nodeList, node);
               }
               if (type === IF) {
@@ -4267,7 +4300,7 @@
                       isCondition = TRUE;
                   }
                   else {
-                      fatal$1("The \"if\" block is closing, but it does't opened.");
+                      fatal$1("The \"if\" block is closing, but it's not open yet.");
                   }
               }
               var node = popStack(type);
@@ -4423,8 +4456,9 @@
   }
 
   var UNDEFINED$1 = '$0';
-  var TRUE$1 = '$1';
-  var FALSE$1 = '$2';
+  var NULL$1 = '$1';
+  var TRUE$1 = '$2';
+  var FALSE$1 = '$3';
   var COMMA = ',';
   var COLON = ':';
   var PLUS = '+';
@@ -4452,24 +4486,50 @@
       }, TRUE);
       return args;
   }
+  /**
+   * 把 [ 'key1:value1', 'key2:value2' ] 格式转成 `{key1:value1,key2:value2}`
+   */
   function toObject$1(fields) {
       return "{" + join(fields, COMMA) + "}";
   }
+  /**
+   * 把 [ 'item1', 'item2' ] 格式转成 `['item1','item2']`
+   */
   function toArray$1(items) {
       return "[" + join(items, COMMA) + "]";
   }
+  /**
+   * 输出函数调用的格式
+   */
   function toCall(name, args) {
-      return name + "(" + join(trimArgs(args), COMMA) + ")";
+      var code = args ? join(trimArgs(args), COMMA) : EMPTY_STRING;
+      return name + "(" + code + ")";
   }
+  /**
+   * 输出为字符串格式
+   */
   function toString$1(value) {
-      return JSON.stringify(value);
+      return value === TRUE
+          ? TRUE$1
+          : value === FALSE
+              ? FALSE$1
+              : value === NULL
+                  ? NULL$1
+                  : value === UNDEFINED
+                      ? UNDEFINED$1
+                      : JSON.stringify(value);
   }
+  /**
+   * 输出为匿名函数格式
+   */
   function toFunction(args, code) {
-      return RAW_FUNCTION + "(" + args + "){var " + UNDEFINED$1 + "=void 0," + TRUE$1 + "=!0," + FALSE$1 + "=!1;" + RETURN + code + "}";
+      return RAW_FUNCTION + "(" + args + "){var " + UNDEFINED$1 + "=void 0," + NULL$1 + "=null," + TRUE$1 + "=!0," + FALSE$1 + "=!1;" + RETURN + code + "}";
   }
 
   function generate(node, renderIdentifier, renderMemberKeypath, renderMemberLiteral, renderCall, holder, depIgnore, stack, inner) {
-      var value, isSpecialNode = FALSE, generateChildNode = function (node) {
+      var value, isSpecialNode = FALSE, 
+      // 如果是内部临时值，不需要 holder
+      needHolder = holder && !inner, generateChildNode = function (node) {
           return generate(node, renderIdentifier, renderMemberKeypath, renderMemberLiteral, renderCall, holder, depIgnore, stack, TRUE);
       };
       switch (node.type) {
@@ -4509,9 +4569,9 @@
               var identifier = node;
               value = toCall(renderIdentifier, [
                   toString$1(identifier.name),
-                  identifier.lookup ? TRUE$1 : UNDEFINED,
+                  toString$1(identifier.lookup),
                   identifier.offset > 0 ? toString$1(identifier.offset) : UNDEFINED,
-                  holder ? TRUE$1 : UNDEFINED,
+                  needHolder ? TRUE$1 : UNDEFINED,
                   depIgnore ? TRUE$1 : UNDEFINED,
                   stack ? stack : UNDEFINED
               ]);
@@ -4526,9 +4586,9 @@
                           toString$1(lead.name),
                           toArray$1(stringifyNodes)
                       ]),
-                      lookup ? TRUE$1 : UNDEFINED,
+                      toString$1(lookup),
                       offset > 0 ? toString$1(offset) : UNDEFINED,
-                      holder ? TRUE$1 : UNDEFINED,
+                      needHolder ? TRUE$1 : UNDEFINED,
                       depIgnore ? TRUE$1 : UNDEFINED,
                       stack ? stack : UNDEFINED
                   ]);
@@ -4540,7 +4600,7 @@
                       generateChildNode(lead),
                       UNDEFINED,
                       toArray$1(stringifyNodes),
-                      holder ? TRUE$1 : UNDEFINED
+                      needHolder ? TRUE$1 : UNDEFINED
                   ]);
               }
               else {
@@ -4550,7 +4610,7 @@
                       generateChildNode(lead),
                       toString$1(keypath),
                       UNDEFINED,
-                      holder ? TRUE$1 : UNDEFINED ]);
+                      needHolder ? TRUE$1 : UNDEFINED ]);
               }
               break;
           default:
@@ -4561,24 +4621,19 @@
                   args.length
                       ? toArray$1(args.map(generateChildNode))
                       : UNDEFINED,
-                  holder ? TRUE$1 : UNDEFINED
+                  needHolder ? TRUE$1 : UNDEFINED
               ]);
               break;
       }
-      // 不需要 value holder
-      if (!holder) {
+      if (!needHolder) {
           return value;
-      }
-      // 内部的临时值，且 holder 为 true
-      if (inner) {
-          return isSpecialNode
-              ? value + RAW_DOT + RAW_VALUE
-              : value;
       }
       // 最外层的值，且 holder 为 true
       return isSpecialNode
           ? value
-          : toObject$1([RAW_VALUE + COLON + value]);
+          : toObject$1([
+              RAW_VALUE + COLON + value
+          ]);
   }
 
   /**
@@ -4601,7 +4656,7 @@
   // 是否要执行 join 操作
   var joinStack = [], 
   // 是否正在收集子节点
-  collectStack = [], nodeGenerator = {}, RENDER_EXPRESSION_IDENTIFIER = 'a', RENDER_EXPRESSION_MEMBER_KEYPATH = 'b', RENDER_EXPRESSION_MEMBER_LITERAL = 'c', RENDER_EXPRESSION_CALL = 'd', RENDER_TEXT_VNODE = 'e', RENDER_ATTRIBUTE_VNODE = 'f', RENDER_PROPERTY_VNODE = 'g', RENDER_LAZY_VNODE = 'h', RENDER_TRANSITION_VNODE = 'i', RENDER_BINDING_VNODE = 'j', RENDER_MODEL_VNODE = 'k', RENDER_EVENT_METHOD_VNODE = 'l', RENDER_EVENT_NAME_VNODE = 'm', RENDER_DIRECTIVE_VNODE = 'n', RENDER_SPREAD_VNODE = 'o', RENDER_ELEMENT_VNODE = 'p', RENDER_SLOT = 'q', RENDER_PARTIAL = 'r', RENDER_IMPORT = 's', RENDER_EACH = 't', RENDER_RANGE = 'u', RENDER_EQUAL_RANGE = 'v', TO_STRING = 'w', ARG_STACK = 'x';
+  collectStack = [], nodeGenerator = {}, RENDER_EXPRESSION_IDENTIFIER = 'a', RENDER_EXPRESSION_MEMBER_KEYPATH = 'b', RENDER_EXPRESSION_MEMBER_LITERAL = 'c', RENDER_EXPRESSION_CALL = 'd', RENDER_TEXT_VNODE = 'e', RENDER_ATTRIBUTE_VNODE = 'f', RENDER_PROPERTY_VNODE = 'g', RENDER_LAZY_VNODE = 'h', RENDER_TRANSITION_VNODE = 'i', RENDER_BINDING_VNODE = 'j', RENDER_MODEL_VNODE = 'k', RENDER_EVENT_METHOD_VNODE = 'l', RENDER_EVENT_NAME_VNODE = 'm', RENDER_DIRECTIVE_VNODE = 'n', RENDER_SPREAD_VNODE = 'o', RENDER_COMMENT_VNODE = 'p', RENDER_ELEMENT_VNODE = 'q', RENDER_COMPONENT_VNODE = 'r', RENDER_SLOT = 's', RENDER_PARTIAL = 't', RENDER_IMPORT = 'u', RENDER_EACH = 'v', RENDER_RANGE = 'w', RENDER_EQUAL_RANGE = 'x', TO_STRING = 'y', ARG_STACK = 'z';
   // 序列化代码的参数列表
   var codeArgs, 
   // 表达式求值是否要求返回字符串类型
@@ -4657,7 +4712,7 @@
   function stringifyChildren(children, isComplex) {
       // 如果是复杂节点的 children，则每个 child 的序列化都是函数调用的形式
       // 因此最后可以拼接为 fn1(), fn2(), fn3() 这样依次调用，而不用再多此一举的使用数组，因为在 renderer 里也用不上这个数组
-      // children 大于一个时，才有 join 的可能，单个值 jion 啥啊...
+      // children 大于一个时，才有 join 的可能，单个值 join 啥啊...
       var isJoin = children.length > 1 && !isComplex;
       push(joinStack, isJoin);
       var value = join(children.map(function (child) {
@@ -4683,10 +4738,7 @@
       }
       // 到达最后一个条件，发现第一个 if 语句带有 stub，需创建一个注释标签占位
       else if (stub) {
-          no = renderElement(stringifyObject({
-              isComment: TRUE$1,
-              text: EMPTY
-          }));
+          no = toCall(RENDER_COMMENT_VNODE);
       }
       if (isDef(yes) || isDef(no)) {
           var isJoin = last(joinStack);
@@ -4713,9 +4765,6 @@
               : result;
       }
       return EMPTY;
-  }
-  function renderElement(data, tag, attrs, childs, slots) {
-      return toCall(RENDER_ELEMENT_VNODE, [data, tag, attrs, childs, slots]);
   }
   function getComponentSlots(children) {
       var result = {}, slots = {}, addSlot = function (name, nodes) {
@@ -4747,73 +4796,86 @@
       }
   }
   nodeGenerator[ELEMENT] = function (node) {
-      var tag = node.tag, isComponent = node.isComponent, isSvg = node.isSvg, isStyle = node.isStyle, isOption = node.isOption, isStatic = node.isStatic, isComplex = node.isComplex, name = node.name, ref = node.ref, key = node.key, html = node.html, attrs = node.attrs, children = node.children, data = {}, outputTag, outputAttrs = [], outputChilds, outputSlots;
+      var tag = node.tag, isComponent = node.isComponent, isComplex = node.isComplex, ref = node.ref, key = node.key, html = node.html, attrs = node.attrs, children = node.children, staticTag, dynamicTag, outputAttrs, outputText, outputHTML, outputChilds, outputSlots, outputStatic, outputOption, outputStyle, outputSvg, outputRef, outputKey;
       if (tag === RAW_SLOT) {
-          var args = [toString$1(SLOT_DATA_PREFIX + name)];
+          var args = [toString$1(SLOT_DATA_PREFIX + node.name)];
           if (children) {
               push(args, stringifyFunction(stringifyChildren(children, TRUE)));
           }
           return toCall(RENDER_SLOT, args);
       }
-      push(collectStack, FALSE);
-      if (attrs) {
-          each(attrs, function (attr) {
-              push(outputAttrs, nodeGenerator[attr.type](attr));
-          });
-      }
       // 如果以 $ 开头，表示动态组件
       if (codeAt(tag) === 36) {
-          outputTag = toString$1(slice(tag, 1));
+          dynamicTag = toString$1(slice(tag, 1));
       }
       else {
-          data.tag = toString$1(tag);
+          staticTag = toString$1(tag);
       }
-      if (isSvg) {
-          data.isSvg = TRUE$1;
+      push(collectStack, FALSE);
+      if (attrs) {
+          var list_1 = [];
+          each(attrs, function (attr) {
+              push(list_1, nodeGenerator[attr.type](attr));
+          });
+          if (list_1.length) {
+              outputAttrs = stringifyFunction(join(list_1, COMMA));
+          }
       }
-      if (isStyle) {
-          data.isStyle = TRUE$1;
-      }
-      if (isOption) {
-          data.isOption = TRUE$1;
-      }
-      if (isStatic) {
-          data.isStatic = TRUE$1;
-      }
-      if (ref) {
-          data.ref = stringifyValue(ref.value, ref.expr, ref.children);
-      }
-      if (key) {
-          data.key = stringifyValue(key.value, key.expr, key.children);
-      }
-      if (html) {
-          data.html = string(html)
-              ? toString$1(html)
-              : stringifyExpression(html, TRUE);
-      }
-      if (isComponent) {
-          data.isComponent = TRUE$1;
-          if (children) {
+      if (children) {
+          if (isComponent) {
               collectStack[collectStack.length - 1] = TRUE;
               outputSlots = getComponentSlots(children);
           }
-      }
-      else if (children) {
-          isStringRequired = TRUE;
-          collectStack[collectStack.length - 1] = isComplex;
-          outputChilds = stringifyChildren(children, isComplex);
-          if (isComplex) {
-              outputChilds = stringifyFunction(outputChilds);
-          }
           else {
-              data.text = outputChilds;
-              outputChilds = UNDEFINED;
+              isStringRequired = TRUE;
+              collectStack[collectStack.length - 1] = isComplex;
+              outputChilds = stringifyChildren(children, isComplex);
+              if (isComplex) {
+                  outputChilds = stringifyFunction(outputChilds);
+              }
+              else {
+                  outputText = outputChilds;
+                  outputChilds = UNDEFINED;
+              }
           }
       }
       pop(collectStack);
-      return renderElement(stringifyObject(data), outputTag, falsy(outputAttrs)
-          ? UNDEFINED
-          : stringifyFunction(join(outputAttrs, COMMA)), outputChilds, outputSlots);
+      if (html) {
+          outputHTML = string(html)
+              ? toString$1(html)
+              : stringifyExpression(html, TRUE);
+      }
+      outputStatic = node.isStatic ? TRUE$1 : UNDEFINED;
+      outputOption = node.isOption ? TRUE$1 : UNDEFINED;
+      outputStyle = node.isStyle ? TRUE$1 : UNDEFINED;
+      outputSvg = node.isSvg ? TRUE$1 : UNDEFINED;
+      outputRef = ref ? stringifyValue(ref.value, ref.expr, ref.children) : UNDEFINED;
+      outputKey = key ? stringifyValue(key.value, key.expr, key.children) : UNDEFINED;
+      if (isComponent) {
+          return toCall(RENDER_COMPONENT_VNODE, 
+          // 最常用 => 最不常用排序
+          [
+              staticTag,
+              outputAttrs,
+              outputSlots,
+              outputRef,
+              outputKey,
+              dynamicTag ]);
+      }
+      return toCall(RENDER_ELEMENT_VNODE, 
+      // 最常用 => 最不常用排序
+      [
+          staticTag,
+          outputAttrs,
+          outputChilds,
+          outputText,
+          outputStatic,
+          outputOption,
+          outputStyle,
+          outputSvg,
+          outputHTML,
+          outputRef,
+          outputKey ]);
   };
   nodeGenerator[ATTRIBUTE] = function (node) {
       var value = node.binding
@@ -4837,7 +4899,6 @@
           : stringifyValue(node.value, node.expr, node.children);
       return toCall(RENDER_PROPERTY_VNODE, [
           toString$1(node.name),
-          toString$1(node.hint),
           value
       ]);
   };
@@ -4938,21 +4999,21 @@
                   children,
                   renderExpression(node.from),
                   renderExpression(node.to),
-                  node.index ? toString$1(node.index) : UNDEFINED
+                  toString$1(node.index)
               ]);
           }
           return toCall(RENDER_RANGE, [
               children,
               renderExpression(node.from),
               renderExpression(node.to),
-              node.index ? toString$1(node.index) : UNDEFINED
+              toString$1(node.index)
           ]);
       }
       // 遍历数组和对象
       return toCall(RENDER_EACH, [
           children,
           renderExpression(node.from, TRUE),
-          node.index ? toString$1(node.index) : UNDEFINED
+          toString$1(node.index)
       ]);
   };
   nodeGenerator[PARTIAL] = function (node) {
@@ -4985,7 +5046,9 @@
               RENDER_EVENT_NAME_VNODE,
               RENDER_DIRECTIVE_VNODE,
               RENDER_SPREAD_VNODE,
+              RENDER_COMMENT_VNODE,
               RENDER_ELEMENT_VNODE,
+              RENDER_COMPONENT_VNODE,
               RENDER_SLOT,
               RENDER_PARTIAL,
               RENDER_IMPORT,
@@ -5108,14 +5171,9 @@
               }
           }
       }, renderAttributeVnode = function (name, value) {
-          if ($vnode.isComponent) {
-              setPair($vnode, 'props', name, value);
-          }
-          else {
-              setPair($vnode, 'nativeAttrs', name, { name: name, value: value });
-          }
-      }, renderPropertyVnode = function (name, hint, value) {
-          setPair($vnode, 'nativeProps', name, { name: name, value: value, hint: hint });
+          setPair($vnode, $vnode.isComponent ? 'props' : 'nativeAttrs', name, value);
+      }, renderPropertyVnode = function (name, value) {
+          setPair($vnode, 'nativeProps', name, value);
       }, renderLazyVnode = function (name, value) {
           setPair($vnode, 'lazy', name, value);
       }, renderTransitionVnode = function (name) {
@@ -5184,65 +5242,107 @@
           });
       }, renderSpreadVnode = function (holder) {
           var value = holder.value, keypath = holder.keypath;
-          // 如果为 null 或 undefined，则不需要 warn
-          if (value != NULL) {
-              // 数组也算一种对象，要排除掉
-              if (object(value) && !array(value)) {
-                  each$2(value, function (value, key) {
-                      setPair($vnode, 'props', key, value);
-                  });
-                  if (keypath) {
-                      var key = join$1(DIRECTIVE_BINDING, keypath);
-                      setPair($vnode, KEY_DIRECTIVES, key, {
-                          ns: DIRECTIVE_BINDING,
-                          name: EMPTY_STRING,
-                          key: key,
-                          modifier: join$1(keypath, RAW_WILDCARD),
-                          hooks: directives[DIRECTIVE_BINDING]
-                      });
-                  }
-              }
-          }
-      }, renderElementVnode = function (vnode, tag, attrs, childs, slots) {
-          if (tag) {
-              var componentName = observer.get(tag);
+          if (object(value)) {
+              // 数组也算一种对象
+              // 延展操作符不支持数组
               {
-                  if (!componentName) {
-                      warn("The dynamic component \"" + tag + "\" can't be found.");
+                  if (array(value)) {
+                      fatal("The spread operator can't be used by an array.");
                   }
               }
-              vnode.tag = componentName;
+              for (var key in value) {
+                  setPair($vnode, 'props', key, value[key]);
+              }
+              if (keypath) {
+                  var key = join$1(DIRECTIVE_BINDING, keypath);
+                  setPair($vnode, KEY_DIRECTIVES, key, {
+                      ns: DIRECTIVE_BINDING,
+                      name: EMPTY_STRING,
+                      key: key,
+                      modifier: join$1(keypath, RAW_WILDCARD),
+                      hooks: directives[DIRECTIVE_BINDING]
+                  });
+              }
           }
-          if (attrs) {
-              $vnode = vnode;
-              attrs();
-              $vnode = UNDEFINED;
-          }
-          // childs 和 slots 不可能同时存在
-          if (childs) {
-              vnodeStack.push(vnode.children = []);
-              childs();
-              pop(vnodeStack);
-          }
-          else if (slots) {
-              var renderSlots_1 = {};
-              each$2(slots, function (slot, name) {
-                  vnodeStack.push([]);
-                  slot();
-                  var vnodes = pop(vnodeStack);
-                  renderSlots_1[name] = vnodes.length ? vnodes : UNDEFINED;
-              });
-              vnode.slots = renderSlots_1;
-          }
-          vnode.context = context;
-          vnode.keypath = $scope.$keypath;
+      }, appendVnode = function (vnode) {
           var vnodeList = last(vnodeStack);
           if (vnodeList) {
               push(vnodeList, vnode);
           }
           return vnode;
+      }, renderCommentVnode = function () {
+          return appendVnode({
+              isComment: TRUE,
+              text: EMPTY_STRING,
+              keypath: $scope.$keypath,
+              context: context
+          });
+      }, renderElementVnode = function (tag, attrs, childs, text, isStatic, isOption, isStyle, isSvg, html, ref, key) {
+          var vnode = {
+              tag: tag,
+              text: text,
+              html: html,
+              isStatic: isStatic,
+              isOption: isOption,
+              isStyle: isStyle,
+              isSvg: isSvg,
+              ref: ref,
+              key: key,
+              context: context,
+              keypath: $scope.$keypath
+          };
+          if (attrs) {
+              $vnode = vnode;
+              attrs();
+              $vnode = UNDEFINED;
+          }
+          if (childs) {
+              vnodeStack.push(vnode.children = []);
+              childs();
+              pop(vnodeStack);
+          }
+          return appendVnode(vnode);
+      }, renderComponentVnode = function (staticTag, attrs, slots, ref, key, dynamicTag) {
+          var tag;
+          // 组件支持动态名称
+          if (dynamicTag) {
+              var componentName = observer.get(dynamicTag);
+              {
+                  if (!componentName) {
+                      warn("The dynamic component \"" + dynamicTag + "\" can't be found.");
+                  }
+              }
+              tag = componentName;
+          }
+          else {
+              tag = staticTag;
+          }
+          var vnode = {
+              tag: tag,
+              ref: ref,
+              key: key,
+              context: context,
+              keypath: $scope.$keypath,
+              isComponent: TRUE
+          };
+          if (attrs) {
+              $vnode = vnode;
+              attrs();
+              $vnode = UNDEFINED;
+          }
+          if (slots) {
+              var vnodeSlots = {};
+              for (var name in slots) {
+                  vnodeStack.push([]);
+                  slots[name]();
+                  var vnodes = pop(vnodeStack);
+                  vnodeSlots[name] = vnodes.length ? vnodes : UNDEFINED;
+              }
+              vnode.slots = vnodeSlots;
+          }
+          return appendVnode(vnode);
       }, renderExpressionIdentifier = function (name, lookup, offset, holder, depIgnore, stack) {
-          var myStack = stack || $stack, result = findValue(myStack, myStack.length - ((offset || 0) + 1), name, lookup, depIgnore);
+          var myStack = stack || $stack, result = findValue(myStack, myStack.length - 1 - (offset || 0), name, lookup, depIgnore);
           return holder ? result : result.value;
       }, renderExpressionMemberKeypath = function (identifier, runtimeKeypath) {
           unshift(runtimeKeypath, identifier);
@@ -5266,11 +5366,11 @@
           var vnodeList = last(vnodeStack), vnodes = context.get(name);
           if (vnodeList) {
               if (vnodes) {
-                  each(vnodes, function (vnode) {
-                      push(vnodeList, vnode);
-                      vnode.slot = name;
-                      vnode.parent = context;
-                  });
+                  for (var i = 0, length = vnodes.length; i < length; i++) {
+                      push(vnodeList, vnodes[i]);
+                      vnodes[i].slot = name;
+                      vnodes[i].parent = context;
+                  }
               }
               else if (defaultRender) {
                   defaultRender();
@@ -5298,7 +5398,7 @@
           else {
               var partial = partials[name];
               if (partial) {
-                  partial(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange, toString);
+                  partial(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderCommentVnode, renderElementVnode, renderComponentVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange, toString);
               }
               else {
                   fatal("The partial \"" + name + "\" can't be found.");
@@ -5366,7 +5466,7 @@
               }
           }
       };
-      return template(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange, toString);
+      return template(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderCommentVnode, renderElementVnode, renderComponentVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange, toString);
   }
 
   // 这里先写 IE9 支持的接口
@@ -5552,12 +5652,8 @@
           }
       }
   }
-  function removeProp(node, name, hint) {
-      set(node, name, hint === HINT_BOOLEAN
-          ? FALSE
-          : hint === HINT_NUMBER
-              ? 0
-              : EMPTY_STRING, FALSE);
+  function removeProp(node, name) {
+      set(node, name, UNDEFINED);
   }
   function attr(node, name, value) {
       if (isDef(value)) {
@@ -7425,7 +7521,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.95";
+      Yox.version = "1.0.0-alpha.96";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

@@ -84,15 +84,6 @@ export interface TransitionHooks {
 	enter?: (node: HTMLElement) => void;
 	leave?: (node: HTMLElement, done: () => void) => void;
 }
-export interface Attribute {
-	readonly name: string;
-	readonly value: string;
-}
-export interface Property {
-	readonly name: string;
-	readonly value: any;
-	readonly hint: PropertyHint;
-}
 export interface Directive {
 	key: string;
 	name: string;
@@ -121,8 +112,8 @@ export interface VNode {
 	readonly isStatic?: boolean;
 	readonly props?: Data;
 	readonly slots?: Record<string, VNode[]>;
-	readonly nativeProps?: Record<string, Property>;
-	readonly nativeAttrs?: Record<string, Attribute>;
+	readonly nativeProps?: Data;
+	readonly nativeAttrs?: Record<string, string>;
 	readonly directives?: Record<string, Directive>;
 	readonly lazy?: Record<string, LazyValue>;
 	readonly transition?: TransitionHooks;
@@ -231,7 +222,7 @@ export interface DomApi {
 	createText(text: string): Text;
 	createComment(text: string): Comment;
 	prop(node: HTMLElement, name: string, value?: string | number | boolean): string | number | boolean | void;
-	removeProp(node: HTMLElement, name: string, hint?: PropertyHint): void;
+	removeProp(node: HTMLElement, name: string): void;
 	attr(node: HTMLElement, name: string, value?: string): string | void;
 	removeAttr(node: HTMLElement, name: string): void;
 	before(parentNode: Node, node: Node, beforeNode: Node): void;

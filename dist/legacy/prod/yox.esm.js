@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.95
+ * yox.js v1.0.0-alpha.96
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1363,17 +1363,17 @@ function update(api, vnode, oldVnode) {
     const { node, nativeAttrs } = vnode, oldNativeAttrs = oldVnode && oldVnode.nativeAttrs;
     if (nativeAttrs || oldNativeAttrs) {
         const newValue = nativeAttrs || EMPTY_OBJECT, oldValue = oldNativeAttrs || EMPTY_OBJECT;
-        each$2(newValue, function (attr, name) {
+        for (let name in newValue) {
             if (!oldValue[name]
-                || attr.value !== oldValue[name].value) {
-                api.attr(node, name, attr.value);
+                || newValue[name] !== oldValue[name]) {
+                api.attr(node, name, newValue[name]);
             }
-        });
-        each$2(oldValue, function (_, name) {
+        }
+        for (let name in oldValue) {
             if (!newValue[name]) {
                 api.removeAttr(node, name);
             }
-        });
+        }
     }
 }
 
@@ -1381,17 +1381,17 @@ function update$1(api, vnode, oldVnode) {
     const { node, nativeProps } = vnode, oldNativeProps = oldVnode && oldVnode.nativeProps;
     if (nativeProps || oldNativeProps) {
         const newValue = nativeProps || EMPTY_OBJECT, oldValue = oldNativeProps || EMPTY_OBJECT;
-        each$2(newValue, function (prop, name) {
+        for (let name in newValue) {
             if (!oldValue[name]
-                || prop.value !== oldValue[name].value) {
-                api.prop(node, name, prop.value);
+                || newValue[name] !== oldValue[name]) {
+                api.prop(node, name, newValue[name]);
             }
-        });
-        each$2(oldValue, function (prop, name) {
+        }
+        for (let name in oldValue) {
             if (!newValue[name]) {
-                api.removeProp(node, name, prop.hint);
+                api.removeProp(node, name);
             }
-        });
+        }
     }
 }
 
@@ -1399,8 +1399,8 @@ function update$2(vnode, oldVnode) {
     const { data, directives } = vnode, oldDirectives = oldVnode && oldVnode.directives;
     if (directives || oldDirectives) {
         const node = data[COMPONENT] || vnode.node, isKeypathChange = oldVnode && vnode.keypath !== oldVnode.keypath, newValue = directives || EMPTY_OBJECT, oldValue = oldDirectives || EMPTY_OBJECT;
-        each$2(newValue, function (directive, name) {
-            const { once, bind, unbind } = directive.hooks;
+        for (let name in newValue) {
+            const directive = newValue[name], { once, bind, unbind } = directive.hooks;
             if (!oldValue[name]) {
                 bind(node, directive, vnode);
             }
@@ -1412,27 +1412,27 @@ function update$2(vnode, oldVnode) {
                 }
                 bind(node, directive, vnode);
             }
-        });
-        each$2(oldValue, function (directive, name) {
+        }
+        for (let name in oldValue) {
             if (!newValue[name]) {
-                const { unbind } = directive.hooks;
+                const { unbind } = oldValue[name].hooks;
                 if (unbind) {
-                    unbind(node, directive, oldVnode);
+                    unbind(node, oldValue[name], oldVnode);
                 }
             }
-        });
+        }
     }
 }
 function remove$1(vnode) {
     const { directives } = vnode;
     if (directives) {
         const node = vnode.data[COMPONENT] || vnode.node;
-        each$2(directives, function (directive) {
-            const { unbind } = directive.hooks;
+        for (let name in directives) {
+            const { unbind } = directives[name].hooks;
             if (unbind) {
-                unbind(node, directive, vnode);
+                unbind(node, directives[name], vnode);
             }
-        });
+        }
     }
 }
 
@@ -2386,14 +2386,6 @@ function createMemberIfNeeded(raw, nodes) {
             }
             // 转成 Identifier
             firstName = join(staticNodes, RAW_DOT);
-            // 当 isLiteral 为 false 时
-            // 需要为 lead 节点创建合适的 raw
-            let firstRaw = firstNode.raw;
-            if (staticRaw) {
-                firstRaw += (firstRaw === KEYPATH_PARENT
-                    ? RAW_SLASH
-                    : RAW_DOT) + staticRaw;
-            }
             // a.b.c
             if (isLiteral) {
                 firstNode = createIdentifierInner(raw, firstName, lookup, offset);
@@ -2401,6 +2393,14 @@ function createMemberIfNeeded(raw, nodes) {
             // a[b]
             // this.a[b]
             else {
+                // 当 isLiteral 为 false 时
+                // 需要为 lead 节点创建合适的 raw
+                let firstRaw = firstNode.raw;
+                if (staticRaw) {
+                    firstRaw += (firstRaw === KEYPATH_PARENT
+                        ? RAW_SLASH
+                        : RAW_DOT) + staticRaw;
+                }
                 firstNode = createMemberInner(raw, createIdentifierInner(firstRaw, firstName, lookup, offset), UNDEFINED, dynamicNodes, lookup, offset);
             }
         }
@@ -3164,7 +3164,7 @@ openCommentPattern = /^([\s\S]*?)<!--/,
 closeCommentPattern = /-->([\s\S]*?)$/, 
 // 属性的 name
 // 支持 on-click.namespace="" 或 on-get-out="" 或 xml:xx=""
-attributePattern = /^\s*([-.:\w]+)(['"])?(?:=(['"]))?/, 
+attributePattern = /^\s*([-$.:\w]+)(['"])?(?:=(['"]))?/, 
 // 自闭合标签
 selfClosingTagPattern = /^\s*(\/)?>/;
 /**
@@ -3578,9 +3578,8 @@ function compile$1(content) {
                 //
                 // 当 name 属性结束后，条件满足，但此时已不是元素属性层级了
                 if (currentElement && currentBranch.type === ELEMENT) {
-                    const attrs = currentElement.attrs || (currentElement.attrs = []);
                     // node 没法转型，一堆可能的类型怎么转啊...
-                    push(attrs, node);
+                    push(currentElement.attrs || (currentElement.attrs = []), node);
                 }
                 else {
                     const children = currentBranch.children || (currentBranch.children = []), lastChild = last(children);
@@ -4037,8 +4036,9 @@ function compile$1(content) {
 }
 
 const UNDEFINED$1 = '$0';
-const TRUE$1 = '$1';
-const FALSE$1 = '$2';
+const NULL$1 = '$1';
+const TRUE$1 = '$2';
+const FALSE$1 = '$3';
 const COMMA = ',';
 const COLON = ':';
 const PLUS = '+';
@@ -4066,24 +4066,50 @@ function trimArgs(list) {
     }, TRUE);
     return args;
 }
+/**
+ * 把 [ 'key1:value1', 'key2:value2' ] 格式转成 `{key1:value1,key2:value2}`
+ */
 function toObject$1(fields) {
     return `{${join(fields, COMMA)}}`;
 }
+/**
+ * 把 [ 'item1', 'item2' ] 格式转成 `['item1','item2']`
+ */
 function toArray$1(items) {
     return `[${join(items, COMMA)}]`;
 }
+/**
+ * 输出函数调用的格式
+ */
 function toCall(name, args) {
-    return `${name}(${join(trimArgs(args), COMMA)})`;
+    const code = args ? join(trimArgs(args), COMMA) : EMPTY_STRING;
+    return `${name}(${code})`;
 }
+/**
+ * 输出为字符串格式
+ */
 function toString$1(value) {
-    return JSON.stringify(value);
+    return value === TRUE
+        ? TRUE$1
+        : value === FALSE
+            ? FALSE$1
+            : value === NULL
+                ? NULL$1
+                : value === UNDEFINED
+                    ? UNDEFINED$1
+                    : JSON.stringify(value);
 }
+/**
+ * 输出为匿名函数格式
+ */
 function toFunction(args, code) {
-    return `${RAW_FUNCTION}(${args}){var ${UNDEFINED$1}=void 0,${TRUE$1}=!0,${FALSE$1}=!1;${RETURN}${code}}`;
+    return `${RAW_FUNCTION}(${args}){var ${UNDEFINED$1}=void 0,${NULL$1}=null,${TRUE$1}=!0,${FALSE$1}=!1;${RETURN}${code}}`;
 }
 
 function generate(node, renderIdentifier, renderMemberKeypath, renderMemberLiteral, renderCall, holder, depIgnore, stack, inner) {
-    let value, isSpecialNode = FALSE, generateChildNode = function (node) {
+    let value, isSpecialNode = FALSE, 
+    // 如果是内部临时值，不需要 holder
+    needHolder = holder && !inner, generateChildNode = function (node) {
         return generate(node, renderIdentifier, renderMemberKeypath, renderMemberLiteral, renderCall, holder, depIgnore, stack, TRUE);
     };
     switch (node.type) {
@@ -4123,9 +4149,9 @@ function generate(node, renderIdentifier, renderMemberKeypath, renderMemberLiter
             const identifier = node;
             value = toCall(renderIdentifier, [
                 toString$1(identifier.name),
-                identifier.lookup ? TRUE$1 : UNDEFINED,
+                toString$1(identifier.lookup),
                 identifier.offset > 0 ? toString$1(identifier.offset) : UNDEFINED,
-                holder ? TRUE$1 : UNDEFINED,
+                needHolder ? TRUE$1 : UNDEFINED,
                 depIgnore ? TRUE$1 : UNDEFINED,
                 stack ? stack : UNDEFINED
             ]);
@@ -4140,9 +4166,9 @@ function generate(node, renderIdentifier, renderMemberKeypath, renderMemberLiter
                         toString$1(lead.name),
                         toArray$1(stringifyNodes)
                     ]),
-                    lookup ? TRUE$1 : UNDEFINED,
+                    toString$1(lookup),
                     offset > 0 ? toString$1(offset) : UNDEFINED,
-                    holder ? TRUE$1 : UNDEFINED,
+                    needHolder ? TRUE$1 : UNDEFINED,
                     depIgnore ? TRUE$1 : UNDEFINED,
                     stack ? stack : UNDEFINED
                 ]);
@@ -4154,7 +4180,7 @@ function generate(node, renderIdentifier, renderMemberKeypath, renderMemberLiter
                     generateChildNode(lead),
                     UNDEFINED,
                     toArray$1(stringifyNodes),
-                    holder ? TRUE$1 : UNDEFINED
+                    needHolder ? TRUE$1 : UNDEFINED
                 ]);
             }
             else {
@@ -4164,7 +4190,7 @@ function generate(node, renderIdentifier, renderMemberKeypath, renderMemberLiter
                     generateChildNode(lead),
                     toString$1(keypath),
                     UNDEFINED,
-                    holder ? TRUE$1 : UNDEFINED,
+                    needHolder ? TRUE$1 : UNDEFINED,
                 ]);
             }
             break;
@@ -4176,24 +4202,19 @@ function generate(node, renderIdentifier, renderMemberKeypath, renderMemberLiter
                 args.length
                     ? toArray$1(args.map(generateChildNode))
                     : UNDEFINED,
-                holder ? TRUE$1 : UNDEFINED
+                needHolder ? TRUE$1 : UNDEFINED
             ]);
             break;
     }
-    // 不需要 value holder
-    if (!holder) {
+    if (!needHolder) {
         return value;
-    }
-    // 内部的临时值，且 holder 为 true
-    if (inner) {
-        return isSpecialNode
-            ? value + RAW_DOT + RAW_VALUE
-            : value;
     }
     // 最外层的值，且 holder 为 true
     return isSpecialNode
         ? value
-        : toObject$1([RAW_VALUE + COLON + value]);
+        : toObject$1([
+            RAW_VALUE + COLON + value
+        ]);
 }
 
 /**
@@ -4216,7 +4237,7 @@ function generate(node, renderIdentifier, renderMemberKeypath, renderMemberLiter
 // 是否要执行 join 操作
 const joinStack = [], 
 // 是否正在收集子节点
-collectStack = [], nodeGenerator = {}, RENDER_EXPRESSION_IDENTIFIER = 'a', RENDER_EXPRESSION_MEMBER_KEYPATH = 'b', RENDER_EXPRESSION_MEMBER_LITERAL = 'c', RENDER_EXPRESSION_CALL = 'd', RENDER_TEXT_VNODE = 'e', RENDER_ATTRIBUTE_VNODE = 'f', RENDER_PROPERTY_VNODE = 'g', RENDER_LAZY_VNODE = 'h', RENDER_TRANSITION_VNODE = 'i', RENDER_BINDING_VNODE = 'j', RENDER_MODEL_VNODE = 'k', RENDER_EVENT_METHOD_VNODE = 'l', RENDER_EVENT_NAME_VNODE = 'm', RENDER_DIRECTIVE_VNODE = 'n', RENDER_SPREAD_VNODE = 'o', RENDER_ELEMENT_VNODE = 'p', RENDER_SLOT = 'q', RENDER_PARTIAL = 'r', RENDER_IMPORT = 's', RENDER_EACH = 't', RENDER_RANGE = 'u', RENDER_EQUAL_RANGE = 'v', TO_STRING = 'w', ARG_STACK = 'x';
+collectStack = [], nodeGenerator = {}, RENDER_EXPRESSION_IDENTIFIER = 'a', RENDER_EXPRESSION_MEMBER_KEYPATH = 'b', RENDER_EXPRESSION_MEMBER_LITERAL = 'c', RENDER_EXPRESSION_CALL = 'd', RENDER_TEXT_VNODE = 'e', RENDER_ATTRIBUTE_VNODE = 'f', RENDER_PROPERTY_VNODE = 'g', RENDER_LAZY_VNODE = 'h', RENDER_TRANSITION_VNODE = 'i', RENDER_BINDING_VNODE = 'j', RENDER_MODEL_VNODE = 'k', RENDER_EVENT_METHOD_VNODE = 'l', RENDER_EVENT_NAME_VNODE = 'm', RENDER_DIRECTIVE_VNODE = 'n', RENDER_SPREAD_VNODE = 'o', RENDER_COMMENT_VNODE = 'p', RENDER_ELEMENT_VNODE = 'q', RENDER_COMPONENT_VNODE = 'r', RENDER_SLOT = 's', RENDER_PARTIAL = 't', RENDER_IMPORT = 'u', RENDER_EACH = 'v', RENDER_RANGE = 'w', RENDER_EQUAL_RANGE = 'x', TO_STRING = 'y', ARG_STACK = 'z';
 // 序列化代码的参数列表
 let codeArgs, 
 // 表达式求值是否要求返回字符串类型
@@ -4272,7 +4293,7 @@ function stringifyValue(value, expr, children) {
 function stringifyChildren(children, isComplex) {
     // 如果是复杂节点的 children，则每个 child 的序列化都是函数调用的形式
     // 因此最后可以拼接为 fn1(), fn2(), fn3() 这样依次调用，而不用再多此一举的使用数组，因为在 renderer 里也用不上这个数组
-    // children 大于一个时，才有 join 的可能，单个值 jion 啥啊...
+    // children 大于一个时，才有 join 的可能，单个值 join 啥啊...
     const isJoin = children.length > 1 && !isComplex;
     push(joinStack, isJoin);
     const value = join(children.map(function (child) {
@@ -4298,10 +4319,7 @@ function stringifyIf(node, stub) {
     }
     // 到达最后一个条件，发现第一个 if 语句带有 stub，需创建一个注释标签占位
     else if (stub) {
-        no = renderElement(stringifyObject({
-            isComment: TRUE$1,
-            text: EMPTY,
-        }));
+        no = toCall(RENDER_COMMENT_VNODE);
     }
     if (isDef(yes) || isDef(no)) {
         const isJoin = last(joinStack);
@@ -4328,9 +4346,6 @@ function stringifyIf(node, stub) {
             : result;
     }
     return EMPTY;
-}
-function renderElement(data, tag, attrs, childs, slots) {
-    return toCall(RENDER_ELEMENT_VNODE, [data, tag, attrs, childs, slots]);
 }
 function getComponentSlots(children) {
     const result = {}, slots = {}, addSlot = function (name, nodes) {
@@ -4362,73 +4377,88 @@ function getComponentSlots(children) {
     }
 }
 nodeGenerator[ELEMENT] = function (node) {
-    let { tag, isComponent, isSvg, isStyle, isOption, isStatic, isComplex, name, ref, key, html, attrs, children } = node, data = {}, outputTag, outputAttrs = [], outputChilds, outputSlots;
+    let { tag, isComponent, isComplex, ref, key, html, attrs, children } = node, staticTag, dynamicTag, outputAttrs, outputText, outputHTML, outputChilds, outputSlots, outputStatic, outputOption, outputStyle, outputSvg, outputRef, outputKey;
     if (tag === RAW_SLOT) {
-        const args = [toString$1(SLOT_DATA_PREFIX + name)];
+        const args = [toString$1(SLOT_DATA_PREFIX + node.name)];
         if (children) {
             push(args, stringifyFunction(stringifyChildren(children, TRUE)));
         }
         return toCall(RENDER_SLOT, args);
     }
-    push(collectStack, FALSE);
-    if (attrs) {
-        each(attrs, function (attr) {
-            push(outputAttrs, nodeGenerator[attr.type](attr));
-        });
-    }
     // 如果以 $ 开头，表示动态组件
     if (codeAt(tag) === 36) {
-        outputTag = toString$1(slice(tag, 1));
+        dynamicTag = toString$1(slice(tag, 1));
     }
     else {
-        data.tag = toString$1(tag);
+        staticTag = toString$1(tag);
     }
-    if (isSvg) {
-        data.isSvg = TRUE$1;
+    push(collectStack, FALSE);
+    if (attrs) {
+        const list = [];
+        each(attrs, function (attr) {
+            push(list, nodeGenerator[attr.type](attr));
+        });
+        if (list.length) {
+            outputAttrs = stringifyFunction(join(list, COMMA));
+        }
     }
-    if (isStyle) {
-        data.isStyle = TRUE$1;
-    }
-    if (isOption) {
-        data.isOption = TRUE$1;
-    }
-    if (isStatic) {
-        data.isStatic = TRUE$1;
-    }
-    if (ref) {
-        data.ref = stringifyValue(ref.value, ref.expr, ref.children);
-    }
-    if (key) {
-        data.key = stringifyValue(key.value, key.expr, key.children);
-    }
-    if (html) {
-        data.html = string(html)
-            ? toString$1(html)
-            : stringifyExpression(html, TRUE);
-    }
-    if (isComponent) {
-        data.isComponent = TRUE$1;
-        if (children) {
+    if (children) {
+        if (isComponent) {
             collectStack[collectStack.length - 1] = TRUE;
             outputSlots = getComponentSlots(children);
         }
-    }
-    else if (children) {
-        isStringRequired = TRUE;
-        collectStack[collectStack.length - 1] = isComplex;
-        outputChilds = stringifyChildren(children, isComplex);
-        if (isComplex) {
-            outputChilds = stringifyFunction(outputChilds);
-        }
         else {
-            data.text = outputChilds;
-            outputChilds = UNDEFINED;
+            isStringRequired = TRUE;
+            collectStack[collectStack.length - 1] = isComplex;
+            outputChilds = stringifyChildren(children, isComplex);
+            if (isComplex) {
+                outputChilds = stringifyFunction(outputChilds);
+            }
+            else {
+                outputText = outputChilds;
+                outputChilds = UNDEFINED;
+            }
         }
     }
     pop(collectStack);
-    return renderElement(stringifyObject(data), outputTag, falsy(outputAttrs)
-        ? UNDEFINED
-        : stringifyFunction(join(outputAttrs, COMMA)), outputChilds, outputSlots);
+    if (html) {
+        outputHTML = string(html)
+            ? toString$1(html)
+            : stringifyExpression(html, TRUE);
+    }
+    outputStatic = node.isStatic ? TRUE$1 : UNDEFINED;
+    outputOption = node.isOption ? TRUE$1 : UNDEFINED;
+    outputStyle = node.isStyle ? TRUE$1 : UNDEFINED;
+    outputSvg = node.isSvg ? TRUE$1 : UNDEFINED;
+    outputRef = ref ? stringifyValue(ref.value, ref.expr, ref.children) : UNDEFINED;
+    outputKey = key ? stringifyValue(key.value, key.expr, key.children) : UNDEFINED;
+    if (isComponent) {
+        return toCall(RENDER_COMPONENT_VNODE, 
+        // 最常用 => 最不常用排序
+        [
+            staticTag,
+            outputAttrs,
+            outputSlots,
+            outputRef,
+            outputKey,
+            dynamicTag,
+        ]);
+    }
+    return toCall(RENDER_ELEMENT_VNODE, 
+    // 最常用 => 最不常用排序
+    [
+        staticTag,
+        outputAttrs,
+        outputChilds,
+        outputText,
+        outputStatic,
+        outputOption,
+        outputStyle,
+        outputSvg,
+        outputHTML,
+        outputRef,
+        outputKey,
+    ]);
 };
 nodeGenerator[ATTRIBUTE] = function (node) {
     const value = node.binding
@@ -4452,7 +4482,6 @@ nodeGenerator[PROPERTY] = function (node) {
         : stringifyValue(node.value, node.expr, node.children);
     return toCall(RENDER_PROPERTY_VNODE, [
         toString$1(node.name),
-        toString$1(node.hint),
         value
     ]);
 };
@@ -4554,21 +4583,21 @@ nodeGenerator[EACH] = function (node) {
                 children,
                 renderExpression(node.from),
                 renderExpression(node.to),
-                node.index ? toString$1(node.index) : UNDEFINED
+                toString$1(node.index)
             ]);
         }
         return toCall(RENDER_RANGE, [
             children,
             renderExpression(node.from),
             renderExpression(node.to),
-            node.index ? toString$1(node.index) : UNDEFINED
+            toString$1(node.index)
         ]);
     }
     // 遍历数组和对象
     return toCall(RENDER_EACH, [
         children,
         renderExpression(node.from, TRUE),
-        node.index ? toString$1(node.index) : UNDEFINED
+        toString$1(node.index)
     ]);
 };
 nodeGenerator[PARTIAL] = function (node) {
@@ -4601,7 +4630,9 @@ function generate$1(node) {
             RENDER_EVENT_NAME_VNODE,
             RENDER_DIRECTIVE_VNODE,
             RENDER_SPREAD_VNODE,
+            RENDER_COMMENT_VNODE,
             RENDER_ELEMENT_VNODE,
+            RENDER_COMPONENT_VNODE,
             RENDER_SLOT,
             RENDER_PARTIAL,
             RENDER_IMPORT,
@@ -4722,14 +4753,9 @@ function render(context, observer, template, filters, partials, directives, tran
             }
         }
     }, renderAttributeVnode = function (name, value) {
-        if ($vnode.isComponent) {
-            setPair($vnode, 'props', name, value);
-        }
-        else {
-            setPair($vnode, 'nativeAttrs', name, { name, value });
-        }
-    }, renderPropertyVnode = function (name, hint, value) {
-        setPair($vnode, 'nativeProps', name, { name, value, hint });
+        setPair($vnode, $vnode.isComponent ? 'props' : 'nativeAttrs', name, value);
+    }, renderPropertyVnode = function (name, value) {
+        setPair($vnode, 'nativeProps', name, value);
     }, renderLazyVnode = function (name, value) {
         setPair($vnode, 'lazy', name, value);
     }, renderTransitionVnode = function (name) {
@@ -4788,60 +4814,95 @@ function render(context, observer, template, filters, partials, directives, tran
         });
     }, renderSpreadVnode = function (holder) {
         const { value, keypath } = holder;
-        // 如果为 null 或 undefined，则不需要 warn
-        if (value != NULL) {
-            // 数组也算一种对象，要排除掉
-            if (object(value) && !array(value)) {
-                each$2(value, function (value, key) {
-                    setPair($vnode, 'props', key, value);
+        if (object(value)) {
+            for (let key in value) {
+                setPair($vnode, 'props', key, value[key]);
+            }
+            if (keypath) {
+                const key = join$1(DIRECTIVE_BINDING, keypath);
+                setPair($vnode, KEY_DIRECTIVES, key, {
+                    ns: DIRECTIVE_BINDING,
+                    name: EMPTY_STRING,
+                    key,
+                    modifier: join$1(keypath, RAW_WILDCARD),
+                    hooks: directives[DIRECTIVE_BINDING],
                 });
-                if (keypath) {
-                    const key = join$1(DIRECTIVE_BINDING, keypath);
-                    setPair($vnode, KEY_DIRECTIVES, key, {
-                        ns: DIRECTIVE_BINDING,
-                        name: EMPTY_STRING,
-                        key,
-                        modifier: join$1(keypath, RAW_WILDCARD),
-                        hooks: directives[DIRECTIVE_BINDING],
-                    });
-                }
             }
         }
-    }, renderElementVnode = function (vnode, tag, attrs, childs, slots) {
-        if (tag) {
-            const componentName = observer.get(tag);
-            vnode.tag = componentName;
-        }
-        if (attrs) {
-            $vnode = vnode;
-            attrs();
-            $vnode = UNDEFINED;
-        }
-        // childs 和 slots 不可能同时存在
-        if (childs) {
-            vnodeStack.push(vnode.children = []);
-            childs();
-            pop(vnodeStack);
-        }
-        else if (slots) {
-            const renderSlots = {};
-            each$2(slots, function (slot, name) {
-                vnodeStack.push([]);
-                slot();
-                const vnodes = pop(vnodeStack);
-                renderSlots[name] = vnodes.length ? vnodes : UNDEFINED;
-            });
-            vnode.slots = renderSlots;
-        }
-        vnode.context = context;
-        vnode.keypath = $scope.$keypath;
+    }, appendVnode = function (vnode) {
         const vnodeList = last(vnodeStack);
         if (vnodeList) {
             push(vnodeList, vnode);
         }
         return vnode;
+    }, renderCommentVnode = function () {
+        return appendVnode({
+            isComment: TRUE,
+            text: EMPTY_STRING,
+            keypath: $scope.$keypath,
+            context,
+        });
+    }, renderElementVnode = function (tag, attrs, childs, text, isStatic, isOption, isStyle, isSvg, html, ref, key) {
+        const vnode = {
+            tag,
+            text,
+            html,
+            isStatic,
+            isOption,
+            isStyle,
+            isSvg,
+            ref,
+            key,
+            context,
+            keypath: $scope.$keypath,
+        };
+        if (attrs) {
+            $vnode = vnode;
+            attrs();
+            $vnode = UNDEFINED;
+        }
+        if (childs) {
+            vnodeStack.push(vnode.children = []);
+            childs();
+            pop(vnodeStack);
+        }
+        return appendVnode(vnode);
+    }, renderComponentVnode = function (staticTag, attrs, slots, ref, key, dynamicTag) {
+        let tag;
+        // 组件支持动态名称
+        if (dynamicTag) {
+            const componentName = observer.get(dynamicTag);
+            tag = componentName;
+        }
+        else {
+            tag = staticTag;
+        }
+        const vnode = {
+            tag,
+            ref,
+            key,
+            context,
+            keypath: $scope.$keypath,
+            isComponent: TRUE,
+        };
+        if (attrs) {
+            $vnode = vnode;
+            attrs();
+            $vnode = UNDEFINED;
+        }
+        if (slots) {
+            const vnodeSlots = {};
+            for (let name in slots) {
+                vnodeStack.push([]);
+                slots[name]();
+                const vnodes = pop(vnodeStack);
+                vnodeSlots[name] = vnodes.length ? vnodes : UNDEFINED;
+            }
+            vnode.slots = vnodeSlots;
+        }
+        return appendVnode(vnode);
     }, renderExpressionIdentifier = function (name, lookup, offset, holder, depIgnore, stack) {
-        const myStack = stack || $stack, result = findValue(myStack, myStack.length - ((offset || 0) + 1), name, lookup, depIgnore);
+        const myStack = stack || $stack, result = findValue(myStack, myStack.length - 1 - (offset || 0), name, lookup, depIgnore);
         return holder ? result : result.value;
     }, renderExpressionMemberKeypath = function (identifier, runtimeKeypath) {
         unshift(runtimeKeypath, identifier);
@@ -4865,11 +4926,11 @@ function render(context, observer, template, filters, partials, directives, tran
         const vnodeList = last(vnodeStack), vnodes = context.get(name);
         if (vnodeList) {
             if (vnodes) {
-                each(vnodes, function (vnode) {
-                    push(vnodeList, vnode);
-                    vnode.slot = name;
-                    vnode.parent = context;
-                });
+                for (let i = 0, length = vnodes.length; i < length; i++) {
+                    push(vnodeList, vnodes[i]);
+                    vnodes[i].slot = name;
+                    vnodes[i].parent = context;
+                }
             }
             else if (defaultRender) {
                 defaultRender();
@@ -4890,7 +4951,7 @@ function render(context, observer, template, filters, partials, directives, tran
         else {
             const partial = partials[name];
             if (partial) {
-                partial(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange, toString);
+                partial(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderCommentVnode, renderElementVnode, renderComponentVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange, toString);
             }
         }
     }, eachHandler = function (generate, item, key, keypath, index, length) {
@@ -4955,7 +5016,7 @@ function render(context, observer, template, filters, partials, directives, tran
             }
         }
     };
-    return template(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderElementVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange, toString);
+    return template(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderCommentVnode, renderElementVnode, renderComponentVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange, toString);
 }
 
 // 这里先写 IE9 支持的接口
@@ -5137,12 +5198,8 @@ function prop(node, name, value) {
         }
     }
 }
-function removeProp(node, name, hint) {
-    set(node, name, hint === HINT_BOOLEAN
-        ? FALSE
-        : hint === HINT_NUMBER
-            ? 0
-            : EMPTY_STRING, FALSE);
+function removeProp(node, name) {
+    set(node, name, UNDEFINED);
 }
 function attr(node, name, value) {
     if (isDef(value)) {
@@ -6934,7 +6991,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.95";
+Yox.version = "1.0.0-alpha.96";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
