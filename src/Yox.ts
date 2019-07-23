@@ -85,14 +85,6 @@ import * as model from './directive/model'
 import * as binding from './directive/binding'
 
 
-type YoxClass = typeof Yox
-
-type YoxPlugin = {
-  install(Yox: YoxClass): void
-}
-
-
-
 const globalDirectives = {},
 
 globalTransitions = {},
@@ -178,7 +170,11 @@ export default class Yox implements YoxInterface {
    *
    * 插件必须暴露 install 方法
    */
-  public static use(plugin: YoxPlugin): void {
+  public static use(
+    plugin: {
+      install(Y: typeof Yox): void
+    }
+  ): void {
     plugin.install(Yox)
   }
 
