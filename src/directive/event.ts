@@ -15,10 +15,10 @@ import {
   MODIFER_NATIVE,
 } from 'yox-config/src/config'
 
-import * as constant from 'yox-type/src/constant'
-
 import execute from 'yox-common/src/function/execute'
 import debounce from 'yox-common/src/function/debounce'
+
+import * as constant from 'yox-common/src/util/constant'
 
 import * as domApi from 'yox-dom/src/dom'
 

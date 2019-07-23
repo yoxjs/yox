@@ -55,8 +55,6 @@ import {
   MODIFER_NATIVE,
 } from 'yox-config/src/config'
 
-import * as constant from 'yox-type/src/constant'
-
 import isDef from 'yox-common/src/function/isDef'
 import isUndef from 'yox-common/src/function/isUndef'
 import execute from 'yox-common/src/function/execute'
@@ -70,6 +68,7 @@ import * as array from 'yox-common/src/util/array'
 import * as string from 'yox-common/src/util/string'
 import * as object from 'yox-common/src/util/object'
 import * as logger from 'yox-common/src/util/logger'
+import * as constant from 'yox-common/src/util/constant'
 
 import * as snabbdom from 'yox-snabbdom/src/snabbdom'
 

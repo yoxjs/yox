@@ -30,18 +30,6 @@ yarn add yox
 
 * [Hello World](http://jsrun.pro/YxyKp/edit)
 
-#### Filter
-
-* [Global Filter](http://jsrun.pro/xRyKp/edit)
-* [Component Filter](http://jsrun.pro/IxyKp/edit)
-* [Global Function Is Disabled](http://jsrun.pro/zByKp/edit)
-* [Object Method Is Disabled](http://jsrun.pro/FByKp/edit)
-
-#### Comment
-
-* [HTML](http://jsrun.pro/2xyKp/edit)
-* [Mustache](http://jsrun.pro/yByKp/edit)
-
 #### If/ElseIf/Else
 
 * [Node](http://jsrun.pro/ZxyKp/edit)
@@ -53,6 +41,18 @@ yarn add yox
 * [Array With Primitive Type](http://jsrun.pro/eByKp/edit)
 * [Object](http://jsrun.pro/yxyKp/edit)
 * [Range](http://jsrun.pro/fxyKp/edit)
+
+#### Filter
+
+* [Global Filter](http://jsrun.pro/xRyKp/edit)
+* [Component Filter](http://jsrun.pro/IxyKp/edit)
+* [Global Function Is Disabled](http://jsrun.pro/zByKp/edit)
+* [Object Method Is Disabled](http://jsrun.pro/FByKp/edit)
+
+#### Comment
+
+* [HTML](http://jsrun.pro/2xyKp/edit)
+* [Mustache](http://jsrun.pro/yByKp/edit)
 
 #### Partial
 

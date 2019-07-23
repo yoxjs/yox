@@ -11,11 +11,10 @@ import {
   YoxInterface,
 } from 'yox-type/src/yox'
 
-import * as constant from 'yox-type/src/constant'
-
 import isDef from 'yox-common/src/function/isDef'
 import execute from 'yox-common/src/function/execute'
 
+import * as constant from 'yox-common/src/util/constant'
 import * as keypathUtil from 'yox-common/src/util/keypath'
 
 import * as domApi from 'yox-dom/src/dom'

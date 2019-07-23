@@ -16,14 +16,13 @@ import {
   DIRECTIVE_MODEL,
 } from 'yox-config/src/config'
 
-import * as constant from 'yox-type/src/constant'
-
 import debounce from 'yox-common/src/function/debounce'
 import execute from 'yox-common/src/function/execute'
 import toString from 'yox-common/src/function/toString'
 
 import * as is from 'yox-common/src/util/is'
 import * as array from 'yox-common/src/util/array'
+import * as constant from 'yox-common/src/util/constant'
 
 import * as domApi from 'yox-dom/src/dom'
 

@@ -1,18 +1,6 @@
 
 * [Hello World](http://jsrun.pro/YxyKp/edit)
 
-## 过滤器
-
-* [全局注册](http://jsrun.pro/xRyKp/edit)
-* [本地注册](http://jsrun.pro/IxyKp/edit)
-* [无法调用全局函数](http://jsrun.pro/zByKp/edit)
-* [无法调用对象方法](http://jsrun.pro/FByKp/edit)
-
-## 注释
-
-* [HTML](http://jsrun.pro/2xyKp/edit)
-* [Mustache](http://jsrun.pro/yByKp/edit)
-
 ## If/ElseIf/Else
 
 * [节点](http://jsrun.pro/ZxyKp/edit)
@@ -24,6 +12,18 @@
 * [数组 - 数组项是基本类型](http://jsrun.pro/eByKp/edit)
 * [对象](http://jsrun.pro/yxyKp/edit)
 * [区间](http://jsrun.pro/fxyKp/edit)
+
+## 过滤器
+
+* [全局注册](http://jsrun.pro/xRyKp/edit)
+* [本地注册](http://jsrun.pro/IxyKp/edit)
+* [无法调用全局函数](http://jsrun.pro/zByKp/edit)
+* [无法调用对象方法](http://jsrun.pro/FByKp/edit)
+
+## 注释
+
+* [HTML](http://jsrun.pro/2xyKp/edit)
+* [Mustache](http://jsrun.pro/yByKp/edit)
 
 ## 子模板
 
@@ -41,7 +41,7 @@
 * [自动收集依赖](http://jsrun.pro/y4yKp/edit)
 * [手动设置依赖](http://jsrun.pro/b4yKp/edit)
 
-#### Keypath
+## Keypath
 
 * [Keypath](http://jsrun.pro/W4yKp/edit)
 
