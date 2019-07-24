@@ -50,6 +50,10 @@ Yox 的设计理念是，**简单比强大更有生命力**。
 
 <!-- 同样是 if，输出什么 HTML 结构你应该能猜出来吧 -->
 <div {{#if isActive}}class="active"{{/if}}></div>
+
+<!-- 更多变种，试问这种语法有记忆负担吗？ -->
+<div class="default{{#if isActive}} active{{/if}}"></div>
+<div class="default {{#if isActive}}active{{else}}unactive{{/if}}"></div>
 ```
 
 如果满屏的 `{{` 和 `}}` 让你很晕，我的建议是多敲几个换行，如下：
