@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.96
+ * yox.js v1.0.0-alpha.97
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1364,13 +1364,13 @@ function update(api, vnode, oldVnode) {
     if (nativeAttrs || oldNativeAttrs) {
         const newValue = nativeAttrs || EMPTY_OBJECT, oldValue = oldNativeAttrs || EMPTY_OBJECT;
         for (let name in newValue) {
-            if (!oldValue[name]
+            if (oldValue[name] === UNDEFINED
                 || newValue[name] !== oldValue[name]) {
                 api.attr(node, name, newValue[name]);
             }
         }
         for (let name in oldValue) {
-            if (!newValue[name]) {
+            if (newValue[name] === UNDEFINED) {
                 api.removeAttr(node, name);
             }
         }
@@ -1382,13 +1382,13 @@ function update$1(api, vnode, oldVnode) {
     if (nativeProps || oldNativeProps) {
         const newValue = nativeProps || EMPTY_OBJECT, oldValue = oldNativeProps || EMPTY_OBJECT;
         for (let name in newValue) {
-            if (!oldValue[name]
+            if (oldValue[name] === UNDEFINED
                 || newValue[name] !== oldValue[name]) {
                 api.prop(node, name, newValue[name]);
             }
         }
         for (let name in oldValue) {
-            if (!newValue[name]) {
+            if (newValue[name] === UNDEFINED) {
                 api.removeProp(node, name);
             }
         }
@@ -1841,10 +1841,6 @@ function patch(api, vnode, oldVnode) {
     // 当异步加载完成时才能用上最新的 vnode
     if (oldVnode.isComponent && data[LOADING]) {
         data[VNODE] = vnode;
-        return;
-    }
-    // 两棵静态子树就别折腾了
-    if (vnode.isStatic && oldVnode.isStatic) {
         return;
     }
     update(api, vnode, oldVnode);
@@ -6991,7 +6987,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.96";
+Yox.version = "1.0.0-alpha.97";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
