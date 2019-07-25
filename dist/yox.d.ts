@@ -603,10 +603,6 @@ declare class Observer {
 	 */
 	destroy(): void;
 }
-export declare type YoxClass = typeof Yox;
-export declare type YoxPlugin = {
-	install(Yox: YoxClass): void;
-};
 export default class Yox implements YoxInterface {
 	$options: ComponentOptions;
 	$observer: Observer;
@@ -649,7 +645,9 @@ export default class Yox implements YoxInterface {
 	 *
 	 * 插件必须暴露 install 方法
 	 */
-	static use(plugin: YoxPlugin): void;
+	static use(plugin: {
+		install(Y: typeof Yox): void;
+	}): void;
 	/**
 	 * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
 	 */

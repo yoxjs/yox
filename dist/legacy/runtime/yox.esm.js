@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.97
+ * yox.js v1.0.0-alpha.98
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -98,14 +98,6 @@ const EMPTY_ARRAY = Object.freeze([]);
  */
 const EMPTY_STRING = '';
 
-function isDef (target) {
-    return target !== UNDEFINED;
-}
-
-function isUndef (target) {
-    return target === UNDEFINED;
-}
-
 /**
  * Check if value is a function.
  *
@@ -194,9 +186,9 @@ function execute (fn, context, args) {
     if (func(fn)) {
         return array(args)
             ? fn.apply(context, args)
-            : isDef(context)
+            : context !== UNDEFINED
                 ? fn.call(context, args)
-                : isDef(args)
+                : args !== UNDEFINED
                     ? fn(args)
                     : fn();
     }
@@ -534,7 +526,7 @@ function slice(str, start, end) {
  * @return
  */
 function indexOf$1(str, part, start) {
-    return str.indexOf(part, isDef(start) ? start : 0);
+    return str.indexOf(part, start !== UNDEFINED ? start : 0);
 }
 /**
  * 获取子串的起始位置
@@ -545,7 +537,7 @@ function indexOf$1(str, part, start) {
  * @return
  */
 function lastIndexOf(str, part, end) {
-    return str.lastIndexOf(part, isDef(end) ? end : str.length);
+    return str.lastIndexOf(part, end !== UNDEFINED ? end : str.length);
 }
 /**
  * str 是否以 part 开头
@@ -825,7 +817,7 @@ function get(object, keypath) {
             let value = object[key], 
             // 紧接着判断值是否存在
             // 下面会处理计算属性的值，不能在它后面设置 hasValue
-            hasValue = isDef(value);
+            hasValue = value !== UNDEFINED;
             // 如果是计算属性，取计算属性的值
             if (value && func(value.get)) {
                 value = value.get();
@@ -883,7 +875,7 @@ function set(object, keypath, value, autofill) {
  */
 function has$2(object, key) {
     // 不用 hasOwnProperty，性能差
-    return isDef(object[key]);
+    return object[key] !== UNDEFINED;
 }
 /**
  * 是否是空对象
@@ -914,7 +906,7 @@ var object$1 = /*#__PURE__*/Object.freeze({
 function toString (target, defaultValue) {
     return target != NULL && target.toString
         ? target.toString()
-        : isDef(defaultValue)
+        : defaultValue !== UNDEFINED
             ? defaultValue
             : EMPTY_STRING;
 }
@@ -1545,7 +1537,7 @@ function createVnode(api, vnode) {
     }
 }
 function addVnodes(api, parentNode, vnodes, startIndex, endIndex, before) {
-    let vnode, start = startIndex || 0, end = isDef(endIndex) ? endIndex : vnodes.length - 1;
+    let vnode, start = startIndex || 0, end = endIndex !== UNDEFINED ? endIndex : vnodes.length - 1;
     while (start <= end) {
         vnode = vnodes[start];
         createVnode(api, vnode);
@@ -1590,7 +1582,7 @@ function insertVnode(api, parentNode, vnode, before) {
     }
 }
 function removeVnodes(api, parentNode, vnodes, startIndex, endIndex) {
-    let vnode, start = startIndex || 0, end = isDef(endIndex) ? endIndex : vnodes.length - 1;
+    let vnode, start = startIndex || 0, end = endIndex !== UNDEFINED ? endIndex : vnodes.length - 1;
     while (start <= end) {
         vnode = vnodes[start];
         if (vnode) {
@@ -1772,7 +1764,7 @@ function updateChildren(api, parentNode, children, oldChildren) {
                 ? oldKeyToIndex[startVnode.key]
                 : UNDEFINED;
             // 移动元素
-            if (isDef(oldIndex)) {
+            if (oldIndex !== UNDEFINED) {
                 patch(api, startVnode, oldChildren[oldIndex]);
                 oldChildren[oldIndex] = UNDEFINED;
             }
@@ -1878,7 +1870,7 @@ function destroy(api, vnode, isRemove) {
 function toNumber (target, defaultValue) {
     return numeric(target)
         ? +target
-        : isDef(defaultValue)
+        : defaultValue !== UNDEFINED
             ? defaultValue
             : 0;
 }
@@ -1892,15 +1884,15 @@ function render(context, observer, template, filters, partials, directives, tran
     let $scope = { $keypath: EMPTY_STRING }, $stack = [$scope], $vnode, vnodeStack = [], localPartials = {}, findValue = function (stack, index, key, lookup, depIgnore, defaultKeypath) {
         let scope = stack[index], keypath = join$1(scope.$keypath, key), value = stack, holder$1 = holder;
         // 如果最后还是取不到值，用回最初的 keypath
-        if (isUndef(defaultKeypath)) {
+        if (defaultKeypath === UNDEFINED) {
             defaultKeypath = keypath;
         }
         // 如果取的是 scope 上直接有的数据，如 $keypath
-        if (isDef(scope[key])) {
+        if (scope[key] !== UNDEFINED) {
             value = scope[key];
         }
         // 如果取的是数组项，则要更进一步
-        else if (isDef(scope.$item)) {
+        else if (scope.$item !== UNDEFINED) {
             scope = scope.$item;
             // 到这里 scope 可能为空
             // 比如 new Array(10) 然后遍历这个数组，每一项肯定是空
@@ -1909,7 +1901,7 @@ function render(context, observer, template, filters, partials, directives, tran
                 value = scope;
             }
             // 取 this.xx
-            else if (scope != NULL && isDef(scope[key])) {
+            else if (scope != NULL && scope[key] !== UNDEFINED) {
                 value = scope[key];
             }
         }
@@ -2146,7 +2138,7 @@ function render(context, observer, template, filters, partials, directives, tran
         unshift(runtimeKeypath, identifier);
         return join(runtimeKeypath, RAW_DOT);
     }, renderExpressionMemberLiteral = function (value, staticKeypath, runtimeKeypath, holder$1) {
-        if (isDef(runtimeKeypath)) {
+        if (runtimeKeypath !== UNDEFINED) {
             staticKeypath = join(runtimeKeypath, RAW_DOT);
         }
         const match = get(value, staticKeypath);
@@ -2198,7 +2190,7 @@ function render(context, observer, template, filters, partials, directives, tran
         $scope = { $keypath: keypath };
         $stack = lastStack.concat($scope);
         // 避免模板里频繁读取 list.length
-        if (isDef(length)) {
+        if (length !== UNDEFINED) {
             $scope.$length = length;
         }
         // 业务层是否写了 expr:index
@@ -2426,7 +2418,7 @@ function createComment(text) {
     return DOCUMENT.createComment(text);
 }
 function prop(node, name, value) {
-    if (isDef(value)) {
+    if (value !== UNDEFINED) {
         set(node, name, value, FALSE);
     }
     else {
@@ -2440,7 +2432,7 @@ function removeProp(node, name) {
     set(node, name, UNDEFINED);
 }
 function attr(node, name, value) {
-    if (isDef(value)) {
+    if (value !== UNDEFINED) {
         node.setAttribute(name, value);
     }
     else {
@@ -2485,7 +2477,7 @@ function tag(node) {
     }
 }
 function text(node, text, isStyle, isOption) {
-    if (isDef(text)) {
+    if (text !== UNDEFINED) {
         {
             if (isStyle && has$2(node, STYLE_SHEET)) {
                 node[STYLE_SHEET].cssText = text;
@@ -2503,7 +2495,7 @@ function text(node, text, isStyle, isOption) {
     }
 }
 function html(node, html, isStyle, isOption) {
-    if (isDef(html)) {
+    if (html !== UNDEFINED) {
         {
             if (isStyle && has$2(node, STYLE_SHEET)) {
                 node[STYLE_SHEET].cssText = html;
@@ -2803,7 +2795,7 @@ function diffRecursion(keypath, newValue, oldValue, watchFuzzyKeypaths, callback
         if (subNewValue !== subOldValue) {
             const newKeypath = join$1(keypath, subKeypath);
             each(watchFuzzyKeypaths, function (fuzzyKeypath) {
-                if (isDef(matchFuzzy(newKeypath, fuzzyKeypath))) {
+                if (matchFuzzy(newKeypath, fuzzyKeypath) !== UNDEFINED) {
                     callback(fuzzyKeypath, newKeypath, subNewValue, subOldValue);
                 }
             });
@@ -2825,7 +2817,7 @@ function diffWatcher (keypath, newValue, oldValue, watcher, isRecursive, callbac
             // users.0 和 users.*.name 无法匹配
             // 此时要知道设置 users.0 到底会不会改变 users.*.name 需要靠递归了
             // 如果匹配，则无需递归
-            if (isDef(matchFuzzy(keypath, watchKeypath))) {
+            if (matchFuzzy(keypath, watchKeypath) !== UNDEFINED) {
                 callback(watchKeypath, keypath, newValue, oldValue);
             }
             else if (isRecursive) {
@@ -3542,7 +3534,7 @@ function bind$2(node, directive, vnode) {
             }
             else {
                 const element = node;
-                if (isDef(directive.hint)) {
+                if (directive.hint !== UNDEFINED) {
                     prop(element, name, newValue);
                 }
                 else {
@@ -3599,9 +3591,9 @@ class Yox {
             if (propTypes) {
                 each$2(propTypes, function (rule, key) {
                     let value = source[key];
-                    if (isUndef(value)) {
+                    if (value === UNDEFINED) {
                         value = rule.value;
-                        if (isDef(value)) {
+                        if (value !== UNDEFINED) {
                             source[key] = rule.type === RAW_FUNCTION
                                 ? value
                                 : func(value)
@@ -3862,7 +3854,7 @@ class Yox {
         // 创建完 CustomEvent，如果没有人为操作
         // 它的 ns 为 undefined
         // 这里先解析出命名空间，避免每次 fire 都要解析
-        if (isUndef(event.ns)) {
+        if (event.ns === UNDEFINED) {
             const namespace = $emitter.parse(event.type);
             event.type = namespace.type;
             event.ns = namespace.ns;
@@ -4221,7 +4213,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.97";
+Yox.version = "1.0.0-alpha.98";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
@@ -4318,7 +4310,7 @@ function setResource(registry, name, value, formatValue) {
             // 不鼓励在过滤器使用 this
             // 因此过滤器没有 this 的类型声明
             // 这个内置过滤器是不得不用 this
-            return isDef(this.get(SLOT_DATA_PREFIX + name));
+            return this.get(SLOT_DATA_PREFIX + name) !== UNDEFINED;
         }
     });
 }

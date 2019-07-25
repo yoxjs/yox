@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.97
+ * yox.js v1.0.0-alpha.98
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -50,14 +50,6 @@
    * 空字符串
    */
   var EMPTY_STRING = '';
-
-  function isDef (target) {
-      return target !== UNDEFINED;
-  }
-
-  function isUndef (target) {
-      return target === UNDEFINED;
-  }
 
   /**
    * Check if value is a function.
@@ -147,9 +139,9 @@
       if (func(fn)) {
           return array(args)
               ? fn.apply(context, args)
-              : isDef(context)
+              : context !== UNDEFINED
                   ? fn.call(context, args)
-                  : isDef(args)
+                  : args !== UNDEFINED
                       ? fn(args)
                       : fn();
       }
@@ -488,7 +480,7 @@
    * @return
    */
   function indexOf$1(str, part, start) {
-      return str.indexOf(part, isDef(start) ? start : 0);
+      return str.indexOf(part, start !== UNDEFINED ? start : 0);
   }
   /**
    * 获取子串的起始位置
@@ -499,7 +491,7 @@
    * @return
    */
   function lastIndexOf(str, part, end) {
-      return str.lastIndexOf(part, isDef(end) ? end : str.length);
+      return str.lastIndexOf(part, end !== UNDEFINED ? end : str.length);
   }
   /**
    * str 是否以 part 开头
@@ -779,7 +771,7 @@
               var value = object[key], 
               // 紧接着判断值是否存在
               // 下面会处理计算属性的值，不能在它后面设置 hasValue
-              hasValue = isDef(value);
+              hasValue = value !== UNDEFINED;
               // 如果是计算属性，取计算属性的值
               if (value && func(value.get)) {
                   value = value.get();
@@ -837,7 +829,7 @@
    */
   function has$2(object, key) {
       // 不用 hasOwnProperty，性能差
-      return isDef(object[key]);
+      return object[key] !== UNDEFINED;
   }
   /**
    * 是否是空对象
@@ -868,7 +860,7 @@
   function toString (target, defaultValue) {
       return target != NULL && target.toString
           ? target.toString()
-          : isDef(defaultValue)
+          : defaultValue !== UNDEFINED
               ? defaultValue
               : EMPTY_STRING;
   }
@@ -1280,7 +1272,7 @@
   function toNumber (target, defaultValue) {
       return numeric(target)
           ? +target
-          : isDef(defaultValue)
+          : defaultValue !== UNDEFINED
               ? defaultValue
               : 0;
   }
@@ -1490,7 +1482,7 @@
           if (subNewValue !== subOldValue) {
               var newKeypath_1 = join$1(keypath, subKeypath);
               each(watchFuzzyKeypaths, function (fuzzyKeypath) {
-                  if (isDef(matchFuzzy(newKeypath_1, fuzzyKeypath))) {
+                  if (matchFuzzy(newKeypath_1, fuzzyKeypath) !== UNDEFINED) {
                       callback(fuzzyKeypath, newKeypath_1, subNewValue, subOldValue);
                   }
               });
@@ -1512,7 +1504,7 @@
               // users.0 和 users.*.name 无法匹配
               // 此时要知道设置 users.0 到底会不会改变 users.*.name 需要靠递归了
               // 如果匹配，则无需递归
-              if (isDef(matchFuzzy(keypath, watchKeypath))) {
+              if (matchFuzzy(keypath, watchKeypath) !== UNDEFINED) {
                   callback(watchKeypath, keypath, newValue, oldValue);
               }
               else if (isRecursive) {
@@ -2128,7 +2120,7 @@
           // 创建完 CustomEvent，如果没有人为操作
           // 它的 ns 为 undefined
           // 这里先解析出命名空间，避免每次 fire 都要解析
-          if (isUndef(event.ns)) {
+          if (event.ns === UNDEFINED) {
               var namespace = $emitter.parse(event.type);
               event.type = namespace.type;
               event.ns = namespace.ns;
@@ -2351,7 +2343,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.97";
+      Yox.version = "1.0.0-alpha.98";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
