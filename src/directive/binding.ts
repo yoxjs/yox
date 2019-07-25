@@ -11,7 +11,6 @@ import {
   YoxInterface,
 } from 'yox-type/src/yox'
 
-import isDef from 'yox-common/src/function/isDef'
 import execute from 'yox-common/src/function/execute'
 
 import * as constant from 'yox-common/src/util/constant'
@@ -44,7 +43,7 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
       }
       else {
         const element = node as HTMLElement
-        if (isDef(directive.hint)) {
+        if (directive.hint !== constant.UNDEFINED) {
           domApi.prop(element, name, newValue)
         }
         else {

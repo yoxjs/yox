@@ -55,8 +55,6 @@ import {
   MODIFER_NATIVE,
 } from 'yox-config/src/config'
 
-import isDef from 'yox-common/src/function/isDef'
-import isUndef from 'yox-common/src/function/isUndef'
 import execute from 'yox-common/src/function/execute'
 
 import Emitter from 'yox-common/src/util/Emitter'
@@ -340,9 +338,9 @@ export default class Yox implements YoxInterface {
             if (process.env.NODE_ENV === 'development') {
               checkProp(key, value, rule)
             }
-            if (isUndef(value)) {
+            if (value === constant.UNDEFINED) {
               value = rule.value
-              if (isDef(value)) {
+              if (value !== constant.UNDEFINED) {
                 source[key] = rule.type === constant.RAW_FUNCTION
                   ? value
                   : is.func(value)
@@ -666,7 +664,7 @@ export default class Yox implements YoxInterface {
     // 创建完 CustomEvent，如果没有人为操作
     // 它的 ns 为 undefined
     // 这里先解析出命名空间，避免每次 fire 都要解析
-    if (isUndef(event.ns)) {
+    if (event.ns === constant.UNDEFINED) {
       const namespace = $emitter.parse(event.type)
       event.type = namespace.type
       event.ns = namespace.ns
@@ -1200,7 +1198,7 @@ function matchType(value: any, type: string) {
 function checkProp(key: string, value: any, rule: PropRule) {
 
   // 传了数据
-  if (isDef(value)) {
+  if (value !== constant.UNDEFINED) {
 
     const type = rule.type
 
@@ -1378,7 +1376,7 @@ if (process.env.NODE_ENV !== 'pure') {
       // 不鼓励在过滤器使用 this
       // 因此过滤器没有 this 的类型声明
       // 这个内置过滤器是不得不用 this
-      return isDef((this as YoxInterface).get(SLOT_DATA_PREFIX + name))
+      return (this as YoxInterface).get(SLOT_DATA_PREFIX + name) !== constant.UNDEFINED
     }
   })
 }
