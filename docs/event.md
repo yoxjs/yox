@@ -515,6 +515,54 @@ this.on('click', function (event) {
 * 事件转换或调用 `fire(type)` 中的 `type`，使用驼峰格式，更符合 `JavaScript` 习惯
 * 模板 `on-[type]` 中的 `type`，使用连字符格式，更符合 `HTML` 习惯
 
+### 判断事件来源
+
+在一棵组件树中，某个组件接收到的事件可能来自组件树中的任何组件，可能来自自己，也可能是子组件，甚至可能是父组件。
+
+> 注意：千万不要假设某个事件是当前组件发射的。
+
+判断来自当前组件的事件
+
+```js
+{
+  events: {
+    'event.namespace': function (event) {
+      if (event.phase === Yox.Event.PHASE_CURRENT) {
+        // event.target === this 为 true
+      }
+    }
+  }
+}
+```
+
+判断来自子组件的事件
+
+```js
+{
+  events: {
+    'event.namespace': function (event) {
+      if (event.phase === Yox.Event.PHASE_UPWARD) {
+        // event.target === this 为 false
+      }
+    }
+  }
+}
+```
+
+判断来自父组件的事件
+
+```js
+{
+  events: {
+    'event.namespace': function (event) {
+      if (event.phase === Yox.Event.PHASE_DOWNWARD) {
+        // event.target === this 为 false
+      }
+    }
+  }
+}
+```
+
 ### 特殊事件
 
 如果浏览器自带的 `DOM 事件` 不满足需求，Yox 还支持 `特殊事件`。
