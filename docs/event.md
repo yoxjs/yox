@@ -526,7 +526,7 @@ this.on('click', function (event) {
 ```js
 {
   events: {
-    'event.namespace': function (event) {
+    'type.namespace': function (event) {
       if (event.phase === Yox.Event.PHASE_CURRENT) {
         // event.target === this 为 true
       }
@@ -540,7 +540,7 @@ this.on('click', function (event) {
 ```js
 {
   events: {
-    'event.namespace': function (event) {
+    'type.namespace': function (event) {
       if (event.phase === Yox.Event.PHASE_UPWARD) {
         // event.target === this 为 false
       }
@@ -554,7 +554,7 @@ this.on('click', function (event) {
 ```js
 {
   events: {
-    'event.namespace': function (event) {
+    'type.namespace': function (event) {
       if (event.phase === Yox.Event.PHASE_DOWNWARD) {
         // event.target === this 为 false
       }
