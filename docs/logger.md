@@ -14,9 +14,9 @@ Yox 内置了一个简易的 `分级` 日志打印器，支持以下五个日志
 * `Yox.logger.error(msg)`
 * `Yox.logger.fatal(msg)`
 
-默认情况下，`源码版` 是 `DEBUG` 等级，`压缩版` 是 `WARN` 等级。
+默认情况下，`源码版` 是 `INFO` 等级，`压缩版` 是 `WARN` 等级。
 
-也就是说，`源码版` 版本会打印所有等级的日志，`压缩版` 只会打印 `大于或等于` 警告级别的日志（即 `WARN`/`ERROR`/`FATAL` 三种日志）。
+也就是说，`源码版` 版本会打印 `INFO`/`WARN`/`ERROR`/`FATAL` 四种日志，`压缩版` 会打印 `WARN`/`ERROR`/`FATAL` 三种日志。
 
 如果你希望改变这个行为，可以修改全局变量 `YOX_LOG_LEVEL`，如下：
 
