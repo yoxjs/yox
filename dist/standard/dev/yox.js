@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.98
+ * yox.js v1.0.0-alpha.99
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1365,11 +1365,6 @@
       return NextTask;
   }());
 
-  var guid = 0;
-  function guid$1 () {
-      return ++guid;
-  }
-
   // vnode.data 内部使用的几个字段
   var ID = '$id';
   var VNODE = '$vnode';
@@ -1526,9 +1521,10 @@
       update$2(vnode);
       return child;
   }
+  var guid = 0;
   function createData() {
       var data = {};
-      data[ID] = guid$1();
+      data[ID] = ++guid;
       return data;
   }
   function createVnode(api, vnode) {
@@ -3846,37 +3842,58 @@
                   }
                   else {
                       var children = currentBranch.children || (currentBranch.children = []), lastChild = last(children);
+                      // 如果表达式是安全插值的字面量，可以优化成字符串
+                      if (type === EXPRESSION
+                          // 在元素的子节点中，则直接转成字符串
+                          && (!currentElement
+                              // 在元素的属性中，如果同级节点大于 0 个（即已经存在一个），则可以转成字符串
+                              || (currentAttribute && children.length > 0))) {
+                          var textNode = toTextNode(node);
+                          if (textNode) {
+                              node = textNode;
+                              type = textNode.type;
+                          }
+                      }
                       // 连续添加文本节点，则直接合并
                       if (lastChild
-                          && lastChild.type === TEXT
-                          && node.type === TEXT) {
-                          lastChild.text += node.text;
-                          return;
-                      }
-                      else {
-                          {
-                              if (type === EXPRESSION
-                                  && !node.safe) {
-                                  // 前面不能有别的 child，危险插值必须独占父元素
-                                  if (lastChild) {
-                                      fatal$1('The dangerous interpolation must be the only child of a HTML element.');
-                                  }
-                                  // 危险插值的父节点必须是 html element
-                                  else if (currentBranch.type !== ELEMENT
-                                      || currentBranch.isComponent
-                                      || specialTags[currentBranch.tag]) {
-                                      fatal$1('The dangerous interpolation must be the only child of a HTML element.');
-                                  }
+                          && type === TEXT) {
+                          // 合并两个文本节点
+                          if (lastChild.type === TEXT) {
+                              lastChild.text += node.text;
+                              return;
+                          }
+                          // 前一个是字面量的表达式，也可以合并节点
+                          if (lastChild.type === EXPRESSION) {
+                              var textNode = toTextNode(lastChild);
+                              if (textNode) {
+                                  children[children.length - 1] = textNode;
+                                  textNode.text += node.text;
+                                  return;
                               }
-                              // 后面不能有别的 child，危险插值必须独占父元素
-                              else if (lastChild
-                                  && lastChild.type === EXPRESSION
-                                  && !lastChild.safe) {
+                          }
+                      }
+                      {
+                          if (type === EXPRESSION
+                              && !node.safe) {
+                              // 前面不能有别的 child，危险插值必须独占父元素
+                              if (lastChild) {
+                                  fatal$1('The dangerous interpolation must be the only child of a HTML element.');
+                              }
+                              // 危险插值的父节点必须是 html element
+                              else if (currentBranch.type !== ELEMENT
+                                  || currentBranch.isComponent
+                                  || specialTags[currentBranch.tag]) {
                                   fatal$1('The dangerous interpolation must be the only child of a HTML element.');
                               }
                           }
-                          push(children, node);
+                          // 后面不能有别的 child，危险插值必须独占父元素
+                          else if (lastChild
+                              && lastChild.type === EXPRESSION
+                              && !lastChild.safe) {
+                              fatal$1('The dangerous interpolation must be the only child of a HTML element.');
+                          }
                       }
+                      push(children, node);
                   }
               }
               else {
@@ -3927,6 +3944,11 @@
           text = text.replace(breaklinePattern, EMPTY_STRING);
           if (text) {
               addChild(createText(text));
+          }
+      }, toTextNode = function (node) {
+          if (node.safe
+              && node.expr.type === LITERAL) {
+              return createText(toString(node.expr.value));
           }
       }, htmlParsers = [
           function (content) {
@@ -5465,8 +5487,9 @@
       return template(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderCommentVnode, renderElementVnode, renderComponentVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange, toString);
   }
 
+  var guid$1 = 0, 
   // 这里先写 IE9 支持的接口
-  var innerText = 'textContent', innerHTML = 'innerHTML', createEvent = function (event, node) {
+  innerText = 'textContent', innerHTML = 'innerHTML', createEvent = function (event, node) {
       return event;
   }, findElement = function (selector) {
       var node = DOCUMENT.querySelector(selector);
@@ -5518,7 +5541,7 @@
    */
   COMPOSITION_END = 'compositionend', domain = 'http://www.w3.org/', namespaces = {
       svg: domain + '2000/svg'
-  }, specialEvents = {};
+  }, emitterHolders = {}, specialEvents = {};
   specialEvents[EVENT_MODEL] = {
       on: function (node, listener) {
           var locked = FALSE;
@@ -5637,7 +5660,7 @@
   var addClass = addElementClass;
   var removeClass = removeElementClass;
   function on(node, type, listener, context) {
-      var emitter = node[EMITTER] || (node[EMITTER] = new Emitter()), nativeListeners = emitter.nativeListeners || (emitter.nativeListeners = {});
+      var emitterKey = node[EMITTER] || (node[EMITTER] = ++guid$1), emitter = emitterHolders[emitterKey] || (emitterHolders[emitterKey] = new Emitter()), nativeListeners = emitter.nativeListeners || (emitter.nativeListeners = {});
       // 一个元素，相同的事件，只注册一个 native listener
       if (!nativeListeners[type]) {
           // 特殊事件
@@ -5666,7 +5689,7 @@
       });
   }
   function off(node, type, listener) {
-      var emitter = node[EMITTER], listeners = emitter.listeners, nativeListeners = emitter.nativeListeners;
+      var emitterKey = node[EMITTER], emitter = emitterHolders[emitterKey], listeners = emitter.listeners, nativeListeners = emitter.nativeListeners;
       // emitter 会根据 type 和 listener 参数进行适当的删除
       emitter.off(type, listener);
       // 如果注册的 type 事件都解绑了，则去掉原生监听器
@@ -5680,8 +5703,10 @@
           }
           delete nativeListeners[type];
       }
-      if (falsy$2(listeners)) {
+      if (emitterHolders[emitterKey]
+          && falsy$2(listeners)) {
           node[EMITTER] = UNDEFINED;
+          delete emitterHolders[emitterKey];
       }
   }
   function addSpecialEvent(type, hooks) {
@@ -6920,7 +6945,10 @@
        */
       Yox.compile = function (template, stringify) {
           {
-              // 需要编译的都是模板源文件，一旦经过预编译，就成了 render 函数，不会再走进 Yox.compile
+              // 需要编译的都是模板源文件，一旦经过预编译，就成了 render 函数
+              if (func(template)) {
+                  return template;
+              }
               if (!compileCache[template]) {
                   var nodes = compile$1(template);
                   {
@@ -7419,7 +7447,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.98";
+      Yox.version = "1.0.0-alpha.99";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

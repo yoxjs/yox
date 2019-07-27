@@ -1,6 +1,7 @@
 import {
   Data,
   Filter,
+  Partial,
   ThisWatcher,
   ThisListener,
   Component,
@@ -186,25 +187,28 @@ export default class Yox implements YoxInterface {
   /**
    * 编译模板，暴露出来是为了打包阶段的模板预编译
    */
-  public static compile(template: string, stringify?: boolean): Function | string {
+  public static compile(template: string | Function, stringify?: boolean): string | Function {
     if (process.env.NODE_ENV !== 'pure' && process.env.NODE_ENV !== 'runtime') {
-      // 需要编译的都是模板源文件，一旦经过预编译，就成了 render 函数，不会再走进 Yox.compile
-      if (!compileCache[template]) {
-        const nodes = templateCompiler.compile(template)
+      // 需要编译的都是模板源文件，一旦经过预编译，就成了 render 函数
+      if (is.func(template)) {
+        return template as Function
+      }
+      if (!compileCache[template as string]) {
+        const nodes = templateCompiler.compile(template as string)
         if (process.env.NODE_ENV === 'development') {
           if (nodes.length !== 1) {
             logger.fatal(`The "template" option should have just one root element.`)
           }
         }
-        compileCache[template] = templateGenerator.generate(nodes[0])
+        compileCache[template as string] = templateGenerator.generate(nodes[0])
       }
-      template = compileCache[template]
+      template = compileCache[template as string]
       return stringify
         ? template
         : new Function(`return ${template}`)()
     }
     else {
-      return constant.EMPTY_STRING
+      return template
     }
   }
 
@@ -257,8 +261,8 @@ export default class Yox implements YoxInterface {
    * 注册全局子模板
    */
   public static partial(
-    name: string | Record<string, string>,
-    partial?: string
+    name: string | Record<string, Partial>,
+    partial?: Partial
   ): Function | void {
     if (process.env.NODE_ENV !== 'pure') {
       if (is.string(name) && !partial) {
@@ -883,8 +887,8 @@ export default class Yox implements YoxInterface {
    * 注册当前组件级别的子模板
    */
   partial(
-    name: string | Record<string, string>,
-    partial?: string
+    name: string | Record<string, Partial>,
+    partial?: Partial
   ): Function | void {
     if (process.env.NODE_ENV !== 'pure') {
       const instance = this, { $partials } = instance

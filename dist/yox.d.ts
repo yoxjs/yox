@@ -55,7 +55,7 @@ export interface YoxInterface {
 	directive(name: string | Record<string, DirectiveHooks>, directive?: DirectiveHooks): DirectiveHooks | void;
 	transition(name: string | Record<string, TransitionHooks>, transition?: TransitionHooks): TransitionHooks | void;
 	component(name: string | Record<string, Component>, component?: Component): Component | void;
-	partial(name: string | Record<string, string>, partial?: string): Function | void;
+	partial(name: string | Record<string, Partial>, partial?: Partial): Function | void;
 	filter(name: string | Record<string, Filter>, filter?: Filter): Filter | void;
 	checkProp(key: string, value: any): void;
 	forceUpdate(data?: Data): void;
@@ -197,6 +197,7 @@ export declare type ComponentLoader = (callback: ComponentCallback) => Promise<C
 export declare type Component = ComponentOptions | ComponentLoader;
 export declare type FilterFunction = (this: any, ...args: any) => string | number | boolean;
 export declare type Filter = FilterFunction | Record<string, FilterFunction>;
+export declare type Partial = string | Function;
 export declare type ThisWatcher<This> = (this: This, newValue: any, oldValue: any, keypath: string) => void;
 export declare type Watcher = (newValue: any, oldValue: any, keypath: string) => void;
 export declare type ThisListener<This> = (this: This, event: CustomEventInterface, data?: Data) => false | void;
@@ -655,7 +656,7 @@ export default class Yox implements YoxInterface {
 	/**
 	 * 编译模板，暴露出来是为了打包阶段的模板预编译
 	 */
-	static compile(template: string, stringify?: boolean): Function | string;
+	static compile(template: string | Function, stringify?: boolean): string | Function;
 	/**
 	 * 注册全局指令
 	 */
@@ -671,7 +672,7 @@ export default class Yox implements YoxInterface {
 	/**
 	 * 注册全局子模板
 	 */
-	static partial(name: string | Record<string, string>, partial?: string): Function | void;
+	static partial(name: string | Record<string, Partial>, partial?: Partial): Function | void;
 	/**
 	 * 注册全局过滤器
 	 */
@@ -738,7 +739,7 @@ export default class Yox implements YoxInterface {
 	/**
 	 * 注册当前组件级别的子模板
 	 */
-	partial(name: string | Record<string, string>, partial?: string): Function | void;
+	partial(name: string | Record<string, Partial>, partial?: Partial): Function | void;
 	/**
 	 * 注册当前组件级别的过滤器
 	 */

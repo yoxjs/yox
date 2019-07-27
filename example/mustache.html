@@ -205,6 +205,9 @@
         <p>
             1{{> bye}}
         </p>
+        <p>
+            2{{> greet}}
+        </p>
 
         <h1>
             过滤器
@@ -292,7 +295,8 @@
                 }
             },
             partials: {
-                bye: '<div>bye, {{user.name}}</div>'
+                bye: '<div>bye, {{user.name}}</div>',
+                greet: Yox.compile('<div>hi, {{user.name}}</div>')
             },
             filters: {
                 formatDate: function (value) {

@@ -1,6 +1,6 @@
 {
   "name": "yox",
-  "version": "1.0.0-alpha.98",
+  "version": "1.0.0-alpha.99",
   "description": "A lightweight mvvm framework",
   "main": "dist/standard/dev/yox.js",
   "module": "dist/standard/dev/yox.esm.js",
@@ -47,7 +47,6 @@
     "lightweight",
     "mvvm",
     "ts",
-    "vue",
     "ie"
   ],
   "author": "musicode",
