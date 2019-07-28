@@ -3,93 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <title>各种 bugfix 的本地调试环境</title>
-    <style>
-        button {
-            background-color: #fff;
-            border: 1px solid #ddd;
-            cursor: pointer;
-            padding: 5px 10px;
-            outline: none;
-            transition: 0.2s background-color;
-        }
-        button:disabled {
-            background-color: #ddd;
-            cursor: not-allowed;
-        }
-    </style>
 </head>
 <body>
     <div id="app"></div>
 
-    <script src="../dist/yox.js"></script>
+    <script src="../dist/standard/dev/yox.js"></script>
     <script>
-        Yox.component({
-              Button1: {
-                  propTypes: {
-                    value: {
-                      type: 'string',
-                      value: 'xx'
-                    }
-                  },
-                  template: `
-                    <div>
-                      <Button2 {{...this}} />
-                      <span>
-                        {{value}}
-                      </span>
-                    </div>
-                  `
-                },
-                Button2: {
-                     template: `
-                      <Button3 {{...this}} />
-                      `
-                },
-                Button3: {
-                    template: `
-                      <button disabled="{{disabled}}" on-click="click">
-                          <slot name="children" />
-                      </button>
-                    `
-                }
-          })
         var instance = new Yox({
-            el: '#app',
-              data: {
-                  disabled: false,
-                  submiting: false,
-                  a: {
-                    b: [
-                      { name: '12312' }
-                    ]
-                  },
-                  title: '123123'
-              },
-              template: `
-                  <div>
-                    <Button1 disabled="{{disabled}}" on-click="clickButton()" model="title">
-                        123{{submiting ? 'Submiting' : 'Submit'}}
-                    </Button1>
-                  </div>
-              `,
-              methods: {
-                clickButton: function () {
-                    instance.set({
-                        disabled: true,
-                          submiting: true
-                      });
-                      setTimeout(
-                        function () {
-                            instance.set({
-                                  disabled: false,
-                                  submiting: false
-                              });
-                          },
-                          1000
-                      );
-                  }
-              }
-          });
+          el: '#app',
+          data: {
+            readOnly: true,
+            editable: false,
+          },
+          template: `
+            <input
+              type="text"
+              data-xx="{{true}}"
+            />
+          `
+        });
 
     </script>
 </body>

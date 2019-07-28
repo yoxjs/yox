@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.99
+ * yox.js v1.0.0-alpha.100
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -4356,13 +4356,16 @@
                   no = EMPTY;
               }
           }
+          // 避免出现 a||b&&c 的情况
+          // 应该输出 (a||b)&&c
           if (isUndef(no)) {
-              result = test + AND + yes;
+              result = stringifyGroup(test) + AND + yes;
           }
           else if (isUndef(yes)) {
-              result = NOT + test + AND + no;
+              result = stringifyGroup(NOT + test) + AND + no;
           }
           else {
+              // 三元表达式优先级最低，不用再调 stringifyGroup
               result = test + QUESTION + yes + COLON + no;
           }
           // 如果是连接操作，因为 ?: 优先级最低，因此要加 ()
@@ -7020,7 +7023,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.99";
+      Yox.version = "1.0.0-alpha.100";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
