@@ -12,14 +12,15 @@
         var instance = new Yox({
           el: '#app',
           data: {
-            readOnly: true,
-            editable: false,
+            width: 100,
+            options: {
+              radius: 20
+            },
           },
           template: `
-            <input
-              type="text"
-              data-xx="{{true}}"
-            />
+            <div>
+    ({{width}} - {{options.radius}}) / 2 = {{(width - options.radius) / 2}} <br>
+  </div>
           `
         });
 

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.100
+ * yox.js v1.0.0-alpha.101
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -4085,6 +4085,14 @@ function trimArgs(list) {
     return args;
 }
 /**
+ * 确保表达式的优先级是正确的
+ */
+function toGroup(code) {
+    return /[-+*\/%<>=!&^|]/.test(code)
+        ? `(${code})`
+        : code;
+}
+/**
  * 把 [ 'key1:value1', 'key2:value2' ] 格式转成 `{key1:value1,key2:value2}`
  */
 function toObject$1(fields) {
@@ -4138,11 +4146,12 @@ function generate(node, renderIdentifier, renderMemberKeypath, renderMemberLiter
             value = node.operator + generateChildNode(node.node);
             break;
         case BINARY:
-            value = generateChildNode(node.left)
+            value = toGroup(generateChildNode(node.left))
                 + node.operator
-                + generateChildNode(node.right);
+                + toGroup(generateChildNode(node.right));
             break;
         case TERNARY:
+            // 三元表达式优先级最低，不用调 generator.toGroup
             value = generateChildNode(node.test)
                 + QUESTION
                 + generateChildNode(node.yes)
@@ -4275,9 +4284,6 @@ function stringifyObject(obj) {
 function stringifyFunction(result, arg) {
     return `${RAW_FUNCTION}(${arg || EMPTY_STRING}){${result || EMPTY_STRING}}`;
 }
-function stringifyGroup(code) {
-    return `(${code})`;
-}
 function stringifyExpression(expr, toString) {
     const value = renderExpression(expr);
     return toString
@@ -4324,7 +4330,7 @@ function stringifyConditionChildren(children, isComplex) {
     if (children) {
         const result = stringifyChildren(children, isComplex);
         return children.length > 1 && isComplex
-            ? stringifyGroup(result)
+            ? toGroup(result)
             : result;
     }
 }
@@ -4352,18 +4358,18 @@ function stringifyIf(node, stub) {
         // 避免出现 a||b&&c 的情况
         // 应该输出 (a||b)&&c
         if (isUndef(no)) {
-            result = stringifyGroup(test) + AND + yes;
+            result = toGroup(test) + AND + yes;
         }
         else if (isUndef(yes)) {
-            result = stringifyGroup(NOT + test) + AND + no;
+            result = toGroup(NOT + test) + AND + no;
         }
         else {
-            // 三元表达式优先级最低，不用再调 stringifyGroup
+            // 三元表达式优先级最低，不用再调 generator.toGroup
             result = test + QUESTION + yes + COLON + no;
         }
         // 如果是连接操作，因为 ?: 优先级最低，因此要加 ()
         return isJoin
-            ? stringifyGroup(result)
+            ? toGroup(result)
             : result;
     }
     return EMPTY;
@@ -7018,7 +7024,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.100";
+Yox.version = "1.0.0-alpha.101";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
