@@ -346,7 +346,7 @@ function oneOf(values) {
 
 ```js
 {
-  propType: {
+  propTypes: {
     gender: {
       type: oneOf(['male', 'female'])
     }
