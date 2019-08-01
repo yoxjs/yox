@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.101
+ * yox.js v1.0.0-alpha.102
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -34,6 +34,7 @@ const HOOK_BEFORE_UPDATE = 'beforeUpdate';
 const HOOK_AFTER_UPDATE = 'afterUpdate';
 const HOOK_BEFORE_DESTROY = 'beforeDestroy';
 const HOOK_AFTER_DESTROY = 'afterDestroy';
+const HOOK_BEFORE_PROPS_UPDATE = 'beforePropsUpdate';
 
 /**
  * 为了压缩，定义的常量
@@ -7346,18 +7347,19 @@ class Yox {
      * 对于某些特殊场景，修改了数据，但是模板的依赖中并没有这一项
      * 而你非常确定需要更新模板，强制刷新正是你需要的
      */
-    forceUpdate(data) {
+    forceUpdate(props) {
         {
-            const instance = this, { $vnode, $observer } = instance, { computed } = $observer;
+            const instance = this, { $options, $vnode, $observer } = instance, { computed } = $observer;
             if ($vnode && computed) {
                 const template = computed[TEMPLATE_COMPUTED], oldValue = template.get();
-                if (data) {
-                    instance.set(data);
+                if (props) {
+                    execute($options[HOOK_BEFORE_PROPS_UPDATE], instance, props);
+                    instance.set(props);
                 }
                 // 当前可能正在进行下一轮更新
                 $observer.nextTask.run();
                 // 没有更新模板，强制刷新
-                if (!data && oldValue === template.get()) {
+                if (!props && oldValue === template.get()) {
                     instance.update(template.get(TRUE), $vnode);
                 }
             }
@@ -7549,7 +7551,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.101";
+Yox.version = "1.0.0-alpha.102";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.101
+ * yox.js v1.0.0-alpha.102
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -2204,7 +2204,7 @@ class Yox {
      * 对于某些特殊场景，修改了数据，但是模板的依赖中并没有这一项
      * 而你非常确定需要更新模板，强制刷新正是你需要的
      */
-    forceUpdate(data) {
+    forceUpdate(props) {
     }
     /**
      * 把模板抽象语法树渲染成 virtual dom
@@ -2333,7 +2333,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.101";
+Yox.version = "1.0.0-alpha.102";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
