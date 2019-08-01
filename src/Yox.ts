@@ -49,6 +49,7 @@ import {
   HOOK_AFTER_UPDATE,
   HOOK_BEFORE_DESTROY,
   HOOK_AFTER_DESTROY,
+  HOOK_BEFORE_PROPS_UPDATE,
   NAMESPACE_HOOK,
   DIRECTIVE_MODEL,
   MODEL_PROP_DEFAULT,
@@ -928,12 +929,12 @@ export default class Yox implements YoxInterface {
    * 对于某些特殊场景，修改了数据，但是模板的依赖中并没有这一项
    * 而你非常确定需要更新模板，强制刷新正是你需要的
    */
-  forceUpdate(data?: Data): void {
+  forceUpdate(props?: Data): void {
     if (process.env.NODE_ENV !== 'pure') {
 
       const instance = this,
 
-      { $vnode, $observer } = instance,
+      { $options, $vnode, $observer } = instance,
 
       { computed } = $observer
 
@@ -943,15 +944,16 @@ export default class Yox implements YoxInterface {
 
         oldValue = template.get()
 
-        if (data) {
-          instance.set(data)
+        if (props) {
+          execute($options[HOOK_BEFORE_PROPS_UPDATE], instance, props)
+          instance.set(props)
         }
 
         // 当前可能正在进行下一轮更新
         $observer.nextTask.run()
 
         // 没有更新模板，强制刷新
-        if (!data && oldValue === template.get()) {
+        if (!props && oldValue === template.get()) {
           instance.update(
             template.get(constant.TRUE),
             $vnode
