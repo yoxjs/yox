@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.104
+ * yox.js v1.0.0-alpha.105
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -4512,7 +4512,7 @@ function toGroup(code) {
         // 一元表达式不用加括号
         || /^(?:[-+~!]|!!)(?:[\$\w]+|\([\$\w]+\))$/.test(code)
         // 函数调用不用加括号
-        || /^\w+\(.*\)$/.test(code)) {
+        || /^\w+\([^\)\{\}]*\)$/.test(code)) {
         return code;
     }
     return /[-+*\/%<>=!&^|,?:]/.test(code)
@@ -7577,7 +7577,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.104";
+Yox.version = "1.0.0-alpha.105";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
