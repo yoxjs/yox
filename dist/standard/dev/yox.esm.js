@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.103
+ * yox.js v1.0.0-alpha.104
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -4501,7 +4501,21 @@ function trimArgs(list) {
  * 确保表达式的优先级是正确的
  */
 function toGroup(code) {
-    return /[-+*\/%<>=!&^|]/.test(code)
+    // 避免重复加括号
+    if (startsWith(code, '(') && endsWith(code, ')')
+        // 数组不用加括号
+        || startsWith(code, '[') && endsWith(code, ']')
+        // 对象不用加括号
+        || startsWith(code, '{') && endsWith(code, '}')
+        // 字符串不用加括号
+        || startsWith(code, '"') && endsWith(code, '"')
+        // 一元表达式不用加括号
+        || /^(?:[-+~!]|!!)(?:[\$\w]+|\([\$\w]+\))$/.test(code)
+        // 函数调用不用加括号
+        || /^\w+\(.*\)$/.test(code)) {
+        return code;
+    }
+    return /[-+*\/%<>=!&^|,?:]/.test(code)
         ? `(${code})`
         : code;
 }
@@ -4564,12 +4578,12 @@ function generate(node, renderIdentifier, renderMemberKeypath, renderMemberLiter
                 + toGroup(generateChildNode(node.right));
             break;
         case TERNARY:
-            // 三元表达式优先级最低，不用调 generator.toGroup
-            value = generateChildNode(node.test)
+            // 虽然三元表达式优先级最低，但无法保证表达式内部没有 ,
+            value = toGroup(generateChildNode(node.test))
                 + QUESTION
-                + generateChildNode(node.yes)
+                + toGroup(generateChildNode(node.yes))
                 + COLON
-                + generateChildNode(node.no);
+                + toGroup(generateChildNode(node.no));
             break;
         case ARRAY:
             const items = node.nodes.map(generateChildNode);
@@ -4783,8 +4797,12 @@ function stringifyIf(node, stub) {
             result = toGroup(NOT + test) + AND + no;
         }
         else {
-            // 三元表达式优先级最低，不用再调 generator.toGroup
-            result = test + QUESTION + yes + COLON + no;
+            // 虽然三元表达式优先级最低，但无法保证表达式内部没有 ,
+            result = toGroup(test)
+                + QUESTION
+                + toGroup(yes)
+                + COLON
+                + toGroup(no);
         }
         // 如果是连接操作，因为 ?: 优先级最低，因此要加 ()
         return last(joinStack)
@@ -7462,7 +7480,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.103";
+Yox.version = "1.0.0-alpha.104";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
