@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.102
+ * yox.js v1.0.0-alpha.103
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -4723,13 +4723,20 @@ function stringifyValue(value, expr, children) {
     }
     // 多个值拼接时，要求是字符串
     if (children) {
+        // 求值时要标识 isStringRequired
+        // 求完后复原
+        // 常见的应用场景是序列化 HTML 元素属性值，处理值时要求字符串，在处理属性名这个级别，不要求字符串
+        const oldValue = isStringRequired;
         isStringRequired = children.length > 1;
-        return stringifyChildren(children);
+        const result = stringifyChildren(children);
+        isStringRequired = oldValue;
+        return result;
     }
 }
 function stringifyChildren(children, isComplex) {
     // 如果是复杂节点的 children，则每个 child 的序列化都是函数调用的形式
-    // 因此最后可以拼接为 fn1(), fn2(), fn3() 这样依次调用，而不用再多此一举的使用数组，因为在 renderer 里也用不上这个数组
+    // 因此最后可以拼接为 fn1(), fn2(), fn3() 这样依次调用，而不用再多此一举的使用数组，
+    // 因为在 renderer 里也用不上这个数组
     // children 大于一个时，才有 join 的可能，单个值 join 啥啊...
     const isJoin = children.length > 1 && !isComplex;
     push(joinStack, isJoin);
@@ -4759,8 +4766,7 @@ function stringifyIf(node, stub) {
         no = toCall(RENDER_COMMENT_VNODE);
     }
     if (isDef(yes) || isDef(no)) {
-        const isJoin = last(joinStack);
-        if (isJoin) {
+        if (isStringRequired) {
             if (isUndef(yes)) {
                 yes = EMPTY;
             }
@@ -4781,7 +4787,7 @@ function stringifyIf(node, stub) {
             result = test + QUESTION + yes + COLON + no;
         }
         // 如果是连接操作，因为 ?: 优先级最低，因此要加 ()
-        return isJoin
+        return last(joinStack)
             ? toGroup(result)
             : result;
     }
@@ -4848,6 +4854,7 @@ nodeGenerator[ELEMENT] = function (node) {
             outputSlots = getComponentSlots(children);
         }
         else {
+            const oldValue = isStringRequired;
             isStringRequired = TRUE;
             collectStack[collectStack.length - 1] = isComplex;
             outputChilds = stringifyChildren(children, isComplex);
@@ -4858,6 +4865,7 @@ nodeGenerator[ELEMENT] = function (node) {
                 outputText = outputChilds;
                 outputChilds = UNDEFINED;
             }
+            isStringRequired = oldValue;
         }
     }
     pop(collectStack);
@@ -7454,7 +7462,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.102";
+Yox.version = "1.0.0-alpha.103";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

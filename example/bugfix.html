@@ -18,8 +18,13 @@
             },
           },
           template: `
-            <div>
-    ({{width}} - {{options.radius}}) / 2 = {{(width - options.radius) / 2}} <br>
+            <div class="tag
+{{#if type}} tag-{{type}}
+
+{{else}}
+  {{#if border}} tag-border{{/if}}
+{{/if}}
+            ">
   </div>
           `
         });
