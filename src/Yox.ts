@@ -2,6 +2,7 @@ import {
   Data,
   Filter,
   Partial,
+  ThisTask,
   ThisWatcher,
   ThisListener,
   Component,
@@ -1091,7 +1092,7 @@ export default class Yox implements YoxInterface {
   /**
    * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
    */
-  nextTick(task: Function): void {
+  nextTick(task: ThisTask<this>): void {
     this.$observer.nextTask.append(task, this)
   }
 

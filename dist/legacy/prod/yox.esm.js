@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.105
+ * yox.js v1.0.0-alpha.106
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -4089,10 +4089,8 @@ function trimArgs(list) {
  * 确保表达式的优先级是正确的
  */
 function toGroup(code) {
-    // 避免重复加括号
-    if (startsWith(code, '(') && endsWith(code, ')')
-        // 数组不用加括号
-        || startsWith(code, '[') && endsWith(code, ']')
+    // 数组不用加括号
+    if (startsWith(code, '[') && endsWith(code, ']')
         // 对象不用加括号
         || startsWith(code, '{') && endsWith(code, '}')
         // 字符串不用加括号
@@ -4100,7 +4098,9 @@ function toGroup(code) {
         // 一元表达式不用加括号
         || /^(?:[-+~!]|!!)(?:[\$\w]+|\([\$\w]+\))$/.test(code)
         // 函数调用不用加括号
-        || /^\w+\([^\)\{\}]*\)$/.test(code)) {
+        || /^\w+\([^\)\{\}]*\)$/.test(code)
+        // 避免重复加括号
+        || /^\([^\)]+\)$/.test(code)) {
         return code;
     }
     return /[-+*\/%<>=!&^|,?:]/.test(code)
@@ -7052,7 +7052,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.105";
+Yox.version = "1.0.0-alpha.106";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

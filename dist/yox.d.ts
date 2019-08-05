@@ -60,7 +60,7 @@ export interface YoxInterface {
 	checkProp(key: string, value: any): void;
 	forceUpdate(props?: Data): void;
 	destroy(): void;
-	nextTick(task: Function): void;
+	nextTick(task: ThisTask<this>): void;
 	toggle(keypath: string): boolean;
 	increase(keypath: string, step?: number, max?: number): number | void;
 	decrease(keypath: string, step?: number, min?: number): number | void;
@@ -198,6 +198,7 @@ export declare type Component = ComponentOptions | ComponentLoader;
 export declare type FilterFunction = (this: any, ...args: any) => string | number | boolean;
 export declare type Filter = FilterFunction | Record<string, FilterFunction>;
 export declare type Partial = string | Function;
+export declare type ThisTask<This> = (this: This) => void;
 export declare type ThisWatcher<This> = (this: This, newValue: any, oldValue: any, keypath: string) => void;
 export declare type Watcher = (newValue: any, oldValue: any, keypath: string) => void;
 export declare type ThisListener<This> = (this: This, event: CustomEventInterface, data?: Data) => false | void;
@@ -773,7 +774,7 @@ export default class Yox implements YoxInterface {
 	/**
 	 * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
 	 */
-	nextTick(task: Function): void;
+	nextTick(task: ThisTask<this>): void;
 	/**
 	 * 取反 keypath 对应的数据
 	 *
