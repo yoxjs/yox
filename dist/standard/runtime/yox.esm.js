@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.106
+ * yox.js v1.0.0-alpha.107
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -143,7 +143,7 @@ function string(value) {
  * @return
  */
 function number(value) {
-    return typeof value === 'number';
+    return typeof value === 'number' && !isNaN(value);
 }
 /**
  * Check if value is boolean.
@@ -4120,7 +4120,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.106";
+Yox.version = "1.0.0-alpha.107";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

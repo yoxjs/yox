@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.106
+ * yox.js v1.0.0-alpha.107
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -169,7 +169,7 @@ function string(value) {
  * @return
  */
 function number(value) {
-    return typeof value === 'number';
+    return typeof value === 'number' && !isNaN(value);
 }
 /**
  * Check if value is boolean.
@@ -4502,11 +4502,11 @@ function trimArgs(list) {
  */
 function toGroup(code) {
     // 数组不用加括号
-    if (startsWith(code, '[') && endsWith(code, ']')
+    if (/^\[[^\]]+\]$/.test(code)
         // 对象不用加括号
-        || startsWith(code, '{') && endsWith(code, '}')
+        || /^{[^\}]+}$/.test(code)
         // 字符串不用加括号
-        || startsWith(code, '"') && endsWith(code, '"')
+        || /^"[^"]+\"$/.test(code)
         // 一元表达式不用加括号
         || /^(?:[-+~!]|!!)(?:[\$\w]+|\([\$\w]+\))$/.test(code)
         // 函数调用不用加括号
@@ -7480,7 +7480,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.106";
+Yox.version = "1.0.0-alpha.107";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
