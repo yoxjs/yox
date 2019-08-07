@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.107
+ * yox.js v1.0.0-alpha.108
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -3115,11 +3115,11 @@ class Parser {
         if (instance.is(CODE_QUESTION)) {
             // 跳过 ?
             instance.go();
-            yes = instance.scanBinary(index);
+            yes = instance.scanTernary();
             if (instance.is(CODE_COLON)) {
                 // 跳过 :
                 instance.go();
-                no = instance.scanBinary(index);
+                no = instance.scanTernary();
             }
             if (test && yes && no) {
                 // 类似 ' a ? 1 : 0 ' 这样的右侧有空格，需要撤回来
@@ -7577,7 +7577,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.107";
+Yox.version = "1.0.0-alpha.108";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
