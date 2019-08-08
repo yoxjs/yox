@@ -148,10 +148,49 @@ Yox 实例的直接子组件。
 
 ### toggle
 
-取反 `keypath` 的值，如下：
+* **参数**: `(keypath: string)`
+* **返回值**: 取反后的值
+
+取反 `keypath` 的值。
 
 ```js
 this.toggle('visible')
+```
+
+### increase
+
+* **参数**: `(keypath: string, step?: number, max?: number)`
+* **返回值**: 递增后的值
+
+递增 `keypath` 对应的数据。
+
+注意，最好是整型的加法，如果涉及浮点型，不保证计算正确。
+
+```js
+// 默认递增 1，不限制最大值
+this.increase('count')
+// 递增 2，不限制最大值
+this.increase('count', 2)
+// 递增 2，限制最大值为 100
+this.increase('count', 2, 100)
+```
+
+### decrease
+
+* **参数**: `(keypath: string, step?: number, min?: number)`
+* **返回值**: 递减后的值
+
+递减 `keypath` 对应的数据。
+
+注意，最好是整型的减法，如果涉及浮点型，不保证计算正确。
+
+```js
+// 默认递减 1，不限制最小值
+this.decrease('count')
+// 递减 2，不限制最小值
+this.decrease('count', 2)
+// 递减 2，限制最小值为 0
+this.decrease('count', 2, 0)
 ```
 
 ## 实例方法 / 事件
@@ -179,6 +218,15 @@ this.toggle('visible')
 发射事件。
 
 > 更多内容，参考 **事件处理** - **发射事件**
+
+## 实例方法 / 工具
+
+### copy
+
+* **参数**: `(value: any, deep?: boolean)`
+* **返回值**: 拷贝的新数据
+
+拷贝数据。
 
 ## 实例方法 / 生命周期
 
