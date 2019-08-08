@@ -1,6 +1,6 @@
 Yox 采用 `TypeScript` 开发，代码质量相比旧版（`JavaScript` 版本）有了质的提升。
 
-> 强烈建议使用 `TypeScript` 开发项目，无论是什么类型、什么规模的项目。
+> 强烈建议使用 `TypeScript` 开发框架或库（共用代码），普通业务项目则看个人爱好。
 
 ### 定义组件
 
@@ -18,10 +18,10 @@ import Yox from 'yox'
 import template from './Button.hbs'
 
 export default Yox.define({
+  template,
   propTypes: {
 
   },
-  template,
   data() {
     // this 指向 Yox 实例
     return {
