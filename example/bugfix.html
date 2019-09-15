@@ -11,21 +11,12 @@
     <script>
         var instance = new Yox({
           el: '#app',
-          data: {
-            width: 100,
-            options: {
-              radius: 20
-            },
-          },
           template: `
-            <div class="tag
-{{#if type}} tag-{{type}}
-
-{{else}}
-  {{#if border}} tag-border{{/if}}
-{{/if}}
-            ">
-  </div>
+            <div>
+{{!-- <Menu ref="menu" mode="{{mode}}" theme="">
+      <slot name="children" />
+    </Menu> --}}
+            </div>
           `
         });
 

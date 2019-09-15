@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.108
+ * yox.js v1.0.0-alpha.109
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -11,7 +11,7 @@ const SYNTAX_EACH = '#each';
 const SYNTAX_PARTIAL = '#partial';
 const SYNTAX_IMPORT = '>';
 const SYNTAX_SPREAD = '...';
-const SYNTAX_COMMENT = /^!\s/;
+const SYNTAX_COMMENT = /^!(?:\s|--)/;
 const SLOT_DATA_PREFIX = '$slot_';
 const SLOT_NAME_DEFAULT = 'children';
 const HINT_STRING = 1;
@@ -7480,7 +7480,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.108";
+Yox.version = "1.0.0-alpha.109";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
