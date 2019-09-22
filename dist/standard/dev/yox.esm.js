@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.109
+ * yox.js v1.0.0-alpha.110
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -7122,17 +7122,21 @@ class Yox {
                 error(`The namespace "${MODIFER_NATIVE}" is not permitted.`);
             }
         }
-        isComplete = $emitter.fire(event, args);
-        if (isComplete) {
-            if (downward) {
-                if ($children) {
-                    event.phase = CustomEvent.PHASE_DOWNWARD;
-                    each($children, function (child) {
-                        return isComplete = child.fire(event, data, TRUE);
-                    });
-                }
+        // 向上发事件会经过自己
+        // 如果向下发事件再经过自己，就产生了一次重叠
+        // 这是没有必要的，而且会导致向下发事件时，外部能接收到该事件，但我们的本意只是想让子组件接收到事件
+        if (downward) {
+            isComplete = TRUE;
+            if ($children) {
+                event.phase = CustomEvent.PHASE_DOWNWARD;
+                each($children, function (child) {
+                    return isComplete = child.fire(event, data, TRUE);
+                });
             }
-            else if ($parent) {
+        }
+        else {
+            isComplete = $emitter.fire(event, args);
+            if (isComplete && $parent) {
                 event.phase = CustomEvent.PHASE_UPWARD;
                 isComplete = $parent.fire(event, data);
             }
@@ -7480,7 +7484,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.109";
+Yox.version = "1.0.0-alpha.110";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
