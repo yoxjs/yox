@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.114
+ * yox.js v1.0.0-alpha.115
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -4802,7 +4802,9 @@ function render(context, observer, template, filters, partials, directives, tran
                 lastVnode.text += text;
             }
             else {
+                // 注释节点标签名是 '!'，这里区分一下
                 const textVnode = {
+                    tag: '#',
                     isText: TRUE,
                     text,
                     context,
@@ -4895,7 +4897,10 @@ function render(context, observer, template, filters, partials, directives, tran
         }
         return vnode;
     }, renderCommentVnode = function () {
+        // 注释节点和文本节点需要有个区分
+        // 如果两者都没有 tag，则 patchVnode 时，会认为两者是 patchable 的
         return appendVnode({
+            tag: '!',
             isComment: TRUE,
             text: EMPTY_STRING,
             keypath: $scope.$keypath,
@@ -6968,7 +6973,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.114";
+Yox.version = "1.0.0-alpha.115";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

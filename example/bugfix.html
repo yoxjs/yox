@@ -9,14 +9,118 @@
 
     <script src="../dist/standard/dev/yox.js"></script>
     <script>
-        var instance = new Yox({
-          el: '#app',
-          template: `
-            <div>
-              <textarea />
-            </div>
-          `
-        });
+        Yox.component("Card", {
+
+            model: "options",
+            template: `
+
+        <div>
+
+        {{#if options.C}}
+						{{options.C.code}}a
+            <span>{{options.C.code}}</span>
+        {{/if}}
+
+        </div>
+
+
+`,
+            watchers: {
+              options: function (val, old, keypath) {
+                console.log("watchers->", keypath, val, old)
+              }
+            }
+          });
+
+
+
+          var app = new Yox({
+            el: '#app',
+            template: `
+
+    <div>
+
+        <h3>card2</h3>
+        <Card model="card2.options" />
+
+    </div>
+  `,
+            data: {
+              version: Yox.version,
+              card1: {
+                options: {
+                  A: { code: "111" },
+                  B: { code: "222" },
+                  C: { code: "333" },
+                  D: { code: "444" }
+                }
+              },
+              card2: {
+              }
+            },
+            methods: {
+              setCardCode: function (options) {
+
+                var me = this;
+                var card2 = me.copy(me.get("card2", {}), true);
+                console.log("            ", JSON.stringify(card2))
+                card2 = Yox.object.extend({},card2)
+                card2 = Yox.object.extend(card2, {
+                  options: options
+                })
+
+                console.log("        ", JSON.stringify(options))
+
+                this.nextTick(function () {
+
+                  this.set("card2", card2);
+                  console.log("card2> ", JSON.stringify(card2))
+                });
+
+              }
+            },
+            afterMount: function () {
+              console.log(JSON.stringify(app.get("card1")))
+
+
+              setTimeout(function () {
+                app.setCardCode({
+                  A: {
+                    code: "aaaa"
+                  }
+                });
+              }, 0);
+
+              setTimeout(function () {
+
+                app.setCardCode({
+                  B: {
+                    code: "bbbb"
+                  }
+                });
+              }, 10);
+
+              setTimeout(function () {
+
+                app.setCardCode({
+                  C: {
+                    code: "cccc"
+                  }
+                });
+              }, 20);
+
+              setTimeout(function () {
+
+                app.setCardCode({
+                  D: {
+                    code: "dddd"
+                  }
+                });
+              }, 30);
+
+            }
+
+          })
 
     </script>
 </body>
