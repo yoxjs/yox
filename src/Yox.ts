@@ -701,7 +701,7 @@ export default class Yox implements YoxInterface {
     // 如果向下发事件再经过自己，就产生了一次重叠
     // 这是没有必要的，而且会导致向下发事件时，外部能接收到该事件，但我们的本意只是想让子组件接收到事件
 
-    isComplete = event.target === instance
+    isComplete = downward && event.target === instance
       ? constant.TRUE
       : $emitter.fire(event, args)
 

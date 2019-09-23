@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.111
+ * yox.js v1.0.0-alpha.112
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -6711,7 +6711,7 @@ class Yox {
         // 向上发事件会经过自己
         // 如果向下发事件再经过自己，就产生了一次重叠
         // 这是没有必要的，而且会导致向下发事件时，外部能接收到该事件，但我们的本意只是想让子组件接收到事件
-        isComplete = event.target === instance
+        isComplete = downward && event.target === instance
             ? TRUE
             : $emitter.fire(event, args);
         if (isComplete) {
@@ -7060,7 +7060,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.111";
+Yox.version = "1.0.0-alpha.112";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
