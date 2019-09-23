@@ -717,12 +717,9 @@ export default class Yox implements YoxInterface {
           )
         }
       }
-      else {
-        isComplete = $emitter.fire(event, args)
-        if (isComplete && $parent) {
-          event.phase = CustomEvent.PHASE_UPWARD
-          isComplete = $parent.fire(event, data)
-        }
+      else if ($parent) {
+        event.phase = CustomEvent.PHASE_UPWARD
+        isComplete = $parent.fire(event, data)
       }
     }
 
