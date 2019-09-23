@@ -700,23 +700,29 @@ export default class Yox implements YoxInterface {
     // 向上发事件会经过自己
     // 如果向下发事件再经过自己，就产生了一次重叠
     // 这是没有必要的，而且会导致向下发事件时，外部能接收到该事件，但我们的本意只是想让子组件接收到事件
-    if (downward) {
-      isComplete = constant.TRUE
-      if ($children) {
-        event.phase = CustomEvent.PHASE_DOWNWARD
-        array.each(
-          $children,
-          function (child) {
-            return isComplete = child.fire(event, data, constant.TRUE)
-          }
-        )
+
+    isComplete = event.target === instance
+      ? constant.TRUE
+      : $emitter.fire(event, args)
+
+    if (isComplete) {
+      if (downward) {
+        if ($children) {
+          event.phase = CustomEvent.PHASE_DOWNWARD
+          array.each(
+            $children,
+            function (child) {
+              return isComplete = child.fire(event, data, constant.TRUE)
+            }
+          )
+        }
       }
-    }
-    else {
-      isComplete = $emitter.fire(event, args)
-      if (isComplete && $parent) {
-        event.phase = CustomEvent.PHASE_UPWARD
-        isComplete = $parent.fire(event, data)
+      else {
+        isComplete = $emitter.fire(event, args)
+        if (isComplete && $parent) {
+          event.phase = CustomEvent.PHASE_UPWARD
+          isComplete = $parent.fire(event, data)
+        }
       }
     }
 
