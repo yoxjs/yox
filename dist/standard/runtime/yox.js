@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.113
+ * yox.js v1.0.0-alpha.114
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1051,17 +1051,19 @@
               // 判断是否是发射事件
               // 如果 args 的第一个参数是 CustomEvent 类型，表示发射事件
               // 因为事件处理函数的参数列表是 (event, data)
-              var event_1 = args && args[0] instanceof CustomEvent
+              var event = args && args[0] instanceof CustomEvent
                   ? args[0]
                   : UNDEFINED;
-              each(list, function (options) {
+              // 这里不用 array.each，减少函数调用
+              for (var i = 0, length = list.length; i < length; i++) {
+                  var options = list[i];
                   // 命名空间不匹配
                   if (!matchNamespace(namespace.ns, options)
                       // 在 fire 过程中被移除了
                       || !has(list, options)
                       // 传了 filter，则用 filter 判断是否过滤此 options
                       || (filter && !filter(namespace, args, options))) {
-                      return;
+                      continue;
                   }
                   // 为 event 对象加上当前正在处理的 listener
                   // 这样方便业务层移除事件绑定
@@ -1069,12 +1071,12 @@
                   // 在这个 listener 里面获取不到当前 listener 的引用
                   // 为了能引用到，有时候会先定义 var listener = function
                   // 然后再 on('xx', listener) 这样其实是没有必要的
-                  if (event_1) {
-                      event_1.listener = options.fn;
+                  if (event) {
+                      event.listener = options.fn;
                   }
                   var result = execute(options.fn, options.ctx, args);
-                  if (event_1) {
-                      event_1.listener = UNDEFINED;
+                  if (event) {
+                      event.listener = UNDEFINED;
                   }
                   // 执行次数
                   options.num = options.num ? (options.num + 1) : 1;
@@ -1083,18 +1085,19 @@
                       instance.off(namespace, options.fn);
                   }
                   // 如果没有返回 false，而是调用了 event.stop 也算是返回 false
-                  if (event_1) {
+                  if (event) {
                       if (result === FALSE) {
-                          event_1.prevent().stop();
+                          event.prevent().stop();
                       }
-                      else if (event_1.isStoped) {
+                      else if (event.isStoped) {
                           result = FALSE;
                       }
                   }
                   if (result === FALSE) {
-                      return isComplete = FALSE;
+                      isComplete = FALSE;
+                      break;
                   }
-              });
+              }
           }
           return isComplete;
       };
@@ -4135,7 +4138,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.113";
+      Yox.version = "1.0.0-alpha.114";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.113
+ * yox.js v1.0.0-alpha.114
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1073,14 +1073,16 @@ class Emitter {
             const event = args && args[0] instanceof CustomEvent
                 ? args[0]
                 : UNDEFINED;
-            each(list, function (options) {
+            // 这里不用 array.each，减少函数调用
+            for (let i = 0, length = list.length; i < length; i++) {
+                let options = list[i];
                 // 命名空间不匹配
                 if (!matchNamespace(namespace.ns, options)
                     // 在 fire 过程中被移除了
                     || !has(list, options)
                     // 传了 filter，则用 filter 判断是否过滤此 options
                     || (filter && !filter(namespace, args, options))) {
-                    return;
+                    continue;
                 }
                 // 为 event 对象加上当前正在处理的 listener
                 // 这样方便业务层移除事件绑定
@@ -1111,9 +1113,10 @@ class Emitter {
                     }
                 }
                 if (result === FALSE) {
-                    return isComplete = FALSE;
+                    isComplete = FALSE;
+                    break;
                 }
-            });
+            }
         }
         return isComplete;
     }
@@ -3613,7 +3616,9 @@ function compile$1(content) {
                 // 方便 virtual dom 进行对比
                 // 这个跟 virtual dom 的实现原理密切相关，不加 stub 会有问题
                 if (!currentElement) {
-                    node.stub = TRUE;
+                    node.stub =
+                        // stub 会在运行时可能创建注释节点，使得父元素变成复杂节点
+                        node.isComplex = TRUE;
                 }
                 push(ifStack, node);
             }
@@ -7057,7 +7062,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.113";
+Yox.version = "1.0.0-alpha.114";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
