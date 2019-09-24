@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.115
+ * yox.js v1.0.0-alpha.116
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -682,11 +682,23 @@
   function each$1(keypath, callback) {
       // 如果 keypath 是 toString 之类的原型字段
       // splitCache[keypath] 会取到原型链上的对象
-      var list = splitCache.hasOwnProperty(keypath)
-          ? splitCache[keypath]
-          : (splitCache[keypath] = keypath.split(RAW_DOT));
+      // is.array() 比 splitCache.hasOwnProperty(keypath) 快一些
+      // 虽然不如后者严谨，但在这里够用了
+      var list;
+      if (array(splitCache[keypath])) {
+          list = splitCache[keypath];
+      }
+      else {
+          if (indexOf$1(keypath, RAW_DOT) < 0) {
+              list = [keypath];
+          }
+          else {
+              list = keypath.split(RAW_DOT);
+          }
+          splitCache[keypath] = list;
+      }
       for (var i = 0, lastIndex = list.length - 1; i <= lastIndex; i++) {
-          if (callback(list[i], i === lastIndex) === FALSE) {
+          if (callback(list[i], i, lastIndex) === FALSE) {
               break;
           }
       }
@@ -746,22 +758,6 @@
    */
   function keys(object) {
       return Object.keys(object);
-  }
-  function sortKeyByAsc(a, b) {
-      return a.length - b.length;
-  }
-  function sortKeyByDesc(a, b) {
-      return b.length - a.length;
-  }
-  /**
-   * 排序对象的 key
-   *
-   * @param object
-   * @param desc 是否逆序，默认从小到大排序
-   * @return
-   */
-  function sort(object, desc) {
-      return keys(object).sort(desc ? sortKeyByDesc : sortKeyByAsc);
   }
   /**
    * 遍历对象
@@ -845,7 +841,7 @@
    * @return
    */
   function get(object, keypath) {
-      each$1(keypath, function (key, isLast) {
+      each$1(keypath, function (key, index, lastIndex) {
           if (object != NULL) {
               // 先直接取值
               var value = object[key], 
@@ -856,7 +852,7 @@
               if (value && func(value.get)) {
                   value = value.get();
               }
-              if (isLast) {
+              if (index === lastIndex) {
                   if (hasValue) {
                       holder.value = value;
                       object = holder;
@@ -885,8 +881,8 @@
    * @param autofill 是否自动填充不存在的对象，默认自动填充
    */
   function set(object, keypath, value, autofill) {
-      each$1(keypath, function (key, isLast) {
-          if (isLast) {
+      each$1(keypath, function (key, index, lastIndex) {
+          if (index === lastIndex) {
               object[key] = value;
           }
           else if (object[key]) {
@@ -925,7 +921,6 @@
 
   var object$1 = /*#__PURE__*/Object.freeze({
     keys: keys,
-    sort: sort,
     each: each$2,
     clear: clear,
     extend: extend,
@@ -5406,7 +5401,11 @@
           }
           return appendVnode(vnode);
       }, renderExpressionIdentifier = function (name, lookup, offset, holder, depIgnore, stack) {
-          var myStack = stack || $stack, result = findValue(myStack, myStack.length - 1 - (offset || 0), name, lookup, depIgnore);
+          var myStack = stack || $stack, index = myStack.length - 1;
+          if (offset) {
+              index -= offset;
+          }
+          var result = findValue(myStack, index, name, lookup, depIgnore);
           return holder ? result : result.value;
       }, renderExpressionMemberKeypath = function (identifier, runtimeKeypath) {
           unshift(runtimeKeypath, identifier);
@@ -5896,27 +5895,6 @@
       return Computed;
   }());
 
-  /**
-   * 从 keypath 数组中选择和 keypath 最匹配的那一个
-   *
-   * @param sorted 经过排序的 keypath 数组
-   * @param keypath
-   */
-  function matchBest (sorted, keypath) {
-      var result;
-      each(sorted, function (prefix) {
-          var length = match(keypath, prefix);
-          if (length >= 0) {
-              result = {
-                  name: prefix,
-                  prop: slice(keypath, length)
-              };
-              return FALSE;
-          }
-      });
-      return result;
-  }
-
   function readValue (source, keypath) {
       if (source == NULL || keypath === EMPTY_STRING) {
           return source;
@@ -6118,7 +6096,7 @@
        * @return
        */
       Observer.prototype.get = function (keypath, defaultValue, depIgnore) {
-          var instance = this, currentComputed = Computed.current, data = instance.data, computed = instance.computed, reversedComputedKeys = instance.reversedComputedKeys;
+          var instance = this, currentComputed = Computed.current, data = instance.data, computed = instance.computed;
           // 传入 '' 获取整个 data
           if (keypath === EMPTY_STRING) {
               return data;
@@ -6128,18 +6106,9 @@
           if (currentComputed && !depIgnore) {
               currentComputed.add(keypath);
           }
-          var result, target;
+          var result;
           if (computed) {
-              target = computed[keypath];
-              if (target) {
-                  return target.get();
-              }
-              if (reversedComputedKeys) {
-                  var match = matchBest(reversedComputedKeys, keypath);
-                  if (match && match.prop) {
-                      result = get(computed[match.name].get(), match.prop);
-                  }
-              }
+              result = get(computed, keypath);
           }
           if (!result) {
               result = get(data, keypath);
@@ -6153,33 +6122,42 @@
        * @param value
        */
       Observer.prototype.set = function (keypath, value) {
-          var instance = this, data = instance.data, computed = instance.computed, reversedComputedKeys = instance.reversedComputedKeys, setValue = function (newValue, keypath) {
+          var instance = this, data = instance.data, computed = instance.computed, setValue = function (newValue, keypath) {
               var oldValue = instance.get(keypath);
               if (newValue === oldValue) {
                   return;
               }
-              var target;
-              if (computed) {
-                  target = computed[keypath];
-                  if (target) {
-                      target.set(newValue);
-                  }
-                  if (reversedComputedKeys) {
-                      var match = matchBest(reversedComputedKeys, keypath);
-                      if (match && match.prop) {
-                          target = computed[match.name];
-                          if (target) {
-                              var targetValue = target.get();
-                              if (object(targetValue)) {
-                                  set(targetValue, match.prop, newValue);
-                              }
+              var next;
+              each$1(keypath, function (key, index, lastIndex) {
+                  if (index === 0) {
+                      if (computed && computed[key]) {
+                          if (lastIndex === 0) {
+                              computed[key].set(newValue);
+                          }
+                          else {
+                              // 这里 next 可能为空
+                              next = computed[key].get();
                           }
                       }
+                      else {
+                          if (lastIndex === 0) {
+                              data[key] = newValue;
+                          }
+                          else {
+                              next = data[key] || (data[key] = {});
+                          }
+                      }
+                      return;
                   }
-              }
-              if (!target) {
-                  set(data, keypath, newValue);
-              }
+                  if (next) {
+                      if (index === lastIndex) {
+                          next[key] = newValue;
+                      }
+                      else {
+                          next = next[key] || (next[key] = {});
+                      }
+                  }
+              });
               instance.diff(keypath, newValue, oldValue);
           };
           if (string(keypath)) {
@@ -6288,7 +6266,6 @@
                   instance.computed = {};
               }
               instance.computed[keypath] = computed;
-              instance.reversedComputedKeys = sort(instance.computed, TRUE);
               return computed;
           }
       };
@@ -6301,7 +6278,6 @@
           var instance = this, computed = instance.computed;
           if (computed && has$2(computed, keypath)) {
               delete computed[keypath];
-              instance.reversedComputedKeys = sort(computed, TRUE);
           }
       };
       /**
@@ -7499,7 +7475,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.115";
+      Yox.version = "1.0.0-alpha.116";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */

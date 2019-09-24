@@ -6,6 +6,7 @@ declare const HOOK_BEFORE_UPDATE = "beforeUpdate";
 declare const HOOK_AFTER_UPDATE = "afterUpdate";
 declare const HOOK_BEFORE_DESTROY = "beforeDestroy";
 declare const HOOK_AFTER_DESTROY = "afterDestroy";
+declare const HOOK_BEFORE_PROPS_UPDATE = "beforePropsUpdate";
 /**
  * Yox 事件系统的事件类型
  */
@@ -186,6 +187,7 @@ export interface ComponentOptions<Computed = any, Watchers = any, Events = any, 
 	[HOOK_AFTER_UPDATE]?: ComponentOptionsOtherHook;
 	[HOOK_BEFORE_DESTROY]?: ComponentOptionsOtherHook;
 	[HOOK_AFTER_DESTROY]?: ComponentOptionsOtherHook;
+	[HOOK_BEFORE_PROPS_UPDATE]?: (props: Data) => void;
 }
 export declare type Data = Record<string, any>;
 export declare type LazyValue = number | true;
