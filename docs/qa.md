@@ -36,4 +36,13 @@ Yox 不是公司项目，没有 KPI，不存在离职弃坑的问题，它纯粹
 
 我现在是业余时间开发 Yox，我特别希望有人赞助 Yox 这个项目，鼓励一下咯，它又不比 Vue 差。
 
+微信支付
+
+<img src="https://user-images.githubusercontent.com/2732303/44254903-ce6d3f80-a236-11e8-86dd-f6b27a7f94df.png" width="200">
+
+支付宝
+
+<img src="https://user-images.githubusercontent.com/2732303/44254929-e5139680-a236-11e8-95e2-f5a864246f83.png" width="200">
+
+
 > 还有，我特别需要一个好看的 Logo！！
