@@ -342,7 +342,7 @@ export default class Yox implements YoxInterface {
           function (rule: PropRule, key: string) {
             let value = source[key]
             if (process.env.NODE_ENV === 'development') {
-              checkProp(key, value, rule)
+              checkProp($options.name, key, value, rule)
             }
             if (value === constant.UNDEFINED) {
               value = rule.value
@@ -1044,11 +1044,11 @@ export default class Yox implements YoxInterface {
    */
   checkProp(key: string, value: any): void {
     if (process.env.NODE_ENV === 'development') {
-      const { propTypes } = this.$options
+      const { name, propTypes } = this.$options
       if (propTypes) {
         const rule = propTypes[key]
         if (rule) {
-          checkProp(key, value, rule)
+          checkProp(name, key, value, rule)
         }
       }
     }
@@ -1209,7 +1209,7 @@ function matchType(value: any, type: string) {
     : string.lower(toString.call(value)) === `[object ${type}]`
 }
 
-function checkProp(key: string, value: any, rule: PropRule) {
+function checkProp(componentName: string | undefined, key: string, value: any, rule: PropRule) {
 
   // 传了数据
   if (value !== constant.UNDEFINED) {
@@ -1223,7 +1223,7 @@ function checkProp(key: string, value: any, rule: PropRule) {
       // 自定义函数判断是否匹配类型
       // 自己打印警告信息吧
       if (is.func(type)) {
-        (type as PropTypeFunction)(key, value)
+        (type as PropTypeFunction)(key, value, componentName)
       }
       else {
 
@@ -1247,20 +1247,20 @@ function checkProp(key: string, value: any, rule: PropRule) {
         }
 
         if (!matched) {
-          logger.warn(`The type of prop "${key}" expected to be "${type}", but is "${value}".`)
+          logger.warn(`The type of prop "${key}" expected to be "${type}", but is "${value}".`, componentName)
         }
 
       }
 
     }
     else {
-      logger.warn(`The prop "${key}" in propTypes has no type.`)
+      logger.warn(`The prop "${key}" in propTypes has no type.`, componentName)
     }
 
   }
   // 没传值但此项是必传项
   else if (rule.required) {
-    logger.warn(`The prop "${key}" is marked as required, but its value is not found.`)
+    logger.warn(`The prop "${key}" is marked as required, but its value is undefined.`, componentName)
   }
 
 }

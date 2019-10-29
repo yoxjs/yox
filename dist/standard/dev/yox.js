@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.116
+ * yox.js v1.0.0-alpha.117
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -6772,7 +6772,7 @@
                   each$2(propTypes, function (rule, key) {
                       var value = source[key];
                       {
-                          checkProp(key, value, rule);
+                          checkProp($options.name, key, value, rule);
                       }
                       if (value === UNDEFINED) {
                           value = rule.value;
@@ -7343,11 +7343,11 @@
        */
       Yox.prototype.checkProp = function (key, value) {
           {
-              var propTypes = this.$options.propTypes;
+              var _a = this.$options, name = _a.name, propTypes = _a.propTypes;
               if (propTypes) {
                   var rule = propTypes[key];
                   if (rule) {
-                      checkProp(key, value, rule);
+                      checkProp(name, key, value, rule);
                   }
               }
           }
@@ -7475,7 +7475,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.116";
+      Yox.version = "1.0.0-alpha.117";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
@@ -7495,7 +7495,7 @@
           ? numeric(value)
           : lower(toString$2.call(value)) === "[object " + type + "]";
   }
-  function checkProp(key, value, rule) {
+  function checkProp(componentName, key, value, rule) {
       // 传了数据
       if (value !== UNDEFINED) {
           var type = rule.type;
@@ -7505,7 +7505,7 @@
               // 自定义函数判断是否匹配类型
               // 自己打印警告信息吧
               if (func(type)) {
-                  type(key, value);
+                  type(key, value, componentName);
               }
               else {
                   var matched_1 = FALSE;
@@ -7523,17 +7523,17 @@
                       });
                   }
                   if (!matched_1) {
-                      warn("The type of prop \"" + key + "\" expected to be \"" + type + "\", but is \"" + value + "\".");
+                      warn("The type of prop \"" + key + "\" expected to be \"" + type + "\", but is \"" + value + "\".", componentName);
                   }
               }
           }
           else {
-              warn("The prop \"" + key + "\" in propTypes has no type.");
+              warn("The prop \"" + key + "\" in propTypes has no type.", componentName);
           }
       }
       // 没传值但此项是必传项
       else if (rule.required) {
-          warn("The prop \"" + key + "\" is marked as required, but its value is not found.");
+          warn("The prop \"" + key + "\" is marked as required, but its value is undefined.", componentName);
       }
   }
   function setFlexibleOptions(instance, key, value) {

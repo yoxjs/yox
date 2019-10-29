@@ -7,8 +7,8 @@ Yox 组件是符合 [ComponentOptions](https://github.com/yoxjs/yox-type/blob/ma
 ```js
 {
 
-  // 通常用不上
-  // 如果你要写组件库，估计会用到
+  // 通常写组件库比较常用
+  // 特别的是，在校验传入组件的数据时，如果设置了组件名称，校验失败的错误信息会更加具体
   name: '组件名称',
 
   // 通常只有根组件需要配置 el，支持元素节点和选择器
@@ -336,9 +336,10 @@ function (value) {
 
 ```js
 function oneOf(values) {
-  return function (key, value) {
+  return function (key, value, componentName) {
+    // 在这，你会知道是哪个组件（componentName）的哪个字段（key）传了什么值（value)
     if (!Yox.array.has(values, value)) {
-      Yox.logger.warn('warn message')
+      Yox.logger.warn('warn message', componentName)
     }
   }
 }

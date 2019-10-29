@@ -191,7 +191,7 @@ export interface ComponentOptions<Computed = any, Watchers = any, Events = any, 
 }
 export declare type Data = Record<string, any>;
 export declare type LazyValue = number | true;
-export declare type PropTypeFunction = (key: string, value: any) => void;
+export declare type PropTypeFunction = (key: string, value: any, componentName: string | void) => void;
 export declare type PropValueFunction = () => any;
 export declare type PropertyHint = 1 | 2 | 3;
 export declare type ComponentCallback = (options: ComponentOptions) => void;
@@ -282,7 +282,6 @@ export interface LoggerApi {
 }
 export interface ObjectApi {
 	keys(object: Data): string[];
-	sort(object: Data, desc?: boolean): string[];
 	each(object: Data, callback: (value: any, key: string) => boolean | void): void;
 	clear(object: Data): void;
 	extend(original: Data, object: Data): Data;
@@ -468,7 +467,6 @@ declare class Observer {
 	context: any;
 	nextTask: NextTask;
 	computed?: Record<string, Computed>;
-	reversedComputedKeys?: string[];
 	syncEmitter: Emitter;
 	asyncEmitter: Emitter;
 	asyncChanges: Record<string, AsyncChange>;

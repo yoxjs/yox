@@ -130,7 +130,13 @@ yarn add yox
 
 ## Document
 
-[技术预览版](https://yoxjs.github.io/yox)
+[中文文档](https://yoxjs.github.io/yox)
+
+## Sponsors
+
+Become a sponsor and get your logo on our README on Github with a link to your site. [[Become a sponsor](https://opencollective.com/yox#sponsor)]
+
+<a href="https://opencollective.com/yox/sponsor/0/website" target="_blank"><img src="https://opencollective.com/yox/sponsor/0/avatar.svg"></a>
 
 ## Donation
 

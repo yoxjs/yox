@@ -9,40 +9,43 @@
     <script id="template" type="plain/text">
 
         <div id="body">
-            {{#each createArray():index}}
-                <button on-click="click($event, index)">
-                    {{index}}: {{$keypath}}
-                </button>
+          {{#each list:i}}
+          <div>
+            {{#each ../columns}}
+                <span style="margin: 0 10px">
+                  {{list[../i][this.key]}}
+                </span>
             {{/each}}
+          </div>
+          {{/each}}
         </div>
 
     </script>
-    <script src="../../dist/yox.js"></script>
+    <script src="../../dist/standard/dev/yox.js"></script>
     <script>
         new Yox({
             el: '#app',
             template: '#template',
             data: {
+                columns: [
+                  {
+                    key: 'name'
+                  },
+                  {
+                    key: 'age'
+                  }
+                ],
                 list: [
-                    1,
-                    2,
-                    3
+                  {
+                    name: 'musicode',
+                    age: 100
+                  },
+                  {
+                    name: 'yox',
+                    age: 2
+                  }
                 ]
             },
-            filters: {
-                createArray: function () {
-                    return [
-                        1,
-                        2,
-                        3
-                    ];
-                }
-            },
-            methods: {
-                click: function (event, index) {
-                    console.log(event, index);
-                }
-            }
         });
     </script>
 </body>
