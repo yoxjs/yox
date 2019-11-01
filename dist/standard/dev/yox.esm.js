@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.117
+ * yox.js v1.0.0-alpha.118
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -3518,8 +3518,16 @@ function compile$1(content) {
         }
     }, processPropertySingleText = function (prop, child) {
         const { text } = child;
+        // 这里需要严格校验格式，比如 width="100%" 要打印报错信息，提示用户类型错误
         if (prop.hint === HINT_NUMBER) {
-            prop.value = toNumber(text);
+            {
+                if (numeric(text)) {
+                    prop.value = +text;
+                }
+                else {
+                    fatal$1(`The value of "${prop.name}" is not a number: ${text}.`);
+                }
+            }
         }
         else if (prop.hint === HINT_BOOLEAN) {
             prop.value = text === RAW_TRUE || text === prop.name;
@@ -7471,7 +7479,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.117";
+Yox.version = "1.0.0-alpha.118";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

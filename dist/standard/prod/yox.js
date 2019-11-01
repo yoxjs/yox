@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.117
+ * yox.js v1.0.0-alpha.118
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -3384,8 +3384,11 @@
           }
       }, processPropertySingleText = function (prop, child) {
           var text = child.text;
+          // 这里需要严格校验格式，比如 width="100%" 要打印报错信息，提示用户类型错误
           if (prop.hint === HINT_NUMBER) {
-              prop.value = toNumber(text);
+              {
+                  prop.value = toNumber(text);
+              }
           }
           else if (prop.hint === HINT_BOOLEAN) {
               prop.value = text === RAW_TRUE || text === prop.name;
@@ -6953,7 +6956,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.117";
+      Yox.version = "1.0.0-alpha.118";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
