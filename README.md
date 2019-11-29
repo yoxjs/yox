@@ -132,6 +132,10 @@ yarn add yox
 
 [中文文档](https://yoxjs.github.io/yox)
 
+## Extension
+
+[Yox Snippets](https://marketplace.visualstudio.com/items?itemName=Wscats.yox&ssr=false#overview)
+
 ## Sponsors
 
 Become a sponsor and get your logo on our README on Github with a link to your site. [[Become a sponsor](https://opencollective.com/yox#sponsor)]
