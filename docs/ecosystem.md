@@ -7,4 +7,8 @@ Yox 非常年轻，周边生态无法跟三巨头相比，但我们仍然希望�
 * 请求：[Soga](https://github.com/musicode/soga)
 * UI：敬请期待
 
+感谢社区的贡献：
+
+* 代码片段：[yox-snippets](https://github.com/wscats/yox-snippets)
+
 > 欢迎自荐，优秀作品会在此补充。
