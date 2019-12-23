@@ -71,7 +71,9 @@ else {
     typescript({
       include: []
     }),
-    buble()
+    buble({
+      namedFunctionExpressions: false
+    })
   )
   output.push({
     file: `dist/${dir}/${name}${suffix}`,
@@ -84,7 +86,9 @@ else {
 
 if (minify) {
   plugins.push(
-    terser()
+    terser({
+      ie8: legacy
+    })
   )
 }
 
