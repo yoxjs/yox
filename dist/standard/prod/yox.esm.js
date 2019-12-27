@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.119
+ * yox.js v1.0.0-alpha.120
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1483,8 +1483,8 @@ function createComponent(vnode, options) {
     const child = (vnode.parent || vnode.context).createComponent(options, vnode);
     vnode.data[COMPONENT] = child;
     vnode.data[LOADING] = FALSE;
-    update$3(vnode);
     update$2(vnode);
+    update$3(vnode);
     return child;
 }
 let guid = 0;
@@ -1553,8 +1553,8 @@ function createVnode(api, vnode) {
         }
         update(api, vnode);
         update$1(api, vnode);
-        update$3(vnode);
         update$2(vnode);
+        update$3(vnode);
     }
 }
 function addVnodes(api, parentNode, vnodes, startIndex, endIndex, before) {
@@ -1832,8 +1832,11 @@ function patch(api, vnode, oldVnode) {
     }
     update(api, vnode, oldVnode);
     update$1(api, vnode, oldVnode);
-    update$3(vnode, oldVnode);
+    // 先处理 directive 再处理 component
+    // 因为组件只是单纯的更新 props，而 directive 则有可能要销毁
+    // 如果顺序反过来，会导致某些本该销毁的指令先被数据的变化触发执行了
     update$2(vnode, oldVnode);
+    update$3(vnode, oldVnode);
     const { text, html, children, isStyle, isOption } = vnode, oldText = oldVnode.text, oldHtml = oldVnode.html, oldChildren = oldVnode.children;
     if (string(text)) {
         if (text !== oldText) {
@@ -1990,7 +1993,6 @@ function createEach(from, to, equal, index) {
         to,
         equal,
         index,
-        isComplex: TRUE,
     };
 }
 function createElement(tag, isSvg, isStyle, isComponent) {
@@ -2034,7 +2036,6 @@ function createImport(name) {
     return {
         type: IMPORT,
         name,
-        isComplex: TRUE,
         isLeaf: TRUE,
     };
 }
@@ -2042,7 +2043,6 @@ function createPartial(name) {
     return {
         type: PARTIAL,
         name,
-        isComplex: TRUE,
     };
 }
 function createSpread(expr, binding) {
@@ -3206,17 +3206,6 @@ function compile$1(content) {
                 if (currentBranch.isStatic && !node.isStatic) {
                     currentBranch.isStatic = FALSE;
                 }
-                if (!currentBranch.isComplex) {
-                    if (node.isComplex || isElement) {
-                        currentBranch.isComplex = TRUE;
-                    }
-                    // <div {{#if xx}} xx{{/if}}>
-                    else if (currentElement
-                        && currentElement !== currentBranch
-                        && (isAttribute || isProperty || isDirective)) {
-                        currentBranch.isComplex = TRUE;
-                    }
-                }
             }
             // 除了 helper.specialAttrs 里指定的特殊属性，attrs 里的任何节点都不能单独拎出来赋给 element
             // 因为 attrs 可能存在 if，所以每个 attr 最终都不一定会存在
@@ -3444,9 +3433,14 @@ function compile$1(content) {
         }
         directive.children = UNDEFINED;
     }, checkCondition = function (condition) {
+        // 这里会去掉没有子节点的空分支
+        // 从最后一个节点往前遍历
         let currentNode = condition, prevNode, hasChildren, hasNext;
         while (TRUE) {
+            // 当前分支有子节点
             if (currentNode.children) {
+                // 从后往前遍历第一次发现非空分支
+                // 此时，可以删掉后面的空分支
                 if (!hasNext) {
                     if (currentNode.next) {
                         delete currentNode.next;
@@ -3456,7 +3450,7 @@ function compile$1(content) {
             }
             prevNode = currentNode.prev;
             if (prevNode) {
-                // prev 仅仅用在 checkCondition 函数中
+                // prev 仅在 checkCondition 函数中用作逆向遍历
                 // 用完就可以删掉了
                 delete currentNode.prev;
                 currentNode = prevNode;
@@ -3465,9 +3459,10 @@ function compile$1(content) {
                 break;
             }
         }
-        // 每个条件都是空内容，则删掉整个 if
+        // 所有分支都没有子节点，删掉整个 if
         if (!hasChildren) {
             replaceChild(currentNode);
+            return;
         }
     }, checkEach = function (each) {
         // 没内容就干掉
@@ -3610,14 +3605,6 @@ function compile$1(content) {
                 push(nodeList, node);
             }
             if (type === IF) {
-                // 只要是 if 节点，并且和 element 同级，就加上 stub
-                // 方便 virtual dom 进行对比
-                // 这个跟 virtual dom 的实现原理密切相关，不加 stub 会有问题
-                if (!currentElement) {
-                    node.stub =
-                        // stub 会在运行时可能创建注释节点，使得父元素变成复杂节点
-                        node.isComplex = TRUE;
-                }
                 push(ifStack, node);
             }
         }
@@ -3627,10 +3614,6 @@ function compile$1(content) {
             if (currentBranch) {
                 if (currentBranch.isStatic && !node.isStatic) {
                     currentBranch.isStatic = FALSE;
-                }
-                // 当前树枝节点是简单节点，一旦加入了一个复杂子节点，当前树枝节点变为复杂节点
-                if (!currentBranch.isComplex && node.isComplex) {
-                    currentBranch.isComplex = TRUE;
                 }
             }
         }
@@ -3673,7 +3656,8 @@ function compile$1(content) {
                          * </div>
                          */
                         popSelfClosingElementIfNeeded(tag);
-                        popStack(ELEMENT);
+                        // 等到 > 字符才算真正的结束
+                        currentElement = popStack(ELEMENT);
                     }
                     else {
                         const node = createElement$1(tag);
@@ -3689,15 +3673,18 @@ function compile$1(content) {
             const match = content.match(selfClosingTagPattern);
             if (match) {
                 // 处理开始标签的 > 或 />
+                // 处理结束标签的 >
                 if (currentElement && !currentAttribute) {
                     // 自闭合标签
                     if (match[1] === RAW_SLASH) {
                         popStack(currentElement.type, currentElement.tag);
                     }
                     currentElement = UNDEFINED;
+                    return match[0];
                 }
-                // 处理结束标签的 >
-                return match[0];
+                // 如果只是写了一个 > 字符
+                // 比如 <div>></div>
+                // 则交给其他 parser 处理
             }
         },
         // 处理 attribute directive 的 name 部分
@@ -4053,20 +4040,13 @@ function compile$1(content) {
     return nodeList;
 }
 
-function isUndef (target) {
-    return target === UNDEFINED;
-}
-
 const UNDEFINED$1 = '$0';
 const NULL$1 = '$1';
 const TRUE$1 = '$2';
 const FALSE$1 = '$3';
 const COMMA = ',';
 const COLON = ':';
-const PLUS = '+';
-const AND = '&&';
 const QUESTION = '?';
-const NOT = '!';
 const EMPTY = '""';
 const RETURN = 'return ';
 /**
@@ -4279,14 +4259,10 @@ function generate(node, renderIdentifier, renderMemberKeypath, renderMemberLiter
  * 这样能确保是从左到右依次执行，也就便于在内部创建一个公共数组，执行一个函数就收集一个值，而不管那个值到底是什么类型
  *
  */
-// 是否要执行 join 操作
-const joinStack = [], 
 // 是否正在收集子节点
-collectStack = [], nodeGenerator = {}, RENDER_EXPRESSION_IDENTIFIER = 'a', RENDER_EXPRESSION_MEMBER_KEYPATH = 'b', RENDER_EXPRESSION_MEMBER_LITERAL = 'c', RENDER_EXPRESSION_CALL = 'd', RENDER_TEXT_VNODE = 'e', RENDER_ATTRIBUTE_VNODE = 'f', RENDER_PROPERTY_VNODE = 'g', RENDER_LAZY_VNODE = 'h', RENDER_TRANSITION_VNODE = 'i', RENDER_BINDING_VNODE = 'j', RENDER_MODEL_VNODE = 'k', RENDER_EVENT_METHOD_VNODE = 'l', RENDER_EVENT_NAME_VNODE = 'm', RENDER_DIRECTIVE_VNODE = 'n', RENDER_SPREAD_VNODE = 'o', RENDER_COMMENT_VNODE = 'p', RENDER_ELEMENT_VNODE = 'q', RENDER_COMPONENT_VNODE = 'r', RENDER_SLOT = 's', RENDER_PARTIAL = 't', RENDER_IMPORT = 'u', RENDER_EACH = 'v', RENDER_RANGE = 'w', RENDER_EQUAL_RANGE = 'x', TO_STRING = 'y', ARG_STACK = 'z';
-// 序列化代码的参数列表
-let codeArgs, 
-// 表达式求值是否要求返回字符串类型
-isStringRequired;
+const collectStack = [], 
+// 是否正在收集字符串类型的值
+stringStack = [], nodeGenerator = {}, RENDER_EXPRESSION_IDENTIFIER = 'a', RENDER_EXPRESSION_MEMBER_KEYPATH = 'b', RENDER_EXPRESSION_MEMBER_LITERAL = 'c', RENDER_EXPRESSION_CALL = 'd', RENDER_TEXT_VNODE = 'e', RENDER_ATTRIBUTE_VNODE = 'f', RENDER_PROPERTY_VNODE = 'g', RENDER_LAZY_VNODE = 'h', RENDER_TRANSITION_VNODE = 'i', RENDER_BINDING_VNODE = 'j', RENDER_MODEL_VNODE = 'k', RENDER_EVENT_METHOD_VNODE = 'l', RENDER_EVENT_NAME_VNODE = 'm', RENDER_DIRECTIVE_VNODE = 'n', RENDER_SPREAD_VNODE = 'o', RENDER_COMMENT_VNODE = 'p', RENDER_ELEMENT_VNODE = 'q', RENDER_COMPONENT_VNODE = 'r', RENDER_SLOT = 's', RENDER_PARTIAL = 't', RENDER_IMPORT = 'u', RENDER_EACH = 'v', RENDER_RANGE = 'w', RENDER_EQUAL_RANGE = 'x', ARG_STACK = 'y';
 function renderExpression(expr, holder, depIgnore, stack) {
     return generate(expr, RENDER_EXPRESSION_IDENTIFIER, RENDER_EXPRESSION_MEMBER_KEYPATH, RENDER_EXPRESSION_MEMBER_LITERAL, RENDER_EXPRESSION_CALL, holder, depIgnore, stack);
 }
@@ -4302,17 +4278,9 @@ function stringifyObject(obj) {
 function stringifyFunction(result, arg) {
     return `${RAW_FUNCTION}(${arg || EMPTY_STRING}){${result || EMPTY_STRING}}`;
 }
-function stringifyExpression(expr, toString) {
-    const value = renderExpression(expr);
-    return toString
-        ? toCall(TO_STRING, [
-            value
-        ])
-        : value;
-}
-function stringifyExpressionVnode(expr, toString) {
+function stringifyExpressionVnode(expr) {
     return toCall(RENDER_TEXT_VNODE, [
-        stringifyExpression(expr, toString)
+        renderExpression(expr)
     ]);
 }
 function stringifyExpressionArg(expr) {
@@ -4324,83 +4292,59 @@ function stringifyValue(value, expr, children) {
     }
     // 只有一个表达式时，保持原始类型
     if (expr) {
-        return stringifyExpression(expr);
+        return renderExpression(expr);
     }
     // 多个值拼接时，要求是字符串
     if (children) {
-        // 求值时要标识 isStringRequired
-        // 求完后复原
         // 常见的应用场景是序列化 HTML 元素属性值，处理值时要求字符串，在处理属性名这个级别，不要求字符串
-        const oldValue = isStringRequired;
-        isStringRequired = children.length > 1;
+        // compiler 会把原始字符串编译成 value
+        // compiler 会把单个插值编译成 expr
+        // 因此走到这里，一定是多个插值或是单个特殊插值（比如 If)
+        push(stringStack, TRUE);
         const result = stringifyChildren(children);
-        isStringRequired = oldValue;
+        pop(stringStack);
         return result;
     }
 }
-function stringifyChildren(children, isComplex) {
-    // 如果是复杂节点的 children，则每个 child 的序列化都是函数调用的形式
-    // 因此最后可以拼接为 fn1(), fn2(), fn3() 这样依次调用，而不用再多此一举的使用数组，
-    // 因为在 renderer 里也用不上这个数组
-    // children 大于一个时，才有 join 的可能，单个值 join 啥啊...
-    const isJoin = children.length > 1 && !isComplex;
-    push(joinStack, isJoin);
-    const value = join(children.map(function (child) {
+function stringifyChildren(children) {
+    const items = children.map(function (child) {
         return nodeGenerator[child.type](child);
-    }), isJoin ? PLUS : COMMA);
-    pop(joinStack);
-    return value;
+    });
+    // 字符串拼接涉及表达式的优先级问题，这里先统一成数组，字符串拼接改成 array.join 有利于一致性
+    return last(stringStack) && items.length > 1
+        ? toArray$1(items) + `.join(${EMPTY})`
+        : join(items, COMMA);
 }
-function stringifyConditionChildren(children, isComplex) {
+function stringifyIf(node) {
+    let { children, next } = node, 
+    // 是否正在收集子节点
+    defaultValue = last(collectStack)
+        ? toCall(RENDER_COMMENT_VNODE)
+        // 要求是字符串
+        : last(stringStack)
+            ? EMPTY
+            : UNDEFINED$1, yes, no;
     if (children) {
-        const result = stringifyChildren(children, isComplex);
-        return children.length > 1 && isComplex
-            ? toGroup(result)
-            : result;
+        yes = stringifyChildren(children);
     }
-}
-function stringifyIf(node, stub) {
-    let { children, isComplex, next } = node, test = stringifyExpression(node.expr), yes = stringifyConditionChildren(children, isComplex), no, result;
     if (next) {
-        no = next.type === ELSE
-            ? stringifyConditionChildren(next.children, next.isComplex)
-            : stringifyIf(next, stub);
+        if (next.type === ELSE_IF) {
+            no = stringifyIf(next);
+        }
+        else if (next.children) {
+            no = stringifyChildren(next.children);
+        }
     }
-    // 到达最后一个条件，发现第一个 if 语句带有 stub，需创建一个注释标签占位
-    else if (stub) {
-        no = toCall(RENDER_COMMENT_VNODE);
+    if (!yes && !no) {
+        return defaultValue;
     }
-    if (isDef(yes) || isDef(no)) {
-        if (isStringRequired) {
-            if (isUndef(yes)) {
-                yes = EMPTY;
-            }
-            if (isUndef(no)) {
-                no = EMPTY;
-            }
-        }
-        // 避免出现 a||b&&c 的情况
-        // 应该输出 (a||b)&&c
-        if (isUndef(no)) {
-            result = toGroup(test) + AND + yes;
-        }
-        else if (isUndef(yes)) {
-            result = toGroup(NOT + test) + AND + no;
-        }
-        else {
-            // 虽然三元表达式优先级最低，但无法保证表达式内部没有 ,
-            result = toGroup(test)
-                + QUESTION
-                + toGroup(yes)
-                + COLON
-                + toGroup(no);
-        }
-        // 如果是连接操作，因为 ?: 优先级最低，因此要加 ()
-        return last(joinStack)
-            ? toGroup(result)
-            : result;
-    }
-    return EMPTY;
+    // 虽然三元表达式优先级最低，但无法保证表达式内部没有 ,
+    // 因此每一个分支都要调用 toGroup
+    return toGroup(renderExpression(node.expr))
+        + QUESTION
+        + toGroup(yes || defaultValue)
+        + COLON
+        + toGroup(no || defaultValue);
 }
 function getComponentSlots(children) {
     const result = {}, slots = {}, addSlot = function (name, nodes) {
@@ -4424,19 +4368,18 @@ function getComponentSlots(children) {
         addSlot(SLOT_NAME_DEFAULT, [child]);
     });
     each$2(slots, function (children, name) {
-        // 强制为复杂节点，因为 slot 的子节点不能用字符串拼接的方式来渲染
-        result[name] = stringifyFunction(stringifyChildren(children, TRUE));
+        result[name] = stringifyFunction(stringifyChildren(children));
     });
     if (!falsy$2(result)) {
         return stringifyObject(result);
     }
 }
 nodeGenerator[ELEMENT] = function (node) {
-    let { tag, isComponent, isComplex, ref, key, html, attrs, children } = node, staticTag, dynamicTag, outputAttrs, outputText, outputHTML, outputChilds, outputSlots, outputStatic, outputOption, outputStyle, outputSvg, outputRef, outputKey;
+    let { tag, isComponent, ref, key, html, attrs, children } = node, staticTag, dynamicTag, outputAttrs, outputHTML, outputChilds, outputSlots, outputStatic, outputOption, outputStyle, outputSvg, outputRef, outputKey;
     if (tag === RAW_SLOT) {
         const args = [toString$1(SLOT_DATA_PREFIX + node.name)];
         if (children) {
-            push(args, stringifyFunction(stringifyChildren(children, TRUE)));
+            push(args, stringifyFunction(stringifyChildren(children)));
         }
         return toCall(RENDER_SLOT, args);
     }
@@ -4458,30 +4401,19 @@ nodeGenerator[ELEMENT] = function (node) {
         }
     }
     if (children) {
+        collectStack[collectStack.length - 1] = TRUE;
         if (isComponent) {
-            collectStack[collectStack.length - 1] = TRUE;
             outputSlots = getComponentSlots(children);
         }
         else {
-            const oldValue = isStringRequired;
-            isStringRequired = TRUE;
-            collectStack[collectStack.length - 1] = isComplex;
-            outputChilds = stringifyChildren(children, isComplex);
-            if (isComplex) {
-                outputChilds = stringifyFunction(outputChilds);
-            }
-            else {
-                outputText = outputChilds;
-                outputChilds = UNDEFINED;
-            }
-            isStringRequired = oldValue;
+            outputChilds = stringifyFunction(stringifyChildren(children));
         }
     }
     pop(collectStack);
     if (html) {
         outputHTML = string(html)
             ? toString$1(html)
-            : stringifyExpression(html, TRUE);
+            : renderExpression(html);
     }
     outputStatic = node.isStatic ? TRUE$1 : UNDEFINED;
     outputOption = node.isOption ? TRUE$1 : UNDEFINED;
@@ -4507,7 +4439,6 @@ nodeGenerator[ELEMENT] = function (node) {
         staticTag,
         outputAttrs,
         outputChilds,
-        outputText,
         outputStatic,
         outputOption,
         outputStyle,
@@ -4612,27 +4543,23 @@ nodeGenerator[SPREAD] = function (node) {
 };
 nodeGenerator[TEXT] = function (node) {
     const result = toString$1(node.text);
-    if (last(collectStack) && !last(joinStack)) {
-        return toCall(RENDER_TEXT_VNODE, [
+    return last(collectStack)
+        ? toCall(RENDER_TEXT_VNODE, [
             result
-        ]);
-    }
-    return result;
+        ])
+        : result;
 };
 nodeGenerator[EXPRESSION] = function (node) {
-    // 强制保留 isStringRequired 参数，减少运行时判断参数是否存在
-    // 因为还有 stack 参数呢，各种判断真的很累
-    if (last(collectStack) && !last(joinStack)) {
-        return stringifyExpressionVnode(node.expr, isStringRequired);
-    }
-    return stringifyExpression(node.expr, isStringRequired);
+    return last(collectStack)
+        ? stringifyExpressionVnode(node.expr)
+        : renderExpression(node.expr);
 };
 nodeGenerator[IF] = function (node) {
-    return stringifyIf(node, node.stub);
+    return stringifyIf(node);
 };
 nodeGenerator[EACH] = function (node) {
     // compiler 保证了 children 一定有值
-    const children = stringifyFunction(stringifyChildren(node.children, node.isComplex));
+    const children = stringifyFunction(stringifyChildren(node.children));
     // 遍历区间
     if (node.to) {
         if (node.equal) {
@@ -4661,7 +4588,7 @@ nodeGenerator[PARTIAL] = function (node) {
     return toCall(RENDER_PARTIAL, [
         toString$1(node.name),
         // compiler 保证了 children 一定有值
-        stringifyFunction(stringifyChildren(node.children, node.isComplex))
+        stringifyFunction(stringifyChildren(node.children))
     ]);
 };
 nodeGenerator[IMPORT] = function (node) {
@@ -4669,6 +4596,8 @@ nodeGenerator[IMPORT] = function (node) {
         toString$1(node.name)
     ]);
 };
+// 序列化代码的参数列表
+let codeArgs;
 function generate$1(node) {
     if (!codeArgs) {
         codeArgs = join([
@@ -4696,7 +4625,6 @@ function generate$1(node) {
             RENDER_EACH,
             RENDER_RANGE,
             RENDER_EQUAL_RANGE,
-            TO_STRING,
         ], COMMA);
     }
     return toFunction(codeArgs, nodeGenerator[node.type](node));
@@ -4792,9 +4720,10 @@ function render(context, observer, template, filters, partials, directives, tran
         return function () {
             return getter(stack);
         };
-    }, renderTextVnode = function (text) {
+    }, renderTextVnode = function (value) {
         const vnodeList = last(vnodeStack);
         if (vnodeList) {
+            const text = toString(value);
             const lastVnode = last(vnodeList);
             if (lastVnode && lastVnode.isText) {
                 lastVnode.text += text;
@@ -4904,11 +4833,9 @@ function render(context, observer, template, filters, partials, directives, tran
             keypath: $scope.$keypath,
             context,
         });
-    }, renderElementVnode = function (tag, attrs, childs, text, isStatic, isOption, isStyle, isSvg, html, ref, key) {
+    }, renderElementVnode = function (tag, attrs, childs, isStatic, isOption, isStyle, isSvg, html, ref, key) {
         const vnode = {
             tag,
-            text,
-            html,
             isStatic,
             isOption,
             isStyle,
@@ -4918,6 +4845,9 @@ function render(context, observer, template, filters, partials, directives, tran
             context,
             keypath: $scope.$keypath,
         };
+        if (isDef(html)) {
+            vnode.html = toString(html);
+        }
         if (attrs) {
             $vnode = vnode;
             attrs();
@@ -6952,7 +6882,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.119";
+Yox.version = "1.0.0-alpha.120";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.119
+ * yox.js v1.0.0-alpha.120
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -1457,8 +1457,8 @@ function createComponent(vnode, options) {
     const child = (vnode.parent || vnode.context).createComponent(options, vnode);
     vnode.data[COMPONENT] = child;
     vnode.data[LOADING] = FALSE;
-    update$3(vnode);
     update$2(vnode);
+    update$3(vnode);
     return child;
 }
 let guid = 0;
@@ -1527,8 +1527,8 @@ function createVnode(api, vnode) {
         }
         update(api, vnode);
         update$1(api, vnode);
-        update$3(vnode);
         update$2(vnode);
+        update$3(vnode);
     }
 }
 function addVnodes(api, parentNode, vnodes, startIndex, endIndex, before) {
@@ -1806,8 +1806,11 @@ function patch(api, vnode, oldVnode) {
     }
     update(api, vnode, oldVnode);
     update$1(api, vnode, oldVnode);
-    update$3(vnode, oldVnode);
+    // 先处理 directive 再处理 component
+    // 因为组件只是单纯的更新 props，而 directive 则有可能要销毁
+    // 如果顺序反过来，会导致某些本该销毁的指令先被数据的变化触发执行了
     update$2(vnode, oldVnode);
+    update$3(vnode, oldVnode);
     const { text, html, children, isStyle, isOption } = vnode, oldText = oldVnode.text, oldHtml = oldVnode.html, oldChildren = oldVnode.children;
     if (string(text)) {
         if (text !== oldText) {
@@ -1868,6 +1871,10 @@ function toNumber (target, defaultValue) {
         : defaultValue !== UNDEFINED
             ? defaultValue
             : 0;
+}
+
+function isDef (target) {
+    return target !== UNDEFINED;
 }
 
 function setPair(target, name, key, value) {
@@ -1960,9 +1967,10 @@ function render(context, observer, template, filters, partials, directives, tran
         return function () {
             return getter(stack);
         };
-    }, renderTextVnode = function (text) {
+    }, renderTextVnode = function (value) {
         const vnodeList = last(vnodeStack);
         if (vnodeList) {
+            const text = toString(value);
             const lastVnode = last(vnodeList);
             if (lastVnode && lastVnode.isText) {
                 lastVnode.text += text;
@@ -2072,11 +2080,9 @@ function render(context, observer, template, filters, partials, directives, tran
             keypath: $scope.$keypath,
             context,
         });
-    }, renderElementVnode = function (tag, attrs, childs, text, isStatic, isOption, isStyle, isSvg, html, ref, key) {
+    }, renderElementVnode = function (tag, attrs, childs, isStatic, isOption, isStyle, isSvg, html, ref, key) {
         const vnode = {
             tag,
-            text,
-            html,
             isStatic,
             isOption,
             isStyle,
@@ -2086,6 +2092,9 @@ function render(context, observer, template, filters, partials, directives, tran
             context,
             keypath: $scope.$keypath,
         };
+        if (isDef(html)) {
+            vnode.html = toString(html);
+        }
         if (attrs) {
             $vnode = vnode;
             attrs();
@@ -4109,7 +4118,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.119";
+Yox.version = "1.0.0-alpha.120";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
