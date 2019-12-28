@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.120
+ * yox.js v1.0.0-alpha.121
  * (c) 2017-2019 musicode
  * Released under the MIT License.
  */
@@ -4398,6 +4398,9 @@
           staticTag = toString$1(tag);
       }
       push(collectStack, FALSE);
+      // 在 collectStack 为 false 时取值
+      outputRef = ref ? stringifyValue(ref.value, ref.expr, ref.children) : UNDEFINED;
+      outputKey = key ? stringifyValue(key.value, key.expr, key.children) : UNDEFINED;
       if (attrs) {
           var list_1 = [];
           each(attrs, function (attr) {
@@ -4426,8 +4429,6 @@
       outputOption = node.isOption ? TRUE$1 : UNDEFINED;
       outputStyle = node.isStyle ? TRUE$1 : UNDEFINED;
       outputSvg = node.isSvg ? TRUE$1 : UNDEFINED;
-      outputRef = ref ? stringifyValue(ref.value, ref.expr, ref.children) : UNDEFINED;
-      outputKey = key ? stringifyValue(key.value, key.expr, key.children) : UNDEFINED;
       if (isComponent) {
           return toCall(RENDER_COMPONENT_VNODE, 
           // 最常用 => 最不常用排序
@@ -4950,7 +4951,7 @@
           else {
               var partial = partials[name];
               if (partial) {
-                  partial(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderCommentVnode, renderElementVnode, renderComponentVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange, toString);
+                  partial(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderCommentVnode, renderElementVnode, renderComponentVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange);
               }
           }
       }, eachHandler = function (generate, item, key, keypath, index, length) {
@@ -5015,7 +5016,7 @@
               }
           }
       };
-      return template(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderCommentVnode, renderElementVnode, renderComponentVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange, toString);
+      return template(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderCommentVnode, renderElementVnode, renderComponentVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange);
   }
 
   var guid$1 = 0, 
@@ -6981,7 +6982,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.120";
+      Yox.version = "1.0.0-alpha.121";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
