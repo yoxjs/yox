@@ -1,6 +1,6 @@
 /**
- * yox.js v1.0.0-alpha.121
- * (c) 2017-2019 musicode
+ * yox.js v1.0.0-alpha.122
+ * (c) 2017-2020 musicode
  * Released under the MIT License.
  */
 
@@ -2106,16 +2106,7 @@ function render(context, observer, template, filters, partials, directives, tran
             pop(vnodeStack);
         }
         return appendVnode(vnode);
-    }, renderComponentVnode = function (staticTag, attrs, slots, ref, key, dynamicTag) {
-        let tag;
-        // 组件支持动态名称
-        if (dynamicTag) {
-            const componentName = observer.get(dynamicTag);
-            tag = componentName;
-        }
-        else {
-            tag = staticTag;
-        }
+    }, renderComponentVnode = function (tag, attrs, slots, ref, key) {
         const vnode = {
             tag,
             ref,
@@ -2264,7 +2255,7 @@ function render(context, observer, template, filters, partials, directives, tran
 
 let guid$1 = 0, 
 // 这里先写 IE9 支持的接口
-innerText = 'textContent', innerHTML = 'innerHTML', createEvent = function (event, node) {
+textContent = 'textContent', innerHTML = 'innerHTML', createEvent = function (event, node) {
     return event;
 }, findElement = function (selector) {
     const node = DOCUMENT.querySelector(selector);
@@ -2321,8 +2312,9 @@ addElementClass = function (node, className) {
                         this.originalEvent.cancelBubble = TRUE;
                     }
                 }
-                // textContent 不兼容 IE 678
-                innerText = 'innerText';
+                // textContent 不兼容 IE678
+                // 改用 data 属性
+                textContent = 'data';
                 createEvent = function (event, element) {
                     return new IEEvent(event, element);
                 };
@@ -2500,12 +2492,12 @@ function text(node, text, isStyle, isOption) {
                 if (isOption) {
                     node.value = text;
                 }
-                node[innerText] = text;
+                node[textContent] = text;
             }
         }
     }
     else {
-        return node[innerText];
+        return node[textContent];
     }
 }
 function html(node, html, isStyle, isOption) {
@@ -3341,9 +3333,15 @@ function bind(node, directive, vnode) {
             if (modifier) {
                 name += RAW_DOT + modifier;
             }
-            component.on(name, handler);
+            // 监听组件事件不用处理父组件传下来的事件
+            let listener = function (event, data) {
+                if (event.phase !== CustomEvent.PHASE_DOWNWARD) {
+                    handler(event, data);
+                }
+            };
+            component.on(name, listener);
             vnode.data[key] = function () {
-                component.off(name, handler);
+                component.off(name, listener);
             };
         }
     }
@@ -4212,7 +4210,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.121";
+Yox.version = "1.0.0-alpha.122";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

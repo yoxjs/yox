@@ -1,6 +1,6 @@
 /**
- * yox.js v1.0.0-alpha.121
- * (c) 2017-2019 musicode
+ * yox.js v1.0.0-alpha.122
+ * (c) 2017-2020 musicode
  * Released under the MIT License.
  */
 
@@ -2022,10 +2022,11 @@ function createEach(from, to, equal, index) {
         index,
     };
 }
-function createElement(tag, isSvg, isStyle, isComponent) {
+function createElement(tag, dynamicTag, isSvg, isStyle, isComponent) {
     return {
         type: ELEMENT,
         tag,
+        dynamicTag,
         isSvg,
         isStyle,
         // 只有 <option> 没有 value 属性时才为 true
@@ -2090,7 +2091,7 @@ function createText(text) {
 }
 
 // 首字母大写，或中间包含 -
-const componentNamePattern = /^[$A-Z]|-/, 
+const componentNamePattern = /^[A-Z]|-/, 
 // HTML 实体（中间最多 6 位，没见过更长的）
 htmlEntityPattern = /&[#\w\d]{2,6};/, 
 // 常见的自闭合标签
@@ -2152,20 +2153,27 @@ function getAttributeDefaultValue(element, name) {
         return TRUE;
     }
     // <div data-name checked>
-    else {
-        return startsWith(name, 'data-')
-            ? EMPTY_STRING
-            : name;
-    }
+    return startsWith(name, 'data-')
+        ? EMPTY_STRING
+        : name;
 }
-function createElement$1(tagName) {
-    let isSvg = has(svgTagNames, tagName), isComponent = FALSE;
-    // 是 svg 就不可能是组件
-    // 加这个判断的原因是，svg 某些标签含有 连字符 和 大写字母，比较蛋疼
-    if (!isSvg && componentNamePattern.test(tagName)) {
+function createElement$1(staticTag, dynamicTag) {
+    let isSvg = FALSE, isStyle = FALSE, isComponent = FALSE;
+    if (dynamicTag) {
         isComponent = TRUE;
     }
-    return createElement(tagName, isSvg, tagName === 'style', isComponent);
+    else {
+        isSvg = has(svgTagNames, staticTag);
+        // 是 svg 就不可能是组件
+        // 加这个判断的原因是，svg 某些标签含有 连字符 和 大写字母，比较蛋疼
+        if (!isSvg && componentNamePattern.test(staticTag)) {
+            isComponent = TRUE;
+        }
+        else if (staticTag === 'style') {
+            isStyle = TRUE;
+        }
+    }
+    return createElement(staticTag, dynamicTag, isSvg, isStyle, isComponent);
 }
 function compatElement(element) {
     let { tag, attrs } = element, hasType = FALSE, hasValue = FALSE;
@@ -3939,7 +3947,7 @@ function compile$1(content) {
                 // 必须以 <tag 开头才能继续
                 // 如果 <tag 前面有别的字符，会走进第四个 parser
                 if (match && match.index === 0) {
-                    const tag = match[2];
+                    let tag = match[2];
                     if (match[1] === RAW_SLASH) {
                         /**
                          * 处理可能存在的自闭合元素，如下
@@ -3970,7 +3978,25 @@ function compile$1(content) {
                                 }
                             }
                         }
-                        const node = createElement$1(tag);
+                        let dynamicTag;
+                        // 如果以 $ 开头，表示动态组件
+                        if (codeAt(tag) === 36) {
+                            // 编译成表达式
+                            tag = slice(tag, 1);
+                            dynamicTag = compile(tag);
+                            // 表达式必须是标识符类型
+                            {
+                                if (dynamicTag) {
+                                    if (dynamicTag.type !== IDENTIFIER) {
+                                        fatal$1(`The dynamic component "${tag}" is not a valid identifier.`);
+                                    }
+                                }
+                                else {
+                                    fatal$1(`The dynamic component "${tag}" is not a valid expression.`);
+                                }
+                            }
+                        }
+                        const node = createElement$1(tag, dynamicTag);
                         addChild(node);
                         currentElement = node;
                     }
@@ -4792,7 +4818,7 @@ function getComponentSlots(children) {
     }
 }
 nodeGenerator[ELEMENT] = function (node) {
-    let { tag, isComponent, ref, key, html, attrs, children } = node, staticTag, dynamicTag, outputAttrs, outputHTML, outputChilds, outputSlots, outputStatic, outputOption, outputStyle, outputSvg, outputRef, outputKey;
+    let { tag, dynamicTag, isComponent, ref, key, html, attrs, children } = node, outputTag, outputAttrs, outputHTML, outputChilds, outputSlots, outputStatic, outputOption, outputStyle, outputSvg, outputRef, outputKey;
     if (tag === RAW_SLOT) {
         const args = [toString$1(SLOT_DATA_PREFIX + node.name)];
         if (children) {
@@ -4800,13 +4826,10 @@ nodeGenerator[ELEMENT] = function (node) {
         }
         return toCall(RENDER_SLOT, args);
     }
-    // 如果以 $ 开头，表示动态组件
-    if (codeAt(tag) === 36) {
-        dynamicTag = toString$1(slice(tag, 1));
-    }
-    else {
-        staticTag = toString$1(tag);
-    }
+    // 如果是动态组件，tag 会是一个标识符表达式
+    outputTag = dynamicTag
+        ? renderExpression(dynamicTag)
+        : toString$1(tag);
     push(collectStack, FALSE);
     // 在 collectStack 为 false 时取值
     outputRef = ref ? stringifyValue(ref.value, ref.expr, ref.children) : UNDEFINED;
@@ -4843,18 +4866,17 @@ nodeGenerator[ELEMENT] = function (node) {
         return toCall(RENDER_COMPONENT_VNODE, 
         // 最常用 => 最不常用排序
         [
-            staticTag,
+            outputTag,
             outputAttrs,
             outputSlots,
             outputRef,
             outputKey,
-            dynamicTag,
         ]);
     }
     return toCall(RENDER_ELEMENT_VNODE, 
     // 最常用 => 最不常用排序
     [
-        staticTag,
+        outputTag,
         outputAttrs,
         outputChilds,
         outputStatic,
@@ -5297,21 +5319,7 @@ function render(context, observer, template, filters, partials, directives, tran
             pop(vnodeStack);
         }
         return appendVnode(vnode);
-    }, renderComponentVnode = function (staticTag, attrs, slots, ref, key, dynamicTag) {
-        let tag;
-        // 组件支持动态名称
-        if (dynamicTag) {
-            const componentName = observer.get(dynamicTag);
-            {
-                if (!componentName) {
-                    warn(`The dynamic component "${dynamicTag}" can't be found.`);
-                }
-            }
-            tag = componentName;
-        }
-        else {
-            tag = staticTag;
-        }
+    }, renderComponentVnode = function (tag, attrs, slots, ref, key) {
         const vnode = {
             tag,
             ref,
@@ -5470,7 +5478,7 @@ function render(context, observer, template, filters, partials, directives, tran
 
 let guid$1 = 0, 
 // 这里先写 IE9 支持的接口
-innerText = 'textContent', innerHTML = 'innerHTML', createEvent = function (event, node) {
+textContent = 'textContent', innerHTML = 'innerHTML', createEvent = function (event, node) {
     return event;
 }, findElement = function (selector) {
     const node = DOCUMENT.querySelector(selector);
@@ -5621,11 +5629,11 @@ function tag(node) {
 function text(node, text, isStyle, isOption) {
     if (text !== UNDEFINED) {
         {
-            node[innerText] = text;
+            node[textContent] = text;
         }
     }
     else {
-        return node[innerText];
+        return node[textContent];
     }
 }
 function html(node, html, isStyle, isOption) {
@@ -6462,9 +6470,15 @@ function bind(node, directive, vnode) {
             if (modifier) {
                 name += RAW_DOT + modifier;
             }
-            component.on(name, handler);
+            // 监听组件事件不用处理父组件传下来的事件
+            let listener = function (event, data) {
+                if (event.phase !== CustomEvent.PHASE_DOWNWARD) {
+                    handler(event, data);
+                }
+            };
+            component.on(name, listener);
             vnode.data[key] = function () {
-                component.off(name, handler);
+                component.off(name, listener);
             };
         }
     }
@@ -7410,7 +7424,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.121";
+Yox.version = "1.0.0-alpha.122";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

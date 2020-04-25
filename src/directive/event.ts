@@ -17,6 +17,7 @@ import {
 
 import execute from 'yox-common/src/function/execute'
 import debounce from 'yox-common/src/function/debounce'
+import CustomEvent from 'yox-common/src/util/CustomEvent'
 
 import * as constant from 'yox-common/src/util/constant'
 
@@ -68,9 +69,15 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
       if (modifier) {
         name += constant.RAW_DOT + modifier
       }
-      component.on(name, handler)
+      // 监听组件事件不用处理父组件传下来的事件
+      let listener: Listener = function (event, data) {
+        if (event.phase !== CustomEvent.PHASE_DOWNWARD) {
+          (handler as Listener)(event, data)
+        }
+      }
+      component.on(name, listener)
       vnode.data[key] = function () {
-        component.off(name, handler as Listener)
+        component.off(name, listener)
       }
     }
   }
@@ -88,4 +95,3 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
 export function unbind(node: HTMLElement | YoxInterface, directive: Directive, vnode: VNode) {
   execute(vnode.data[directive.key])
 }
-

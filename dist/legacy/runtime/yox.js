@@ -1,6 +1,6 @@
 /**
- * yox.js v1.0.0-alpha.121
- * (c) 2017-2019 musicode
+ * yox.js v1.0.0-alpha.122
+ * (c) 2017-2020 musicode
  * Released under the MIT License.
  */
 
@@ -2115,16 +2115,7 @@
               pop(vnodeStack);
           }
           return appendVnode(vnode);
-      }, renderComponentVnode = function (staticTag, attrs, slots, ref, key, dynamicTag) {
-          var tag;
-          // 组件支持动态名称
-          if (dynamicTag) {
-              var componentName = observer.get(dynamicTag);
-              tag = componentName;
-          }
-          else {
-              tag = staticTag;
-          }
+      }, renderComponentVnode = function (tag, attrs, slots, ref, key) {
           var vnode = {
               tag: tag,
               ref: ref,
@@ -2273,7 +2264,7 @@
 
   var guid$1 = 0, 
   // 这里先写 IE9 支持的接口
-  innerText = 'textContent', innerHTML = 'innerHTML', createEvent = function (event, node) {
+  textContent = 'textContent', innerHTML = 'innerHTML', createEvent = function (event, node) {
       return event;
   }, findElement = function (selector) {
       var node = DOCUMENT.querySelector(selector);
@@ -2331,8 +2322,9 @@
                       };
                       return IEEvent;
                   }());
-                  // textContent 不兼容 IE 678
-                  innerText = 'innerText';
+                  // textContent 不兼容 IE678
+                  // 改用 data 属性
+                  textContent = 'data';
                   createEvent = function (event, element) {
                       return new IEEvent_1(event, element);
                   };
@@ -2510,12 +2502,12 @@
                   if (isOption) {
                       node.value = text;
                   }
-                  node[innerText] = text;
+                  node[textContent] = text;
               }
           }
       }
       else {
-          return node[innerText];
+          return node[textContent];
       }
   }
   function html(node, html, isStyle, isOption) {
@@ -3353,9 +3345,15 @@
               if (modifier) {
                   name += RAW_DOT + modifier;
               }
-              component_1.on(name, handler);
+              // 监听组件事件不用处理父组件传下来的事件
+              var listener_1 = function (event, data) {
+                  if (event.phase !== CustomEvent.PHASE_DOWNWARD) {
+                      handler(event, data);
+                  }
+              };
+              component_1.on(name, listener_1);
               vnode.data[key] = function () {
-                  component_1.off(name, handler);
+                  component_1.off(name, listener_1);
               };
           }
       }
@@ -4223,7 +4221,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.121";
+      Yox.version = "1.0.0-alpha.122";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
