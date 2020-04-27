@@ -143,6 +143,10 @@ export interface ThisWatcherOptions<This = any> {
 	sync?: boolean;
 	once?: boolean;
 }
+export interface EmitterNamespace {
+	type: string;
+	ns?: string;
+}
 export interface EmitterOptions extends Task {
 	ns?: string;
 	num?: number;
@@ -309,10 +313,6 @@ export interface StringApi {
 	has(str: string, part: string): boolean;
 	falsy(str: any): boolean;
 }
-export declare type Namespace = {
-	type: string;
-	ns?: string;
-};
 declare class Emitter {
 	/**
 	 * 是否开启命名空间
@@ -334,34 +334,34 @@ declare class Emitter {
 	 * @param args 事件处理函数的参数列表
 	 * @param filter 自定义过滤器
 	 */
-	fire(type: string | Namespace, args: any[] | void, filter?: (namespace: Namespace, args: any[] | void, options: EmitterOptions) => boolean | void): boolean;
+	fire(type: string | EmitterNamespace, args: any[] | void, filter?: (namespace: EmitterNamespace, args: any[] | void, options: EmitterOptions) => boolean | void): boolean;
 	/**
 	 * 注册监听
 	 *
 	 * @param type
 	 * @param listener
 	 */
-	on(type: string | Namespace, listener: Function | EmitterOptions): void;
+	on(type: string | EmitterNamespace, listener: Function | EmitterOptions): void;
 	/**
 	 * 取消监听
 	 *
 	 * @param type
 	 * @param listener
 	 */
-	off(type?: string | Namespace, listener?: Function): void;
+	off(type?: string | EmitterNamespace, listener?: Function): void;
 	/**
 	 * 是否已监听某个事件
 	 *
 	 * @param type
 	 * @param listener
 	 */
-	has(type: string | Namespace, listener?: Function): boolean;
+	has(type: string | EmitterNamespace, listener?: Function): boolean;
 	/**
 	 * 把事件类型解析成命名空间格式
 	 *
 	 * @param type
 	 */
-	parse(type: string): Namespace;
+	parse(type: string): EmitterNamespace;
 }
 declare class CustomEvent implements CustomEventInterface {
 	static PHASE_CURRENT: number;

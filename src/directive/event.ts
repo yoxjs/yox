@@ -72,7 +72,7 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
       // 监听组件事件不用处理父组件传下来的事件
       let listener: Listener = function (event, data) {
         if (event.phase !== CustomEvent.PHASE_DOWNWARD) {
-          (handler as Listener)(event, data)
+          return (handler as Listener)(event, data)
         }
       }
       component.on(name, listener)

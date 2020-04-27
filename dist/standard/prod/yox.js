@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.122
+ * yox.js v1.0.0-alpha.123
  * (c) 2017-2020 musicode
  * Released under the MIT License.
  */
@@ -6011,7 +6011,7 @@
               // 监听组件事件不用处理父组件传下来的事件
               var listener_1 = function (event, data) {
                   if (event.phase !== CustomEvent.PHASE_DOWNWARD) {
-                      handler(event, data);
+                      return handler(event, data);
                   }
               };
               component_1.on(name, listener_1);
@@ -6895,7 +6895,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.122";
+      Yox.version = "1.0.0-alpha.123";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
