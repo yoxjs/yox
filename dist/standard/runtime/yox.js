@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.123
+ * yox.js v1.0.0-alpha.124
  * (c) 2017-2020 musicode
  * Released under the MIT License.
  */
@@ -1892,7 +1892,7 @@
   }
   var KEY_DIRECTIVES = 'directives';
   function render(context, observer, template, filters, partials, directives, transitions) {
-      var $scope = { $keypath: EMPTY_STRING }, $stack = [$scope], $vnode, vnodeStack = [], localPartials = {}, findValue = function (stack, index, key, lookup, depIgnore, defaultKeypath) {
+      var $scope = { $keypath: EMPTY_STRING }, $stack = [$scope], currentVnode, vnodeStack = [], slotComponentStack = [], localPartials = {}, findValue = function (stack, index, key, lookup, depIgnore, defaultKeypath) {
           var scope = stack[index], keypath = join$1(scope.$keypath, key), value = stack, holder$1 = holder;
           // 如果最后还是取不到值，用回最初的 keypath
           if (defaultKeypath === UNDEFINED) {
@@ -1997,16 +1997,16 @@
               }
           }
       }, renderAttributeVnode = function (name, value) {
-          setPair($vnode, $vnode.isComponent ? 'props' : 'nativeAttrs', name, value);
+          setPair(currentVnode, currentVnode.isComponent ? 'props' : 'nativeAttrs', name, value);
       }, renderPropertyVnode = function (name, value) {
-          setPair($vnode, 'nativeProps', name, value);
+          setPair(currentVnode, 'nativeProps', name, value);
       }, renderLazyVnode = function (name, value) {
-          setPair($vnode, 'lazy', name, value);
+          setPair(currentVnode, 'lazy', name, value);
       }, renderTransitionVnode = function (name) {
-          $vnode.transition = transitions[name];
+          currentVnode.transition = transitions[name];
       }, renderBindingVnode = function (name, holder, hint) {
           var key = join$1(DIRECTIVE_BINDING, name);
-          setPair($vnode, KEY_DIRECTIVES, key, {
+          setPair(currentVnode, KEY_DIRECTIVES, key, {
               ns: DIRECTIVE_BINDING,
               name: name,
               key: key,
@@ -2016,7 +2016,7 @@
           });
           return holder.value;
       }, renderModelVnode = function (holder) {
-          setPair($vnode, KEY_DIRECTIVES, DIRECTIVE_MODEL, {
+          setPair(currentVnode, KEY_DIRECTIVES, DIRECTIVE_MODEL, {
               ns: DIRECTIVE_MODEL,
               name: EMPTY_STRING,
               key: DIRECTIVE_MODEL,
@@ -2025,7 +2025,7 @@
               hooks: directives[DIRECTIVE_MODEL]
           });
       }, renderEventMethodVnode = function (name, key, modifier, value, method, args) {
-          setPair($vnode, KEY_DIRECTIVES, key, {
+          setPair(currentVnode, KEY_DIRECTIVES, key, {
               ns: DIRECTIVE_EVENT,
               name: name,
               key: key,
@@ -2035,7 +2035,7 @@
               handler: createMethodListener(method, args, $stack)
           });
       }, renderEventNameVnode = function (name, key, modifier, value, event) {
-          setPair($vnode, KEY_DIRECTIVES, key, {
+          setPair(currentVnode, KEY_DIRECTIVES, key, {
               ns: DIRECTIVE_EVENT,
               name: name,
               key: key,
@@ -2046,7 +2046,7 @@
           });
       }, renderDirectiveVnode = function (name, key, modifier, value, method, args, getter) {
           var hooks = directives[name];
-          setPair($vnode, KEY_DIRECTIVES, key, {
+          setPair(currentVnode, KEY_DIRECTIVES, key, {
               ns: DIRECTIVE_CUSTOM,
               name: name,
               key: key,
@@ -2060,11 +2060,11 @@
           var value = holder.value, keypath = holder.keypath;
           if (object(value)) {
               for (var key in value) {
-                  setPair($vnode, 'props', key, value[key]);
+                  setPair(currentVnode, 'props', key, value[key]);
               }
               if (keypath) {
                   var key = join$1(DIRECTIVE_BINDING, keypath);
-                  setPair($vnode, KEY_DIRECTIVES, key, {
+                  setPair(currentVnode, KEY_DIRECTIVES, key, {
                       ns: DIRECTIVE_BINDING,
                       name: EMPTY_STRING,
                       key: key,
@@ -2105,9 +2105,9 @@
               vnode.html = toString(html);
           }
           if (attrs) {
-              $vnode = vnode;
+              currentVnode = vnode;
               attrs();
-              $vnode = UNDEFINED;
+              currentVnode = UNDEFINED;
           }
           if (childs) {
               vnodeStack.push(vnode.children = []);
@@ -2124,18 +2124,33 @@
               keypath: $scope.$keypath,
               isComponent: TRUE
           };
+          var componentList = last(slotComponentStack);
+          if (componentList) {
+              push(componentList, vnode);
+          }
           if (attrs) {
-              $vnode = vnode;
+              currentVnode = vnode;
               attrs();
-              $vnode = UNDEFINED;
+              currentVnode = UNDEFINED;
           }
           if (slots) {
               var vnodeSlots = {};
               for (var name in slots) {
                   vnodeStack.push([]);
+                  slotComponentStack.push([]);
                   slots[name]();
                   var vnodes = pop(vnodeStack);
-                  vnodeSlots[name] = vnodes.length ? vnodes : UNDEFINED;
+                  var components = pop(slotComponentStack);
+                  if (vnodes.length) {
+                      vnodeSlots[name] = {
+                          vnodes: vnodes,
+                          components: components
+                      };
+                  }
+                  else {
+                      // 必须要有值，用于覆盖旧值
+                      vnodeSlots[name] = UNDEFINED;
+                  }
               }
               vnode.slots = vnodeSlots;
           }
@@ -2166,13 +2181,16 @@
       }, 
       // <slot name="xx"/>
       renderSlot = function (name, defaultRender) {
-          var vnodeList = last(vnodeStack), vnodes = context.get(name);
+          var vnodeList = last(vnodeStack), slotProps = context.get(name);
           if (vnodeList) {
-              if (vnodes) {
+              if (slotProps) {
+                  var vnodes = slotProps.vnodes, components = slotProps.components;
                   for (var i = 0, length = vnodes.length; i < length; i++) {
                       push(vnodeList, vnodes[i]);
                       vnodes[i].slot = name;
-                      vnodes[i].parent = context;
+                  }
+                  for (var i = 0, length = components.length; i < length; i++) {
+                      components[i].parent = context;
                   }
               }
               else if (defaultRender) {
@@ -4125,7 +4143,7 @@
       /**
        * core 版本
        */
-      Yox.version = "1.0.0-alpha.123";
+      Yox.version = "1.0.0-alpha.124";
       /**
        * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
        */
