@@ -7,8 +7,13 @@ import {
   Directive,
 } from 'yox-type/src/vnode'
 
+import { 
+  ThisListenerOptions,
+} from 'yox-type/src/options'
+
 import {
-  YoxInterface,
+  YoxInterface, 
+  CustomEventInterface,
 } from 'yox-type/src/yox'
 
 import {
@@ -65,19 +70,18 @@ export function bind(node: HTMLElement | YoxInterface, directive: Directive, vno
       }
     }
     else {
-      // 还原命名空间
-      if (modifier) {
-        name += constant.RAW_DOT + modifier
+      const options: ThisListenerOptions = {
+        ns: modifier || constant.EMPTY_STRING,
+        listener(event: CustomEventInterface, data: any) {
+          // 监听组件事件不用处理父组件传下来的事件
+          if (event.phase !== CustomEvent.PHASE_DOWNWARD) {
+            return (handler as Listener)(event, data)
+          }
+        },
       }
-      // 监听组件事件不用处理父组件传下来的事件
-      let listener: Listener = function (event, data) {
-        if (event.phase !== CustomEvent.PHASE_DOWNWARD) {
-          return (handler as Listener)(event, data)
-        }
-      }
-      component.on(name, listener)
+      component.on(name, options)
       vnode.data[key] = function () {
-        component.off(name, listener)
+        component.off(name, options)
       }
     }
   }

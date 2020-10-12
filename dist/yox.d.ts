@@ -45,10 +45,10 @@ export interface YoxInterface {
 	$refs?: Record<string, YoxInterface | HTMLElement>;
 	get(keypath: string, defaultValue?: any): any;
 	set(keypath: string | Data, value?: any): void;
-	on(type: string | Record<string, ThisListener<this>>, listener?: ThisListener<this>): this;
-	once(type: string | Record<string, ThisListener<this>>, listener?: ThisListener<this>): this;
-	off(type?: string, listener?: Function): this;
-	fire(type: string | CustomEventInterface, data?: Data | boolean, downward?: boolean): boolean;
+	on(type: string | Record<string, ThisListener<this> | ThisListenerOptions>, listener?: ThisListener<this> | ThisListenerOptions): this;
+	once(type: string | Record<string, ThisListener<this> | ThisListenerOptions>, listener?: ThisListener<this> | ThisListenerOptions): this;
+	off(type?: string, listener?: ThisListener<this> | ThisListenerOptions): this;
+	fire(type: string | EmitterEvent | CustomEventInterface, data?: Data | boolean, downward?: boolean): boolean;
 	watch(keypath: string | Record<string, ThisWatcher<this> | ThisWatcherOptions<this>>, watcher?: ThisWatcher<this> | ThisWatcherOptions<this>, immediate?: boolean): this;
 	unwatch(keypath?: string, watcher?: ThisWatcher<this>): this;
 	loadComponent(name: string, callback: ComponentCallback): void;
@@ -143,15 +143,30 @@ export interface ThisWatcherOptions<This = any> {
 	sync?: boolean;
 	once?: boolean;
 }
-export interface EmitterNamespace {
+export interface ListenerOptions {
+	listener: Listener;
+	ns?: string;
+}
+export interface ThisListenerOptions<This = any> {
+	listener: ThisListener<This>;
+	ns?: string;
+}
+export interface EmitterEvent {
 	type: string;
 	ns?: string;
 }
-export interface EmitterOptions extends Task {
+export interface EmitterFilter {
+	type?: string;
+	ns?: string;
+	fn?: Function;
+}
+export interface EmitterOptions {
 	ns?: string;
 	num?: number;
 	max?: number;
 	count?: number;
+	ctx?: any;
+	fn: Function;
 }
 export declare type DataGenerator<T> = (options: ComponentOptions<T>) => Data;
 export declare type Accessors<T, V> = {
@@ -175,7 +190,7 @@ export interface ComponentOptions<Computed = any, Watchers = any, Events = any, 
 	slots?: Record<string, VNode[]>;
 	computed?: Accessors<Computed, ComputedGetter | ComputedOptions>;
 	watchers?: Accessors<Watchers, Watcher | WatcherOptions>;
-	events?: Accessors<Events, Listener>;
+	events?: Accessors<Events, Listener | ListenerOptions>;
 	methods?: Methods;
 	transitions?: Record<string, TransitionHooks>;
 	components?: Record<string, ComponentOptions>;
@@ -334,39 +349,41 @@ declare class Emitter {
 	 * @param args 事件处理函数的参数列表
 	 * @param filter 自定义过滤器
 	 */
-	fire(type: string | EmitterNamespace, args: any[] | void, filter?: (namespace: EmitterNamespace, args: any[] | void, options: EmitterOptions) => boolean | void): boolean;
+	fire(type: string | EmitterEvent, args: any[] | void, filter?: (event: EmitterEvent, args: any[] | void, options: EmitterOptions) => boolean | void): boolean;
 	/**
 	 * 注册监听
 	 *
 	 * @param type
 	 * @param listener
 	 */
-	on(type: string | EmitterNamespace, listener: Function | EmitterOptions): void;
+	on(type: string, listener: Function | EmitterOptions): void;
 	/**
 	 * 取消监听
 	 *
 	 * @param type
 	 * @param listener
 	 */
-	off(type?: string | EmitterNamespace, listener?: Function): void;
+	off(type?: string, listener?: Function | EmitterFilter): void;
 	/**
 	 * 是否已监听某个事件
 	 *
 	 * @param type
 	 * @param listener
 	 */
-	has(type: string | EmitterNamespace, listener?: Function): boolean;
+	has(type: string, listener?: Function | EmitterFilter): boolean;
 	/**
 	 * 把事件类型解析成命名空间格式
 	 *
 	 * @param type
 	 */
-	parse(type: string): EmitterNamespace;
+	toEvent(type: string): EmitterEvent;
+	toFilter(type: string, listener?: Function | EmitterFilter): EmitterFilter;
 }
 declare class CustomEvent implements CustomEventInterface {
 	static PHASE_CURRENT: number;
 	static PHASE_UPWARD: number;
 	static PHASE_DOWNWARD: number;
+	static is(event: any): boolean;
 	type: string;
 	phase: number;
 	ns?: string;
@@ -690,19 +707,19 @@ export default class Yox implements YoxInterface {
 	/**
 	 * 监听事件，支持链式调用
 	 */
-	on(type: string | Record<string, ThisListener<this>>, listener?: ThisListener<this>): this;
+	on(type: string | Record<string, ThisListener<this> | ThisListenerOptions>, listener?: ThisListener<this> | ThisListenerOptions): this;
 	/**
 	 * 监听一次事件，支持链式调用
 	 */
-	once(type: string | Record<string, ThisListener<this>>, listener?: ThisListener<this>): this;
+	once(type: string | Record<string, ThisListener<this> | ThisListenerOptions>, listener?: ThisListener<this> | ThisListenerOptions): this;
 	/**
 	 * 取消监听事件，支持链式调用
 	 */
-	off(type?: string, listener?: Function): this;
+	off(type?: string, listener?: ThisListener<this> | ThisListenerOptions): this;
 	/**
 	 * 发射事件
 	 */
-	fire(type: string | CustomEvent, data?: Data | boolean, downward?: boolean): boolean;
+	fire(type: string | EmitterEvent | CustomEvent, data?: Data | boolean, downward?: boolean): boolean;
 	/**
 	 * 监听数据变化，支持链式调用
 	 */

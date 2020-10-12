@@ -1,6 +1,6 @@
 {
   "name": "yox",
-  "version": "1.0.0-alpha.124",
+  "version": "1.0.0-alpha.125",
   "description": "A lightweight mvvm framework",
   "main": "dist/standard/dev/yox.js",
   "module": "dist/standard/dev/yox.esm.js",
@@ -11,31 +11,8 @@
     "test": "test"
   },
   "scripts": {
-    "doc": "docsify serve docs",
-    "dev": "cross-env NODE_ENV=development NODE_RELEASE=dev NODE_PORT=8080 node_modules/.bin/rollup -c ./rollup.config.js",
-    "dts": "./node_modules/.bin/dts-bundle-generator -o dist/yox.d.ts ../../dist/packages/yox/src/Yox.d.ts",
-
-    "dev-standard-source": "cross-env NODE_ENV=development NODE_RELEASE=dev NODE_FORMAT=es node_modules/.bin/rollup -c ./rollup.config.js && cross-env NODE_ENV=development NODE_RELEASE=dev node_modules/.bin/rollup -c ./rollup.config.js",
-    "prod-standard-source": "cross-env NODE_ENV=production NODE_RELEASE=prod NODE_FORMAT=es node_modules/.bin/rollup -c ./rollup.config.js && cross-env NODE_ENV=production NODE_RELEASE=prod node_modules/.bin/rollup -c ./rollup.config.js",
-    "runtime-standard-source": "cross-env NODE_ENV=runtime NODE_RELEASE=runtime NODE_FORMAT=es node_modules/.bin/rollup -c ./rollup.config.js && cross-env NODE_ENV=runtime NODE_RELEASE=runtime node_modules/.bin/rollup -c ./rollup.config.js",
-    "pure-standard-source": "cross-env NODE_ENV=pure NODE_RELEASE=pure NODE_FORMAT=es node_modules/.bin/rollup -c ./rollup.config.js && cross-env NODE_ENV=pure NODE_RELEASE=pure node_modules/.bin/rollup -c ./rollup.config.js",
-
-    "dev-standard-min": "cross-env NODE_ENV=development NODE_RELEASE=dev NODE_FORMAT=es NODE_MINIFY=true node_modules/.bin/rollup -c ./rollup.config.js && cross-env NODE_ENV=development NODE_RELEASE=dev NODE_MINIFY=true node_modules/.bin/rollup -c ./rollup.config.js",
-    "prod-standard-min": "cross-env NODE_ENV=production NODE_RELEASE=prod NODE_FORMAT=es NODE_MINIFY=true node_modules/.bin/rollup -c ./rollup.config.js && cross-env NODE_ENV=production NODE_RELEASE=prod NODE_MINIFY=true node_modules/.bin/rollup -c ./rollup.config.js",
-    "runtime-standard-min": "cross-env NODE_ENV=runtime NODE_RELEASE=runtime NODE_FORMAT=es NODE_MINIFY=true node_modules/.bin/rollup -c ./rollup.config.js && cross-env NODE_ENV=runtime NODE_RELEASE=runtime NODE_MINIFY=true node_modules/.bin/rollup -c ./rollup.config.js",
-    "pure-standard-min": "cross-env NODE_ENV=pure NODE_RELEASE=pure NODE_FORMAT=es NODE_MINIFY=true node_modules/.bin/rollup -c ./rollup.config.js && cross-env NODE_ENV=pure NODE_RELEASE=pure NODE_MINIFY=true node_modules/.bin/rollup -c ./rollup.config.js",
-
-    "dev-legacy-source": "cross-env NODE_ENV=development NODE_RELEASE=dev NODE_LEGACY=true NODE_FORMAT=es node_modules/.bin/rollup -c ./rollup.config.js && cross-env NODE_ENV=development NODE_RELEASE=dev NODE_LEGACY=true node_modules/.bin/rollup -c ./rollup.config.js",
-    "prod-legacy-source": "cross-env NODE_ENV=production NODE_RELEASE=prod NODE_LEGACY=true NODE_FORMAT=es node_modules/.bin/rollup -c ./rollup.config.js && cross-env NODE_ENV=production NODE_RELEASE=prod NODE_LEGACY=true node_modules/.bin/rollup -c ./rollup.config.js",
-    "runtime-legacy-source": "cross-env NODE_ENV=runtime NODE_RELEASE=runtime NODE_LEGACY=true NODE_FORMAT=es node_modules/.bin/rollup -c ./rollup.config.js && cross-env NODE_ENV=runtime NODE_RELEASE=runtime NODE_LEGACY=true node_modules/.bin/rollup -c ./rollup.config.js",
-    "pure-legacy-source": "cross-env NODE_ENV=pure NODE_RELEASE=pure NODE_LEGACY=true NODE_FORMAT=es node_modules/.bin/rollup -c ./rollup.config.js && cross-env NODE_ENV=pure NODE_RELEASE=pure NODE_LEGACY=true node_modules/.bin/rollup -c ./rollup.config.js",
-
-    "dev-legacy-min": "cross-env NODE_ENV=development NODE_RELEASE=dev NODE_LEGACY=true NODE_FORMAT=es NODE_MINIFY=true node_modules/.bin/rollup -c ./rollup.config.js && cross-env NODE_ENV=development NODE_RELEASE=dev NODE_LEGACY=true NODE_MINIFY=true node_modules/.bin/rollup -c ./rollup.config.js",
-    "prod-legacy-min": "cross-env NODE_ENV=production NODE_RELEASE=prod NODE_LEGACY=true NODE_FORMAT=es NODE_MINIFY=true node_modules/.bin/rollup -c ./rollup.config.js && cross-env NODE_ENV=production NODE_RELEASE=prod NODE_LEGACY=true NODE_MINIFY=true node_modules/.bin/rollup -c ./rollup.config.js",
-    "runtime-legacy-min": "cross-env NODE_ENV=runtime NODE_RELEASE=runtime NODE_LEGACY=true NODE_FORMAT=es NODE_MINIFY=true node_modules/.bin/rollup -c ./rollup.config.js && cross-env NODE_ENV=runtime NODE_RELEASE=runtime NODE_LEGACY=true NODE_MINIFY=true node_modules/.bin/rollup -c ./rollup.config.js",
-    "pure-legacy-min": "cross-env NODE_ENV=pure NODE_RELEASE=pure NODE_LEGACY=true NODE_FORMAT=es NODE_MINIFY=true node_modules/.bin/rollup -c ./rollup.config.js && cross-env NODE_ENV=pure NODE_RELEASE=pure NODE_LEGACY=true NODE_MINIFY=true node_modules/.bin/rollup -c ./rollup.config.js",
-
-    "build": "npm run pure-standard-source && npm run runtime-standard-source && npm run prod-standard-source && npm run dev-standard-source && npm run pure-legacy-source && npm run runtime-legacy-source && npm run prod-legacy-source && npm run dev-legacy-source && npm run pure-standard-min && npm run runtime-standard-min && npm run prod-standard-min && npm run dev-standard-min && npm run pure-legacy-min && npm run runtime-legacy-min && npm run prod-legacy-min && npm run dev-legacy-min"
+    "tsc": "tsc",
+    "doc": "docsify serve docs"
   },
   "repository": {
     "type": "git",
@@ -56,16 +33,13 @@
   },
   "homepage": "https://github.com/yoxjs/yox#readme",
   "devDependencies": {
-    "cross-env": "^5.2.0",
-    "dts-bundle-generator": "^3.1.0",
-    "rollup": "^1.10.1",
-    "rollup-plugin-buble": "^0.19.6",
-    "rollup-plugin-filesize": "^6.1.0",
-    "rollup-plugin-replace": "^2.2.0",
-    "rollup-plugin-serve": "^1.0.1",
-    "rollup-plugin-terser": "^5.0.0",
-    "rollup-plugin-typescript": "^1.0.1",
-    "tslib": "^1.10.0",
-    "typescript": "^3.5.3"
+    "yox-common": "^0.20.0",
+    "yox-config": "^0.3.0",
+    "yox-dom": "^0.2.0",
+    "yox-expression-compiler": "^0.18.0",
+    "yox-observer": "^0.19.0",
+    "yox-snabbdom": "^0.21.0",
+    "yox-template-compiler": "^0.29.0",
+    "yox-type": "^0.2.0"
   }
 }

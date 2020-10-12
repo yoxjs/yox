@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.124
+ * yox.js v1.0.0-alpha.125
  * (c) 2017-2020 musicode
  * Released under the MIT License.
  */
@@ -7,8 +7,8 @@
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
   typeof define === 'function' && define.amd ? define(factory) :
-  (global = global || self, global.Yox = factory());
-}(this, function () { 'use strict';
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Yox = factory());
+}(this, (function () { 'use strict';
 
   /**
    * 为了压缩，定义的常量
@@ -118,6 +118,7 @@
   }
 
   var is = /*#__PURE__*/Object.freeze({
+    __proto__: null,
     func: func,
     array: array,
     object: object,
@@ -147,61 +148,56 @@
       }
   }
 
-  var CustomEvent = /** @class */ (function () {
-      /**
-       * 构造函数
-       *
-       * 可以传事件名称，也可以传原生事件对象
-       */
-      function CustomEvent(type, originalEvent) {
-          // 这里不设置命名空间
-          // 因为有没有命名空间取决于 Emitter 的构造函数有没有传 true
-          // CustomEvent 自己无法决定
-          this.type = type;
-          this.phase = CustomEvent.PHASE_CURRENT;
-          if (originalEvent) {
-              this.originalEvent = originalEvent;
-          }
+  var CustomEvent = function(type, originalEvent) {
+      // 这里不设置命名空间
+      // 因为有没有命名空间取决于 Emitter 的构造函数有没有传 true
+      // CustomEvent 自己无法决定
+      this.type = type;
+      this.phase = CustomEvent.PHASE_CURRENT;
+      if (originalEvent) {
+          this.originalEvent = originalEvent;
       }
-      /**
-       * 阻止事件的默认行为
-       */
-      CustomEvent.prototype.preventDefault = function () {
-          var instance = this;
-          if (!instance.isPrevented) {
-              var originalEvent = instance.originalEvent;
-              if (originalEvent) {
-                  originalEvent.preventDefault();
-              }
-              instance.isPrevented = TRUE;
+  };
+  CustomEvent.is = function (event) {
+      return event instanceof CustomEvent;
+  };
+  /**
+   * 阻止事件的默认行为
+   */
+  CustomEvent.prototype.preventDefault = function () {
+      var instance = this;
+      if (!instance.isPrevented) {
+          var originalEvent = instance.originalEvent;
+          if (originalEvent) {
+              originalEvent.preventDefault();
           }
-          return instance;
-      };
-      /**
-       * 停止事件广播
-       */
-      CustomEvent.prototype.stopPropagation = function () {
-          var instance = this;
-          if (!instance.isStoped) {
-              var originalEvent = instance.originalEvent;
-              if (originalEvent) {
-                  originalEvent.stopPropagation();
-              }
-              instance.isStoped = TRUE;
+          instance.isPrevented = TRUE;
+      }
+      return instance;
+  };
+  /**
+   * 停止事件广播
+   */
+  CustomEvent.prototype.stopPropagation = function () {
+      var instance = this;
+      if (!instance.isStoped) {
+          var originalEvent = instance.originalEvent;
+          if (originalEvent) {
+              originalEvent.stopPropagation();
           }
-          return instance;
-      };
-      CustomEvent.prototype.prevent = function () {
-          return this.preventDefault();
-      };
-      CustomEvent.prototype.stop = function () {
-          return this.stopPropagation();
-      };
-      CustomEvent.PHASE_CURRENT = 0;
-      CustomEvent.PHASE_UPWARD = 1;
-      CustomEvent.PHASE_DOWNWARD = MINUS_ONE;
-      return CustomEvent;
-  }());
+          instance.isStoped = TRUE;
+      }
+      return instance;
+  };
+  CustomEvent.prototype.prevent = function () {
+      return this.preventDefault();
+  };
+  CustomEvent.prototype.stop = function () {
+      return this.stopPropagation();
+  };
+  CustomEvent.PHASE_CURRENT = 0;
+  CustomEvent.PHASE_UPWARD = 1;
+  CustomEvent.PHASE_DOWNWARD = MINUS_ONE;
 
   /**
    * 遍历数组
@@ -221,8 +217,8 @@
               }
           }
           else {
-              for (var i = 0; i < length; i++) {
-                  if (callback(array[i], i) === FALSE) {
+              for (var i$1 = 0; i$1 < length; i$1++) {
+                  if (callback(array[i$1], i$1) === FALSE) {
                       break;
                   }
               }
@@ -390,6 +386,7 @@
   }
 
   var array$1 = /*#__PURE__*/Object.freeze({
+    __proto__: null,
     each: each,
     push: push,
     unshift: unshift,
@@ -559,6 +556,7 @@
   }
 
   var string$1 = /*#__PURE__*/Object.freeze({
+    __proto__: null,
     camelize: camelize,
     hyphenate: hyphenate,
     capitalize: capitalize,
@@ -655,7 +653,7 @@
               .replace(dotPattern, '\\.')
               .replace(asteriskPattern, '(\\w+)')
               .replace(doubleAsteriskPattern, '([\.\\w]+?)');
-          cache = patternCache[pattern] = new RegExp("^" + str + "$");
+          cache = patternCache[pattern] = new RegExp(("^" + str + "$"));
       }
       var result = keypath.match(cache);
       if (result) {
@@ -840,6 +838,7 @@
   }
 
   var object$1 = /*#__PURE__*/Object.freeze({
+    __proto__: null,
     keys: keys,
     each: each$2,
     clear: clear,
@@ -906,7 +905,7 @@
       return defaultLogLevel;
   }
   function getStyle(backgroundColor) {
-      return "background-color:" + backgroundColor + ";border-radius:12px;color:#fff;font-size:10px;padding:3px 6px;";
+      return ("background-color:" + backgroundColor + ";border-radius:12px;color:#fff;font-size:10px;padding:3px 6px;");
   }
   /**
    * 打印 debug 日志
@@ -955,11 +954,12 @@
    */
   function fatal(msg, tag) {
       if (getLogLevel() <= FATAL) {
-          throw new Error("[" + (tag || 'Yox fatal') + "]: " + msg);
+          throw new Error(("[" + (tag || 'Yox fatal') + "]: " + msg));
       }
   }
 
   var logger = /*#__PURE__*/Object.freeze({
+    __proto__: null,
     DEBUG: DEBUG,
     INFO: INFO,
     WARN: WARN,
@@ -972,196 +972,208 @@
     fatal: fatal
   });
 
-  var Emitter = /** @class */ (function () {
-      function Emitter(ns) {
-          this.ns = ns || FALSE;
-          this.listeners = {};
-      }
-      /**
-       * 发射事件
-       *
-       * @param type 事件名称或命名空间
-       * @param args 事件处理函数的参数列表
-       * @param filter 自定义过滤器
-       */
-      Emitter.prototype.fire = function (type, args, filter) {
-          var instance = this, namespace = string(type) ? instance.parse(type) : type, list = instance.listeners[namespace.type], isComplete = TRUE;
-          if (list) {
-              // 避免遍历过程中，数组发生变化，比如增删了
-              list = copy(list);
-              // 判断是否是发射事件
-              // 如果 args 的第一个参数是 CustomEvent 类型，表示发射事件
-              // 因为事件处理函数的参数列表是 (event, data)
-              var event = args && args[0] instanceof CustomEvent
-                  ? args[0]
-                  : UNDEFINED;
-              // 这里不用 array.each，减少函数调用
-              for (var i = 0, length = list.length; i < length; i++) {
-                  var options = list[i];
-                  // 命名空间不匹配
-                  if (!matchNamespace(namespace.ns, options)
-                      // 在 fire 过程中被移除了
-                      || !has(list, options)
-                      // 传了 filter，则用 filter 判断是否过滤此 options
-                      || (filter && !filter(namespace, args, options))) {
-                      continue;
-                  }
-                  // 为 event 对象加上当前正在处理的 listener
-                  // 这样方便业务层移除事件绑定
-                  // 比如 on('xx', function) 这样定义了匿名 listener
-                  // 在这个 listener 里面获取不到当前 listener 的引用
-                  // 为了能引用到，有时候会先定义 var listener = function
-                  // 然后再 on('xx', listener) 这样其实是没有必要的
-                  if (event) {
-                      event.listener = options.fn;
-                  }
-                  var result = execute(options.fn, options.ctx, args);
-                  if (event) {
-                      event.listener = UNDEFINED;
-                  }
-                  // 执行次数
-                  options.num = options.num ? (options.num + 1) : 1;
-                  // 注册的 listener 可以指定最大执行次数
-                  if (options.num === options.max) {
-                      instance.off(namespace, options.fn);
-                  }
-                  // 如果没有返回 false，而是调用了 event.stop 也算是返回 false
-                  if (event) {
-                      if (result === FALSE) {
-                          event.prevent().stop();
-                      }
-                      else if (event.isStoped) {
-                          result = FALSE;
-                      }
-                  }
-                  if (result === FALSE) {
-                      isComplete = FALSE;
-                      break;
-                  }
-              }
-          }
-          return isComplete;
-      };
-      /**
-       * 注册监听
-       *
-       * @param type
-       * @param listener
-       */
-      Emitter.prototype.on = function (type, listener) {
-          var instance = this, listeners = instance.listeners, options = func(listener)
-              ? { fn: listener }
-              : listener;
-          if (object(options) && func(options.fn)) {
-              var namespace = string(type) ? instance.parse(type) : type;
-              options.ns = namespace.ns;
-              push(listeners[namespace.type] || (listeners[namespace.type] = []), options);
-          }
-      };
-      /**
-       * 取消监听
-       *
-       * @param type
-       * @param listener
-       */
-      Emitter.prototype.off = function (type, listener) {
-          var instance = this, listeners = instance.listeners;
-          if (type) {
-              var namespace = string(type) ? instance.parse(type) : type, name = namespace.type, ns_1 = namespace.ns, matchListener_1 = createMatchListener(listener), each$1 = function (list, name) {
-                  each(list, function (options, index) {
-                      if (matchListener_1(options) && matchNamespace(ns_1, options)) {
-                          list.splice(index, 1);
-                      }
-                  }, TRUE);
-                  if (!list.length) {
-                      delete listeners[name];
-                  }
-              };
-              if (name) {
-                  if (listeners[name]) {
-                      each$1(listeners[name], name);
-                  }
-              }
-              else if (ns_1) {
-                  each$2(listeners, each$1);
-              }
-          }
-          else {
-              // 清空
-              instance.listeners = {};
-          }
-      };
-      /**
-       * 是否已监听某个事件
-       *
-       * @param type
-       * @param listener
-       */
-      Emitter.prototype.has = function (type, listener) {
-          var instance = this, listeners = instance.listeners, namespace = string(type) ? instance.parse(type) : type, name = namespace.type, ns = namespace.ns, result = TRUE, matchListener = createMatchListener(listener), each$1 = function (list) {
-              each(list, function (options) {
-                  if (matchListener(options) && matchNamespace(ns, options)) {
-                      return result = FALSE;
-                  }
-              });
-              return result;
-          };
-          if (name) {
-              if (listeners[name]) {
-                  each$1(listeners[name]);
-              }
-          }
-          else if (ns) {
-              each$2(listeners, each$1);
-          }
-          return !result;
-      };
-      /**
-       * 把事件类型解析成命名空间格式
-       *
-       * @param type
-       */
-      Emitter.prototype.parse = function (type) {
-          // 这里 ns 必须为字符串
-          // 用于区分 event 对象是否已完成命名空间的解析
-          var result = {
-              type: type,
-              ns: EMPTY_STRING
-          };
-          // 是否开启命名空间
-          if (this.ns) {
-              var index = indexOf$1(type, RAW_DOT);
-              if (index >= 0) {
-                  result.type = slice(type, 0, index);
-                  result.ns = slice(type, index + 1);
-              }
-          }
-          return result;
-      };
-      return Emitter;
-  }());
-  function matchTrue() {
-      return TRUE;
-  }
+  var Emitter = function(ns) {
+      this.ns = ns || FALSE;
+      this.listeners = {};
+  };
   /**
-   * 外部会传入 Function 或 EmitterOptions 或 空
+   * 发射事件
    *
-   * 这里根据传入值的不同类型，创建不同的判断函数
+   * @param type 事件名称或命名空间
+   * @param args 事件处理函数的参数列表
+   * @param filter 自定义过滤器
+   */
+  Emitter.prototype.fire = function (type, args, filter) {
+      var instance = this, event = string(type) ? instance.toEvent(type) : type, list = instance.listeners[event.type], isComplete = TRUE;
+      if (list) {
+          // 避免遍历过程中，数组发生变化，比如增删了
+          list = list.slice();
+          // 判断是否是发射事件
+          // 如果 args 的第一个参数是 CustomEvent 类型，表示发射事件
+          // 因为事件处理函数的参数列表是 (event, data)
+          var customEvent = args && CustomEvent.is(args[0])
+              ? args[0]
+              : UNDEFINED;
+          // 这里不用 array.each，减少函数调用
+          for (var i = 0, length = list.length; i < length; i++) {
+              var options = list[i];
+              // 命名空间不匹配
+              if (!matchNamespace(event.ns, options)
+                  // 在 fire 过程中被移除了
+                  || !has(list, options)
+                  // 传了 filter，则用 filter 判断是否过滤此 options
+                  || (filter && !filter(event, args, options))) {
+                  continue;
+              }
+              // 为 customEvent 对象加上当前正在处理的 listener
+              // 这样方便业务层移除事件绑定
+              // 比如 on('xx', function) 这样定义了匿名 listener
+              // 在这个 listener 里面获取不到当前 listener 的引用
+              // 为了能引用到，有时候会先定义 var listener = function
+              // 然后再 on('xx', listener) 这样其实是没有必要的
+              if (customEvent) {
+                  customEvent.listener = options.listener;
+              }
+              var result = execute(options.listener, options.ctx, args);
+              if (customEvent) {
+                  customEvent.listener = UNDEFINED;
+              }
+              // 执行次数
+              options.num = options.num ? (options.num + 1) : 1;
+              // 注册的 listener 可以指定最大执行次数
+              if (options.num === options.max) {
+                  instance.off(event.type, {
+                      ns: event.ns,
+                      listener: options.listener,
+                  });
+              }
+              // 如果没有返回 false，而是调用了 customEvent.stop 也算是返回 false
+              if (customEvent) {
+                  if (result === FALSE) {
+                      customEvent.prevent().stop();
+                  }
+                  else if (customEvent.isStoped) {
+                      result = FALSE;
+                  }
+              }
+              if (result === FALSE) {
+                  isComplete = FALSE;
+                  break;
+              }
+          }
+      }
+      return isComplete;
+  };
+  /**
+   * 注册监听
    *
-   * 如果传入的是 EmitterOptions，则全等判断
-   *
-   * 如果传入的是 Function，则判断函数是否全等
-   *
-   * 如果传入的是空，则直接返回 true
-   *
+   * @param type
    * @param listener
    */
-  function createMatchListener(listener) {
-      return func(listener)
-          ? function (options) {
-              return listener === options.fn;
+  Emitter.prototype.on = function (type, listener) {
+      var instance = this, listeners = instance.listeners, options = func(listener)
+          ? { listener: listener }
+          : listener;
+      if (object(options) && func(options.listener)) {
+          if (!string(options.ns)) {
+              var event = instance.toEvent(type);
+              options.ns = event.ns;
+              type = event.type;
           }
-          : matchTrue;
+          push(listeners[type] || (listeners[type] = []), options);
+      }
+  };
+  /**
+   * 取消监听
+   *
+   * @param type
+   * @param listener
+   */
+  Emitter.prototype.off = function (type, listener) {
+      var instance = this, listeners = instance.listeners;
+      if (type) {
+          var filter = instance.toFilter(type, listener), each$1 = function (list, name) {
+              each(list, function (item, index) {
+                  if (matchListener(filter.listener, item) && matchNamespace(filter.ns, item)) {
+                      list.splice(index, 1);
+                  }
+              }, TRUE);
+              if (!list.length) {
+                  delete listeners[name];
+              }
+          };
+          if (filter.type) {
+              if (listeners[filter.type]) {
+                  each$1(listeners[filter.type], filter.type);
+              }
+          }
+          // 按命名空间过滤，如 type 传入 .ns
+          else if (filter.ns) {
+              each$2(listeners, each$1);
+          }
+      }
+      else {
+          // 清空
+          instance.listeners = {};
+      }
+  };
+  /**
+   * 是否已监听某个事件
+   *
+   * @param type
+   * @param listener
+   */
+  Emitter.prototype.has = function (type, listener) {
+      var instance = this, listeners = instance.listeners, filter = instance.toFilter(type, listener), result = TRUE, each$1 = function (list) {
+          each(list, function (item) {
+              if (matchListener(filter.listener, item) && matchNamespace(filter.ns, item)) {
+                  return result = FALSE;
+              }
+          });
+          return result;
+      };
+      if (filter.type) {
+          if (listeners[filter.type]) {
+              each$1(listeners[filter.type]);
+          }
+      }
+      else if (filter.ns) {
+          each$2(listeners, each$1);
+      }
+      return !result;
+  };
+  /**
+   * 把事件类型解析成命名空间格式
+   *
+   * @param type
+   */
+  Emitter.prototype.toEvent = function (type) {
+      // 这里 ns 必须为字符串
+      // 用于区分 event 对象是否已完成命名空间的解析
+      var event = {
+          type: type,
+          ns: EMPTY_STRING,
+      };
+      // 是否开启命名空间
+      if (this.ns) {
+          var index = indexOf$1(type, RAW_DOT);
+          if (index >= 0) {
+              event.type = slice(type, 0, index);
+              event.ns = slice(type, index + 1);
+          }
+      }
+      return event;
+  };
+  Emitter.prototype.toFilter = function (type, listener) {
+      var filter;
+      if (listener) {
+          filter = func(listener)
+              ? { listener: listener }
+              : listener;
+      }
+      else {
+          filter = {};
+      }
+      if (string(filter.ns)) {
+          filter.type = type;
+      }
+      else {
+          var event = this.toEvent(type);
+          filter.type = event.type;
+          filter.ns = event.ns;
+      }
+      return filter;
+  };
+  /**
+   * 判断 options 是否能匹配 listener
+   *
+   * @param listener
+   * @param options
+   */
+  function matchListener(listener, options) {
+      return listener
+          ? listener === options.listener
+          : TRUE;
   }
   /**
    * 判断 options 是否能匹配命名空间
@@ -1206,66 +1218,66 @@
   var nextTick$1 = nextTick;
 
   var shared;
-  var NextTask = /** @class */ (function () {
-      function NextTask() {
-          this.tasks = [];
+  var NextTask = function() {
+      this.tasks = [];
+  };
+  /**
+   * 全局单例
+   */
+  NextTask.shared = function () {
+      return shared || (shared = new NextTask());
+  };
+  /**
+   * 在队尾添加异步任务
+   */
+  NextTask.prototype.append = function (func, context) {
+      var instance = this;
+          var tasks = instance.tasks;
+      push(tasks, {
+          fn: func,
+          ctx: context
+      });
+      if (tasks.length === 1) {
+          nextTick$1(function () {
+              instance.run();
+          });
       }
-      /**
-       * 全局单例
-       */
-      NextTask.shared = function () {
-          return shared || (shared = new NextTask());
-      };
-      /**
-       * 在队尾添加异步任务
-       */
-      NextTask.prototype.append = function (func, context) {
-          var instance = this, tasks = instance.tasks;
-          push(tasks, {
-              fn: func,
-              ctx: context
+  };
+  /**
+   * 在队首添加异步任务
+   */
+  NextTask.prototype.prepend = function (func, context) {
+      var instance = this;
+          var tasks = instance.tasks;
+      unshift(tasks, {
+          fn: func,
+          ctx: context
+      });
+      if (tasks.length === 1) {
+          nextTick$1(function () {
+              instance.run();
           });
-          if (tasks.length === 1) {
-              nextTick$1(function () {
-                  instance.run();
-              });
-          }
-      };
-      /**
-       * 在队首添加异步任务
-       */
-      NextTask.prototype.prepend = function (func, context) {
-          var instance = this, tasks = instance.tasks;
-          unshift(tasks, {
-              fn: func,
-              ctx: context
+      }
+  };
+  /**
+   * 清空异步队列
+   */
+  NextTask.prototype.clear = function () {
+      this.tasks.length = 0;
+  };
+  /**
+   * 立即执行异步任务，并清空队列
+   */
+  NextTask.prototype.run = function () {
+      var ref = this;
+          var tasks = ref.tasks;
+      if (tasks.length) {
+          this.tasks = [];
+          each(tasks, function (task) {
+              execute(task.fn, task.ctx);
           });
-          if (tasks.length === 1) {
-              nextTick$1(function () {
-                  instance.run();
-              });
-          }
-      };
-      /**
-       * 清空异步队列
-       */
-      NextTask.prototype.clear = function () {
-          this.tasks.length = 0;
-      };
-      /**
-       * 立即执行异步任务，并清空队列
-       */
-      NextTask.prototype.run = function () {
-          var tasks = this.tasks;
-          if (tasks.length) {
-              this.tasks = [];
-              each(tasks, function (task) {
-                  execute(task.fn, task.ctx);
-              });
-          }
-      };
-      return NextTask;
-  }());
+      }
+  };
 
   function toNumber (target, defaultValue) {
       return numeric(target)
@@ -1280,106 +1292,114 @@
    *
    * 可配置 cache、deps、get、set 等
    */
-  var Computed = /** @class */ (function () {
-      function Computed(keypath, sync, cache, deps, observer, getter, setter) {
-          var instance = this;
-          instance.keypath = keypath;
-          instance.cache = cache;
-          instance.deps = deps;
-          instance.context = observer.context;
-          instance.observer = observer;
-          instance.getter = getter;
-          instance.setter = setter;
-          instance.unique = {};
-          instance.watcher = function ($0, $1, $2) {
-              // 计算属性的依赖变了会走进这里
-              var oldValue = instance.value, newValue = instance.get(TRUE);
-              if (newValue !== oldValue) {
-                  observer.diff(keypath, newValue, oldValue);
-              }
-          };
-          instance.watcherOptions = {
-              sync: sync,
-              watcher: instance.watcher
-          };
-          if (instance.fixed = !falsy(deps)) {
-              each(deps, function (dep) {
-                  observer.watch(dep, instance.watcherOptions);
-              });
+  var Computed = function(keypath, sync, cache, deps, observer, getter, setter) {
+      var instance = this;
+      instance.keypath = keypath;
+      instance.cache = cache;
+      instance.deps = deps;
+      instance.context = observer.context;
+      instance.observer = observer;
+      instance.getter = getter;
+      instance.setter = setter;
+      instance.unique = {};
+      instance.watcher = function ($0, $1, $2) {
+          // 计算属性的依赖变了会走进这里
+          var oldValue = instance.value, newValue = instance.get(TRUE);
+          if (newValue !== oldValue) {
+              observer.diff(keypath, newValue, oldValue);
           }
+      };
+      instance.watcherOptions = {
+          sync: sync,
+          watcher: instance.watcher
+      };
+      if (instance.fixed = !falsy(deps)) {
+          each(deps, function (dep) {
+              observer.watch(dep, instance.watcherOptions);
+          });
       }
-      /**
-       * 读取计算属性的值
-       *
-       * @param force 是否强制刷新缓存
-       */
-      Computed.prototype.get = function (force) {
-          var instance = this, getter = instance.getter, context = instance.context;
-          // 禁用缓存
-          if (!instance.cache) {
+  };
+  /**
+   * 读取计算属性的值
+   *
+   * @param force 是否强制刷新缓存
+   */
+  Computed.prototype.get = function (force) {
+      var instance = this;
+          var getter = instance.getter;
+          var context = instance.context;
+      // 禁用缓存
+      if (!instance.cache) {
+          instance.value = execute(getter, context);
+      }
+      // 减少取值频率，尤其是处理复杂的计算规则
+      else if (force || !has$2(instance, RAW_VALUE)) {
+          // 如果写死了依赖，则不需要收集依赖
+          if (instance.fixed) {
               instance.value = execute(getter, context);
           }
-          // 减少取值频率，尤其是处理复杂的计算规则
-          else if (force || !has$2(instance, RAW_VALUE)) {
-              // 如果写死了依赖，则不需要收集依赖
-              if (instance.fixed) {
-                  instance.value = execute(getter, context);
-              }
-              else {
-                  // 清空上次收集的依赖
-                  instance.unbind();
-                  // 开始收集新的依赖
-                  var lastComputed = Computed.current;
-                  Computed.current = instance;
-                  instance.value = execute(getter, context);
-                  // 绑定新的依赖
-                  instance.bind();
-                  Computed.current = lastComputed;
-              }
+          else {
+              // 清空上次收集的依赖
+              instance.unbind();
+              // 开始收集新的依赖
+              var lastComputed = Computed.current;
+              Computed.current = instance;
+              instance.value = execute(getter, context);
+              // 绑定新的依赖
+              instance.bind();
+              Computed.current = lastComputed;
           }
-          return instance.value;
-      };
-      Computed.prototype.set = function (value) {
-          var _a = this, setter = _a.setter, context = _a.context;
-          if (setter) {
-              setter.call(context, value);
-          }
-      };
-      /**
-       * 添加依赖
-       *
-       * 这里只是为了保证依赖唯一，最后由 bind() 实现绑定
-       *
-       * @param dep
-       */
-      Computed.prototype.add = function (dep) {
-          this.unique[dep] = TRUE;
-      };
-      /**
-       * 绑定依赖
-       */
-      Computed.prototype.bind = function () {
-          var _a = this, unique = _a.unique, deps = _a.deps, observer = _a.observer, watcherOptions = _a.watcherOptions;
-          each$2(unique, function (_, dep) {
-              push(deps, dep);
-              observer.watch(dep, watcherOptions);
-          });
-          // 用完重置
-          // 方便下次收集依赖
-          this.unique = {};
-      };
-      /**
-       * 解绑依赖
-       */
-      Computed.prototype.unbind = function () {
-          var _a = this, deps = _a.deps, observer = _a.observer, watcher = _a.watcher;
-          each(deps, function (dep) {
-              observer.unwatch(dep, watcher);
-          }, TRUE);
-          deps.length = 0;
-      };
-      return Computed;
-  }());
+      }
+      return instance.value;
+  };
+  Computed.prototype.set = function (value) {
+      var ref = this;
+          var setter = ref.setter;
+          var context = ref.context;
+      if (setter) {
+          setter.call(context, value);
+      }
+  };
+  /**
+   * 添加依赖
+   *
+   * 这里只是为了保证依赖唯一，最后由 bind() 实现绑定
+   *
+   * @param dep
+   */
+  Computed.prototype.add = function (dep) {
+      this.unique[dep] = TRUE;
+  };
+  /**
+   * 绑定依赖
+   */
+  Computed.prototype.bind = function () {
+      var ref = this;
+          var unique = ref.unique;
+          var deps = ref.deps;
+          var observer = ref.observer;
+          var watcherOptions = ref.watcherOptions;
+      each$2(unique, function (_, dep) {
+          push(deps, dep);
+          observer.watch(dep, watcherOptions);
+      });
+      // 用完重置
+      // 方便下次收集依赖
+      this.unique = {};
+  };
+  /**
+   * 解绑依赖
+   */
+  Computed.prototype.unbind = function () {
+      var ref = this;
+          var deps = ref.deps;
+          var observer = ref.observer;
+          var watcher = ref.watcher;
+      each(deps, function (dep) {
+          observer.unwatch(dep, watcher);
+      }, TRUE);
+      deps.length = 0;
+  };
 
   function readValue (source, keypath) {
       if (source == NULL || keypath === EMPTY_STRING) {
@@ -1457,13 +1477,13 @@
   function diffRecursion(keypath, newValue, oldValue, watchFuzzyKeypaths, callback) {
       var diff = function (subKeypath, subNewValue, subOldValue) {
           if (subNewValue !== subOldValue) {
-              var newKeypath_1 = join$1(keypath, subKeypath);
+              var newKeypath = join$1(keypath, subKeypath);
               each(watchFuzzyKeypaths, function (fuzzyKeypath) {
-                  if (matchFuzzy(newKeypath_1, fuzzyKeypath) !== UNDEFINED) {
-                      callback(fuzzyKeypath, newKeypath_1, subNewValue, subOldValue);
+                  if (matchFuzzy(newKeypath, fuzzyKeypath) !== UNDEFINED) {
+                      callback(fuzzyKeypath, newKeypath, subNewValue, subOldValue);
                   }
               });
-              diffRecursion(newKeypath_1, subNewValue, subOldValue, watchFuzzyKeypaths, callback);
+              diffRecursion(newKeypath, subNewValue, subOldValue, watchFuzzyKeypaths, callback);
           }
       };
       diffString(newValue, oldValue, diff)
@@ -1560,793 +1580,842 @@
    *
    * 对于外部调用 observer.watch('keypath', listener)，属于异步监听，它只关心是否变了，而不关心是否是立即触发的
    */
-  var Observer = /** @class */ (function () {
-      function Observer(data, context) {
-          var instance = this;
-          instance.data = data || {};
-          instance.context = context || instance;
-          instance.nextTask = new NextTask();
-          instance.syncEmitter = new Emitter();
-          instance.asyncEmitter = new Emitter();
-          instance.asyncChanges = {};
+  var Observer = function(data, context) {
+      var instance = this;
+      instance.data = data || {};
+      instance.context = context || instance;
+      instance.nextTask = new NextTask();
+      instance.syncEmitter = new Emitter();
+      instance.asyncEmitter = new Emitter();
+      instance.asyncChanges = {};
+  };
+  /**
+   * 获取数据
+   *
+   * @param keypath
+   * @param defaultValue
+   * @param depIgnore
+   * @return
+   */
+  Observer.prototype.get = function (keypath, defaultValue, depIgnore) {
+      var instance = this, currentComputed = Computed.current;
+          var data = instance.data;
+          var computed = instance.computed;
+      // 传入 '' 获取整个 data
+      if (keypath === EMPTY_STRING) {
+          return data;
       }
-      /**
-       * 获取数据
-       *
-       * @param keypath
-       * @param defaultValue
-       * @param depIgnore
-       * @return
-       */
-      Observer.prototype.get = function (keypath, defaultValue, depIgnore) {
-          var instance = this, currentComputed = Computed.current, data = instance.data, computed = instance.computed;
-          // 传入 '' 获取整个 data
-          if (keypath === EMPTY_STRING) {
-              return data;
+      // 调用 get 时，外面想要获取依赖必须设置是谁在收集依赖
+      // 如果没设置，则跳过依赖收集
+      if (currentComputed && !depIgnore) {
+          currentComputed.add(keypath);
+      }
+      var result;
+      if (computed) {
+          result = get(computed, keypath);
+      }
+      if (!result) {
+          result = get(data, keypath);
+      }
+      return result ? result.value : defaultValue;
+  };
+  /**
+   * 更新数据
+   *
+   * @param keypath
+   * @param value
+   */
+  Observer.prototype.set = function (keypath, value) {
+      var instance = this;
+          var data = instance.data;
+          var computed = instance.computed;
+          var setValue = function (newValue, keypath) {
+          var oldValue = instance.get(keypath);
+          if (newValue === oldValue) {
+              return;
           }
-          // 调用 get 时，外面想要获取依赖必须设置是谁在收集依赖
-          // 如果没设置，则跳过依赖收集
-          if (currentComputed && !depIgnore) {
-              currentComputed.add(keypath);
-          }
-          var result;
-          if (computed) {
-              result = get(computed, keypath);
-          }
-          if (!result) {
-              result = get(data, keypath);
-          }
-          return result ? result.value : defaultValue;
-      };
-      /**
-       * 更新数据
-       *
-       * @param keypath
-       * @param value
-       */
-      Observer.prototype.set = function (keypath, value) {
-          var instance = this, data = instance.data, computed = instance.computed, setValue = function (newValue, keypath) {
-              var oldValue = instance.get(keypath);
-              if (newValue === oldValue) {
+          var next;
+          each$1(keypath, function (key, index, lastIndex) {
+              if (index === 0) {
+                  if (computed && computed[key]) {
+                      if (lastIndex === 0) {
+                          computed[key].set(newValue);
+                      }
+                      else {
+                          // 这里 next 可能为空
+                          next = computed[key].get();
+                      }
+                  }
+                  else {
+                      if (lastIndex === 0) {
+                          data[key] = newValue;
+                      }
+                      else {
+                          next = data[key] || (data[key] = {});
+                      }
+                  }
                   return;
               }
-              var next;
-              each$1(keypath, function (key, index, lastIndex) {
-                  if (index === 0) {
-                      if (computed && computed[key]) {
-                          if (lastIndex === 0) {
-                              computed[key].set(newValue);
-                          }
-                          else {
-                              // 这里 next 可能为空
-                              next = computed[key].get();
-                          }
-                      }
-                      else {
-                          if (lastIndex === 0) {
-                              data[key] = newValue;
-                          }
-                          else {
-                              next = data[key] || (data[key] = {});
-                          }
-                      }
-                      return;
+              if (next) {
+                  if (index === lastIndex) {
+                      next[key] = newValue;
                   }
-                  if (next) {
-                      if (index === lastIndex) {
-                          next[key] = newValue;
-                      }
-                      else {
-                          next = next[key] || (next[key] = {});
-                      }
+                  else {
+                      next = next[key] || (next[key] = {});
+                  }
+              }
+          });
+          instance.diff(keypath, newValue, oldValue);
+      };
+      if (string(keypath)) {
+          setValue(value, keypath);
+      }
+      else if (object(keypath)) {
+          each$2(keypath, setValue);
+      }
+  };
+  /**
+   * 同步调用的 diff，用于触发 syncEmitter，以及唤醒 asyncEmitter
+   *
+   * @param keypath
+   * @param newValue
+   * @param oldValue
+   */
+  Observer.prototype.diff = function (keypath, newValue, oldValue) {
+      var instance = this;
+          var syncEmitter = instance.syncEmitter;
+          var asyncEmitter = instance.asyncEmitter;
+          var asyncChanges = instance.asyncChanges;
+          var isRecursive = codeAt(keypath) !== 36;
+      diffWatcher(keypath, newValue, oldValue, syncEmitter.listeners, isRecursive, function (watchKeypath, keypath, newValue, oldValue) {
+          syncEmitter.fire({
+              type: watchKeypath,
+              ns: EMPTY_STRING,
+          }, [
+              newValue, oldValue, keypath
+          ]);
+      });
+      /**
+       * 此处有坑，举个例子
+       *
+       * observer.watch('a', function () {})
+       *
+       * observer.set('a', 1)
+       *
+       * observer.watch('a', function () {})
+       *
+       * 这里，第一个 watcher 应该触发，但第二个不应该，因为它绑定监听时，值已经是最新的了
+       */
+      diffWatcher(keypath, newValue, oldValue, asyncEmitter.listeners, isRecursive, function (watchKeypath, keypath, newValue, oldValue) {
+          each(asyncEmitter.listeners[watchKeypath], function (item) {
+              item.count++;
+          });
+          var ref = asyncChanges[keypath] || (asyncChanges[keypath] = { value: oldValue, keypaths: [] });
+              var keypaths = ref.keypaths;
+          if (!has(keypaths, watchKeypath)) {
+              push(keypaths, watchKeypath);
+          }
+          if (!instance.pending) {
+              instance.pending = TRUE;
+              instance.nextTask.append(function () {
+                  if (instance.pending) {
+                      instance.pending = UNDEFINED;
+                      instance.diffAsync();
                   }
               });
-              instance.diff(keypath, newValue, oldValue);
+          }
+      });
+  };
+  /**
+   * 异步触发的 diff
+   */
+  Observer.prototype.diffAsync = function () {
+      var instance = this;
+          var asyncEmitter = instance.asyncEmitter;
+          var asyncChanges = instance.asyncChanges;
+      instance.asyncChanges = {};
+      each$2(asyncChanges, function (change, keypath) {
+          var args = [instance.get(keypath), change.value, keypath];
+          // 不能在这判断新旧值是否相同，相同就不 fire
+          // 因为前面标记了 count，在这中断会导致 count 无法清除
+          each(change.keypaths, function (watchKeypath) {
+              asyncEmitter.fire({
+                  type: watchKeypath,
+                  ns: EMPTY_STRING,
+              }, args, filterWatcher);
+          });
+      });
+  };
+  /**
+   * 添加计算属性
+   *
+   * @param keypath
+   * @param computed
+   */
+  Observer.prototype.addComputed = function (keypath, options) {
+      var cache = TRUE, sync = TRUE, deps = [], getter, setter;
+      if (func(options)) {
+          getter = options;
+      }
+      else if (object(options)) {
+          var computedOptions = options;
+          if (boolean(computedOptions.cache)) {
+              cache = computedOptions.cache;
+          }
+          if (boolean(computedOptions.sync)) {
+              sync = computedOptions.sync;
+          }
+          // 因为可能会修改 deps，所以这里创建一个新的 deps，避免影响外部传入的 deps
+          if (array(computedOptions.deps)) {
+              deps = copy(computedOptions.deps);
+          }
+          if (func(computedOptions.get)) {
+              getter = computedOptions.get;
+          }
+          if (func(computedOptions.set)) {
+              setter = computedOptions.set;
+          }
+      }
+      if (getter) {
+          var instance = this, computed = new Computed(keypath, sync, cache, deps, instance, getter, setter);
+          if (!instance.computed) {
+              instance.computed = {};
+          }
+          instance.computed[keypath] = computed;
+          return computed;
+      }
+  };
+  /**
+   * 移除计算属性
+   *
+   * @param keypath
+   */
+  Observer.prototype.removeComputed = function (keypath) {
+      var instance = this;
+          var computed = instance.computed;
+      if (computed && has$2(computed, keypath)) {
+          delete computed[keypath];
+      }
+  };
+  /**
+   * 监听数据变化
+   *
+   * @param keypath
+   * @param watcher
+   * @param immediate
+   */
+  Observer.prototype.watch = function (keypath, watcher, immediate) {
+      var instance = this;
+          var context = instance.context;
+          var syncEmitter = instance.syncEmitter;
+          var asyncEmitter = instance.asyncEmitter;
+          var bind = function (keypath, options) {
+          var emitter = options.sync ? syncEmitter : asyncEmitter, 
+          // formatWatcherOptions 保证了 options.watcher 一定存在
+          listener = {
+              ns: EMPTY_STRING,
+              listener: options.watcher,
+              ctx: context,
+              count: 0,
           };
-          if (string(keypath)) {
-              setValue(value, keypath);
+          if (options.once) {
+              listener.max = 1;
           }
-          else if (object(keypath)) {
-              each$2(keypath, setValue);
-          }
-      };
-      /**
-       * 同步调用的 diff，用于触发 syncEmitter，以及唤醒 asyncEmitter
-       *
-       * @param keypath
-       * @param newValue
-       * @param oldValue
-       */
-      Observer.prototype.diff = function (keypath, newValue, oldValue) {
-          var instance = this, syncEmitter = instance.syncEmitter, asyncEmitter = instance.asyncEmitter, asyncChanges = instance.asyncChanges, 
-          /**
-           * 我们认为 $ 开头的变量是不可递归的
-           * 比如浏览器中常见的 $0 表示当前选中元素
-           * DOM 元素是不能递归的
-           */
-          isRecursive = codeAt(keypath) !== 36;
-          diffWatcher(keypath, newValue, oldValue, syncEmitter.listeners, isRecursive, function (watchKeypath, keypath, newValue, oldValue) {
-              syncEmitter.fire(watchKeypath, [newValue, oldValue, keypath]);
-          });
-          /**
-           * 此处有坑，举个例子
-           *
-           * observer.watch('a', function () {})
-           *
-           * observer.set('a', 1)
-           *
-           * observer.watch('a', function () {})
-           *
-           * 这里，第一个 watcher 应该触发，但第二个不应该，因为它绑定监听时，值已经是最新的了
-           */
-          diffWatcher(keypath, newValue, oldValue, asyncEmitter.listeners, isRecursive, function (watchKeypath, keypath, newValue, oldValue) {
-              each(asyncEmitter.listeners[watchKeypath], function (item) {
-                  item.count++;
-              });
-              var keypaths = (asyncChanges[keypath] || (asyncChanges[keypath] = { value: oldValue, keypaths: [] })).keypaths;
-              if (!has(keypaths, watchKeypath)) {
-                  push(keypaths, watchKeypath);
-              }
-              if (!instance.pending) {
-                  instance.pending = TRUE;
-                  instance.nextTask.append(function () {
-                      if (instance.pending) {
-                          instance.pending = UNDEFINED;
-                          instance.diffAsync();
-                      }
-                  });
-              }
-          });
-      };
-      /**
-       * 异步触发的 diff
-       */
-      Observer.prototype.diffAsync = function () {
-          var instance = this, asyncEmitter = instance.asyncEmitter, asyncChanges = instance.asyncChanges;
-          instance.asyncChanges = {};
-          each$2(asyncChanges, function (change, keypath) {
-              var args = [instance.get(keypath), change.value, keypath];
-              // 不能在这判断新旧值是否相同，相同就不 fire
-              // 因为前面标记了 count，在这中断会导致 count 无法清除
-              each(change.keypaths, function (watchKeypath) {
-                  asyncEmitter.fire(watchKeypath, args, filterWatcher);
-              });
-          });
-      };
-      /**
-       * 添加计算属性
-       *
-       * @param keypath
-       * @param computed
-       */
-      Observer.prototype.addComputed = function (keypath, options) {
-          var cache = TRUE, sync = TRUE, deps = [], getter, setter;
-          if (func(options)) {
-              getter = options;
-          }
-          else if (object(options)) {
-              var computedOptions = options;
-              if (boolean(computedOptions.cache)) {
-                  cache = computedOptions.cache;
-              }
-              if (boolean(computedOptions.sync)) {
-                  sync = computedOptions.sync;
-              }
-              // 因为可能会修改 deps，所以这里创建一个新的 deps，避免影响外部传入的 deps
-              if (array(computedOptions.deps)) {
-                  deps = copy(computedOptions.deps);
-              }
-              if (func(computedOptions.get)) {
-                  getter = computedOptions.get;
-              }
-              if (func(computedOptions.set)) {
-                  setter = computedOptions.set;
-              }
-          }
-          if (getter) {
-              var instance = this, computed = new Computed(keypath, sync, cache, deps, instance, getter, setter);
-              if (!instance.computed) {
-                  instance.computed = {};
-              }
-              instance.computed[keypath] = computed;
-              return computed;
+          emitter.on(keypath, listener);
+          if (options.immediate) {
+              execute(options.watcher, context, [
+                  instance.get(keypath),
+                  UNDEFINED,
+                  keypath
+              ]);
           }
       };
-      /**
-       * 移除计算属性
-       *
-       * @param keypath
-       */
-      Observer.prototype.removeComputed = function (keypath) {
-          var instance = this, computed = instance.computed;
-          if (computed && has$2(computed, keypath)) {
-              delete computed[keypath];
-          }
+      if (string(keypath)) {
+          bind(keypath, formatWatcherOptions(watcher, immediate));
+          return;
+      }
+      each$2(keypath, function (options, keypath) {
+          bind(keypath, formatWatcherOptions(options));
+      });
+  };
+  /**
+   * 取消监听数据变化
+   *
+   * @param keypath
+   * @param watcher
+   */
+  Observer.prototype.unwatch = function (keypath, watcher) {
+      var filter = {
+          ns: EMPTY_STRING,
+          listener: watcher,
       };
-      /**
-       * 监听数据变化
-       *
-       * @param keypath
-       * @param watcher
-       * @param immediate
-       */
-      Observer.prototype.watch = function (keypath, watcher, immediate) {
-          var instance = this, context = instance.context, syncEmitter = instance.syncEmitter, asyncEmitter = instance.asyncEmitter, bind = function (keypath, options) {
-              var emitter = options.sync ? syncEmitter : asyncEmitter, 
-              // formatWatcherOptions 保证了 options.watcher 一定存在
-              listener = {
-                  fn: options.watcher,
-                  ctx: context,
-                  count: 0
-              };
-              if (options.once) {
-                  listener.max = 1;
-              }
-              emitter.on(keypath, listener);
-              if (options.immediate) {
-                  execute(options.watcher, context, [
-                      instance.get(keypath),
-                      UNDEFINED,
-                      keypath
-                  ]);
-              }
-          };
-          if (string(keypath)) {
-              bind(keypath, formatWatcherOptions(watcher, immediate));
-              return;
-          }
-          each$2(keypath, function (options, keypath) {
-              bind(keypath, formatWatcherOptions(options));
-          });
-      };
-      /**
-       * 取消监听数据变化
-       *
-       * @param keypath
-       * @param watcher
-       */
-      Observer.prototype.unwatch = function (keypath, watcher) {
-          this.syncEmitter.off(keypath, watcher);
-          this.asyncEmitter.off(keypath, watcher);
-      };
-      /**
-       * 取反 keypath 对应的数据
-       *
-       * 不管 keypath 对应的数据是什么类型，操作后都是布尔型
-       *
-       * @param keypath
-       * @return 取反后的布尔值
-       */
-      Observer.prototype.toggle = function (keypath) {
-          var value = !this.get(keypath);
+      this.syncEmitter.off(keypath, filter);
+      this.asyncEmitter.off(keypath, filter);
+  };
+  /**
+   * 取反 keypath 对应的数据
+   *
+   * 不管 keypath 对应的数据是什么类型，操作后都是布尔型
+   *
+   * @param keypath
+   * @return 取反后的布尔值
+   */
+  Observer.prototype.toggle = function (keypath) {
+      var value = !this.get(keypath);
+      this.set(keypath, value);
+      return value;
+  };
+  /**
+   * 递增 keypath 对应的数据
+   *
+   * 注意，最好是整型的加法，如果涉及浮点型，不保证计算正确
+   *
+   * @param keypath 值必须能转型成数字，如果不能，则默认从 0 开始递增
+   * @param step 步进值，默认是 1
+   * @param max 可以递增到的最大值，默认不限制
+   */
+  Observer.prototype.increase = function (keypath, step, max) {
+      var value = toNumber(this.get(keypath), 0) + (step || 1);
+      if (!number(max) || value <= max) {
           this.set(keypath, value);
           return value;
-      };
-      /**
-       * 递增 keypath 对应的数据
-       *
-       * 注意，最好是整型的加法，如果涉及浮点型，不保证计算正确
-       *
-       * @param keypath 值必须能转型成数字，如果不能，则默认从 0 开始递增
-       * @param step 步进值，默认是 1
-       * @param max 可以递增到的最大值，默认不限制
-       */
-      Observer.prototype.increase = function (keypath, step, max) {
-          var value = toNumber(this.get(keypath), 0) + (step || 1);
-          if (!number(max) || value <= max) {
-              this.set(keypath, value);
-              return value;
-          }
-      };
-      /**
-       * 递减 keypath 对应的数据
-       *
-       * 注意，最好是整型的减法，如果涉及浮点型，不保证计算正确
-       *
-       * @param keypath 值必须能转型成数字，如果不能，则默认从 0 开始递减
-       * @param step 步进值，默认是 1
-       * @param min 可以递减到的最小值，默认不限制
-       */
-      Observer.prototype.decrease = function (keypath, step, min) {
-          var value = toNumber(this.get(keypath), 0) - (step || 1);
-          if (!number(min) || value >= min) {
-              this.set(keypath, value);
-              return value;
-          }
-      };
-      /**
-       * 在数组指定位置插入元素
-       *
-       * @param keypath
-       * @param item
-       * @param index
-       */
-      Observer.prototype.insert = function (keypath, item, index) {
-          var list = this.get(keypath);
-          list = !array(list) ? [] : copy(list);
-          var length = list.length;
-          if (index === TRUE || index === length) {
-              list.push(item);
-          }
-          else if (index === FALSE || index === 0) {
-              list.unshift(item);
-          }
-          else if (index > 0 && index < length) {
-              list.splice(index, 0, item);
-          }
-          else {
-              return;
-          }
+      }
+  };
+  /**
+   * 递减 keypath 对应的数据
+   *
+   * 注意，最好是整型的减法，如果涉及浮点型，不保证计算正确
+   *
+   * @param keypath 值必须能转型成数字，如果不能，则默认从 0 开始递减
+   * @param step 步进值，默认是 1
+   * @param min 可以递减到的最小值，默认不限制
+   */
+  Observer.prototype.decrease = function (keypath, step, min) {
+      var value = toNumber(this.get(keypath), 0) - (step || 1);
+      if (!number(min) || value >= min) {
+          this.set(keypath, value);
+          return value;
+      }
+  };
+  /**
+   * 在数组指定位置插入元素
+   *
+   * @param keypath
+   * @param item
+   * @param index
+   */
+  Observer.prototype.insert = function (keypath, item, index) {
+      var list = this.get(keypath);
+      list = !array(list) ? [] : copy(list);
+      var length = list.length;
+      if (index === TRUE || index === length) {
+          list.push(item);
+      }
+      else if (index === FALSE || index === 0) {
+          list.unshift(item);
+      }
+      else if (index > 0 && index < length) {
+          list.splice(index, 0, item);
+      }
+      else {
+          return;
+      }
+      this.set(keypath, list);
+      return TRUE;
+  };
+  /**
+   * 在数组尾部添加元素
+   *
+   * @param keypath
+   * @param item
+   */
+  Observer.prototype.append = function (keypath, item) {
+      return this.insert(keypath, item, TRUE);
+  };
+  /**
+   * 在数组首部添加元素
+   *
+   * @param keypath
+   * @param item
+   */
+  Observer.prototype.prepend = function (keypath, item) {
+      return this.insert(keypath, item, FALSE);
+  };
+  /**
+   * 通过索引移除数组中的元素
+   *
+   * @param keypath
+   * @param index
+   */
+  Observer.prototype.removeAt = function (keypath, index) {
+      var list = this.get(keypath);
+      if (array(list)
+          && index >= 0
+          && index < list.length) {
+          list = copy(list);
+          list.splice(index, 1);
           this.set(keypath, list);
           return TRUE;
-      };
-      /**
-       * 在数组尾部添加元素
-       *
-       * @param keypath
-       * @param item
-       */
-      Observer.prototype.append = function (keypath, item) {
-          return this.insert(keypath, item, TRUE);
-      };
-      /**
-       * 在数组首部添加元素
-       *
-       * @param keypath
-       * @param item
-       */
-      Observer.prototype.prepend = function (keypath, item) {
-          return this.insert(keypath, item, FALSE);
-      };
-      /**
-       * 通过索引移除数组中的元素
-       *
-       * @param keypath
-       * @param index
-       */
-      Observer.prototype.removeAt = function (keypath, index) {
-          var list = this.get(keypath);
-          if (array(list)
-              && index >= 0
-              && index < list.length) {
-              list = copy(list);
-              list.splice(index, 1);
+      }
+  };
+  /**
+   * 直接移除数组中的元素
+   *
+   * @param keypath
+   * @param item
+   */
+  Observer.prototype.remove = function (keypath, item) {
+      var list = this.get(keypath);
+      if (array(list)) {
+          list = copy(list);
+          if (remove(list, item)) {
               this.set(keypath, list);
               return TRUE;
           }
-      };
-      /**
-       * 直接移除数组中的元素
-       *
-       * @param keypath
-       * @param item
-       */
-      Observer.prototype.remove = function (keypath, item) {
-          var list = this.get(keypath);
-          if (array(list)) {
-              list = copy(list);
-              if (remove(list, item)) {
-                  this.set(keypath, list);
-                  return TRUE;
+      }
+  };
+  /**
+   * 拷贝任意数据，支持深拷贝
+   *
+   * @param data
+   * @param deep
+   */
+  Observer.prototype.copy = function (data, deep) {
+      return copy(data, deep);
+  };
+  /**
+   * 销毁
+   */
+  Observer.prototype.destroy = function () {
+      var instance = this;
+      instance.syncEmitter.off();
+      instance.asyncEmitter.off();
+      instance.nextTask.clear();
+      clear(instance);
+  };
+
+  var Yox = function(options) {
+      var instance = this, $options = options || EMPTY_OBJECT;
+      // 为了冒泡 HOOK_BEFORE_CREATE 事件，必须第一时间创建 emitter
+      // 监听各种事件
+      // 支持命名空间
+      instance.$emitter = new Emitter(TRUE);
+      if ($options.events) {
+          instance.on($options.events);
+      }
+      var data = $options.data;
+      var props = $options.props;
+      var vnode = $options.vnode;
+      var propTypes = $options.propTypes;
+      var computed = $options.computed;
+      var methods = $options.methods;
+      var watchers = $options.watchers;
+      var extensions = $options.extensions;
+      instance.$options = $options;
+      if (extensions) {
+          extend(instance, extensions);
+      }
+      // 数据源，默认值仅在创建组件时启用
+      var source = props ? copy(props) : {};
+      // 先放 props
+      // 当 data 是函数时，可以通过 this.get() 获取到外部数据
+      var observer = instance.$observer = new Observer(source, instance);
+      if (computed) {
+          each$2(computed, function (options, keypath) {
+              observer.addComputed(keypath, options);
+          });
+      }
+      var extend$1 = func(data) ? execute(data, instance, options) : data;
+      if (object(extend$1)) {
+          each$2(extend$1, function (value, key) {
+              source[key] = value;
+          });
+      }
+      if (methods) {
+          each$2(methods, function (method, name) {
+              instance[name] = method;
+          });
+      }
+      if (watchers) {
+          instance.watch(watchers);
+      }
+  };
+  /**
+   * 定义组件对象
+   */
+  Yox.define = function (options) {
+      return options;
+  };
+  /**
+   * 安装插件
+   *
+   * 插件必须暴露 install 方法
+   */
+  Yox.use = function (plugin) {
+      plugin.install(Yox);
+  };
+  /**
+   * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
+   */
+  Yox.nextTick = function (task, context) {
+      NextTask.shared().append(task, context);
+  };
+  /**
+   * 编译模板，暴露出来是为了打包阶段的模板预编译
+   */
+  Yox.compile = function (template, stringify) {
+      {
+          return template;
+      }
+  };
+  /**
+   * 注册全局指令
+   */
+  Yox.directive = function (name, directive$1) {
+  };
+  /**
+   * 注册全局过渡动画
+   */
+  Yox.transition = function (name, transition$1) {
+  };
+  /**
+   * 注册全局组件
+   */
+  Yox.component = function (name, component$1) {
+  };
+  /**
+   * 注册全局子模板
+   */
+  Yox.partial = function (name, partial$1) {
+  };
+  /**
+   * 注册全局过滤器
+   */
+  Yox.filter = function (name, filter$1) {
+  };
+  /**
+   * 取值
+   */
+  Yox.prototype.get = function (keypath, defaultValue) {
+      return this.$observer.get(keypath, defaultValue);
+  };
+  /**
+   * 设值
+   */
+  Yox.prototype.set = function (keypath, value) {
+      // 组件经常有各种异步改值，为了避免组件销毁后依然调用 set
+      // 这里判断一下，至于其他方法的异步调用就算了，业务自己控制吧
+      var ref = this;
+          var $observer = ref.$observer;
+      if ($observer) {
+          $observer.set(keypath, value);
+      }
+  };
+  /**
+   * 监听事件，支持链式调用
+   */
+  Yox.prototype.on = function (type, listener) {
+      addEvents(this, type, listener);
+      return this;
+  };
+  /**
+   * 监听一次事件，支持链式调用
+   */
+  Yox.prototype.once = function (type, listener) {
+      addEvents(this, type, listener, TRUE);
+      return this;
+  };
+  /**
+   * 取消监听事件，支持链式调用
+   */
+  Yox.prototype.off = function (type, listener) {
+      this.$emitter.off(type, listener);
+      return this;
+  };
+  /**
+   * 发射事件
+   */
+  Yox.prototype.fire = function (type, data, downward) {
+      // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
+      // 内部为了保持格式统一
+      // 需要转成 Event，这样还能知道 target 是哪个组件
+      var instance = this;
+          var $emitter = instance.$emitter;
+          var $parent = instance.$parent;
+          var $children = instance.$children;
+      // 生成事件对象
+      var event;
+      if (CustomEvent.is(type)) {
+          event = type;
+      }
+      else if (string(type)) {
+          event = new CustomEvent(type);
+      }
+      else {
+          var emitterEvent = type;
+          event = new CustomEvent(emitterEvent.type);
+          event.ns = emitterEvent.ns;
+      }
+      // 先解析出命名空间，避免每次 fire 都要解析
+      if (event.ns === UNDEFINED) {
+          var emitterEvent$1 = $emitter.toEvent(event.type);
+          event.type = emitterEvent$1.type;
+          event.ns = emitterEvent$1.ns;
+      }
+      // 告诉外部是谁发出的事件
+      if (!event.target) {
+          event.target = instance;
+      }
+      // 事件参数列表
+      var args = [event], 
+      // 事件是否正常结束（未被停止冒泡）
+      isComplete;
+      // 比如 fire('name', true) 直接向下发事件
+      if (object(data)) {
+          push(args, data);
+      }
+      else if (data === TRUE) {
+          downward = TRUE;
+      }
+      // 向上发事件会经过自己
+      // 如果向下发事件再经过自己，就产生了一次重叠
+      // 这是没有必要的，而且会导致向下发事件时，外部能接收到该事件，但我们的本意只是想让子组件接收到事件
+      isComplete = downward && event.target === instance
+          ? TRUE
+          : $emitter.fire(event, args);
+      if (isComplete) {
+          if (downward) {
+              if ($children) {
+                  event.phase = CustomEvent.PHASE_DOWNWARD;
+                  each($children, function (child) {
+                      return isComplete = child.fire(event, data, TRUE);
+                  });
               }
           }
-      };
-      /**
-       * 拷贝任意数据，支持深拷贝
-       *
-       * @param data
-       * @param deep
-       */
-      Observer.prototype.copy = function (data, deep) {
-          return copy(data, deep);
-      };
-      /**
-       * 销毁
-       */
-      Observer.prototype.destroy = function () {
-          var instance = this;
-          instance.syncEmitter.off();
-          instance.asyncEmitter.off();
-          instance.nextTask.clear();
-          clear(instance);
-      };
-      return Observer;
-  }());
-
-  var Yox = /** @class */ (function () {
-      function Yox(options) {
-          var instance = this, $options = options || EMPTY_OBJECT;
-          // 为了冒泡 HOOK_BEFORE_CREATE 事件，必须第一时间创建 emitter
-          // 监听各种事件
-          // 支持命名空间
-          instance.$emitter = new Emitter(TRUE);
-          if ($options.events) {
-              instance.on($options.events);
-          }
-          var data = $options.data, props = $options.props, vnode = $options.vnode, propTypes = $options.propTypes, computed = $options.computed, methods = $options.methods, watchers = $options.watchers, extensions = $options.extensions;
-          instance.$options = $options;
-          if (extensions) {
-              extend(instance, extensions);
-          }
-          // 数据源，默认值仅在创建组件时启用
-          var source = props ? copy(props) : {};
-          // 先放 props
-          // 当 data 是函数时，可以通过 this.get() 获取到外部数据
-          var observer = instance.$observer = new Observer(source, instance);
-          if (computed) {
-              each$2(computed, function (options, keypath) {
-                  observer.addComputed(keypath, options);
-              });
-          }
-          var extend$1 = func(data) ? execute(data, instance, options) : data;
-          if (object(extend$1)) {
-              each$2(extend$1, function (value, key) {
-                  source[key] = value;
-              });
-          }
-          if (methods) {
-              each$2(methods, function (method, name) {
-                  instance[name] = method;
-              });
-          }
-          if (watchers) {
-              instance.watch(watchers);
+          else if ($parent) {
+              event.phase = CustomEvent.PHASE_UPWARD;
+              isComplete = $parent.fire(event, data);
           }
       }
-      /**
-       * 定义组件对象
-       */
-      Yox.define = function (options) {
-          return options;
-      };
-      /**
-       * 安装插件
-       *
-       * 插件必须暴露 install 方法
-       */
-      Yox.use = function (plugin) {
-          plugin.install(Yox);
-      };
-      /**
-       * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
-       */
-      Yox.nextTick = function (task, context) {
-          NextTask.shared().append(task, context);
-      };
-      /**
-       * 编译模板，暴露出来是为了打包阶段的模板预编译
-       */
-      Yox.compile = function (template, stringify) {
-          {
-              return template;
-          }
-      };
-      /**
-       * 注册全局指令
-       */
-      Yox.directive = function (name, directive) {
-      };
-      /**
-       * 注册全局过渡动画
-       */
-      Yox.transition = function (name, transition) {
-      };
-      /**
-       * 注册全局组件
-       */
-      Yox.component = function (name, component) {
-      };
-      /**
-       * 注册全局子模板
-       */
-      Yox.partial = function (name, partial) {
-      };
-      /**
-       * 注册全局过滤器
-       */
-      Yox.filter = function (name, filter) {
-      };
-      /**
-       * 取值
-       */
-      Yox.prototype.get = function (keypath, defaultValue) {
-          return this.$observer.get(keypath, defaultValue);
-      };
-      /**
-       * 设值
-       */
-      Yox.prototype.set = function (keypath, value) {
-          // 组件经常有各种异步改值，为了避免组件销毁后依然调用 set
-          // 这里判断一下，至于其他方法的异步调用就算了，业务自己控制吧
-          var $observer = this.$observer;
-          if ($observer) {
-              $observer.set(keypath, value);
-          }
-      };
-      /**
-       * 监听事件，支持链式调用
-       */
-      Yox.prototype.on = function (type, listener) {
-          addEvents(this, type, listener);
+      return isComplete;
+  };
+  /**
+   * 监听数据变化，支持链式调用
+   */
+  Yox.prototype.watch = function (keypath, watcher, immediate) {
+      this.$observer.watch(keypath, watcher, immediate);
+      return this;
+  };
+  /**
+   * 取消监听数据变化，支持链式调用
+   */
+  Yox.prototype.unwatch = function (keypath, watcher) {
+      this.$observer.unwatch(keypath, watcher);
+      return this;
+  };
+  /**
+   * 加载组件，组件可以是同步或异步，最后会调用 callback
+   *
+   * @param name 组件名称
+   * @param callback 组件加载成功后的回调
+   */
+  Yox.prototype.loadComponent = function (name, callback) {
+  };
+  /**
+   * 创建子组件
+   *
+   * @param options 组件配置
+   * @param vnode 虚拟节点
+   */
+  Yox.prototype.createComponent = function (options, vnode) {
+      {
           return this;
-      };
-      /**
-       * 监听一次事件，支持链式调用
-       */
-      Yox.prototype.once = function (type, listener) {
-          addEvents(this, type, listener, TRUE);
-          return this;
-      };
-      /**
-       * 取消监听事件，支持链式调用
-       */
-      Yox.prototype.off = function (type, listener) {
-          this.$emitter.off(type, listener);
-          return this;
-      };
-      /**
-       * 发射事件
-       */
-      Yox.prototype.fire = function (type, data, downward) {
-          // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
-          // 内部为了保持格式统一
-          // 需要转成 Event，这样还能知道 target 是哪个组件
-          var instance = this, $emitter = instance.$emitter, $parent = instance.$parent, $children = instance.$children, event = type instanceof CustomEvent ? type : new CustomEvent(type), args = [event], isComplete;
-          // 创建完 CustomEvent，如果没有人为操作
-          // 它的 ns 为 undefined
-          // 这里先解析出命名空间，避免每次 fire 都要解析
-          if (event.ns === UNDEFINED) {
-              var namespace = $emitter.parse(event.type);
-              event.type = namespace.type;
-              event.ns = namespace.ns;
-          }
-          // 告诉外部是谁发出的事件
-          if (!event.target) {
-              event.target = instance;
-          }
-          // 比如 fire('name', true) 直接向下发事件
-          if (object(data)) {
-              push(args, data);
-          }
-          else if (data === TRUE) {
-              downward = TRUE;
-          }
-          // 向上发事件会经过自己
-          // 如果向下发事件再经过自己，就产生了一次重叠
-          // 这是没有必要的，而且会导致向下发事件时，外部能接收到该事件，但我们的本意只是想让子组件接收到事件
-          isComplete = downward && event.target === instance
-              ? TRUE
-              : $emitter.fire(event, args);
-          if (isComplete) {
-              if (downward) {
-                  if ($children) {
-                      event.phase = CustomEvent.PHASE_DOWNWARD;
-                      each($children, function (child) {
-                          return isComplete = child.fire(event, data, TRUE);
-                      });
-                  }
-              }
-              else if ($parent) {
-                  event.phase = CustomEvent.PHASE_UPWARD;
-                  isComplete = $parent.fire(event, data);
-              }
-          }
-          return isComplete;
-      };
-      /**
-       * 监听数据变化，支持链式调用
-       */
-      Yox.prototype.watch = function (keypath, watcher, immediate) {
-          this.$observer.watch(keypath, watcher, immediate);
-          return this;
-      };
-      /**
-       * 取消监听数据变化，支持链式调用
-       */
-      Yox.prototype.unwatch = function (keypath, watcher) {
-          this.$observer.unwatch(keypath, watcher);
-          return this;
-      };
-      /**
-       * 加载组件，组件可以是同步或异步，最后会调用 callback
-       *
-       * @param name 组件名称
-       * @param callback 组件加载成功后的回调
-       */
-      Yox.prototype.loadComponent = function (name, callback) {
-      };
-      /**
-       * 创建子组件
-       *
-       * @param options 组件配置
-       * @param vnode 虚拟节点
-       */
-      Yox.prototype.createComponent = function (options, vnode) {
-          {
-              return this;
-          }
-      };
-      /**
-       * 注册当前组件级别的指令
-       */
-      Yox.prototype.directive = function (name, directive) {
-      };
-      /**
-       * 注册当前组件级别的过渡动画
-       */
-      Yox.prototype.transition = function (name, transition) {
-      };
-      /**
-       * 注册当前组件级别的组件
-       */
-      Yox.prototype.component = function (name, component) {
-      };
-      /**
-       * 注册当前组件级别的子模板
-       */
-      Yox.prototype.partial = function (name, partial) {
-      };
-      /**
-       * 注册当前组件级别的过滤器
-       */
-      Yox.prototype.filter = function (name, filter) {
-      };
-      /**
-       * 对于某些特殊场景，修改了数据，但是模板的依赖中并没有这一项
-       * 而你非常确定需要更新模板，强制刷新正是你需要的
-       */
-      Yox.prototype.forceUpdate = function (props) {
-      };
-      /**
-       * 把模板抽象语法树渲染成 virtual dom
-       */
-      Yox.prototype.render = function () {
-      };
-      /**
-       * 更新 virtual dom
-       *
-       * @param vnode
-       * @param oldVnode
-       */
-      Yox.prototype.update = function (vnode, oldVnode) {
-      };
-      /**
-       * 校验组件参数
-       *
-       * @param props
-       */
-      Yox.prototype.checkProp = function (key, value) {
-      };
-      /**
-       * 销毁组件
-       */
-      Yox.prototype.destroy = function () {
-          var instance = this, $parent = instance.$parent, $options = instance.$options, $emitter = instance.$emitter, $observer = instance.$observer;
-          $observer.destroy();
-          // 发完 after destroy 事件再解绑所有事件
-          $emitter.off();
-          clear(instance);
-      };
-      /**
-       * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
-       */
-      Yox.prototype.nextTick = function (task) {
-          this.$observer.nextTask.append(task, this);
-      };
-      /**
-       * 取反 keypath 对应的数据
-       *
-       * 不管 keypath 对应的数据是什么类型，操作后都是布尔型
-       */
-      Yox.prototype.toggle = function (keypath) {
-          return this.$observer.toggle(keypath);
-      };
-      /**
-       * 递增 keypath 对应的数据
-       *
-       * 注意，最好是整型的加法，如果涉及浮点型，不保证计算正确
-       *
-       * @param keypath 值必须能转型成数字，如果不能，则默认从 0 开始递增
-       * @param step 步进值，默认是 1
-       * @param max 可以递增到的最大值，默认不限制
-       */
-      Yox.prototype.increase = function (keypath, step, max) {
-          return this.$observer.increase(keypath, step, max);
-      };
-      /**
-       * 递减 keypath 对应的数据
-       *
-       * 注意，最好是整型的减法，如果涉及浮点型，不保证计算正确
-       *
-       * @param keypath 值必须能转型成数字，如果不能，则默认从 0 开始递减
-       * @param step 步进值，默认是 1
-       * @param min 可以递减到的最小值，默认不限制
-       */
-      Yox.prototype.decrease = function (keypath, step, min) {
-          return this.$observer.decrease(keypath, step, min);
-      };
-      /**
-       * 在数组指定位置插入元素
-       *
-       * @param keypath
-       * @param item
-       * @param index
-       */
-      Yox.prototype.insert = function (keypath, item, index) {
-          return this.$observer.insert(keypath, item, index);
-      };
-      /**
-       * 在数组尾部添加元素
-       *
-       * @param keypath
-       * @param item
-       */
-      Yox.prototype.append = function (keypath, item) {
-          return this.$observer.append(keypath, item);
-      };
-      /**
-       * 在数组首部添加元素
-       *
-       * @param keypath
-       * @param item
-       */
-      Yox.prototype.prepend = function (keypath, item) {
-          return this.$observer.prepend(keypath, item);
-      };
-      /**
-       * 通过索引移除数组中的元素
-       *
-       * @param keypath
-       * @param index
-       */
-      Yox.prototype.removeAt = function (keypath, index) {
-          return this.$observer.removeAt(keypath, index);
-      };
-      /**
-       * 直接移除数组中的元素
-       *
-       * @param keypath
-       * @param item
-       */
-      Yox.prototype.remove = function (keypath, item) {
-          return this.$observer.remove(keypath, item);
-      };
-      /**
-       * 拷贝任意数据，支持深拷贝
-       *
-       * @param data
-       * @param deep
-       */
-      Yox.prototype.copy = function (data, deep) {
-          return this.$observer.copy(data, deep);
-      };
-      /**
-       * core 版本
-       */
-      Yox.version = "1.0.0-alpha.124";
-      /**
-       * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
-       */
-      Yox.is = is;
-      Yox.array = array$1;
-      Yox.object = object$1;
-      Yox.string = string$1;
-      Yox.logger = logger;
-      Yox.Event = CustomEvent;
-      Yox.Emitter = Emitter;
-      return Yox;
-  }());
+      }
+  };
+  /**
+   * 注册当前组件级别的指令
+   */
+  Yox.prototype.directive = function (name, directive$1) {
+  };
+  /**
+   * 注册当前组件级别的过渡动画
+   */
+  Yox.prototype.transition = function (name, transition$1) {
+  };
+  /**
+   * 注册当前组件级别的组件
+   */
+  Yox.prototype.component = function (name, component$1) {
+  };
+  /**
+   * 注册当前组件级别的子模板
+   */
+  Yox.prototype.partial = function (name, partial$1) {
+  };
+  /**
+   * 注册当前组件级别的过滤器
+   */
+  Yox.prototype.filter = function (name, filter$1) {
+  };
+  /**
+   * 对于某些特殊场景，修改了数据，但是模板的依赖中并没有这一项
+   * 而你非常确定需要更新模板，强制刷新正是你需要的
+   */
+  Yox.prototype.forceUpdate = function (props) {
+  };
+  /**
+   * 把模板抽象语法树渲染成 virtual dom
+   */
+  Yox.prototype.render = function () {
+  };
+  /**
+   * 更新 virtual dom
+   *
+   * @param vnode
+   * @param oldVnode
+   */
+  Yox.prototype.update = function (vnode, oldVnode) {
+  };
+  /**
+   * 校验组件参数
+   *
+   * @param props
+   */
+  Yox.prototype.checkProp = function (key, value) {
+  };
+  /**
+   * 销毁组件
+   */
+  Yox.prototype.destroy = function () {
+      var instance = this;
+          var $parent = instance.$parent;
+          var $options = instance.$options;
+          var $emitter = instance.$emitter;
+          var $observer = instance.$observer;
+      $observer.destroy();
+      // 发完 after destroy 事件再解绑所有事件
+      $emitter.off();
+      clear(instance);
+  };
+  /**
+   * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
+   */
+  Yox.prototype.nextTick = function (task) {
+      this.$observer.nextTask.append(task, this);
+  };
+  /**
+   * 取反 keypath 对应的数据
+   *
+   * 不管 keypath 对应的数据是什么类型，操作后都是布尔型
+   */
+  Yox.prototype.toggle = function (keypath) {
+      return this.$observer.toggle(keypath);
+  };
+  /**
+   * 递增 keypath 对应的数据
+   *
+   * 注意，最好是整型的加法，如果涉及浮点型，不保证计算正确
+   *
+   * @param keypath 值必须能转型成数字，如果不能，则默认从 0 开始递增
+   * @param step 步进值，默认是 1
+   * @param max 可以递增到的最大值，默认不限制
+   */
+  Yox.prototype.increase = function (keypath, step, max) {
+      return this.$observer.increase(keypath, step, max);
+  };
+  /**
+   * 递减 keypath 对应的数据
+   *
+   * 注意，最好是整型的减法，如果涉及浮点型，不保证计算正确
+   *
+   * @param keypath 值必须能转型成数字，如果不能，则默认从 0 开始递减
+   * @param step 步进值，默认是 1
+   * @param min 可以递减到的最小值，默认不限制
+   */
+  Yox.prototype.decrease = function (keypath, step, min) {
+      return this.$observer.decrease(keypath, step, min);
+  };
+  /**
+   * 在数组指定位置插入元素
+   *
+   * @param keypath
+   * @param item
+   * @param index
+   */
+  Yox.prototype.insert = function (keypath, item, index) {
+      return this.$observer.insert(keypath, item, index);
+  };
+  /**
+   * 在数组尾部添加元素
+   *
+   * @param keypath
+   * @param item
+   */
+  Yox.prototype.append = function (keypath, item) {
+      return this.$observer.append(keypath, item);
+  };
+  /**
+   * 在数组首部添加元素
+   *
+   * @param keypath
+   * @param item
+   */
+  Yox.prototype.prepend = function (keypath, item) {
+      return this.$observer.prepend(keypath, item);
+  };
+  /**
+   * 通过索引移除数组中的元素
+   *
+   * @param keypath
+   * @param index
+   */
+  Yox.prototype.removeAt = function (keypath, index) {
+      return this.$observer.removeAt(keypath, index);
+  };
+  /**
+   * 直接移除数组中的元素
+   *
+   * @param keypath
+   * @param item
+   */
+  Yox.prototype.remove = function (keypath, item) {
+      return this.$observer.remove(keypath, item);
+  };
+  /**
+   * 拷贝任意数据，支持深拷贝
+   *
+   * @param data
+   * @param deep
+   */
+  Yox.prototype.copy = function (data, deep) {
+      return this.$observer.copy(data, deep);
+  };
+  /**
+   * core 版本
+   */
+  Yox.version = "1.0.0-alpha.125";
+  /**
+   * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
+   */
+  Yox.is = is;
+  Yox.array = array$1;
+  Yox.object = object$1;
+  Yox.string = string$1;
+  Yox.logger = logger;
+  Yox.Event = CustomEvent;
+  Yox.Emitter = Emitter;
   function addEvent(instance, type, listener, once) {
+      var $emitter = instance.$emitter;
+      var filter = $emitter.toFilter(type, listener);
       var options = {
-          fn: listener,
-          ctx: instance
+          listener: filter.listener,
+          ns: filter.ns,
+          ctx: instance,
       };
       if (once) {
           options.max = 1;
       }
-      // YoxInterface 没有声明 $emitter，因为不想让外部访问，
-      // 但是这里要用一次，所以加了 as any
-      instance.$emitter.on(type, options);
+      instance.$emitter.on(filter.type, options);
   }
   function addEvents(instance, type, listener, once) {
       if (string(type)) {
@@ -2361,5 +2430,5 @@
 
   return Yox;
 
-}));
+})));
 //# sourceMappingURL=yox.js.map

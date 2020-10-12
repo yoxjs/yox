@@ -1,3 +1,4 @@
+lib
 test
 example
 docs
@@ -6,8 +7,8 @@ build
 node_modules
 package-lock.json
 yarn.lock
+tsconfig.json
 tsconfig.tsbuildinfo
 
 src
-tsconfig.json
 rollup.config.js

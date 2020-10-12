@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.124
+ * yox.js v1.0.0-alpha.125
  * (c) 2017-2020 musicode
  * Released under the MIT License.
  */
@@ -112,6 +112,7 @@ function numeric(value) {
 }
 
 var is = /*#__PURE__*/Object.freeze({
+  __proto__: null,
   func: func,
   array: array,
   object: object,
@@ -156,6 +157,9 @@ class CustomEvent {
         if (originalEvent) {
             this.originalEvent = originalEvent;
         }
+    }
+    static is(event) {
+        return event instanceof CustomEvent;
     }
     /**
      * 阻止事件的默认行为
@@ -383,6 +387,7 @@ function falsy(array$1) {
 }
 
 var array$1 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
   each: each,
   push: push,
   unshift: unshift,
@@ -552,6 +557,7 @@ function falsy$1(str) {
 }
 
 var string$1 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
   camelize: camelize,
   hyphenate: hyphenate,
   capitalize: capitalize,
@@ -833,6 +839,7 @@ function falsy$2(object$1) {
 }
 
 var object$1 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
   keys: keys,
   each: each$2,
   clear: clear,
@@ -953,6 +960,7 @@ function fatal(msg, tag) {
 }
 
 var logger = /*#__PURE__*/Object.freeze({
+  __proto__: null,
   DEBUG: DEBUG,
   INFO: INFO,
   WARN: WARN,
@@ -978,52 +986,55 @@ class Emitter {
      * @param filter 自定义过滤器
      */
     fire(type, args, filter) {
-        let instance = this, namespace = string(type) ? instance.parse(type) : type, list = instance.listeners[namespace.type], isComplete = TRUE;
+        let instance = this, event = string(type) ? instance.toEvent(type) : type, list = instance.listeners[event.type], isComplete = TRUE;
         if (list) {
             // 避免遍历过程中，数组发生变化，比如增删了
-            list = copy(list);
+            list = list.slice();
             // 判断是否是发射事件
             // 如果 args 的第一个参数是 CustomEvent 类型，表示发射事件
             // 因为事件处理函数的参数列表是 (event, data)
-            const event = args && args[0] instanceof CustomEvent
+            const customEvent = args && CustomEvent.is(args[0])
                 ? args[0]
                 : UNDEFINED;
             // 这里不用 array.each，减少函数调用
             for (let i = 0, length = list.length; i < length; i++) {
                 let options = list[i];
                 // 命名空间不匹配
-                if (!matchNamespace(namespace.ns, options)
+                if (!matchNamespace(event.ns, options)
                     // 在 fire 过程中被移除了
                     || !has(list, options)
                     // 传了 filter，则用 filter 判断是否过滤此 options
-                    || (filter && !filter(namespace, args, options))) {
+                    || (filter && !filter(event, args, options))) {
                     continue;
                 }
-                // 为 event 对象加上当前正在处理的 listener
+                // 为 customEvent 对象加上当前正在处理的 listener
                 // 这样方便业务层移除事件绑定
                 // 比如 on('xx', function) 这样定义了匿名 listener
                 // 在这个 listener 里面获取不到当前 listener 的引用
                 // 为了能引用到，有时候会先定义 var listener = function
                 // 然后再 on('xx', listener) 这样其实是没有必要的
-                if (event) {
-                    event.listener = options.fn;
+                if (customEvent) {
+                    customEvent.listener = options.listener;
                 }
-                let result = execute(options.fn, options.ctx, args);
-                if (event) {
-                    event.listener = UNDEFINED;
+                let result = execute(options.listener, options.ctx, args);
+                if (customEvent) {
+                    customEvent.listener = UNDEFINED;
                 }
                 // 执行次数
                 options.num = options.num ? (options.num + 1) : 1;
                 // 注册的 listener 可以指定最大执行次数
                 if (options.num === options.max) {
-                    instance.off(namespace, options.fn);
+                    instance.off(event.type, {
+                        ns: event.ns,
+                        listener: options.listener,
+                    });
                 }
-                // 如果没有返回 false，而是调用了 event.stop 也算是返回 false
-                if (event) {
+                // 如果没有返回 false，而是调用了 customEvent.stop 也算是返回 false
+                if (customEvent) {
                     if (result === FALSE) {
-                        event.prevent().stop();
+                        customEvent.prevent().stop();
                     }
-                    else if (event.isStoped) {
+                    else if (customEvent.isStoped) {
                         result = FALSE;
                     }
                 }
@@ -1043,12 +1054,15 @@ class Emitter {
      */
     on(type, listener) {
         const instance = this, listeners = instance.listeners, options = func(listener)
-            ? { fn: listener }
+            ? { listener: listener }
             : listener;
-        if (object(options) && func(options.fn)) {
-            const namespace = string(type) ? instance.parse(type) : type;
-            options.ns = namespace.ns;
-            push(listeners[namespace.type] || (listeners[namespace.type] = []), options);
+        if (object(options) && func(options.listener)) {
+            if (!string(options.ns)) {
+                const event = instance.toEvent(type);
+                options.ns = event.ns;
+                type = event.type;
+            }
+            push(listeners[type] || (listeners[type] = []), options);
         }
     }
     /**
@@ -1060,9 +1074,9 @@ class Emitter {
     off(type, listener) {
         const instance = this, listeners = instance.listeners;
         if (type) {
-            const namespace = string(type) ? instance.parse(type) : type, name = namespace.type, ns = namespace.ns, matchListener = createMatchListener(listener), each$1 = function (list, name) {
-                each(list, function (options, index) {
-                    if (matchListener(options) && matchNamespace(ns, options)) {
+            const filter = instance.toFilter(type, listener), each$1 = function (list, name) {
+                each(list, function (item, index) {
+                    if (matchListener(filter.listener, item) && matchNamespace(filter.ns, item)) {
                         list.splice(index, 1);
                     }
                 }, TRUE);
@@ -1070,12 +1084,13 @@ class Emitter {
                     delete listeners[name];
                 }
             };
-            if (name) {
-                if (listeners[name]) {
-                    each$1(listeners[name], name);
+            if (filter.type) {
+                if (listeners[filter.type]) {
+                    each$1(listeners[filter.type], filter.type);
                 }
             }
-            else if (ns) {
+            // 按命名空间过滤，如 type 传入 .ns
+            else if (filter.ns) {
                 each$2(listeners, each$1);
             }
         }
@@ -1091,20 +1106,20 @@ class Emitter {
      * @param listener
      */
     has(type, listener) {
-        let instance = this, listeners = instance.listeners, namespace = string(type) ? instance.parse(type) : type, name = namespace.type, ns = namespace.ns, result = TRUE, matchListener = createMatchListener(listener), each$1 = function (list) {
-            each(list, function (options) {
-                if (matchListener(options) && matchNamespace(ns, options)) {
+        let instance = this, listeners = instance.listeners, filter = instance.toFilter(type, listener), result = TRUE, each$1 = function (list) {
+            each(list, function (item) {
+                if (matchListener(filter.listener, item) && matchNamespace(filter.ns, item)) {
                     return result = FALSE;
                 }
             });
             return result;
         };
-        if (name) {
-            if (listeners[name]) {
-                each$1(listeners[name]);
+        if (filter.type) {
+            if (listeners[filter.type]) {
+                each$1(listeners[filter.type]);
             }
         }
-        else if (ns) {
+        else if (filter.ns) {
             each$2(listeners, each$1);
         }
         return !result;
@@ -1114,10 +1129,10 @@ class Emitter {
      *
      * @param type
      */
-    parse(type) {
+    toEvent(type) {
         // 这里 ns 必须为字符串
         // 用于区分 event 对象是否已完成命名空间的解析
-        const result = {
+        const event = {
             type,
             ns: EMPTY_STRING,
         };
@@ -1125,35 +1140,43 @@ class Emitter {
         if (this.ns) {
             const index = indexOf$1(type, RAW_DOT);
             if (index >= 0) {
-                result.type = slice(type, 0, index);
-                result.ns = slice(type, index + 1);
+                event.type = slice(type, 0, index);
+                event.ns = slice(type, index + 1);
             }
         }
-        return result;
+        return event;
+    }
+    toFilter(type, listener) {
+        let filter;
+        if (listener) {
+            filter = func(listener)
+                ? { listener: listener }
+                : listener;
+        }
+        else {
+            filter = {};
+        }
+        if (string(filter.ns)) {
+            filter.type = type;
+        }
+        else {
+            const event = this.toEvent(type);
+            filter.type = event.type;
+            filter.ns = event.ns;
+        }
+        return filter;
     }
 }
-function matchTrue() {
-    return TRUE;
-}
 /**
- * 外部会传入 Function 或 EmitterOptions 或 空
- *
- * 这里根据传入值的不同类型，创建不同的判断函数
- *
- * 如果传入的是 EmitterOptions，则全等判断
- *
- * 如果传入的是 Function，则判断函数是否全等
- *
- * 如果传入的是空，则直接返回 true
+ * 判断 options 是否能匹配 listener
  *
  * @param listener
+ * @param options
  */
-function createMatchListener(listener) {
-    return func(listener)
-        ? function (options) {
-            return listener === options.fn;
-        }
-        : matchTrue;
+function matchListener(listener, options) {
+    return listener
+        ? listener === options.listener
+        : TRUE;
 }
 /**
  * 判断 options 是否能匹配命名空间
@@ -1199,14 +1222,14 @@ var nextTick$1 = nextTick;
 
 let shared;
 class NextTask {
+    constructor() {
+        this.tasks = [];
+    }
     /**
      * 全局单例
      */
     static shared() {
         return shared || (shared = new NextTask());
-    }
-    constructor() {
-        this.tasks = [];
     }
     /**
      * 在队尾添加异步任务
@@ -1656,7 +1679,12 @@ class Observer {
          */
         isRecursive = codeAt(keypath) !== 36;
         diffWatcher(keypath, newValue, oldValue, syncEmitter.listeners, isRecursive, function (watchKeypath, keypath, newValue, oldValue) {
-            syncEmitter.fire(watchKeypath, [newValue, oldValue, keypath]);
+            syncEmitter.fire({
+                type: watchKeypath,
+                ns: EMPTY_STRING,
+            }, [
+                newValue, oldValue, keypath
+            ]);
         });
         /**
          * 此处有坑，举个例子
@@ -1699,7 +1727,10 @@ class Observer {
             // 不能在这判断新旧值是否相同，相同就不 fire
             // 因为前面标记了 count，在这中断会导致 count 无法清除
             each(change.keypaths, function (watchKeypath) {
-                asyncEmitter.fire(watchKeypath, args, filterWatcher);
+                asyncEmitter.fire({
+                    type: watchKeypath,
+                    ns: EMPTY_STRING,
+                }, args, filterWatcher);
             });
         });
     }
@@ -1765,7 +1796,8 @@ class Observer {
             const emitter = options.sync ? syncEmitter : asyncEmitter, 
             // formatWatcherOptions 保证了 options.watcher 一定存在
             listener = {
-                fn: options.watcher,
+                ns: EMPTY_STRING,
+                listener: options.watcher,
                 ctx: context,
                 count: 0,
             };
@@ -1796,8 +1828,12 @@ class Observer {
      * @param watcher
      */
     unwatch(keypath, watcher) {
-        this.syncEmitter.off(keypath, watcher);
-        this.asyncEmitter.off(keypath, watcher);
+        let filter = {
+            ns: EMPTY_STRING,
+            listener: watcher,
+        };
+        this.syncEmitter.off(keypath, filter);
+        this.asyncEmitter.off(keypath, filter);
     }
     /**
      * 取反 keypath 对应的数据
@@ -2080,19 +2116,34 @@ class Yox {
         // 外部为了使用方便，fire(type) 或 fire(type, data) 就行了
         // 内部为了保持格式统一
         // 需要转成 Event，这样还能知道 target 是哪个组件
-        let instance = this, { $emitter, $parent, $children } = instance, event = type instanceof CustomEvent ? type : new CustomEvent(type), args = [event], isComplete;
-        // 创建完 CustomEvent，如果没有人为操作
-        // 它的 ns 为 undefined
-        // 这里先解析出命名空间，避免每次 fire 都要解析
+        const instance = this, { $emitter, $parent, $children } = instance;
+        // 生成事件对象
+        let event;
+        if (CustomEvent.is(type)) {
+            event = type;
+        }
+        else if (string(type)) {
+            event = new CustomEvent(type);
+        }
+        else {
+            const emitterEvent = type;
+            event = new CustomEvent(emitterEvent.type);
+            event.ns = emitterEvent.ns;
+        }
+        // 先解析出命名空间，避免每次 fire 都要解析
         if (event.ns === UNDEFINED) {
-            const namespace = $emitter.parse(event.type);
-            event.type = namespace.type;
-            event.ns = namespace.ns;
+            const emitterEvent = $emitter.toEvent(event.type);
+            event.type = emitterEvent.type;
+            event.ns = emitterEvent.ns;
         }
         // 告诉外部是谁发出的事件
         if (!event.target) {
             event.target = instance;
         }
+        // 事件参数列表
+        let args = [event], 
+        // 事件是否正常结束（未被停止冒泡）
+        isComplete;
         // 比如 fire('name', true) 直接向下发事件
         if (object(data)) {
             push(args, data);
@@ -2313,7 +2364,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.124";
+Yox.version = "1.0.0-alpha.125";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
@@ -2325,16 +2376,16 @@ Yox.logger = logger;
 Yox.Event = CustomEvent;
 Yox.Emitter = Emitter;
 function addEvent(instance, type, listener, once) {
+    const { $emitter } = instance, filter = $emitter.toFilter(type, listener);
     const options = {
-        fn: listener,
-        ctx: instance
+        listener: filter.listener,
+        ns: filter.ns,
+        ctx: instance,
     };
     if (once) {
         options.max = 1;
     }
-    // YoxInterface 没有声明 $emitter，因为不想让外部访问，
-    // 但是这里要用一次，所以加了 as any
-    instance.$emitter.on(type, options);
+    instance.$emitter.on(filter.type, options);
 }
 function addEvents(instance, type, listener, once) {
     if (string(type)) {

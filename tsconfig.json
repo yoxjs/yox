@@ -1,31 +1,8 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "noImplicitThis": true
+    "composite": true
   },
-  "references": [
-    {
-      "path": "../yox-template-compiler"
-    },
-    {
-      "path": "../yox-snabbdom"
-    },
-    {
-      "path": "../yox-dom"
-    },
-    {
-      "path": "../yox-observer"
-    },
-    {
-      "path": "../yox-common"
-    },
-    {
-      "path": "../yox-config"
-    },
-    {
-      "path": "../yox-type"
-    }
-  ],
   "include": [
     "src/**/*.ts"
   ]
