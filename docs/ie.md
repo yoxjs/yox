@@ -5,12 +5,14 @@
 Yox 用了以下高级 API，它们都可以打补丁实现。
 
 * `Object.keys`
+* `Object.create`
 * `Object.freeze`
 * `String.prototype.trim`
 * `Array.isArray`
 * `Array.prototype.indexOf`
 * `Array.prototype.map`
 * `Array.prototype.filter`
+* `Function.prototype.bind`
 * `JSON.stringify`
 
 > IE8 已内置 JSON 对象，IE6、7 需要打补丁
@@ -18,9 +20,8 @@ Yox 用了以下高级 API，它们都可以打补丁实现。
 如果不想自己实现这些函数，建议加上以下脚本，从此拥抱 ES5 全特性（建议加上 Promise）：
 
 ```html
-<!--[if IE]>
-<script src="https://cdn.bootcss.com/es6-promise/4.1.1/es6-promise.auto.min.js"></script>
-<![endif]-->
+<!-- IE 全系列不支持 Promise，且 IE10、IE11 不支持条件注释，只能这样无脑加载了 -->
+<script src="https://cdn.bootcss.com/es6-promise/4.2.8/es6-promise.auto.min.js"></script>
 
 <!--[if lt IE 9]>
 <script src="https://cdn.bootcss.com/es5-shim/4.5.13/es5-shim.min.js"></script>
