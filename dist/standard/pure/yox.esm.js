@@ -1,6 +1,6 @@
 /**
- * yox.js v1.0.0-alpha.125
- * (c) 2017-2020 musicode
+ * yox.js v1.0.0-alpha.200
+ * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
 
@@ -11,10 +11,7 @@ const TRUE = true;
 const FALSE = false;
 const NULL = null;
 const UNDEFINED = void 0;
-const MINUS_ONE = -1;
 const RAW_UNDEFINED = 'undefined';
-const RAW_VALUE = 'value';
-const RAW_LENGTH = 'length';
 const RAW_FUNCTION = 'function';
 const RAW_WILDCARD = '*';
 const RAW_DOT = '.';
@@ -22,10 +19,6 @@ const RAW_DOT = '.';
  * Single instance for window in browser
  */
 const WINDOW = typeof window !== RAW_UNDEFINED ? window : UNDEFINED;
-/**
- * Single instance for global in nodejs or browser
- */
-const GLOBAL = typeof global !== RAW_UNDEFINED ? global : WINDOW;
 /**
  * Single instance for noop function
  */
@@ -44,6 +37,29 @@ const EMPTY_ARRAY = Object.freeze([]);
  * 空字符串
  */
 const EMPTY_STRING = '';
+/**
+ * 日志等级
+ */
+const LOG_LEVEL_DEBUG = 1;
+const LOG_LEVEL_INFO = 2;
+const LOG_LEVEL_WARN = 3;
+const LOG_LEVEL_ERROR = 4;
+const LOG_LEVEL_FATAL = 5;
+/**
+ * 当前是否是源码调试，如果开启了代码压缩，empty function 里的注释会被干掉
+ * 源码模式默认选 INFO，因为 DEBUG 输出的日志太多，会导致性能急剧下降
+ */
+const LOG_LEVEL_DEFAULT = /yox/.test(EMPTY_FUNCTION.toString()) ? LOG_LEVEL_INFO : LOG_LEVEL_WARN;
+/**
+ * 外部可配置的对象
+ */
+const PUBLIC_CONFIG = {
+    leftDelimiter: '{',
+    rightDelimiter: '}',
+    uglifyCompiled: FALSE,
+    minifyCompiled: FALSE,
+    logLevel: LOG_LEVEL_DEFAULT,
+};
 
 /**
  * Check if value is a function.
@@ -198,7 +214,7 @@ class CustomEvent {
 }
 CustomEvent.PHASE_CURRENT = 0;
 CustomEvent.PHASE_UPWARD = 1;
-CustomEvent.PHASE_DOWNWARD = MINUS_ONE;
+CustomEvent.PHASE_DOWNWARD = -1;
 
 /**
  * 遍历数组
@@ -276,7 +292,7 @@ function unshift(array, target) {
  * @return 如果未找到，返回 -1
  */
 function indexOf(array, target, strict) {
-    let result = MINUS_ONE;
+    let result = -1;
     each(array, function (item, index) {
         if (strict === FALSE ? item == target : item === target) {
             result = index;
@@ -402,46 +418,119 @@ var array$1 = /*#__PURE__*/Object.freeze({
   falsy: falsy
 });
 
-const camelizePattern = /-([a-z])/gi, hyphenatePattern = /\B([A-Z])/g, capitalizePattern = /^[a-z]/, camelizeCache = {}, hyphenateCache = {}, capitalizeCache = {};
+function toString (target, defaultValue) {
+    return target != NULL && target.toString
+        ? target.toString()
+        : defaultValue !== UNDEFINED
+            ? defaultValue
+            : EMPTY_STRING;
+}
+
+function isNative (target) {
+    return func(target)
+        && toString(target).indexOf('[native code]') >= 0;
+}
+
+let createPureObject = function () {
+    const obj = Object.create(NULL);
+    return {
+        get(key) {
+            return obj[key];
+        },
+        set(key, value) {
+            obj[key] = value;
+        },
+        keys() {
+            return Object.keys(obj);
+        }
+    };
+};
+
+/**
+ * 缓存一个参数的函数调用结果
+ *
+ * @param fn 需要缓存的函数
+ * @return 带缓存功能的函数
+ */
+function createOneKeyCache(fn) {
+    const cache = createPureObject();
+    return function (key) {
+        const hit = cache.get(key);
+        if (hit !== UNDEFINED) {
+            return hit;
+        }
+        const value = fn(key);
+        cache.set(key, value);
+        return value;
+    };
+}
+/**
+ * 缓存两个参数的函数调用结果
+ *
+ * @param fn 需要缓存的函数
+ * @return 带缓存功能的函数
+ */
+function createTwoKeyCache(fn) {
+    const cache = createPureObject();
+    return function (key1, key2) {
+        let hit1 = cache.get(key1);
+        if (hit1) {
+            const hit2 = hit1.get(key2);
+            if (hit2) {
+                return hit2;
+            }
+        }
+        else {
+            hit1 = createPureObject();
+            cache.set(key1, hit1);
+        }
+        const value = fn(key1, key2);
+        hit1.set(key2, value);
+        return value;
+    };
+}
+
+const camelizePattern = /-([a-z])/gi, hyphenatePattern = /\B([A-Z])/g, capitalizePattern = /^[a-z]/;
 /**
  * 连字符转成驼峰
  *
  * @param str
  * @return 驼峰格式的字符串
  */
-function camelize(str) {
-    if (!camelizeCache[str]) {
-        camelizeCache[str] = str.replace(camelizePattern, function ($0, $1) {
-            return upper($1);
-        });
-    }
-    return camelizeCache[str];
-}
+const camelize = createOneKeyCache(function (str) {
+    return str.replace(camelizePattern, function (_, $1) {
+        return upper($1);
+    });
+});
 /**
  * 驼峰转成连字符
  *
  * @param str
  * @return 连字符格式的字符串
  */
-function hyphenate(str) {
-    if (!hyphenateCache[str]) {
-        hyphenateCache[str] = str.replace(hyphenatePattern, function ($0, $1) {
-            return '-' + lower($1);
-        });
-    }
-    return hyphenateCache[str];
-}
+const hyphenate = createOneKeyCache(function (str) {
+    return str.replace(hyphenatePattern, function (_, $1) {
+        return '-' + lower($1);
+    });
+});
 /**
  * 首字母大写
  *
  * @param str
  * @return
  */
-function capitalize(str) {
-    if (!capitalizeCache[str]) {
-        capitalizeCache[str] = str.replace(capitalizePattern, upper);
-    }
-    return capitalizeCache[str];
+const capitalize = createOneKeyCache(function (str) {
+    return str.replace(capitalizePattern, upper);
+});
+/**
+ * 重复字符串
+ *
+ * @param str
+ * @param count 重复次数
+ * @return
+ */
+function repeat(str, count) {
+    return new Array(count + 1).join(str);
 }
 /**
  * 清除两侧空白符
@@ -561,6 +650,7 @@ var string$1 = /*#__PURE__*/Object.freeze({
   camelize: camelize,
   hyphenate: hyphenate,
   capitalize: capitalize,
+  repeat: repeat,
   trim: trim,
   slice: slice,
   indexOf: indexOf$1,
@@ -575,7 +665,7 @@ var string$1 = /*#__PURE__*/Object.freeze({
   falsy: falsy$1
 });
 
-const dotPattern = /\./g, asteriskPattern = /\*/g, doubleAsteriskPattern = /\*\*/g, splitCache = {}, patternCache = {};
+const dotPattern = /\./g, asteriskPattern = /\*/g, doubleAsteriskPattern = /\*\*/g;
 /**
  * 判断 keypath 是否以 prefix 开头，如果是，返回匹配上的前缀长度，否则返回 -1
  *
@@ -583,15 +673,20 @@ const dotPattern = /\./g, asteriskPattern = /\*/g, doubleAsteriskPattern = /\*\*
  * @param prefix
  * @return
  */
-function match(keypath, prefix) {
+const match = createTwoKeyCache(function (keypath, prefix) {
     if (keypath === prefix) {
         return prefix.length;
     }
     prefix += RAW_DOT;
     return startsWith(keypath, prefix)
         ? prefix.length
-        : MINUS_ONE;
-}
+        : -1;
+});
+const getKeypathTokens = createOneKeyCache(function (keypath) {
+    return indexOf$1(keypath, RAW_DOT) < 0
+        ? [keypath]
+        : keypath.split(RAW_DOT);
+});
 /**
  * 遍历 keypath 的每个部分
  *
@@ -599,25 +694,9 @@ function match(keypath, prefix) {
  * @param callback 返回 false 可中断遍历
  */
 function each$1(keypath, callback) {
-    // 如果 keypath 是 toString 之类的原型字段
-    // splitCache[keypath] 会取到原型链上的对象
-    // is.array() 比 splitCache.hasOwnProperty(keypath) 快一些
-    // 虽然不如后者严谨，但在这里够用了
-    let list;
-    if (array(splitCache[keypath])) {
-        list = splitCache[keypath];
-    }
-    else {
-        if (indexOf$1(keypath, RAW_DOT) < 0) {
-            list = [keypath];
-        }
-        else {
-            list = keypath.split(RAW_DOT);
-        }
-        splitCache[keypath] = list;
-    }
-    for (let i = 0, lastIndex = list.length - 1; i <= lastIndex; i++) {
-        if (callback(list[i], i, lastIndex) === FALSE) {
+    const tokens = getKeypathTokens(keypath);
+    for (let i = 0, lastIndex = tokens.length - 1; i <= lastIndex; i++) {
+        if (callback(tokens[i], i, lastIndex) === FALSE) {
             break;
         }
     }
@@ -628,39 +707,37 @@ function each$1(keypath, callback) {
  * @param keypath1
  * @param keypath2
  */
-function join$1(keypath1, keypath2) {
+const join$1 = createTwoKeyCache(function (keypath1, keypath2) {
     return keypath1 && keypath2
         ? keypath1 + RAW_DOT + keypath2
         : keypath1 || keypath2;
-}
+});
 /**
  * 是否模糊匹配
  *
  * @param keypath
  */
-function isFuzzy(keypath) {
+const isFuzzy = createOneKeyCache(function (keypath) {
     return has$1(keypath, RAW_WILDCARD);
-}
+});
+const getFuzzyPattern = createOneKeyCache(function (pattern) {
+    return new RegExp(`^${pattern
+        .replace(dotPattern, '\\.')
+        .replace(asteriskPattern, '(\\w+)')
+        .replace(doubleAsteriskPattern, '([\.\\w]+?)')}$`);
+});
 /**
  * 模糊匹配 keypath
  *
  * @param keypath
  * @param pattern
  */
-function matchFuzzy(keypath, pattern) {
-    let cache = patternCache[pattern];
-    if (!cache) {
-        const str = pattern
-            .replace(dotPattern, '\\.')
-            .replace(asteriskPattern, '(\\w+)')
-            .replace(doubleAsteriskPattern, '([\.\\w]+?)');
-        cache = patternCache[pattern] = new RegExp(`^${str}$`);
-    }
-    const result = keypath.match(cache);
-    if (result) {
-        return result[1];
-    }
-}
+const matchFuzzy = createTwoKeyCache(function (keypath, pattern) {
+    const result = keypath.match(getFuzzyPattern(pattern));
+    return result
+        ? result[1]
+        : UNDEFINED;
+});
 
 /**
  * 全局 value holder，避免频繁的创建临时对象
@@ -852,28 +929,18 @@ var object$1 = /*#__PURE__*/Object.freeze({
   falsy: falsy$2
 });
 
-function toString (target, defaultValue) {
-    return target != NULL && target.toString
-        ? target.toString()
-        : defaultValue !== UNDEFINED
-            ? defaultValue
-            : EMPTY_STRING;
-}
-
-const DEBUG = 1;
-const INFO = 2;
-const WARN = 3;
-const ERROR = 4;
-const FATAL = 5;
+/**
+ * 外部可用这些常量
+ */
+const DEBUG = LOG_LEVEL_DEBUG;
+const INFO = LOG_LEVEL_INFO;
+const WARN = LOG_LEVEL_WARN;
+const ERROR = LOG_LEVEL_ERROR;
+const FATAL = LOG_LEVEL_FATAL;
 /**
  * 是否有原生的日志特性，没有必要单独实现
  */
 const nativeConsole = typeof console !== RAW_UNDEFINED ? console : NULL, 
-/**
- * 当前是否是源码调试，如果开启了代码压缩，empty function 里的注释会被干掉
- * 源码模式默认选 INFO，因为 DEBUG 输出的日志太多，会导致性能急剧下降
- */
-defaultLogLevel = /yox/.test(toString(EMPTY_FUNCTION)) ? INFO : WARN, 
 /**
  * console 样式前缀
  * ie 和 edge 不支持 console.log 样式
@@ -897,13 +964,11 @@ printLog = nativeConsole
  * 全局调试开关
  */
 function getLogLevel() {
-    if (GLOBAL) {
-        const logLevel = GLOBAL['YOX_LOG_LEVEL'];
-        if (logLevel >= DEBUG && logLevel <= FATAL) {
-            return logLevel;
-        }
+    const { logLevel } = PUBLIC_CONFIG;
+    if (logLevel >= DEBUG && logLevel <= FATAL) {
+        return logLevel;
     }
-    return defaultLogLevel;
+    return LOG_LEVEL_DEFAULT;
 }
 function getStyle(backgroundColor) {
     return `background-color:${backgroundColor};border-radius:12px;color:#fff;font-size:10px;padding:3px 6px;`;
@@ -1195,11 +1260,6 @@ function matchNamespace(namespace, options) {
         : TRUE;
 }
 
-function isNative (target) {
-    return func(target)
-        && has$1(toString(target), '[native code]');
-}
-
 let nextTick;
 // IE (10+) 和 node
 if (typeof setImmediate === RAW_FUNCTION && isNative(setImmediate)) {
@@ -1281,6 +1341,26 @@ class NextTask {
     }
 }
 
+function split2Map(str) {
+    const obj = createPureObject();
+    each(str.split(','), function (item) {
+        obj.set(item, TRUE);
+    });
+    return obj;
+}
+// 首字母大写，或中间包含 -
+const // 常见的自闭合标签
+selfClosingTagNames = split2Map('area,base,embed,track,source,param,input,col,img,br,hr'), 
+// 常见的 svg 标签
+svgTagNames = split2Map('svg,g,defs,desc,metadata,symbol,use,image,path,rect,circle,line,ellipse,polyline,polygon,text,tspan,tref,textpath,marker,pattern,clippath,mask,filter,cursor,view,animate,font,font-face,glyph,missing-glyph,foreignObject'), 
+// 常见的字符串类型的属性
+// 注意：autocomplete,autocapitalize 不是布尔类型
+stringPropertyNames = split2Map('id,class,name,value,for,accesskey,title,style,src,type,href,target,alt,placeholder,preload,poster,wrap,accept,pattern,dir,autocomplete,autocapitalize'), 
+// 常见的数字类型的属性
+numberPropertyNames = split2Map('min,minlength,max,maxlength,step,width,height,size,rows,cols,tabindex'), 
+// 常见的布尔类型的属性
+booleanPropertyNames = split2Map('disabled,checked,required,multiple,readonly,autofocus,autoplay,controls,loop,muted,novalidate,draggable,hidden,spellcheck');
+
 function toNumber (target, defaultValue) {
     return numeric(target)
         ? +target
@@ -1288,6 +1368,9 @@ function toNumber (target, defaultValue) {
             ? defaultValue
             : 0;
 }
+
+const QUOTE_SINGLE = "'";
+const JOIN_EMPTY = repeat(QUOTE_SINGLE, 2);
 
 /**
  * 计算属性
@@ -1300,26 +1383,26 @@ class Computed {
         instance.keypath = keypath;
         instance.cache = cache;
         instance.deps = deps;
-        instance.context = observer.context;
         instance.observer = observer;
         instance.getter = getter;
         instance.setter = setter;
-        instance.unique = {};
-        instance.watcher = function ($0, $1, $2) {
-            // 计算属性的依赖变了会走进这里
-            const oldValue = instance.value, newValue = instance.get(TRUE);
-            if (newValue !== oldValue) {
-                observer.diff(keypath, newValue, oldValue);
-            }
-        };
         instance.watcherOptions = {
             sync,
-            watcher: instance.watcher
+            watcher: instance.watcher = function ($0, $1, $2) {
+                // 计算属性的依赖变了会走进这里
+                const oldValue = instance.value, newValue = instance.get(TRUE);
+                if (newValue !== oldValue) {
+                    observer.diff(keypath, newValue, oldValue);
+                }
+            }
         };
-        if (instance.fixed = !falsy(deps)) {
-            each(deps, function (dep) {
-                observer.watch(dep, instance.watcherOptions);
-            });
+        // 如果 deps 是空数组，Observer 会传入 undefined
+        // 因此这里直接判断即可
+        if (deps) {
+            instance.fixed = TRUE;
+            for (let i = 0, length = deps.length; i < length; i++) {
+                observer.watch(deps[i], instance.watcherOptions);
+            }
         }
     }
     /**
@@ -1328,69 +1411,58 @@ class Computed {
      * @param force 是否强制刷新缓存
      */
     get(force) {
-        const instance = this, { getter, context } = instance;
+        const instance = this, { getter, deps, observer, watcher, watcherOptions } = instance;
         // 禁用缓存
         if (!instance.cache) {
-            instance.value = execute(getter, context);
+            instance.value = getter();
         }
         // 减少取值频率，尤其是处理复杂的计算规则
-        else if (force || !has$2(instance, RAW_VALUE)) {
+        else if (force || !has$2(instance, 'value')) {
             // 如果写死了依赖，则不需要收集依赖
             if (instance.fixed) {
-                instance.value = execute(getter, context);
+                instance.value = getter();
             }
+            // 自动收集依赖
             else {
                 // 清空上次收集的依赖
-                instance.unbind();
+                if (deps) {
+                    for (let i = deps.length - 1; i >= 0; i--) {
+                        observer.unwatch(deps[i], watcher);
+                    }
+                }
+                // 惰性初始化
+                instance.unique = createPureObject();
                 // 开始收集新的依赖
                 const lastComputed = Computed.current;
                 Computed.current = instance;
-                instance.value = execute(getter, context);
+                instance.value = getter();
                 // 绑定新的依赖
-                instance.bind();
+                const newDeps = instance.unique.keys();
+                for (let i = 0, length = newDeps.length; i < length; i++) {
+                    observer.watch(newDeps[i], watcherOptions);
+                }
+                instance.deps = newDeps;
+                // 取值完成，恢复原值
                 Computed.current = lastComputed;
             }
         }
         return instance.value;
     }
     set(value) {
-        const { setter, context } = this;
+        const { setter } = this;
         if (setter) {
-            setter.call(context, value);
+            setter(value);
         }
     }
     /**
      * 添加依赖
      *
-     * 这里只是为了保证依赖唯一，最后由 bind() 实现绑定
+     * 这里只是为了保证依赖唯一
      *
      * @param dep
      */
     add(dep) {
-        this.unique[dep] = TRUE;
-    }
-    /**
-     * 绑定依赖
-     */
-    bind() {
-        const { unique, deps, observer, watcherOptions } = this;
-        each$2(unique, function (_, dep) {
-            push(deps, dep);
-            observer.watch(dep, watcherOptions);
-        });
-        // 用完重置
-        // 方便下次收集依赖
-        this.unique = {};
-    }
-    /**
-     * 解绑依赖
-     */
-    unbind() {
-        const { deps, observer, watcher } = this;
-        each(deps, function (dep) {
-            observer.unwatch(dep, watcher);
-        }, TRUE);
-        deps.length = 0;
+        this.unique.set(dep, TRUE);
     }
 }
 
@@ -1405,7 +1477,7 @@ function readValue (source, keypath) {
 }
 
 /**
- * 对比新旧数组
+ * 对比新旧字符串
  *
  * @param newValue
  * @param oldValue
@@ -1414,7 +1486,7 @@ function readValue (source, keypath) {
 function diffString (newValue, oldValue, callback) {
     const newIsString = string(newValue), oldIsString = string(oldValue);
     if (newIsString || oldIsString) {
-        callback(RAW_LENGTH, newIsString ? newValue.length : UNDEFINED, oldIsString ? oldValue.length : UNDEFINED);
+        callback('length', newIsString ? newValue.length : UNDEFINED, oldIsString ? oldValue.length : UNDEFINED);
         return TRUE;
     }
 }
@@ -1430,9 +1502,11 @@ function diffArray (newValue, oldValue, callback) {
     const newIsArray = array(newValue), oldIsArray = array(oldValue);
     if (newIsArray || oldIsArray) {
         const newLength = newIsArray ? newValue.length : UNDEFINED, oldLength = oldIsArray ? oldValue.length : UNDEFINED;
-        callback(RAW_LENGTH, newLength, oldLength);
+        callback('length', newLength, oldLength);
         for (let i = 0, length = Math.max(newLength || 0, oldLength || 0); i < length; i++) {
-            callback('' + i, newValue ? newValue[i] : UNDEFINED, oldValue ? oldValue[i] : UNDEFINED);
+            callback(
+            // 把 number 转成 string
+            EMPTY_STRING + i, newIsArray ? newValue[i] : UNDEFINED, oldIsArray ? oldValue[i] : UNDEFINED);
         }
         return TRUE;
     }
@@ -1448,35 +1522,42 @@ function diffArray (newValue, oldValue, callback) {
 function diffObject (newValue, oldValue, callback) {
     const newIsObject = object(newValue), oldIsObject = object(oldValue);
     if (newIsObject || oldIsObject) {
-        newValue = newIsObject ? newValue : EMPTY_OBJECT;
-        oldValue = oldIsObject ? oldValue : EMPTY_OBJECT;
+        const diffed = createPureObject(), newObject = newIsObject ? newValue : EMPTY_OBJECT, oldObject = oldIsObject ? oldValue : EMPTY_OBJECT;
         if (newIsObject) {
-            each$2(newValue, function (value, key) {
-                if (value !== oldValue[key]) {
-                    callback(key, value, oldValue[key]);
+            for (let key in newObject) {
+                const value = newObject[key];
+                if (value !== oldObject[key]) {
+                    // 保证遍历 oldObject 时不会再次触发
+                    diffed.set(key, TRUE);
+                    callback(key, value, oldObject[key]);
                 }
-            });
+            }
         }
         if (oldIsObject) {
-            each$2(oldValue, function (value, key) {
-                if (value !== newValue[key]) {
-                    callback(key, newValue[key], value);
+            for (let key in oldObject) {
+                const value = oldObject[key];
+                if (diffed.get(key) === UNDEFINED && value !== newObject[key]) {
+                    callback(key, newObject[key], value);
                 }
-            });
+            }
         }
     }
 }
 
-function diffRecursion(keypath, newValue, oldValue, watchFuzzyKeypaths, callback) {
-    const diff = function (subKeypath, subNewValue, subOldValue) {
+/**
+ * 递归对比
+ */
+function diffRecursion(keypath, newValue, oldValue, fuzzyKeypaths, fuzzyKeypathLength, callback) {
+    const diff = function (subKey, subNewValue, subOldValue) {
         if (subNewValue !== subOldValue) {
-            const newKeypath = join$1(keypath, subKeypath);
-            each(watchFuzzyKeypaths, function (fuzzyKeypath) {
+            const newKeypath = join$1(keypath, subKey);
+            for (let i = 0; i < fuzzyKeypathLength; i++) {
+                const fuzzyKeypath = fuzzyKeypaths[i];
                 if (matchFuzzy(newKeypath, fuzzyKeypath) !== UNDEFINED) {
                     callback(fuzzyKeypath, newKeypath, subNewValue, subOldValue);
                 }
-            });
-            diffRecursion(newKeypath, subNewValue, subOldValue, watchFuzzyKeypaths, callback);
+            }
+            diffRecursion(newKeypath, subNewValue, subOldValue, fuzzyKeypaths, fuzzyKeypathLength, callback);
         }
     };
     diffString(newValue, oldValue, diff)
@@ -1487,7 +1568,7 @@ function diffRecursion(keypath, newValue, oldValue, watchFuzzyKeypaths, callback
 function diffWatcher (keypath, newValue, oldValue, watcher, isRecursive, callback) {
     let fuzzyKeypaths;
     // 遍历监听的 keypath，如果未被监听，则无需触发任何事件
-    each$2(watcher, function (_, watchKeypath) {
+    for (const watchKeypath in watcher) {
         // 模糊监听，如 users.*.name
         if (isFuzzy(watchKeypath)) {
             // 如果当前修改的是 users.0 整个对象
@@ -1499,52 +1580,36 @@ function diffWatcher (keypath, newValue, oldValue, watcher, isRecursive, callbac
             }
             else if (isRecursive) {
                 if (fuzzyKeypaths) {
-                    push(fuzzyKeypaths, watchKeypath);
+                    fuzzyKeypaths.push(watchKeypath);
                 }
                 else {
                     fuzzyKeypaths = [watchKeypath];
                 }
             }
-            return;
         }
-        // 不是模糊匹配，直接靠前缀匹配
-        // 比如监听的是 users.0.name，此时修改 users.0，则直接读出子属性值，判断是否相等
-        const length = match(watchKeypath, keypath);
-        if (length >= 0) {
-            const subKeypath = slice(watchKeypath, length), subNewValue = readValue(newValue, subKeypath), subOldValue = readValue(oldValue, subKeypath);
-            if (subNewValue !== subOldValue) {
-                callback(watchKeypath, watchKeypath, subNewValue, subOldValue);
+        // 不是模糊匹配，直接通过前缀匹配
+        else {
+            // 比如监听的是 users.0.name，此时修改 users.0，则直接读出子属性值，判断是否相等
+            const length = match(watchKeypath, keypath);
+            if (length >= 0) {
+                const subKeypath = slice(watchKeypath, length), subNewValue = readValue(newValue, subKeypath), subOldValue = readValue(oldValue, subKeypath);
+                if (subNewValue !== subOldValue) {
+                    callback(watchKeypath, watchKeypath, subNewValue, subOldValue);
+                }
             }
         }
-    });
+    }
     // 存在模糊匹配的需求
     // 必须对数据进行递归
     // 性能确实会慢一些，但是很好用啊，几乎可以监听所有的数据
     if (fuzzyKeypaths) {
-        diffRecursion(keypath, newValue, oldValue, fuzzyKeypaths, callback);
-    }
-}
-
-/**
- * 触发异步变化时，用此函数过滤下，哪些 listener 应该执行
- *
- * @param item
- * @param data
- */
-function filterWatcher (_, args, options) {
-    if (options.count && args) {
-        // 采用计数器的原因是，同一个 options 可能执行多次
-        // 比如监听 user.*，如果同批次修改了 user.name 和 user.age
-        // 这个监听器会调用多次，如果第一次执行就把 count 干掉了，第二次就无法执行了
-        options.count--;
-        // 新旧值不相等
-        return args[0] !== args[1];
+        diffRecursion(keypath, newValue, oldValue, fuzzyKeypaths, fuzzyKeypaths.length, callback);
     }
 }
 
 // 避免频繁创建对象
 const optionsHolder = {
-    watcher: EMPTY_FUNCTION
+    watcher: EMPTY_FUNCTION,
 };
 /**
  * 格式化 watch options
@@ -1552,16 +1617,18 @@ const optionsHolder = {
  * @param options
  */
 function formatWatcherOptions (options, immediate) {
-    if (func(options)) {
+    const isWatcher = func(options);
+    if (isWatcher) {
         optionsHolder.watcher = options;
         optionsHolder.immediate = immediate === TRUE;
         return optionsHolder;
     }
-    if (options && options.watcher) {
-        return options;
-    }
+    return options;
 }
 
+// 触发监听函数的参数列表
+// 复用同一个数组，应该能稍微快些
+const syncWatchArgs = new Array(3), asyncWatchArgs = new Array(3);
 /**
  * 观察者有两种观察模式：
  *
@@ -1581,7 +1648,8 @@ class Observer {
         instance.nextTask = new NextTask();
         instance.syncEmitter = new Emitter();
         instance.asyncEmitter = new Emitter();
-        instance.asyncChanges = {};
+        instance.asyncOldValues = {};
+        instance.asyncKeypaths = {};
     }
     /**
      * 获取数据
@@ -1618,7 +1686,7 @@ class Observer {
      * @param value
      */
     set(keypath, value) {
-        const instance = this, { data, computed } = instance, setValue = function (newValue, keypath) {
+        const instance = this, { data, computed } = instance, setValue = function (keypath, newValue) {
             const oldValue = instance.get(keypath);
             if (newValue === oldValue) {
                 return;
@@ -1657,10 +1725,12 @@ class Observer {
             instance.diff(keypath, newValue, oldValue);
         };
         if (string(keypath)) {
-            setValue(value, keypath);
+            setValue(keypath, value);
         }
         else if (object(keypath)) {
-            each$2(keypath, setValue);
+            for (let key in keypath) {
+                setValue(key, keypath[key]);
+            }
         }
     }
     /**
@@ -1671,7 +1741,7 @@ class Observer {
      * @param oldValue
      */
     diff(keypath, newValue, oldValue) {
-        const instance = this, { syncEmitter, asyncEmitter, asyncChanges } = instance, 
+        let instance = this, { syncEmitter, asyncEmitter, asyncOldValues, asyncKeypaths } = instance, 
         /**
          * 我们认为 $ 开头的变量是不可递归的
          * 比如浏览器中常见的 $0 表示当前选中元素
@@ -1679,12 +1749,13 @@ class Observer {
          */
         isRecursive = codeAt(keypath) !== 36;
         diffWatcher(keypath, newValue, oldValue, syncEmitter.listeners, isRecursive, function (watchKeypath, keypath, newValue, oldValue) {
+            syncWatchArgs[0] = newValue;
+            syncWatchArgs[1] = oldValue;
+            syncWatchArgs[2] = keypath;
             syncEmitter.fire({
                 type: watchKeypath,
                 ns: EMPTY_STRING,
-            }, [
-                newValue, oldValue, keypath
-            ]);
+            }, syncWatchArgs);
         });
         /**
          * 此处有坑，举个例子
@@ -1698,18 +1769,20 @@ class Observer {
          * 这里，第一个 watcher 应该触发，但第二个不应该，因为它绑定监听时，值已经是最新的了
          */
         diffWatcher(keypath, newValue, oldValue, asyncEmitter.listeners, isRecursive, function (watchKeypath, keypath, newValue, oldValue) {
-            each(asyncEmitter.listeners[watchKeypath], function (item) {
-                item.count++;
-            });
-            const { keypaths } = asyncChanges[keypath] || (asyncChanges[keypath] = { value: oldValue, keypaths: [] });
-            if (!has(keypaths, watchKeypath)) {
-                push(keypaths, watchKeypath);
+            // 这里是为了解决上面说的坑
+            const options = asyncEmitter.listeners[watchKeypath];
+            for (let i = 0, length = options.length; i < length; i++) {
+                options[i].count++;
             }
+            if (!asyncKeypaths[keypath]) {
+                asyncOldValues[keypath] = oldValue;
+                asyncKeypaths[keypath] = {};
+            }
+            asyncKeypaths[keypath][watchKeypath] = TRUE;
             if (!instance.pending) {
                 instance.pending = TRUE;
                 instance.nextTask.append(function () {
                     if (instance.pending) {
-                        instance.pending = UNDEFINED;
                         instance.diffAsync();
                     }
                 });
@@ -1720,19 +1793,34 @@ class Observer {
      * 异步触发的 diff
      */
     diffAsync() {
-        const instance = this, { asyncEmitter, asyncChanges } = instance;
-        instance.asyncChanges = {};
-        each$2(asyncChanges, function (change, keypath) {
-            const args = [instance.get(keypath), change.value, keypath];
-            // 不能在这判断新旧值是否相同，相同就不 fire
-            // 因为前面标记了 count，在这中断会导致 count 无法清除
-            each(change.keypaths, function (watchKeypath) {
+        const instance = this, { asyncEmitter, asyncOldValues, asyncKeypaths } = instance;
+        instance.pending = UNDEFINED;
+        instance.asyncOldValues = {};
+        instance.asyncKeypaths = {};
+        for (let keypath in asyncOldValues) {
+            asyncWatchArgs[0] = instance.get(keypath);
+            asyncWatchArgs[1] = asyncOldValues[keypath];
+            asyncWatchArgs[2] = keypath;
+            const keypaths = asyncKeypaths[keypath], hasChange = asyncWatchArgs[0] !== asyncWatchArgs[1], filterWatcher = function (event, args, options) {
+                // 前面递增了 count
+                // 这里要递减 count
+                // count > 0 表示前面标记了该监听器需要响应此次变化
+                if (options.count) {
+                    // 采用计数器的原因是，同一个 options 可能执行多次
+                    // 比如监听 user.*，如果同批次修改了 user.name 和 user.age
+                    // 这个监听器会调用多次，如果第一次执行就把 count 干掉了，第二次就无法执行了
+                    options.count--;
+                    // 新旧值不相等才能触发监听器
+                    return hasChange;
+                }
+            };
+            for (let watchKeypath in keypaths) {
                 asyncEmitter.fire({
                     type: watchKeypath,
                     ns: EMPTY_STRING,
-                }, args, filterWatcher);
-            });
-        });
+                }, asyncWatchArgs, filterWatcher);
+            }
+        }
     }
     /**
      * 添加计算属性
@@ -1741,9 +1829,11 @@ class Observer {
      * @param computed
      */
     addComputed(keypath, options) {
-        let cache = TRUE, sync = TRUE, deps = [], getter, setter;
+        let instance = this, context = instance.context, cache = TRUE, sync = TRUE, deps, getter, setter;
+        // 这里用 bind 方法转换一下调用的 this
+        // 还有一个好处，它比 call(context) 速度稍快一些
         if (func(options)) {
-            getter = options;
+            getter = options.bind(context);
         }
         else if (object(options)) {
             const computedOptions = options;
@@ -1753,19 +1843,19 @@ class Observer {
             if (boolean(computedOptions.sync)) {
                 sync = computedOptions.sync;
             }
-            // 因为可能会修改 deps，所以这里创建一个新的 deps，避免影响外部传入的 deps
-            if (array(computedOptions.deps)) {
-                deps = copy(computedOptions.deps);
+            // 传入空数组等同于没传
+            if (!falsy(computedOptions.deps)) {
+                deps = computedOptions.deps;
             }
             if (func(computedOptions.get)) {
-                getter = computedOptions.get;
+                getter = computedOptions.get.bind(context);
             }
             if (func(computedOptions.set)) {
-                setter = computedOptions.set;
+                setter = computedOptions.set.bind(context);
             }
         }
         if (getter) {
-            const instance = this, computed = new Computed(keypath, sync, cache, deps, instance, getter, setter);
+            const computed = new Computed(keypath, sync, cache, deps, instance, getter, setter);
             if (!instance.computed) {
                 instance.computed = {};
             }
@@ -1792,7 +1882,7 @@ class Observer {
      * @param immediate
      */
     watch(keypath, watcher, immediate) {
-        const instance = this, { context, syncEmitter, asyncEmitter } = instance, bind = function (keypath, options) {
+        const instance = this, { context, syncEmitter, asyncEmitter } = instance, addWatcher = function (keypath, options) {
             const emitter = options.sync ? syncEmitter : asyncEmitter, 
             // formatWatcherOptions 保证了 options.watcher 一定存在
             listener = {
@@ -1814,12 +1904,13 @@ class Observer {
             }
         };
         if (string(keypath)) {
-            bind(keypath, formatWatcherOptions(watcher, immediate));
-            return;
+            addWatcher(keypath, formatWatcherOptions(watcher, immediate));
         }
-        each$2(keypath, function (options, keypath) {
-            bind(keypath, formatWatcherOptions(options));
-        });
+        else {
+            for (let key in keypath) {
+                addWatcher(key, formatWatcherOptions(keypath[key]));
+            }
+        }
     }
     /**
      * 取消监听数据变化
@@ -1828,7 +1919,7 @@ class Observer {
      * @param watcher
      */
     unwatch(keypath, watcher) {
-        let filter = {
+        const filter = {
             ns: EMPTY_STRING,
             listener: watcher,
         };
@@ -1889,7 +1980,7 @@ class Observer {
      */
     insert(keypath, item, index) {
         let list = this.get(keypath);
-        list = !array(list) ? [] : copy(list);
+        list = array(list) ? list.slice() : [];
         const { length } = list;
         if (index === TRUE || index === length) {
             list.push(item);
@@ -1935,7 +2026,7 @@ class Observer {
         if (array(list)
             && index >= 0
             && index < list.length) {
-            list = copy(list);
+            list = list.slice();
             list.splice(index, 1);
             this.set(keypath, list);
             return TRUE;
@@ -1950,7 +2041,7 @@ class Observer {
     remove(keypath, item) {
         let list = this.get(keypath);
         if (array(list)) {
-            list = copy(list);
+            list = list.slice();
             if (remove(list, item)) {
                 this.set(keypath, list);
                 return TRUE;
@@ -1978,6 +2069,26 @@ class Observer {
     }
 }
 
+class LifeCycle {
+    constructor() {
+        this.$emitter = new Emitter();
+    }
+    fire(component, type, data) {
+        this.$emitter.fire(type, [
+            component,
+            data,
+        ]);
+    }
+    on(type, listener) {
+        this.$emitter.on(type, listener);
+        return this;
+    }
+    off(type, listener) {
+        this.$emitter.off(type, listener);
+        return this;
+    }
+}
+const lifeCycle = new LifeCycle();
 class Yox {
     constructor(options) {
         const instance = this, $options = options || EMPTY_OBJECT;
@@ -2364,7 +2475,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.125";
+Yox.version = "1.0.0-alpha.200";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
@@ -2375,6 +2486,10 @@ Yox.string = string$1;
 Yox.logger = logger;
 Yox.Event = CustomEvent;
 Yox.Emitter = Emitter;
+// 外部可配置的对象
+Yox.config = PUBLIC_CONFIG;
+// 外部可监听组件的生命周期，路由会用到
+Yox.lifeCycle = lifeCycle;
 function addEvent(instance, type, listener, once) {
     const { $emitter } = instance, filter = $emitter.toFilter(type, listener);
     const options = {
@@ -2385,7 +2500,7 @@ function addEvent(instance, type, listener, once) {
     if (once) {
         options.max = 1;
     }
-    instance.$emitter.on(filter.type, options);
+    $emitter.on(filter.type, options);
 }
 function addEvents(instance, type, listener, once) {
     if (string(type)) {

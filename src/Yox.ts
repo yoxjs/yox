@@ -46,7 +46,6 @@ import {
 } from 'yox-type/src/api'
 
 import {
-  NAMESPACE_HOOK,
   HOOK_BEFORE_CREATE,
   HOOK_AFTER_CREATE,
   HOOK_BEFORE_MOUNT,
@@ -56,7 +55,6 @@ import {
   HOOK_BEFORE_DESTROY,
   HOOK_AFTER_DESTROY,
   HOOK_BEFORE_PROPS_UPDATE,
-  DIRECTIVE_MODEL,
   MODEL_PROP_DEFAULT,
   SLOT_DATA_PREFIX,
   MODIFER_NATIVE,
@@ -69,6 +67,7 @@ import NextTask from 'yox-common/src/util/NextTask'
 import CustomEvent from 'yox-common/src/util/CustomEvent'
 
 import * as is from 'yox-common/src/util/is'
+import * as cache from 'yox-common/src/util/cache'
 import * as array from 'yox-common/src/util/array'
 import * as string from 'yox-common/src/util/string'
 import * as object from 'yox-common/src/util/object'
@@ -85,10 +84,34 @@ import * as domApi from 'yox-dom/src/dom'
 
 import Observer from 'yox-observer/src/Observer'
 
-import * as event from './directive/event'
-import * as model from './directive/model'
-import * as binding from './directive/binding'
 
+class LifeCycle {
+  private $emitter: Emitter
+
+  constructor() {
+    this.$emitter = new Emitter()
+  }
+
+  fire(component: YoxInterface, type: string, data?: Data) {
+    this.$emitter.fire(
+      type,
+      [
+        component,
+        data,
+      ]
+    )
+  }
+
+  on(type: string, listener: Function) {
+    this.$emitter.on(type, listener)
+    return this
+  }
+
+  off(type: string, listener: Function) {
+    this.$emitter.off(type, listener)
+    return this
+  }
+}
 
 const globalDirectives = {},
 
@@ -100,11 +123,23 @@ globalPartials = {},
 
 globalFilters = {},
 
-compileCache = {},
-
 TEMPLATE_COMPUTED = '$$',
 
-selectorPattern = /^[#.][-\w+]+$/
+selectorPattern = /^[#.][-\w+]+$/,
+
+lifeCycle = new LifeCycle(),
+
+compileTemplate = cache.createOneKeyCache(
+  function (template: string) {
+    const nodes = templateCompiler.compile(template)
+    if (process.env.NODE_ENV === 'development') {
+      if (nodes.length !== 1) {
+        logger.fatal(`The "template" option should have just one root element.`)
+      }
+    }
+    return templateGenerator.generate(nodes[0])
+  }
+)
 
 export default class Yox implements YoxInterface {
 
@@ -160,6 +195,12 @@ export default class Yox implements YoxInterface {
   public static Event = CustomEvent
   public static Emitter = Emitter
 
+  // 外部可配置的对象
+  public static config = constant.PUBLIC_CONFIG
+
+  // 外部可监听组件的生命周期，路由会用到
+  public static lifeCycle = lifeCycle
+
   /**
    * 定义组件对象
    */
@@ -199,16 +240,7 @@ export default class Yox implements YoxInterface {
       if (is.func(template)) {
         return template as Function
       }
-      if (!compileCache[template as string]) {
-        const nodes = templateCompiler.compile(template as string)
-        if (process.env.NODE_ENV === 'development') {
-          if (nodes.length !== 1) {
-            logger.fatal(`The "template" option should have just one root element.`)
-          }
-        }
-        compileCache[template as string] = templateGenerator.generate(nodes[0])
-      }
-      template = compileCache[template as string]
+      template = compileTemplate(template as string)
       return stringify
         ? template
         : new Function(`return ${template}`)()
@@ -315,13 +347,13 @@ export default class Yox implements YoxInterface {
 
       // 建立好父子连接后，立即触发钩子
       execute($options[HOOK_BEFORE_CREATE], instance, $options)
-      // 冒泡 before create 事件
-      instance.fire(
+
+      lifeCycle.fire(
+        instance,
+        HOOK_BEFORE_CREATE,
         {
-          type: HOOK_BEFORE_CREATE,
-          ns: NAMESPACE_HOOK,
-        }, 
-        $options
+          options: $options,
+        }
       )
 
     }
@@ -541,11 +573,9 @@ export default class Yox implements YoxInterface {
 
         if (process.env.NODE_ENV !== 'pure') {
           execute(instance.$options[HOOK_AFTER_CREATE], instance)
-          instance.fire(
-            {
-              type: HOOK_AFTER_CREATE,
-              ns: NAMESPACE_HOOK,
-            }
+          lifeCycle.fire(
+            instance,
+            HOOK_AFTER_CREATE
           )
         }
 
@@ -568,8 +598,7 @@ export default class Yox implements YoxInterface {
           vnode = snabbdom.create(
             domApi,
             placeholder as Node,
-            instance,
-            constant.EMPTY_STRING
+            instance
           )
 
         }
@@ -596,11 +625,9 @@ export default class Yox implements YoxInterface {
 
     if (process.env.NODE_ENV !== 'pure') {
       execute(instance.$options[HOOK_AFTER_CREATE], instance)
-      instance.fire(
-        {
-          type: HOOK_AFTER_CREATE,
-          ns: NAMESPACE_HOOK,
-        }
+      lifeCycle.fire(
+        instance,
+        HOOK_AFTER_CREATE
       )
     }
 
@@ -821,9 +848,7 @@ export default class Yox implements YoxInterface {
       options.vnode = vnode
       options.replace = constant.TRUE
 
-      let { props, slots, directives } = vnode,
-
-      model = directives && directives[DIRECTIVE_MODEL]
+      let { props, slots, model } = vnode
 
       if (model) {
         if (!props) {
@@ -1035,29 +1060,20 @@ export default class Yox implements YoxInterface {
 
       afterHook: string
 
-      // 每次渲染重置 refs
-      // 在渲染过程中收集最新的 ref
-      // 这样可避免更新时，新的 ref，在前面创建，老的 ref 却在后面删除的情况
-      instance.$refs = {}
-
       if ($vnode) {
         execute($options[HOOK_BEFORE_UPDATE], instance)
-        instance.fire(
-          {
-            type: HOOK_BEFORE_UPDATE,
-            ns: NAMESPACE_HOOK,
-          }
+        lifeCycle.fire(
+          instance,
+          HOOK_BEFORE_UPDATE
         )
         snabbdom.patch(domApi, vnode, oldVnode)
         afterHook = HOOK_AFTER_UPDATE
       }
       else {
         execute($options[HOOK_BEFORE_MOUNT], instance)
-        instance.fire(
-          {
-            type: HOOK_BEFORE_MOUNT,
-            ns: NAMESPACE_HOOK,
-          }
+        lifeCycle.fire(
+          instance,
+          HOOK_BEFORE_MOUNT
         )
         snabbdom.patch(domApi, vnode, oldVnode)
         instance.$el = vnode.node as HTMLElement
@@ -1072,11 +1088,9 @@ export default class Yox implements YoxInterface {
         function () {
           if (instance.$vnode) {
             execute($options[afterHook], instance)
-            instance.fire(
-              {
-                type: afterHook,
-                ns: NAMESPACE_HOOK,
-              }
+            lifeCycle.fire(
+              instance,
+              afterHook
             )
           }
         }
@@ -1113,11 +1127,9 @@ export default class Yox implements YoxInterface {
     if (process.env.NODE_ENV !== 'pure') {
 
       execute($options[HOOK_BEFORE_DESTROY], instance)
-      instance.fire(
-        {
-          type: HOOK_BEFORE_DESTROY,
-          ns: NAMESPACE_HOOK,
-        }
+      lifeCycle.fire(
+        instance,
+        HOOK_BEFORE_DESTROY
       )
 
       const { $vnode } = instance
@@ -1138,11 +1150,9 @@ export default class Yox implements YoxInterface {
 
     if (process.env.NODE_ENV !== 'pure') {
       execute($options[HOOK_AFTER_DESTROY], instance)
-      instance.fire(
-        {
-          type: HOOK_AFTER_DESTROY,
-          ns: NAMESPACE_HOOK,
-        }
+      lifeCycle.fire(
+        instance,
+        HOOK_AFTER_DESTROY
       )
     }
 
@@ -1334,7 +1344,7 @@ function setFlexibleOptions(instance: YoxInterface, key: string, value: Function
 function addEvent(instance: Yox, type: string, listener?: Listener | ListenerOptions, once?: true) {
 
   const { $emitter } = instance, filter = $emitter.toFilter(type, listener)
-  
+
   const options: EmitterOptions = {
     listener: filter.listener as Function,
     ns: filter.ns,
@@ -1345,7 +1355,7 @@ function addEvent(instance: Yox, type: string, listener?: Listener | ListenerOpt
     options.max = 1
   }
 
-  instance.$emitter.on(filter.type as string, options)
+  $emitter.on(filter.type as string, options)
 
 }
 
@@ -1444,8 +1454,6 @@ function setResource(registry: Data, name: string | Data, value?: any, formatVal
 }
 
 if (process.env.NODE_ENV !== 'pure') {
-  // 全局注册内置指令
-  Yox.directive({ event, model, binding })
   // 全局注册内置过滤器
   Yox.filter({
     hasSlot(name: string): boolean {

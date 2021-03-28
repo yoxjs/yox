@@ -152,7 +152,7 @@
             {{#each users:index}}
                 <div key="{{index}}" class="wrapper" data-id="{{id}}">
                     {{name}}-{{age}}
-                    {{#if index < users.length - 1}}
+                    {{#if index < $length - 1}}
                         -
                     {{/if}}
                 </div>

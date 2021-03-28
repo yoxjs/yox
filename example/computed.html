@@ -23,7 +23,7 @@
         </div>
 
     </script>
-    <script src="../dist/yox.js"></script>
+    <script src="../dist/standard/dev/yox.js"></script>
     <script>
         var instance = new Yox({
             el: '#app',
@@ -35,6 +35,24 @@
                 ]
             },
             computed: {
+                selectedList: function () {
+                  let list = []
+                  this.get('list').forEach(function (item) {
+                    if (item.checked) {
+                      list.push(item)
+                    }
+                  })
+                  return list
+                },
+                unselectedList: function () {
+                  let list = []
+                  this.get('list').forEach(function (item) {
+                    if (!item.checked) {
+                      list.push(item)
+                    }
+                  })
+                  return list
+                },
                 allChecked: {
                     deps: [ 'list.*.checked' ],
                     get: function () {

@@ -1,17 +1,13 @@
 /**
- * yox.js v1.0.0-alpha.125
- * (c) 2017-2020 musicode
+ * yox.js v1.0.0-alpha.200
+ * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
 
 const SLOT_DATA_PREFIX = '$slot_';
 const DIRECTIVE_MODEL = 'model';
-const DIRECTIVE_EVENT = 'event';
-const DIRECTIVE_BINDING = 'binding';
 const DIRECTIVE_CUSTOM = 'o';
-const MODIFER_NATIVE = 'native';
 const MODEL_PROP_DEFAULT = 'value';
-const NAMESPACE_HOOK = 'hook';
 const HOOK_BEFORE_CREATE = 'beforeCreate';
 const HOOK_AFTER_CREATE = 'afterCreate';
 const HOOK_BEFORE_MOUNT = 'beforeMount';
@@ -29,15 +25,12 @@ const TRUE = true;
 const FALSE = false;
 const NULL = null;
 const UNDEFINED = void 0;
-const MINUS_ONE = -1;
 const RAW_UNDEFINED = 'undefined';
 const RAW_FILTER = 'filter';
 const RAW_PARTIAL = 'partial';
 const RAW_COMPONENT = 'component';
 const RAW_DIRECTIVE = 'directive';
 const RAW_TRANSITION = 'transition';
-const RAW_VALUE = 'value';
-const RAW_LENGTH = 'length';
 const RAW_FUNCTION = 'function';
 const RAW_WILDCARD = '*';
 const RAW_DOT = '.';
@@ -49,10 +42,6 @@ const WINDOW = typeof window !== RAW_UNDEFINED ? window : UNDEFINED;
  * Single instance for document in browser
  */
 const DOCUMENT = typeof document !== RAW_UNDEFINED ? document : UNDEFINED;
-/**
- * Single instance for global in nodejs or browser
- */
-const GLOBAL = typeof global !== RAW_UNDEFINED ? global : WINDOW;
 /**
  * tap 事件
  *
@@ -98,6 +87,29 @@ const EMPTY_ARRAY = Object.freeze([]);
  * 空字符串
  */
 const EMPTY_STRING = '';
+/**
+ * 日志等级
+ */
+const LOG_LEVEL_DEBUG = 1;
+const LOG_LEVEL_INFO = 2;
+const LOG_LEVEL_WARN = 3;
+const LOG_LEVEL_ERROR = 4;
+const LOG_LEVEL_FATAL = 5;
+/**
+ * 当前是否是源码调试，如果开启了代码压缩，empty function 里的注释会被干掉
+ * 源码模式默认选 INFO，因为 DEBUG 输出的日志太多，会导致性能急剧下降
+ */
+const LOG_LEVEL_DEFAULT = /yox/.test(EMPTY_FUNCTION.toString()) ? LOG_LEVEL_INFO : LOG_LEVEL_WARN;
+/**
+ * 外部可配置的对象
+ */
+const PUBLIC_CONFIG = {
+    leftDelimiter: '{',
+    rightDelimiter: '}',
+    uglifyCompiled: FALSE,
+    minifyCompiled: FALSE,
+    logLevel: LOG_LEVEL_DEFAULT,
+};
 
 /**
  * Check if value is a function.
@@ -252,7 +264,7 @@ class CustomEvent {
 }
 CustomEvent.PHASE_CURRENT = 0;
 CustomEvent.PHASE_UPWARD = 1;
-CustomEvent.PHASE_DOWNWARD = MINUS_ONE;
+CustomEvent.PHASE_DOWNWARD = -1;
 
 /**
  * 遍历数组
@@ -330,7 +342,7 @@ function unshift(array, target) {
  * @return 如果未找到，返回 -1
  */
 function indexOf(array, target, strict) {
-    let result = MINUS_ONE;
+    let result = -1;
     each(array, function (item, index) {
         if (strict === FALSE ? item == target : item === target) {
             result = index;
@@ -456,46 +468,119 @@ var array$1 = /*#__PURE__*/Object.freeze({
   falsy: falsy
 });
 
-const camelizePattern = /-([a-z])/gi, hyphenatePattern = /\B([A-Z])/g, capitalizePattern = /^[a-z]/, camelizeCache = {}, hyphenateCache = {}, capitalizeCache = {};
+function toString (target, defaultValue) {
+    return target != NULL && target.toString
+        ? target.toString()
+        : defaultValue !== UNDEFINED
+            ? defaultValue
+            : EMPTY_STRING;
+}
+
+function isNative (target) {
+    return func(target)
+        && toString(target).indexOf('[native code]') >= 0;
+}
+
+let createPureObject = function () {
+    const obj = Object.create(NULL);
+    return {
+        get(key) {
+            return obj[key];
+        },
+        set(key, value) {
+            obj[key] = value;
+        },
+        keys() {
+            return Object.keys(obj);
+        }
+    };
+};
+
+/**
+ * 缓存一个参数的函数调用结果
+ *
+ * @param fn 需要缓存的函数
+ * @return 带缓存功能的函数
+ */
+function createOneKeyCache(fn) {
+    const cache = createPureObject();
+    return function (key) {
+        const hit = cache.get(key);
+        if (hit !== UNDEFINED) {
+            return hit;
+        }
+        const value = fn(key);
+        cache.set(key, value);
+        return value;
+    };
+}
+/**
+ * 缓存两个参数的函数调用结果
+ *
+ * @param fn 需要缓存的函数
+ * @return 带缓存功能的函数
+ */
+function createTwoKeyCache(fn) {
+    const cache = createPureObject();
+    return function (key1, key2) {
+        let hit1 = cache.get(key1);
+        if (hit1) {
+            const hit2 = hit1.get(key2);
+            if (hit2) {
+                return hit2;
+            }
+        }
+        else {
+            hit1 = createPureObject();
+            cache.set(key1, hit1);
+        }
+        const value = fn(key1, key2);
+        hit1.set(key2, value);
+        return value;
+    };
+}
+
+const camelizePattern = /-([a-z])/gi, hyphenatePattern = /\B([A-Z])/g, capitalizePattern = /^[a-z]/;
 /**
  * 连字符转成驼峰
  *
  * @param str
  * @return 驼峰格式的字符串
  */
-function camelize(str) {
-    if (!camelizeCache[str]) {
-        camelizeCache[str] = str.replace(camelizePattern, function ($0, $1) {
-            return upper($1);
-        });
-    }
-    return camelizeCache[str];
-}
+const camelize = createOneKeyCache(function (str) {
+    return str.replace(camelizePattern, function (_, $1) {
+        return upper($1);
+    });
+});
 /**
  * 驼峰转成连字符
  *
  * @param str
  * @return 连字符格式的字符串
  */
-function hyphenate(str) {
-    if (!hyphenateCache[str]) {
-        hyphenateCache[str] = str.replace(hyphenatePattern, function ($0, $1) {
-            return '-' + lower($1);
-        });
-    }
-    return hyphenateCache[str];
-}
+const hyphenate = createOneKeyCache(function (str) {
+    return str.replace(hyphenatePattern, function (_, $1) {
+        return '-' + lower($1);
+    });
+});
 /**
  * 首字母大写
  *
  * @param str
  * @return
  */
-function capitalize(str) {
-    if (!capitalizeCache[str]) {
-        capitalizeCache[str] = str.replace(capitalizePattern, upper);
-    }
-    return capitalizeCache[str];
+const capitalize = createOneKeyCache(function (str) {
+    return str.replace(capitalizePattern, upper);
+});
+/**
+ * 重复字符串
+ *
+ * @param str
+ * @param count 重复次数
+ * @return
+ */
+function repeat(str, count) {
+    return new Array(count + 1).join(str);
 }
 /**
  * 清除两侧空白符
@@ -615,6 +700,7 @@ var string$1 = /*#__PURE__*/Object.freeze({
   camelize: camelize,
   hyphenate: hyphenate,
   capitalize: capitalize,
+  repeat: repeat,
   trim: trim,
   slice: slice,
   indexOf: indexOf$1,
@@ -629,7 +715,7 @@ var string$1 = /*#__PURE__*/Object.freeze({
   falsy: falsy$1
 });
 
-const dotPattern = /\./g, asteriskPattern = /\*/g, doubleAsteriskPattern = /\*\*/g, splitCache = {}, patternCache = {};
+const dotPattern = /\./g, asteriskPattern = /\*/g, doubleAsteriskPattern = /\*\*/g;
 /**
  * 判断 keypath 是否以 prefix 开头，如果是，返回匹配上的前缀长度，否则返回 -1
  *
@@ -637,15 +723,20 @@ const dotPattern = /\./g, asteriskPattern = /\*/g, doubleAsteriskPattern = /\*\*
  * @param prefix
  * @return
  */
-function match(keypath, prefix) {
+const match = createTwoKeyCache(function (keypath, prefix) {
     if (keypath === prefix) {
         return prefix.length;
     }
     prefix += RAW_DOT;
     return startsWith(keypath, prefix)
         ? prefix.length
-        : MINUS_ONE;
-}
+        : -1;
+});
+const getKeypathTokens = createOneKeyCache(function (keypath) {
+    return indexOf$1(keypath, RAW_DOT) < 0
+        ? [keypath]
+        : keypath.split(RAW_DOT);
+});
 /**
  * 遍历 keypath 的每个部分
  *
@@ -653,25 +744,9 @@ function match(keypath, prefix) {
  * @param callback 返回 false 可中断遍历
  */
 function each$1(keypath, callback) {
-    // 如果 keypath 是 toString 之类的原型字段
-    // splitCache[keypath] 会取到原型链上的对象
-    // is.array() 比 splitCache.hasOwnProperty(keypath) 快一些
-    // 虽然不如后者严谨，但在这里够用了
-    let list;
-    if (array(splitCache[keypath])) {
-        list = splitCache[keypath];
-    }
-    else {
-        if (indexOf$1(keypath, RAW_DOT) < 0) {
-            list = [keypath];
-        }
-        else {
-            list = keypath.split(RAW_DOT);
-        }
-        splitCache[keypath] = list;
-    }
-    for (let i = 0, lastIndex = list.length - 1; i <= lastIndex; i++) {
-        if (callback(list[i], i, lastIndex) === FALSE) {
+    const tokens = getKeypathTokens(keypath);
+    for (let i = 0, lastIndex = tokens.length - 1; i <= lastIndex; i++) {
+        if (callback(tokens[i], i, lastIndex) === FALSE) {
             break;
         }
     }
@@ -682,39 +757,37 @@ function each$1(keypath, callback) {
  * @param keypath1
  * @param keypath2
  */
-function join$1(keypath1, keypath2) {
+const join$1 = createTwoKeyCache(function (keypath1, keypath2) {
     return keypath1 && keypath2
         ? keypath1 + RAW_DOT + keypath2
         : keypath1 || keypath2;
-}
+});
 /**
  * 是否模糊匹配
  *
  * @param keypath
  */
-function isFuzzy(keypath) {
+const isFuzzy = createOneKeyCache(function (keypath) {
     return has$1(keypath, RAW_WILDCARD);
-}
+});
+const getFuzzyPattern = createOneKeyCache(function (pattern) {
+    return new RegExp(`^${pattern
+        .replace(dotPattern, '\\.')
+        .replace(asteriskPattern, '(\\w+)')
+        .replace(doubleAsteriskPattern, '([\.\\w]+?)')}$`);
+});
 /**
  * 模糊匹配 keypath
  *
  * @param keypath
  * @param pattern
  */
-function matchFuzzy(keypath, pattern) {
-    let cache = patternCache[pattern];
-    if (!cache) {
-        const str = pattern
-            .replace(dotPattern, '\\.')
-            .replace(asteriskPattern, '(\\w+)')
-            .replace(doubleAsteriskPattern, '([\.\\w]+?)');
-        cache = patternCache[pattern] = new RegExp(`^${str}$`);
-    }
-    const result = keypath.match(cache);
-    if (result) {
-        return result[1];
-    }
-}
+const matchFuzzy = createTwoKeyCache(function (keypath, pattern) {
+    const result = keypath.match(getFuzzyPattern(pattern));
+    return result
+        ? result[1]
+        : UNDEFINED;
+});
 
 /**
  * 全局 value holder，避免频繁的创建临时对象
@@ -906,28 +979,18 @@ var object$1 = /*#__PURE__*/Object.freeze({
   falsy: falsy$2
 });
 
-function toString (target, defaultValue) {
-    return target != NULL && target.toString
-        ? target.toString()
-        : defaultValue !== UNDEFINED
-            ? defaultValue
-            : EMPTY_STRING;
-}
-
-const DEBUG = 1;
-const INFO = 2;
-const WARN = 3;
-const ERROR = 4;
-const FATAL = 5;
+/**
+ * 外部可用这些常量
+ */
+const DEBUG = LOG_LEVEL_DEBUG;
+const INFO = LOG_LEVEL_INFO;
+const WARN = LOG_LEVEL_WARN;
+const ERROR = LOG_LEVEL_ERROR;
+const FATAL = LOG_LEVEL_FATAL;
 /**
  * 是否有原生的日志特性，没有必要单独实现
  */
 const nativeConsole = typeof console !== RAW_UNDEFINED ? console : NULL, 
-/**
- * 当前是否是源码调试，如果开启了代码压缩，empty function 里的注释会被干掉
- * 源码模式默认选 INFO，因为 DEBUG 输出的日志太多，会导致性能急剧下降
- */
-defaultLogLevel = /yox/.test(toString(EMPTY_FUNCTION)) ? INFO : WARN, 
 /**
  * console 样式前缀
  * ie 和 edge 不支持 console.log 样式
@@ -951,13 +1014,11 @@ printLog = nativeConsole
  * 全局调试开关
  */
 function getLogLevel() {
-    if (GLOBAL) {
-        const logLevel = GLOBAL['YOX_LOG_LEVEL'];
-        if (logLevel >= DEBUG && logLevel <= FATAL) {
-            return logLevel;
-        }
+    const { logLevel } = PUBLIC_CONFIG;
+    if (logLevel >= DEBUG && logLevel <= FATAL) {
+        return logLevel;
     }
-    return defaultLogLevel;
+    return LOG_LEVEL_DEFAULT;
 }
 function getStyle(backgroundColor) {
     return `background-color:${backgroundColor};border-radius:12px;color:#fff;font-size:10px;padding:3px 6px;`;
@@ -1249,11 +1310,6 @@ function matchNamespace(namespace, options) {
         : TRUE;
 }
 
-function isNative (target) {
-    return func(target)
-        && has$1(toString(target), '[native code]');
-}
-
 let nextTick;
 // IE (10+) 和 node
 if (typeof setImmediate === RAW_FUNCTION && isNative(setImmediate)) {
@@ -1336,25 +1392,30 @@ class NextTask {
 }
 
 // vnode.data 内部使用的几个字段
-const ID = '$id';
 const VNODE = '$vnode';
 const LOADING = '$loading';
-const COMPONENT = '$component';
 const LEAVING = '$leaving';
+const MODEL = '$model';
+const EVENT = '$event';
 
 function update(api, vnode, oldVnode) {
     const { node, nativeAttrs } = vnode, oldNativeAttrs = oldVnode && oldVnode.nativeAttrs;
     if (nativeAttrs || oldNativeAttrs) {
-        const newValue = nativeAttrs || EMPTY_OBJECT, oldValue = oldNativeAttrs || EMPTY_OBJECT;
-        for (let name in newValue) {
-            if (oldValue[name] === UNDEFINED
-                || newValue[name] !== oldValue[name]) {
-                api.attr(node, name, newValue[name]);
+        if (nativeAttrs) {
+            const oldValue = oldNativeAttrs || EMPTY_OBJECT;
+            for (let name in nativeAttrs) {
+                if (oldValue[name] === UNDEFINED
+                    || nativeAttrs[name] !== oldValue[name]) {
+                    api.setAttr(node, name, nativeAttrs[name]);
+                }
             }
         }
-        for (let name in oldValue) {
-            if (newValue[name] === UNDEFINED) {
-                api.removeAttr(node, name);
+        if (oldNativeAttrs) {
+            const newValue = nativeAttrs || EMPTY_OBJECT;
+            for (let name in oldNativeAttrs) {
+                if (newValue[name] === UNDEFINED) {
+                    api.removeAttr(node, name);
+                }
             }
         }
     }
@@ -1363,53 +1424,368 @@ function update(api, vnode, oldVnode) {
 function update$1(api, vnode, oldVnode) {
     const { node, nativeProps } = vnode, oldNativeProps = oldVnode && oldVnode.nativeProps;
     if (nativeProps || oldNativeProps) {
-        const newValue = nativeProps || EMPTY_OBJECT, oldValue = oldNativeProps || EMPTY_OBJECT;
-        for (let name in newValue) {
-            if (oldValue[name] === UNDEFINED
-                || newValue[name] !== oldValue[name]) {
-                api.prop(node, name, newValue[name]);
+        if (nativeProps) {
+            const oldValue = oldNativeProps || EMPTY_OBJECT;
+            for (let name in nativeProps) {
+                if (oldValue[name] === UNDEFINED
+                    || nativeProps[name] !== oldValue[name]) {
+                    api.setProp(node, name, nativeProps[name]);
+                }
             }
         }
-        for (let name in oldValue) {
-            if (newValue[name] === UNDEFINED) {
-                api.removeProp(node, name);
+        if (oldNativeProps) {
+            const newValue = nativeProps || EMPTY_OBJECT;
+            for (let name in oldNativeProps) {
+                if (newValue[name] === UNDEFINED) {
+                    api.removeProp(node, name);
+                }
             }
         }
     }
 }
 
-function update$2(vnode, oldVnode) {
-    const { data, directives } = vnode, oldDirectives = oldVnode && oldVnode.directives;
-    if (directives || oldDirectives) {
-        const node = data[COMPONENT] || vnode.node, isKeypathChange = oldVnode && vnode.keypath !== oldVnode.keypath, newValue = directives || EMPTY_OBJECT, oldValue = oldDirectives || EMPTY_OBJECT;
-        for (let name in newValue) {
-            const directive = newValue[name], { once, bind, unbind } = directive.hooks;
-            if (!oldValue[name]) {
-                bind(node, directive, vnode);
-            }
-            else if (once
-                || directive.value !== oldValue[name].value
-                || isKeypathChange) {
-                if (unbind) {
-                    unbind(node, oldValue[name], oldVnode);
+// 删除 ref 的时候，要确保是相同的节点
+// 因为模板中可能出现同一个 ref 名字，出现在不同的地方，
+// 这样就可能出现一种特殊情况，即前面刚创建了 ref1，后面又把这个这个新创建的 ref1 删除了
+function update$2(api, vnode, oldVnode) {
+    const { context, ref } = vnode, oldRef = oldVnode && oldVnode.ref;
+    if (ref || oldRef) {
+        let refs = context.$refs, value = vnode.component || vnode.node;
+        if (ref) {
+            if (!oldRef) {
+                if (!refs) {
+                    refs = context.$refs = {};
                 }
-                bind(node, directive, vnode);
+                refs[ref] = value;
+            }
+            else if (ref !== oldRef) {
+                if (refs) {
+                    if (refs[ref] === value) {
+                        delete refs[ref];
+                    }
+                }
+                else {
+                    refs = context.$refs = {};
+                }
+                refs[ref] = value;
             }
         }
-        for (let name in oldValue) {
-            if (!newValue[name]) {
-                const { unbind } = oldValue[name].hooks;
-                if (unbind) {
-                    unbind(node, oldValue[name], oldVnode);
+        else if (refs && oldRef && refs[oldRef] === value) {
+            delete refs[oldRef];
+        }
+    }
+}
+function remove$1(api, vnode) {
+    const { ref } = vnode;
+    if (ref) {
+        const refs = vnode.context.$refs, value = vnode.component || vnode.node;
+        if (refs && refs[ref] === value) {
+            delete refs[ref];
+        }
+    }
+}
+
+/**
+ * 节流调用
+ *
+ * @param fn 需要节制调用的函数
+ * @param delay 调用的时间间隔，单位毫秒
+ * @param immediate 是否立即触发
+ * @return 节流函数
+ */
+function debounce (fn, delay, immediate) {
+    let timer;
+    return function () {
+        if (!timer) {
+            const args = toArray(arguments);
+            if (immediate) {
+                execute(fn, UNDEFINED, args);
+            }
+            timer = setTimeout(function () {
+                timer = UNDEFINED;
+                if (!immediate) {
+                    execute(fn, UNDEFINED, args);
+                }
+            }, delay);
+        }
+    };
+}
+
+function addEvent(api, element, component, lazy, event) {
+    let { name, listener } = event;
+    if (lazy) {
+        const value = lazy[name] || lazy[EMPTY_STRING];
+        if (value === TRUE) {
+            name = EVENT_CHANGE;
+        }
+        else if (value > 0) {
+            listener = debounce(listener, value, 
+            // 避免连续多次点击，主要用于提交表单场景
+            // 移动端的 tap 事件可自行在业务层打补丁实现
+            name === EVENT_CLICK || name === EVENT_TAP);
+        }
+    }
+    if (component) {
+        if (event.isNative) {
+            const target = component.$el;
+            api.on(target, name, listener);
+            return function () {
+                api.off(target, name, listener);
+            };
+        }
+        // event 有 ns 和 listener 两个字段，满足 ThisListenerOptions 的要求
+        component.on(name, event);
+        return function () {
+            component.off(name, event);
+        };
+    }
+    api.on(element, name, listener);
+    return function () {
+        api.off(element, name, listener);
+    };
+}
+function update$3(api, vnode, oldVnode) {
+    const { data, lazy, events } = vnode, oldEvents = oldVnode && oldVnode.events;
+    if (events || oldEvents) {
+        const element = vnode.node, component = vnode.component, destroy = data[EVENT] || (data[EVENT] = {});
+        if (events) {
+            const oldValue = oldEvents || EMPTY_OBJECT;
+            for (let key in events) {
+                const event = events[key], oldEvent = oldValue[key];
+                if (!oldEvent) {
+                    destroy[key] = addEvent(api, element, component, lazy, event);
+                }
+                else if (event.value !== oldEvent.value) {
+                    destroy[key]();
+                    destroy[key] = addEvent(api, element, component, lazy, event);
+                }
+                else if (oldEvent.runtime && event.runtime) {
+                    extend(oldEvent.runtime, event.runtime);
+                    // 在当前节点传递 oldEvent.runtime 的引用
+                    event.runtime = oldEvent.runtime;
+                }
+            }
+        }
+        if (oldEvents) {
+            const newValue = events || EMPTY_OBJECT;
+            for (let key in oldEvents) {
+                if (!newValue[key]) {
+                    destroy[key]();
+                    delete destroy[key];
                 }
             }
         }
     }
 }
-function remove$1(vnode) {
+function remove$2(api, vnode) {
+    const { data, events } = vnode, destroy = data[EVENT];
+    if (events && destroy) {
+        for (let key in events) {
+            destroy[key]();
+            delete destroy[key];
+        }
+    }
+}
+
+function debounceIfNeeded(fn, lazy) {
+    // 应用 lazy
+    return lazy && lazy !== TRUE
+        ? debounce(fn, lazy)
+        : fn;
+}
+const inputControl = {
+    set(node, value) {
+        node.value = toString(value);
+    },
+    sync(node, keypath, context) {
+        context.set(keypath, node.value);
+    },
+    name: 'value'
+}, radioControl = {
+    set(node, value) {
+        node.checked = node.value === toString(value);
+    },
+    sync(node, keypath, context) {
+        if (node.checked) {
+            context.set(keypath, node.value);
+        }
+    },
+    name: 'checked'
+}, checkboxControl = {
+    set(node, value) {
+        node.checked = array(value)
+            ? has(value, node.value, FALSE)
+            : !!value;
+    },
+    sync(node, keypath, context) {
+        const value = context.get(keypath);
+        if (array(value)) {
+            if (node.checked) {
+                context.append(keypath, node.value);
+            }
+            else {
+                context.removeAt(keypath, indexOf(value, node.value, FALSE));
+            }
+        }
+        else {
+            context.set(keypath, node.checked);
+        }
+    },
+    name: 'checked'
+}, selectControl = {
+    set(node, value) {
+        each(toArray(node.options), node.multiple
+            ? function (option) {
+                option.selected = has(value, option.value, FALSE);
+            }
+            : function (option, index) {
+                if (option.value == value) {
+                    node.selectedIndex = index;
+                    return FALSE;
+                }
+            });
+    },
+    sync(node, keypath, context) {
+        const { options } = node;
+        if (node.multiple) {
+            const values = [];
+            each(toArray(options), function (option) {
+                if (option.selected) {
+                    push(values, option.value);
+                }
+            });
+            context.set(keypath, values);
+        }
+        else {
+            context.set(keypath, options[node.selectedIndex].value);
+        }
+    },
+    name: 'value'
+};
+function addModel(api, element, component, vnode) {
+    let { context, model, lazy, nativeProps } = vnode, { keypath, value } = model, lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[EMPTY_STRING]), update, destroy;
+    if (component) {
+        let viewBinding = component.$model, viewSyncing = debounceIfNeeded(function (newValue) {
+            context.set(keypath, newValue);
+        }, lazyValue);
+        update = function (newValue) {
+            if (update) {
+                component.set(viewBinding, newValue);
+            }
+        };
+        destroy = function () {
+            component.unwatch(viewBinding, viewSyncing);
+        };
+        component.watch(viewBinding, viewSyncing);
+    }
+    else {
+        let control = vnode.tag === 'select'
+            ? selectControl
+            : inputControl, 
+        // checkbox,radio,select 监听的是 change 事件
+        eventName = EVENT_CHANGE;
+        if (control === inputControl) {
+            const type = nativeProps && nativeProps.type;
+            if (type === 'radio') {
+                control = radioControl;
+            }
+            else if (type === 'checkbox') {
+                control = checkboxControl;
+            }
+            // 如果是输入框，则切换成 model 事件
+            // model 事件是个 yox-dom 实现的特殊事件
+            // 不会在输入法组合文字过程中得到触发事件
+            else if (lazyValue !== TRUE) {
+                eventName = EVENT_MODEL;
+            }
+        }
+        update = function (newValue) {
+            if (update) {
+                control.set(element, newValue);
+            }
+        };
+        const sync = debounceIfNeeded(function () {
+            control.sync(element, keypath, context);
+        }, lazyValue);
+        destroy = function () {
+            api.off(element, eventName, sync);
+        };
+        api.on(element, eventName, sync);
+        control.set(element, value);
+    }
+    // 监听数据，修改界面
+    context.watch(keypath, update);
+    return function () {
+        context.unwatch(keypath, update);
+        update = UNDEFINED;
+        destroy();
+    };
+}
+function update$4(api, vnode, oldVnode) {
+    const { data, node, component, model } = vnode, oldModel = oldVnode && oldVnode.model;
+    if (model) {
+        if (!oldModel) {
+            data[MODEL] = addModel(api, node, component, vnode);
+        }
+        else if (model.keypath !== oldModel.keypath) {
+            data[MODEL]();
+            data[MODEL] = addModel(api, node, component, vnode);
+        }
+    }
+    else if (oldModel) {
+        data[MODEL]();
+        delete data[MODEL];
+    }
+}
+function remove$3(api, vnode) {
+    const { data } = vnode;
+    if (data[MODEL]) {
+        data[MODEL]();
+        delete data[MODEL];
+    }
+}
+
+function update$5(api, vnode, oldVnode) {
+    const { directives } = vnode, oldDirectives = oldVnode && oldVnode.directives;
+    if (directives || oldDirectives) {
+        const node = vnode.component || vnode.node;
+        if (directives) {
+            const oldValue = oldDirectives || EMPTY_OBJECT;
+            for (let name in directives) {
+                const directive = directives[name], oldDirective = oldValue[name], { bind, unbind } = directive.hooks;
+                if (!oldDirective) {
+                    bind(node, directive, vnode);
+                }
+                else if (directive.value !== oldDirective.value) {
+                    if (unbind) {
+                        unbind(node, oldDirective, oldVnode);
+                    }
+                    bind(node, directive, vnode);
+                }
+                else if (oldDirective.runtime && directive.runtime) {
+                    extend(oldDirective.runtime, directive.runtime);
+                    // 在当前节点传递 oldDirective.runtime 的引用
+                    directive.runtime = oldDirective.runtime;
+                }
+            }
+        }
+        if (oldDirectives) {
+            const newValue = directives || EMPTY_OBJECT;
+            for (let name in oldDirectives) {
+                if (!newValue[name]) {
+                    const { unbind } = oldDirectives[name].hooks;
+                    if (unbind) {
+                        unbind(node, oldDirectives[name], oldVnode);
+                    }
+                }
+            }
+        }
+    }
+}
+function remove$4(api, vnode) {
     const { directives } = vnode;
     if (directives) {
-        const node = vnode.data[COMPONENT] || vnode.node;
+        const node = vnode.component || vnode.node;
         for (let name in directives) {
             const { unbind } = directives[name].hooks;
             if (unbind) {
@@ -1419,40 +1795,36 @@ function remove$1(vnode) {
     }
 }
 
-function update$3(vnode, oldVnode) {
-    let { data, ref, props, slots, directives, context } = vnode, node;
-    if (vnode.isComponent) {
-        node = data[COMPONENT];
-        // 更新时才要 set
-        // 因为初始化时，所有这些都经过构造函数完成了
-        if (oldVnode) {
-            const model = directives && directives[DIRECTIVE_MODEL];
-            if (model) {
-                if (!props) {
-                    props = {};
-                }
-                props[node.$model] = model.value;
+function update$6(api, vnode, oldVnode) {
+    let { component, props, slots, model } = vnode;
+    // 更新时才要 set
+    // 因为初始化时，所有这些都经过构造函数完成了
+    if (component && oldVnode) {
+        if (model) {
+            if (!props) {
+                props = {};
             }
-            const result = merge(props, slots);
-            if (result) {
-                node.forceUpdate(result);
-            }
+            props[component.$model] = model.value;
+        }
+        const result = merge(props, slots);
+        if (result) {
+            component.forceUpdate(result);
         }
     }
-    else {
-        node = vnode.node;
-    }
-    if (ref) {
-        const refs = context.$refs;
-        if (refs) {
-            refs[ref] = node;
-        }
+}
+function remove$5(api, vnode) {
+    const { component } = vnode;
+    if (component) {
+        component.destroy();
+        delete vnode.component;
     }
 }
 
 function isPatchable(vnode, oldVnode) {
-    return vnode.tag === oldVnode.tag
-        && vnode.key === oldVnode.key;
+    return vnode.isText && oldVnode.isText
+        || vnode.isComment && oldVnode.isComment
+        || (vnode.tag === oldVnode.tag
+            && vnode.key === oldVnode.key);
 }
 function createKeyToIndex(vnodes, startIndex, endIndex) {
     let result, vnode, key;
@@ -1476,19 +1848,19 @@ function insertBefore(api, parentNode, node, referenceNode) {
         api.append(parentNode, node);
     }
 }
-function createComponent(vnode, options) {
+function createComponent(api, vnode, options) {
     const child = (vnode.parent || vnode.context).createComponent(options, vnode);
-    vnode.data[COMPONENT] = child;
+    vnode.component = child;
     vnode.data[LOADING] = FALSE;
-    update$2(vnode);
-    update$3(vnode);
+    update$2(api, vnode);
+    update$3(api, vnode);
+    update$4(api, vnode);
+    update$5(api, vnode);
+    update$6(api, vnode);
     return child;
 }
-let guid = 0;
 function createData() {
-    const data = {};
-    data[ID] = ++guid;
-    return data;
+    return {};
 }
 function createVnode(api, vnode) {
     let { tag, node, data, isComponent, isComment, isText, isStyle, isOption, children, text, html, context } = vnode;
@@ -1519,7 +1891,7 @@ function createVnode(api, vnode) {
                             // 用完就删掉
                             delete data[VNODE];
                         }
-                        enterVnode(vnode, createComponent(vnode, options));
+                        enterVnode(vnode, createComponent(api, vnode, options));
                     }
                 }
                 // 同步组件
@@ -1531,7 +1903,7 @@ function createVnode(api, vnode) {
         // 不论是同步还是异步组件，都需要一个占位元素
         vnode.node = api.createComment(RAW_COMPONENT);
         if (componentOptions) {
-            createComponent(vnode, componentOptions);
+            createComponent(api, vnode, componentOptions);
         }
         else {
             data[LOADING] = TRUE;
@@ -1543,15 +1915,17 @@ function createVnode(api, vnode) {
             addVnodes(api, node, children);
         }
         else if (text) {
-            api.text(node, text, isStyle, isOption);
+            api.setText(node, text, isStyle, isOption);
         }
         else if (html) {
-            api.html(node, html, isStyle, isOption);
+            api.setHtml(node, html, isStyle, isOption);
         }
         update(api, vnode);
         update$1(api, vnode);
-        update$2(vnode);
-        update$3(vnode);
+        update$2(api, vnode);
+        update$3(api, vnode);
+        update$4(api, vnode);
+        update$5(api, vnode);
     }
 }
 function addVnodes(api, parentNode, vnodes, startIndex, endIndex, before) {
@@ -1564,7 +1938,7 @@ function addVnodes(api, parentNode, vnodes, startIndex, endIndex, before) {
     }
 }
 function insertVnode(api, parentNode, vnode, before) {
-    const { node, data, context } = vnode, hasParent = api.parent(node);
+    const { node, component, context } = vnode, hasParent = api.parent(node);
     // 这里不调用 insertBefore，避免判断两次
     if (before) {
         api.before(parentNode, node, before.node);
@@ -1576,13 +1950,10 @@ function insertVnode(api, parentNode, vnode, before) {
     // 但是占位节点不用 enter，而是等组件加载回来之后再调 enter
     if (!hasParent) {
         let enter = UNDEFINED;
-        if (vnode.isComponent) {
-            const component = data[COMPONENT];
-            if (component) {
-                enter = function () {
-                    enterVnode(vnode, component);
-                };
-            }
+        if (vnode.isComponent && component) {
+            enter = function () {
+                enterVnode(vnode, component);
+            };
         }
         else if (!vnode.isStatic && !vnode.isText && !vnode.isComment) {
             enter = function () {
@@ -1610,58 +1981,32 @@ function removeVnodes(api, parentNode, vnodes, startIndex, endIndex) {
     }
 }
 function removeVnode(api, parentNode, vnode) {
-    const { node } = vnode;
+    const { node, component } = vnode;
     if (vnode.isStatic || vnode.isText || vnode.isComment) {
         api.remove(parentNode, node);
     }
     else {
-        let done = function () {
+        const done = function () {
             destroyVnode(api, vnode);
             api.remove(parentNode, node);
-        }, component;
-        if (vnode.isComponent) {
-            component = vnode.data[COMPONENT];
-            // 异步组件，还没加载成功就被删除了
-            if (!component) {
-                done();
-                return;
-            }
+        };
+        // 异步组件，还没加载成功就被删除了
+        if (vnode.isComponent && !component) {
+            done();
+            return;
         }
         leaveVnode(vnode, component, done);
     }
 }
 function destroyVnode(api, vnode) {
-    /**
-     * 如果一个子组件的模板是这样写的：
-     *
-     * <div>
-     *   {{#if visible}}
-     *      <slot name="children"/>
-     *   {{/if}}
-     * </div>
-     *
-     * 当 visible 从 true 变为 false 时，不能销毁 slot 导入的任何 vnode
-     * 不论是组件或是元素，都不能销毁，只能简单的 remove，
-     * 否则子组件下一次展现它们时，会出问题
-     */
-    const { data, children, parent, slot } = vnode;
-    // 销毁插槽组件
-    // 如果宿主组件正在销毁，$vnode 属性会在调 destroy() 之前被删除
-    // 这里表示的是宿主组件还没被销毁
-    // 如果宿主组件被销毁了，则它的一切都要进行销毁
-    if (slot && parent && parent.$vnode) {
-        // 如果更新时，父组件没有传入该 slot，则子组件需要销毁该 slot
-        const slots = parent.get(slot);
-        // slots 要么没有，要么是数组，不可能是别的
-        if (slots && has(slots, vnode)) {
-            return;
-        }
-    }
+    const { data, children } = vnode;
     if (vnode.isComponent) {
-        const component = data[COMPONENT];
-        if (component) {
-            remove$1(vnode);
-            component.destroy();
+        if (vnode.component) {
+            remove$1(api, vnode);
+            remove$2(api, vnode);
+            remove$3(api, vnode);
+            remove$4(api, vnode);
+            remove$5(api, vnode);
         }
         else
             [
@@ -1669,7 +2014,10 @@ function destroyVnode(api, vnode) {
             ];
     }
     else {
-        remove$1(vnode);
+        remove$1(api, vnode);
+        remove$2(api, vnode);
+        remove$3(api, vnode);
+        remove$4(api, vnode);
         if (children) {
             each(children, function (child) {
                 destroyVnode(api, child);
@@ -1805,7 +2153,7 @@ function patch(api, vnode, oldVnode) {
     if (vnode === oldVnode) {
         return;
     }
-    const { node, data } = oldVnode;
+    const { data, node, isComponent } = oldVnode;
     // 如果不能 patch，则删除重建
     if (!isPatchable(vnode, oldVnode)) {
         // 同步加载的组件，初始化时不会传入占位节点
@@ -1819,30 +2167,38 @@ function patch(api, vnode, oldVnode) {
         }
         return;
     }
-    vnode.node = node;
     vnode.data = data;
+    vnode.node = node;
+    vnode.component = oldVnode.component;
     // 组件正在异步加载，更新为最新的 vnode
     // 当异步加载完成时才能用上最新的 vnode
     if (oldVnode.isComponent && data[LOADING]) {
         data[VNODE] = vnode;
         return;
     }
-    update(api, vnode, oldVnode);
-    update$1(api, vnode, oldVnode);
+    if (!isComponent) {
+        update(api, vnode, oldVnode);
+        update$1(api, vnode, oldVnode);
+    }
     // 先处理 directive 再处理 component
     // 因为组件只是单纯的更新 props，而 directive 则有可能要销毁
     // 如果顺序反过来，会导致某些本该销毁的指令先被数据的变化触发执行了
-    update$2(vnode, oldVnode);
-    update$3(vnode, oldVnode);
+    update$2(api, vnode, oldVnode);
+    update$3(api, vnode, oldVnode);
+    update$4(api, vnode, oldVnode);
+    update$5(api, vnode, oldVnode);
+    if (isComponent) {
+        update$6(api, vnode, oldVnode);
+    }
     const { text, html, children, isStyle, isOption } = vnode, oldText = oldVnode.text, oldHtml = oldVnode.html, oldChildren = oldVnode.children;
     if (string(text)) {
         if (text !== oldText) {
-            api.text(node, text, isStyle, isOption);
+            api.setText(node, text, isStyle, isOption);
         }
     }
     else if (string(html)) {
         if (html !== oldHtml) {
-            api.html(node, html, isStyle, isOption);
+            api.setHtml(node, html, isStyle, isOption);
         }
     }
     // 两个都有需要 diff
@@ -1854,7 +2210,7 @@ function patch(api, vnode, oldVnode) {
     // 有新的没旧的 - 新增节点
     else if (children) {
         if (string(oldText) || string(oldHtml)) {
-            api.text(node, EMPTY_STRING, isStyle);
+            api.setText(node, EMPTY_STRING, isStyle);
         }
         addVnodes(api, node, children);
     }
@@ -1864,28 +2220,62 @@ function patch(api, vnode, oldVnode) {
     }
     // 有旧的 text 没有新的 text
     else if (string(oldText) || string(oldHtml)) {
-        api.text(node, EMPTY_STRING, isStyle);
+        api.setText(node, EMPTY_STRING, isStyle);
     }
 }
-function create(api, node, context, keypath) {
-    return {
-        tag: api.tag(node),
+function create(api, node, context) {
+    const vnode = {
         data: createData(),
         node,
         context,
-        keypath,
     };
+    switch (node.nodeType) {
+        case 1:
+            vnode.tag = api.tag(node);
+            break;
+        case 3:
+            vnode.isText = TRUE;
+            vnode.text = node.nodeValue;
+            break;
+        case 8:
+            vnode.isComment = TRUE;
+            vnode.text = node.nodeValue;
+            break;
+    }
+    return vnode;
 }
 function destroy(api, vnode, isRemove) {
     if (isRemove) {
         const parentNode = api.parent(vnode.node);
-        if (parentNode) {
-            removeVnode(api, parentNode, vnode);
-        }
+        removeVnode(api, parentNode, vnode);
     }
     else {
         destroyVnode(api, vnode);
     }
+}
+
+function split2Map(str) {
+    const obj = createPureObject();
+    each(str.split(','), function (item) {
+        obj.set(item, TRUE);
+    });
+    return obj;
+}
+// 首字母大写，或中间包含 -
+const // 常见的自闭合标签
+selfClosingTagNames = split2Map('area,base,embed,track,source,param,input,col,img,br,hr'), 
+// 常见的 svg 标签
+svgTagNames = split2Map('svg,g,defs,desc,metadata,symbol,use,image,path,rect,circle,line,ellipse,polyline,polygon,text,tspan,tref,textpath,marker,pattern,clippath,mask,filter,cursor,view,animate,font,font-face,glyph,missing-glyph,foreignObject'), 
+// 常见的字符串类型的属性
+// 注意：autocomplete,autocapitalize 不是布尔类型
+stringPropertyNames = split2Map('id,class,name,value,for,accesskey,title,style,src,type,href,target,alt,placeholder,preload,poster,wrap,accept,pattern,dir,autocomplete,autocapitalize'), 
+// 常见的数字类型的属性
+numberPropertyNames = split2Map('min,minlength,max,maxlength,step,width,height,size,rows,cols,tabindex'), 
+// 常见的布尔类型的属性
+booleanPropertyNames = split2Map('disabled,checked,required,multiple,readonly,autofocus,autoplay,controls,loop,muted,novalidate,draggable,hidden,spellcheck');
+
+function isDef (target) {
+    return target !== UNDEFINED;
 }
 
 function toNumber (target, defaultValue) {
@@ -1896,321 +2286,295 @@ function toNumber (target, defaultValue) {
             : 0;
 }
 
-function isDef (target) {
-    return target !== UNDEFINED;
-}
+const QUOTE_SINGLE = "'";
+const JOIN_EMPTY = repeat(QUOTE_SINGLE, 2);
 
-function setPair(target, name, key, value) {
-    const data = target[name] || (target[name] = {});
-    data[key] = value;
-}
-const KEY_DIRECTIVES = 'directives';
+const NATIVE_ATTRIBUTES = 'nativeAttrs';
+const NATIVE_PROPERTIES = 'nativeProps';
+const PROPERTIES = 'props';
+const DIRECTIVES = 'directives';
+const EVENTS = 'events';
+const MODEL$1 = 'model';
+const LAZY = 'lazy';
+const TRANSITION = 'transition';
+
 function render(context, observer, template, filters, partials, directives, transitions) {
-    let $scope = { $keypath: EMPTY_STRING }, $stack = [$scope], currentVnode, vnodeStack = [], slotComponentStack = [], localPartials = {}, findValue = function (stack, index, key, lookup, depIgnore, defaultKeypath) {
-        let scope = stack[index], keypath = join$1(scope.$keypath, key), value = stack, holder$1 = holder;
+    let currentKeypath = EMPTY_STRING, keypathStack = [currentKeypath], localPartials = {}, findValue = function (stack, index, key, lookup, call, defaultKeypath) {
+        let baseKeypath = stack[index], keypath = join$1(baseKeypath, key), value = UNDEFINED;
         // 如果最后还是取不到值，用回最初的 keypath
         if (defaultKeypath === UNDEFINED) {
             defaultKeypath = keypath;
         }
-        // 如果取的是 scope 上直接有的数据，如 $keypath
-        if (scope[key] !== UNDEFINED) {
-            value = scope[key];
-        }
-        // 如果取的是数组项，则要更进一步
-        else if (scope.$item !== UNDEFINED) {
-            scope = scope.$item;
-            // 到这里 scope 可能为空
-            // 比如 new Array(10) 然后遍历这个数组，每一项肯定是空
-            // 取 this
-            if (key === EMPTY_STRING) {
-                value = scope;
-            }
-            // 取 this.xx
-            else if (scope != NULL && scope[key] !== UNDEFINED) {
-                value = scope[key];
-            }
-        }
+        // 正常取数据
+        value = observer.get(keypath, stack);
         if (value === stack) {
-            // 正常取数据
-            value = observer.get(keypath, stack, depIgnore);
-            if (value === stack) {
-                if (lookup && index > 0) {
-                    return findValue(stack, index - 1, key, lookup, depIgnore, defaultKeypath);
-                }
-                // 到头了，最后尝试过滤器
+            if (lookup && index > 0) {
+                return findValue(stack, index - 1, key, lookup, call, defaultKeypath);
+            }
+            // 到头了，如果是函数调用，则最后尝试过滤器
+            if (call) {
                 const result = get(filters, key);
                 if (result) {
-                    holder$1 = result;
-                    holder$1.keypath = key;
+                    result.keypath = key;
+                    return result;
                 }
-                else {
-                    holder$1.value = UNDEFINED;
-                    holder$1.keypath = defaultKeypath;
-                }
-                return holder$1;
+            }
+            holder.value = UNDEFINED;
+            holder.keypath = defaultKeypath;
+        }
+        else {
+            holder.value = value;
+            holder.keypath = keypath;
+        }
+        return holder;
+    }, flattenArray = function (array$1, handler) {
+        for (let i = 0, length = array$1.length; i < length; i++) {
+            const item = array$1[i];
+            if (array(item)) {
+                flattenArray(item, handler);
+            }
+            else if (isDef(item)) {
+                handler(item);
             }
         }
-        holder$1.value = value;
-        holder$1.keypath = keypath;
-        return holder$1;
-    }, createEventListener = function (type) {
-        return function (event, data) {
-            // 事件名称相同的情况，只可能是监听 DOM 事件，比如写一个 Button 组件
-            // <button on-click="click"> 纯粹的封装了一个原生 click 事件
-            if (type !== event.type) {
-                event = new CustomEvent(type, event);
+    }, normalizeAttributes = function (data, attrs) {
+        flattenArray(attrs, function (item) {
+            const { key, name, value } = item;
+            if (data[key]) {
+                data[key][name] = value;
+            }
+            else {
+                if (name) {
+                    const map = {};
+                    map[name] = value;
+                    data[key] = map;
+                }
+                else {
+                    data[key] = value;
+                }
+            }
+        });
+    }, normalizeChildren = function (result, childs) {
+        flattenArray(childs, function (item) {
+            // item 只能是 vnode
+            if (item.isText) {
+                const lastChild = last(result);
+                if (lastChild && lastChild.isText) {
+                    lastChild.text += item.text;
+                    return;
+                }
+            }
+            result.push(item);
+        });
+    }, renderElementVnode = function (data, attrs, childs) {
+        data.context = context;
+        if (attrs) {
+            normalizeAttributes(data, attrs);
+        }
+        if (childs) {
+            const children = [];
+            normalizeChildren(children, childs);
+            data.children = children;
+        }
+        return data;
+    }, renderComponentVnode = function (data, attrs, slots) {
+        data.context = context;
+        if (attrs) {
+            normalizeAttributes(data, attrs);
+        }
+        if (slots) {
+            const vnodeMap = {};
+            for (let name in slots) {
+                const children = [];
+                normalizeChildren(children, slots[name]);
+                // 就算是 undefined 也必须有值，用于覆盖旧值
+                vnodeMap[name] = children.length
+                    ? children
+                    : UNDEFINED;
+            }
+            data.slots = vnodeMap;
+        }
+        return data;
+    }, renderNativeAttribute = function (name, value) {
+        return {
+            key: NATIVE_ATTRIBUTES,
+            name,
+            value,
+        };
+    }, renderNativeProperty = function (name, value) {
+        return {
+            key: NATIVE_PROPERTIES,
+            name,
+            value,
+        };
+    }, renderProperty = function (name, value) {
+        return {
+            key: PROPERTIES,
+            name,
+            value,
+        };
+    }, renderLazy = function (name, value) {
+        return {
+            key: LAZY,
+            name,
+            value,
+        };
+    }, renderTransition = function (name) {
+        return {
+            key: TRANSITION,
+            value: getTransition(name),
+        };
+    }, getTransition = function (name) {
+        const transition = transitions[name];
+        return transition;
+    }, renderModel = function (holder) {
+        return {
+            key: MODEL$1,
+            value: getModel(holder),
+        };
+    }, getModel = function (holder) {
+        return {
+            value: holder.value,
+            keypath: holder.keypath,
+        };
+    }, createEventNameListener = function (isComponent, type, ns) {
+        return function (event, data, isNative) {
+            // 监听组件事件不用处理父组件传下来的事件
+            if (isComponent && event.phase === CustomEvent.PHASE_DOWNWARD) {
+                return;
+            }
+            if (type !== event.type || ns !== event.ns) {
+                event = new CustomEvent(type, isNative
+                    ? event.originalEvent
+                    : event);
+                event.ns = ns;
             }
             context.fire(event, data);
         };
-    }, createMethodListener = function (name, args, stack) {
+    }, createEventMethodListener = function (isComponent, name, runtime) {
         return function (event, data) {
-            const method = context[name];
-            if (CustomEvent.is(event)) {
-                let result = UNDEFINED;
-                if (args) {
-                    const scope = last(stack);
-                    if (scope) {
-                        scope.$event = event;
-                        scope.$data = data;
-                        result = execute(method, context, args(stack));
-                        scope.$event =
-                            scope.$data = UNDEFINED;
-                    }
+            // 监听组件事件不用处理父组件传下来的事件
+            if (isComponent && event.phase === CustomEvent.PHASE_DOWNWARD) {
+                return;
+            }
+            let methodArgs;
+            if (runtime) {
+                methodArgs = runtime.args(runtime.stack, event, data);
+                // 1 个或 0 个参数可优化调用方式，即 method.call 或直接调用函数
+                if (methodArgs.length < 2) {
+                    methodArgs = methodArgs[0];
                 }
-                else {
-                    result = execute(method, context, data ? [event, data] : event);
-                }
-                return result;
             }
             else {
-                execute(method, context, args ? args(stack) : UNDEFINED);
+                methodArgs = data ? [event, data] : event;
+            }
+            const result = execute(context[name], context, methodArgs);
+            if (result === FALSE) {
+                event.prevent().stop();
             }
         };
-    }, createGetter = function (getter, stack) {
-        return function () {
-            return getter(stack);
+    }, renderEventMethod = function (params) {
+        return {
+            key: EVENTS,
+            name: params.key,
+            value: getEventMethod(params),
         };
-    }, renderTextVnode = function (value) {
-        const vnodeList = last(vnodeStack);
-        if (vnodeList) {
-            const text = toString(value);
-            const lastVnode = last(vnodeList);
-            if (lastVnode && lastVnode.isText) {
-                lastVnode.text += text;
-            }
-            else {
-                // 注释节点标签名是 '!'，这里区分一下
-                const textVnode = {
-                    tag: '#',
-                    isText: TRUE,
-                    text,
-                    context,
-                    keypath: $scope.$keypath,
-                };
-                push(vnodeList, textVnode);
-            }
+    }, getEventMethod = function (params) {
+        const { runtime } = params;
+        if (runtime) {
+            runtime.stack = keypathStack;
         }
-    }, renderAttributeVnode = function (name, value) {
-        setPair(currentVnode, currentVnode.isComponent ? 'props' : 'nativeAttrs', name, value);
-    }, renderPropertyVnode = function (name, value) {
-        setPair(currentVnode, 'nativeProps', name, value);
-    }, renderLazyVnode = function (name, value) {
-        setPair(currentVnode, 'lazy', name, value);
-    }, renderTransitionVnode = function (name) {
-        currentVnode.transition = transitions[name];
-    }, renderBindingVnode = function (name, holder, hint) {
-        const key = join$1(DIRECTIVE_BINDING, name);
-        setPair(currentVnode, KEY_DIRECTIVES, key, {
-            ns: DIRECTIVE_BINDING,
-            name,
-            key,
-            modifier: holder.keypath,
-            hooks: directives[DIRECTIVE_BINDING],
-            hint,
-        });
-        return holder.value;
-    }, renderModelVnode = function (holder) {
-        setPair(currentVnode, KEY_DIRECTIVES, DIRECTIVE_MODEL, {
-            ns: DIRECTIVE_MODEL,
-            name: EMPTY_STRING,
-            key: DIRECTIVE_MODEL,
-            value: holder.value,
-            modifier: holder.keypath,
-            hooks: directives[DIRECTIVE_MODEL]
-        });
-    }, renderEventMethodVnode = function (name, key, modifier, value, method, args) {
-        setPair(currentVnode, KEY_DIRECTIVES, key, {
-            ns: DIRECTIVE_EVENT,
-            name,
-            key,
-            value,
-            modifier,
-            hooks: directives[DIRECTIVE_EVENT],
-            handler: createMethodListener(method, args, $stack),
-        });
-    }, renderEventNameVnode = function (name, key, modifier, value, event) {
-        setPair(currentVnode, KEY_DIRECTIVES, key, {
-            ns: DIRECTIVE_EVENT,
-            name,
-            key,
-            value,
-            modifier,
-            hooks: directives[DIRECTIVE_EVENT],
-            handler: createEventListener(event),
-        });
-    }, renderDirectiveVnode = function (name, key, modifier, value, method, args, getter) {
-        const hooks = directives[name];
-        setPair(currentVnode, KEY_DIRECTIVES, key, {
-            ns: DIRECTIVE_CUSTOM,
-            name,
-            key,
-            value,
-            hooks,
-            modifier,
-            getter: getter ? createGetter(getter, $stack) : UNDEFINED,
-            handler: method ? createMethodListener(method, args, $stack) : UNDEFINED,
-        });
-    }, renderSpreadVnode = function (holder) {
-        const { value, keypath } = holder;
-        if (object(value)) {
-            for (let key in value) {
-                setPair(currentVnode, 'props', key, value[key]);
+        return {
+            key: params.key,
+            value: params.value,
+            name: params.from,
+            ns: params.fromNs,
+            isNative: params.isNative,
+            listener: createEventMethodListener(params.isComponent, params.method, runtime),
+            runtime,
+        };
+    }, renderEventName = function (params) {
+        return {
+            key: EVENTS,
+            name: params.key,
+            value: getEventName(params),
+        };
+    }, getEventName = function (params) {
+        return {
+            key: params.key,
+            value: params.value,
+            name: params.from,
+            ns: params.fromNs,
+            isNative: params.isNative,
+            listener: createEventNameListener(params.isComponent, params.to, params.toNs),
+        };
+    }, createDirectiveGetter = function (runtime) {
+        return function () {
+            return runtime.expr(runtime.stack);
+        };
+    }, createDirectiveHandler = function (name, runtime) {
+        return function () {
+            let methodArgs = UNDEFINED;
+            if (runtime) {
+                methodArgs = runtime.args(runtime.stack);
+                // 1 个或 0 个参数可优化调用方式，即 method.call 或直接调用函数
+                if (methodArgs.length < 2) {
+                    methodArgs = methodArgs[0];
+                }
             }
-            if (keypath) {
-                const key = join$1(DIRECTIVE_BINDING, keypath);
-                setPair(currentVnode, KEY_DIRECTIVES, key, {
-                    ns: DIRECTIVE_BINDING,
-                    name: EMPTY_STRING,
-                    key,
-                    modifier: join$1(keypath, RAW_WILDCARD),
-                    hooks: directives[DIRECTIVE_BINDING],
+            execute(context[name], context, methodArgs);
+        };
+    }, renderDirective = function (params) {
+        return {
+            key: DIRECTIVES,
+            name: params.key,
+            value: getDirective(params),
+        };
+    }, getDirective = function (params) {
+        const { name, runtime } = params, hooks = directives[name];
+        if (runtime) {
+            runtime.stack = keypathStack;
+        }
+        return {
+            ns: DIRECTIVE_CUSTOM,
+            key: params.key,
+            name,
+            value: params.value,
+            modifier: params.modifier,
+            getter: runtime && runtime.expr ? createDirectiveGetter(runtime) : UNDEFINED,
+            handler: params.method ? createDirectiveHandler(params.method, runtime) : UNDEFINED,
+            hooks,
+            runtime,
+        };
+    }, renderSpread = function (value) {
+        if (object(value)) {
+            const result = [];
+            for (let key in value) {
+                result.push({
+                    key: PROPERTIES,
+                    name: key,
+                    value: value[key],
                 });
             }
+            return result;
         }
-    }, appendVnode = function (vnode) {
-        const vnodeList = last(vnodeStack);
-        if (vnodeList) {
-            push(vnodeList, vnode);
-        }
-        return vnode;
+    }, renderTextVnode = function (value) {
+        return {
+            isText: TRUE,
+            text: value,
+            context,
+        };
     }, renderCommentVnode = function () {
-        // 注释节点和文本节点需要有个区分
-        // 如果两者都没有 tag，则 patchVnode 时，会认为两者是 patchable 的
-        return appendVnode({
-            tag: '!',
+        return {
             isComment: TRUE,
             text: EMPTY_STRING,
-            keypath: $scope.$keypath,
             context,
-        });
-    }, renderElementVnode = function (tag, attrs, childs, isStatic, isOption, isStyle, isSvg, html, ref, key) {
-        const vnode = {
-            tag,
-            isStatic,
-            isOption,
-            isStyle,
-            isSvg,
-            ref,
-            key,
-            context,
-            keypath: $scope.$keypath,
         };
-        if (isDef(html)) {
-            vnode.html = toString(html);
-        }
-        if (attrs) {
-            currentVnode = vnode;
-            attrs();
-            currentVnode = UNDEFINED;
-        }
-        if (childs) {
-            vnodeStack.push(vnode.children = []);
-            childs();
-            pop(vnodeStack);
-        }
-        return appendVnode(vnode);
-    }, renderComponentVnode = function (tag, attrs, slots, ref, key) {
-        const vnode = {
-            tag,
-            ref,
-            key,
-            context,
-            keypath: $scope.$keypath,
-            isComponent: TRUE,
-        };
-        const componentList = last(slotComponentStack);
-        if (componentList) {
-            push(componentList, vnode);
-        }
-        if (attrs) {
-            currentVnode = vnode;
-            attrs();
-            currentVnode = UNDEFINED;
-        }
-        if (slots) {
-            const vnodeSlots = {};
-            for (let name in slots) {
-                vnodeStack.push([]);
-                slotComponentStack.push([]);
-                slots[name]();
-                const vnodes = pop(vnodeStack);
-                const components = pop(slotComponentStack);
-                if (vnodes.length) {
-                    vnodeSlots[name] = {
-                        vnodes,
-                        components,
-                    };
-                }
-                else {
-                    // 必须要有值，用于覆盖旧值
-                    vnodeSlots[name] = UNDEFINED;
-                }
-            }
-            vnode.slots = vnodeSlots;
-        }
-        return appendVnode(vnode);
-    }, renderExpressionIdentifier = function (name, lookup, offset, holder, depIgnore, stack) {
-        let myStack = stack || $stack, index = myStack.length - 1;
-        if (offset) {
-            index -= offset;
-        }
-        let result = findValue(myStack, index, name, lookup, depIgnore);
-        return holder ? result : result.value;
-    }, renderExpressionMemberKeypath = function (identifier, runtimeKeypath) {
-        unshift(runtimeKeypath, identifier);
-        return join(runtimeKeypath, RAW_DOT);
-    }, renderExpressionMemberLiteral = function (value, staticKeypath, runtimeKeypath, holder$1) {
-        if (runtimeKeypath !== UNDEFINED) {
-            staticKeypath = join(runtimeKeypath, RAW_DOT);
-        }
-        const match = get(value, staticKeypath);
-        holder.keypath = UNDEFINED;
-        holder.value = match ? match.value : UNDEFINED;
-        return holder$1 ? holder : holder.value;
-    }, renderExpressionCall = function (fn, args, holder$1) {
-        holder.keypath = UNDEFINED;
-        // 当 holder 为 true, args 为空时，args 会传入 false
-        holder.value = execute(fn, context, args || UNDEFINED);
-        return holder$1 ? holder : holder.value;
     }, 
     // <slot name="xx"/>
-    renderSlot = function (name, defaultRender) {
-        const vnodeList = last(vnodeStack), slotProps = context.get(name);
-        if (vnodeList) {
-            if (slotProps) {
-                const { vnodes, components } = slotProps;
-                for (let i = 0, length = vnodes.length; i < length; i++) {
-                    push(vnodeList, vnodes[i]);
-                    vnodes[i].slot = name;
-                }
-                for (let i = 0, length = components.length; i < length; i++) {
-                    components[i].parent = context;
-                }
-            }
-            else if (defaultRender) {
-                defaultRender();
-            }
-        }
+    renderSlot = function (name, render) {
+        return context.get(name)
+            || (render && render());
     }, 
     // {{#partial name}}
     //   xx
@@ -2221,80 +2585,96 @@ function render(context, observer, template, filters, partials, directives, tran
     // {{> name}}
     renderImport = function (name) {
         if (localPartials[name]) {
-            localPartials[name]();
+            return localPartials[name]();
         }
-        else {
-            const partial = partials[name];
-            if (partial) {
-                partial(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderCommentVnode, renderElementVnode, renderComponentVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange);
-            }
-        }
-    }, eachHandler = function (generate, item, key, keypath, index, length) {
-        const lastScope = $scope, lastStack = $stack;
-        // each 会改变 keypath
-        $scope = { $keypath: keypath };
-        $stack = lastStack.concat($scope);
-        // 避免模板里频繁读取 list.length
-        if (length !== UNDEFINED) {
-            $scope.$length = length;
-        }
-        // 业务层是否写了 expr:index
-        if (index) {
-            $scope[index] = key;
-        }
-        // 无法通过 context.get($keypath + key) 读取到数据的场景
-        // 必须把 item 写到 scope
-        if (!keypath) {
-            $scope.$item = item;
-        }
-        generate();
-        $scope = lastScope;
-        $stack = lastStack;
-    }, renderEach = function (generate, holder, index) {
-        const { keypath, value } = holder;
+        const partial = partials[name];
+        return renderTemplate(partial);
+    }, renderEach = function (holder, renderChildren, renderElse) {
+        let { keypath, value } = holder, result = [], needKeypath = !!keypath, oldKeypathStack = keypathStack, oldCurrentKeypath = currentKeypath;
         if (array(value)) {
             for (let i = 0, length = value.length; i < length; i++) {
-                eachHandler(generate, value[i], i, keypath
-                    ? join$1(keypath, EMPTY_STRING + i)
-                    : EMPTY_STRING, index, length);
+                if (needKeypath) {
+                    currentKeypath = keypath + RAW_DOT + i;
+                    // slice + push 比直接 concat 快多了
+                    keypathStack = oldKeypathStack.slice();
+                    keypathStack.push(currentKeypath);
+                }
+                result.push(renderChildren(currentKeypath || EMPTY_STRING, length, value[i], i));
             }
         }
         else if (object(value)) {
             for (let key in value) {
-                eachHandler(generate, value[key], key, keypath
-                    ? join$1(keypath, key)
-                    : EMPTY_STRING, index);
+                if (needKeypath) {
+                    // 这里 key 虽然可能为空，但也必须直接拼接
+                    // 因为不拼接就变成了原来的 keypath，这样更是错的，
+                    // 只能在使用上尽量避免 key 为空的用法
+                    currentKeypath = keypath + RAW_DOT + key;
+                    // slice + push 比直接 concat 快多了
+                    keypathStack = oldKeypathStack.slice();
+                    keypathStack.push(currentKeypath);
+                }
+                result.push(renderChildren(currentKeypath || EMPTY_STRING, UNDEFINED, value[key], key));
             }
         }
-    }, renderRange = function (generate, from, to, index) {
-        let count = 0;
+        if (keypathStack !== oldKeypathStack) {
+            currentKeypath = oldCurrentKeypath;
+            keypathStack = oldKeypathStack;
+        }
+        if (renderElse && result.length === 0) {
+            result = renderElse();
+        }
+        return result;
+    }, renderRange = function (from, to, equal, renderChildren, renderElse) {
+        let count = 0, length = 0, result = [];
         if (from < to) {
-            for (let i = from; i < to; i++) {
-                eachHandler(generate, i, count++, EMPTY_STRING, index);
+            length = to - from;
+            if (equal) {
+                for (let i = from; i <= to; i++) {
+                    result.push(renderChildren(currentKeypath, length, i, count++));
+                }
+            }
+            else {
+                for (let i = from; i < to; i++) {
+                    result.push(renderChildren(currentKeypath, length, i, count++));
+                }
             }
         }
         else {
-            for (let i = from; i > to; i--) {
-                eachHandler(generate, i, count++, EMPTY_STRING, index);
+            length = from - to;
+            if (equal) {
+                for (let i = from; i >= to; i--) {
+                    result.push(renderChildren(currentKeypath, length, i, count++));
+                }
+            }
+            else {
+                for (let i = from; i > to; i--) {
+                    result.push(renderChildren(currentKeypath, length, i, count++));
+                }
             }
         }
-    }, renderEqualRange = function (generate, from, to, index) {
-        let count = 0;
-        if (from < to) {
-            for (let i = from; i <= to; i++) {
-                eachHandler(generate, i, count++, EMPTY_STRING, index);
-            }
+        if (renderElse && length === 0) {
+            result = renderElse();
         }
-        else {
-            for (let i = from; i >= to; i--) {
-                eachHandler(generate, i, count++, EMPTY_STRING, index);
-            }
-        }
+        return result;
+    }, renderExpressionIdentifier = function (params) {
+        const stack = params.stack || keypathStack, index = stack.length - 1, result = findValue(stack, params.root ? 0 : (params.offset ? index - params.offset : index), params.name, params.lookup, params.call);
+        return params.holder ? result : result.value;
+    }, renderExpressionMemberLiteral = function (value, keypath, holder$1) {
+        const match = get(value, keypath);
+        holder.keypath = UNDEFINED;
+        holder.value = match ? match.value : UNDEFINED;
+        return holder$1 ? holder : holder.value;
+    }, renderExpressionCall = function (fn, args, holder$1) {
+        holder.keypath = UNDEFINED;
+        holder.value = execute(fn, context, args);
+        return holder$1 ? holder : holder.value;
+    }, renderTemplate = function (render) {
+        return render(renderElementVnode, renderComponentVnode, renderNativeAttribute, renderNativeProperty, renderProperty, renderLazy, renderTransition, getTransition, renderModel, getModel, renderEventMethod, getEventMethod, renderEventName, getEventName, renderDirective, getDirective, renderSpread, renderTextVnode, renderCommentVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderExpressionIdentifier, renderExpressionMemberLiteral, renderExpressionCall, currentKeypath, toString);
     };
-    return template(renderExpressionIdentifier, renderExpressionMemberKeypath, renderExpressionMemberLiteral, renderExpressionCall, renderTextVnode, renderAttributeVnode, renderPropertyVnode, renderLazyVnode, renderTransitionVnode, renderBindingVnode, renderModelVnode, renderEventMethodVnode, renderEventNameVnode, renderDirectiveVnode, renderSpreadVnode, renderCommentVnode, renderElementVnode, renderComponentVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderEqualRange);
+    return renderTemplate(template);
 }
 
-let guid$1 = 0, 
+let guid = 0, 
 // 这里先写 IE9 支持的接口
 textContent = 'textContent', innerHTML = 'innerHTML', createEvent = function (event, node) {
     return event;
@@ -2338,7 +2718,7 @@ const CHAR_WHITESPACE = ' ',
 /**
  * 绑定在 HTML 元素上的事件发射器
  */
-EMITTER = '$emitter', 
+EVENT$1 = '$event', 
 /**
  * 跟输入事件配套使用的事件
  */
@@ -2348,7 +2728,7 @@ COMPOSITION_START = 'compositionstart',
  */
 COMPOSITION_END = 'compositionend', domain = 'http://www.w3.org/', namespaces = {
     svg: domain + '2000/svg',
-}, emitterHolders = {}, specialEvents = {};
+}, nativeListenerCount = {}, nativeListeners = {}, customListeners = {}, specialEvents = {};
 specialEvents[EVENT_MODEL] = {
     on(node, listener) {
         let locked = FALSE;
@@ -2387,7 +2767,7 @@ function createComment(text) {
 }
 function prop(node, name, value) {
     if (value !== UNDEFINED) {
-        set(node, name, value, FALSE);
+        setProp(node, name, value);
     }
     else {
         const holder = get(node, name);
@@ -2396,12 +2776,15 @@ function prop(node, name, value) {
         }
     }
 }
+function setProp(node, name, value) {
+    set(node, name, value, FALSE);
+}
 function removeProp(node, name) {
     set(node, name, UNDEFINED);
 }
 function attr(node, name, value) {
     if (value !== UNDEFINED) {
-        node.setAttribute(name, value);
+        setAttr(node, name, value);
     }
     else {
         // value 还可能是 null
@@ -2410,6 +2793,9 @@ function attr(node, name, value) {
             return value;
         }
     }
+}
+function setAttr(node, name, value) {
+    node.setAttribute(name, value);
 }
 function removeAttr(node, name) {
     node.removeAttribute(name);
@@ -2423,7 +2809,7 @@ function append(parentNode, node) {
 function replace(parentNode, node, oldNode) {
     parentNode.replaceChild(node, oldNode);
 }
-function remove$2(parentNode, node) {
+function remove$6(parentNode, node) {
     parentNode.removeChild(node);
 }
 function parent(node) {
@@ -2446,48 +2832,61 @@ function tag(node) {
 }
 function text(node, text, isStyle, isOption) {
     if (text !== UNDEFINED) {
-        {
-            node[textContent] = text;
-        }
+        setText(node, text);
     }
     else {
         return node[textContent];
     }
 }
+function setText(node, text, isStyle, isOption) {
+    {
+        node[textContent] = text;
+    }
+}
 function html(node, html, isStyle, isOption) {
     if (html !== UNDEFINED) {
-        {
-            node[innerHTML] = html;
-        }
+        setHtml(node, html);
     }
     else {
         return node[innerHTML];
     }
 }
+function setHtml(node, html, isStyle, isOption) {
+    {
+        node[innerHTML] = html;
+    }
+}
 const addClass = addElementClass;
 const removeClass = removeElementClass;
-function on(node, type, listener, context) {
-    const emitterKey = node[EMITTER] || (node[EMITTER] = ++guid$1), emitter = emitterHolders[emitterKey] || (emitterHolders[emitterKey] = new Emitter()), nativeListeners = emitter.nativeListeners || (emitter.nativeListeners = {});
+function on(node, type, listener) {
+    const nativeKey = node[EVENT$1] || (node[EVENT$1] = ++guid), nativeListenerMap = nativeListeners[nativeKey] || (nativeListeners[nativeKey] = {}), customListenerMap = customListeners[nativeKey] || (customListeners[nativeKey] = {}), customListenerList = customListenerMap[type] || (customListenerMap[type] = []);
     // 一个元素，相同的事件，只注册一个 native listener
-    if (!nativeListeners[type]) {
+    if (!nativeListenerMap[type]) {
         // 特殊事件
         const special = specialEvents[type], 
         // 唯一的原生监听器
         nativeListener = function (event) {
-            const customEvent = CustomEvent.is(event)
-                ? event
-                : new CustomEvent(event.type, createEvent(event));
-            if (customEvent.type !== type) {
-                customEvent.type = type;
+            let customEvent;
+            if (CustomEvent.is(event)) {
+                customEvent = event;
+                if (customEvent.type !== type) {
+                    customEvent.type = type;
+                }
             }
-            emitter.fire({
-                type,
-                ns: EMPTY_STRING,
-            }, [
-                customEvent
-            ]);
+            else {
+                customEvent = new CustomEvent(type, createEvent(event));
+            }
+            for (let i = 0, length = customListenerList.length; i < length; i++) {
+                customListenerList[i](customEvent, UNDEFINED, TRUE);
+            }
         };
-        nativeListeners[type] = nativeListener;
+        nativeListenerMap[type] = nativeListener;
+        if (nativeListenerCount[nativeKey]) {
+            nativeListenerCount[nativeKey]++;
+        }
+        else {
+            nativeListenerCount[nativeKey] = 1;
+        }
         if (special) {
             special.on(node, nativeListener);
         }
@@ -2495,34 +2894,35 @@ function on(node, type, listener, context) {
             addEventListener(node, type, nativeListener);
         }
     }
-    emitter.on(type, {
-        ns: EMPTY_STRING,
-        listener,
-        ctx: context,
-    });
+    customListenerList.push(listener);
 }
 function off(node, type, listener) {
-    const emitterKey = node[EMITTER], emitter = emitterHolders[emitterKey], { listeners, nativeListeners } = emitter;
-    // emitter 会根据 type 和 listener 参数进行适当的删除
-    emitter.off(type, {
-        ns: EMPTY_STRING,
-        listener,
-    });
+    let nativeKey = node[EVENT$1], nativeListenerMap = nativeListeners[nativeKey], customListenerMap = customListeners[nativeKey], customListenerList = customListenerMap && customListenerMap[type];
+    if (customListenerList) {
+        remove(customListenerList, listener);
+        if (!customListenerList.length) {
+            customListenerList = UNDEFINED;
+            delete customListenerMap[type];
+        }
+    }
     // 如果注册的 type 事件都解绑了，则去掉原生监听器
-    if (nativeListeners && !emitter.has(type)) {
-        const special = specialEvents[type], nativeListener = nativeListeners[type];
+    if (nativeListenerMap && nativeListenerMap[type] && !customListenerList) {
+        const special = specialEvents[type], nativeListener = nativeListenerMap[type];
         if (special) {
             special.off(node, nativeListener);
         }
         else {
             removeEventListener(node, type, nativeListener);
         }
-        delete nativeListeners[type];
+        delete nativeListenerMap[type];
+        if (nativeListenerCount[nativeKey]) {
+            nativeListenerCount[nativeKey]--;
+        }
     }
-    if (emitterHolders[emitterKey]
-        && falsy$2(listeners)) {
-        node[EMITTER] = UNDEFINED;
-        delete emitterHolders[emitterKey];
+    if (!nativeListenerCount[nativeKey]) {
+        node[EVENT$1] = UNDEFINED;
+        delete nativeListeners[nativeKey];
+        delete customListeners[nativeKey];
     }
 }
 function addSpecialEvent(type, hooks) {
@@ -2535,19 +2935,23 @@ var domApi = /*#__PURE__*/Object.freeze({
   createText: createText,
   createComment: createComment,
   prop: prop,
+  setProp: setProp,
   removeProp: removeProp,
   attr: attr,
+  setAttr: setAttr,
   removeAttr: removeAttr,
   before: before,
   append: append,
   replace: replace,
-  remove: remove$2,
+  remove: remove$6,
   parent: parent,
   next: next,
   find: find,
   tag: tag,
   text: text,
+  setText: setText,
   html: html,
+  setHtml: setHtml,
   addClass: addClass,
   removeClass: removeClass,
   on: on,
@@ -2566,26 +2970,26 @@ class Computed {
         instance.keypath = keypath;
         instance.cache = cache;
         instance.deps = deps;
-        instance.context = observer.context;
         instance.observer = observer;
         instance.getter = getter;
         instance.setter = setter;
-        instance.unique = {};
-        instance.watcher = function ($0, $1, $2) {
-            // 计算属性的依赖变了会走进这里
-            const oldValue = instance.value, newValue = instance.get(TRUE);
-            if (newValue !== oldValue) {
-                observer.diff(keypath, newValue, oldValue);
-            }
-        };
         instance.watcherOptions = {
             sync,
-            watcher: instance.watcher
+            watcher: instance.watcher = function ($0, $1, $2) {
+                // 计算属性的依赖变了会走进这里
+                const oldValue = instance.value, newValue = instance.get(TRUE);
+                if (newValue !== oldValue) {
+                    observer.diff(keypath, newValue, oldValue);
+                }
+            }
         };
-        if (instance.fixed = !falsy(deps)) {
-            each(deps, function (dep) {
-                observer.watch(dep, instance.watcherOptions);
-            });
+        // 如果 deps 是空数组，Observer 会传入 undefined
+        // 因此这里直接判断即可
+        if (deps) {
+            instance.fixed = TRUE;
+            for (let i = 0, length = deps.length; i < length; i++) {
+                observer.watch(deps[i], instance.watcherOptions);
+            }
         }
     }
     /**
@@ -2594,69 +2998,58 @@ class Computed {
      * @param force 是否强制刷新缓存
      */
     get(force) {
-        const instance = this, { getter, context } = instance;
+        const instance = this, { getter, deps, observer, watcher, watcherOptions } = instance;
         // 禁用缓存
         if (!instance.cache) {
-            instance.value = execute(getter, context);
+            instance.value = getter();
         }
         // 减少取值频率，尤其是处理复杂的计算规则
-        else if (force || !has$2(instance, RAW_VALUE)) {
+        else if (force || !has$2(instance, 'value')) {
             // 如果写死了依赖，则不需要收集依赖
             if (instance.fixed) {
-                instance.value = execute(getter, context);
+                instance.value = getter();
             }
+            // 自动收集依赖
             else {
                 // 清空上次收集的依赖
-                instance.unbind();
+                if (deps) {
+                    for (let i = deps.length - 1; i >= 0; i--) {
+                        observer.unwatch(deps[i], watcher);
+                    }
+                }
+                // 惰性初始化
+                instance.unique = createPureObject();
                 // 开始收集新的依赖
                 const lastComputed = Computed.current;
                 Computed.current = instance;
-                instance.value = execute(getter, context);
+                instance.value = getter();
                 // 绑定新的依赖
-                instance.bind();
+                const newDeps = instance.unique.keys();
+                for (let i = 0, length = newDeps.length; i < length; i++) {
+                    observer.watch(newDeps[i], watcherOptions);
+                }
+                instance.deps = newDeps;
+                // 取值完成，恢复原值
                 Computed.current = lastComputed;
             }
         }
         return instance.value;
     }
     set(value) {
-        const { setter, context } = this;
+        const { setter } = this;
         if (setter) {
-            setter.call(context, value);
+            setter(value);
         }
     }
     /**
      * 添加依赖
      *
-     * 这里只是为了保证依赖唯一，最后由 bind() 实现绑定
+     * 这里只是为了保证依赖唯一
      *
      * @param dep
      */
     add(dep) {
-        this.unique[dep] = TRUE;
-    }
-    /**
-     * 绑定依赖
-     */
-    bind() {
-        const { unique, deps, observer, watcherOptions } = this;
-        each$2(unique, function (_, dep) {
-            push(deps, dep);
-            observer.watch(dep, watcherOptions);
-        });
-        // 用完重置
-        // 方便下次收集依赖
-        this.unique = {};
-    }
-    /**
-     * 解绑依赖
-     */
-    unbind() {
-        const { deps, observer, watcher } = this;
-        each(deps, function (dep) {
-            observer.unwatch(dep, watcher);
-        }, TRUE);
-        deps.length = 0;
+        this.unique.set(dep, TRUE);
     }
 }
 
@@ -2671,7 +3064,7 @@ function readValue (source, keypath) {
 }
 
 /**
- * 对比新旧数组
+ * 对比新旧字符串
  *
  * @param newValue
  * @param oldValue
@@ -2680,7 +3073,7 @@ function readValue (source, keypath) {
 function diffString (newValue, oldValue, callback) {
     const newIsString = string(newValue), oldIsString = string(oldValue);
     if (newIsString || oldIsString) {
-        callback(RAW_LENGTH, newIsString ? newValue.length : UNDEFINED, oldIsString ? oldValue.length : UNDEFINED);
+        callback('length', newIsString ? newValue.length : UNDEFINED, oldIsString ? oldValue.length : UNDEFINED);
         return TRUE;
     }
 }
@@ -2696,9 +3089,11 @@ function diffArray (newValue, oldValue, callback) {
     const newIsArray = array(newValue), oldIsArray = array(oldValue);
     if (newIsArray || oldIsArray) {
         const newLength = newIsArray ? newValue.length : UNDEFINED, oldLength = oldIsArray ? oldValue.length : UNDEFINED;
-        callback(RAW_LENGTH, newLength, oldLength);
+        callback('length', newLength, oldLength);
         for (let i = 0, length = Math.max(newLength || 0, oldLength || 0); i < length; i++) {
-            callback('' + i, newValue ? newValue[i] : UNDEFINED, oldValue ? oldValue[i] : UNDEFINED);
+            callback(
+            // 把 number 转成 string
+            EMPTY_STRING + i, newIsArray ? newValue[i] : UNDEFINED, oldIsArray ? oldValue[i] : UNDEFINED);
         }
         return TRUE;
     }
@@ -2714,35 +3109,42 @@ function diffArray (newValue, oldValue, callback) {
 function diffObject (newValue, oldValue, callback) {
     const newIsObject = object(newValue), oldIsObject = object(oldValue);
     if (newIsObject || oldIsObject) {
-        newValue = newIsObject ? newValue : EMPTY_OBJECT;
-        oldValue = oldIsObject ? oldValue : EMPTY_OBJECT;
+        const diffed = createPureObject(), newObject = newIsObject ? newValue : EMPTY_OBJECT, oldObject = oldIsObject ? oldValue : EMPTY_OBJECT;
         if (newIsObject) {
-            each$2(newValue, function (value, key) {
-                if (value !== oldValue[key]) {
-                    callback(key, value, oldValue[key]);
+            for (let key in newObject) {
+                const value = newObject[key];
+                if (value !== oldObject[key]) {
+                    // 保证遍历 oldObject 时不会再次触发
+                    diffed.set(key, TRUE);
+                    callback(key, value, oldObject[key]);
                 }
-            });
+            }
         }
         if (oldIsObject) {
-            each$2(oldValue, function (value, key) {
-                if (value !== newValue[key]) {
-                    callback(key, newValue[key], value);
+            for (let key in oldObject) {
+                const value = oldObject[key];
+                if (diffed.get(key) === UNDEFINED && value !== newObject[key]) {
+                    callback(key, newObject[key], value);
                 }
-            });
+            }
         }
     }
 }
 
-function diffRecursion(keypath, newValue, oldValue, watchFuzzyKeypaths, callback) {
-    const diff = function (subKeypath, subNewValue, subOldValue) {
+/**
+ * 递归对比
+ */
+function diffRecursion(keypath, newValue, oldValue, fuzzyKeypaths, fuzzyKeypathLength, callback) {
+    const diff = function (subKey, subNewValue, subOldValue) {
         if (subNewValue !== subOldValue) {
-            const newKeypath = join$1(keypath, subKeypath);
-            each(watchFuzzyKeypaths, function (fuzzyKeypath) {
+            const newKeypath = join$1(keypath, subKey);
+            for (let i = 0; i < fuzzyKeypathLength; i++) {
+                const fuzzyKeypath = fuzzyKeypaths[i];
                 if (matchFuzzy(newKeypath, fuzzyKeypath) !== UNDEFINED) {
                     callback(fuzzyKeypath, newKeypath, subNewValue, subOldValue);
                 }
-            });
-            diffRecursion(newKeypath, subNewValue, subOldValue, watchFuzzyKeypaths, callback);
+            }
+            diffRecursion(newKeypath, subNewValue, subOldValue, fuzzyKeypaths, fuzzyKeypathLength, callback);
         }
     };
     diffString(newValue, oldValue, diff)
@@ -2753,7 +3155,7 @@ function diffRecursion(keypath, newValue, oldValue, watchFuzzyKeypaths, callback
 function diffWatcher (keypath, newValue, oldValue, watcher, isRecursive, callback) {
     let fuzzyKeypaths;
     // 遍历监听的 keypath，如果未被监听，则无需触发任何事件
-    each$2(watcher, function (_, watchKeypath) {
+    for (const watchKeypath in watcher) {
         // 模糊监听，如 users.*.name
         if (isFuzzy(watchKeypath)) {
             // 如果当前修改的是 users.0 整个对象
@@ -2765,52 +3167,36 @@ function diffWatcher (keypath, newValue, oldValue, watcher, isRecursive, callbac
             }
             else if (isRecursive) {
                 if (fuzzyKeypaths) {
-                    push(fuzzyKeypaths, watchKeypath);
+                    fuzzyKeypaths.push(watchKeypath);
                 }
                 else {
                     fuzzyKeypaths = [watchKeypath];
                 }
             }
-            return;
         }
-        // 不是模糊匹配，直接靠前缀匹配
-        // 比如监听的是 users.0.name，此时修改 users.0，则直接读出子属性值，判断是否相等
-        const length = match(watchKeypath, keypath);
-        if (length >= 0) {
-            const subKeypath = slice(watchKeypath, length), subNewValue = readValue(newValue, subKeypath), subOldValue = readValue(oldValue, subKeypath);
-            if (subNewValue !== subOldValue) {
-                callback(watchKeypath, watchKeypath, subNewValue, subOldValue);
+        // 不是模糊匹配，直接通过前缀匹配
+        else {
+            // 比如监听的是 users.0.name，此时修改 users.0，则直接读出子属性值，判断是否相等
+            const length = match(watchKeypath, keypath);
+            if (length >= 0) {
+                const subKeypath = slice(watchKeypath, length), subNewValue = readValue(newValue, subKeypath), subOldValue = readValue(oldValue, subKeypath);
+                if (subNewValue !== subOldValue) {
+                    callback(watchKeypath, watchKeypath, subNewValue, subOldValue);
+                }
             }
         }
-    });
+    }
     // 存在模糊匹配的需求
     // 必须对数据进行递归
     // 性能确实会慢一些，但是很好用啊，几乎可以监听所有的数据
     if (fuzzyKeypaths) {
-        diffRecursion(keypath, newValue, oldValue, fuzzyKeypaths, callback);
-    }
-}
-
-/**
- * 触发异步变化时，用此函数过滤下，哪些 listener 应该执行
- *
- * @param item
- * @param data
- */
-function filterWatcher (_, args, options) {
-    if (options.count && args) {
-        // 采用计数器的原因是，同一个 options 可能执行多次
-        // 比如监听 user.*，如果同批次修改了 user.name 和 user.age
-        // 这个监听器会调用多次，如果第一次执行就把 count 干掉了，第二次就无法执行了
-        options.count--;
-        // 新旧值不相等
-        return args[0] !== args[1];
+        diffRecursion(keypath, newValue, oldValue, fuzzyKeypaths, fuzzyKeypaths.length, callback);
     }
 }
 
 // 避免频繁创建对象
 const optionsHolder = {
-    watcher: EMPTY_FUNCTION
+    watcher: EMPTY_FUNCTION,
 };
 /**
  * 格式化 watch options
@@ -2818,16 +3204,18 @@ const optionsHolder = {
  * @param options
  */
 function formatWatcherOptions (options, immediate) {
-    if (func(options)) {
+    const isWatcher = func(options);
+    if (isWatcher) {
         optionsHolder.watcher = options;
         optionsHolder.immediate = immediate === TRUE;
         return optionsHolder;
     }
-    if (options && options.watcher) {
-        return options;
-    }
+    return options;
 }
 
+// 触发监听函数的参数列表
+// 复用同一个数组，应该能稍微快些
+const syncWatchArgs = new Array(3), asyncWatchArgs = new Array(3);
 /**
  * 观察者有两种观察模式：
  *
@@ -2847,7 +3235,8 @@ class Observer {
         instance.nextTask = new NextTask();
         instance.syncEmitter = new Emitter();
         instance.asyncEmitter = new Emitter();
-        instance.asyncChanges = {};
+        instance.asyncOldValues = {};
+        instance.asyncKeypaths = {};
     }
     /**
      * 获取数据
@@ -2884,7 +3273,7 @@ class Observer {
      * @param value
      */
     set(keypath, value) {
-        const instance = this, { data, computed } = instance, setValue = function (newValue, keypath) {
+        const instance = this, { data, computed } = instance, setValue = function (keypath, newValue) {
             const oldValue = instance.get(keypath);
             if (newValue === oldValue) {
                 return;
@@ -2923,10 +3312,12 @@ class Observer {
             instance.diff(keypath, newValue, oldValue);
         };
         if (string(keypath)) {
-            setValue(value, keypath);
+            setValue(keypath, value);
         }
         else if (object(keypath)) {
-            each$2(keypath, setValue);
+            for (let key in keypath) {
+                setValue(key, keypath[key]);
+            }
         }
     }
     /**
@@ -2937,7 +3328,7 @@ class Observer {
      * @param oldValue
      */
     diff(keypath, newValue, oldValue) {
-        const instance = this, { syncEmitter, asyncEmitter, asyncChanges } = instance, 
+        let instance = this, { syncEmitter, asyncEmitter, asyncOldValues, asyncKeypaths } = instance, 
         /**
          * 我们认为 $ 开头的变量是不可递归的
          * 比如浏览器中常见的 $0 表示当前选中元素
@@ -2945,12 +3336,13 @@ class Observer {
          */
         isRecursive = codeAt(keypath) !== 36;
         diffWatcher(keypath, newValue, oldValue, syncEmitter.listeners, isRecursive, function (watchKeypath, keypath, newValue, oldValue) {
+            syncWatchArgs[0] = newValue;
+            syncWatchArgs[1] = oldValue;
+            syncWatchArgs[2] = keypath;
             syncEmitter.fire({
                 type: watchKeypath,
                 ns: EMPTY_STRING,
-            }, [
-                newValue, oldValue, keypath
-            ]);
+            }, syncWatchArgs);
         });
         /**
          * 此处有坑，举个例子
@@ -2964,18 +3356,20 @@ class Observer {
          * 这里，第一个 watcher 应该触发，但第二个不应该，因为它绑定监听时，值已经是最新的了
          */
         diffWatcher(keypath, newValue, oldValue, asyncEmitter.listeners, isRecursive, function (watchKeypath, keypath, newValue, oldValue) {
-            each(asyncEmitter.listeners[watchKeypath], function (item) {
-                item.count++;
-            });
-            const { keypaths } = asyncChanges[keypath] || (asyncChanges[keypath] = { value: oldValue, keypaths: [] });
-            if (!has(keypaths, watchKeypath)) {
-                push(keypaths, watchKeypath);
+            // 这里是为了解决上面说的坑
+            const options = asyncEmitter.listeners[watchKeypath];
+            for (let i = 0, length = options.length; i < length; i++) {
+                options[i].count++;
             }
+            if (!asyncKeypaths[keypath]) {
+                asyncOldValues[keypath] = oldValue;
+                asyncKeypaths[keypath] = {};
+            }
+            asyncKeypaths[keypath][watchKeypath] = TRUE;
             if (!instance.pending) {
                 instance.pending = TRUE;
                 instance.nextTask.append(function () {
                     if (instance.pending) {
-                        instance.pending = UNDEFINED;
                         instance.diffAsync();
                     }
                 });
@@ -2986,19 +3380,34 @@ class Observer {
      * 异步触发的 diff
      */
     diffAsync() {
-        const instance = this, { asyncEmitter, asyncChanges } = instance;
-        instance.asyncChanges = {};
-        each$2(asyncChanges, function (change, keypath) {
-            const args = [instance.get(keypath), change.value, keypath];
-            // 不能在这判断新旧值是否相同，相同就不 fire
-            // 因为前面标记了 count，在这中断会导致 count 无法清除
-            each(change.keypaths, function (watchKeypath) {
+        const instance = this, { asyncEmitter, asyncOldValues, asyncKeypaths } = instance;
+        instance.pending = UNDEFINED;
+        instance.asyncOldValues = {};
+        instance.asyncKeypaths = {};
+        for (let keypath in asyncOldValues) {
+            asyncWatchArgs[0] = instance.get(keypath);
+            asyncWatchArgs[1] = asyncOldValues[keypath];
+            asyncWatchArgs[2] = keypath;
+            const keypaths = asyncKeypaths[keypath], hasChange = asyncWatchArgs[0] !== asyncWatchArgs[1], filterWatcher = function (event, args, options) {
+                // 前面递增了 count
+                // 这里要递减 count
+                // count > 0 表示前面标记了该监听器需要响应此次变化
+                if (options.count) {
+                    // 采用计数器的原因是，同一个 options 可能执行多次
+                    // 比如监听 user.*，如果同批次修改了 user.name 和 user.age
+                    // 这个监听器会调用多次，如果第一次执行就把 count 干掉了，第二次就无法执行了
+                    options.count--;
+                    // 新旧值不相等才能触发监听器
+                    return hasChange;
+                }
+            };
+            for (let watchKeypath in keypaths) {
                 asyncEmitter.fire({
                     type: watchKeypath,
                     ns: EMPTY_STRING,
-                }, args, filterWatcher);
-            });
-        });
+                }, asyncWatchArgs, filterWatcher);
+            }
+        }
     }
     /**
      * 添加计算属性
@@ -3007,9 +3416,11 @@ class Observer {
      * @param computed
      */
     addComputed(keypath, options) {
-        let cache = TRUE, sync = TRUE, deps = [], getter, setter;
+        let instance = this, context = instance.context, cache = TRUE, sync = TRUE, deps, getter, setter;
+        // 这里用 bind 方法转换一下调用的 this
+        // 还有一个好处，它比 call(context) 速度稍快一些
         if (func(options)) {
-            getter = options;
+            getter = options.bind(context);
         }
         else if (object(options)) {
             const computedOptions = options;
@@ -3019,19 +3430,19 @@ class Observer {
             if (boolean(computedOptions.sync)) {
                 sync = computedOptions.sync;
             }
-            // 因为可能会修改 deps，所以这里创建一个新的 deps，避免影响外部传入的 deps
-            if (array(computedOptions.deps)) {
-                deps = copy(computedOptions.deps);
+            // 传入空数组等同于没传
+            if (!falsy(computedOptions.deps)) {
+                deps = computedOptions.deps;
             }
             if (func(computedOptions.get)) {
-                getter = computedOptions.get;
+                getter = computedOptions.get.bind(context);
             }
             if (func(computedOptions.set)) {
-                setter = computedOptions.set;
+                setter = computedOptions.set.bind(context);
             }
         }
         if (getter) {
-            const instance = this, computed = new Computed(keypath, sync, cache, deps, instance, getter, setter);
+            const computed = new Computed(keypath, sync, cache, deps, instance, getter, setter);
             if (!instance.computed) {
                 instance.computed = {};
             }
@@ -3058,7 +3469,7 @@ class Observer {
      * @param immediate
      */
     watch(keypath, watcher, immediate) {
-        const instance = this, { context, syncEmitter, asyncEmitter } = instance, bind = function (keypath, options) {
+        const instance = this, { context, syncEmitter, asyncEmitter } = instance, addWatcher = function (keypath, options) {
             const emitter = options.sync ? syncEmitter : asyncEmitter, 
             // formatWatcherOptions 保证了 options.watcher 一定存在
             listener = {
@@ -3080,12 +3491,13 @@ class Observer {
             }
         };
         if (string(keypath)) {
-            bind(keypath, formatWatcherOptions(watcher, immediate));
-            return;
+            addWatcher(keypath, formatWatcherOptions(watcher, immediate));
         }
-        each$2(keypath, function (options, keypath) {
-            bind(keypath, formatWatcherOptions(options));
-        });
+        else {
+            for (let key in keypath) {
+                addWatcher(key, formatWatcherOptions(keypath[key]));
+            }
+        }
     }
     /**
      * 取消监听数据变化
@@ -3094,7 +3506,7 @@ class Observer {
      * @param watcher
      */
     unwatch(keypath, watcher) {
-        let filter = {
+        const filter = {
             ns: EMPTY_STRING,
             listener: watcher,
         };
@@ -3155,7 +3567,7 @@ class Observer {
      */
     insert(keypath, item, index) {
         let list = this.get(keypath);
-        list = !array(list) ? [] : copy(list);
+        list = array(list) ? list.slice() : [];
         const { length } = list;
         if (index === TRUE || index === length) {
             list.push(item);
@@ -3201,7 +3613,7 @@ class Observer {
         if (array(list)
             && index >= 0
             && index < list.length) {
-            list = copy(list);
+            list = list.slice();
             list.splice(index, 1);
             this.set(keypath, list);
             return TRUE;
@@ -3216,7 +3628,7 @@ class Observer {
     remove(keypath, item) {
         let list = this.get(keypath);
         if (array(list)) {
-            list = copy(list);
+            list = list.slice();
             if (remove(list, item)) {
                 this.set(keypath, list);
                 return TRUE;
@@ -3244,284 +3656,26 @@ class Observer {
     }
 }
 
-/**
- * 节流调用
- *
- * @param fn 需要节制调用的函数
- * @param delay 调用的时间间隔，单位毫秒
- * @param immediate 是否立即触发
- * @return 节流函数
- */
-function debounce (fn, delay, immediate) {
-    let timer;
-    return function () {
-        if (!timer) {
-            const args = toArray(arguments);
-            if (immediate) {
-                execute(fn, UNDEFINED, args);
-            }
-            timer = setTimeout(function () {
-                timer = UNDEFINED;
-                if (!immediate) {
-                    execute(fn, UNDEFINED, args);
-                }
-            }, delay);
-        }
-    };
-}
-
-function bind(node, directive, vnode) {
-    let { key, name, modifier, handler } = directive, { lazy } = vnode;
-    if (!handler) {
-        return;
+class LifeCycle {
+    constructor() {
+        this.$emitter = new Emitter();
     }
-    if (lazy) {
-        const value = lazy[name] || lazy[EMPTY_STRING];
-        if (value === TRUE) {
-            name = EVENT_CHANGE;
-        }
-        else if (value > 0) {
-            handler = debounce(handler, value, 
-            // 避免连续多次点击，主要用于提交表单场景
-            // 移动端的 tap 事件可自行在业务层打补丁实现
-            name === EVENT_CLICK || name === EVENT_TAP);
-        }
+    fire(component, type, data) {
+        this.$emitter.fire(type, [
+            component,
+            data,
+        ]);
     }
-    let element;
-    if (vnode.isComponent) {
-        const component = node;
-        if (modifier === MODIFER_NATIVE) {
-            element = component.$el;
-            on(element, name, handler);
-            vnode.data[key] = function () {
-                off(element, name, handler);
-            };
-        }
-        else {
-            const options = {
-                ns: modifier || EMPTY_STRING,
-                listener(event, data) {
-                    // 监听组件事件不用处理父组件传下来的事件
-                    if (event.phase !== CustomEvent.PHASE_DOWNWARD) {
-                        return handler(event, data);
-                    }
-                },
-            };
-            component.on(name, options);
-            vnode.data[key] = function () {
-                component.off(name, options);
-            };
-        }
+    on(type, listener) {
+        this.$emitter.on(type, listener);
+        return this;
     }
-    else {
-        element = node;
-        on(element, name, handler);
-        vnode.data[key] = function () {
-            off(element, name, handler);
-        };
+    off(type, listener) {
+        this.$emitter.off(type, listener);
+        return this;
     }
 }
-function unbind(node, directive, vnode) {
-    execute(vnode.data[directive.key]);
-}
-
-var event = /*#__PURE__*/Object.freeze({
-  __proto__: null,
-  bind: bind,
-  unbind: unbind
-});
-
-function debounceIfNeeded(fn, lazy) {
-    // 应用 lazy
-    return lazy && lazy !== TRUE
-        ? debounce(fn, lazy)
-        : fn;
-}
-const inputControl = {
-    set(node, value) {
-        node.value = toString(value);
-    },
-    sync(node, keypath, context) {
-        context.set(keypath, node.value);
-    },
-    name: RAW_VALUE
-}, radioControl = {
-    set(node, value) {
-        node.checked = node.value === toString(value);
-    },
-    sync(node, keypath, context) {
-        if (node.checked) {
-            context.set(keypath, node.value);
-        }
-    },
-    name: 'checked'
-}, checkboxControl = {
-    set(node, value) {
-        node.checked = array(value)
-            ? has(value, node.value, FALSE)
-            : !!value;
-    },
-    sync(node, keypath, context) {
-        const value = context.get(keypath);
-        if (array(value)) {
-            if (node.checked) {
-                context.append(keypath, node.value);
-            }
-            else {
-                context.removeAt(keypath, indexOf(value, node.value, FALSE));
-            }
-        }
-        else {
-            context.set(keypath, node.checked);
-        }
-    },
-    name: 'checked'
-}, selectControl = {
-    set(node, value) {
-        each(toArray(node.options), node.multiple
-            ? function (option) {
-                option.selected = has(value, option.value, FALSE);
-            }
-            : function (option, index) {
-                if (option.value == value) {
-                    node.selectedIndex = index;
-                    return FALSE;
-                }
-            });
-    },
-    sync(node, keypath, context) {
-        const { options } = node;
-        if (node.multiple) {
-            const values = [];
-            each(toArray(options), function (option) {
-                if (option.selected) {
-                    push(values, option.value);
-                }
-            });
-            context.set(keypath, values);
-        }
-        else {
-            context.set(keypath, options[node.selectedIndex].value);
-        }
-    },
-    name: RAW_VALUE
-};
-const once = TRUE;
-function bind$1(node, directive, vnode) {
-    let { context, lazy, isComponent } = vnode, dataBinding = directive.modifier, lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[EMPTY_STRING]), set, unbind;
-    if (isComponent) {
-        let component = node, viewBinding = component.$model, viewSyncing = debounceIfNeeded(function (newValue) {
-            context.set(dataBinding, newValue);
-        }, lazyValue);
-        set = function (newValue) {
-            if (set) {
-                component.set(viewBinding, newValue);
-            }
-        };
-        unbind = function () {
-            component.unwatch(viewBinding, viewSyncing);
-        };
-        component.watch(viewBinding, viewSyncing);
-    }
-    else {
-        let element = node, control = vnode.tag === 'select'
-            ? selectControl
-            : inputControl, 
-        // checkbox,radio,select 监听的是 change 事件
-        eventName = EVENT_CHANGE;
-        if (control === inputControl) {
-            const type = node.type;
-            if (type === 'radio') {
-                control = radioControl;
-            }
-            else if (type === 'checkbox') {
-                control = checkboxControl;
-            }
-            // 如果是输入框，则切换成 model 事件
-            // model 事件是个 yox-dom 实现的特殊事件
-            // 不会在输入法组合文字过程中得到触发事件
-            else if (lazyValue !== TRUE) {
-                eventName = EVENT_MODEL;
-            }
-        }
-        set = function (newValue) {
-            if (set) {
-                control.set(element, newValue);
-            }
-        };
-        const sync = debounceIfNeeded(function () {
-            control.sync(element, dataBinding, context);
-        }, lazyValue);
-        unbind = function () {
-            off(element, eventName, sync);
-        };
-        on(element, eventName, sync);
-        control.set(element, directive.value);
-    }
-    // 监听数据，修改界面
-    context.watch(dataBinding, set);
-    vnode.data[directive.key] = function () {
-        context.unwatch(dataBinding, set);
-        set = UNDEFINED;
-        unbind();
-    };
-}
-function unbind$1(node, directive, vnode) {
-    execute(vnode.data[directive.key]);
-}
-
-var model = /*#__PURE__*/Object.freeze({
-  __proto__: null,
-  once: once,
-  bind: bind$1,
-  unbind: unbind$1
-});
-
-const once$1 = TRUE;
-function bind$2(node, directive, vnode) {
-    // binding 可能是模糊匹配
-    // 比如延展属性 {{...obj}}，这里 binding 会是 `obj.*`
-    let binding = directive.modifier, 
-    // 提前判断好是否是模糊匹配，避免 watcher 频繁执行判断逻辑
-    isFuzzy$1 = isFuzzy(binding), watcher = function (newValue, _, keypath) {
-        if (watcher) {
-            const name = isFuzzy$1
-                ? matchFuzzy(keypath, binding)
-                : directive.name;
-            if (vnode.isComponent) {
-                const component = node;
-                component.checkProp(name, newValue);
-                component.set(name, newValue);
-            }
-            else {
-                const element = node;
-                if (directive.hint !== UNDEFINED) {
-                    prop(element, name, newValue);
-                }
-                else {
-                    attr(element, name, newValue);
-                }
-            }
-        }
-    };
-    vnode.context.watch(binding, watcher);
-    vnode.data[directive.key] = function () {
-        vnode.context.unwatch(binding, watcher);
-        watcher = UNDEFINED;
-    };
-}
-function unbind$2(node, directive, vnode) {
-    execute(vnode.data[directive.key]);
-}
-
-var binding = /*#__PURE__*/Object.freeze({
-  __proto__: null,
-  once: once$1,
-  bind: bind$2,
-  unbind: unbind$2
-});
-
-const globalDirectives = {}, globalTransitions = {}, globalComponents = {}, globalPartials = {}, globalFilters = {}, TEMPLATE_COMPUTED = '$$', selectorPattern = /^[#.][-\w+]+$/;
+const globalDirectives = {}, globalTransitions = {}, globalComponents = {}, globalPartials = {}, globalFilters = {}, TEMPLATE_COMPUTED = '$$', selectorPattern = /^[#.][-\w+]+$/, lifeCycle = new LifeCycle();
 class Yox {
     constructor(options) {
         const instance = this, $options = options || EMPTY_OBJECT;
@@ -3539,11 +3693,9 @@ class Yox {
             }
             // 建立好父子连接后，立即触发钩子
             execute($options[HOOK_BEFORE_CREATE], instance, $options);
-            // 冒泡 before create 事件
-            instance.fire({
-                type: HOOK_BEFORE_CREATE,
-                ns: NAMESPACE_HOOK,
-            }, $options);
+            lifeCycle.fire(instance, HOOK_BEFORE_CREATE, {
+                options: $options,
+            });
         }
         let { data, props, vnode, propTypes, computed, methods, watchers, extensions, } = $options;
         instance.$options = $options;
@@ -3663,10 +3815,7 @@ class Yox {
                 instance.watch(newWatchers);
                 {
                     execute(instance.$options[HOOK_AFTER_CREATE], instance);
-                    instance.fire({
-                        type: HOOK_AFTER_CREATE,
-                        ns: NAMESPACE_HOOK,
-                    });
+                    lifeCycle.fire(instance, HOOK_AFTER_CREATE);
                 }
                 // 编译模板
                 // 在开发阶段，template 是原始的 html 模板
@@ -3676,7 +3825,7 @@ class Yox {
                     ? Yox.compile(template)
                     : template;
                 if (!vnode) {
-                    vnode = create(domApi, placeholder, instance, EMPTY_STRING);
+                    vnode = create(domApi, placeholder, instance);
                 }
                 instance.update(instance.get(TEMPLATE_COMPUTED), vnode);
                 return;
@@ -3687,10 +3836,7 @@ class Yox {
         }
         {
             execute(instance.$options[HOOK_AFTER_CREATE], instance);
-            instance.fire({
-                type: HOOK_AFTER_CREATE,
-                ns: NAMESPACE_HOOK,
-            });
+            lifeCycle.fire(instance, HOOK_AFTER_CREATE);
         }
     }
     /**
@@ -3922,7 +4068,7 @@ class Yox {
             options.context = vnode.context;
             options.vnode = vnode;
             options.replace = TRUE;
-            let { props, slots, directives } = vnode, model = directives && directives[DIRECTIVE_MODEL];
+            let { props, slots, model } = vnode;
             if (model) {
                 if (!props) {
                     props = {};
@@ -4046,25 +4192,15 @@ class Yox {
     update(vnode, oldVnode) {
         {
             let instance = this, { $vnode, $options } = instance, afterHook;
-            // 每次渲染重置 refs
-            // 在渲染过程中收集最新的 ref
-            // 这样可避免更新时，新的 ref，在前面创建，老的 ref 却在后面删除的情况
-            instance.$refs = {};
             if ($vnode) {
                 execute($options[HOOK_BEFORE_UPDATE], instance);
-                instance.fire({
-                    type: HOOK_BEFORE_UPDATE,
-                    ns: NAMESPACE_HOOK,
-                });
+                lifeCycle.fire(instance, HOOK_BEFORE_UPDATE);
                 patch(domApi, vnode, oldVnode);
                 afterHook = HOOK_AFTER_UPDATE;
             }
             else {
                 execute($options[HOOK_BEFORE_MOUNT], instance);
-                instance.fire({
-                    type: HOOK_BEFORE_MOUNT,
-                    ns: NAMESPACE_HOOK,
-                });
+                lifeCycle.fire(instance, HOOK_BEFORE_MOUNT);
                 patch(domApi, vnode, oldVnode);
                 instance.$el = vnode.node;
                 afterHook = HOOK_AFTER_MOUNT;
@@ -4075,10 +4211,7 @@ class Yox {
             Yox.nextTick(function () {
                 if (instance.$vnode) {
                     execute($options[afterHook], instance);
-                    instance.fire({
-                        type: afterHook,
-                        ns: NAMESPACE_HOOK,
-                    });
+                    lifeCycle.fire(instance, afterHook);
                 }
             });
         }
@@ -4097,10 +4230,7 @@ class Yox {
         const instance = this, { $parent, $options, $emitter, $observer } = instance;
         {
             execute($options[HOOK_BEFORE_DESTROY], instance);
-            instance.fire({
-                type: HOOK_BEFORE_DESTROY,
-                ns: NAMESPACE_HOOK,
-            });
+            lifeCycle.fire(instance, HOOK_BEFORE_DESTROY);
             const { $vnode } = instance;
             if ($parent && $parent.$children) {
                 remove($parent.$children, instance);
@@ -4114,10 +4244,7 @@ class Yox {
         $observer.destroy();
         {
             execute($options[HOOK_AFTER_DESTROY], instance);
-            instance.fire({
-                type: HOOK_AFTER_DESTROY,
-                ns: NAMESPACE_HOOK,
-            });
+            lifeCycle.fire(instance, HOOK_AFTER_DESTROY);
         }
         // 发完 after destroy 事件再解绑所有事件
         $emitter.off();
@@ -4220,7 +4347,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.125";
+Yox.version = "1.0.0-alpha.200";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
@@ -4232,6 +4359,10 @@ Yox.string = string$1;
 Yox.logger = logger;
 Yox.Event = CustomEvent;
 Yox.Emitter = Emitter;
+// 外部可配置的对象
+Yox.config = PUBLIC_CONFIG;
+// 外部可监听组件的生命周期，路由会用到
+Yox.lifeCycle = lifeCycle;
 function setFlexibleOptions(instance, key, value) {
     if (func(value)) {
         instance[key](execute(value, instance));
@@ -4240,7 +4371,7 @@ function setFlexibleOptions(instance, key, value) {
         instance[key](value);
     }
 }
-function addEvent(instance, type, listener, once) {
+function addEvent$1(instance, type, listener, once) {
     const { $emitter } = instance, filter = $emitter.toFilter(type, listener);
     const options = {
         listener: filter.listener,
@@ -4250,15 +4381,15 @@ function addEvent(instance, type, listener, once) {
     if (once) {
         options.max = 1;
     }
-    instance.$emitter.on(filter.type, options);
+    $emitter.on(filter.type, options);
 }
 function addEvents(instance, type, listener, once) {
     if (string(type)) {
-        addEvent(instance, type, listener, once);
+        addEvent$1(instance, type, listener, once);
     }
     else {
         each$2(type, function (value, key) {
-            addEvent(instance, key, value, once);
+            addEvent$1(instance, key, value, once);
         });
     }
 }
@@ -4309,8 +4440,6 @@ function setResource(registry, name, value, formatValue) {
     }
 }
 {
-    // 全局注册内置指令
-    Yox.directive({ event, model, binding });
     // 全局注册内置过滤器
     Yox.filter({
         hasSlot(name) {

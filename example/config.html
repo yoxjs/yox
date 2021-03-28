@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>定界符</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div id="app"></div>
+    <script id="template" type="plain/text">
+
+        <div>
+            <span>
+              [[title]]
+            </span>
+            <span>
+              [[[html]]]
+            </span>
+        </div>
+
+    </script>
+    <script src="../dist/standard/dev/yox.js"></script>
+    <script>
+        Yox.config.leftDelimiter = '['
+        Yox.config.rightDelimiter = ']'
+        Yox.config.uglifyCompiled = true
+        Yox.config.minifyCompiled = false
+        var instance = new Yox({
+            el: '#app',
+            template: '#template',
+            data: {
+                title: 'title',
+                html: '1<strong>2</strong>3'
+            },
+        });
+
+    </script>
+</body>
+</html>
