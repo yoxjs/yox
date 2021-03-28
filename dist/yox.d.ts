@@ -85,25 +85,46 @@ export interface TransitionHooks {
 	enter?: (node: HTMLElement) => void;
 	leave?: (node: HTMLElement, done: () => void) => void;
 }
+export interface DirectiveRuntime {
+	args?: (stack: string[]) => any[];
+	expr?: (stack: string[]) => any;
+	stack: string[];
+}
+export interface EventRuntime {
+	args: (stack: string[], event: CustomEventInterface, data?: Data) => any[];
+	stack: string[];
+}
 export interface Directive {
 	key: string;
 	name: string;
 	ns: string;
+	runtime: DirectiveRuntime | void;
 	readonly modifier: string | void;
 	readonly value?: string | number | boolean;
-	readonly hooks: DirectiveHooks;
 	readonly getter?: () => any | void;
-	readonly handler?: Listener | void;
-	readonly hint?: PropertyHint | void;
+	readonly handler?: () => void | void;
+	readonly hooks: DirectiveHooks;
+}
+export interface EventValue {
+	key: string;
+	name: string;
+	value: string;
+	runtime: EventRuntime | void;
+	readonly ns: string | void;
+	readonly isNative?: boolean;
+	readonly listener: Listener;
+}
+export interface ModelValue {
+	keypath: string;
+	value: any;
 }
 export interface VNode {
 	data: Data;
 	node: Node;
 	parent?: YoxInterface;
-	slot?: string;
-	readonly keypath: string;
+	component?: YoxInterface;
 	readonly context: YoxInterface;
-	readonly tag?: string | void;
+	readonly tag?: string;
 	readonly isComponent?: boolean;
 	readonly isComment?: boolean;
 	readonly isText?: boolean;
@@ -116,8 +137,10 @@ export interface VNode {
 	readonly nativeProps?: Data;
 	readonly nativeAttrs?: Record<string, string>;
 	readonly directives?: Record<string, Directive>;
+	readonly events?: Record<string, EventValue>;
 	readonly lazy?: Record<string, LazyValue>;
 	readonly transition?: TransitionHooks;
+	readonly model?: ModelValue;
 	readonly ref?: string;
 	readonly key?: string;
 	readonly text?: string;
@@ -158,7 +181,7 @@ export interface EmitterEvent {
 export interface EmitterFilter {
 	type?: string;
 	ns?: string;
-	fn?: Function;
+	listener?: Function;
 }
 export interface EmitterOptions {
 	ns?: string;
@@ -166,7 +189,7 @@ export interface EmitterOptions {
 	max?: number;
 	count?: number;
 	ctx?: any;
-	fn: Function;
+	listener: Function;
 }
 export declare type DataGenerator<T> = (options: ComponentOptions<T>) => Data;
 export declare type Accessors<T, V> = {
@@ -212,7 +235,6 @@ export declare type Data = Record<string, any>;
 export declare type LazyValue = number | true;
 export declare type PropTypeFunction = (key: string, value: any, componentName: string | void) => void;
 export declare type PropValueFunction = () => any;
-export declare type PropertyHint = 1 | 2 | 3;
 export declare type ComponentCallback = (options: ComponentOptions) => void;
 export declare type ComponentLoader = (callback: ComponentCallback) => Promise<ComponentOptions> | void;
 export declare type Component = ComponentOptions | ComponentLoader;
@@ -223,13 +245,18 @@ export declare type ThisTask<This> = (this: This) => void;
 export declare type ThisWatcher<This> = (this: This, newValue: any, oldValue: any, keypath: string) => void;
 export declare type Watcher = (newValue: any, oldValue: any, keypath: string) => void;
 export declare type ThisListener<This> = (this: This, event: CustomEventInterface, data?: Data) => false | void;
-export declare type Listener = (event: CustomEventInterface, data?: Data) => false | void;
+export declare type Listener = (event: CustomEventInterface, data?: Data, isNative?: boolean) => false | void;
 export declare type NativeListener = (event: CustomEventInterface | Event) => false | void;
 export declare type ComputedGetter = () => any;
 export declare type ComputedSetter = (value: any) => void;
 export declare type ValueHolder = {
 	keypath?: string;
 	value: any;
+};
+export declare type PureObject = {
+	get(key: string): any;
+	set(key: string, value: any): void;
+	keys(): string[];
 };
 export declare type Task = {
 	fn: Function;
@@ -245,8 +272,10 @@ export interface DomApi {
 	createText(text: string): Text;
 	createComment(text: string): Comment;
 	prop(node: HTMLElement, name: string, value?: string | number | boolean): string | number | boolean | void;
+	setProp(node: HTMLElement, name: string, value: string | number | boolean): string | number | boolean | void;
 	removeProp(node: HTMLElement, name: string): void;
 	attr(node: HTMLElement, name: string, value?: string): string | void;
+	setAttr(node: HTMLElement, name: string, value: string): string | void;
 	removeAttr(node: HTMLElement, name: string): void;
 	before(parentNode: Node, node: Node, beforeNode: Node): void;
 	append(parentNode: Node, node: Node): void;
@@ -257,10 +286,12 @@ export interface DomApi {
 	find(selector: string): Element | void;
 	tag(node: Node): string | void;
 	text(node: Node, text?: string, isStyle?: boolean, isOption?: boolean): string | void;
+	setText(node: Node, text: string, isStyle?: boolean, isOption?: boolean): string | void;
 	html(node: Element, html?: string, isStyle?: boolean, isOption?: boolean): string | void;
+	setHtml(node: Element, html: string, isStyle?: boolean, isOption?: boolean): string | void;
 	addClass(node: HTMLElement, className: string): void;
 	removeClass(node: HTMLElement, className: string): void;
-	on(node: HTMLElement | Window | Document, type: string, listener: Listener, context?: any): void;
+	on(node: HTMLElement | Window | Document, type: string, listener: Listener): void;
 	off(node: HTMLElement | Window | Document, type: string, listener: Function): void;
 	addSpecialEvent(type: string, hooks: SpecialEventHooks): void;
 }
@@ -337,10 +368,6 @@ declare class Emitter {
 	 * 已注册的事件监听
 	 */
 	listeners: Record<string, EmitterOptions[]>;
-	/**
-	 * 原生事件监听，一个事件对应一个 listener
-	 */
-	nativeListeners?: Record<string, NativeListener>;
 	constructor(ns?: boolean);
 	/**
 	 * 发射事件
@@ -440,17 +467,16 @@ declare class Computed {
 	static current?: Computed;
 	keypath: string;
 	value: any;
-	deps: string[];
+	deps: string[] | void;
 	cache: boolean;
 	fixed: boolean;
-	context: any;
 	observer: Observer;
 	getter: ComputedGetter;
 	setter: ComputedSetter | void;
 	watcher: Watcher;
 	watcherOptions: WatcherOptions;
-	unique: Record<string, boolean>;
-	constructor(keypath: string, sync: boolean, cache: boolean, deps: string[], observer: Observer, getter: ComputedGetter, setter: ComputedSetter | void);
+	unique: PureObject | void;
+	constructor(keypath: string, sync: boolean, cache: boolean, deps: string[] | void, observer: Observer, getter: ComputedGetter, setter: ComputedSetter | void);
 	/**
 	 * 读取计算属性的值
 	 *
@@ -461,23 +487,11 @@ declare class Computed {
 	/**
 	 * 添加依赖
 	 *
-	 * 这里只是为了保证依赖唯一，最后由 bind() 实现绑定
+	 * 这里只是为了保证依赖唯一
 	 *
 	 * @param dep
 	 */
 	add(dep: string): void;
-	/**
-	 * 绑定依赖
-	 */
-	bind(): void;
-	/**
-	 * 解绑依赖
-	 */
-	unbind(): void;
-}
-export interface AsyncChange {
-	value: any;
-	keypaths: string[];
 }
 declare class Observer {
 	data: Data;
@@ -486,7 +500,8 @@ declare class Observer {
 	computed?: Record<string, Computed>;
 	syncEmitter: Emitter;
 	asyncEmitter: Emitter;
-	asyncChanges: Record<string, AsyncChange>;
+	asyncOldValues: Record<string, any>;
+	asyncKeypaths: Record<string, Record<string, boolean>>;
 	pending?: boolean;
 	constructor(data?: Data, context?: any);
 	/**
@@ -622,6 +637,13 @@ declare class Observer {
 	 */
 	destroy(): void;
 }
+declare class LifeCycle {
+	private $emitter;
+	constructor();
+	fire(component: YoxInterface, type: string, data?: Data): void;
+	on(type: string, listener: Function): this;
+	off(type: string, listener: Function): this;
+}
 export default class Yox implements YoxInterface {
 	$options: ComponentOptions;
 	$observer: Observer;
@@ -655,6 +677,8 @@ export default class Yox implements YoxInterface {
 	static logger: LoggerApi;
 	static Event: typeof CustomEvent;
 	static Emitter: typeof Emitter;
+	static config: Record<string, any>;
+	static lifeCycle: LifeCycle;
 	/**
 	 * 定义组件对象
 	 */

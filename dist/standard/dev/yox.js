@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.200
+ * yox.js v1.0.0-alpha.201
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -3784,9 +3784,9 @@
   // o-
   directiveCustomSeparator = DIRECTIVE_CUSTOM + directiveSeparator, 
   // 解析 each 的 index
-  eachIndexPattern = /\s*:\s*([_$a-z]+)$/, 
+  eachIndexPattern = /\s*:\s*([_$a-z]+)$/i, 
   // 调用的方法
-  methodPattern = /^[_$a-z]([\w]+)?$/, 
+  methodPattern = /^[_$a-z]([\w]+)?$/i, 
   // 没有命名空间的事件
   eventPattern = /^[_$a-z]([\w]+)?$/i, 
   // 有命名空间的事件
@@ -4302,7 +4302,7 @@
           }
           var type = node.type, currentBranch = last(nodeStack), lastIfBranch = UNDEFINED, lastElseIfBranch = UNDEFINED, lastEachBranch = UNDEFINED;
           if (type === ELSE_IF) {
-              var lastNode = pop(ifStack);
+              var lastNode = last(ifStack);
               if (lastNode) {
                   // lastNode 只能是 if 或 else if 节点
                   if (lastNode.type === IF) {
@@ -4321,7 +4321,7 @@
               }
           }
           else if (type === ELSE) {
-              var lastIfNode = pop(ifStack), lastEachNode = pop(eachStack);
+              var lastIfNode = last(ifStack), lastEachNode = last(eachStack);
               if (lastIfNode && currentBranch === lastIfNode) {
                   // lastIfNode 只能是 if 或 else if 节点
                   if (lastIfNode.type === IF) {
@@ -4459,17 +4459,17 @@
           }
           else if (lastIfBranch) {
               lastIfBranch.next = node;
-              push(ifStack, node);
+              ifStack[ifStack.length - 1] = node;
               popStack(lastIfBranch.type);
           }
           else if (lastElseIfBranch) {
               lastElseIfBranch.next = node;
-              push(ifStack, node);
+              ifStack[ifStack.length - 1] = node;
               popStack(lastElseIfBranch.type);
           }
           else if (lastEachBranch) {
               lastEachBranch.next = node;
-              push(eachStack, node);
+              ifStack[eachStack.length - 1] = node;
               popStack(lastEachBranch.type);
           }
           if (node.isLeaf) {
@@ -5288,7 +5288,8 @@
       var quote = has$1(value, QUOTE_SINGLE)
           ? QUOTE_DOUBLE
           : QUOTE_SINGLE;
-      return ("" + quote + value + quote);
+      // 换行符会导致字符串语法错误
+      return ("" + quote + (value.replace(/\n\s*/g, '\\n')) + quote);
   }
   function toPair(key, value) {
       if (!/^[\w$]+$/.test(key)) {
@@ -8402,7 +8403,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.200";
+  Yox.version = "1.0.0-alpha.201";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
