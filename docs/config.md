@@ -1,6 +1,6 @@
 自 `1.0.0-alpha.203` 版本开始，Yox 通过 `Yox.config` 对象支持自定义配置 ，默认值如下：
 
-```
+```js
 {
   leftDelimiter: '{',
   rightDelimiter: '}',
