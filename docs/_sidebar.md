@@ -14,6 +14,7 @@
 * [指令](directive)
 * [日志](logger)
 * [组件](component)
+* [配置](config)
 * [API](api-yox)
 * [TypeScript](ts)
 * [注意事项](notice)

@@ -8,7 +8,7 @@ Yox 采用了 `Mustache` 的定界符： `{{` 和 `}}`。
 </div>
 ```
 
-> 目前不支持自定义定界符，如果你对自定义定界符有强烈需求，请通过 [Issue](https://github.com/yoxjs/yox/issues/new) 清晰地描述使用场景。
+> 支持自定义定界符，参考 **配置**
 
 ## 注释
 
@@ -336,9 +336,13 @@ Yox.filter({
 <div>
   {{#each array}}
     ...
+  {{else}}
+    ...
   {{/each}}
 </div>
 ```
+
+> else 自 `1.0.0-alpha.203` 版本开始支持，方便实现列表为空时的视图
 
 ### 数组下标
 
@@ -583,9 +587,13 @@ Yox.filter({
 <div>
   {{#each object:key}}
     ...
+  {{else}}
+    ...
   {{/each}}
 </div>
 ```
+
+> else 自 `1.0.0-alpha.203` 版本开始支持，方便实现对象为空时的视图
 
 ## 循环区间
 
@@ -596,14 +604,20 @@ Yox.filter({
   // 包含 to（有等号当然表示包含啦）
   {{#each from => to:index}}
     ...
+  {{else}}
+    ...
   {{/each}}
 
   // 不包含 to
   {{#each from -> to:index}}
     ...
+  {{else}}
+    ...
   {{/each}}
 </div>
 ```
+
+> else 自 `1.0.0-alpha.203` 版本开始支持，方便实现 `from === to` 时的视图（虽然没人会这么用...）
 
 `from` 是起始的数字，`to` 是结束的数字，如果 `from` 大于 `to`，则递减循环，如果 `from` 小于 `to`，则递增循环。
 

@@ -21,7 +21,9 @@ Yox 内置了一个简易的 `分级` 日志打印器，支持以下五个日志
 如果你希望改变这个行为，可以修改全局变量 `YOX_LOG_LEVEL`，如下：
 
 ```js
-window.YOX_LOG_LEVEL = Yox.logger.ERROR
+Yox.config.logLevel = Yox.logger.ERROR
 ```
+
+> Yox.config 自 `1.0.0-alpha.203` 版本开始支持，之前的版本请使用 `window.YOX_LOG_LEVEL`
 
 修改 `YOX_LOG_LEVEL` 是实时生效的，也就是说，即使上一秒还在打印 `DEBUG` 日志，一旦把 `YOX_LOG_LEVEL` 修改为 `ERROR`，之后便只会打印 `ERROR` 和 `FATAL` 日志。

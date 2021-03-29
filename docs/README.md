@@ -4,7 +4,7 @@
 
 ## 特性
 
-* 比 Vue 更低的学习门槛，比 Vue 更好的兼容性，比 Vue 更小的文件体积（`runtime` 版本：Vue [63KB](https://github.com/vuejs/vue/blob/dev/dist/vue.runtime.min.js) Yox [31KB](https://github.com/yoxjs/yox/blob/master/dist/standard/runtime/yox.min.js)）
+* 比 Vue 更低的学习门槛，比 Vue 更好的兼容性，比 Vue 更小的文件体积（`runtime` 版本：Vue [63.4KB](https://github.com/vuejs/vue/blob/dev/dist/vue.runtime.min.js) Yox [34KB](https://github.com/yoxjs/yox/blob/master/dist/standard/runtime/yox.min.js)）
 * 采用 `TypeScript` 开发，带来更好的工程化开发体验
 * 无需记忆繁冗的语法糖和 API，脱离文档开发不是梦
 * 高仿 [Handlebars](http://handlebarsjs.com/) 风格的模板引擎，借力 `.hbs` 文件的语法高亮
@@ -29,7 +29,7 @@
 
 ## 适合人群
 
-* 有过 `Handlebars`、`Hogan`、`BlazeJS`、`art-template` 等模板引擎的开发经验
+* 有过 `Handlebars`、`Hogan`、`BlazeJS`、`art-template` 等模板引擎的使用经验
 * 希望通过一个框架搞定所有浏览器（包括低版本 IE 和移动端浏览器），节省学习和人力成本
 * 不想学太多框架概念，快速上手开发
 * 后端
