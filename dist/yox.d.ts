@@ -118,6 +118,10 @@ export interface ModelValue {
 	keypath: string;
 	value: any;
 }
+export interface Slots {
+	vnodes: VNode[];
+	components: VNode[];
+}
 export interface VNode {
 	data: Data;
 	node: Node;
@@ -132,8 +136,8 @@ export interface VNode {
 	readonly isStyle?: boolean;
 	readonly isOption?: boolean;
 	readonly isStatic?: boolean;
+	readonly slots?: Slots;
 	readonly props?: Data;
-	readonly slots?: Record<string, VNode[]>;
 	readonly nativeProps?: Data;
 	readonly nativeAttrs?: Record<string, string>;
 	readonly directives?: Record<string, Directive>;
@@ -210,7 +214,7 @@ export interface ComponentOptions<Computed = any, Watchers = any, Events = any, 
 	context?: YoxInterface;
 	replace?: true;
 	vnode?: VNode;
-	slots?: Record<string, VNode[]>;
+	slots?: Slots;
 	computed?: Accessors<Computed, ComputedGetter | ComputedOptions>;
 	watchers?: Accessors<Watchers, Watcher | WatcherOptions>;
 	events?: Accessors<Events, Listener | ListenerOptions>;

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.201
+ * yox.js v1.0.0-alpha.202
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -5114,7 +5114,7 @@
   // 是否正在收集字符串类型的值
   stringStack = [], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {}, RAW_METHOD = 'method';
   // 下面这些值需要根据外部配置才能确定
-  var isUglify$1 = UNDEFINED, isRuntimeExpression = FALSE, RENDER_ELEMENT_VNODE = EMPTY_STRING, RENDER_COMPONENT_VNODE = EMPTY_STRING, RENDER_NATIVE_ATTRIBUTE = EMPTY_STRING, RENDER_NATIVE_PROPERTY = EMPTY_STRING, RENDER_PROPERTY = EMPTY_STRING, RENDER_LAZY = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, GET_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, GET_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, GET_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, GET_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, GET_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_TEXT_VNODE = EMPTY_STRING, RENDER_COMMENT_VNODE = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_IMPORT = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, RENDER_EXPRESSION_IDENTIFIER = EMPTY_STRING, RENDER_EXPRESSION_MEMBER_LITERAL = EMPTY_STRING, RENDER_EXPRESSION_CALL = EMPTY_STRING, RENDER_MAGIC_VAR_KEYPATH = EMPTY_STRING, RENDER_MAGIC_VAR_LENGTH = EMPTY_STRING, RENDER_MAGIC_VAR_EVENT = EMPTY_STRING, RENDER_MAGIC_VAR_DATA = EMPTY_STRING, RENDER_MAGIC_VAR_ITEM = EMPTY_STRING, TO_STRING = EMPTY_STRING, ARG_STACK = EMPTY_STRING;
+  var isUglify$1 = UNDEFINED, RENDER_ELEMENT_VNODE = EMPTY_STRING, RENDER_COMPONENT_VNODE = EMPTY_STRING, RENDER_NATIVE_ATTRIBUTE = EMPTY_STRING, RENDER_NATIVE_PROPERTY = EMPTY_STRING, RENDER_PROPERTY = EMPTY_STRING, RENDER_LAZY = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, GET_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, GET_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, GET_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, GET_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, GET_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_TEXT_VNODE = EMPTY_STRING, RENDER_COMMENT_VNODE = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_IMPORT = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, RENDER_EXPRESSION_IDENTIFIER = EMPTY_STRING, RENDER_EXPRESSION_MEMBER_LITERAL = EMPTY_STRING, RENDER_EXPRESSION_CALL = EMPTY_STRING, RENDER_MAGIC_VAR_KEYPATH = EMPTY_STRING, RENDER_MAGIC_VAR_LENGTH = EMPTY_STRING, RENDER_MAGIC_VAR_EVENT = EMPTY_STRING, RENDER_MAGIC_VAR_DATA = EMPTY_STRING, RENDER_MAGIC_VAR_ITEM = EMPTY_STRING, TO_STRING = EMPTY_STRING, ARG_STACK = EMPTY_STRING;
   function init$1() {
       if (isUglify$1 === PUBLIC_CONFIG.uglifyCompiled) {
           return;
@@ -5224,7 +5224,7 @@
                   // 这里要把 list.0.a 转成 list[0].a
                   // . 是 Yox 特有的访问数组的语法，正常的 js 语法是 [index]
                   + name.replace(/\.(\d+)/g, '[$1]'));
-          if (isRuntimeExpression || last(eachSpecialStack)) {
+          if (last(eachSpecialStack)) {
               return result;
           }
           else {
@@ -5245,10 +5245,7 @@
       return generate$1(expr, transformIdentifier, RENDER_EXPRESSION_IDENTIFIER, RENDER_EXPRESSION_MEMBER_LITERAL, RENDER_EXPRESSION_CALL, TRUE);
   }
   function generateExpressionArg(expr) {
-      isRuntimeExpression = TRUE;
-      var result = generate$1(expr, transformIdentifier, RENDER_EXPRESSION_IDENTIFIER, RENDER_EXPRESSION_MEMBER_LITERAL, RENDER_EXPRESSION_CALL, FALSE, ARG_STACK);
-      isRuntimeExpression = FALSE;
-      return result;
+      return generate$1(expr, transformIdentifier, RENDER_EXPRESSION_IDENTIFIER, RENDER_EXPRESSION_MEMBER_LITERAL, RENDER_EXPRESSION_CALL, FALSE, ARG_STACK);
   }
   function generateAttributeValue(value, expr, children) {
       if (isDef(value)) {
@@ -5280,11 +5277,12 @@
       var result = children.map(function (node) {
           return nodeGenerator[node.type](node);
       });
+      if (result.length === 1) {
+          return result[0];
+      }
       // 字符串拼接涉及表达式的优先级问题，改成 array.join 有利于一致性
       if (last(stringStack)) {
-          return children.length === 1
-              ? result[0]
-              : toList(result, JOIN_EMPTY);
+          return toList(result, JOIN_EMPTY);
       }
       return toList(result);
   }
@@ -5803,7 +5801,7 @@
                   handler(item);
               }
           }
-      }, normalizeAttributes = function (data, attrs) {
+      }, normalizeAttributes = function (attrs, data) {
           flattenArray(attrs, function (item) {
               var key = item.key;
               var name = item.name;
@@ -5822,45 +5820,48 @@
                   }
               }
           });
-      }, normalizeChildren = function (result, childs) {
-          flattenArray(childs, function (item) {
+      }, normalizeChildren = function (children, vnodes, components) {
+          flattenArray(children, function (item) {
               // item 只能是 vnode
               if (item.isText) {
-                  var lastChild = last(result);
+                  var lastChild = last(vnodes);
                   if (lastChild && lastChild.isText) {
                       lastChild.text += item.text;
                       return;
                   }
               }
-              result.push(item);
+              else if (item.isComponent && components) {
+                  components.push(item);
+              }
+              vnodes.push(item);
           });
       }, renderElementVnode = function (data, attrs, childs) {
           data.context = context;
           if (attrs) {
-              normalizeAttributes(data, attrs);
+              normalizeAttributes(attrs, data);
           }
           if (childs) {
               var children = [];
-              normalizeChildren(children, childs);
+              normalizeChildren(childs, children);
               data.children = children;
           }
           return data;
       }, renderComponentVnode = function (data, attrs, slots) {
           data.context = context;
           if (attrs) {
-              normalizeAttributes(data, attrs);
+              normalizeAttributes(attrs, data);
           }
           if (slots) {
-              var vnodeMap = {};
+              var result = {};
               for (var name in slots) {
-                  var children = [];
-                  normalizeChildren(children, slots[name]);
+                  var vnodes = [], components = [];
+                  normalizeChildren(slots[name], vnodes, components);
                   // 就算是 undefined 也必须有值，用于覆盖旧值
-                  vnodeMap[name] = children.length
-                      ? children
+                  result[name] = vnodes.length
+                      ? { vnodes: vnodes, components: components }
                       : UNDEFINED;
               }
-              data.slots = vnodeMap;
+              data.slots = result;
           }
           return data;
       }, renderNativeAttribute = function (name, value) {
@@ -6043,8 +6044,16 @@
       }, 
       // <slot name="xx"/>
       renderSlot = function (name, render) {
-          return context.get(name)
-              || (render && render());
+          var result = context.get(name);
+          if (result) {
+              var vnodes = result.vnodes;
+              var components = result.components;
+              for (var i = 0, length = components.length; i < length; i++) {
+                  components[i].parent = context;
+              }
+              return vnodes;
+          }
+          return render && render();
       }, 
       // {{#partial name}}
       //   xx
@@ -6143,7 +6152,8 @@
       }, renderTemplate = function (render) {
           return render(renderElementVnode, renderComponentVnode, renderNativeAttribute, renderNativeProperty, renderProperty, renderLazy, renderTransition, getTransition, renderModel, getModel, renderEventMethod, getEventMethod, renderEventName, getEventName, renderDirective, getDirective, renderSpread, renderTextVnode, renderCommentVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderExpressionIdentifier, renderExpressionMemberLiteral, renderExpressionCall, currentKeypath, toString);
       };
-      return renderTemplate(template);
+      var result = renderTemplate(template);
+      return result;
   }
 
   var guid = 0, 
@@ -7963,7 +7973,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.201";
+  Yox.version = "1.0.0-alpha.202";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

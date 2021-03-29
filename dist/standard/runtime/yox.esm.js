@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.201
+ * yox.js v1.0.0-alpha.202
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -2337,7 +2337,7 @@ function render(context, observer, template, filters, partials, directives, tran
                 handler(item);
             }
         }
-    }, normalizeAttributes = function (data, attrs) {
+    }, normalizeAttributes = function (attrs, data) {
         flattenArray(attrs, function (item) {
             const { key, name, value } = item;
             if (data[key]) {
@@ -2354,45 +2354,48 @@ function render(context, observer, template, filters, partials, directives, tran
                 }
             }
         });
-    }, normalizeChildren = function (result, childs) {
-        flattenArray(childs, function (item) {
+    }, normalizeChildren = function (children, vnodes, components) {
+        flattenArray(children, function (item) {
             // item 只能是 vnode
             if (item.isText) {
-                const lastChild = last(result);
+                const lastChild = last(vnodes);
                 if (lastChild && lastChild.isText) {
                     lastChild.text += item.text;
                     return;
                 }
             }
-            result.push(item);
+            else if (item.isComponent && components) {
+                components.push(item);
+            }
+            vnodes.push(item);
         });
     }, renderElementVnode = function (data, attrs, childs) {
         data.context = context;
         if (attrs) {
-            normalizeAttributes(data, attrs);
+            normalizeAttributes(attrs, data);
         }
         if (childs) {
             const children = [];
-            normalizeChildren(children, childs);
+            normalizeChildren(childs, children);
             data.children = children;
         }
         return data;
     }, renderComponentVnode = function (data, attrs, slots) {
         data.context = context;
         if (attrs) {
-            normalizeAttributes(data, attrs);
+            normalizeAttributes(attrs, data);
         }
         if (slots) {
-            const vnodeMap = {};
+            const result = {};
             for (let name in slots) {
-                const children = [];
-                normalizeChildren(children, slots[name]);
+                const vnodes = [], components = [];
+                normalizeChildren(slots[name], vnodes, components);
                 // 就算是 undefined 也必须有值，用于覆盖旧值
-                vnodeMap[name] = children.length
-                    ? children
+                result[name] = vnodes.length
+                    ? { vnodes, components }
                     : UNDEFINED;
             }
-            data.slots = vnodeMap;
+            data.slots = result;
         }
         return data;
     }, renderNativeAttribute = function (name, value) {
@@ -2573,8 +2576,15 @@ function render(context, observer, template, filters, partials, directives, tran
     }, 
     // <slot name="xx"/>
     renderSlot = function (name, render) {
-        return context.get(name)
-            || (render && render());
+        const result = context.get(name);
+        if (result) {
+            const { vnodes, components } = result;
+            for (let i = 0, length = components.length; i < length; i++) {
+                components[i].parent = context;
+            }
+            return vnodes;
+        }
+        return render && render();
     }, 
     // {{#partial name}}
     //   xx
@@ -2671,7 +2681,8 @@ function render(context, observer, template, filters, partials, directives, tran
     }, renderTemplate = function (render) {
         return render(renderElementVnode, renderComponentVnode, renderNativeAttribute, renderNativeProperty, renderProperty, renderLazy, renderTransition, getTransition, renderModel, getModel, renderEventMethod, getEventMethod, renderEventName, getEventName, renderDirective, getDirective, renderSpread, renderTextVnode, renderCommentVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderExpressionIdentifier, renderExpressionMemberLiteral, renderExpressionCall, currentKeypath, toString);
     };
-    return renderTemplate(template);
+    const result = renderTemplate(template);
+    return result;
 }
 
 let guid = 0, 
@@ -4347,7 +4358,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.201";
+Yox.version = "1.0.0-alpha.202";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
