@@ -120,7 +120,7 @@ export interface ModelValue {
 }
 export interface Slots {
 	vnodes: VNode[];
-	components: VNode[];
+	components: VNode[] | void;
 }
 export interface VNode {
 	data: Data;

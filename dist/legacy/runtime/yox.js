@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.202
+ * yox.js v1.0.0-alpha.203
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -5858,7 +5858,12 @@
                   normalizeChildren(slots[name], vnodes, components);
                   // 就算是 undefined 也必须有值，用于覆盖旧值
                   result[name] = vnodes.length
-                      ? { vnodes: vnodes, components: components }
+                      ? {
+                          vnodes: vnodes,
+                          components: components.length
+                              ? components
+                              : UNDEFINED
+                      }
                       : UNDEFINED;
               }
               data.slots = result;
@@ -6048,8 +6053,10 @@
           if (result) {
               var vnodes = result.vnodes;
               var components = result.components;
-              for (var i = 0, length = components.length; i < length; i++) {
-                  components[i].parent = context;
+              if (components) {
+                  for (var i = 0, length = components.length; i < length; i++) {
+                      components[i].parent = context;
+                  }
               }
               return vnodes;
           }
@@ -6788,9 +6795,6 @@
       return options;
   }
 
-  // 触发监听函数的参数列表
-  // 复用同一个数组，应该能稍微快些
-  var syncWatchArgs = new Array(3), asyncWatchArgs = new Array(3);
   /**
    * 观察者有两种观察模式：
    *
@@ -6914,13 +6918,13 @@
           var asyncKeypaths = instance.asyncKeypaths;
           var isRecursive = codeAt(keypath) !== 36;
       diffWatcher(keypath, newValue, oldValue, syncEmitter.listeners, isRecursive, function (watchKeypath, keypath, newValue, oldValue) {
-          syncWatchArgs[0] = newValue;
-          syncWatchArgs[1] = oldValue;
-          syncWatchArgs[2] = keypath;
           syncEmitter.fire({
               type: watchKeypath,
               ns: EMPTY_STRING,
-          }, syncWatchArgs);
+          }, [
+              newValue,
+              oldValue,
+              keypath ]);
       });
       /**
        * 此处有坑，举个例子
@@ -6966,10 +6970,10 @@
       instance.asyncOldValues = {};
       instance.asyncKeypaths = {};
       var loop = function ( keypath ) {
-          asyncWatchArgs[0] = instance.get(keypath);
-          asyncWatchArgs[1] = asyncOldValues[keypath];
-          asyncWatchArgs[2] = keypath;
-          var keypaths = asyncKeypaths[keypath], hasChange = asyncWatchArgs[0] !== asyncWatchArgs[1], filterWatcher = function (event, args, options) {
+          var args = [
+              instance.get(keypath),
+              asyncOldValues[keypath],
+              keypath ], keypaths = asyncKeypaths[keypath], hasChange = args[0] !== args[1], filterWatcher = function (event, args, options) {
               // 前面递增了 count
               // 这里要递减 count
               // count > 0 表示前面标记了该监听器需要响应此次变化
@@ -6986,7 +6990,7 @@
               asyncEmitter.fire({
                   type: watchKeypath,
                   ns: EMPTY_STRING,
-              }, asyncWatchArgs, filterWatcher);
+              }, args, filterWatcher);
           }
       };
 
@@ -7973,7 +7977,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.202";
+  Yox.version = "1.0.0-alpha.203";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

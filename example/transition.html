@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>demo</title>
+    <style>
+      .box {
+        height: 100px;
+        background-color: red;
+        opacity: 0;
+        transition: all 0.5s;
+      }
+      .fade {
+        opacity: 1;
+      }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    <script id="template" type="plain/text">
+      <div id="root">
+          <div on-click="toggle('visible')">
+            toggle
+          </div>
+          {{#if visible}}
+            <div class="box" transition="fade"></div>
+          {{/if}}
+      </div>
+    </script>
+    <script src="../dist/standard/dev/yox.js"></script>
+    <script>
+
+        var instance = new Yox({
+            el: '#app',
+            template: '#template',
+            data: {
+              visible: true,
+            },
+            transitions: {
+              fade: {
+                enter(node) {
+                  Yox.dom.addClass(node, 'fade')
+                },
+                leave(node, done) {
+                  Yox.dom.removeClass(node, 'fade')
+                  setTimeout(
+                    done,
+                    500,
+                  )
+                }
+              }
+            }
+        });
+
+    </script>
+</body>
+</html>
