@@ -23,4 +23,4 @@ Yox 通过配置的左右定界符来解析模板，你只需要各配置一个�
 
 编译模板默认输出源码格式，这样方便开发学习。
 
-在生成环境，可按需打开 `uglifyCompiled` 和 `minifyCompiled`，这样能减少字符，压缩文件尺寸。
+在生产环境，可按需打开 `uglifyCompiled` 和 `minifyCompiled`，这样能减少字符，压缩文件尺寸。
