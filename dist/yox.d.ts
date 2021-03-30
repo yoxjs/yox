@@ -260,6 +260,7 @@ export declare type ValueHolder = {
 export declare type PureObject = {
 	get(key: string): any;
 	set(key: string, value: any): void;
+	has(key: string): boolean;
 	keys(): string[];
 };
 export declare type Task = {

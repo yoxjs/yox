@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.203
+ * yox.js v1.0.0-alpha.204
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -489,6 +489,9 @@ let createPureObject = function () {
         },
         set(key, value) {
             obj[key] = value;
+        },
+        has(key) {
+            return key in obj;
         },
         keys() {
             return Object.keys(obj);
@@ -2299,32 +2302,39 @@ const LAZY = 'lazy';
 const TRANSITION = 'transition';
 
 function render(context, observer, template, filters, partials, directives, transitions) {
-    let currentKeypath = EMPTY_STRING, keypathStack = [currentKeypath], localPartials = {}, findValue = function (stack, index, key, lookup, call, defaultKeypath) {
+    let currentKeypath = EMPTY_STRING, keypathStack = [currentKeypath], localPartials = {}, valueCache = createPureObject(), findValue = function (stack, index, key, lookup, call, defaultKeypath) {
         let baseKeypath = stack[index], keypath = join$1(baseKeypath, key), value = UNDEFINED;
-        // 如果最后还是取不到值，用回最初的 keypath
-        if (defaultKeypath === UNDEFINED) {
-            defaultKeypath = keypath;
+        if (valueCache.has(keypath)) {
+            value = valueCache.get(keypath);
         }
-        // 正常取数据
-        value = observer.get(keypath, stack);
+        else {
+            // 如果最后还是取不到值，用回最初的 keypath
+            if (defaultKeypath === UNDEFINED) {
+                defaultKeypath = keypath;
+            }
+            value = observer.get(keypath, stack);
+        }
         if (value === stack) {
             if (lookup && index > 0) {
                 return findValue(stack, index - 1, key, lookup, call, defaultKeypath);
             }
             // 到头了，如果是函数调用，则最后尝试过滤器
             if (call) {
-                const result = get(filters, key);
+                const result = get(filters, keypath);
                 if (result) {
-                    result.keypath = key;
+                    result.keypath = keypath;
+                    valueCache[keypath] = result.value;
                     return result;
                 }
             }
-            holder.value = UNDEFINED;
             holder.keypath = defaultKeypath;
+            holder.value = UNDEFINED;
+            valueCache[defaultKeypath] = UNDEFINED;
         }
         else {
-            holder.value = value;
             holder.keypath = keypath;
+            holder.value = value;
+            valueCache[keypath] = value;
         }
         return holder;
     }, flattenArray = function (array$1, handler) {
@@ -2602,7 +2612,7 @@ function render(context, observer, template, filters, partials, directives, tran
     // {{> name}}
     renderImport = function (name) {
         if (localPartials[name]) {
-            return localPartials[name]();
+            return localPartials[name](currentKeypath);
         }
         const partial = partials[name];
         return renderTemplate(partial);
@@ -4364,7 +4374,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.203";
+Yox.version = "1.0.0-alpha.204";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.203
+ * yox.js v1.0.0-alpha.204
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -439,6 +439,9 @@ let createPureObject = function () {
         },
         set(key, value) {
             obj[key] = value;
+        },
+        has(key) {
+            return key in obj;
         },
         keys() {
             return Object.keys(obj);
@@ -2474,7 +2477,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.203";
+Yox.version = "1.0.0-alpha.204";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

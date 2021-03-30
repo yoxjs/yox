@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.203
+ * yox.js v1.0.0-alpha.204
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -525,6 +525,9 @@
           set: function(key, value) {
               obj[key] = value;
           },
+          has: function(key) {
+              return key in obj;
+          },
           keys: function() {
               return Object.keys(obj);
           }
@@ -543,6 +546,9 @@
                   },
                   set: function(key, value) {
                       obj[key] = value;
+                  },
+                  has: function(key) {
+                      return obj.hasOwnProperty(key);
                   },
                   keys: function() {
                       return Object.keys(obj);
@@ -5551,10 +5557,10 @@
   var vnodeStack = [TRUE], 
   // 是否正在处理组件节点
   componentStack = [], 
+  // 是否正在处理 attribute
+  attributeStack = [], 
   // 是否正在处理特殊 each，包括 遍历 range 和 遍历数组字面量和对象字面量
   eachSpecialStack = [], 
-  // each 渲染片段用过哪些 this，用过的标记为 true
-  eachThisStack = [], 
   // 是否正在收集字符串类型的值
   stringStack = [], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {}, RAW_METHOD = 'method';
   // 下面这些值需要根据外部配置才能确定
@@ -5657,29 +5663,17 @@
       // this 仅在 each 中有意义
       // 这里把 this 转成 $item，方便直接读取
       // 避免不必要的查找，提升性能
-      if (eachThisStack.length > 0
+      if (last(eachSpecialStack)
           && node.root === FALSE
           && node.lookup === FALSE
           && node.offset === 0) {
-          var result = toRaw(name === EMPTY_STRING
+          return toRaw(name === EMPTY_STRING
               ? RENDER_MAGIC_VAR_ITEM
               : RENDER_MAGIC_VAR_ITEM
                   + RAW_DOT
                   // 这里要把 list.0.a 转成 list[0].a
                   // . 是 Yox 特有的访问数组的语法，正常的 js 语法是 [index]
                   + name.replace(/\.(\d+)/g, '[$1]'));
-          if (last(eachSpecialStack)) {
-              return result;
-          }
-          else {
-              var eachThis = last(eachThisStack);
-              if (eachThis[name]) {
-                  return result;
-              }
-              // 当前 each 还没用过 this，这里要标记已用过
-              // 这样下次再进来，就会走上面的分支
-              eachThis[name] = TRUE;
-          }
       }
   }
   function generateExpression(expr) {
@@ -5759,6 +5753,86 @@
           ? result
           : toPrimitive(UNDEFINED);
   }
+  function parseAttrs(attrs, isComponent) {
+      var nativeAttributeList = [], nativePropertyList = [], propertyList = [], lazyList = [], transition = UNDEFINED, model = UNDEFINED, 
+      // 最后收集事件指令、自定义指令、动态属性
+      eventList = [], customDirectiveList = [], otherList = [];
+      each(attrs, function (attr) {
+          if (attr.type === ATTRIBUTE) {
+              var attributeNode = attr;
+              if (isComponent) {
+                  push(propertyList, attributeNode);
+              }
+              else {
+                  push(nativeAttributeList, attributeNode);
+              }
+          }
+          else if (attr.type === PROPERTY) {
+              var propertyNode = attr;
+              push(nativePropertyList, propertyNode);
+          }
+          else if (attr.type === DIRECTIVE) {
+              var directiveNode = attr;
+              switch (directiveNode.ns) {
+                  case DIRECTIVE_LAZY:
+                      push(lazyList, directiveNode);
+                      break;
+                  case DIRECTIVE_TRANSITION:
+                      transition = directiveNode;
+                      break;
+                  case DIRECTIVE_MODEL:
+                      model = directiveNode;
+                      break;
+                  case DIRECTIVE_EVENT:
+                      push(eventList, directiveNode);
+                      break;
+                  default:
+                      push(customDirectiveList, directiveNode);
+              }
+          }
+          else {
+              push(otherList, attr);
+          }
+      });
+      return {
+          nativeAttributeList: nativeAttributeList,
+          nativePropertyList: nativePropertyList,
+          propertyList: propertyList,
+          lazyList: lazyList,
+          transition: transition,
+          model: model,
+          eventList: eventList,
+          customDirectiveList: customDirectiveList,
+          otherList: otherList,
+      };
+  }
+  function sortAttrs(attrs, isComponent) {
+      var ref = parseAttrs(attrs, isComponent);
+      var nativeAttributeList = ref.nativeAttributeList;
+      var nativePropertyList = ref.nativePropertyList;
+      var propertyList = ref.propertyList;
+      var lazyList = ref.lazyList;
+      var transition = ref.transition;
+      var model = ref.model;
+      var eventList = ref.eventList;
+      var customDirectiveList = ref.customDirectiveList;
+      var otherList = ref.otherList;
+      var result = [];
+      push(result, nativeAttributeList);
+      push(result, nativePropertyList);
+      push(result, propertyList);
+      push(result, lazyList);
+      if (transition) {
+          push(result, transition);
+      }
+      if (model) {
+          push(result, model);
+      }
+      push(result, eventList);
+      push(result, customDirectiveList);
+      push(result, otherList);
+      return result;
+  }
   nodeGenerator[ELEMENT] = function (node) {
       var tag = node.tag;
       var dynamicTag = node.dynamicTag;
@@ -5785,7 +5859,41 @@
       data.set('tag', dynamicTag
           ? generateExpression(dynamicTag)
           : toPrimitive(tag));
-      push(vnodeStack, FALSE);
+      // 先序列化 children，再序列化 attrs，原因需要举两个例子：
+      // 例子1：
+      // <div on-click="output(this)"></div> 如果 this 序列化成 $item，如果外部修改了 this，因为模板没有计入此依赖，不会刷新，因此 item 是旧的
+      // 这个例子要求即使是动态执行的代码，也不能简单的直接序列化成 $item
+      // 例子2：
+      // <div on-click="output(this)">{{this}}</div>，如果第一个 this 转成 $item，第二个正常读取数据，这样肯定没问题
+      // 但问题是，你不知道有没有第二个 this，因此这里反过来，先序列化非动态部分，即 children，再序列化可能动态的部分，即 attrs
+      // 这样序列化动态部分的时候，就知道是否可以转成 $item
+      // 后来发现，即使这样实现也不行，因为模板里存在各种可能的 if 或三元运算，导致依赖的捕捉充满不确定，因此这里我们不再考虑把 this 转成 $item
+      push(vnodeStack, TRUE);
+      push(componentStack, isComponent);
+      if (children) {
+          if (isComponent) {
+              outputSlots = generateComponentSlots(children);
+          }
+          else {
+              var isStatic = TRUE, newChildren = toList();
+              each(children, function (node) {
+                  if (!node.isStatic) {
+                      isStatic = FALSE;
+                  }
+                  newChildren.push(nodeGenerator[node.type](node));
+              });
+              if (isStatic) {
+                  data.set(CHILDREN, newChildren);
+              }
+              else {
+                  outputChildren = newChildren;
+              }
+          }
+      }
+      pop(vnodeStack);
+      pop(componentStack);
+      // 开始序列化 attrs，原则也是先序列化非动态部分，再序列化动态部分，即指令留在最后序列化
+      push(attributeStack, TRUE);
       push(componentStack, isComponent);
       // 在 vnodeStack 为 false 时取值
       if (ref) {
@@ -5809,78 +5917,77 @@
               ]));
       }
       if (attrs) {
-          // 先收集静态属性
-          var nativeAttributes = toMap(), nativeProperties = toMap(), properties = toMap(), directives = toMap(), events = toMap(), lazy = toMap(), 
-          // 最后收集动态属性
-          dynamicAttrs = [];
-          each(attrs, function (attr) {
-              if (attr.type === ATTRIBUTE) {
-                  var attributeNode = attr, value = generateAttributeValue(attributeNode.value, attributeNode.expr, attributeNode.children);
-                  if (isComponent) {
-                      properties.set(attributeNode.name, value);
-                  }
-                  else {
-                      nativeAttributes.set(attributeNode.name, value);
-                  }
-              }
-              else if (attr.type === PROPERTY) {
-                  var propertyNode = attr, value$1 = generateAttributeValue(propertyNode.value, propertyNode.expr, propertyNode.children);
-                  nativeProperties.set(propertyNode.name, value$1);
-              }
-              else if (attr.type === DIRECTIVE) {
-                  var directiveNode = attr;
-                  switch (directiveNode.ns) {
-                      case DIRECTIVE_LAZY:
-                          lazy.set(directiveNode.name, getLazyValue(directiveNode));
-                          break;
-                      case DIRECTIVE_TRANSITION:
-                          data.set(TRANSITION, toCall(GET_TRANSITION, [
-                              getTransitionValue(directiveNode)
-                          ]));
-                          break;
-                      case DIRECTIVE_MODEL:
-                          data.set(MODEL$1, toCall(GET_MODEL, [
-                              getModelValue(directiveNode)
-                          ]));
-                          break;
-                      case DIRECTIVE_EVENT:
-                          var params = getEventValue(directiveNode);
-                          events.set(getDirectiveKey(directiveNode), toCall(params.has(RAW_METHOD)
-                              ? GET_EVENT_METHOD
-                              : GET_EVENT_NAME, [
-                              params
-                          ]));
-                          break;
-                      default:
-                          directives.set(getDirectiveKey(directiveNode), toCall(GET_DIRECTIVE, [
-                              getDirectiveValue(directiveNode)
-                          ]));
-                  }
-              }
-              else {
-                  push(dynamicAttrs, attr);
-              }
-          });
-          if (nativeAttributes.isNotEmpty()) {
+          var ref$1 = parseAttrs(attrs, isComponent);
+          var nativeAttributeList = ref$1.nativeAttributeList;
+          var nativePropertyList = ref$1.nativePropertyList;
+          var propertyList = ref$1.propertyList;
+          var lazyList = ref$1.lazyList;
+          var transition = ref$1.transition;
+          var model = ref$1.model;
+          var eventList = ref$1.eventList;
+          var customDirectiveList = ref$1.customDirectiveList;
+          var otherList = ref$1.otherList;
+          if (nativeAttributeList.length) {
+              var nativeAttributes = toMap();
+              each(nativeAttributeList, function (node) {
+                  nativeAttributes.set(node.name, generateAttributeValue(node.value, node.expr, node.children));
+              });
               data.set(NATIVE_ATTRIBUTES, nativeAttributes);
           }
-          if (nativeProperties.isNotEmpty()) {
+          if (nativePropertyList.length) {
+              var nativeProperties = toMap();
+              each(nativePropertyList, function (node) {
+                  nativeProperties.set(node.name, generateAttributeValue(node.value, node.expr, node.children));
+              });
               data.set(NATIVE_PROPERTIES, nativeProperties);
           }
-          if (properties.isNotEmpty()) {
+          if (propertyList.length) {
+              var properties = toMap();
+              each(propertyList, function (node) {
+                  properties.set(node.name, generateAttributeValue(node.value, node.expr, node.children));
+              });
               data.set(PROPERTIES, properties);
           }
-          if (directives.isNotEmpty()) {
-              data.set(DIRECTIVES, directives);
-          }
-          if (events.isNotEmpty()) {
-              data.set(EVENTS, events);
-          }
-          if (lazy.isNotEmpty()) {
+          if (lazyList.length) {
+              var lazy = toMap();
+              each(lazyList, function (node) {
+                  lazy.set(node.name, getLazyValue(node));
+              });
               data.set(LAZY, lazy);
           }
-          if (dynamicAttrs.length) {
-              outputAttrs = generateNodesToList(dynamicAttrs);
+          if (transition) {
+              data.set(TRANSITION, toCall(GET_TRANSITION, [
+                  getTransitionValue(transition)
+              ]));
+          }
+          if (model) {
+              data.set(MODEL$1, toCall(GET_MODEL, [
+                  getModelValue(model)
+              ]));
+          }
+          if (eventList.length) {
+              var events = toMap();
+              each(eventList, function (node) {
+                  var params = getEventValue(node);
+                  events.set(getDirectiveKey(node), toCall(params.has(RAW_METHOD)
+                      ? GET_EVENT_METHOD
+                      : GET_EVENT_NAME, [
+                      params
+                  ]));
+              });
+              data.set(EVENTS, events);
+          }
+          if (customDirectiveList.length) {
+              var directives = toMap();
+              each(customDirectiveList, function (node) {
+                  directives.set(getDirectiveKey(node), toCall(GET_DIRECTIVE, [
+                      getDirectiveValue(node)
+                  ]));
+              });
+              data.set(DIRECTIVES, directives);
+          }
+          if (otherList.length) {
+              outputAttrs = generateNodesToList(otherList);
           }
       }
       if (children) {
@@ -5889,22 +5996,22 @@
               outputSlots = generateComponentSlots(children);
           }
           else {
-              var isStatic = TRUE, newChildren = toList();
+              var isStatic$1 = TRUE, newChildren$1 = toList();
               each(children, function (node) {
                   if (!node.isStatic) {
-                      isStatic = FALSE;
+                      isStatic$1 = FALSE;
                   }
-                  newChildren.push(nodeGenerator[node.type](node));
+                  newChildren$1.push(nodeGenerator[node.type](node));
               });
-              if (isStatic) {
-                  data.set(CHILDREN, newChildren);
+              if (isStatic$1) {
+                  data.set(CHILDREN, newChildren$1);
               }
               else {
-                  outputChildren = newChildren;
+                  outputChildren = newChildren$1;
               }
           }
       }
-      pop(vnodeStack);
+      pop(attributeStack);
       pop(componentStack);
       if (isComponent) {
           data.set('isComponent', toPrimitive(TRUE));
@@ -6104,17 +6211,27 @@
           var next = node.next;
           var defaultValue = last(vnodeStack)
               ? toCall(RENDER_COMMENT_VNODE)
-              : toPrimitive(UNDEFINED);
-          return toTernary(generateExpression(node.expr), (children && generateNodesToStringIfNeeded(children)) || defaultValue, next ? nodeGenerator[next.type](next) : defaultValue);
+              : toPrimitive(UNDEFINED), value;
+          if (children) {
+              if (last(attributeStack)) {
+                  children = sortAttrs(children, last(componentStack));
+              }
+              value = generateNodesToStringIfNeeded(children);
+          }
+          return toTernary(generateExpression(node.expr), value || defaultValue, next ? nodeGenerator[next.type](next) : defaultValue);
       };
   nodeGenerator[ELSE] = function (node) {
       var children = node.children;
       var defaultValue = last(vnodeStack)
           ? toCall(RENDER_COMMENT_VNODE)
-          : toPrimitive(UNDEFINED);
-      return children
-          ? generateNodesToStringIfNeeded(children)
-          : defaultValue;
+          : toPrimitive(UNDEFINED), value;
+      if (children) {
+          if (last(attributeStack)) {
+              children = sortAttrs(children, last(componentStack));
+          }
+          value = generateNodesToStringIfNeeded(children);
+      }
+      return value || defaultValue;
   };
   nodeGenerator[EACH] = function (node) {
       var index = node.index;
@@ -6133,14 +6250,12 @@
       // 如果是特殊的 each，包括 遍历 range 和 遍历数组字面量和对象字面量
       // 在这种 each 中引用 this 无需追踪依赖，因此可直接认为 this 已用过，这样生成代码时，会直接引用局部变量，提高执行效率
       push(eachSpecialStack, isSpecial);
-      push(eachThisStack, {});
       // compiler 保证了 children 一定有值
       var renderChildren = toAnonymousFunction(generateNodesToList(node.children), args);
       if (index) {
           pop(magicVariables);
       }
       pop(eachSpecialStack);
-      pop(eachThisStack);
       // compiler 保证了 children 一定有值
       var renderElse = next
           ? toAnonymousFunction(generateNodesToList(next.children))
@@ -6163,7 +6278,9 @@
   nodeGenerator[PARTIAL] = function (node) {
       return toCall(RENDER_PARTIAL, [
           toPrimitive(node.name),
-          toAnonymousFunction(generateNodesToList(node.children))
+          toAnonymousFunction(generateNodesToList(node.children), [
+              toRaw(RENDER_MAGIC_VAR_KEYPATH)
+          ])
       ]);
   };
   nodeGenerator[IMPORT] = function (node) {
@@ -6207,14 +6324,18 @@
   }
 
   function render(context, observer, template, filters, partials, directives, transitions) {
-      var currentKeypath = EMPTY_STRING, keypathStack = [currentKeypath], localPartials = {}, findValue = function (stack, index, key, lookup, call, defaultKeypath) {
+      var currentKeypath = EMPTY_STRING, keypathStack = [currentKeypath], localPartials = {}, valueCache = createPureObject$1(), findValue = function (stack, index, key, lookup, call, defaultKeypath) {
           var baseKeypath = stack[index], keypath = join$1(baseKeypath, key), value = UNDEFINED;
-          // 如果最后还是取不到值，用回最初的 keypath
-          if (defaultKeypath === UNDEFINED) {
-              defaultKeypath = keypath;
+          if (valueCache.has(keypath)) {
+              value = valueCache.get(keypath);
           }
-          // 正常取数据
-          value = observer.get(keypath, stack);
+          else {
+              // 如果最后还是取不到值，用回最初的 keypath
+              if (defaultKeypath === UNDEFINED) {
+                  defaultKeypath = keypath;
+              }
+              value = observer.get(keypath, stack);
+          }
           if (value === stack) {
               if (lookup && index > 0) {
                   {
@@ -6224,18 +6345,21 @@
               }
               // 到头了，如果是函数调用，则最后尝试过滤器
               if (call) {
-                  var result = get(filters, key);
+                  var result = get(filters, keypath);
                   if (result) {
-                      result.keypath = key;
+                      result.keypath = keypath;
+                      valueCache[keypath] = result.value;
                       return result;
                   }
               }
-              holder.value = UNDEFINED;
               holder.keypath = defaultKeypath;
+              holder.value = UNDEFINED;
+              valueCache[defaultKeypath] = UNDEFINED;
           }
           else {
-              holder.value = value;
               holder.keypath = keypath;
+              holder.value = value;
+              valueCache[keypath] = value;
           }
           return holder;
       }, flattenArray = function (array$1, handler) {
@@ -6535,7 +6659,7 @@
       // {{> name}}
       renderImport = function (name) {
           if (localPartials[name]) {
-              return localPartials[name]();
+              return localPartials[name](currentKeypath);
           }
           var partial = partials[name];
           {
@@ -8541,7 +8665,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.203";
+  Yox.version = "1.0.0-alpha.204";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
