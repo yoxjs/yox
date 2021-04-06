@@ -263,10 +263,6 @@ export declare type PureObject = {
 	has(key: string): boolean;
 	keys(): string[];
 };
-export declare type Task = {
-	fn: Function;
-	ctx?: any;
-};
 export declare type PropRule = {
 	type: string | string[] | PropTypeFunction;
 	value?: any | PropValueFunction;
@@ -441,6 +437,10 @@ declare class CustomEvent implements CustomEventInterface {
 	prevent(): this;
 	stop(): this;
 }
+export declare type NextTaskHooks = {
+	beforeTask?: Function;
+	afterTask?: Function;
+};
 declare class NextTask {
 	/**
 	 * 全局单例
@@ -449,8 +449,9 @@ declare class NextTask {
 	/**
 	 * 异步队列
 	 */
-	tasks: Task[];
-	constructor();
+	private tasks;
+	private hooks;
+	constructor(hooks?: NextTaskHooks);
 	/**
 	 * 在队尾添加异步任务
 	 */
@@ -508,7 +509,7 @@ declare class Observer {
 	asyncOldValues: Record<string, any>;
 	asyncKeypaths: Record<string, Record<string, boolean>>;
 	pending?: boolean;
-	constructor(data?: Data, context?: any);
+	constructor(data?: Data, context?: any, nextTask?: NextTask);
 	/**
 	 * 获取数据
 	 *
@@ -536,7 +537,7 @@ declare class Observer {
 	/**
 	 * 异步触发的 diff
 	 */
-	diffAsync(): void;
+	private diffAsync;
 	/**
 	 * 添加计算属性
 	 *
@@ -662,11 +663,14 @@ export default class Yox implements YoxInterface {
 	$context?: YoxInterface;
 	$children?: YoxInterface[];
 	$vnode: VNode | undefined;
-	$directives?: Record<string, DirectiveHooks>;
-	$components?: Record<string, ComponentOptions>;
-	$transitions?: Record<string, TransitionHooks>;
-	$partials?: Record<string, Function>;
-	$filters?: Record<string, Filter>;
+	private $nextTask;
+	private $directives?;
+	private $components?;
+	private $transitions?;
+	private $partials?;
+	private $filters?;
+	private $dependencies?;
+	private $isDirty?;
 	/**
 	 * core 版本
 	 */

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.204
+ * yox.js v1.0.0-alpha.205
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -30,11 +30,11 @@
   var DIRECTIVE_TRANSITION = 'transition';
   var DIRECTIVE_CUSTOM = 'o';
   var MODIFER_NATIVE = 'native';
+  var MAGIC_VAR_SCOPE = '$scope';
   var MAGIC_VAR_KEYPATH = '$keypath';
   var MAGIC_VAR_LENGTH = '$length';
   var MAGIC_VAR_EVENT = '$event';
   var MAGIC_VAR_DATA = '$data';
-  var MAGIC_VAR_ITEM = '$item';
   var MODEL_PROP_DEFAULT = 'value';
   var HOOK_BEFORE_CREATE = 'beforeCreate';
   var HOOK_AFTER_CREATE = 'afterCreate';
@@ -782,7 +782,7 @@
    * @param callback 返回 false 可中断遍历
    */
   function each$1(keypath, callback) {
-      var tokens = getKeypathTokens(keypath);
+      var tokens = string(keypath) ? getKeypathTokens(keypath) : keypath;
       for (var i = 0, lastIndex = tokens.length - 1; i <= lastIndex; i++) {
           if (callback(tokens[i], i, lastIndex) === FALSE) {
               break;
@@ -925,10 +925,11 @@
    * @return
    */
   function get(object, keypath) {
+      var result = object;
       each$1(keypath, function (key, index, lastIndex) {
-          if (object != NULL) {
+          if (result != NULL) {
               // 先直接取值
-              var value = object[key], 
+              var value = result[key], 
               // 紧接着判断值是否存在
               // 下面会处理计算属性的值，不能在它后面设置 hasValue
               hasValue = value !== UNDEFINED;
@@ -939,22 +940,22 @@
               if (index === lastIndex) {
                   if (hasValue) {
                       holder.value = value;
-                      object = holder;
+                      result = holder;
                   }
                   else {
-                      object = UNDEFINED;
+                      result = UNDEFINED;
                   }
               }
               else {
-                  object = value;
+                  result = value;
               }
           }
           else {
-              object = UNDEFINED;
+              result = UNDEFINED;
               return FALSE;
           }
       });
-      return object;
+      return result;
   }
   /**
    * 为对象设置一个键值对
@@ -965,15 +966,16 @@
    * @param autofill 是否自动填充不存在的对象，默认自动填充
    */
   function set(object, keypath, value, autofill) {
+      var next = object;
       each$1(keypath, function (key, index, lastIndex) {
           if (index === lastIndex) {
-              object[key] = value;
+              next[key] = value;
           }
-          else if (object[key]) {
-              object = object[key];
+          else if (next[key]) {
+              next = next[key];
           }
           else if (autofill) {
-              object = object[key] = {};
+              next = next[key] = {};
           }
           else {
               return FALSE;
@@ -1368,8 +1370,10 @@
   var nextTick$1 = nextTick;
 
   var shared;
-  var NextTask = function() {
-      this.tasks = [];
+  var NextTask = function(hooks) {
+      var instance = this;
+      instance.tasks = [];
+      instance.hooks = hooks || EMPTY_OBJECT;
   };
   /**
    * 全局单例
@@ -1419,13 +1423,21 @@
    * 立即执行异步任务，并清空队列
    */
   NextTask.prototype.run = function () {
-      var ref = this;
-          var tasks = ref.tasks;
-      if (tasks.length) {
-          this.tasks = [];
-          each(tasks, function (task) {
-              execute(task.fn, task.ctx);
-          });
+      var instance = this;
+          var tasks = instance.tasks;
+          var hooks = instance.hooks;
+          var length = tasks.length;
+      if (length) {
+          instance.tasks = [];
+          if (hooks.beforeTask) {
+              hooks.beforeTask();
+          }
+          for (var i = 0; i < length; i++) {
+              execute(tasks[i].fn, tasks[i].ctx);
+          }
+          if (hooks.afterTask) {
+              hooks.afterTask();
+          }
       }
   };
 
@@ -2047,9 +2059,9 @@
               // 执行到这时，组件还没有挂载到 DOM 树
               // 如果此时直接触发 enter，外部还需要做多余的工作，比如 setTimeout
               // 索性这里直接等挂载到 DOM 数之后再触发
-              // 注意：YoxInterface 没有声明 $observer，因为不想让外部访问，
+              // 注意：YoxInterface 没有声明 $nextTask，因为不想让外部访问，
               // 但是这里要用一次，所以加了 as any
-              context.$observer.nextTask.prepend(enter);
+              context.$nextTask.prepend(enter);
           }
       }
   }
@@ -2577,14 +2589,14 @@
   // 常见的自闭合标签
   selfClosingTagNames = split2Map('area,base,embed,track,source,param,input,col,img,br,hr'), 
   // 常见的 svg 标签
-  svgTagNames = split2Map('svg,g,defs,desc,metadata,symbol,use,image,path,rect,circle,line,ellipse,polyline,polygon,text,tspan,tref,textpath,marker,pattern,clippath,mask,filter,cursor,view,animate,font,font-face,glyph,missing-glyph,foreignObject'), 
+  svgTagNames = split2Map('svg,g,defs,desc,metadata,symbol,use,image,path,rect,circle,line,ellipse,polyline,polygon,text,tspan,tref,textpath,marker,pattern,clippath,mask,filter,cursor,view,animate,font,font-face,glyph,missing-glyph,animateColor,animateMotion,animateTransform,textPath,foreignObject'), 
   // 常见的字符串类型的属性
   // 注意：autocomplete,autocapitalize 不是布尔类型
-  stringPropertyNames = split2Map('id,class,name,value,for,accesskey,title,style,src,type,href,target,alt,placeholder,preload,poster,wrap,accept,pattern,dir,autocomplete,autocapitalize'), 
-  // 常见的数字类型的属性
-  numberPropertyNames = split2Map('min,minlength,max,maxlength,step,width,height,size,rows,cols,tabindex'), 
+  stringPropertyNames = split2Map('id,class,name,value,for,accesskey,title,style,src,type,href,target,alt,placeholder,preload,poster,wrap,accept,pattern,dir,autocomplete,autocapitalize,valign'), 
+  // 常见的数字类型的属性（width,height,cellpadding,cellspacing 支持百分比，因此不计入数字类型）
+  numberPropertyNames = split2Map('min,minlength,max,maxlength,step,size,rows,cols,tabindex,colspan,rowspan,frameborder'), 
   // 常见的布尔类型的属性
-  booleanPropertyNames = split2Map('disabled,checked,required,multiple,readonly,autofocus,autoplay,controls,loop,muted,novalidate,draggable,hidden,spellcheck'), 
+  booleanPropertyNames = split2Map('disabled,checked,required,multiple,readonly,autofocus,autoplay,controls,loop,muted,novalidate,draggable,contenteditable,hidden,spellcheck'), 
   // 某些属性 attribute name 和 property name 不同
   attr2Prop = {};
   // 列举几个常见的
@@ -2597,6 +2609,12 @@
   attr2Prop['tabindex'] = 'tabIndex';
   attr2Prop['minlength'] = 'minLength';
   attr2Prop['maxlength'] = 'maxLength';
+  attr2Prop['cellpadding'] = 'cellPadding';
+  attr2Prop['cellspacing'] = 'cellSpacing';
+  attr2Prop['colspan'] = 'colSpan';
+  attr2Prop['rowspan'] = 'rowSpan';
+  attr2Prop['valign'] = 'vAlign';
+  attr2Prop['frameborder'] = 'frameBorder';
   function isSelfClosing(tagName) {
       return selfClosingTagNames.get(tagName) !== UNDEFINED;
   }
@@ -4182,7 +4200,7 @@
           }
           else if (lastEachBranch) {
               lastEachBranch.next = node;
-              ifStack[eachStack.length - 1] = node;
+              eachStack[eachStack.length - 1] = node;
               popStack(lastEachBranch.type);
           }
           if (node.isLeaf) {
@@ -4643,8 +4661,6 @@
   }
 
   var QUOTE_DOUBLE = '"', QUOTE_SINGLE = "'", COMMA = ',', RETURN = 'return ';
-  var JOIN_EMPTY = repeat(QUOTE_SINGLE, 2);
-  var JOIN_DOT = QUOTE_SINGLE + "." + QUOTE_SINGLE;
   // 下面这些值需要根据外部配置才能确定
   var isUglify = UNDEFINED, isMinify = UNDEFINED, UNDEFINED$1 = EMPTY_STRING, NULL$1 = EMPTY_STRING, TRUE$1 = EMPTY_STRING, FALSE$1 = EMPTY_STRING, 
   // 空格
@@ -4652,7 +4668,7 @@
   // 缩进
   INDENT = EMPTY_STRING, 
   // 换行
-  BREAK_LINE = EMPTY_STRING, GRAW_UNDEFINED, GRAW_NULL, GRAW_TRUE, GRAW_FALSE;
+  BREAK_LINE = EMPTY_STRING;
   var Raw = function(value) {
       this.value = value;
   };
@@ -4665,13 +4681,20 @@
   Primitive.prototype.toString = function () {
       var ref = this;
           var value = ref.value;
-      return string(value)
-          ? toStringLiteral(value)
-          : ("" + value);
+      return value === TRUE
+          ? TRUE$1
+          : value === FALSE
+              ? FALSE$1
+              : value === NULL
+                  ? NULL$1
+                  : value === UNDEFINED
+                      ? UNDEFINED$1
+                      : string(value)
+                          ? toStringLiteral(value)
+                          : ("" + value);
   };
-  var List = function(values, join) {
-      this.items = values || [];
-      this.join = join;
+  var List = function(items) {
+      this.items = items || [];
   };
   List.prototype.unshift = function (value) {
       unshift(this.items, value);
@@ -4682,7 +4705,6 @@
   List.prototype.toString = function (tabSize) {
       var ref = this;
           var items = ref.items;
-          var join$1 = ref.join;
           var length = items.length;
       if (!length) {
           return ("[" + SPACE + "]");
@@ -4693,24 +4715,17 @@
       var currentIndentSize = repeat(INDENT, tabSize), nextIndentSize = repeat(INDENT, tabSize + 1), result = items.map(function (item) {
           return item.toString(tabSize + 1);
       });
-      var str = "[" + BREAK_LINE + nextIndentSize + (join(result, COMMA + BREAK_LINE + nextIndentSize)) + BREAK_LINE + currentIndentSize + "]";
-      if (join$1) {
-          if (length > 1) {
-              str += ".join(" + join$1 + ")";
-          }
-          else {
-              str = result[0];
-          }
-      }
-      return str;
+      return ("[" + BREAK_LINE + nextIndentSize + (join(result, COMMA + BREAK_LINE + nextIndentSize)) + BREAK_LINE + currentIndentSize + "]");
   };
   var Map = function() {
       this.fields = {};
   };
   Map.prototype.set = function (name, value) {
-      if (value !== GRAW_UNDEFINED) {
-          this.fields[name] = value;
+      if (value instanceof Primitive
+          && value.value === UNDEFINED) {
+          return;
       }
+      this.fields[name] = value;
   };
   Map.prototype.has = function (key) {
       return has$2(this.fields, key);
@@ -4788,22 +4803,24 @@
       });
       return ("" + (RAW_FUNCTION) + SPACE + "(" + (result.join(("" + COMMA + SPACE))) + ")" + SPACE + "{" + BREAK_LINE + nextIndentSize + RETURN + (returnValue.toString(nextTabSize)) + BREAK_LINE + currentIndentSize + "}");
   };
+  var Operator = function(base, code) {
+      this.base = base;
+      this.code = code;
+  };
+  Operator.prototype.toString = function (tabSize) {
+      var ref = this;
+          var base = ref.base;
+          var code = ref.code;
+      return ((base.toString(tabSize)) + "." + (code.toString(tabSize)));
+  };
   function toRaw(value) {
       return new Raw(value);
   }
   function toPrimitive(value) {
-      return value === TRUE
-          ? GRAW_TRUE
-          : value === FALSE
-              ? GRAW_FALSE
-              : value === NULL
-                  ? GRAW_NULL
-                  : value === UNDEFINED
-                      ? GRAW_UNDEFINED
-                      : new Primitive(value);
+      return new Primitive(value);
   }
-  function toList(values, join) {
-      return new List(values, join);
+  function toList(items) {
+      return new List(items);
   }
   function toMap() {
       return new Map();
@@ -4822,6 +4839,9 @@
   }
   function toAnonymousFunction(returnValue, args) {
       return new AnonymousFunction(returnValue, args);
+  }
+  function toOperator(base, code) {
+      return new Operator(base, code);
   }
   /**
    * 目的是 保证调用参数顺序稳定，减少运行时判断
@@ -4871,10 +4891,6 @@
               TRUE$1 = '$true';
               FALSE$1 = '$false';
           }
-          GRAW_UNDEFINED = new Raw(UNDEFINED$1);
-          GRAW_NULL = new Raw(NULL$1);
-          GRAW_TRUE = new Raw(TRUE$1);
-          GRAW_FALSE = new Raw(FALSE$1);
       }
       if (isMinify !== PUBLIC_CONFIG.minifyCompiled) {
           isMinify = PUBLIC_CONFIG.minifyCompiled;
@@ -4888,10 +4904,25 @@
           }
       }
   }
-  function generate(code, args) {
-      var currentTabSize = 0, nextTabSize = currentTabSize + 1, currentIndentSize = repeat(INDENT, currentTabSize), nextIndentSize = repeat(INDENT, nextTabSize);
+  function parse(keypath) {
+      return keypath.split(RAW_DOT)
+          .filter(function (item) {
+          return item.length > 0;
+      })
+          .map(toPrimitive);
+  }
+  function generate(code, vars, args) {
+      var currentTabSize = 0, nextTabSize = currentTabSize + 1, currentIndentSize = repeat(INDENT, currentTabSize), nextIndentSize = repeat(INDENT, nextTabSize), localVarMap = {}, localVarList = [], addLocalVar = function (value, key) {
+          push(localVarList, ("" + key + SPACE + "=" + SPACE + (value.toString(nextTabSize))));
+      };
+      localVarMap[UNDEFINED$1] = toRaw('void 0');
+      localVarMap[NULL$1] = toRaw('null');
+      localVarMap[TRUE$1] = toRaw('!0');
+      localVarMap[FALSE$1] = toRaw('!1');
+      each$2(localVarMap, addLocalVar);
+      each$2(vars, addLocalVar);
       return "" + currentIndentSize + (RAW_FUNCTION) + SPACE + "(" + (args.join(("" + COMMA + SPACE))) + ")" + SPACE + "{"
-          + "" + BREAK_LINE + nextIndentSize + "var " + UNDEFINED$1 + SPACE + "=" + SPACE + "void 0," + SPACE + NULL$1 + SPACE + "=" + SPACE + "null," + SPACE + TRUE$1 + SPACE + "=" + SPACE + "!0," + SPACE + FALSE$1 + SPACE + "=" + SPACE + "!1;"
+          + "" + BREAK_LINE + nextIndentSize + "var " + (localVarList.join(("," + SPACE))) + ";"
           + "" + BREAK_LINE + nextIndentSize + RETURN + (code.toString(nextTabSize))
           + "" + BREAK_LINE + currentIndentSize + "}";
   }
@@ -4913,36 +4944,14 @@
       }
       return 0;
   }
-  function generate$1(node, transformIdentifier, renderIdentifier, renderMemberLiteral, renderCall, holder, stack, parentNode) {
-      var value, isSpecialNode = FALSE, generateNode = function (node, parentNode) {
-          return generate$1(node, transformIdentifier, renderIdentifier, renderMemberLiteral, renderCall, FALSE, // 如果是内部临时值，不需要 holder
+  function generate$1(node, transformIdentifier, generateIdentifier, generateValue, generateCall, holder, stack, parentNode) {
+      var value, hasHolder = FALSE, generateNode = function (node, parentNode) {
+          return generate$1(node, transformIdentifier, generateIdentifier, generateValue, generateCall, FALSE, // 如果是内部临时值，不需要 holder
           stack, parentNode);
       }, generateNodes = function (nodes, parentNode) {
-          return toList(nodes.map(function (node) {
+          return nodes.map(function (node) {
               return generateNode(node, parentNode);
-          }));
-      }, generateKeypathParams = function (keypath, keypathNode) {
-          var params = toMap();
-          params.set('name', keypath);
-          if (parentNode && parentNode.type === CALL) {
-              params.set('call', toPrimitive(TRUE));
-          }
-          if (keypathNode.root === TRUE) {
-              params.set('root', toPrimitive(TRUE));
-          }
-          if (keypathNode.lookup === TRUE) {
-              params.set('lookup', toPrimitive(TRUE));
-          }
-          if (keypathNode.offset > 0) {
-              params.set('offset', toPrimitive(keypathNode.offset));
-          }
-          if (holder) {
-              params.set('holder', toPrimitive(TRUE));
-          }
-          if (stack) {
-              params.set('stack', toRaw(stack));
-          }
-          return params;
+          });
       };
       switch (node.type) {
           case LITERAL:
@@ -4969,7 +4978,7 @@
               break;
           case ARRAY:
               var arrayNode = node;
-              value = generateNodes(arrayNode.nodes);
+              value = toList(generateNodes(arrayNode.nodes, parentNode));
               break;
           case OBJECT:
               var objectNode = node, newObject = toMap();
@@ -4980,88 +4989,50 @@
               value = newObject;
               break;
           case IDENTIFIER:
-              isSpecialNode = TRUE;
-              var identifierNode = node, identifierValue = transformIdentifier(identifierNode);
-              if (identifierValue) {
-                  value = identifierValue;
-              }
-              else {
-                  value = toCall(renderIdentifier, [
-                      generateKeypathParams(toPrimitive(identifierNode.name), identifierNode)
-                  ]);
-              }
+              hasHolder = TRUE;
+              var identifierNode = node;
+              value = transformIdentifier(identifierNode)
+                  || generateIdentifier(identifierNode, identifierNode.name ? parse(identifierNode.name) : UNDEFINED, holder, stack, parentNode);
               break;
           case MEMBER:
-              isSpecialNode = TRUE;
-              var memberNode = node, stringifyNodes = generateNodes(memberNode.nodes || []);
+              hasHolder = TRUE;
+              var memberNode = node;
               if (memberNode.lead.type === IDENTIFIER) {
                   // 只能是 a[b] 的形式，因为 a.b 已经在解析时转换成 Identifier 了
-                  var leadValue = transformIdentifier(memberNode.lead);
+                  var leadNode = memberNode.lead, leadValue = transformIdentifier(leadNode), memberNodes = generateNodes(memberNode.nodes || []);
                   if (leadValue) {
-                      stringifyNodes.join = JOIN_DOT;
-                      value = toCall(renderMemberLiteral, [
-                          leadValue,
-                          stringifyNodes,
-                          holder
-                              ? toPrimitive(TRUE)
-                              : toPrimitive(UNDEFINED)
-                      ]);
+                      value = generateValue(leadValue, memberNodes, holder);
                   }
                   else {
-                      stringifyNodes.join = JOIN_DOT;
-                      // 避免 this[a]，this 会被解析成空字符串，此时不应加入 stringifyNodes
-                      var leadName = memberNode.lead.name;
-                      if (leadName) {
-                          stringifyNodes.unshift(toPrimitive(leadName));
+                      if (leadNode.name) {
+                          // a.b.c[d] 这里要把 a.b.c 拆开
+                          each(parse(leadNode.name), function (node) {
+                              memberNodes.unshift(node);
+                          }, TRUE);
                       }
-                      value = toCall(renderIdentifier, [
-                          generateKeypathParams(stringifyNodes, memberNode)
-                      ]);
+                      value = generateIdentifier(memberNode, memberNodes, holder, stack, parentNode);
                   }
               }
               else if (memberNode.nodes) {
                   // "xx"[length]
                   // format()[a][b]
-                  stringifyNodes.join = JOIN_DOT;
-                  value = toCall(renderMemberLiteral, [
-                      generateNode(memberNode.lead),
-                      stringifyNodes,
-                      holder
-                          ? toPrimitive(TRUE)
-                          : toPrimitive(UNDEFINED)
-                  ]);
+                  value = generateValue(generateNode(memberNode.lead), generateNodes(memberNode.nodes || []), holder);
               }
               else {
                   // "xx".length
                   // format().a.b
-                  value = toCall(renderMemberLiteral, [
-                      generateNode(memberNode.lead),
-                      toPrimitive(memberNode.keypath),
-                      holder
-                          ? toPrimitive(TRUE)
-                          : toPrimitive(UNDEFINED)
-                  ]);
+                  value = generateValue(generateNode(memberNode.lead), parse(memberNode.keypath), holder);
               }
               break;
           default:
-              isSpecialNode = TRUE;
+              hasHolder = TRUE;
               var callNode = node;
-              value = toCall(renderCall, [
-                  generateNode(callNode.name, callNode),
-                  callNode.args.length
-                      ? generateNodes(callNode.args)
-                      : toPrimitive(UNDEFINED),
-                  holder
-                      ? toPrimitive(TRUE)
-                      : toPrimitive(UNDEFINED)
-              ]);
+              value = generateCall(generateNode(callNode.name, callNode), callNode.args.length
+                  ? generateNodes(callNode.args)
+                  : UNDEFINED, holder);
               break;
       }
-      if (!holder) {
-          return value;
-      }
-      // 最外层的值，且 holder 为 true
-      if (isSpecialNode) {
+      if (!holder || hasHolder) {
           return value;
       }
       var newObject = toMap();
@@ -5086,16 +5057,19 @@
   // 是否正在处理 attribute
   attributeStack = [], 
   // 是否正在处理特殊 each，包括 遍历 range 和 遍历数组字面量和对象字面量
-  eachSpecialStack = [], 
+  eachStack = [], 
   // 是否正在收集字符串类型的值
   stringStack = [], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {}, RAW_METHOD = 'method';
   // 下面这些值需要根据外部配置才能确定
-  var isUglify$1 = UNDEFINED, RENDER_ELEMENT_VNODE = EMPTY_STRING, RENDER_COMPONENT_VNODE = EMPTY_STRING, RENDER_NATIVE_ATTRIBUTE = EMPTY_STRING, RENDER_NATIVE_PROPERTY = EMPTY_STRING, RENDER_PROPERTY = EMPTY_STRING, RENDER_LAZY = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, GET_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, GET_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, GET_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, GET_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, GET_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_TEXT_VNODE = EMPTY_STRING, RENDER_COMMENT_VNODE = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_IMPORT = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, RENDER_EXPRESSION_IDENTIFIER = EMPTY_STRING, RENDER_EXPRESSION_MEMBER_LITERAL = EMPTY_STRING, RENDER_EXPRESSION_CALL = EMPTY_STRING, RENDER_MAGIC_VAR_KEYPATH = EMPTY_STRING, RENDER_MAGIC_VAR_LENGTH = EMPTY_STRING, RENDER_MAGIC_VAR_EVENT = EMPTY_STRING, RENDER_MAGIC_VAR_DATA = EMPTY_STRING, RENDER_MAGIC_VAR_ITEM = EMPTY_STRING, TO_STRING = EMPTY_STRING, ARG_STACK = EMPTY_STRING;
+  var isUglify$1 = UNDEFINED, 
+  // 下面 4 个变量用于分配局部变量名称
+  localVarId, localVarMap = {}, localVarCache = {}, VAR_LOCAL_PREFIX = EMPTY_STRING, RENDER_ELEMENT_VNODE = EMPTY_STRING, RENDER_COMPONENT_VNODE = EMPTY_STRING, RENDER_NATIVE_ATTRIBUTE = EMPTY_STRING, RENDER_NATIVE_PROPERTY = EMPTY_STRING, RENDER_PROPERTY = EMPTY_STRING, RENDER_LAZY = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, GET_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, GET_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, GET_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, GET_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, GET_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_TEXT_VNODE = EMPTY_STRING, RENDER_COMMENT_VNODE = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, DEFINE_PARTIAL = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, RENDER_EXPRESSION_IDENTIFIER = EMPTY_STRING, RENDER_EXPRESSION_VALUE = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, TO_STRING = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_MAGIC_VAR_SCOPE = EMPTY_STRING, ARG_MAGIC_VAR_KEYPATH = EMPTY_STRING, ARG_MAGIC_VAR_LENGTH = EMPTY_STRING, ARG_MAGIC_VAR_EVENT = EMPTY_STRING, ARG_MAGIC_VAR_DATA = EMPTY_STRING;
   function init$1() {
       if (isUglify$1 === PUBLIC_CONFIG.uglifyCompiled) {
           return;
       }
       if (PUBLIC_CONFIG.uglifyCompiled) {
+          VAR_LOCAL_PREFIX = '_v';
           RENDER_ELEMENT_VNODE = '_a';
           RENDER_COMPONENT_VNODE = '_b';
           RENDER_NATIVE_ATTRIBUTE = '_c';
@@ -5116,22 +5090,23 @@
           RENDER_TEXT_VNODE = '_r';
           RENDER_COMMENT_VNODE = '_s';
           RENDER_SLOT = '_t';
-          RENDER_PARTIAL = '_u';
-          RENDER_IMPORT = '_v';
+          DEFINE_PARTIAL = '_u';
+          RENDER_PARTIAL = '_v';
           RENDER_EACH = '_w';
           RENDER_RANGE = '_x';
           RENDER_EXPRESSION_IDENTIFIER = '_y';
-          RENDER_EXPRESSION_MEMBER_LITERAL = '_z';
-          RENDER_EXPRESSION_CALL = '_1';
-          RENDER_MAGIC_VAR_KEYPATH = '_2';
-          RENDER_MAGIC_VAR_LENGTH = '_3';
-          RENDER_MAGIC_VAR_EVENT = '_4';
-          RENDER_MAGIC_VAR_DATA = '_5';
-          RENDER_MAGIC_VAR_ITEM = '_6';
-          TO_STRING = '_7';
-          ARG_STACK = '_8';
+          RENDER_EXPRESSION_VALUE = '_z';
+          EXECUTE_FUNCTION = '_0';
+          TO_STRING = '_1';
+          ARG_STACK = '_2';
+          ARG_MAGIC_VAR_SCOPE = '_3';
+          ARG_MAGIC_VAR_KEYPATH = '_4';
+          ARG_MAGIC_VAR_LENGTH = '_5';
+          ARG_MAGIC_VAR_EVENT = '_6';
+          ARG_MAGIC_VAR_DATA = '_7';
       }
       else {
+          VAR_LOCAL_PREFIX = 'var';
           RENDER_ELEMENT_VNODE = 'renderElementVnode';
           RENDER_COMPONENT_VNODE = 'renderComponentVnode';
           RENDER_NATIVE_ATTRIBUTE = 'renderNativeAttribute';
@@ -5152,64 +5127,127 @@
           RENDER_TEXT_VNODE = 'renderTextVnode';
           RENDER_COMMENT_VNODE = 'renderCommentVnode';
           RENDER_SLOT = 'renderSlot';
+          DEFINE_PARTIAL = 'definePartial';
           RENDER_PARTIAL = 'renderPartial';
-          RENDER_IMPORT = 'renderImport';
           RENDER_EACH = 'renderEach';
           RENDER_RANGE = 'renderRange';
           RENDER_EXPRESSION_IDENTIFIER = 'renderExpressionIdentifier';
-          RENDER_EXPRESSION_MEMBER_LITERAL = 'renderExpressionMemberLiteral';
-          RENDER_EXPRESSION_CALL = 'renderExpressionCall';
-          RENDER_MAGIC_VAR_KEYPATH = MAGIC_VAR_KEYPATH;
-          RENDER_MAGIC_VAR_LENGTH = MAGIC_VAR_LENGTH;
-          RENDER_MAGIC_VAR_EVENT = MAGIC_VAR_EVENT;
-          RENDER_MAGIC_VAR_DATA = MAGIC_VAR_DATA;
-          RENDER_MAGIC_VAR_ITEM = MAGIC_VAR_ITEM;
+          RENDER_EXPRESSION_VALUE = 'renderExpressionValue';
+          EXECUTE_FUNCTION = 'executeFunction';
           TO_STRING = 'toString';
           ARG_STACK = 'stack';
+          ARG_MAGIC_VAR_SCOPE = MAGIC_VAR_SCOPE;
+          ARG_MAGIC_VAR_KEYPATH = MAGIC_VAR_KEYPATH;
+          ARG_MAGIC_VAR_LENGTH = MAGIC_VAR_LENGTH;
+          ARG_MAGIC_VAR_EVENT = MAGIC_VAR_EVENT;
+          ARG_MAGIC_VAR_DATA = MAGIC_VAR_DATA;
       }
       isUglify$1 = PUBLIC_CONFIG.uglifyCompiled;
   }
-  function transformIdentifier(node) {
+  function addLocalVar(value) {
+      var hash = value.toString();
+      if (localVarCache[hash]) {
+          return localVarCache[hash];
+      }
+      var key = VAR_LOCAL_PREFIX + (localVarId++);
+      localVarMap[key] = value;
+      localVarCache[hash] = key;
+      return key;
+  }
+  function transformExpressionIdentifier(node) {
       var name = node.name;
+      var root = node.root;
+      var lookup = node.lookup;
+      var offset = node.offset;
       // 魔法变量，直接转换
       if (has(magicVariables, name)) {
           switch (name) {
               case MAGIC_VAR_KEYPATH:
-                  return toRaw(RENDER_MAGIC_VAR_KEYPATH);
+                  return toRaw(ARG_MAGIC_VAR_KEYPATH);
               case MAGIC_VAR_LENGTH:
-                  return toRaw(RENDER_MAGIC_VAR_LENGTH);
+                  return toRaw(ARG_MAGIC_VAR_LENGTH);
               case MAGIC_VAR_EVENT:
-                  return toRaw(RENDER_MAGIC_VAR_EVENT);
+                  return toRaw(ARG_MAGIC_VAR_EVENT);
               case MAGIC_VAR_DATA:
-                  return toRaw(RENDER_MAGIC_VAR_DATA);
+                  return toRaw(ARG_MAGIC_VAR_DATA);
               default:
                   return toRaw(name);
           }
       }
       // this 仅在 each 中有意义
-      // 这里把 this 转成 $item，方便直接读取
+      // 这里把 this 转成 $scope，方便直接读取
       // 避免不必要的查找，提升性能
-      if (last(eachSpecialStack)
-          && node.root === FALSE
-          && node.lookup === FALSE
-          && node.offset === 0) {
+      if (last(eachStack)
+          && root === FALSE
+          && lookup === FALSE
+          && offset === 0) {
           return toRaw(name === EMPTY_STRING
-              ? RENDER_MAGIC_VAR_ITEM
-              : RENDER_MAGIC_VAR_ITEM
+              ? ARG_MAGIC_VAR_SCOPE
+              : ARG_MAGIC_VAR_SCOPE
                   + RAW_DOT
                   // 这里要把 list.0.a 转成 list[0].a
                   // . 是 Yox 特有的访问数组的语法，正常的 js 语法是 [index]
                   + name.replace(/\.(\d+)/g, '[$1]'));
       }
   }
+  function generateHolderIfNeeded(node, holder) {
+      return holder
+          ? node
+          : toOperator(node, toRaw('value'));
+  }
+  function generateExpressionIdentifier(node, nodes, holder, stack, parentNode) {
+      var getIndex;
+      if (node.root) {
+          getIndex = toRaw(addLocalVar(toAnonymousFunction(toPrimitive(0))));
+      }
+      else if (node.offset) {
+          getIndex = toRaw(addLocalVar(toAnonymousFunction(toOperator(toRaw(ARG_STACK), toRaw(("length - " + (1 + node.offset)))), [
+              toRaw(ARG_STACK)
+          ])));
+      }
+      else {
+          getIndex = toRaw(addLocalVar(toAnonymousFunction(toOperator(toRaw(ARG_STACK), toRaw("length - 1")), [
+              toRaw(ARG_STACK)
+          ])));
+      }
+      return generateHolderIfNeeded(toCall(RENDER_EXPRESSION_IDENTIFIER, [
+          getIndex,
+          nodes
+              ? toList(nodes)
+              : toPrimitive(UNDEFINED),
+          node.lookup
+              ? toPrimitive(TRUE)
+              : toPrimitive(UNDEFINED),
+          stack
+              ? toRaw(ARG_STACK)
+              : toPrimitive(UNDEFINED),
+          parentNode && parentNode.type === CALL
+              ? toPrimitive(TRUE)
+              : toPrimitive(UNDEFINED)
+      ]), holder);
+  }
+  function generateExpressionValue(value, keys, holder) {
+      return generateHolderIfNeeded(toCall(RENDER_EXPRESSION_VALUE, [
+          value,
+          toList(keys)
+      ]), holder);
+  }
+  function generateExpressionCall(fn, args, holder) {
+      return generateHolderIfNeeded(toCall(EXECUTE_FUNCTION, [
+          fn,
+          args
+              ? toList(args)
+              : toPrimitive(UNDEFINED)
+      ]), holder);
+  }
   function generateExpression(expr) {
-      return generate$1(expr, transformIdentifier, RENDER_EXPRESSION_IDENTIFIER, RENDER_EXPRESSION_MEMBER_LITERAL, RENDER_EXPRESSION_CALL);
+      return generate$1(expr, transformExpressionIdentifier, generateExpressionIdentifier, generateExpressionValue, generateExpressionCall);
   }
   function generateExpressionHolder(expr) {
-      return generate$1(expr, transformIdentifier, RENDER_EXPRESSION_IDENTIFIER, RENDER_EXPRESSION_MEMBER_LITERAL, RENDER_EXPRESSION_CALL, TRUE);
+      return generate$1(expr, transformExpressionIdentifier, generateExpressionIdentifier, generateExpressionValue, generateExpressionCall, TRUE);
   }
   function generateExpressionArg(expr) {
-      return generate$1(expr, transformIdentifier, RENDER_EXPRESSION_IDENTIFIER, RENDER_EXPRESSION_MEMBER_LITERAL, RENDER_EXPRESSION_CALL, FALSE, ARG_STACK);
+      return generate$1(expr, transformExpressionIdentifier, generateExpressionIdentifier, generateExpressionValue, generateExpressionCall, FALSE, TRUE);
   }
   function generateAttributeValue(value, expr, children) {
       if (isDef(value)) {
@@ -5246,7 +5284,9 @@
       }
       // 字符串拼接涉及表达式的优先级问题，改成 array.join 有利于一致性
       if (last(stringStack)) {
-          return toList(result, JOIN_EMPTY);
+          return toOperator(toList(result), toCall('join', [
+              toPrimitive(EMPTY_STRING)
+          ]));
       }
       return toList(result);
   }
@@ -5387,13 +5427,13 @@
           : toPrimitive(tag));
       // 先序列化 children，再序列化 attrs，原因需要举两个例子：
       // 例子1：
-      // <div on-click="output(this)"></div> 如果 this 序列化成 $item，如果外部修改了 this，因为模板没有计入此依赖，不会刷新，因此 item 是旧的
-      // 这个例子要求即使是动态执行的代码，也不能简单的直接序列化成 $item
+      // <div on-click="output(this)"></div> 如果 this 序列化成 $scope，如果外部修改了 this，因为模板没有计入此依赖，不会刷新，因此 item 是旧的
+      // 这个例子要求即使是动态执行的代码，也不能简单的直接序列化成 $scope
       // 例子2：
-      // <div on-click="output(this)">{{this}}</div>，如果第一个 this 转成 $item，第二个正常读取数据，这样肯定没问题
+      // <div on-click="output(this)">{{this}}</div>，如果第一个 this 转成 $scope，第二个正常读取数据，这样肯定没问题
       // 但问题是，你不知道有没有第二个 this，因此这里反过来，先序列化非动态部分，即 children，再序列化可能动态的部分，即 attrs
-      // 这样序列化动态部分的时候，就知道是否可以转成 $item
-      // 后来发现，即使这样实现也不行，因为模板里存在各种可能的 if 或三元运算，导致依赖的捕捉充满不确定，因此这里我们不再考虑把 this 转成 $item
+      // 这样序列化动态部分的时候，就知道是否可以转成 $scope
+      // 后来发现，即使这样实现也不行，因为模板里存在各种可能的 if 或三元运算，导致依赖的捕捉充满不确定，因此这里我们不再考虑把 this 转成 $scope
       push(vnodeStack, TRUE);
       push(componentStack, isComponent);
       if (children) {
@@ -5554,16 +5594,15 @@
       if (node.isSvg) {
           data.set('isSvg', toPrimitive(TRUE));
       }
-      if (isComponent) {
-          return toCall(RENDER_COMPONENT_VNODE, [
+      return isComponent
+          ? toCall(RENDER_COMPONENT_VNODE, [
               data,
               outputAttrs,
-              outputSlots ]);
-      }
-      return toCall(RENDER_ELEMENT_VNODE, [
-          data,
-          outputAttrs,
-          outputChildren ]);
+              outputSlots ])
+          : toCall(RENDER_ELEMENT_VNODE, [
+              data,
+              outputAttrs,
+              outputChildren ]);
   };
   nodeGenerator[ATTRIBUTE] = function (node) {
       var value = generateAttributeValue(node.value, node.expr, node.children);
@@ -5622,8 +5661,8 @@
               params.set('runtime', runtime);
               runtime.set('args', toAnonymousFunction(toList(callNode.args.map(generateExpressionArg)), [
                   toRaw(ARG_STACK),
-                  toRaw(RENDER_MAGIC_VAR_EVENT),
-                  toRaw(RENDER_MAGIC_VAR_DATA) ]));
+                  toRaw(ARG_MAGIC_VAR_EVENT),
+                  toRaw(ARG_MAGIC_VAR_DATA) ]));
           }
       }
       else {
@@ -5765,23 +5804,24 @@
       var to = node.to;
       var equal = node.equal;
       var next = node.next;
-      var isSpecial = to || from.type === ARRAY || from.type === OBJECT, args = [
-          toRaw(RENDER_MAGIC_VAR_KEYPATH),
-          toRaw(RENDER_MAGIC_VAR_LENGTH),
-          toRaw(RENDER_MAGIC_VAR_ITEM) ];
+      var isSpecial = to || from.type === ARRAY || from.type === OBJECT;
+      var args = [
+          toRaw(ARG_MAGIC_VAR_KEYPATH),
+          toRaw(ARG_MAGIC_VAR_LENGTH),
+          toRaw(ARG_MAGIC_VAR_SCOPE) ];
       if (index) {
           push(args, toRaw(index));
           push(magicVariables, index);
       }
       // 如果是特殊的 each，包括 遍历 range 和 遍历数组字面量和对象字面量
       // 在这种 each 中引用 this 无需追踪依赖，因此可直接认为 this 已用过，这样生成代码时，会直接引用局部变量，提高执行效率
-      push(eachSpecialStack, isSpecial);
+      push(eachStack, isSpecial);
       // compiler 保证了 children 一定有值
       var renderChildren = toAnonymousFunction(generateNodesToList(node.children), args);
       if (index) {
           pop(magicVariables);
       }
-      pop(eachSpecialStack);
+      pop(eachStack);
       // compiler 保证了 children 一定有值
       var renderElse = next
           ? toAnonymousFunction(generateNodesToList(next.children))
@@ -5802,22 +5842,27 @@
           renderElse ]);
   };
   nodeGenerator[PARTIAL] = function (node) {
-      return toCall(RENDER_PARTIAL, [
+      return toCall(DEFINE_PARTIAL, [
           toPrimitive(node.name),
           toAnonymousFunction(generateNodesToList(node.children), [
-              toRaw(RENDER_MAGIC_VAR_KEYPATH)
+              toRaw(ARG_MAGIC_VAR_KEYPATH)
           ])
       ]);
   };
   nodeGenerator[IMPORT] = function (node) {
-      return toCall(RENDER_IMPORT, [
-          toPrimitive(node.name)
+      return toCall(RENDER_PARTIAL, [
+          toPrimitive(node.name),
+          toRaw(ARG_MAGIC_VAR_KEYPATH)
       ]);
   };
   function generate$2(node) {
       init$1();
       init();
-      return generate(nodeGenerator[node.type](node), [
+      // 重新收集
+      localVarId = 0;
+      localVarMap = {};
+      localVarCache = {};
+      return generate(nodeGenerator[node.type](node), localVarMap, [
           RENDER_ELEMENT_VNODE,
           RENDER_COMPONENT_VNODE,
           RENDER_NATIVE_ATTRIBUTE,
@@ -5838,53 +5883,32 @@
           RENDER_TEXT_VNODE,
           RENDER_COMMENT_VNODE,
           RENDER_SLOT,
+          DEFINE_PARTIAL,
           RENDER_PARTIAL,
-          RENDER_IMPORT,
           RENDER_EACH,
           RENDER_RANGE,
           RENDER_EXPRESSION_IDENTIFIER,
-          RENDER_EXPRESSION_MEMBER_LITERAL,
-          RENDER_EXPRESSION_CALL,
-          RENDER_MAGIC_VAR_KEYPATH,
-          TO_STRING ]);
+          RENDER_EXPRESSION_VALUE,
+          EXECUTE_FUNCTION,
+          TO_STRING,
+          ARG_MAGIC_VAR_KEYPATH
+      ]);
   }
 
-  function render(context, observer, template, filters, partials, directives, transitions) {
-      var currentKeypath = EMPTY_STRING, keypathStack = [currentKeypath], localPartials = {}, valueCache = createPureObject(), findValue = function (stack, index, key, lookup, call, defaultKeypath) {
-          var baseKeypath = stack[index], keypath = join$1(baseKeypath, key), value = UNDEFINED;
-          if (valueCache.has(keypath)) {
-              value = valueCache.get(keypath);
+  function render(instance, template, scope, filters, partials, directives, transitions) {
+      var rootKeypath = EMPTY_STRING, contextStack = [
+          { keypath: rootKeypath, scope: scope, }
+      ], localPartials = {}, 
+      // 渲染模板的数据依赖
+      dependencies = {}, lookupValue = function (stack, index, key) {
+          var context = stack[index], keypath = join$1(context.keypath, key), result = get(context.scope, keypath);
+          if (result) {
+              result.keypath = keypath;
+              return result;
           }
-          else {
-              // 如果最后还是取不到值，用回最初的 keypath
-              if (defaultKeypath === UNDEFINED) {
-                  defaultKeypath = keypath;
-              }
-              value = observer.get(keypath, stack);
+          if (index > 0) {
+              return lookupValue(stack, index - 1, key);
           }
-          if (value === stack) {
-              if (lookup && index > 0) {
-                  return findValue(stack, index - 1, key, lookup, call, defaultKeypath);
-              }
-              // 到头了，如果是函数调用，则最后尝试过滤器
-              if (call) {
-                  var result = get(filters, keypath);
-                  if (result) {
-                      result.keypath = keypath;
-                      valueCache[keypath] = result.value;
-                      return result;
-                  }
-              }
-              holder.keypath = defaultKeypath;
-              holder.value = UNDEFINED;
-              valueCache[defaultKeypath] = UNDEFINED;
-          }
-          else {
-              holder.keypath = keypath;
-              holder.value = value;
-              valueCache[keypath] = value;
-          }
-          return holder;
       }, flattenArray = function (array$1, handler) {
           for (var i = 0, length = array$1.length; i < length; i++) {
               var item = array$1[i];
@@ -5930,7 +5954,7 @@
               vnodes.push(item);
           });
       }, renderElementVnode = function (data, attrs, childs) {
-          data.context = context;
+          data.context = instance;
           if (attrs) {
               normalizeAttributes(attrs, data);
           }
@@ -5941,7 +5965,7 @@
           }
           return data;
       }, renderComponentVnode = function (data, attrs, slots) {
-          data.context = context;
+          data.context = instance;
           if (attrs) {
               normalizeAttributes(attrs, data);
           }
@@ -6017,7 +6041,7 @@
                       : event);
                   event.ns = ns;
               }
-              context.fire(event, data);
+              instance.fire(event, data);
           };
       }, createEventMethodListener = function (isComponent, name, runtime) {
           return function (event, data) {
@@ -6036,7 +6060,7 @@
               else {
                   methodArgs = data ? [event, data] : event;
               }
-              var result = execute(context[name], context, methodArgs);
+              var result = execute(instance[name], instance, methodArgs);
               if (result === FALSE) {
                   event.prevent().stop();
               }
@@ -6050,7 +6074,7 @@
       }, getEventMethod = function (params) {
           var runtime = params.runtime;
           if (runtime) {
-              runtime.stack = keypathStack;
+              runtime.stack = contextStack;
           }
           return {
               key: params.key,
@@ -6090,7 +6114,7 @@
                       methodArgs = methodArgs[0];
                   }
               }
-              execute(context[name], context, methodArgs);
+              execute(instance[name], instance, methodArgs);
           };
       }, renderDirective = function (params) {
           return {
@@ -6103,7 +6127,7 @@
           var runtime = params.runtime;
           var hooks = directives[name];
           if (runtime) {
-              runtime.stack = keypathStack;
+              runtime.stack = contextStack;
           }
           return {
               ns: DIRECTIVE_CUSTOM,
@@ -6132,24 +6156,25 @@
           return {
               isText: TRUE,
               text: value,
-              context: context,
+              context: instance,
           };
       }, renderCommentVnode = function () {
           return {
               isComment: TRUE,
               text: EMPTY_STRING,
-              context: context,
+              context: instance,
           };
       }, 
       // <slot name="xx"/>
       renderSlot = function (name, render) {
-          var result = context.get(name);
+          dependencies[name] = TRUE;
+          var result = scope[name];
           if (result) {
               var vnodes = result.vnodes;
               var components = result.components;
               if (components) {
                   for (var i = 0, length = components.length; i < length; i++) {
-                      components[i].parent = context;
+                      components[i].parent = instance;
                   }
               }
               return vnodes;
@@ -6159,29 +6184,32 @@
       // {{#partial name}}
       //   xx
       // {{/partial}}
-      renderPartial = function (name, render) {
+      definePartial = function (name, render) {
           localPartials[name] = render;
       }, 
       // {{> name}}
-      renderImport = function (name) {
+      renderPartial = function (name, keypath) {
           if (localPartials[name]) {
-              return localPartials[name](currentKeypath);
+              return localPartials[name](keypath);
           }
           var partial = partials[name];
-          return renderTemplate(partial);
+          return renderTemplate(partial, keypath);
       }, renderEach = function (holder, renderChildren, renderElse) {
           var keypath = holder.keypath;
           var value = holder.value;
-          var result = [], needKeypath = !!keypath, oldKeypathStack = keypathStack, oldCurrentKeypath = currentKeypath;
+          var result = [], needKeypath = !!keypath, oldScopeStack = contextStack, currentKeypath = last(contextStack).keypath;
           if (array(value)) {
               for (var i = 0, length = value.length; i < length; i++) {
                   if (needKeypath) {
                       currentKeypath = keypath + RAW_DOT + i;
                       // slice + push 比直接 concat 快多了
-                      keypathStack = oldKeypathStack.slice();
-                      keypathStack.push(currentKeypath);
+                      contextStack = oldScopeStack.slice();
+                      contextStack.push({
+                          keypath: currentKeypath,
+                          scope: value[i],
+                      });
                   }
-                  result.push(renderChildren(currentKeypath || EMPTY_STRING, length, value[i], i));
+                  result.push(renderChildren(currentKeypath, length, value[i], i));
               }
           }
           else if (object(value)) {
@@ -6192,22 +6220,24 @@
                       // 只能在使用上尽量避免 key 为空的用法
                       currentKeypath = keypath + RAW_DOT + key;
                       // slice + push 比直接 concat 快多了
-                      keypathStack = oldKeypathStack.slice();
-                      keypathStack.push(currentKeypath);
+                      contextStack = oldScopeStack.slice();
+                      contextStack.push({
+                          keypath: currentKeypath,
+                          scope: value[key],
+                      });
                   }
-                  result.push(renderChildren(currentKeypath || EMPTY_STRING, UNDEFINED, value[key], key));
+                  result.push(renderChildren(currentKeypath, UNDEFINED, value[key], key));
               }
           }
-          if (keypathStack !== oldKeypathStack) {
-              currentKeypath = oldCurrentKeypath;
-              keypathStack = oldKeypathStack;
+          if (contextStack !== oldScopeStack) {
+              contextStack = oldScopeStack;
           }
           if (renderElse && result.length === 0) {
               result = renderElse();
           }
           return result;
       }, renderRange = function (from, to, equal, renderChildren, renderElse) {
-          var count = 0, length = 0, result = [];
+          var count = 0, length = 0, result = [], currentKeypath = last(contextStack).keypath;
           if (from < to) {
               length = to - from;
               if (equal) {
@@ -6238,23 +6268,66 @@
               result = renderElse();
           }
           return result;
-      }, renderExpressionIdentifier = function (params) {
-          var stack = params.stack || keypathStack, index = stack.length - 1, result = findValue(stack, params.root ? 0 : (params.offset ? index - params.offset : index), params.name, params.lookup, params.call);
-          return params.holder ? result : result.value;
-      }, renderExpressionMemberLiteral = function (value, keypath, holder$1) {
-          var match = get(value, keypath);
+      }, renderExpressionIdentifier = function (getIndex, tokens, lookup, stack, call) {
+          var currentStack = stack || contextStack, index = getIndex(currentStack);
+          var ref = currentStack[index];
+          var keypath = ref.keypath;
+          var scope = ref.scope;
+          var name = tokens ? tokens.join(RAW_DOT) : EMPTY_STRING, currentKeypath = join$1(keypath, name);
+          var result;
+          if (tokens) {
+              result = get(scope, tokens);
+          }
+          else {
+              result = holder;
+              result.value = scope;
+          }
+          if (result) {
+              result.keypath = currentKeypath;
+          }
+          else {
+              if (lookup && index > 0) {
+                  result = lookupValue(currentStack, index - 1, name);
+              }
+              // 如果是函数调用，则最后尝试过滤器
+              if (!result && call) {
+                  result = get(filters, name);
+                  if (result) {
+                      // filter 不算数据
+                      result.keypath = UNDEFINED;
+                  }
+              }
+              if (!result) {
+                  result = holder;
+                  result.keypath = currentKeypath;
+                  result.value = UNDEFINED;
+              }
+          }
+          if (result.keypath !== UNDEFINED) {
+              dependencies[result.keypath] = TRUE;
+          }
+          return result;
+      }, renderExpressionValue = function (value, tokens) {
+          var result = get(value, tokens);
+          if (result) {
+              result.keypath = UNDEFINED;
+              return result;
+          }
+          holder.keypath =
+              holder.value = UNDEFINED;
+          return holder;
+      }, executeFunction = function (fn, args) {
           holder.keypath = UNDEFINED;
-          holder.value = match ? match.value : UNDEFINED;
-          return holder$1 ? holder : holder.value;
-      }, renderExpressionCall = function (fn, args, holder$1) {
-          holder.keypath = UNDEFINED;
-          holder.value = execute(fn, context, args);
-          return holder$1 ? holder : holder.value;
-      }, renderTemplate = function (render) {
-          return render(renderElementVnode, renderComponentVnode, renderNativeAttribute, renderNativeProperty, renderProperty, renderLazy, renderTransition, getTransition, renderModel, getModel, renderEventMethod, getEventMethod, renderEventName, getEventName, renderDirective, getDirective, renderSpread, renderTextVnode, renderCommentVnode, renderSlot, renderPartial, renderImport, renderEach, renderRange, renderExpressionIdentifier, renderExpressionMemberLiteral, renderExpressionCall, currentKeypath, toString);
+          holder.value = execute(fn, instance, args);
+          return holder;
+      }, renderTemplate = function (render, keypath) {
+          return render(renderElementVnode, renderComponentVnode, renderNativeAttribute, renderNativeProperty, renderProperty, renderLazy, renderTransition, getTransition, renderModel, getModel, renderEventMethod, getEventMethod, renderEventName, getEventName, renderDirective, getDirective, renderSpread, renderTextVnode, renderCommentVnode, renderSlot, definePartial, renderPartial, renderEach, renderRange, renderExpressionIdentifier, renderExpressionValue, executeFunction, toString, keypath);
       };
-      var result = renderTemplate(template);
-      return result;
+      var vnode = renderTemplate(template, rootKeypath);
+      return {
+          vnode: vnode,
+          dependencies: dependencies,
+      };
   }
 
   var guid = 0, 
@@ -6811,11 +6884,11 @@
    *
    * 对于外部调用 observer.watch('keypath', listener)，属于异步监听，它只关心是否变了，而不关心是否是立即触发的
    */
-  var Observer = function(data, context) {
+  var Observer = function(data, context, nextTask) {
       var instance = this;
       instance.data = data || {};
       instance.context = context || instance;
-      instance.nextTask = new NextTask();
+      instance.nextTask = nextTask || new NextTask();
       instance.syncEmitter = new Emitter();
       instance.asyncEmitter = new Emitter();
       instance.asyncOldValues = {};
@@ -7268,10 +7341,12 @@
       this.$emitter.off(type, listener);
       return this;
   };
-  var globalDirectives = {}, globalTransitions = {}, globalComponents = {}, globalPartials = {}, globalFilters = {}, TEMPLATE_COMPUTED = '$$', selectorPattern = /^[#.][-\w+]+$/, lifeCycle = new LifeCycle(), compileTemplate = createOneKeyCache(function (template) {
+  var globalDirectives = {}, globalTransitions = {}, globalComponents = {}, globalPartials = {}, globalFilters = {}, selectorPattern = /^[#.][-\w+]+$/, lifeCycle = new LifeCycle(), compileTemplate = createOneKeyCache(function (template) {
       var nodes = compile$1(template);
       return generate$2(nodes[0]);
-  });
+  }), markDirty = function () {
+      this.$isDirty = TRUE;
+  };
   var Yox = function(options) {
       var instance = this, $options = options || EMPTY_OBJECT;
       // 为了冒泡 HOOK_BEFORE_CREATE 事件，必须第一时间创建 emitter
@@ -7325,7 +7400,14 @@
       }
       // 先放 props
       // 当 data 是函数时，可以通过 this.get() 获取到外部数据
-      var observer = instance.$observer = new Observer(source, instance);
+      var observer = instance.$observer = new Observer(source, instance, instance.$nextTask = new NextTask({
+          afterTask: function() {
+              if (instance.$isDirty) {
+                  instance.$isDirty = UNDEFINED;
+                  instance.update(instance.render(), instance.$vnode);
+              }
+          }
+      }));
       if (computed) {
           each$2(computed, function (options, keypath) {
               observer.addComputed(keypath, options);
@@ -7403,30 +7485,10 @@
           setFlexibleOptions(instance, RAW_DIRECTIVE, directives);
           setFlexibleOptions(instance, RAW_PARTIAL, partials);
           setFlexibleOptions(instance, RAW_FILTER, filters);
-          // 当存在模板和计算属性时
-          // 因为这里把模板当做一种特殊的计算属性
-          // 因此模板这个计算属性的优先级应该最高
           if (template) {
-              // 拷贝一份，避免影响外部定义的 watchers
-              var newWatchers = watchers
-                  ? copy(watchers)
-                  : {};
-              newWatchers[TEMPLATE_COMPUTED] = {
-                  // 模板一旦变化，立即刷新
-                  sync: TRUE,
-                  watcher: function (vnode) {
-                      instance.update(vnode, instance.$vnode);
-                  }
-              };
-              // 当模板的依赖变了，则重新创建 virtual dom
-              observer.addComputed(TEMPLATE_COMPUTED, {
-                  // 当模板依赖变化时，异步通知模板更新
-                  sync: FALSE,
-                  get: function () {
-                      return instance.render();
-                  }
-              });
-              instance.watch(newWatchers);
+              if (watchers) {
+                  instance.watch(watchers);
+              }
               {
                   execute(instance.$options[HOOK_AFTER_CREATE], instance);
                   lifeCycle.fire(instance, HOOK_AFTER_CREATE);
@@ -7441,7 +7503,7 @@
               if (!vnode) {
                   vnode = create(domApi, placeholder, instance);
               }
-              instance.update(instance.get(TEMPLATE_COMPUTED), vnode);
+              instance.update(instance.render(), vnode);
               return;
           }
       }
@@ -7793,19 +7855,17 @@
           var instance = this;
               var $options = instance.$options;
               var $vnode = instance.$vnode;
-              var $observer = instance.$observer;
-              var computed = $observer.computed;
-          if ($vnode && computed) {
-              var template = computed[TEMPLATE_COMPUTED], oldValue = template.get();
+              var $nextTask = instance.$nextTask;
+          if ($vnode) {
               if (props) {
                   execute($options[HOOK_BEFORE_PROPS_UPDATE], instance, props);
                   instance.set(props);
               }
               // 当前可能正在进行下一轮更新
-              $observer.nextTask.run();
+              $nextTask.run();
               // 没有更新模板，强制刷新
-              if (!props && oldValue === template.get()) {
-                  instance.update(template.get(TRUE), $vnode);
+              if (!props && $vnode === instance.$vnode) {
+                  instance.update(instance.render(), $vnode);
               }
           }
       }
@@ -7816,7 +7876,27 @@
   Yox.prototype.render = function () {
       {
           var instance = this;
-          return render(instance, instance.$observer, instance.$template, merge(instance.$filters, globalFilters), merge(instance.$partials, globalPartials), merge(instance.$directives, globalDirectives), merge(instance.$transitions, globalTransitions));
+              var $observer = instance.$observer;
+              var $dependencies = instance.$dependencies;
+              var oldDependencies = $dependencies || EMPTY_OBJECT;
+              var ref = render(instance, instance.$template, merge($observer.data, $observer.computed), merge(instance.$filters, globalFilters), merge(instance.$partials, globalPartials), merge(instance.$directives, globalDirectives), merge(instance.$transitions, globalTransitions));
+              var vnode = ref.vnode;
+              var dependencies = ref.dependencies;
+          for (var key in dependencies) {
+              if (!oldDependencies[key]) {
+                  $observer.watch(key, markDirty);
+              }
+          }
+          if ($dependencies) {
+              for (var key$1 in $dependencies) {
+                  if (!dependencies[key$1]) {
+                      $observer.unwatch(key$1, markDirty);
+                  }
+              }
+          }
+          instance.$dependencies = dependencies;
+          console.log(instance, dependencies);
+          return vnode;
       }
   };
   /**
@@ -7897,7 +7977,7 @@
    * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
    */
   Yox.prototype.nextTick = function (task) {
-      this.$observer.nextTask.append(task, this);
+      this.$nextTask.append(task, this);
   };
   /**
    * 取反 keypath 对应的数据
@@ -7989,7 +8069,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.204";
+  Yox.version = "1.0.0-alpha.205";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

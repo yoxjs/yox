@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.204
+ * yox.js v1.0.0-alpha.205
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -696,7 +696,7 @@
    * @param callback 返回 false 可中断遍历
    */
   function each$1(keypath, callback) {
-      var tokens = getKeypathTokens(keypath);
+      var tokens = string(keypath) ? getKeypathTokens(keypath) : keypath;
       for (var i = 0, lastIndex = tokens.length - 1; i <= lastIndex; i++) {
           if (callback(tokens[i], i, lastIndex) === FALSE) {
               break;
@@ -839,10 +839,11 @@
    * @return
    */
   function get(object, keypath) {
+      var result = object;
       each$1(keypath, function (key, index, lastIndex) {
-          if (object != NULL) {
+          if (result != NULL) {
               // 先直接取值
-              var value = object[key], 
+              var value = result[key], 
               // 紧接着判断值是否存在
               // 下面会处理计算属性的值，不能在它后面设置 hasValue
               hasValue = value !== UNDEFINED;
@@ -853,22 +854,22 @@
               if (index === lastIndex) {
                   if (hasValue) {
                       holder.value = value;
-                      object = holder;
+                      result = holder;
                   }
                   else {
-                      object = UNDEFINED;
+                      result = UNDEFINED;
                   }
               }
               else {
-                  object = value;
+                  result = value;
               }
           }
           else {
-              object = UNDEFINED;
+              result = UNDEFINED;
               return FALSE;
           }
       });
-      return object;
+      return result;
   }
   /**
    * 为对象设置一个键值对
@@ -879,15 +880,16 @@
    * @param autofill 是否自动填充不存在的对象，默认自动填充
    */
   function set(object, keypath, value, autofill) {
+      var next = object;
       each$1(keypath, function (key, index, lastIndex) {
           if (index === lastIndex) {
-              object[key] = value;
+              next[key] = value;
           }
-          else if (object[key]) {
-              object = object[key];
+          else if (next[key]) {
+              next = next[key];
           }
           else if (autofill) {
-              object = object[key] = {};
+              next = next[key] = {};
           }
           else {
               return FALSE;
@@ -1282,8 +1284,10 @@
   var nextTick$1 = nextTick;
 
   var shared;
-  var NextTask = function() {
-      this.tasks = [];
+  var NextTask = function(hooks) {
+      var instance = this;
+      instance.tasks = [];
+      instance.hooks = hooks || EMPTY_OBJECT;
   };
   /**
    * 全局单例
@@ -1333,13 +1337,21 @@
    * 立即执行异步任务，并清空队列
    */
   NextTask.prototype.run = function () {
-      var ref = this;
-          var tasks = ref.tasks;
-      if (tasks.length) {
-          this.tasks = [];
-          each(tasks, function (task) {
-              execute(task.fn, task.ctx);
-          });
+      var instance = this;
+          var tasks = instance.tasks;
+          var hooks = instance.hooks;
+          var length = tasks.length;
+      if (length) {
+          instance.tasks = [];
+          if (hooks.beforeTask) {
+              hooks.beforeTask();
+          }
+          for (var i = 0; i < length; i++) {
+              execute(tasks[i].fn, tasks[i].ctx);
+          }
+          if (hooks.afterTask) {
+              hooks.afterTask();
+          }
       }
   };
 
@@ -1354,14 +1366,14 @@
   var // 常见的自闭合标签
   selfClosingTagNames = split2Map('area,base,embed,track,source,param,input,col,img,br,hr'), 
   // 常见的 svg 标签
-  svgTagNames = split2Map('svg,g,defs,desc,metadata,symbol,use,image,path,rect,circle,line,ellipse,polyline,polygon,text,tspan,tref,textpath,marker,pattern,clippath,mask,filter,cursor,view,animate,font,font-face,glyph,missing-glyph,foreignObject'), 
+  svgTagNames = split2Map('svg,g,defs,desc,metadata,symbol,use,image,path,rect,circle,line,ellipse,polyline,polygon,text,tspan,tref,textpath,marker,pattern,clippath,mask,filter,cursor,view,animate,font,font-face,glyph,missing-glyph,animateColor,animateMotion,animateTransform,textPath,foreignObject'), 
   // 常见的字符串类型的属性
   // 注意：autocomplete,autocapitalize 不是布尔类型
-  stringPropertyNames = split2Map('id,class,name,value,for,accesskey,title,style,src,type,href,target,alt,placeholder,preload,poster,wrap,accept,pattern,dir,autocomplete,autocapitalize'), 
-  // 常见的数字类型的属性
-  numberPropertyNames = split2Map('min,minlength,max,maxlength,step,width,height,size,rows,cols,tabindex'), 
+  stringPropertyNames = split2Map('id,class,name,value,for,accesskey,title,style,src,type,href,target,alt,placeholder,preload,poster,wrap,accept,pattern,dir,autocomplete,autocapitalize,valign'), 
+  // 常见的数字类型的属性（width,height,cellpadding,cellspacing 支持百分比，因此不计入数字类型）
+  numberPropertyNames = split2Map('min,minlength,max,maxlength,step,size,rows,cols,tabindex,colspan,rowspan,frameborder'), 
   // 常见的布尔类型的属性
-  booleanPropertyNames = split2Map('disabled,checked,required,multiple,readonly,autofocus,autoplay,controls,loop,muted,novalidate,draggable,hidden,spellcheck');
+  booleanPropertyNames = split2Map('disabled,checked,required,multiple,readonly,autofocus,autoplay,controls,loop,muted,novalidate,draggable,contenteditable,hidden,spellcheck');
 
   function toNumber (target, defaultValue) {
       return numeric(target)
@@ -1370,9 +1382,6 @@
               ? defaultValue
               : 0;
   }
-
-  var QUOTE_SINGLE = "'";
-  var JOIN_EMPTY = repeat(QUOTE_SINGLE, 2);
 
   /**
    * 计算属性
@@ -1643,11 +1652,11 @@
    *
    * 对于外部调用 observer.watch('keypath', listener)，属于异步监听，它只关心是否变了，而不关心是否是立即触发的
    */
-  var Observer = function(data, context) {
+  var Observer = function(data, context, nextTask) {
       var instance = this;
       instance.data = data || {};
       instance.context = context || instance;
-      instance.nextTask = new NextTask();
+      instance.nextTask = nextTask || new NextTask();
       instance.syncEmitter = new Emitter();
       instance.asyncEmitter = new Emitter();
       instance.asyncOldValues = {};
@@ -2126,7 +2135,14 @@
       var source = props ? copy(props) : {};
       // 先放 props
       // 当 data 是函数时，可以通过 this.get() 获取到外部数据
-      var observer = instance.$observer = new Observer(source, instance);
+      var observer = instance.$observer = new Observer(source, instance, instance.$nextTask = new NextTask({
+          afterTask: function() {
+              if (instance.$isDirty) {
+                  instance.$isDirty = UNDEFINED;
+                  instance.update(instance.render(), instance.$vnode);
+              }
+          }
+      }));
       if (computed) {
           each$2(computed, function (options, keypath) {
               observer.addComputed(keypath, options);
@@ -2408,7 +2424,7 @@
    * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
    */
   Yox.prototype.nextTick = function (task) {
-      this.$observer.nextTask.append(task, this);
+      this.$nextTask.append(task, this);
   };
   /**
    * 取反 keypath 对应的数据
@@ -2500,7 +2516,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.204";
+  Yox.version = "1.0.0-alpha.205";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

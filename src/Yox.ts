@@ -113,17 +113,15 @@ class LifeCycle {
   }
 }
 
-const globalDirectives = {},
+const globalDirectives = { },
 
-globalTransitions = {},
+globalTransitions = { },
 
-globalComponents = {},
+globalComponents = { },
 
-globalPartials = {},
+globalPartials = { },
 
-globalFilters = {},
-
-TEMPLATE_COMPUTED = '$$',
+globalFilters = { },
 
 selectorPattern = /^[#.][-\w+]+$/,
 
@@ -139,7 +137,11 @@ compileTemplate = cache.createOneKeyCache(
     }
     return templateGenerator.generate(nodes[0])
   }
-)
+),
+
+markDirty = function () {
+  this.$isDirty = constant.TRUE
+}
 
 export default class Yox implements YoxInterface {
 
@@ -167,15 +169,21 @@ export default class Yox implements YoxInterface {
 
   $vnode: VNode | undefined
 
-  $directives?: Record<string, DirectiveHooks>
+  private $nextTask: NextTask
 
-  $components?: Record<string, ComponentOptions>
+  private $directives?: Record<string, DirectiveHooks>
 
-  $transitions?: Record<string, TransitionHooks>
+  private $components?: Record<string, ComponentOptions>
 
-  $partials?: Record<string, Function>
+  private $transitions?: Record<string, TransitionHooks>
 
-  $filters?: Record<string, Filter>
+  private $partials?: Record<string, Function>
+
+  private $filters?: Record<string, Filter>
+
+  private $dependencies?: Record<string, boolean>
+
+  private $isDirty?: boolean
 
   /**
    * core 版本
@@ -403,7 +411,21 @@ export default class Yox implements YoxInterface {
 
     // 先放 props
     // 当 data 是函数时，可以通过 this.get() 获取到外部数据
-    const observer = instance.$observer = new Observer(source, instance)
+    const observer = instance.$observer = new Observer(
+      source,
+      instance,
+      instance.$nextTask = new NextTask({
+        afterTask() {
+          if (instance.$isDirty) {
+            instance.$isDirty = constant.UNDEFINED
+            instance.update(
+              instance.render(),
+              instance.$vnode as VNode
+            )
+          }
+        }
+      })
+    )
 
     if (computed) {
       object.each(
@@ -539,37 +561,11 @@ export default class Yox implements YoxInterface {
       setFlexibleOptions(instance, constant.RAW_PARTIAL, partials)
       setFlexibleOptions(instance, constant.RAW_FILTER, filters)
 
-      // 当存在模板和计算属性时
-      // 因为这里把模板当做一种特殊的计算属性
-      // 因此模板这个计算属性的优先级应该最高
       if (template) {
 
-        // 拷贝一份，避免影响外部定义的 watchers
-        const newWatchers = watchers
-          ? object.copy(watchers)
-          : {}
-
-        newWatchers[TEMPLATE_COMPUTED] = {
-          // 模板一旦变化，立即刷新
-          sync: constant.TRUE,
-          watcher: function (vnode: VNode) {
-            instance.update(vnode, instance.$vnode as VNode)
-          }
+        if (watchers) {
+          instance.watch(watchers)
         }
-
-        // 当模板的依赖变了，则重新创建 virtual dom
-        observer.addComputed(
-          TEMPLATE_COMPUTED,
-          {
-            // 当模板依赖变化时，异步通知模板更新
-            sync: constant.FALSE,
-            get: function () {
-              return instance.render()
-            }
-          }
-        )
-
-        instance.watch(newWatchers)
 
         if (process.env.NODE_ENV !== 'pure') {
           execute(instance.$options[HOOK_AFTER_CREATE], instance)
@@ -604,7 +600,7 @@ export default class Yox implements YoxInterface {
         }
 
         instance.update(
-          instance.get(TEMPLATE_COMPUTED),
+          instance.render(),
           vnode
         )
 
@@ -999,15 +995,9 @@ export default class Yox implements YoxInterface {
 
       const instance = this,
 
-      { $options, $vnode, $observer } = instance,
+      { $options, $vnode, $nextTask } = instance
 
-      { computed } = $observer
-
-      if ($vnode && computed) {
-
-        const template = computed[TEMPLATE_COMPUTED],
-
-        oldValue = template.get()
+      if ($vnode) {
 
         if (props) {
           execute($options[HOOK_BEFORE_PROPS_UPDATE], instance, props)
@@ -1015,12 +1005,12 @@ export default class Yox implements YoxInterface {
         }
 
         // 当前可能正在进行下一轮更新
-        $observer.nextTask.run()
+        $nextTask.run()
 
         // 没有更新模板，强制刷新
-        if (!props && oldValue === template.get()) {
+        if (!props && $vnode === instance.$vnode) {
           instance.update(
-            template.get(constant.TRUE),
+            instance.render(),
             $vnode
           )
         }
@@ -1033,16 +1023,41 @@ export default class Yox implements YoxInterface {
    */
   render() {
     if (process.env.NODE_ENV !== 'pure') {
-      const instance = this
-      return templateRender.render(
+      const instance = this,
+
+      { $observer, $dependencies } = instance,
+
+      oldDependencies = $dependencies || constant.EMPTY_OBJECT,
+
+      { vnode, dependencies } = templateRender.render(
         instance,
-        instance.$observer,
         instance.$template as Function,
+        object.merge($observer.data, $observer.computed) as Record<string, any>,
         object.merge(instance.$filters, globalFilters) as Record<string, Function>,
         object.merge(instance.$partials, globalPartials) as Record<string, Function>,
         object.merge(instance.$directives, globalDirectives) as Record<string, DirectiveHooks>,
         object.merge(instance.$transitions, globalTransitions) as Record<string, TransitionHooks>
       )
+
+      for (let key in dependencies) {
+        if (!oldDependencies[key]) {
+          $observer.watch(key, markDirty)
+        }
+      }
+
+      if ($dependencies) {
+        for (let key in $dependencies) {
+          if (!dependencies[key]) {
+            $observer.unwatch(key, markDirty)
+          }
+        }
+      }
+
+      instance.$dependencies = dependencies
+
+      console.log(instance, dependencies)
+
+      return vnode
     }
   }
 
@@ -1167,7 +1182,7 @@ export default class Yox implements YoxInterface {
    * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
    */
   nextTick(task: ThisTask<this>): void {
-    this.$observer.nextTask.append(task, this)
+    this.$nextTask.append(task, this)
   }
 
   /**
