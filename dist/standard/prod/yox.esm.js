@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.205
+ * yox.js v1.0.0-alpha.206
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -7748,7 +7748,6 @@ class Yox {
                 }
             }
             instance.$dependencies = dependencies;
-            console.log(instance, dependencies);
             return vnode;
         }
     }
@@ -7916,7 +7915,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.205";
+Yox.version = "1.0.0-alpha.206";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

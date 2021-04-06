@@ -1055,8 +1055,6 @@ export default class Yox implements YoxInterface {
 
       instance.$dependencies = dependencies
 
-      console.log(instance, dependencies)
-
       return vnode
     }
   }
