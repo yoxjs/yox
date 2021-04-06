@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.206
+ * yox.js v1.0.0-alpha.207
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -5834,6 +5834,7 @@ nodeGenerator[ELEMENT] = function (node) {
     // 这样序列化动态部分的时候，就知道是否可以转成 $scope
     // 后来发现，即使这样实现也不行，因为模板里存在各种可能的 if 或三元运算，导致依赖的捕捉充满不确定，因此这里我们不再考虑把 this 转成 $scope
     push(vnodeStack, TRUE);
+    push(attributeStack, FALSE);
     push(componentStack, isComponent);
     if (children) {
         if (isComponent) {
@@ -5855,11 +5856,9 @@ nodeGenerator[ELEMENT] = function (node) {
             }
         }
     }
-    pop(vnodeStack);
-    pop(componentStack);
     // 开始序列化 attrs，原则也是先序列化非动态部分，再序列化动态部分，即指令留在最后序列化
-    push(attributeStack, TRUE);
-    push(componentStack, isComponent);
+    vnodeStack[vnodeStack.length - 1] = FALSE;
+    attributeStack[attributeStack.length - 1] = TRUE;
     // 在 vnodeStack 为 false 时取值
     if (ref) {
         data.set('ref', generateAttributeValue(ref.value, ref.expr, ref.children));
@@ -5946,27 +5945,7 @@ nodeGenerator[ELEMENT] = function (node) {
             outputAttrs = generateNodesToList(otherList);
         }
     }
-    if (children) {
-        vnodeStack[vnodeStack.length - 1] = TRUE;
-        if (isComponent) {
-            outputSlots = generateComponentSlots(children);
-        }
-        else {
-            let isStatic = TRUE, newChildren = toList();
-            each(children, function (node) {
-                if (!node.isStatic) {
-                    isStatic = FALSE;
-                }
-                newChildren.push(nodeGenerator[node.type](node));
-            });
-            if (isStatic) {
-                data.set(CHILDREN, newChildren);
-            }
-            else {
-                outputChildren = newChildren;
-            }
-        }
-    }
+    pop(vnodeStack);
     pop(attributeStack);
     pop(componentStack);
     if (isComponent) {
@@ -8592,7 +8571,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.206";
+Yox.version = "1.0.0-alpha.207";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
