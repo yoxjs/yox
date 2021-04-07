@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.207
+ * yox.js v1.0.0-alpha.208
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -1845,16 +1845,10 @@ function remove$4(api, vnode) {
 }
 
 function update$6(api, vnode, oldVnode) {
-    let { component, props, slots, model } = vnode;
+    const { component, props, slots } = vnode;
     // 更新时才要 set
     // 因为初始化时，所有这些都经过构造函数完成了
     if (component && oldVnode) {
-        if (model) {
-            if (!props) {
-                props = {};
-            }
-            props[component.$model] = model.value;
-        }
         const result = merge(props, slots);
         if (result) {
             component.forceUpdate(result);
@@ -5004,11 +4998,13 @@ attributeStack = [],
 // 是否正在处理特殊 each，包括 遍历 range 和 遍历数组字面量和对象字面量
 eachStack = [], 
 // 是否正在收集字符串类型的值
-stringStack = [], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {}, RAW_METHOD = 'method';
+stringStack = [], 
+// 是否正在收集 slot
+slotStack = [], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {}, RAW_METHOD = 'method';
 // 下面这些值需要根据外部配置才能确定
 let isUglify$1 = UNDEFINED, 
 // 下面 4 个变量用于分配局部变量名称
-localVarId, localVarMap = {}, localVarCache = {}, VAR_LOCAL_PREFIX = EMPTY_STRING, RENDER_ELEMENT_VNODE = EMPTY_STRING, RENDER_COMPONENT_VNODE = EMPTY_STRING, RENDER_NATIVE_ATTRIBUTE = EMPTY_STRING, RENDER_NATIVE_PROPERTY = EMPTY_STRING, RENDER_PROPERTY = EMPTY_STRING, RENDER_LAZY = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, GET_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, GET_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, GET_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, GET_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, GET_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_TEXT_VNODE = EMPTY_STRING, RENDER_COMMENT_VNODE = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, DEFINE_PARTIAL = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, RENDER_EXPRESSION_IDENTIFIER = EMPTY_STRING, RENDER_EXPRESSION_VALUE = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, TO_STRING = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_MAGIC_VAR_SCOPE = EMPTY_STRING, ARG_MAGIC_VAR_KEYPATH = EMPTY_STRING, ARG_MAGIC_VAR_LENGTH = EMPTY_STRING, ARG_MAGIC_VAR_EVENT = EMPTY_STRING, ARG_MAGIC_VAR_DATA = EMPTY_STRING;
+localVarId = 0, localVarMap = {}, localVarCache = {}, VAR_LOCAL_PREFIX = EMPTY_STRING, RENDER_ELEMENT_VNODE = EMPTY_STRING, RENDER_COMPONENT_VNODE = EMPTY_STRING, RENDER_NATIVE_ATTRIBUTE = EMPTY_STRING, RENDER_NATIVE_PROPERTY = EMPTY_STRING, RENDER_PROPERTY = EMPTY_STRING, RENDER_LAZY = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, GET_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, GET_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, GET_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, GET_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, GET_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_TEXT_VNODE = EMPTY_STRING, RENDER_COMMENT_VNODE = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, DEFINE_PARTIAL = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, RENDER_EXPRESSION_IDENTIFIER = EMPTY_STRING, RENDER_EXPRESSION_VALUE = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, TO_STRING = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_COMPONENTS = EMPTY_STRING, ARG_MAGIC_VAR_SCOPE = EMPTY_STRING, ARG_MAGIC_VAR_KEYPATH = EMPTY_STRING, ARG_MAGIC_VAR_LENGTH = EMPTY_STRING, ARG_MAGIC_VAR_EVENT = EMPTY_STRING, ARG_MAGIC_VAR_DATA = EMPTY_STRING;
 function init$1() {
     if (isUglify$1 === PUBLIC_CONFIG.uglifyCompiled) {
         return;
@@ -5044,11 +5040,12 @@ function init$1() {
         EXECUTE_FUNCTION = '_0';
         TO_STRING = '_1';
         ARG_STACK = '_2';
-        ARG_MAGIC_VAR_SCOPE = '_3';
-        ARG_MAGIC_VAR_KEYPATH = '_4';
-        ARG_MAGIC_VAR_LENGTH = '_5';
-        ARG_MAGIC_VAR_EVENT = '_6';
-        ARG_MAGIC_VAR_DATA = '_7';
+        ARG_COMPONENTS = '_3';
+        ARG_MAGIC_VAR_SCOPE = '_4';
+        ARG_MAGIC_VAR_KEYPATH = '_5';
+        ARG_MAGIC_VAR_LENGTH = '_6';
+        ARG_MAGIC_VAR_EVENT = '_7';
+        ARG_MAGIC_VAR_DATA = '_8';
     }
     else {
         VAR_LOCAL_PREFIX = 'var';
@@ -5081,6 +5078,7 @@ function init$1() {
         EXECUTE_FUNCTION = 'executeFunction';
         TO_STRING = 'toString';
         ARG_STACK = 'stack';
+        ARG_COMPONENTS = 'components';
         ARG_MAGIC_VAR_SCOPE = MAGIC_VAR_SCOPE;
         ARG_MAGIC_VAR_KEYPATH = MAGIC_VAR_KEYPATH;
         ARG_MAGIC_VAR_LENGTH = MAGIC_VAR_LENGTH;
@@ -5255,7 +5253,13 @@ function generateComponentSlots(children) {
         addSlot(SLOT_NAME_DEFAULT, [child]);
     });
     each$2(slots, function (children, name) {
-        result.set(name, generateNodesToList(children));
+        push(slotStack, 0);
+        result.set(name, toAnonymousFunction(generateNodesToList(children), last(slotStack) > 0
+            ? [
+                toRaw(ARG_COMPONENTS)
+            ]
+            : UNDEFINED));
+        pop(slotStack);
     });
     return result.isNotEmpty()
         ? result
@@ -5333,7 +5337,7 @@ function sortAttrs(attrs, isComponent) {
     return result;
 }
 nodeGenerator[ELEMENT] = function (node) {
-    let { tag, dynamicTag, isComponent, ref, key, html, text, attrs, children } = node, data = toMap(), outputAttrs = toPrimitive(UNDEFINED), outputChildren = toPrimitive(UNDEFINED), outputSlots = toPrimitive(UNDEFINED);
+    let { tag, dynamicTag, isComponent, ref, key, html, text, attrs, children } = node, data = toMap(), outputAttrs = toPrimitive(UNDEFINED), outputChildren = toPrimitive(UNDEFINED), outputSlots = toPrimitive(UNDEFINED), outputComponents = toPrimitive(UNDEFINED);
     if (tag === RAW_SLOT) {
         // slot 不可能有 html、text 属性
         // 因此 slot 的子节点只存在于 children 中
@@ -5488,17 +5492,24 @@ nodeGenerator[ELEMENT] = function (node) {
     if (node.isSvg) {
         data.set('isSvg', toPrimitive(TRUE));
     }
-    return isComponent
-        ? toCall(RENDER_COMPONENT_VNODE, [
+    if (isComponent) {
+        const lastSlotIndex = slotStack.length - 1;
+        if (number(slotStack[lastSlotIndex])) {
+            slotStack[lastSlotIndex]++;
+            outputComponents = toRaw(ARG_COMPONENTS);
+        }
+        return toCall(RENDER_COMPONENT_VNODE, [
             data,
             outputAttrs,
             outputSlots,
-        ])
-        : toCall(RENDER_ELEMENT_VNODE, [
-            data,
-            outputAttrs,
-            outputChildren,
+            outputComponents
         ]);
+    }
+    return toCall(RENDER_ELEMENT_VNODE, [
+        data,
+        outputAttrs,
+        outputChildren,
+    ]);
 };
 nodeGenerator[ATTRIBUTE] = function (node) {
     const value = generateAttributeValue(node.value, node.expr, node.children);
@@ -5828,7 +5839,7 @@ function render(instance, template, scope, filters, partials, directives, transi
                 }
             }
         });
-    }, normalizeChildren = function (children, vnodes, components) {
+    }, normalizeChildren = function (children, vnodes) {
         flattenArray(children, function (item) {
             // item 只能是 vnode
             if (item.isText) {
@@ -5837,9 +5848,6 @@ function render(instance, template, scope, filters, partials, directives, transi
                     lastChild.text += item.text;
                     return;
                 }
-            }
-            else if (item.isComponent && components) {
-                components.push(item);
             }
             vnodes.push(item);
         });
@@ -5854,7 +5862,7 @@ function render(instance, template, scope, filters, partials, directives, transi
             data.children = children;
         }
         return data;
-    }, renderComponentVnode = function (data, attrs, slots) {
+    }, renderComponentVnode = function (data, attrs, slots, components) {
         data.context = instance;
         if (attrs) {
             normalizeAttributes(attrs, data);
@@ -5862,19 +5870,22 @@ function render(instance, template, scope, filters, partials, directives, transi
         if (slots) {
             const result = {};
             for (let name in slots) {
-                const vnodes = [], components = [];
-                normalizeChildren(slots[name], vnodes, components);
+                const vnodes = [], slotComponents = [];
+                normalizeChildren(slots[name](slotComponents), vnodes);
                 // 就算是 undefined 也必须有值，用于覆盖旧值
                 result[name] = vnodes.length
                     ? {
                         vnodes,
-                        components: components.length
-                            ? components
+                        components: slotComponents.length
+                            ? slotComponents
                             : UNDEFINED
                     }
                     : UNDEFINED;
             }
             data.slots = result;
+        }
+        if (components) {
+            components.push(data);
         }
         return data;
     }, renderNativeAttribute = function (name, value) {
@@ -7894,7 +7905,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.207";
+Yox.version = "1.0.0-alpha.208";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

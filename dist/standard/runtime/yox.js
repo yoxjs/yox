@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.207
+ * yox.js v1.0.0-alpha.208
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -1841,16 +1841,9 @@
       var component = vnode.component;
       var props = vnode.props;
       var slots = vnode.slots;
-      var model = vnode.model;
       // 更新时才要 set
       // 因为初始化时，所有这些都经过构造函数完成了
       if (component && oldVnode) {
-          if (model) {
-              if (!props) {
-                  props = {};
-              }
-              props[component.$model] = model.value;
-          }
           var result = merge(props, slots);
           if (result) {
               component.forceUpdate(result);
@@ -2408,7 +2401,7 @@
                   }
               }
           });
-      }, normalizeChildren = function (children, vnodes, components) {
+      }, normalizeChildren = function (children, vnodes) {
           flattenArray(children, function (item) {
               // item 只能是 vnode
               if (item.isText) {
@@ -2417,9 +2410,6 @@
                       lastChild.text += item.text;
                       return;
                   }
-              }
-              else if (item.isComponent && components) {
-                  components.push(item);
               }
               vnodes.push(item);
           });
@@ -2434,7 +2424,7 @@
               data.children = children;
           }
           return data;
-      }, renderComponentVnode = function (data, attrs, slots) {
+      }, renderComponentVnode = function (data, attrs, slots, components) {
           data.context = instance;
           if (attrs) {
               normalizeAttributes(attrs, data);
@@ -2442,19 +2432,22 @@
           if (slots) {
               var result = {};
               for (var name in slots) {
-                  var vnodes = [], components = [];
-                  normalizeChildren(slots[name], vnodes, components);
+                  var vnodes = [], slotComponents = [];
+                  normalizeChildren(slots[name](slotComponents), vnodes);
                   // 就算是 undefined 也必须有值，用于覆盖旧值
                   result[name] = vnodes.length
                       ? {
                           vnodes: vnodes,
-                          components: components.length
-                              ? components
+                          components: slotComponents.length
+                              ? slotComponents
                               : UNDEFINED
                       }
                       : UNDEFINED;
               }
               data.slots = result;
+          }
+          if (components) {
+              components.push(data);
           }
           return data;
       }, renderNativeAttribute = function (name, value) {
@@ -4528,7 +4521,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.207";
+  Yox.version = "1.0.0-alpha.208";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
