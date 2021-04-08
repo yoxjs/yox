@@ -564,7 +564,7 @@ export default class Yox implements YoxInterface {
       if (template) {
 
         if (watchers) {
-          instance.watch(watchers)
+          observer.watch(watchers)
         }
 
         if (process.env.NODE_ENV !== 'pure') {
@@ -616,7 +616,7 @@ export default class Yox implements YoxInterface {
     }
 
     if (watchers) {
-      instance.watch(watchers)
+      observer.watch(watchers)
     }
 
     if (process.env.NODE_ENV !== 'pure') {
@@ -1033,10 +1033,14 @@ export default class Yox implements YoxInterface {
         instance,
         instance.$template as Function,
         object.merge($observer.data, $observer.computed) as Record<string, any>,
-        object.merge(instance.$filters, globalFilters) as Record<string, Function>,
-        object.merge(instance.$partials, globalPartials) as Record<string, Function>,
-        object.merge(instance.$directives, globalDirectives) as Record<string, DirectiveHooks>,
-        object.merge(instance.$transitions, globalTransitions) as Record<string, TransitionHooks>
+        instance.$filters,
+        globalFilters,
+        instance.$partials,
+        globalPartials,
+        instance.$directives,
+        globalDirectives,
+        instance.$transitions,
+        globalTransitions
       )
 
       for (let key in dependencies) {

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.208
+ * yox.js v1.0.0-alpha.209
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -4653,8 +4653,14 @@ class List {
     }
 }
 class Map {
-    constructor() {
+    constructor(fields) {
         this.fields = {};
+        if (fields) {
+            const instance = this;
+            each$2(fields, function (value, key) {
+                instance.set(key, value);
+            });
+        }
     }
     set(name, value) {
         if (value instanceof Primitive
@@ -4761,8 +4767,8 @@ function toPrimitive(value) {
 function toList(items) {
     return new List(items);
 }
-function toMap() {
-    return new Map();
+function toMap(fields) {
+    return new Map(fields);
 }
 function toCall(name, args) {
     return new Call(name, args);
@@ -4974,9 +4980,9 @@ function generate$1(node, transformIdentifier, generateIdentifier, generateValue
     if (!holder || hasHolder) {
         return value;
     }
-    const newObject = toMap();
-    newObject.set('value', value);
-    return newObject;
+    return toMap({
+        value,
+    });
 }
 
 const NATIVE_ATTRIBUTES = 'nativeAttrs';
@@ -5000,74 +5006,54 @@ eachStack = [],
 // 是否正在收集字符串类型的值
 stringStack = [], 
 // 是否正在收集 slot
-slotStack = [], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {}, RAW_METHOD = 'method';
+slotStack = [], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {};
 // 下面这些值需要根据外部配置才能确定
 let isUglify$1 = UNDEFINED, 
 // 下面 4 个变量用于分配局部变量名称
-localVarId = 0, localVarMap = {}, localVarCache = {}, VAR_LOCAL_PREFIX = EMPTY_STRING, RENDER_ELEMENT_VNODE = EMPTY_STRING, RENDER_COMPONENT_VNODE = EMPTY_STRING, RENDER_NATIVE_ATTRIBUTE = EMPTY_STRING, RENDER_NATIVE_PROPERTY = EMPTY_STRING, RENDER_PROPERTY = EMPTY_STRING, RENDER_LAZY = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, GET_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, GET_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, GET_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, GET_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, GET_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_TEXT_VNODE = EMPTY_STRING, RENDER_COMMENT_VNODE = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, DEFINE_PARTIAL = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, RENDER_EXPRESSION_IDENTIFIER = EMPTY_STRING, RENDER_EXPRESSION_VALUE = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, TO_STRING = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_COMPONENTS = EMPTY_STRING, ARG_MAGIC_VAR_SCOPE = EMPTY_STRING, ARG_MAGIC_VAR_KEYPATH = EMPTY_STRING, ARG_MAGIC_VAR_LENGTH = EMPTY_STRING, ARG_MAGIC_VAR_EVENT = EMPTY_STRING, ARG_MAGIC_VAR_DATA = EMPTY_STRING;
+localVarId = 0, localVarMap = {}, localVarCache = {}, VAR_LOCAL_PREFIX = EMPTY_STRING, ARG_INSTANCE = EMPTY_STRING, RENDER_ELEMENT_VNODE = EMPTY_STRING, RENDER_COMPONENT_VNODE = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, DEFINE_PARTIAL = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, RENDER_EXPRESSION_IDENTIFIER = EMPTY_STRING, RENDER_EXPRESSION_VALUE = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, TO_STRING = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_COMPONENTS = EMPTY_STRING, ARG_MAGIC_VAR_SCOPE = EMPTY_STRING, ARG_MAGIC_VAR_KEYPATH = EMPTY_STRING, ARG_MAGIC_VAR_LENGTH = EMPTY_STRING, ARG_MAGIC_VAR_EVENT = EMPTY_STRING, ARG_MAGIC_VAR_DATA = EMPTY_STRING;
 function init$1() {
     if (isUglify$1 === PUBLIC_CONFIG.uglifyCompiled) {
         return;
     }
     if (PUBLIC_CONFIG.uglifyCompiled) {
-        VAR_LOCAL_PREFIX = '_v';
-        RENDER_ELEMENT_VNODE = '_a';
-        RENDER_COMPONENT_VNODE = '_b';
-        RENDER_NATIVE_ATTRIBUTE = '_c';
-        RENDER_NATIVE_PROPERTY = '_d';
-        RENDER_PROPERTY = '_e';
-        RENDER_LAZY = '_f';
-        RENDER_TRANSITION = '_g';
-        GET_TRANSITION = '_h';
-        RENDER_MODEL = '_i';
-        GET_MODEL = '_j';
-        RENDER_EVENT_METHOD = '_k';
-        GET_EVENT_METHOD = '_l';
-        RENDER_EVENT_NAME = '_m';
-        GET_EVENT_NAME = '_n';
-        RENDER_DIRECTIVE = '_o';
-        GET_DIRECTIVE = '_p';
-        RENDER_SPREAD = '_q';
-        RENDER_TEXT_VNODE = '_r';
-        RENDER_COMMENT_VNODE = '_s';
-        RENDER_SLOT = '_t';
-        DEFINE_PARTIAL = '_u';
-        RENDER_PARTIAL = '_v';
-        RENDER_EACH = '_w';
-        RENDER_RANGE = '_x';
-        RENDER_EXPRESSION_IDENTIFIER = '_y';
-        RENDER_EXPRESSION_VALUE = '_z';
-        EXECUTE_FUNCTION = '_0';
-        TO_STRING = '_1';
-        ARG_STACK = '_2';
-        ARG_COMPONENTS = '_3';
-        ARG_MAGIC_VAR_SCOPE = '_4';
-        ARG_MAGIC_VAR_KEYPATH = '_5';
-        ARG_MAGIC_VAR_LENGTH = '_6';
-        ARG_MAGIC_VAR_EVENT = '_7';
-        ARG_MAGIC_VAR_DATA = '_8';
+        VAR_LOCAL_PREFIX = '_';
+        ARG_INSTANCE = '_a';
+        RENDER_ELEMENT_VNODE = '_b';
+        RENDER_COMPONENT_VNODE = '_c';
+        RENDER_TRANSITION = '_d';
+        RENDER_MODEL = '_e';
+        RENDER_EVENT_METHOD = '_f';
+        RENDER_EVENT_NAME = '_g';
+        RENDER_DIRECTIVE = '_h';
+        RENDER_SPREAD = '_i';
+        RENDER_SLOT = '_j';
+        DEFINE_PARTIAL = '_k';
+        RENDER_PARTIAL = '_l';
+        RENDER_EACH = '_m';
+        RENDER_RANGE = '_n';
+        RENDER_EXPRESSION_IDENTIFIER = '_o';
+        RENDER_EXPRESSION_VALUE = '_p';
+        EXECUTE_FUNCTION = '_q';
+        TO_STRING = '_r';
+        ARG_STACK = '_s';
+        ARG_COMPONENTS = '_t';
+        ARG_MAGIC_VAR_SCOPE = '_u';
+        ARG_MAGIC_VAR_KEYPATH = '_v';
+        ARG_MAGIC_VAR_LENGTH = '_w';
+        ARG_MAGIC_VAR_EVENT = '_x';
+        ARG_MAGIC_VAR_DATA = '_y';
     }
     else {
         VAR_LOCAL_PREFIX = 'var';
+        ARG_INSTANCE = 'instance';
         RENDER_ELEMENT_VNODE = 'renderElementVnode';
         RENDER_COMPONENT_VNODE = 'renderComponentVnode';
-        RENDER_NATIVE_ATTRIBUTE = 'renderNativeAttribute';
-        RENDER_NATIVE_PROPERTY = 'renderNativeProperty';
-        RENDER_PROPERTY = 'renderProperty';
-        RENDER_LAZY = 'renderLazy';
         RENDER_TRANSITION = 'renderTransition';
-        GET_TRANSITION = 'getTransition';
         RENDER_MODEL = 'renderModel';
-        GET_MODEL = 'getModel';
         RENDER_EVENT_METHOD = 'renderEventMethod';
-        GET_EVENT_METHOD = 'getEventMethod';
         RENDER_EVENT_NAME = 'renderEventName';
-        GET_EVENT_NAME = 'getEventName';
         RENDER_DIRECTIVE = 'renderDirective';
-        GET_DIRECTIVE = 'getDirective';
         RENDER_SPREAD = 'renderSpread';
-        RENDER_TEXT_VNODE = 'renderTextVnode';
-        RENDER_COMMENT_VNODE = 'renderCommentVnode';
         RENDER_SLOT = 'renderSlot';
         DEFINE_PARTIAL = 'definePartial';
         RENDER_PARTIAL = 'renderPartial';
@@ -5229,6 +5215,20 @@ function generateNodesToStringIfNeeded(children) {
         ]));
     }
     return toList(result);
+}
+function generateCommentVnode() {
+    return toMap({
+        context: ARG_INSTANCE,
+        isComment: toPrimitive(TRUE),
+        text: toPrimitive(EMPTY_STRING),
+    });
+}
+function generateTextVnode(text) {
+    return toMap({
+        context: ARG_INSTANCE,
+        isText: toPrimitive(TRUE),
+        text,
+    });
 }
 function generateComponentSlots(children) {
     const result = toMap(), slots = {}, addSlot = function (name, nodes) {
@@ -5440,33 +5440,25 @@ nodeGenerator[ELEMENT] = function (node) {
             data.set(LAZY, lazy);
         }
         if (transition) {
-            data.set(TRANSITION, toCall(GET_TRANSITION, [
+            data.set(TRANSITION, toCall(RENDER_TRANSITION, [
                 getTransitionValue(transition)
             ]));
         }
         if (model) {
-            data.set(MODEL$1, toCall(GET_MODEL, [
-                getModelValue(model)
-            ]));
+            data.set(MODEL$1, getModelValue(model));
         }
         if (eventList.length) {
             const events = toMap();
             each(eventList, function (node) {
-                const params = getEventValue(node);
-                events.set(getDirectiveKey(node), toCall(params.has(RAW_METHOD)
-                    ? GET_EVENT_METHOD
-                    : GET_EVENT_NAME, [
-                    params
-                ]));
+                const info = getEventInfo(node);
+                events.set(getDirectiveKey(node), toCall(info.name, info.args));
             });
             data.set(EVENTS, events);
         }
         if (customDirectiveList.length) {
             const directives = toMap();
             each(customDirectiveList, function (node) {
-                directives.set(getDirectiveKey(node), toCall(GET_DIRECTIVE, [
-                    getDirectiveValue(node)
-                ]));
+                directives.set(getDirectiveKey(node), toCall(RENDER_DIRECTIVE, getDirectiveArgs(node)));
             });
             data.set(DIRECTIVES, directives);
         }
@@ -5512,20 +5504,20 @@ nodeGenerator[ELEMENT] = function (node) {
     ]);
 };
 nodeGenerator[ATTRIBUTE] = function (node) {
-    const value = generateAttributeValue(node.value, node.expr, node.children);
-    return toCall(last(componentStack)
-        ? RENDER_PROPERTY
-        : RENDER_NATIVE_ATTRIBUTE, [
-        toPrimitive(node.name),
-        value
-    ]);
+    return toMap({
+        key: toPrimitive(last(componentStack)
+            ? PROPERTIES
+            : NATIVE_ATTRIBUTES),
+        name: toPrimitive(node.name),
+        value: generateAttributeValue(node.value, node.expr, node.children),
+    });
 };
 nodeGenerator[PROPERTY] = function (node) {
-    const value = generateAttributeValue(node.value, node.expr, node.children);
-    return toCall(RENDER_NATIVE_PROPERTY, [
-        toPrimitive(node.name),
-        value
-    ]);
+    return toMap({
+        key: toPrimitive(NATIVE_PROPERTIES),
+        name: toPrimitive(node.name),
+        value: generateAttributeValue(node.value, node.expr, node.children),
+    });
 };
 function getLazyValue(node) {
     return toPrimitive(node.value);
@@ -5534,60 +5526,87 @@ function getTransitionValue(node) {
     return toPrimitive(node.value);
 }
 function getModelValue(node) {
-    return generateExpressionHolder(node.expr);
+    return toCall(RENDER_MODEL, [
+        generateExpressionHolder(node.expr)
+    ]);
 }
-function getEventValue(node) {
-    const params = toMap();
-    params.set('key', toPrimitive(getDirectiveKey(node)));
-    params.set('value', toPrimitive(node.value));
-    params.set('from', toPrimitive(node.name));
+function addEventBooleanInfo(args, node) {
+    // isNative
+    push(args, toPrimitive(UNDEFINED));
+    // isComponent
+    push(args, toPrimitive(UNDEFINED));
     if (last(componentStack)) {
         if (node.modifier === MODIFER_NATIVE) {
-            params.set('isNative', toPrimitive(TRUE));
+            // isNative
+            args[args.length - 2] = toPrimitive(TRUE);
         }
         else {
-            params.set('isComponent', toPrimitive(TRUE));
-            // 组件事件要用 component.on(type, options) 进行监听
-            // 为了保证 options.ns 是字符串类型，这里需确保 fromNs 是字符串
-            params.set('fromNs', toPrimitive(node.modifier || EMPTY_STRING));
+            // isComponent
+            args[args.length - 1] = toPrimitive(TRUE);
         }
     }
-    else {
-        params.set('fromNs', toPrimitive(node.modifier));
-    }
+}
+function getEventInfo(node) {
+    const args = [];
+    // key
+    push(args, toPrimitive(getDirectiveKey(node)));
+    // value
+    push(args, toPrimitive(node.value));
+    // from
+    push(args, toPrimitive(node.name));
+    // fromNs
+    push(args, 
+    // 组件事件要用 component.on(type, options) 进行监听
+    // 为了保证 options.ns 是字符串类型，这里需确保 fromNs 是字符串
+    toPrimitive(node.modifier || EMPTY_STRING));
     // 事件的 expr 必须是表达式
     const expr = node.expr, { raw } = expr;
     if (expr.type === CALL) {
         const callNode = expr;
         // compiler 保证了函数调用的 name 是标识符
-        params.set(RAW_METHOD, toPrimitive(callNode.name.name));
+        // method
+        push(args, toPrimitive(callNode.name.name));
         // 为了实现运行时动态收集参数，这里序列化成函数
         if (!falsy(callNode.args)) {
-            const runtime = toMap();
-            params.set('runtime', runtime);
-            runtime.set('args', toAnonymousFunction(toList(callNode.args.map(generateExpressionArg)), [
-                toRaw(ARG_STACK),
-                toRaw(ARG_MAGIC_VAR_EVENT),
-                toRaw(ARG_MAGIC_VAR_DATA),
-            ]));
+            // runtime
+            push(args, toMap({
+                args: toAnonymousFunction(toList(callNode.args.map(generateExpressionArg)), [
+                    toRaw(ARG_STACK),
+                    toRaw(ARG_MAGIC_VAR_EVENT),
+                    toRaw(ARG_MAGIC_VAR_DATA),
+                ])
+            }));
         }
+        addEventBooleanInfo(args, node);
+        return {
+            name: RENDER_EVENT_METHOD,
+            args,
+        };
     }
-    else {
-        const parts = raw.split(RAW_DOT);
-        params.set('to', toPrimitive(parts[0]));
-        params.set('toNs', toPrimitive(parts[1]));
-    }
-    return params;
+    const parts = raw.split(RAW_DOT);
+    // to
+    push(args, toPrimitive(parts[0]));
+    // toNs
+    push(args, toPrimitive(parts[1]));
+    addEventBooleanInfo(args, node);
+    return {
+        name: RENDER_EVENT_NAME,
+        args,
+    };
 }
 function getDirectiveKey(node) {
     return join$1(node.name, node.modifier || EMPTY_STRING);
 }
-function getDirectiveValue(node) {
-    const params = toMap();
-    params.set('key', toPrimitive(getDirectiveKey(node)));
-    params.set('name', toPrimitive(node.name));
-    params.set('modifier', toPrimitive(node.modifier));
-    params.set('value', toPrimitive(node.value));
+function getDirectiveArgs(node) {
+    const args = [];
+    // key
+    push(args, toPrimitive(getDirectiveKey(node)));
+    // name
+    push(args, toPrimitive(node.name));
+    // modifier
+    push(args, toPrimitive(node.modifier));
+    // value
+    push(args, toPrimitive(node.value));
     // 尽可能把表达式编译成函数，这样对外界最友好
     //
     // 众所周知，事件指令会编译成函数，对于自定义指令来说，也要尽可能编译成函数
@@ -5599,89 +5618,100 @@ function getDirectiveValue(node) {
         // 如果表达式明确是在调用方法，则序列化成 method + args 的形式
         if (expr.type === CALL) {
             const callNode = expr;
-            // compiler 保证了函数调用的 name 是标识符
-            params.set(RAW_METHOD, toPrimitive(callNode.name.name));
             // 为了实现运行时动态收集参数，这里序列化成函数
             if (!falsy(callNode.args)) {
-                const runtime = toMap();
-                params.set('runtime', runtime);
-                runtime.set('args', toAnonymousFunction(toList(callNode.args.map(generateExpressionArg)), [
-                    toRaw(ARG_STACK),
-                ]));
+                // runtime
+                push(args, toMap({
+                    args: toAnonymousFunction(toList(callNode.args.map(generateExpressionArg)), [
+                        toRaw(ARG_STACK),
+                    ])
+                }));
             }
+            else {
+                // runtime
+                push(args, toPrimitive(UNDEFINED));
+            }
+            // compiler 保证了函数调用的 name 是标识符
+            // method
+            push(args, toPrimitive(callNode.name.name));
         }
         else {
             // 取值函数
             // getter 函数在触发事件时调用，调用时会传入它的作用域，因此这里要加一个参数
             if (expr.type !== LITERAL) {
-                const runtime = toMap();
-                params.set('runtime', runtime);
-                runtime.set('expr', toAnonymousFunction(generateExpressionArg(expr), [
-                    toRaw(ARG_STACK)
-                ]));
+                // runtime
+                push(args, toMap({
+                    expr: toAnonymousFunction(generateExpressionArg(expr), [
+                        toRaw(ARG_STACK)
+                    ])
+                }));
             }
         }
     }
-    return params;
+    return args;
 }
 nodeGenerator[DIRECTIVE] = function (node) {
     switch (node.ns) {
         case DIRECTIVE_LAZY:
-            return toCall(RENDER_LAZY, [
-                toPrimitive(node.name),
-                getLazyValue(node)
-            ]);
+            return toMap({
+                key: toPrimitive(LAZY),
+                name: toPrimitive(node.name),
+                value: getLazyValue(node),
+            });
         // <div transition="name">
         case DIRECTIVE_TRANSITION:
-            return toCall(RENDER_TRANSITION, [
-                getTransitionValue(node)
-            ]);
+            return toMap({
+                key: toPrimitive(TRANSITION),
+                value: toCall(RENDER_TRANSITION, [
+                    getTransitionValue(node)
+                ]),
+            });
         // <input model="id">
         case DIRECTIVE_MODEL:
-            return toCall(RENDER_MODEL, [
-                getModelValue(node)
-            ]);
+            return toMap({
+                key: toPrimitive(MODEL$1),
+                value: getModelValue(node),
+            });
         // <div on-click="name">
         case DIRECTIVE_EVENT:
-            const params = getEventValue(node);
-            return toCall(params.has(RAW_METHOD)
-                ? RENDER_EVENT_METHOD
-                : RENDER_EVENT_NAME, [
-                params
-            ]);
+            const info = getEventInfo(node);
+            return toMap({
+                key: toPrimitive(EVENTS),
+                name: toPrimitive(getDirectiveKey(node)),
+                value: toCall(info.name, info.args)
+            });
         default:
-            return toCall(RENDER_DIRECTIVE, [
-                getDirectiveValue(node)
-            ]);
+            return toMap({
+                key: toPrimitive(DIRECTIVES),
+                name: toPrimitive(getDirectiveKey(node)),
+                value: toCall(RENDER_DIRECTIVE, getDirectiveArgs(node))
+            });
     }
 };
 nodeGenerator[SPREAD] = function (node) {
     return toCall(RENDER_SPREAD, [
+        toPrimitive(PROPERTIES),
         generateExpression(node.expr)
     ]);
 };
 nodeGenerator[TEXT] = function (node) {
-    const result = toPrimitive(node.text);
+    const text = toPrimitive(node.text);
     return last(vnodeStack)
-        ? toCall(RENDER_TEXT_VNODE, [
-            result
-        ])
-        : result;
+        ? generateTextVnode(text)
+        : text;
 };
 nodeGenerator[EXPRESSION] = function (node) {
-    const result = generateExpression(node.expr);
+    const value = generateExpression(node.expr);
     return last(vnodeStack)
-        ? toCall(RENDER_TEXT_VNODE, [
-            toCall(TO_STRING, [
-                result
-            ])
-        ])
-        : result;
+        ? generateTextVnode(toCall(TO_STRING, [
+            value
+        ]))
+        : value;
 };
 nodeGenerator[IF] =
     nodeGenerator[ELSE_IF] = function (node) {
         let { children, next } = node, defaultValue = last(vnodeStack)
-            ? toCall(RENDER_COMMENT_VNODE)
+            ? generateCommentVnode()
             : toPrimitive(UNDEFINED), value;
         if (children) {
             if (last(attributeStack)) {
@@ -5693,7 +5723,7 @@ nodeGenerator[IF] =
     };
 nodeGenerator[ELSE] = function (node) {
     let { children } = node, defaultValue = last(vnodeStack)
-        ? toCall(RENDER_COMMENT_VNODE)
+        ? generateCommentVnode()
         : toPrimitive(UNDEFINED), value;
     if (children) {
         if (last(attributeStack)) {
@@ -5766,25 +5796,15 @@ function generate$2(node) {
     localVarMap = {};
     localVarCache = {};
     return generate(nodeGenerator[node.type](node), localVarMap, [
+        ARG_INSTANCE,
         RENDER_ELEMENT_VNODE,
         RENDER_COMPONENT_VNODE,
-        RENDER_NATIVE_ATTRIBUTE,
-        RENDER_NATIVE_PROPERTY,
-        RENDER_PROPERTY,
-        RENDER_LAZY,
         RENDER_TRANSITION,
-        GET_TRANSITION,
         RENDER_MODEL,
-        GET_MODEL,
         RENDER_EVENT_METHOD,
-        GET_EVENT_METHOD,
         RENDER_EVENT_NAME,
-        GET_EVENT_NAME,
         RENDER_DIRECTIVE,
-        GET_DIRECTIVE,
         RENDER_SPREAD,
-        RENDER_TEXT_VNODE,
-        RENDER_COMMENT_VNODE,
         RENDER_SLOT,
         DEFINE_PARTIAL,
         RENDER_PARTIAL,
@@ -5798,7 +5818,7 @@ function generate$2(node) {
     ]);
 }
 
-function render(instance, template, scope, filters, partials, directives, transitions) {
+function render(instance, template, scope, filters, globalFilters, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions) {
     let rootKeypath = EMPTY_STRING, contextStack = [
         { keypath: rootKeypath, scope, }
     ], localPartials = {}, 
@@ -5888,47 +5908,15 @@ function render(instance, template, scope, filters, partials, directives, transi
             components.push(data);
         }
         return data;
-    }, renderNativeAttribute = function (name, value) {
-        return {
-            key: NATIVE_ATTRIBUTES,
-            name,
-            value,
-        };
-    }, renderNativeProperty = function (name, value) {
-        return {
-            key: NATIVE_PROPERTIES,
-            name,
-            value,
-        };
-    }, renderProperty = function (name, value) {
-        return {
-            key: PROPERTIES,
-            name,
-            value,
-        };
-    }, renderLazy = function (name, value) {
-        return {
-            key: LAZY,
-            name,
-            value,
-        };
     }, renderTransition = function (name) {
-        return {
-            key: TRANSITION,
-            value: getTransition(name),
-        };
-    }, getTransition = function (name) {
-        const transition = transitions[name];
+        const transition = (transitions && transitions[name]) || globalTransitions[name];
         return transition;
-    }, renderModel = function (holder) {
+    }, 
+    // holder 是全局共用的，这里要浅拷贝一次
+    renderModel = function (holder) {
         return {
-            key: MODEL$1,
-            value: getModel(holder),
-        };
-    }, getModel = function (holder) {
-        return {
-            value: holder.value,
             keypath: holder.keypath,
+            value: holder.value,
         };
     }, createEventNameListener = function (isComponent, type, ns) {
         return function (event, data, isNative) {
@@ -5950,56 +5938,34 @@ function render(instance, template, scope, filters, partials, directives, transi
             if (isComponent && event.phase === CustomEvent.PHASE_DOWNWARD) {
                 return;
             }
-            let methodArgs;
-            if (runtime) {
-                methodArgs = runtime.args(runtime.stack, event, data);
-                // 1 个或 0 个参数可优化调用方式，即 method.call 或直接调用函数
-                if (methodArgs.length < 2) {
-                    methodArgs = methodArgs[0];
-                }
-            }
-            else {
-                methodArgs = data ? [event, data] : event;
-            }
-            const result = execute(instance[name], instance, methodArgs);
+            const result = execute(instance[name], instance, runtime
+                ? runtime.args(runtime.stack, event, data)
+                : (data ? [event, data] : event));
             if (result === FALSE) {
                 event.prevent().stop();
             }
         };
-    }, renderEventMethod = function (params) {
-        return {
-            key: EVENTS,
-            name: params.key,
-            value: getEventMethod(params),
-        };
-    }, getEventMethod = function (params) {
-        const { runtime } = params;
+    }, renderEventMethod = function (key, value, name, ns, method, runtime, isNative, isComponent) {
         if (runtime) {
             runtime.stack = contextStack;
         }
         return {
-            key: params.key,
-            value: params.value,
-            name: params.from,
-            ns: params.fromNs,
-            isNative: params.isNative,
-            listener: createEventMethodListener(params.isComponent, params.method, runtime),
+            key,
+            value,
+            name,
+            ns,
+            isNative,
+            listener: createEventMethodListener(isComponent, method, runtime),
             runtime,
         };
-    }, renderEventName = function (params) {
+    }, renderEventName = function (key, value, name, ns, to, toNs, isNative, isComponent) {
         return {
-            key: EVENTS,
-            name: params.key,
-            value: getEventName(params),
-        };
-    }, getEventName = function (params) {
-        return {
-            key: params.key,
-            value: params.value,
-            name: params.from,
-            ns: params.fromNs,
-            isNative: params.isNative,
-            listener: createEventNameListener(params.isComponent, params.to, params.toNs),
+            key,
+            value,
+            name,
+            ns,
+            isNative,
+            listener: createEventNameListener(isComponent, to, toNs),
         };
     }, createDirectiveGetter = function (runtime) {
         return function () {
@@ -6007,62 +5973,38 @@ function render(instance, template, scope, filters, partials, directives, transi
         };
     }, createDirectiveHandler = function (name, runtime) {
         return function () {
-            let methodArgs = UNDEFINED;
-            if (runtime) {
-                methodArgs = runtime.args(runtime.stack);
-                // 1 个或 0 个参数可优化调用方式，即 method.call 或直接调用函数
-                if (methodArgs.length < 2) {
-                    methodArgs = methodArgs[0];
-                }
-            }
-            execute(instance[name], instance, methodArgs);
+            execute(instance[name], instance, runtime
+                ? runtime.args(runtime.stack)
+                : UNDEFINED);
         };
-    }, renderDirective = function (params) {
-        return {
-            key: DIRECTIVES,
-            name: params.key,
-            value: getDirective(params),
-        };
-    }, getDirective = function (params) {
-        const { name, runtime } = params, hooks = directives[name];
+    }, renderDirective = function (key, name, modifier, value, runtime, method) {
+        const hooks = (directives && directives[name]) || globalDirectives[name];
         if (runtime) {
             runtime.stack = contextStack;
         }
         return {
             ns: DIRECTIVE_CUSTOM,
-            key: params.key,
+            key,
             name,
-            value: params.value,
-            modifier: params.modifier,
+            value,
+            modifier,
             getter: runtime && runtime.expr ? createDirectiveGetter(runtime) : UNDEFINED,
-            handler: params.method ? createDirectiveHandler(params.method, runtime) : UNDEFINED,
+            handler: method ? createDirectiveHandler(method, runtime) : UNDEFINED,
             hooks,
             runtime,
         };
-    }, renderSpread = function (value) {
+    }, renderSpread = function (key, value) {
         if (object(value)) {
             const result = [];
-            for (let key in value) {
+            for (let name in value) {
                 result.push({
-                    key: PROPERTIES,
-                    name: key,
-                    value: value[key],
+                    key,
+                    name,
+                    value: value[name],
                 });
             }
             return result;
         }
-    }, renderTextVnode = function (value) {
-        return {
-            isText: TRUE,
-            text: value,
-            context: instance,
-        };
-    }, renderCommentVnode = function () {
-        return {
-            isComment: TRUE,
-            text: EMPTY_STRING,
-            context: instance,
-        };
     }, 
     // <slot name="xx"/>
     renderSlot = function (name, render) {
@@ -6090,7 +6032,7 @@ function render(instance, template, scope, filters, partials, directives, transi
         if (localPartials[name]) {
             return localPartials[name](keypath);
         }
-        const partial = partials[name];
+        const partial = (partials && partials[name]) || globalPartials[name];
         return renderTemplate(partial, keypath);
     }, renderEach = function (holder, renderChildren, renderElse) {
         let { keypath, value } = holder, result = [], needKeypath = !!keypath, oldScopeStack = contextStack, currentKeypath = last(contextStack).keypath;
@@ -6183,7 +6125,12 @@ function render(instance, template, scope, filters, partials, directives, transi
             }
             // 如果是函数调用，则最后尝试过滤器
             if (!result && call) {
-                result = get(filters, name);
+                if (filters) {
+                    result = get(filters, name);
+                }
+                if (!result) {
+                    result = get(globalFilters, name);
+                }
                 if (result) {
                     // filter 不算数据
                     result.keypath = UNDEFINED;
@@ -6213,7 +6160,7 @@ function render(instance, template, scope, filters, partials, directives, transi
         holder.value = execute(fn, instance, args);
         return holder;
     }, renderTemplate = function (render, keypath) {
-        return render(renderElementVnode, renderComponentVnode, renderNativeAttribute, renderNativeProperty, renderProperty, renderLazy, renderTransition, getTransition, renderModel, getModel, renderEventMethod, getEventMethod, renderEventName, getEventName, renderDirective, getDirective, renderSpread, renderTextVnode, renderCommentVnode, renderSlot, definePartial, renderPartial, renderEach, renderRange, renderExpressionIdentifier, renderExpressionValue, executeFunction, toString, keypath);
+        return render(instance, renderElementVnode, renderComponentVnode, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, definePartial, renderPartial, renderEach, renderRange, renderExpressionIdentifier, renderExpressionValue, executeFunction, toString, keypath);
     };
     const vnode = renderTemplate(template, rootKeypath);
     return {
@@ -7350,7 +7297,7 @@ class Yox {
             setFlexibleOptions(instance, RAW_FILTER, filters);
             if (template) {
                 if (watchers) {
-                    instance.watch(watchers);
+                    observer.watch(watchers);
                 }
                 {
                     execute(instance.$options[HOOK_AFTER_CREATE], instance);
@@ -7371,7 +7318,7 @@ class Yox {
             }
         }
         if (watchers) {
-            instance.watch(watchers);
+            observer.watch(watchers);
         }
         {
             execute(instance.$options[HOOK_AFTER_CREATE], instance);
@@ -7724,7 +7671,7 @@ class Yox {
      */
     render() {
         {
-            const instance = this, { $observer, $dependencies } = instance, oldDependencies = $dependencies || EMPTY_OBJECT, { vnode, dependencies } = render(instance, instance.$template, merge($observer.data, $observer.computed), merge(instance.$filters, globalFilters), merge(instance.$partials, globalPartials), merge(instance.$directives, globalDirectives), merge(instance.$transitions, globalTransitions));
+            const instance = this, { $observer, $dependencies } = instance, oldDependencies = $dependencies || EMPTY_OBJECT, { vnode, dependencies } = render(instance, instance.$template, merge($observer.data, $observer.computed), instance.$filters, globalFilters, instance.$partials, globalPartials, instance.$directives, globalDirectives, instance.$transitions, globalTransitions);
             for (let key in dependencies) {
                 if (!oldDependencies[key]) {
                     $observer.watch(key, markDirty);
@@ -7905,7 +7852,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.208";
+Yox.version = "1.0.0-alpha.209";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

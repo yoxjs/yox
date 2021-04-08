@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.208
+ * yox.js v1.0.0-alpha.209
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -2349,16 +2349,7 @@
               : 0;
   }
 
-  var NATIVE_ATTRIBUTES = 'nativeAttrs';
-  var NATIVE_PROPERTIES = 'nativeProps';
-  var PROPERTIES = 'props';
-  var DIRECTIVES = 'directives';
-  var EVENTS = 'events';
-  var MODEL$1 = 'model';
-  var LAZY = 'lazy';
-  var TRANSITION = 'transition';
-
-  function render(instance, template, scope, filters, partials, directives, transitions) {
+  function render(instance, template, scope, filters, globalFilters, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions) {
       var rootKeypath = EMPTY_STRING, contextStack = [
           { keypath: rootKeypath, scope: scope, }
       ], localPartials = {}, 
@@ -2450,47 +2441,15 @@
               components.push(data);
           }
           return data;
-      }, renderNativeAttribute = function (name, value) {
-          return {
-              key: NATIVE_ATTRIBUTES,
-              name: name,
-              value: value,
-          };
-      }, renderNativeProperty = function (name, value) {
-          return {
-              key: NATIVE_PROPERTIES,
-              name: name,
-              value: value,
-          };
-      }, renderProperty = function (name, value) {
-          return {
-              key: PROPERTIES,
-              name: name,
-              value: value,
-          };
-      }, renderLazy = function (name, value) {
-          return {
-              key: LAZY,
-              name: name,
-              value: value,
-          };
       }, renderTransition = function (name) {
-          return {
-              key: TRANSITION,
-              value: getTransition(name),
-          };
-      }, getTransition = function (name) {
-          var transition = transitions[name];
+          var transition = (transitions && transitions[name]) || globalTransitions[name];
           return transition;
-      }, renderModel = function (holder) {
+      }, 
+      // holder 是全局共用的，这里要浅拷贝一次
+      renderModel = function (holder) {
           return {
-              key: MODEL$1,
-              value: getModel(holder),
-          };
-      }, getModel = function (holder) {
-          return {
-              value: holder.value,
               keypath: holder.keypath,
+              value: holder.value,
           };
       }, createEventNameListener = function (isComponent, type, ns) {
           return function (event, data, isNative) {
@@ -2512,56 +2471,34 @@
               if (isComponent && event.phase === CustomEvent.PHASE_DOWNWARD) {
                   return;
               }
-              var methodArgs;
-              if (runtime) {
-                  methodArgs = runtime.args(runtime.stack, event, data);
-                  // 1 个或 0 个参数可优化调用方式，即 method.call 或直接调用函数
-                  if (methodArgs.length < 2) {
-                      methodArgs = methodArgs[0];
-                  }
-              }
-              else {
-                  methodArgs = data ? [event, data] : event;
-              }
-              var result = execute(instance[name], instance, methodArgs);
+              var result = execute(instance[name], instance, runtime
+                  ? runtime.args(runtime.stack, event, data)
+                  : (data ? [event, data] : event));
               if (result === FALSE) {
                   event.prevent().stop();
               }
           };
-      }, renderEventMethod = function (params) {
-          return {
-              key: EVENTS,
-              name: params.key,
-              value: getEventMethod(params),
-          };
-      }, getEventMethod = function (params) {
-          var runtime = params.runtime;
+      }, renderEventMethod = function (key, value, name, ns, method, runtime, isNative, isComponent) {
           if (runtime) {
               runtime.stack = contextStack;
           }
           return {
-              key: params.key,
-              value: params.value,
-              name: params.from,
-              ns: params.fromNs,
-              isNative: params.isNative,
-              listener: createEventMethodListener(params.isComponent, params.method, runtime),
+              key: key,
+              value: value,
+              name: name,
+              ns: ns,
+              isNative: isNative,
+              listener: createEventMethodListener(isComponent, method, runtime),
               runtime: runtime,
           };
-      }, renderEventName = function (params) {
+      }, renderEventName = function (key, value, name, ns, to, toNs, isNative, isComponent) {
           return {
-              key: EVENTS,
-              name: params.key,
-              value: getEventName(params),
-          };
-      }, getEventName = function (params) {
-          return {
-              key: params.key,
-              value: params.value,
-              name: params.from,
-              ns: params.fromNs,
-              isNative: params.isNative,
-              listener: createEventNameListener(params.isComponent, params.to, params.toNs),
+              key: key,
+              value: value,
+              name: name,
+              ns: ns,
+              isNative: isNative,
+              listener: createEventNameListener(isComponent, to, toNs),
           };
       }, createDirectiveGetter = function (runtime) {
           return function () {
@@ -2569,64 +2506,38 @@
           };
       }, createDirectiveHandler = function (name, runtime) {
           return function () {
-              var methodArgs = UNDEFINED;
-              if (runtime) {
-                  methodArgs = runtime.args(runtime.stack);
-                  // 1 个或 0 个参数可优化调用方式，即 method.call 或直接调用函数
-                  if (methodArgs.length < 2) {
-                      methodArgs = methodArgs[0];
-                  }
-              }
-              execute(instance[name], instance, methodArgs);
+              execute(instance[name], instance, runtime
+                  ? runtime.args(runtime.stack)
+                  : UNDEFINED);
           };
-      }, renderDirective = function (params) {
-          return {
-              key: DIRECTIVES,
-              name: params.key,
-              value: getDirective(params),
-          };
-      }, getDirective = function (params) {
-          var name = params.name;
-          var runtime = params.runtime;
-          var hooks = directives[name];
+      }, renderDirective = function (key, name, modifier, value, runtime, method) {
+          var hooks = (directives && directives[name]) || globalDirectives[name];
           if (runtime) {
               runtime.stack = contextStack;
           }
           return {
               ns: DIRECTIVE_CUSTOM,
-              key: params.key,
+              key: key,
               name: name,
-              value: params.value,
-              modifier: params.modifier,
+              value: value,
+              modifier: modifier,
               getter: runtime && runtime.expr ? createDirectiveGetter(runtime) : UNDEFINED,
-              handler: params.method ? createDirectiveHandler(params.method, runtime) : UNDEFINED,
+              handler: method ? createDirectiveHandler(method, runtime) : UNDEFINED,
               hooks: hooks,
               runtime: runtime,
           };
-      }, renderSpread = function (value) {
+      }, renderSpread = function (key, value) {
           if (object(value)) {
               var result = [];
-              for (var key in value) {
+              for (var name in value) {
                   result.push({
-                      key: PROPERTIES,
-                      name: key,
-                      value: value[key],
+                      key: key,
+                      name: name,
+                      value: value[name],
                   });
               }
               return result;
           }
-      }, renderTextVnode = function (value) {
-          return {
-              isText: TRUE,
-              text: value,
-              context: instance,
-          };
-      }, renderCommentVnode = function () {
-          return {
-              isComment: TRUE,
-              text: EMPTY_STRING,
-              context: instance,
-          };
       }, 
       // <slot name="xx"/>
       renderSlot = function (name, render) {
@@ -2655,7 +2566,7 @@
           if (localPartials[name]) {
               return localPartials[name](keypath);
           }
-          var partial = partials[name];
+          var partial = (partials && partials[name]) || globalPartials[name];
           return renderTemplate(partial, keypath);
       }, renderEach = function (holder, renderChildren, renderElse) {
           var keypath = holder.keypath;
@@ -2754,7 +2665,12 @@
               }
               // 如果是函数调用，则最后尝试过滤器
               if (!result && call) {
-                  result = get(filters, name);
+                  if (filters) {
+                      result = get(filters, name);
+                  }
+                  if (!result) {
+                      result = get(globalFilters, name);
+                  }
                   if (result) {
                       // filter 不算数据
                       result.keypath = UNDEFINED;
@@ -2784,7 +2700,7 @@
           holder.value = execute(fn, instance, args);
           return holder;
       }, renderTemplate = function (render, keypath) {
-          return render(renderElementVnode, renderComponentVnode, renderNativeAttribute, renderNativeProperty, renderProperty, renderLazy, renderTransition, getTransition, renderModel, getModel, renderEventMethod, getEventMethod, renderEventName, getEventName, renderDirective, getDirective, renderSpread, renderTextVnode, renderCommentVnode, renderSlot, definePartial, renderPartial, renderEach, renderRange, renderExpressionIdentifier, renderExpressionValue, executeFunction, toString, keypath);
+          return render(instance, renderElementVnode, renderComponentVnode, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, definePartial, renderPartial, renderEach, renderRange, renderExpressionIdentifier, renderExpressionValue, executeFunction, toString, keypath);
       };
       var vnode = renderTemplate(template, rootKeypath);
       return {
@@ -3947,7 +3863,7 @@
           setFlexibleOptions(instance, RAW_FILTER, filters);
           if (template) {
               if (watchers) {
-                  instance.watch(watchers);
+                  observer.watch(watchers);
               }
               {
                   execute(instance.$options[HOOK_AFTER_CREATE], instance);
@@ -3968,7 +3884,7 @@
           }
       }
       if (watchers) {
-          instance.watch(watchers);
+          observer.watch(watchers);
       }
       {
           execute(instance.$options[HOOK_AFTER_CREATE], instance);
@@ -4332,7 +4248,7 @@
               var $observer = instance.$observer;
               var $dependencies = instance.$dependencies;
               var oldDependencies = $dependencies || EMPTY_OBJECT;
-              var ref = render(instance, instance.$template, merge($observer.data, $observer.computed), merge(instance.$filters, globalFilters), merge(instance.$partials, globalPartials), merge(instance.$directives, globalDirectives), merge(instance.$transitions, globalTransitions));
+              var ref = render(instance, instance.$template, merge($observer.data, $observer.computed), instance.$filters, globalFilters, instance.$partials, globalPartials, instance.$directives, globalDirectives, instance.$transitions, globalTransitions);
               var vnode = ref.vnode;
               var dependencies = ref.dependencies;
           for (var key in dependencies) {
@@ -4521,7 +4437,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.208";
+  Yox.version = "1.0.0-alpha.209";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
