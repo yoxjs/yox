@@ -1,4 +1,4 @@
-自 `1.0.0-alpha.203` 版本开始，Yox 通过 `Yox.config` 对象支持自定义配置 ，默认值如下：
+自 `1.0.0-alpha.208` 版本开始，Yox 通过 `Yox.config` 对象支持自定义配置 ，默认值如下：
 
 ```js
 {
@@ -14,7 +14,7 @@
 
 ## 模板定界符
 
-Yox 通过配置的左右定界符来解析模板，你只需要各配置一个字符即可，它会自动 repeat 成相应的定界符。
+Yox 通过配置的左右定界符来解析模板，你只需要各配置一个字符即可，它会自动 `repeat` 成相应的定界符。
 
 * 安全定界符：`repeat(leftDelimiter, 2)` 和 `repeat(rightDelimiter, 2)`，如 `{{` 和 `}}`
 * 危险定界符：`repeat(leftDelimiter, 3)` 和 `repeat(rightDelimiter, 3)`，如 `{{{` 和 `}}}`
