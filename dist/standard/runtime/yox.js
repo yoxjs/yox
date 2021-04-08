@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.209
+ * yox.js v1.0.0-alpha.210
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -2478,7 +2478,7 @@
                   event.prevent().stop();
               }
           };
-      }, renderEventMethod = function (key, value, name, ns, method, runtime, isNative, isComponent) {
+      }, renderEventMethod = function (key, value, name, ns, method, runtime, isComponent, isNative) {
           if (runtime) {
               runtime.stack = contextStack;
           }
@@ -2491,7 +2491,7 @@
               listener: createEventMethodListener(isComponent, method, runtime),
               runtime: runtime,
           };
-      }, renderEventName = function (key, value, name, ns, to, toNs, isNative, isComponent) {
+      }, renderEventName = function (key, value, name, ns, to, toNs, isComponent, isNative) {
           return {
               key: key,
               value: value,
@@ -4437,7 +4437,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.209";
+  Yox.version = "1.0.0-alpha.210";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

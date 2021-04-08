@@ -86,13 +86,13 @@ export interface TransitionHooks {
 	leave?: (node: HTMLElement, done: () => void) => void;
 }
 export interface DirectiveRuntime {
-	args?: (stack: string[]) => any[];
-	expr?: (stack: string[]) => any;
-	stack: string[];
+	args?: (stack: any[]) => any[];
+	expr?: (stack: any[]) => any;
+	stack: any[];
 }
 export interface EventRuntime {
-	args: (stack: string[], event: CustomEventInterface, data?: Data) => any[];
-	stack: string[];
+	args: (stack: any[], event: CustomEventInterface, data?: Data) => any[];
+	stack: any[];
 }
 export interface Directive {
 	key: string;

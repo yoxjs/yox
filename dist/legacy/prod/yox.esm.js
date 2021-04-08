@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.209
+ * yox.js v1.0.0-alpha.210
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -5561,18 +5561,18 @@ function getModelValue(node) {
     ]);
 }
 function addEventBooleanInfo(args, node) {
-    // isNative
-    push(args, toPrimitive(UNDEFINED));
     // isComponent
+    push(args, toPrimitive(UNDEFINED));
+    // isNative
     push(args, toPrimitive(UNDEFINED));
     if (last(componentStack)) {
         if (node.modifier === MODIFER_NATIVE) {
             // isNative
-            args[args.length - 2] = toPrimitive(TRUE);
+            args[args.length - 1] = toPrimitive(TRUE);
         }
         else {
             // isComponent
-            args[args.length - 1] = toPrimitive(TRUE);
+            args[args.length - 2] = toPrimitive(TRUE);
         }
     }
 }
@@ -5606,6 +5606,10 @@ function getEventInfo(node) {
                     toRaw(ARG_MAGIC_VAR_DATA),
                 ])
             }));
+        }
+        else {
+            // runtime
+            push(args, toPrimitive(UNDEFINED));
         }
         addEventBooleanInfo(args, node);
         return {
@@ -5975,7 +5979,7 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
                 event.prevent().stop();
             }
         };
-    }, renderEventMethod = function (key, value, name, ns, method, runtime, isNative, isComponent) {
+    }, renderEventMethod = function (key, value, name, ns, method, runtime, isComponent, isNative) {
         if (runtime) {
             runtime.stack = contextStack;
         }
@@ -5988,7 +5992,7 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
             listener: createEventMethodListener(isComponent, method, runtime),
             runtime,
         };
-    }, renderEventName = function (key, value, name, ns, to, toNs, isNative, isComponent) {
+    }, renderEventName = function (key, value, name, ns, to, toNs, isComponent, isNative) {
         return {
             key,
             value,
@@ -7973,7 +7977,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.209";
+Yox.version = "1.0.0-alpha.210";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
