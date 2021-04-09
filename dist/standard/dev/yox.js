@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.211
+ * yox.js v1.0.0-alpha.212
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -1162,19 +1162,7 @@
                   || (filter && !filter(event, args, options))) {
                   continue;
               }
-              // 为 customEvent 对象加上当前正在处理的 listener
-              // 这样方便业务层移除事件绑定
-              // 比如 on('xx', function) 这样定义了匿名 listener
-              // 在这个 listener 里面获取不到当前 listener 的引用
-              // 为了能引用到，有时候会先定义 var listener = function
-              // 然后再 on('xx', listener) 这样其实是没有必要的
-              if (customEvent) {
-                  customEvent.listener = options.listener;
-              }
               var result = execute(options.listener, options.ctx, args);
-              if (customEvent) {
-                  customEvent.listener = UNDEFINED$1;
-              }
               // 执行次数
               options.num = options.num ? (options.num + 1) : 1;
               // 注册的 listener 可以指定最大执行次数
@@ -2604,21 +2592,21 @@
       });
       return map;
   }
-  // 首字母大写，或中间包含 -
-  var componentNamePattern = /^[A-Z]|-/, 
+  var // 首字母大写，或中间包含 -
+  componentNamePattern = /^[A-Z]|-/, 
   // HTML 实体（中间最多 6 位，没见过更长的）
   htmlEntityPattern = /&[#\w\d]{2,6};/, 
   // 常见的自闭合标签
-  selfClosingTagNames = split2Map('area,base,embed,track,source,param,input,col,img,br,hr'), 
+  selfClosingTagNames = split2Map('area,base,embed,track,source,param,input,col,img,br,hr') , 
   // 常见的 svg 标签
-  svgTagNames = split2Map('svg,g,defs,desc,metadata,symbol,use,image,path,rect,circle,line,ellipse,polyline,polygon,text,tspan,tref,textpath,marker,pattern,clippath,mask,filter,cursor,view,animate,font,font-face,glyph,missing-glyph,animateColor,animateMotion,animateTransform,textPath,foreignObject'), 
+  svgTagNames = split2Map('svg,g,defs,desc,metadata,symbol,use,image,path,rect,circle,line,ellipse,polyline,polygon,text,tspan,tref,textpath,marker,pattern,clippath,mask,filter,cursor,view,animate,font,font-face,glyph,missing-glyph,animateColor,animateMotion,animateTransform,textPath,foreignObject') , 
   // 常见的字符串类型的属性
   // 注意：autocomplete,autocapitalize 不是布尔类型
-  stringPropertyNames = split2Map('id,class,name,value,for,accesskey,title,style,src,type,href,target,alt,placeholder,preload,poster,wrap,accept,pattern,dir,autocomplete,autocapitalize,valign'), 
+  stringPropertyNames = split2Map('id,class,name,value,for,accesskey,title,style,src,type,href,target,alt,placeholder,preload,poster,wrap,accept,pattern,dir,autocomplete,autocapitalize,valign') , 
   // 常见的数字类型的属性（width,height,cellpadding,cellspacing 支持百分比，因此不计入数字类型）
-  numberPropertyNames = split2Map('min,minlength,max,maxlength,step,size,rows,cols,tabindex,colspan,rowspan,frameborder'), 
+  numberPropertyNames = split2Map('min,minlength,max,maxlength,step,size,rows,cols,tabindex,colspan,rowspan,frameborder') , 
   // 常见的布尔类型的属性
-  booleanPropertyNames = split2Map('disabled,checked,required,multiple,readonly,autofocus,autoplay,controls,loop,muted,novalidate,draggable,contenteditable,hidden,spellcheck'), 
+  booleanPropertyNames = split2Map('disabled,checked,required,multiple,readonly,autofocus,autoplay,controls,loop,muted,novalidate,draggable,contenteditable,hidden,spellcheck') , 
   // 某些属性 attribute name 和 property name 不同
   attr2Prop = {};
   // 列举几个常见的
@@ -8616,7 +8604,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.211";
+  Yox.version = "1.0.0-alpha.212";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
@@ -8628,8 +8616,11 @@
   Yox.logger = logger;
   Yox.Event = CustomEvent;
   Yox.Emitter = Emitter;
-  // 外部可配置的对象
+  /**
+   * 外部可配置的对象
+   */
   Yox.config = PUBLIC_CONFIG;
+  Yox.lifeCycle = lifeCycle;
   var toString = Object.prototype.toString;
   function matchType(value, type) {
       return type === 'numeric'

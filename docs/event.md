@@ -353,7 +353,6 @@ this.off('.button')
 * `originalEvent`: 被封装的原始事件
 * `isPrevented`: 是否已阻止事件的默认行为
 * `isStoped`: 是否已停止向上或向下传递事件
-* `listener`: 当前正在执行的事件处理函数
 
 ### type
 
@@ -430,29 +429,6 @@ this.fire('click.button')
 ### isStoped
 
 一旦调用 `event.stop()` 方法，`event.isStoped` 变为 `true`。
-
-### listener
-
-绑定事件需要事件处理函数，解绑事件则需要传入绑定事件时的事件处理函数，如下：
-
-```js
-var listener = function (event) {
-
-}
-this.on('click', listener)
-this.off('click', listener)
-```
-
-为事件处理函数定义一个变量不太好看，因此我们把当前正在执行的事件处理函数赋给了 `event.listener`，你可以直接在事件处理函数中解绑事件，如下：
-
-```js
-this.on('click', function (event) {
-  // this 指向当前 Yox 实例
-  this.off('click', event.listener)
-})
-```
-
-> 如果你认为 `event.listener` 没什么用，就当它不存在吧
 
 ## 高级进阶
 

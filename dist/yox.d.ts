@@ -18,7 +18,6 @@ export interface CustomEventInterface {
 	originalEvent?: CustomEventInterface | Event;
 	isPrevented?: true;
 	isStoped?: true;
-	listener?: Function;
 	/**
 	 * 阻止事件的默认行为
 	 */
@@ -419,7 +418,6 @@ declare class CustomEvent implements CustomEventInterface {
 	originalEvent?: CustomEventInterface | Event;
 	isPrevented?: true;
 	isStoped?: true;
-	listener?: Function;
 	/**
 	 * 构造函数
 	 *
@@ -686,6 +684,9 @@ export default class Yox implements YoxInterface {
 	static logger: LoggerApi;
 	static Event: typeof CustomEvent;
 	static Emitter: typeof Emitter;
+	/**
+	 * 外部可配置的对象
+	 */
 	static config: Record<string, any>;
 	static lifeCycle: LifeCycle;
 	/**
