@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.210
+ * yox.js v1.0.0-alpha.211
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -126,7 +126,7 @@ function func(value) {
  * @param value
  * @return
  */
-function array(value) {
+function array$1(value) {
     return Array.isArray(value);
 }
 /**
@@ -135,7 +135,7 @@ function array(value) {
  * @param value
  * @return
  */
-function object(value) {
+function object$1(value) {
     // 低版本 IE 会把 null 当作 object
     return value !== NULL && typeof value === 'object';
 }
@@ -145,7 +145,7 @@ function object(value) {
  * @param value
  * @return
  */
-function string(value) {
+function string$1(value) {
     return typeof value === 'string';
 }
 /**
@@ -174,15 +174,15 @@ function boolean(value) {
  */
 function numeric(value) {
     return number(value)
-        || (string(value) && !isNaN(parseFloat(value)) && isFinite(value));
+        || (string$1(value) && !isNaN(parseFloat(value)) && isFinite(value));
 }
 
 var is = /*#__PURE__*/Object.freeze({
   __proto__: null,
   func: func,
-  array: array,
-  object: object,
-  string: string,
+  array: array$1,
+  object: object$1,
+  string: string$1,
   number: number,
   boolean: boolean,
   numeric: numeric
@@ -198,7 +198,7 @@ var is = /*#__PURE__*/Object.freeze({
  */
 function execute (fn, context, args) {
     if (func(fn)) {
-        return array(args)
+        return array$1(args)
             ? fn.apply(context, args)
             : context !== UNDEFINED
                 ? fn.call(context, args)
@@ -273,7 +273,7 @@ CustomEvent.PHASE_DOWNWARD = -1;
  * @param callback 返回 false 可停止遍历
  * @param reversed 是否逆序遍历
  */
-function each(array, callback, reversed) {
+function each$2(array, callback, reversed) {
     const { length } = array;
     if (length) {
         if (reversed) {
@@ -305,14 +305,14 @@ function nativeUnshift(array, item) {
  * @param value
  * @param action
  */
-function addItem(array$1, value, action) {
-    if (array(value)) {
-        each(value, function (item) {
-            action(array$1, item);
+function addItem(array, value, action) {
+    if (array$1(value)) {
+        each$2(value, function (item) {
+            action(array, item);
         });
     }
     else {
-        action(array$1, value);
+        action(array, value);
     }
 }
 /**
@@ -341,9 +341,9 @@ function unshift(array, target) {
  * @param strict 是否全等判断，默认是全等
  * @return 如果未找到，返回 -1
  */
-function indexOf(array, target, strict) {
+function indexOf$1(array, target, strict) {
     let result = -1;
-    each(array, function (item, index) {
+    each$2(array, function (item, index) {
         if (strict === FALSE ? item == target : item === target) {
             result = index;
             return FALSE;
@@ -385,9 +385,9 @@ function pop(array) {
  * @param strict 是否全等判断，默认是全等
  * @return 删除的数量
  */
-function remove(array, target, strict) {
+function remove$6(array, target, strict) {
     let result = 0;
-    each(array, function (item, index) {
+    each$2(array, function (item, index) {
         if (strict === FALSE ? item == target : item === target) {
             array.splice(index, 1);
             result++;
@@ -403,8 +403,8 @@ function remove(array, target, strict) {
  * @param strict 是否全等判断，默认是全等
  * @return
  */
-function has(array, target, strict) {
-    return indexOf(array, target, strict) >= 0;
+function has$2(array, target, strict) {
+    return indexOf$1(array, target, strict) >= 0;
 }
 /**
  * 把类数组转成数组
@@ -412,10 +412,10 @@ function has(array, target, strict) {
  * @param array 类数组
  * @return
  */
-function toArray(array$1) {
-    return array(array$1)
-        ? array$1
-        : execute(EMPTY_ARRAY.slice, array$1);
+function toArray(array) {
+    return array$1(array)
+        ? array
+        : execute(EMPTY_ARRAY.slice, array);
 }
 /**
  * 把数组转成对象
@@ -427,7 +427,7 @@ function toArray(array$1) {
  */
 function toObject(array, key, value) {
     let result = {};
-    each(array, function (item) {
+    each$2(array, function (item) {
         result[key ? item[key] : item] = value || item;
     });
     return result;
@@ -439,7 +439,7 @@ function toObject(array, key, value) {
  * @param separator
  * @return
  */
-function join(array, separator) {
+function join$1(array, separator) {
     return array.join(separator);
 }
 /**
@@ -448,24 +448,24 @@ function join(array, separator) {
  * @param array
  * @return
  */
-function falsy(array$1) {
-    return !array(array$1) || !array$1.length;
+function falsy$2(array) {
+    return !array$1(array) || !array.length;
 }
 
-var array$1 = /*#__PURE__*/Object.freeze({
+var array = /*#__PURE__*/Object.freeze({
   __proto__: null,
-  each: each,
+  each: each$2,
   push: push,
   unshift: unshift,
-  indexOf: indexOf,
+  indexOf: indexOf$1,
   last: last,
   pop: pop,
-  remove: remove,
-  has: has,
+  remove: remove$6,
+  has: has$2,
   toArray: toArray,
   toObject: toObject,
-  join: join,
-  falsy: falsy
+  join: join$1,
+  falsy: falsy$2
 });
 
 function toString (target, defaultValue) {
@@ -583,7 +583,7 @@ const capitalize = createOneKeyCache(function (str) {
  * @return
  */
 function repeat(str, count) {
-    return new Array(count + 1).join(str);
+    return join$1(new Array(count + 1), str);
 }
 /**
  * 清除两侧空白符
@@ -619,7 +619,7 @@ function slice(str, start, end) {
  * @param start
  * @return
  */
-function indexOf$1(str, part, start) {
+function indexOf(str, part, start) {
     return str.indexOf(part, start !== UNDEFINED ? start : 0);
 }
 /**
@@ -641,7 +641,7 @@ function lastIndexOf(str, part, end) {
  * @return
  */
 function startsWith(str, part) {
-    return indexOf$1(str, part) === 0;
+    return indexOf(str, part) === 0;
 }
 /**
  * str 是否以 part 结束
@@ -686,7 +686,7 @@ function lower(str) {
  * @return 是否包含
  */
 function has$1(str, part) {
-    return indexOf$1(str, part) >= 0;
+    return indexOf(str, part) >= 0;
 }
 /**
  * 判断长度大于 0 的字符串
@@ -695,10 +695,10 @@ function has$1(str, part) {
  * @return
  */
 function falsy$1(str) {
-    return !string(str) || !str.length;
+    return !string$1(str) || !str.length;
 }
 
-var string$1 = /*#__PURE__*/Object.freeze({
+var string = /*#__PURE__*/Object.freeze({
   __proto__: null,
   camelize: camelize,
   hyphenate: hyphenate,
@@ -706,7 +706,7 @@ var string$1 = /*#__PURE__*/Object.freeze({
   repeat: repeat,
   trim: trim,
   slice: slice,
-  indexOf: indexOf$1,
+  indexOf: indexOf,
   lastIndexOf: lastIndexOf,
   startsWith: startsWith,
   endsWith: endsWith,
@@ -736,7 +736,7 @@ const match = createTwoKeyCache(function (keypath, prefix) {
         : -1;
 });
 const getKeypathTokens = createOneKeyCache(function (keypath) {
-    return indexOf$1(keypath, RAW_DOT) < 0
+    return indexOf(keypath, RAW_DOT) < 0
         ? [keypath]
         : keypath.split(RAW_DOT);
 });
@@ -747,7 +747,7 @@ const getKeypathTokens = createOneKeyCache(function (keypath) {
  * @param callback 返回 false 可中断遍历
  */
 function each$1(keypath, callback) {
-    const tokens = string(keypath) ? getKeypathTokens(keypath) : keypath;
+    const tokens = string$1(keypath) ? getKeypathTokens(keypath) : keypath;
     for (let i = 0, lastIndex = tokens.length - 1; i <= lastIndex; i++) {
         if (callback(tokens[i], i, lastIndex) === FALSE) {
             break;
@@ -760,7 +760,7 @@ function each$1(keypath, callback) {
  * @param keypath1
  * @param keypath2
  */
-const join$1 = createTwoKeyCache(function (keypath1, keypath2) {
+const join = createTwoKeyCache(function (keypath1, keypath2) {
     return keypath1 && keypath2
         ? keypath1 + RAW_DOT + keypath2
         : keypath1 || keypath2;
@@ -814,7 +814,7 @@ function keys(object) {
  * @param object
  * @param callback 返回 false 可停止遍历
  */
-function each$2(object, callback) {
+function each(object, callback) {
     for (let key in object) {
         if (callback(object[key], key) === FALSE) {
             break;
@@ -827,7 +827,7 @@ function each$2(object, callback) {
  * @param object
  */
 function clear(object) {
-    each$2(object, function (_, key) {
+    each(object, function (_, key) {
         delete object[key];
     });
 }
@@ -837,7 +837,7 @@ function clear(object) {
  * @return
  */
 function extend(original, object) {
-    each$2(object, function (value, key) {
+    each(object, function (value, key) {
         original[key] = value;
     });
     return original;
@@ -859,22 +859,22 @@ function merge(object1, object2) {
  * @param deep 是否需要深拷贝
  * @return
  */
-function copy(object$1, deep) {
-    let result = object$1;
-    if (array(object$1)) {
+function copy(object, deep) {
+    let result = object;
+    if (array$1(object)) {
         if (deep) {
             result = [];
-            each(object$1, function (item, index) {
+            each$2(object, function (item, index) {
                 result[index] = copy(item, deep);
             });
         }
         else {
-            result = object$1.slice();
+            result = object.slice();
         }
     }
-    else if (object(object$1)) {
+    else if (object$1(object)) {
         result = {};
-        each$2(object$1, function (value, key) {
+        each(object, function (value, key) {
             result[key] = deep ? copy(value, deep) : value;
         });
     }
@@ -954,7 +954,7 @@ function set(object, keypath, value, autofill) {
  * @param key
  * @return
  */
-function has$2(object, key) {
+function has(object, key) {
     // 不用 hasOwnProperty，性能差
     return object[key] !== UNDEFINED;
 }
@@ -964,24 +964,24 @@ function has$2(object, key) {
  * @param object
  * @return
  */
-function falsy$2(object$1) {
-    return !object(object$1)
-        || array(object$1)
-        || !keys(object$1).length;
+function falsy(object) {
+    return !object$1(object)
+        || array$1(object)
+        || !keys(object).length;
 }
 
-var object$1 = /*#__PURE__*/Object.freeze({
+var object = /*#__PURE__*/Object.freeze({
   __proto__: null,
   keys: keys,
-  each: each$2,
+  each: each,
   clear: clear,
   extend: extend,
   merge: merge,
   copy: copy,
   get: get,
   set: set,
-  has: has$2,
-  falsy: falsy$2
+  has: has,
+  falsy: falsy
 });
 
 /**
@@ -1106,7 +1106,7 @@ class Emitter {
      * @param filter 自定义过滤器
      */
     fire(type, args, filter) {
-        let instance = this, event = string(type) ? instance.toEvent(type) : type, list = instance.listeners[event.type], isComplete = TRUE;
+        let instance = this, event = string$1(type) ? instance.toEvent(type) : type, list = instance.listeners[event.type], isComplete = TRUE;
         if (list) {
             // 避免遍历过程中，数组发生变化，比如增删了
             list = list.slice();
@@ -1122,7 +1122,7 @@ class Emitter {
                 // 命名空间不匹配
                 if (!matchNamespace(event.ns, options)
                     // 在 fire 过程中被移除了
-                    || !has(list, options)
+                    || !has$2(list, options)
                     // 传了 filter，则用 filter 判断是否过滤此 options
                     || (filter && !filter(event, args, options))) {
                     continue;
@@ -1176,8 +1176,8 @@ class Emitter {
         const instance = this, listeners = instance.listeners, options = func(listener)
             ? { listener: listener }
             : listener;
-        if (object(options) && func(options.listener)) {
-            if (!string(options.ns)) {
+        if (object$1(options) && func(options.listener)) {
+            if (!string$1(options.ns)) {
                 const event = instance.toEvent(type);
                 options.ns = event.ns;
                 type = event.type;
@@ -1195,7 +1195,7 @@ class Emitter {
         const instance = this, listeners = instance.listeners;
         if (type) {
             const filter = instance.toFilter(type, listener), each$1 = function (list, name) {
-                each(list, function (item, index) {
+                each$2(list, function (item, index) {
                     if (matchListener(filter.listener, item) && matchNamespace(filter.ns, item)) {
                         list.splice(index, 1);
                     }
@@ -1211,7 +1211,7 @@ class Emitter {
             }
             // 按命名空间过滤，如 type 传入 .ns
             else if (filter.ns) {
-                each$2(listeners, each$1);
+                each(listeners, each$1);
             }
         }
         else {
@@ -1227,7 +1227,7 @@ class Emitter {
      */
     has(type, listener) {
         let instance = this, listeners = instance.listeners, filter = instance.toFilter(type, listener), result = TRUE, each$1 = function (list) {
-            each(list, function (item) {
+            each$2(list, function (item) {
                 if (matchListener(filter.listener, item) && matchNamespace(filter.ns, item)) {
                     return result = FALSE;
                 }
@@ -1240,7 +1240,7 @@ class Emitter {
             }
         }
         else if (filter.ns) {
-            each$2(listeners, each$1);
+            each(listeners, each$1);
         }
         return !result;
     }
@@ -1258,7 +1258,7 @@ class Emitter {
         };
         // 是否开启命名空间
         if (this.ns) {
-            const index = indexOf$1(type, RAW_DOT);
+            const index = indexOf(type, RAW_DOT);
             if (index >= 0) {
                 event.type = slice(type, 0, index);
                 event.ns = slice(type, index + 1);
@@ -1276,7 +1276,7 @@ class Emitter {
         else {
             filter = {};
         }
-        if (string(filter.ns)) {
+        if (string$1(filter.ns)) {
             filter.type = type;
         }
         else {
@@ -1409,9 +1409,9 @@ const VNODE = '$vnode';
 const LOADING = '$loading';
 const LEAVING = '$leaving';
 const MODEL = '$model';
-const EVENT = '$event';
+const EVENT$1 = '$event';
 
-function update(api, vnode, oldVnode) {
+function update$6(api, vnode, oldVnode) {
     const { node, nativeAttrs } = vnode, oldNativeAttrs = oldVnode && oldVnode.nativeAttrs;
     if (nativeAttrs || oldNativeAttrs) {
         if (nativeAttrs) {
@@ -1434,7 +1434,7 @@ function update(api, vnode, oldVnode) {
     }
 }
 
-function update$1(api, vnode, oldVnode) {
+function update$5(api, vnode, oldVnode) {
     const { node, nativeProps } = vnode, oldNativeProps = oldVnode && oldVnode.nativeProps;
     if (nativeProps || oldNativeProps) {
         if (nativeProps) {
@@ -1460,7 +1460,7 @@ function update$1(api, vnode, oldVnode) {
 // 删除 ref 的时候，要确保是相同的节点
 // 因为模板中可能出现同一个 ref 名字，出现在不同的地方，
 // 这样就可能出现一种特殊情况，即前面刚创建了 ref1，后面又把这个这个新创建的 ref1 删除了
-function update$2(api, vnode, oldVnode) {
+function update$4(api, vnode, oldVnode) {
     const { context, ref } = vnode, oldRef = oldVnode && oldVnode.ref;
     if (ref || oldRef) {
         let refs = context.$refs, value = vnode.component || vnode.node;
@@ -1488,7 +1488,7 @@ function update$2(api, vnode, oldVnode) {
         }
     }
 }
-function remove$1(api, vnode) {
+function remove$5(api, vnode) {
     const { ref } = vnode;
     if (ref) {
         const refs = vnode.context.$refs, value = vnode.component || vnode.node;
@@ -1524,7 +1524,7 @@ function debounce (fn, delay, immediate) {
     };
 }
 
-function addEvent(api, element, component, lazy, event) {
+function addEvent$1(api, element, component, lazy, event) {
     let { name, listener } = event;
     if (lazy) {
         const value = lazy[name] || lazy[EMPTY_STRING];
@@ -1560,17 +1560,17 @@ function addEvent(api, element, component, lazy, event) {
 function update$3(api, vnode, oldVnode) {
     const { data, lazy, events } = vnode, oldEvents = oldVnode && oldVnode.events;
     if (events || oldEvents) {
-        const element = vnode.node, component = vnode.component, destroy = data[EVENT] || (data[EVENT] = {});
+        const element = vnode.node, component = vnode.component, destroy = data[EVENT$1] || (data[EVENT$1] = {});
         if (events) {
             const oldValue = oldEvents || EMPTY_OBJECT;
             for (let key in events) {
                 const event = events[key], oldEvent = oldValue[key];
                 if (!oldEvent) {
-                    destroy[key] = addEvent(api, element, component, lazy, event);
+                    destroy[key] = addEvent$1(api, element, component, lazy, event);
                 }
                 else if (event.value !== oldEvent.value) {
                     destroy[key]();
-                    destroy[key] = addEvent(api, element, component, lazy, event);
+                    destroy[key] = addEvent$1(api, element, component, lazy, event);
                 }
                 else if (oldEvent.runtime && event.runtime) {
                     extend(oldEvent.runtime, event.runtime);
@@ -1590,8 +1590,8 @@ function update$3(api, vnode, oldVnode) {
         }
     }
 }
-function remove$2(api, vnode) {
-    const { data, events } = vnode, destroy = data[EVENT];
+function remove$4(api, vnode) {
+    const { data, events } = vnode, destroy = data[EVENT$1];
     if (events && destroy) {
         for (let key in events) {
             destroy[key]();
@@ -1626,18 +1626,18 @@ const inputControl = {
     name: 'checked'
 }, checkboxControl = {
     set(node, value) {
-        node.checked = array(value)
-            ? has(value, node.value, FALSE)
+        node.checked = array$1(value)
+            ? has$2(value, node.value, FALSE)
             : !!value;
     },
     sync(node, keypath, context) {
         const value = context.get(keypath);
-        if (array(value)) {
+        if (array$1(value)) {
             if (node.checked) {
                 context.append(keypath, node.value);
             }
             else {
-                context.removeAt(keypath, indexOf(value, node.value, FALSE));
+                context.removeAt(keypath, indexOf$1(value, node.value, FALSE));
             }
         }
         else {
@@ -1647,9 +1647,9 @@ const inputControl = {
     name: 'checked'
 }, selectControl = {
     set(node, value) {
-        each(toArray(node.options), node.multiple
+        each$2(toArray(node.options), node.multiple
             ? function (option) {
-                option.selected = has(value, option.value, FALSE);
+                option.selected = has$2(value, option.value, FALSE);
             }
             : function (option, index) {
                 if (option.value == value) {
@@ -1662,7 +1662,7 @@ const inputControl = {
         const { options } = node;
         if (node.multiple) {
             const values = [];
-            each(toArray(options), function (option) {
+            each$2(toArray(options), function (option) {
                 if (option.selected) {
                     push(values, option.value);
                 }
@@ -1734,7 +1734,7 @@ function addModel(api, element, component, vnode) {
         destroy();
     };
 }
-function update$4(api, vnode, oldVnode) {
+function update$2(api, vnode, oldVnode) {
     const { data, node, component, model } = vnode, oldModel = oldVnode && oldVnode.model;
     if (model) {
         if (!oldModel) {
@@ -1758,7 +1758,7 @@ function remove$3(api, vnode) {
     }
 }
 
-function update$5(api, vnode, oldVnode) {
+function update$1(api, vnode, oldVnode) {
     const { directives } = vnode, oldDirectives = oldVnode && oldVnode.directives;
     if (directives || oldDirectives) {
         const node = vnode.component || vnode.node;
@@ -1795,7 +1795,7 @@ function update$5(api, vnode, oldVnode) {
         }
     }
 }
-function remove$4(api, vnode) {
+function remove$2(api, vnode) {
     const { directives } = vnode;
     if (directives) {
         const node = vnode.component || vnode.node;
@@ -1808,7 +1808,7 @@ function remove$4(api, vnode) {
     }
 }
 
-function update$6(api, vnode, oldVnode) {
+function update(api, vnode, oldVnode) {
     const { component, props, slots } = vnode;
     // 更新时才要 set
     // 因为初始化时，所有这些都经过构造函数完成了
@@ -1819,7 +1819,7 @@ function update$6(api, vnode, oldVnode) {
         }
     }
 }
-function remove$5(api, vnode) {
+function remove$1(api, vnode) {
     const { component } = vnode;
     if (component) {
         component.destroy();
@@ -1859,11 +1859,11 @@ function createComponent(api, vnode, options) {
     const child = (vnode.parent || vnode.context).createComponent(options, vnode);
     vnode.component = child;
     vnode.data[LOADING] = FALSE;
-    update$2(api, vnode);
-    update$3(api, vnode);
     update$4(api, vnode);
-    update$5(api, vnode);
-    update$6(api, vnode);
+    update$3(api, vnode);
+    update$2(api, vnode);
+    update$1(api, vnode);
+    update(api, vnode);
     return child;
 }
 function createData() {
@@ -1889,7 +1889,7 @@ function createVnode(api, vnode) {
         // 动态组件，tag 可能为空
         if (tag) {
             context.loadComponent(tag, function (options) {
-                if (has$2(data, LOADING)) {
+                if (has(data, LOADING)) {
                     // 异步组件
                     if (data[LOADING]) {
                         // 尝试使用最新的 vnode
@@ -1927,12 +1927,12 @@ function createVnode(api, vnode) {
         else if (html) {
             api.setHtml(node, html, isStyle, isOption);
         }
-        update(api, vnode);
-        update$1(api, vnode);
-        update$2(api, vnode);
-        update$3(api, vnode);
-        update$4(api, vnode);
+        update$6(api, vnode);
         update$5(api, vnode);
+        update$4(api, vnode);
+        update$3(api, vnode);
+        update$2(api, vnode);
+        update$1(api, vnode);
     }
 }
 function addVnodes(api, parentNode, vnodes, startIndex, endIndex, before) {
@@ -2009,11 +2009,11 @@ function destroyVnode(api, vnode) {
     const { data, children } = vnode;
     if (vnode.isComponent) {
         if (vnode.component) {
-            remove$1(api, vnode);
-            remove$2(api, vnode);
-            remove$3(api, vnode);
-            remove$4(api, vnode);
             remove$5(api, vnode);
+            remove$4(api, vnode);
+            remove$3(api, vnode);
+            remove$2(api, vnode);
+            remove$1(api, vnode);
         }
         else
             [
@@ -2021,12 +2021,12 @@ function destroyVnode(api, vnode) {
             ];
     }
     else {
-        remove$1(api, vnode);
-        remove$2(api, vnode);
-        remove$3(api, vnode);
+        remove$5(api, vnode);
         remove$4(api, vnode);
+        remove$3(api, vnode);
+        remove$2(api, vnode);
         if (children) {
-            each(children, function (child) {
+            each$2(children, function (child) {
                 destroyVnode(api, child);
             });
         }
@@ -2184,26 +2184,26 @@ function patch(api, vnode, oldVnode) {
         return;
     }
     if (!isComponent) {
-        update(api, vnode, oldVnode);
-        update$1(api, vnode, oldVnode);
+        update$6(api, vnode, oldVnode);
+        update$5(api, vnode, oldVnode);
     }
     // 先处理 directive 再处理 component
     // 因为组件只是单纯的更新 props，而 directive 则有可能要销毁
     // 如果顺序反过来，会导致某些本该销毁的指令先被数据的变化触发执行了
-    update$2(api, vnode, oldVnode);
-    update$3(api, vnode, oldVnode);
     update$4(api, vnode, oldVnode);
-    update$5(api, vnode, oldVnode);
+    update$3(api, vnode, oldVnode);
+    update$2(api, vnode, oldVnode);
+    update$1(api, vnode, oldVnode);
     if (isComponent) {
-        update$6(api, vnode, oldVnode);
+        update(api, vnode, oldVnode);
     }
     const { text, html, children, isStyle, isOption } = vnode, oldText = oldVnode.text, oldHtml = oldVnode.html, oldChildren = oldVnode.children;
-    if (string(text)) {
+    if (string$1(text)) {
         if (text !== oldText) {
             api.setText(node, text, isStyle, isOption);
         }
     }
-    else if (string(html)) {
+    else if (string$1(html)) {
         if (html !== oldHtml) {
             api.setHtml(node, html, isStyle, isOption);
         }
@@ -2216,7 +2216,7 @@ function patch(api, vnode, oldVnode) {
     }
     // 有新的没旧的 - 新增节点
     else if (children) {
-        if (string(oldText) || string(oldHtml)) {
+        if (string$1(oldText) || string$1(oldHtml)) {
             api.setText(node, EMPTY_STRING, isStyle);
         }
         addVnodes(api, node, children);
@@ -2226,7 +2226,7 @@ function patch(api, vnode, oldVnode) {
         removeVnodes(api, node, oldChildren);
     }
     // 有旧的 text 没有新的 text
-    else if (string(oldText) || string(oldHtml)) {
+    else if (string$1(oldText) || string$1(oldHtml)) {
         api.setText(node, EMPTY_STRING, isStyle);
     }
 }
@@ -2262,28 +2262,24 @@ function destroy(api, vnode, isRemove) {
 }
 
 function split2Map(str) {
-    const obj = createPureObject();
-    each(str.split(','), function (item) {
-        obj.set(item, TRUE);
+    const map = Object.create(NULL);
+    each$2(str.split(','), function (item) {
+        map[item] = TRUE;
     });
-    return obj;
+    return map;
 }
 // 首字母大写，或中间包含 -
-const // 常见的自闭合标签
-selfClosingTagNames = split2Map('area,base,embed,track,source,param,input,col,img,br,hr'), 
+// 常见的自闭合标签
+split2Map('area,base,embed,track,source,param,input,col,img,br,hr'); 
 // 常见的 svg 标签
-svgTagNames = split2Map('svg,g,defs,desc,metadata,symbol,use,image,path,rect,circle,line,ellipse,polyline,polygon,text,tspan,tref,textpath,marker,pattern,clippath,mask,filter,cursor,view,animate,font,font-face,glyph,missing-glyph,animateColor,animateMotion,animateTransform,textPath,foreignObject'), 
+split2Map('svg,g,defs,desc,metadata,symbol,use,image,path,rect,circle,line,ellipse,polyline,polygon,text,tspan,tref,textpath,marker,pattern,clippath,mask,filter,cursor,view,animate,font,font-face,glyph,missing-glyph,animateColor,animateMotion,animateTransform,textPath,foreignObject'); 
 // 常见的字符串类型的属性
 // 注意：autocomplete,autocapitalize 不是布尔类型
-stringPropertyNames = split2Map('id,class,name,value,for,accesskey,title,style,src,type,href,target,alt,placeholder,preload,poster,wrap,accept,pattern,dir,autocomplete,autocapitalize,valign'), 
+split2Map('id,class,name,value,for,accesskey,title,style,src,type,href,target,alt,placeholder,preload,poster,wrap,accept,pattern,dir,autocomplete,autocapitalize,valign'); 
 // 常见的数字类型的属性（width,height,cellpadding,cellspacing 支持百分比，因此不计入数字类型）
-numberPropertyNames = split2Map('min,minlength,max,maxlength,step,size,rows,cols,tabindex,colspan,rowspan,frameborder'), 
+split2Map('min,minlength,max,maxlength,step,size,rows,cols,tabindex,colspan,rowspan,frameborder'); 
 // 常见的布尔类型的属性
-booleanPropertyNames = split2Map('disabled,checked,required,multiple,readonly,autofocus,autoplay,controls,loop,muted,novalidate,draggable,contenteditable,hidden,spellcheck');
-
-function isDef (target) {
-    return target !== UNDEFINED;
-}
+split2Map('disabled,checked,required,multiple,readonly,autofocus,autoplay,controls,loop,muted,novalidate,draggable,contenteditable,hidden,spellcheck');
 
 function toNumber (target, defaultValue) {
     return numeric(target)
@@ -2299,7 +2295,7 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
     ], localPartials = {}, 
     // 渲染模板的数据依赖
     dependencies = {}, lookupValue = function (stack, index, key) {
-        const context = stack[index], keypath = join$1(context.keypath, key), result = get(context.scope, keypath);
+        const context = stack[index], keypath = join(context.keypath, key), result = get(context.scope, keypath);
         if (result) {
             result.keypath = keypath;
             return result;
@@ -2307,82 +2303,59 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
         if (index > 0) {
             return lookupValue(stack, index - 1, key);
         }
-    }, flattenArray = function (array$1, handler) {
-        for (let i = 0, length = array$1.length; i < length; i++) {
-            const item = array$1[i];
-            if (array(item)) {
-                flattenArray(item, handler);
-            }
-            else if (isDef(item)) {
-                handler(item);
-            }
+    }, renderElementVnode = function (data, createAttributes, createChildren) {
+        if (createAttributes) {
+            createAttributes(data);
         }
-    }, normalizeAttributes = function (attrs, data) {
-        flattenArray(attrs, function (item) {
-            const { key, name, value } = item;
-            if (data[key]) {
-                data[key][name] = value;
-            }
-            else {
-                if (name) {
-                    const map = {};
-                    map[name] = value;
-                    data[key] = map;
-                }
-                else {
-                    data[key] = value;
-                }
-            }
-        });
-    }, normalizeChildren = function (children, vnodes) {
-        flattenArray(children, function (item) {
-            // item 只能是 vnode
-            if (item.isText) {
-                const lastChild = last(vnodes);
-                if (lastChild && lastChild.isText) {
-                    lastChild.text += item.text;
-                    return;
-                }
-            }
-            vnodes.push(item);
-        });
-    }, renderElementVnode = function (data, attrs, childs) {
-        data.context = instance;
-        if (attrs) {
-            normalizeAttributes(attrs, data);
-        }
-        if (childs) {
+        if (createChildren) {
             const children = [];
-            normalizeChildren(childs, children);
+            createChildren(children);
             data.children = children;
         }
         return data;
-    }, renderComponentVnode = function (data, attrs, slots, components) {
-        data.context = instance;
-        if (attrs) {
-            normalizeAttributes(attrs, data);
+    }, renderComponentVnode = function (data, createAttributes, slots) {
+        if (createAttributes) {
+            createAttributes(data);
         }
         if (slots) {
             const result = {};
             for (let name in slots) {
-                const vnodes = [], slotComponents = [];
-                normalizeChildren(slots[name](slotComponents), vnodes);
+                const children = [], components = [];
+                slots[name](children, components);
                 // 就算是 undefined 也必须有值，用于覆盖旧值
-                result[name] = vnodes.length
+                result[name] = children.length
                     ? {
-                        vnodes,
-                        components: slotComponents.length
-                            ? slotComponents
+                        vnodes: children,
+                        components: components.length
+                            ? components
                             : UNDEFINED
                     }
                     : UNDEFINED;
             }
             data.slots = result;
         }
-        if (components) {
-            components.push(data);
-        }
         return data;
+    }, addAttribute = function (vnode, key, value, name) {
+        if (name) {
+            if (vnode[key]) {
+                vnode[key][name] = value;
+            }
+            else {
+                const map = {};
+                map[name] = value;
+                vnode[key] = map;
+            }
+        }
+        else {
+            vnode[key] = value;
+        }
+    }, addTextVnode = function (children, vnode) {
+        const { length } = children, lastChild = children[length - 1];
+        if (lastChild && lastChild.isText) {
+            lastChild.text += vnode.text;
+            return;
+        }
+        children[length] = vnode;
     }, renderTransition = function (name) {
         const transition = (transitions && transitions[name]) || globalTransitions[name];
         return transition;
@@ -2393,7 +2366,7 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
             keypath: holder.keypath,
             value: holder.value,
         };
-    }, createEventNameListener = function (isComponent, type, ns) {
+    }, createEventNameListener = function (type, ns, isComponent) {
         return function (event, data, isNative) {
             // 监听组件事件不用处理父组件传下来的事件
             if (isComponent && event.phase === CustomEvent.PHASE_DOWNWARD) {
@@ -2407,7 +2380,7 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
             }
             instance.fire(event, data);
         };
-    }, createEventMethodListener = function (isComponent, name, runtime) {
+    }, createEventMethodListener = function (name, runtime, isComponent) {
         return function (event, data) {
             // 监听组件事件不用处理父组件传下来的事件
             if (isComponent && event.phase === CustomEvent.PHASE_DOWNWARD) {
@@ -2430,7 +2403,7 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
             name,
             ns,
             isNative,
-            listener: createEventMethodListener(isComponent, method, runtime),
+            listener: createEventMethodListener(method, runtime, isComponent),
             runtime,
         };
     }, renderEventName = function (key, value, name, ns, to, toNs, isComponent, isNative) {
@@ -2440,7 +2413,7 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
             name,
             ns,
             isNative,
-            listener: createEventNameListener(isComponent, to, toNs),
+            listener: createEventNameListener(to, toNs, isComponent),
         };
     }, createDirectiveGetter = function (runtime) {
         return function () {
@@ -2468,21 +2441,15 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
             hooks,
             runtime,
         };
-    }, renderSpread = function (key, value) {
-        if (object(value)) {
-            const result = [];
+    }, renderSpread = function (vnode, key, value) {
+        if (object$1(value)) {
             for (let name in value) {
-                result.push({
-                    key,
-                    name,
-                    value: value[name],
-                });
+                addAttribute(vnode, key, value[name], name);
             }
-            return result;
         }
     }, 
     // <slot name="xx"/>
-    renderSlot = function (name, render) {
+    renderSlot = function (name, children, render) {
         dependencies[name] = TRUE;
         const result = scope[name];
         if (result) {
@@ -2492,9 +2459,12 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
                     components[i].parent = instance;
                 }
             }
-            return vnodes;
+            for (let i = 0, length = vnodes.length; i < length; i++) {
+                children[children.length] = vnodes[i];
+            }
+            return;
         }
-        return render && render();
+        render && render();
     }, 
     // {{#partial name}}
     //   xx
@@ -2503,15 +2473,16 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
         localPartials[name] = render;
     }, 
     // {{> name}}
-    renderPartial = function (name, keypath) {
+    renderPartial = function (name, keypath, children, components) {
         if (localPartials[name]) {
-            return localPartials[name](keypath);
+            localPartials[name](keypath, children, components);
+            return;
         }
         const partial = (partials && partials[name]) || globalPartials[name];
-        return renderTemplate(partial, keypath);
+        renderTemplate(partial, keypath, children, components);
     }, renderEach = function (holder, renderChildren, renderElse) {
         let { keypath, value } = holder, result = [], needKeypath = !!keypath, oldScopeStack = contextStack, currentKeypath = last(contextStack).keypath;
-        if (array(value)) {
+        if (array$1(value)) {
             for (let i = 0, length = value.length; i < length; i++) {
                 if (needKeypath) {
                     currentKeypath = keypath + RAW_DOT + i;
@@ -2525,7 +2496,7 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
                 result.push(renderChildren(currentKeypath, length, value[i], i));
             }
         }
-        else if (object(value)) {
+        else if (object$1(value)) {
             for (let key in value) {
                 if (needKeypath) {
                     // 这里 key 虽然可能为空，但也必须直接拼接
@@ -2582,7 +2553,7 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
         }
         return result;
     }, renderExpressionIdentifier = function (getIndex, tokens, lookup, stack, call) {
-        const currentStack = stack || contextStack, index = getIndex(currentStack), { keypath, scope } = currentStack[index], name = tokens ? tokens.join(RAW_DOT) : EMPTY_STRING, currentKeypath = join$1(keypath, name);
+        const currentStack = stack || contextStack, index = getIndex(currentStack), { keypath, scope } = currentStack[index], name = tokens ? tokens.join(RAW_DOT) : EMPTY_STRING, currentKeypath = join(keypath, name);
         let result;
         if (tokens) {
             result = get(scope, tokens);
@@ -2634,12 +2605,13 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
         holder.keypath = UNDEFINED;
         holder.value = execute(fn, instance, args);
         return holder;
-    }, renderTemplate = function (render, keypath) {
-        return render(instance, renderElementVnode, renderComponentVnode, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, definePartial, renderPartial, renderEach, renderRange, renderExpressionIdentifier, renderExpressionValue, executeFunction, toString, keypath);
+    }, renderTemplate = function (render, keypath, children, components) {
+        return render(instance, renderElementVnode, renderComponentVnode, addAttribute, addTextVnode, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, definePartial, renderPartial, renderEach, renderRange, renderExpressionIdentifier, renderExpressionValue, executeFunction, toString, keypath, children, components);
     };
-    const vnode = renderTemplate(template, rootKeypath);
+    const children = [], components = [];
+    renderTemplate(template, rootKeypath, children, components);
     return {
-        vnode,
+        vnode: children[0],
         dependencies,
     };
 }
@@ -2670,15 +2642,15 @@ addElementClass = function (node, className) {
         if (!DOCUMENT.documentElement.classList) {
             addElementClass = function (node, className) {
                 const classes = node.className.split(CHAR_WHITESPACE);
-                if (!has(classes, className)) {
+                if (!has$2(classes, className)) {
                     push(classes, className);
-                    node.className = join(classes, CHAR_WHITESPACE);
+                    node.className = join$1(classes, CHAR_WHITESPACE);
                 }
             };
             removeElementClass = function (node, className) {
                 const classes = node.className.split(CHAR_WHITESPACE);
-                if (remove(classes, className)) {
-                    node.className = join(classes, CHAR_WHITESPACE);
+                if (remove$6(classes, className)) {
+                    node.className = join$1(classes, CHAR_WHITESPACE);
                 }
             };
         }
@@ -2688,7 +2660,7 @@ const CHAR_WHITESPACE = ' ',
 /**
  * 绑定在 HTML 元素上的事件发射器
  */
-EVENT$1 = '$event', 
+EVENT = '$event', 
 /**
  * 跟输入事件配套使用的事件
  */
@@ -2698,6 +2670,8 @@ COMPOSITION_START = 'compositionstart',
  */
 COMPOSITION_END = 'compositionend', domain = 'http://www.w3.org/', namespaces = {
     svg: domain + '2000/svg',
+    // xml: domain + 'XML/1998/namespace',
+    // xlink: domain + '1999/xlink',
 }, nativeListenerCount = {}, nativeListeners = {}, customListeners = {}, specialEvents = {};
 specialEvents[EVENT_MODEL] = {
     on(node, listener) {
@@ -2779,7 +2753,7 @@ function append(parentNode, node) {
 function replace(parentNode, node, oldNode) {
     parentNode.replaceChild(node, oldNode);
 }
-function remove$6(parentNode, node) {
+function remove(parentNode, node) {
     parentNode.removeChild(node);
 }
 function parent(node) {
@@ -2829,7 +2803,7 @@ function setHtml(node, html, isStyle, isOption) {
 const addClass = addElementClass;
 const removeClass = removeElementClass;
 function on(node, type, listener) {
-    const nativeKey = node[EVENT$1] || (node[EVENT$1] = ++guid), nativeListenerMap = nativeListeners[nativeKey] || (nativeListeners[nativeKey] = {}), customListenerMap = customListeners[nativeKey] || (customListeners[nativeKey] = {}), customListenerList = customListenerMap[type] || (customListenerMap[type] = []);
+    const nativeKey = node[EVENT] || (node[EVENT] = ++guid), nativeListenerMap = nativeListeners[nativeKey] || (nativeListeners[nativeKey] = {}), customListenerMap = customListeners[nativeKey] || (customListeners[nativeKey] = {}), customListenerList = customListenerMap[type] || (customListenerMap[type] = []);
     // 一个元素，相同的事件，只注册一个 native listener
     if (!nativeListenerMap[type]) {
         // 特殊事件
@@ -2867,9 +2841,9 @@ function on(node, type, listener) {
     customListenerList.push(listener);
 }
 function off(node, type, listener) {
-    let nativeKey = node[EVENT$1], nativeListenerMap = nativeListeners[nativeKey], customListenerMap = customListeners[nativeKey], customListenerList = customListenerMap && customListenerMap[type];
+    let nativeKey = node[EVENT], nativeListenerMap = nativeListeners[nativeKey], customListenerMap = customListeners[nativeKey], customListenerList = customListenerMap && customListenerMap[type];
     if (customListenerList) {
-        remove(customListenerList, listener);
+        remove$6(customListenerList, listener);
         if (!customListenerList.length) {
             customListenerList = UNDEFINED;
             delete customListenerMap[type];
@@ -2890,7 +2864,7 @@ function off(node, type, listener) {
         }
     }
     if (!nativeListenerCount[nativeKey]) {
-        node[EVENT$1] = UNDEFINED;
+        node[EVENT] = UNDEFINED;
         delete nativeListeners[nativeKey];
         delete customListeners[nativeKey];
     }
@@ -2913,7 +2887,7 @@ var domApi = /*#__PURE__*/Object.freeze({
   before: before,
   append: append,
   replace: replace,
-  remove: remove$6,
+  remove: remove,
   parent: parent,
   next: next,
   find: find,
@@ -2974,7 +2948,7 @@ class Computed {
             instance.value = getter();
         }
         // 减少取值频率，尤其是处理复杂的计算规则
-        else if (force || !has$2(instance, 'value')) {
+        else if (force || !has(instance, 'value')) {
             // 如果写死了依赖，则不需要收集依赖
             if (instance.fixed) {
                 instance.value = getter();
@@ -3041,7 +3015,7 @@ function readValue (source, keypath) {
  * @param callback
  */
 function diffString (newValue, oldValue, callback) {
-    const newIsString = string(newValue), oldIsString = string(oldValue);
+    const newIsString = string$1(newValue), oldIsString = string$1(oldValue);
     if (newIsString || oldIsString) {
         callback('length', newIsString ? newValue.length : UNDEFINED, oldIsString ? oldValue.length : UNDEFINED);
         return TRUE;
@@ -3056,7 +3030,7 @@ function diffString (newValue, oldValue, callback) {
  * @param callback
  */
 function diffArray (newValue, oldValue, callback) {
-    const newIsArray = array(newValue), oldIsArray = array(oldValue);
+    const newIsArray = array$1(newValue), oldIsArray = array$1(oldValue);
     if (newIsArray || oldIsArray) {
         const newLength = newIsArray ? newValue.length : UNDEFINED, oldLength = oldIsArray ? oldValue.length : UNDEFINED;
         callback('length', newLength, oldLength);
@@ -3077,7 +3051,7 @@ function diffArray (newValue, oldValue, callback) {
  * @param callback
  */
 function diffObject (newValue, oldValue, callback) {
-    const newIsObject = object(newValue), oldIsObject = object(oldValue);
+    const newIsObject = object$1(newValue), oldIsObject = object$1(oldValue);
     if (newIsObject || oldIsObject) {
         const diffed = createPureObject(), newObject = newIsObject ? newValue : EMPTY_OBJECT, oldObject = oldIsObject ? oldValue : EMPTY_OBJECT;
         if (newIsObject) {
@@ -3107,7 +3081,7 @@ function diffObject (newValue, oldValue, callback) {
 function diffRecursion(keypath, newValue, oldValue, fuzzyKeypaths, fuzzyKeypathLength, callback) {
     const diff = function (subKey, subNewValue, subOldValue) {
         if (subNewValue !== subOldValue) {
-            const newKeypath = join$1(keypath, subKey);
+            const newKeypath = join(keypath, subKey);
             for (let i = 0; i < fuzzyKeypathLength; i++) {
                 const fuzzyKeypath = fuzzyKeypaths[i];
                 if (matchFuzzy(newKeypath, fuzzyKeypath) !== UNDEFINED) {
@@ -3278,10 +3252,10 @@ class Observer {
             });
             instance.diff(keypath, newValue, oldValue);
         };
-        if (string(keypath)) {
+        if (string$1(keypath)) {
             setValue(keypath, value);
         }
-        else if (object(keypath)) {
+        else if (object$1(keypath)) {
             for (let key in keypath) {
                 setValue(key, keypath[key]);
             }
@@ -3391,7 +3365,7 @@ class Observer {
         if (func(options)) {
             getter = options.bind(context);
         }
-        else if (object(options)) {
+        else if (object$1(options)) {
             const computedOptions = options;
             if (boolean(computedOptions.cache)) {
                 cache = computedOptions.cache;
@@ -3400,7 +3374,7 @@ class Observer {
                 sync = computedOptions.sync;
             }
             // 传入空数组等同于没传
-            if (!falsy(computedOptions.deps)) {
+            if (!falsy$2(computedOptions.deps)) {
                 deps = computedOptions.deps;
             }
             if (func(computedOptions.get)) {
@@ -3426,7 +3400,7 @@ class Observer {
      */
     removeComputed(keypath) {
         const instance = this, { computed } = instance;
-        if (computed && has$2(computed, keypath)) {
+        if (computed && has(computed, keypath)) {
             delete computed[keypath];
         }
     }
@@ -3459,7 +3433,7 @@ class Observer {
                 ]);
             }
         };
-        if (string(keypath)) {
+        if (string$1(keypath)) {
             addWatcher(keypath, formatWatcherOptions(watcher, immediate));
         }
         else {
@@ -3536,7 +3510,7 @@ class Observer {
      */
     insert(keypath, item, index) {
         let list = this.get(keypath);
-        list = array(list) ? list.slice() : [];
+        list = array$1(list) ? list.slice() : [];
         const { length } = list;
         if (index === TRUE || index === length) {
             list.push(item);
@@ -3579,7 +3553,7 @@ class Observer {
      */
     removeAt(keypath, index) {
         let list = this.get(keypath);
-        if (array(list)
+        if (array$1(list)
             && index >= 0
             && index < list.length) {
             list = list.slice();
@@ -3596,9 +3570,9 @@ class Observer {
      */
     remove(keypath, item) {
         let list = this.get(keypath);
-        if (array(list)) {
+        if (array$1(list)) {
             list = list.slice();
-            if (remove(list, item)) {
+            if (remove$6(list, item)) {
                 this.set(keypath, list);
                 return TRUE;
             }
@@ -3677,7 +3651,7 @@ class Yox {
         const source = props ? copy(props) : {};
         {
             if (propTypes) {
-                each$2(propTypes, function (rule, key) {
+                each(propTypes, function (rule, key) {
                     let value = source[key];
                     if (value === UNDEFINED) {
                         value = rule.value;
@@ -3703,18 +3677,18 @@ class Yox {
             }
         }));
         if (computed) {
-            each$2(computed, function (options, keypath) {
+            each(computed, function (options, keypath) {
                 observer.addComputed(keypath, options);
             });
         }
         const extend$1 = func(data) ? execute(data, instance, options) : data;
-        if (object(extend$1)) {
-            each$2(extend$1, function (value, key) {
+        if (object$1(extend$1)) {
+            each(extend$1, function (value, key) {
                 source[key] = value;
             });
         }
         if (methods) {
-            each$2(methods, function (method, name) {
+            each(methods, function (method, name) {
                 instance[name] = method;
             });
         }
@@ -3728,7 +3702,7 @@ class Yox {
                 extend(source, slots);
             }
             // 检查 template
-            if (string(template)) {
+            if (string$1(template)) {
                 // 传了选择器，则取对应元素的 html
                 if (selectorPattern.test(template)) {
                     placeholder = find(template);
@@ -3740,7 +3714,7 @@ class Yox {
             }
             // 检查 el
             if (el) {
-                if (string(el)) {
+                if (string$1(el)) {
                     const selector = el;
                     if (selectorPattern.test(selector)) {
                         placeholder = find(selector);
@@ -3779,7 +3753,7 @@ class Yox {
                 // 在开发阶段，template 是原始的 html 模板
                 // 在产品阶段，template 是编译后的渲染函数
                 // 当然，具体是什么需要外部自己控制
-                instance.$template = string(template)
+                instance.$template = string$1(template)
                     ? Yox.compile(template)
                     : template;
                 if (!vnode) {
@@ -3830,7 +3804,7 @@ class Yox {
      */
     static directive(name, directive) {
         {
-            if (string(name) && !directive) {
+            if (string$1(name) && !directive) {
                 return getResource(globalDirectives, name);
             }
             setResource(globalDirectives, name, directive);
@@ -3841,7 +3815,7 @@ class Yox {
      */
     static transition(name, transition) {
         {
-            if (string(name) && !transition) {
+            if (string$1(name) && !transition) {
                 return getResource(globalTransitions, name);
             }
             setResource(globalTransitions, name, transition);
@@ -3852,7 +3826,7 @@ class Yox {
      */
     static component(name, component) {
         {
-            if (string(name) && !component) {
+            if (string$1(name) && !component) {
                 return getResource(globalComponents, name);
             }
             setResource(globalComponents, name, component);
@@ -3863,7 +3837,7 @@ class Yox {
      */
     static partial(name, partial) {
         {
-            if (string(name) && !partial) {
+            if (string$1(name) && !partial) {
                 return getResource(globalPartials, name);
             }
             setResource(globalPartials, name, partial, Yox.compile);
@@ -3874,7 +3848,7 @@ class Yox {
      */
     static filter(name, filter) {
         {
-            if (string(name) && !filter) {
+            if (string$1(name) && !filter) {
                 return getResource(globalFilters, name);
             }
             setResource(globalFilters, name, filter);
@@ -3931,7 +3905,7 @@ class Yox {
         if (CustomEvent.is(type)) {
             event = type;
         }
-        else if (string(type)) {
+        else if (string$1(type)) {
             event = new CustomEvent(type);
         }
         else {
@@ -3954,7 +3928,7 @@ class Yox {
         // 事件是否正常结束（未被停止冒泡）
         isComplete;
         // 比如 fire('name', true) 直接向下发事件
-        if (object(data)) {
+        if (object$1(data)) {
             push(args, data);
         }
         else if (data === TRUE) {
@@ -3970,7 +3944,7 @@ class Yox {
             if (downward) {
                 if ($children) {
                     event.phase = CustomEvent.PHASE_DOWNWARD;
-                    each($children, function (child) {
+                    each$2($children, function (child) {
                         return isComplete = child.fire(event, data, TRUE);
                     });
                 }
@@ -4056,7 +4030,7 @@ class Yox {
     directive(name, directive) {
         {
             const instance = this, { $directives } = instance;
-            if (string(name) && !directive) {
+            if (string$1(name) && !directive) {
                 return getResource($directives, name, Yox.directive);
             }
             setResource($directives || (instance.$directives = {}), name, directive);
@@ -4068,7 +4042,7 @@ class Yox {
     transition(name, transition) {
         {
             const instance = this, { $transitions } = instance;
-            if (string(name) && !transition) {
+            if (string$1(name) && !transition) {
                 return getResource($transitions, name, Yox.transition);
             }
             setResource($transitions || (instance.$transitions = {}), name, transition);
@@ -4080,7 +4054,7 @@ class Yox {
     component(name, component) {
         {
             const instance = this, { $components } = instance;
-            if (string(name) && !component) {
+            if (string$1(name) && !component) {
                 return getResource($components, name, Yox.component);
             }
             setResource($components || (instance.$components = {}), name, component);
@@ -4092,7 +4066,7 @@ class Yox {
     partial(name, partial) {
         {
             const instance = this, { $partials } = instance;
-            if (string(name) && !partial) {
+            if (string$1(name) && !partial) {
                 return getResource($partials, name, Yox.partial);
             }
             setResource($partials || (instance.$partials = {}), name, partial, Yox.compile);
@@ -4104,7 +4078,7 @@ class Yox {
     filter(name, filter) {
         {
             const instance = this, { $filters } = instance;
-            if (string(name) && !filter) {
+            if (string$1(name) && !filter) {
                 return getResource($filters, name, Yox.filter);
             }
             setResource($filters || (instance.$filters = {}), name, filter);
@@ -4203,7 +4177,7 @@ class Yox {
             lifeCycle.fire(instance, HOOK_BEFORE_DESTROY);
             const { $vnode } = instance;
             if ($parent && $parent.$children) {
-                remove($parent.$children, instance);
+                remove$6($parent.$children, instance);
             }
             if ($vnode) {
                 // virtual dom 通过判断 parent.$vnode 知道宿主组件是否正在销毁
@@ -4317,31 +4291,29 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.210";
+Yox.version = "1.0.0-alpha.211";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
 Yox.is = is;
 Yox.dom = domApi;
-Yox.array = array$1;
-Yox.object = object$1;
-Yox.string = string$1;
+Yox.array = array;
+Yox.object = object;
+Yox.string = string;
 Yox.logger = logger;
 Yox.Event = CustomEvent;
 Yox.Emitter = Emitter;
 // 外部可配置的对象
 Yox.config = PUBLIC_CONFIG;
-// 外部可监听组件的生命周期，路由会用到
-Yox.lifeCycle = lifeCycle;
 function setFlexibleOptions(instance, key, value) {
     if (func(value)) {
         instance[key](execute(value, instance));
     }
-    else if (object(value)) {
+    else if (object$1(value)) {
         instance[key](value);
     }
 }
-function addEvent$1(instance, type, listener, once) {
+function addEvent(instance, type, listener, once) {
     const { $emitter } = instance, filter = $emitter.toFilter(type, listener);
     const options = {
         listener: filter.listener,
@@ -4354,12 +4326,12 @@ function addEvent$1(instance, type, listener, once) {
     $emitter.on(filter.type, options);
 }
 function addEvents(instance, type, listener, once) {
-    if (string(type)) {
-        addEvent$1(instance, type, listener, once);
+    if (string$1(type)) {
+        addEvent(instance, type, listener, once);
     }
     else {
-        each$2(type, function (value, key) {
-            addEvent$1(instance, key, value, once);
+        each(type, function (value, key) {
+            addEvent(instance, key, value, once);
         });
     }
 }
@@ -4372,7 +4344,7 @@ function loadComponent(registry, name, callback) {
             const componentCallback = function (result) {
                 const queue = registry[name], options = result['default'] || result;
                 registry[name] = options;
-                each(queue, function (callback) {
+                each$2(queue, function (callback) {
                     callback(options);
                 });
             }, promise = component(componentCallback);
@@ -4381,7 +4353,7 @@ function loadComponent(registry, name, callback) {
             }
         }
         // 正在加载中
-        else if (array(component)) {
+        else if (array$1(component)) {
             push(component, callback);
         }
         // 不是异步加载函数，直接同步返回
@@ -4400,11 +4372,11 @@ function getResource(registry, name, lookup) {
     }
 }
 function setResource(registry, name, value, formatValue) {
-    if (string(name)) {
+    if (string$1(name)) {
         registry[name] = formatValue ? formatValue(value) : value;
     }
     else {
-        each$2(name, function (value, key) {
+        each(name, function (value, key) {
             registry[key] = formatValue ? formatValue(value) : value;
         });
     }

@@ -23,7 +23,9 @@
             <slot name="icon" />
 
             {{#if visible}}
-              <slot />
+              <slot>
+                default title
+              </slot>
             {{/if}}
 
             <button on-click="toggle('visible')">

@@ -206,9 +206,6 @@ export default class Yox implements YoxInterface {
   // 外部可配置的对象
   public static config = constant.PUBLIC_CONFIG
 
-  // 外部可监听组件的生命周期，路由会用到
-  public static lifeCycle = lifeCycle
-
   /**
    * 定义组件对象
    */
@@ -419,7 +416,7 @@ export default class Yox implements YoxInterface {
           if (instance.$isDirty) {
             instance.$isDirty = constant.UNDEFINED
             instance.update(
-              instance.render(),
+              instance.render() as VNode,
               instance.$vnode as VNode
             )
           }
@@ -600,7 +597,7 @@ export default class Yox implements YoxInterface {
         }
 
         instance.update(
-          instance.render(),
+          instance.render() as VNode,
           vnode
         )
 
@@ -1010,7 +1007,7 @@ export default class Yox implements YoxInterface {
         // 没有更新模板，强制刷新
         if (!props && $vnode === instance.$vnode) {
           instance.update(
-            instance.render(),
+            instance.render() as VNode,
             $vnode
           )
         }

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.210
+ * yox.js v1.0.0-alpha.211
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -76,7 +76,7 @@ function func(value) {
  * @param value
  * @return
  */
-function array(value) {
+function array$1(value) {
     return Array.isArray(value);
 }
 /**
@@ -85,7 +85,7 @@ function array(value) {
  * @param value
  * @return
  */
-function object(value) {
+function object$1(value) {
     // 低版本 IE 会把 null 当作 object
     return value !== NULL && typeof value === 'object';
 }
@@ -95,7 +95,7 @@ function object(value) {
  * @param value
  * @return
  */
-function string(value) {
+function string$1(value) {
     return typeof value === 'string';
 }
 /**
@@ -124,15 +124,15 @@ function boolean(value) {
  */
 function numeric(value) {
     return number(value)
-        || (string(value) && !isNaN(parseFloat(value)) && isFinite(value));
+        || (string$1(value) && !isNaN(parseFloat(value)) && isFinite(value));
 }
 
 var is = /*#__PURE__*/Object.freeze({
   __proto__: null,
   func: func,
-  array: array,
-  object: object,
-  string: string,
+  array: array$1,
+  object: object$1,
+  string: string$1,
   number: number,
   boolean: boolean,
   numeric: numeric
@@ -148,7 +148,7 @@ var is = /*#__PURE__*/Object.freeze({
  */
 function execute (fn, context, args) {
     if (func(fn)) {
-        return array(args)
+        return array$1(args)
             ? fn.apply(context, args)
             : context !== UNDEFINED
                 ? fn.call(context, args)
@@ -223,7 +223,7 @@ CustomEvent.PHASE_DOWNWARD = -1;
  * @param callback 返回 false 可停止遍历
  * @param reversed 是否逆序遍历
  */
-function each(array, callback, reversed) {
+function each$2(array, callback, reversed) {
     const { length } = array;
     if (length) {
         if (reversed) {
@@ -255,14 +255,14 @@ function nativeUnshift(array, item) {
  * @param value
  * @param action
  */
-function addItem(array$1, value, action) {
-    if (array(value)) {
-        each(value, function (item) {
-            action(array$1, item);
+function addItem(array, value, action) {
+    if (array$1(value)) {
+        each$2(value, function (item) {
+            action(array, item);
         });
     }
     else {
-        action(array$1, value);
+        action(array, value);
     }
 }
 /**
@@ -291,9 +291,9 @@ function unshift(array, target) {
  * @param strict 是否全等判断，默认是全等
  * @return 如果未找到，返回 -1
  */
-function indexOf(array, target, strict) {
+function indexOf$1(array, target, strict) {
     let result = -1;
-    each(array, function (item, index) {
+    each$2(array, function (item, index) {
         if (strict === FALSE ? item == target : item === target) {
             result = index;
             return FALSE;
@@ -337,7 +337,7 @@ function pop(array) {
  */
 function remove(array, target, strict) {
     let result = 0;
-    each(array, function (item, index) {
+    each$2(array, function (item, index) {
         if (strict === FALSE ? item == target : item === target) {
             array.splice(index, 1);
             result++;
@@ -353,8 +353,8 @@ function remove(array, target, strict) {
  * @param strict 是否全等判断，默认是全等
  * @return
  */
-function has(array, target, strict) {
-    return indexOf(array, target, strict) >= 0;
+function has$2(array, target, strict) {
+    return indexOf$1(array, target, strict) >= 0;
 }
 /**
  * 把类数组转成数组
@@ -362,10 +362,10 @@ function has(array, target, strict) {
  * @param array 类数组
  * @return
  */
-function toArray(array$1) {
-    return array(array$1)
-        ? array$1
-        : execute(EMPTY_ARRAY.slice, array$1);
+function toArray(array) {
+    return array$1(array)
+        ? array
+        : execute(EMPTY_ARRAY.slice, array);
 }
 /**
  * 把数组转成对象
@@ -377,7 +377,7 @@ function toArray(array$1) {
  */
 function toObject(array, key, value) {
     let result = {};
-    each(array, function (item) {
+    each$2(array, function (item) {
         result[key ? item[key] : item] = value || item;
     });
     return result;
@@ -389,7 +389,7 @@ function toObject(array, key, value) {
  * @param separator
  * @return
  */
-function join(array, separator) {
+function join$1(array, separator) {
     return array.join(separator);
 }
 /**
@@ -398,24 +398,24 @@ function join(array, separator) {
  * @param array
  * @return
  */
-function falsy(array$1) {
-    return !array(array$1) || !array$1.length;
+function falsy$2(array) {
+    return !array$1(array) || !array.length;
 }
 
-var array$1 = /*#__PURE__*/Object.freeze({
+var array = /*#__PURE__*/Object.freeze({
   __proto__: null,
-  each: each,
+  each: each$2,
   push: push,
   unshift: unshift,
-  indexOf: indexOf,
+  indexOf: indexOf$1,
   last: last,
   pop: pop,
   remove: remove,
-  has: has,
+  has: has$2,
   toArray: toArray,
   toObject: toObject,
-  join: join,
-  falsy: falsy
+  join: join$1,
+  falsy: falsy$2
 });
 
 function toString (target, defaultValue) {
@@ -533,7 +533,7 @@ const capitalize = createOneKeyCache(function (str) {
  * @return
  */
 function repeat(str, count) {
-    return new Array(count + 1).join(str);
+    return join$1(new Array(count + 1), str);
 }
 /**
  * 清除两侧空白符
@@ -569,7 +569,7 @@ function slice(str, start, end) {
  * @param start
  * @return
  */
-function indexOf$1(str, part, start) {
+function indexOf(str, part, start) {
     return str.indexOf(part, start !== UNDEFINED ? start : 0);
 }
 /**
@@ -591,7 +591,7 @@ function lastIndexOf(str, part, end) {
  * @return
  */
 function startsWith(str, part) {
-    return indexOf$1(str, part) === 0;
+    return indexOf(str, part) === 0;
 }
 /**
  * str 是否以 part 结束
@@ -636,7 +636,7 @@ function lower(str) {
  * @return 是否包含
  */
 function has$1(str, part) {
-    return indexOf$1(str, part) >= 0;
+    return indexOf(str, part) >= 0;
 }
 /**
  * 判断长度大于 0 的字符串
@@ -645,10 +645,10 @@ function has$1(str, part) {
  * @return
  */
 function falsy$1(str) {
-    return !string(str) || !str.length;
+    return !string$1(str) || !str.length;
 }
 
-var string$1 = /*#__PURE__*/Object.freeze({
+var string = /*#__PURE__*/Object.freeze({
   __proto__: null,
   camelize: camelize,
   hyphenate: hyphenate,
@@ -656,7 +656,7 @@ var string$1 = /*#__PURE__*/Object.freeze({
   repeat: repeat,
   trim: trim,
   slice: slice,
-  indexOf: indexOf$1,
+  indexOf: indexOf,
   lastIndexOf: lastIndexOf,
   startsWith: startsWith,
   endsWith: endsWith,
@@ -686,7 +686,7 @@ const match = createTwoKeyCache(function (keypath, prefix) {
         : -1;
 });
 const getKeypathTokens = createOneKeyCache(function (keypath) {
-    return indexOf$1(keypath, RAW_DOT) < 0
+    return indexOf(keypath, RAW_DOT) < 0
         ? [keypath]
         : keypath.split(RAW_DOT);
 });
@@ -697,7 +697,7 @@ const getKeypathTokens = createOneKeyCache(function (keypath) {
  * @param callback 返回 false 可中断遍历
  */
 function each$1(keypath, callback) {
-    const tokens = string(keypath) ? getKeypathTokens(keypath) : keypath;
+    const tokens = string$1(keypath) ? getKeypathTokens(keypath) : keypath;
     for (let i = 0, lastIndex = tokens.length - 1; i <= lastIndex; i++) {
         if (callback(tokens[i], i, lastIndex) === FALSE) {
             break;
@@ -710,7 +710,7 @@ function each$1(keypath, callback) {
  * @param keypath1
  * @param keypath2
  */
-const join$1 = createTwoKeyCache(function (keypath1, keypath2) {
+const join = createTwoKeyCache(function (keypath1, keypath2) {
     return keypath1 && keypath2
         ? keypath1 + RAW_DOT + keypath2
         : keypath1 || keypath2;
@@ -764,7 +764,7 @@ function keys(object) {
  * @param object
  * @param callback 返回 false 可停止遍历
  */
-function each$2(object, callback) {
+function each(object, callback) {
     for (let key in object) {
         if (callback(object[key], key) === FALSE) {
             break;
@@ -777,7 +777,7 @@ function each$2(object, callback) {
  * @param object
  */
 function clear(object) {
-    each$2(object, function (_, key) {
+    each(object, function (_, key) {
         delete object[key];
     });
 }
@@ -787,7 +787,7 @@ function clear(object) {
  * @return
  */
 function extend(original, object) {
-    each$2(object, function (value, key) {
+    each(object, function (value, key) {
         original[key] = value;
     });
     return original;
@@ -809,22 +809,22 @@ function merge(object1, object2) {
  * @param deep 是否需要深拷贝
  * @return
  */
-function copy(object$1, deep) {
-    let result = object$1;
-    if (array(object$1)) {
+function copy(object, deep) {
+    let result = object;
+    if (array$1(object)) {
         if (deep) {
             result = [];
-            each(object$1, function (item, index) {
+            each$2(object, function (item, index) {
                 result[index] = copy(item, deep);
             });
         }
         else {
-            result = object$1.slice();
+            result = object.slice();
         }
     }
-    else if (object(object$1)) {
+    else if (object$1(object)) {
         result = {};
-        each$2(object$1, function (value, key) {
+        each(object, function (value, key) {
             result[key] = deep ? copy(value, deep) : value;
         });
     }
@@ -904,7 +904,7 @@ function set(object, keypath, value, autofill) {
  * @param key
  * @return
  */
-function has$2(object, key) {
+function has(object, key) {
     // 不用 hasOwnProperty，性能差
     return object[key] !== UNDEFINED;
 }
@@ -914,24 +914,24 @@ function has$2(object, key) {
  * @param object
  * @return
  */
-function falsy$2(object$1) {
-    return !object(object$1)
-        || array(object$1)
-        || !keys(object$1).length;
+function falsy(object) {
+    return !object$1(object)
+        || array$1(object)
+        || !keys(object).length;
 }
 
-var object$1 = /*#__PURE__*/Object.freeze({
+var object = /*#__PURE__*/Object.freeze({
   __proto__: null,
   keys: keys,
-  each: each$2,
+  each: each,
   clear: clear,
   extend: extend,
   merge: merge,
   copy: copy,
   get: get,
   set: set,
-  has: has$2,
-  falsy: falsy$2
+  has: has,
+  falsy: falsy
 });
 
 /**
@@ -1056,7 +1056,7 @@ class Emitter {
      * @param filter 自定义过滤器
      */
     fire(type, args, filter) {
-        let instance = this, event = string(type) ? instance.toEvent(type) : type, list = instance.listeners[event.type], isComplete = TRUE;
+        let instance = this, event = string$1(type) ? instance.toEvent(type) : type, list = instance.listeners[event.type], isComplete = TRUE;
         if (list) {
             // 避免遍历过程中，数组发生变化，比如增删了
             list = list.slice();
@@ -1072,7 +1072,7 @@ class Emitter {
                 // 命名空间不匹配
                 if (!matchNamespace(event.ns, options)
                     // 在 fire 过程中被移除了
-                    || !has(list, options)
+                    || !has$2(list, options)
                     // 传了 filter，则用 filter 判断是否过滤此 options
                     || (filter && !filter(event, args, options))) {
                     continue;
@@ -1126,8 +1126,8 @@ class Emitter {
         const instance = this, listeners = instance.listeners, options = func(listener)
             ? { listener: listener }
             : listener;
-        if (object(options) && func(options.listener)) {
-            if (!string(options.ns)) {
+        if (object$1(options) && func(options.listener)) {
+            if (!string$1(options.ns)) {
                 const event = instance.toEvent(type);
                 options.ns = event.ns;
                 type = event.type;
@@ -1145,7 +1145,7 @@ class Emitter {
         const instance = this, listeners = instance.listeners;
         if (type) {
             const filter = instance.toFilter(type, listener), each$1 = function (list, name) {
-                each(list, function (item, index) {
+                each$2(list, function (item, index) {
                     if (matchListener(filter.listener, item) && matchNamespace(filter.ns, item)) {
                         list.splice(index, 1);
                     }
@@ -1161,7 +1161,7 @@ class Emitter {
             }
             // 按命名空间过滤，如 type 传入 .ns
             else if (filter.ns) {
-                each$2(listeners, each$1);
+                each(listeners, each$1);
             }
         }
         else {
@@ -1177,7 +1177,7 @@ class Emitter {
      */
     has(type, listener) {
         let instance = this, listeners = instance.listeners, filter = instance.toFilter(type, listener), result = TRUE, each$1 = function (list) {
-            each(list, function (item) {
+            each$2(list, function (item) {
                 if (matchListener(filter.listener, item) && matchNamespace(filter.ns, item)) {
                     return result = FALSE;
                 }
@@ -1190,7 +1190,7 @@ class Emitter {
             }
         }
         else if (filter.ns) {
-            each$2(listeners, each$1);
+            each(listeners, each$1);
         }
         return !result;
     }
@@ -1208,7 +1208,7 @@ class Emitter {
         };
         // 是否开启命名空间
         if (this.ns) {
-            const index = indexOf$1(type, RAW_DOT);
+            const index = indexOf(type, RAW_DOT);
             if (index >= 0) {
                 event.type = slice(type, 0, index);
                 event.ns = slice(type, index + 1);
@@ -1226,7 +1226,7 @@ class Emitter {
         else {
             filter = {};
         }
-        if (string(filter.ns)) {
+        if (string$1(filter.ns)) {
             filter.type = type;
         }
         else {
@@ -1355,24 +1355,24 @@ class NextTask {
 }
 
 function split2Map(str) {
-    const obj = createPureObject();
-    each(str.split(','), function (item) {
-        obj.set(item, TRUE);
+    const map = Object.create(NULL);
+    each$2(str.split(','), function (item) {
+        map[item] = TRUE;
     });
-    return obj;
+    return map;
 }
 // 首字母大写，或中间包含 -
-const // 常见的自闭合标签
-selfClosingTagNames = split2Map('area,base,embed,track,source,param,input,col,img,br,hr'), 
+// 常见的自闭合标签
+split2Map('area,base,embed,track,source,param,input,col,img,br,hr'); 
 // 常见的 svg 标签
-svgTagNames = split2Map('svg,g,defs,desc,metadata,symbol,use,image,path,rect,circle,line,ellipse,polyline,polygon,text,tspan,tref,textpath,marker,pattern,clippath,mask,filter,cursor,view,animate,font,font-face,glyph,missing-glyph,animateColor,animateMotion,animateTransform,textPath,foreignObject'), 
+split2Map('svg,g,defs,desc,metadata,symbol,use,image,path,rect,circle,line,ellipse,polyline,polygon,text,tspan,tref,textpath,marker,pattern,clippath,mask,filter,cursor,view,animate,font,font-face,glyph,missing-glyph,animateColor,animateMotion,animateTransform,textPath,foreignObject'); 
 // 常见的字符串类型的属性
 // 注意：autocomplete,autocapitalize 不是布尔类型
-stringPropertyNames = split2Map('id,class,name,value,for,accesskey,title,style,src,type,href,target,alt,placeholder,preload,poster,wrap,accept,pattern,dir,autocomplete,autocapitalize,valign'), 
+split2Map('id,class,name,value,for,accesskey,title,style,src,type,href,target,alt,placeholder,preload,poster,wrap,accept,pattern,dir,autocomplete,autocapitalize,valign'); 
 // 常见的数字类型的属性（width,height,cellpadding,cellspacing 支持百分比，因此不计入数字类型）
-numberPropertyNames = split2Map('min,minlength,max,maxlength,step,size,rows,cols,tabindex,colspan,rowspan,frameborder'), 
+split2Map('min,minlength,max,maxlength,step,size,rows,cols,tabindex,colspan,rowspan,frameborder'); 
 // 常见的布尔类型的属性
-booleanPropertyNames = split2Map('disabled,checked,required,multiple,readonly,autofocus,autoplay,controls,loop,muted,novalidate,draggable,contenteditable,hidden,spellcheck');
+split2Map('disabled,checked,required,multiple,readonly,autofocus,autoplay,controls,loop,muted,novalidate,draggable,contenteditable,hidden,spellcheck');
 
 function toNumber (target, defaultValue) {
     return numeric(target)
@@ -1427,7 +1427,7 @@ class Computed {
             instance.value = getter();
         }
         // 减少取值频率，尤其是处理复杂的计算规则
-        else if (force || !has$2(instance, 'value')) {
+        else if (force || !has(instance, 'value')) {
             // 如果写死了依赖，则不需要收集依赖
             if (instance.fixed) {
                 instance.value = getter();
@@ -1494,7 +1494,7 @@ function readValue (source, keypath) {
  * @param callback
  */
 function diffString (newValue, oldValue, callback) {
-    const newIsString = string(newValue), oldIsString = string(oldValue);
+    const newIsString = string$1(newValue), oldIsString = string$1(oldValue);
     if (newIsString || oldIsString) {
         callback('length', newIsString ? newValue.length : UNDEFINED, oldIsString ? oldValue.length : UNDEFINED);
         return TRUE;
@@ -1509,7 +1509,7 @@ function diffString (newValue, oldValue, callback) {
  * @param callback
  */
 function diffArray (newValue, oldValue, callback) {
-    const newIsArray = array(newValue), oldIsArray = array(oldValue);
+    const newIsArray = array$1(newValue), oldIsArray = array$1(oldValue);
     if (newIsArray || oldIsArray) {
         const newLength = newIsArray ? newValue.length : UNDEFINED, oldLength = oldIsArray ? oldValue.length : UNDEFINED;
         callback('length', newLength, oldLength);
@@ -1530,7 +1530,7 @@ function diffArray (newValue, oldValue, callback) {
  * @param callback
  */
 function diffObject (newValue, oldValue, callback) {
-    const newIsObject = object(newValue), oldIsObject = object(oldValue);
+    const newIsObject = object$1(newValue), oldIsObject = object$1(oldValue);
     if (newIsObject || oldIsObject) {
         const diffed = createPureObject(), newObject = newIsObject ? newValue : EMPTY_OBJECT, oldObject = oldIsObject ? oldValue : EMPTY_OBJECT;
         if (newIsObject) {
@@ -1560,7 +1560,7 @@ function diffObject (newValue, oldValue, callback) {
 function diffRecursion(keypath, newValue, oldValue, fuzzyKeypaths, fuzzyKeypathLength, callback) {
     const diff = function (subKey, subNewValue, subOldValue) {
         if (subNewValue !== subOldValue) {
-            const newKeypath = join$1(keypath, subKey);
+            const newKeypath = join(keypath, subKey);
             for (let i = 0; i < fuzzyKeypathLength; i++) {
                 const fuzzyKeypath = fuzzyKeypaths[i];
                 if (matchFuzzy(newKeypath, fuzzyKeypath) !== UNDEFINED) {
@@ -1731,10 +1731,10 @@ class Observer {
             });
             instance.diff(keypath, newValue, oldValue);
         };
-        if (string(keypath)) {
+        if (string$1(keypath)) {
             setValue(keypath, value);
         }
-        else if (object(keypath)) {
+        else if (object$1(keypath)) {
             for (let key in keypath) {
                 setValue(key, keypath[key]);
             }
@@ -1844,7 +1844,7 @@ class Observer {
         if (func(options)) {
             getter = options.bind(context);
         }
-        else if (object(options)) {
+        else if (object$1(options)) {
             const computedOptions = options;
             if (boolean(computedOptions.cache)) {
                 cache = computedOptions.cache;
@@ -1853,7 +1853,7 @@ class Observer {
                 sync = computedOptions.sync;
             }
             // 传入空数组等同于没传
-            if (!falsy(computedOptions.deps)) {
+            if (!falsy$2(computedOptions.deps)) {
                 deps = computedOptions.deps;
             }
             if (func(computedOptions.get)) {
@@ -1879,7 +1879,7 @@ class Observer {
      */
     removeComputed(keypath) {
         const instance = this, { computed } = instance;
-        if (computed && has$2(computed, keypath)) {
+        if (computed && has(computed, keypath)) {
             delete computed[keypath];
         }
     }
@@ -1912,7 +1912,7 @@ class Observer {
                 ]);
             }
         };
-        if (string(keypath)) {
+        if (string$1(keypath)) {
             addWatcher(keypath, formatWatcherOptions(watcher, immediate));
         }
         else {
@@ -1989,7 +1989,7 @@ class Observer {
      */
     insert(keypath, item, index) {
         let list = this.get(keypath);
-        list = array(list) ? list.slice() : [];
+        list = array$1(list) ? list.slice() : [];
         const { length } = list;
         if (index === TRUE || index === length) {
             list.push(item);
@@ -2032,7 +2032,7 @@ class Observer {
      */
     removeAt(keypath, index) {
         let list = this.get(keypath);
-        if (array(list)
+        if (array$1(list)
             && index >= 0
             && index < list.length) {
             list = list.slice();
@@ -2049,7 +2049,7 @@ class Observer {
      */
     remove(keypath, item) {
         let list = this.get(keypath);
-        if (array(list)) {
+        if (array$1(list)) {
             list = list.slice();
             if (remove(list, item)) {
                 this.set(keypath, list);
@@ -2078,26 +2078,6 @@ class Observer {
     }
 }
 
-class LifeCycle {
-    constructor() {
-        this.$emitter = new Emitter();
-    }
-    fire(component, type, data) {
-        this.$emitter.fire(type, [
-            component,
-            data,
-        ]);
-    }
-    on(type, listener) {
-        this.$emitter.on(type, listener);
-        return this;
-    }
-    off(type, listener) {
-        this.$emitter.off(type, listener);
-        return this;
-    }
-}
-const lifeCycle = new LifeCycle();
 class Yox {
     constructor(options) {
         const instance = this, $options = options || EMPTY_OBJECT;
@@ -2126,18 +2106,18 @@ class Yox {
             }
         }));
         if (computed) {
-            each$2(computed, function (options, keypath) {
+            each(computed, function (options, keypath) {
                 observer.addComputed(keypath, options);
             });
         }
         const extend$1 = func(data) ? execute(data, instance, options) : data;
-        if (object(extend$1)) {
-            each$2(extend$1, function (value, key) {
+        if (object$1(extend$1)) {
+            each(extend$1, function (value, key) {
                 source[key] = value;
             });
         }
         if (methods) {
-            each$2(methods, function (method, name) {
+            each(methods, function (method, name) {
                 instance[name] = method;
             });
         }
@@ -2249,7 +2229,7 @@ class Yox {
         if (CustomEvent.is(type)) {
             event = type;
         }
-        else if (string(type)) {
+        else if (string$1(type)) {
             event = new CustomEvent(type);
         }
         else {
@@ -2272,7 +2252,7 @@ class Yox {
         // 事件是否正常结束（未被停止冒泡）
         isComplete;
         // 比如 fire('name', true) 直接向下发事件
-        if (object(data)) {
+        if (object$1(data)) {
             push(args, data);
         }
         else if (data === TRUE) {
@@ -2288,7 +2268,7 @@ class Yox {
             if (downward) {
                 if ($children) {
                     event.phase = CustomEvent.PHASE_DOWNWARD;
-                    each($children, function (child) {
+                    each$2($children, function (child) {
                         return isComplete = child.fire(event, data, TRUE);
                     });
                 }
@@ -2491,21 +2471,19 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.210";
+Yox.version = "1.0.0-alpha.211";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
 Yox.is = is;
-Yox.array = array$1;
-Yox.object = object$1;
-Yox.string = string$1;
+Yox.array = array;
+Yox.object = object;
+Yox.string = string;
 Yox.logger = logger;
 Yox.Event = CustomEvent;
 Yox.Emitter = Emitter;
 // 外部可配置的对象
 Yox.config = PUBLIC_CONFIG;
-// 外部可监听组件的生命周期，路由会用到
-Yox.lifeCycle = lifeCycle;
 function addEvent(instance, type, listener, once) {
     const { $emitter } = instance, filter = $emitter.toFilter(type, listener);
     const options = {
@@ -2519,11 +2497,11 @@ function addEvent(instance, type, listener, once) {
     $emitter.on(filter.type, options);
 }
 function addEvents(instance, type, listener, once) {
-    if (string(type)) {
+    if (string$1(type)) {
         addEvent(instance, type, listener, once);
     }
     else {
-        each$2(type, function (value, key) {
+        each(type, function (value, key) {
             addEvent(instance, key, value, once);
         });
     }

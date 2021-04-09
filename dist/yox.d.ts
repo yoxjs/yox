@@ -803,7 +803,7 @@ export default class Yox implements YoxInterface {
 	/**
 	 * 把模板抽象语法树渲染成 virtual dom
 	 */
-	render(): any;
+	render(): VNode | undefined;
 	/**
 	 * 更新 virtual dom
 	 *
