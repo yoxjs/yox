@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.212
+ * yox.js v1.0.0-alpha.213
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -3700,7 +3700,7 @@ function compile(content) {
     return nodeList;
 }
 
-const QUOTE_DOUBLE = '"', QUOTE_SINGLE = "'", COMMA = ',', RETURN = 'return ';
+const QUOTE_DOUBLE = '"', QUOTE_SINGLE = "'", COMMA = ',', OPAREN = '(', CPAREN = ')';
 // 下面这些值需要根据外部配置才能确定
 let isUglify$1 = UNDEFINED$1, isMinify = UNDEFINED$1, UNDEFINED = EMPTY_STRING, NULL = EMPTY_STRING, TRUE = EMPTY_STRING, FALSE = EMPTY_STRING, SPACE = EMPTY_STRING, INDENT = EMPTY_STRING, BREAK_LINE = EMPTY_STRING;
 class Raw {
@@ -3802,8 +3802,8 @@ class Call {
     }
     toString(tabSize) {
         const { name, args } = this, tuple = args
-            ? toTuple('(', ')', COMMA, TRUE$1, trimArgs(args)).toString(tabSize)
-            : '()';
+            ? toTuple(OPAREN, CPAREN, COMMA, TRUE$1, trimArgs(args)).toString(tabSize)
+            : `${OPAREN}${CPAREN}`;
         return `${name}${tuple}`;
     }
 }
@@ -3825,10 +3825,10 @@ class Binary {
     toString(tabSize) {
         let left = this.left.toString(tabSize), right = this.right.toString(tabSize);
         if (this.leftGroup) {
-            left = `(${left})`;
+            left = `${OPAREN}${left}${CPAREN}`;
         }
         if (this.rightGroup) {
-            right = `(${right})`;
+            right = `${OPAREN}${right}${CPAREN}`;
         }
         return `${left}${SPACE}${this.operator}${SPACE}${right}`;
     }
@@ -3855,7 +3855,7 @@ class AnonymousFunction {
             push(code, body.toString(nextTabSize));
         }
         if (returnValue) {
-            push(code, `${RETURN}${returnValue.toString(nextTabSize)}`);
+            push(code, `return ${returnValue.toString(nextTabSize)}`);
         }
         return `${RAW_FUNCTION}${SPACE}(${tuple})${SPACE}{${BREAK_LINE}${nextIndentSize}${join$1(code, BREAK_LINE + nextIndentSize)}${BREAK_LINE}${currentIndentSize}}`;
     }
@@ -3868,6 +3868,16 @@ class Operator {
     toString(tabSize) {
         const { base, code } = this;
         return `${base.toString(tabSize)}.${code.toString(tabSize)}`;
+    }
+}
+class Assign {
+    constructor(name, value) {
+        this.name = name;
+        this.value = value;
+    }
+    toString(tabSize) {
+        const { name, value } = this;
+        return `${name.toString(tabSize)} = ${value.toString(tabSize)}`;
     }
 }
 class Push {
@@ -3912,6 +3922,9 @@ function toAnonymousFunction(args, body, returnValue) {
 }
 function toOperator(base, code) {
     return new Operator(base, code);
+}
+function toAssign(name, value) {
+    return new Assign(name, value);
 }
 function toPush(array, item) {
     return new Push(array, item);
@@ -4079,7 +4092,7 @@ function generate$1(node, transformIdentifier, generateIdentifier, generateValue
             hasHolder = TRUE$1;
             const identifierNode = node;
             value = transformIdentifier(identifierNode)
-                || generateIdentifier(identifierNode, identifierNode.name ? parse(identifierNode.name) : UNDEFINED$1, holder, stack, parentNode);
+                || generateIdentifier(identifierNode, identifierNode.name || UNDEFINED$1, identifierNode.name ? parse(identifierNode.name) : UNDEFINED$1, holder, stack, parentNode);
             break;
         case MEMBER:
             hasHolder = TRUE$1;
@@ -4097,7 +4110,7 @@ function generate$1(node, transformIdentifier, generateIdentifier, generateValue
                             memberNodes.unshift(node);
                         }, TRUE$1);
                     }
-                    value = generateIdentifier(memberNode, memberNodes, holder, stack, parentNode);
+                    value = generateIdentifier(memberNode, UNDEFINED$1, memberNodes, holder, stack, parentNode);
                 }
             }
             else if (memberNode.nodes) {
@@ -4152,7 +4165,7 @@ dynamicChildrenStack = [TRUE$1], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_
 // 下面这些值需要根据外部配置才能确定
 let isUglify = UNDEFINED$1, 
 // 下面 4 个变量用于分配局部变量名称
-localVarId = 0, localVarMap = {}, localVarCache = {}, VAR_LOCAL_PREFIX = EMPTY_STRING, ARG_INSTANCE = EMPTY_STRING, RENDER_ELEMENT_VNODE = EMPTY_STRING, RENDER_COMPONENT_VNODE = EMPTY_STRING, ADD_ATTRIBUTE = EMPTY_STRING, ADD_TEXT_VNODE = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, DEFINE_PARTIAL = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, RENDER_EXPRESSION_IDENTIFIER = EMPTY_STRING, RENDER_EXPRESSION_VALUE = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, TO_STRING = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_COMPONENTS = EMPTY_STRING, ARG_MAGIC_VAR_SCOPE = EMPTY_STRING, ARG_MAGIC_VAR_KEYPATH = EMPTY_STRING, ARG_MAGIC_VAR_LENGTH = EMPTY_STRING, ARG_MAGIC_VAR_EVENT = EMPTY_STRING, ARG_MAGIC_VAR_DATA = EMPTY_STRING;
+localVarId = 0, localVarMap = {}, localVarCache = {}, VAR_LOCAL_PREFIX = EMPTY_STRING, ARG_INSTANCE = EMPTY_STRING, RENDER_ELEMENT_VNODE = EMPTY_STRING, RENDER_COMPONENT_VNODE = EMPTY_STRING, APPEND_ATTRIBUTE = EMPTY_STRING, APPEND_TEXT_VNODE = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, RENDER_EXPRESSION_IDENTIFIER = EMPTY_STRING, RENDER_EXPRESSION_VALUE = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, TO_STRING = EMPTY_STRING, ARG_FILTERS = EMPTY_STRING, ARG_GLOBAL_FILTERS = EMPTY_STRING, ARG_LOCAL_PARTIALS = EMPTY_STRING, ARG_PARTIALS = EMPTY_STRING, ARG_GLOBAL_PARTIALS = EMPTY_STRING, ARG_DIRECTIVES = EMPTY_STRING, ARG_GLOBAL_DIRECTIVES = EMPTY_STRING, ARG_TRANSITIONS = EMPTY_STRING, ARG_GLOBAL_TRANSITIONS = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_COMPONENTS = EMPTY_STRING, ARG_SCOPE = EMPTY_STRING, ARG_KEYPATH = EMPTY_STRING, ARG_LENGTH = EMPTY_STRING, ARG_EVENT = EMPTY_STRING, ARG_DATA = EMPTY_STRING;
 function init() {
     if (isUglify === PUBLIC_CONFIG.uglifyCompiled) {
         return;
@@ -4162,8 +4175,8 @@ function init() {
         ARG_INSTANCE = '_a';
         RENDER_ELEMENT_VNODE = '_b';
         RENDER_COMPONENT_VNODE = '_c';
-        ADD_ATTRIBUTE = '_d';
-        ADD_TEXT_VNODE = '_e';
+        APPEND_ATTRIBUTE = '_d';
+        APPEND_TEXT_VNODE = '_e';
         RENDER_TRANSITION = '_f';
         RENDER_MODEL = '_g';
         RENDER_EVENT_METHOD = '_h';
@@ -4171,31 +4184,39 @@ function init() {
         RENDER_DIRECTIVE = '_j';
         RENDER_SPREAD = '_k';
         RENDER_SLOT = '_l';
-        DEFINE_PARTIAL = '_m';
-        RENDER_PARTIAL = '_n';
-        RENDER_EACH = '_o';
-        RENDER_RANGE = '_p';
-        RENDER_EXPRESSION_IDENTIFIER = '_q';
-        RENDER_EXPRESSION_VALUE = '_r';
-        EXECUTE_FUNCTION = '_s';
-        TO_STRING = '_t';
-        ARG_STACK = '_u';
-        ARG_VNODE = '_v';
-        ARG_CHILDREN = '_w';
-        ARG_COMPONENTS = '_x';
-        ARG_MAGIC_VAR_SCOPE = '_y';
-        ARG_MAGIC_VAR_KEYPATH = '_z';
-        ARG_MAGIC_VAR_LENGTH = '_1';
-        ARG_MAGIC_VAR_EVENT = '_2';
-        ARG_MAGIC_VAR_DATA = '_3';
+        RENDER_PARTIAL = '_m';
+        RENDER_EACH = '_n';
+        RENDER_RANGE = '_o';
+        RENDER_EXPRESSION_IDENTIFIER = '_p';
+        RENDER_EXPRESSION_VALUE = '_q';
+        EXECUTE_FUNCTION = '_r';
+        TO_STRING = '_s';
+        ARG_FILTERS = '_t',
+            ARG_GLOBAL_FILTERS = '_u',
+            ARG_LOCAL_PARTIALS = '_v';
+        ARG_PARTIALS = '_w',
+            ARG_GLOBAL_PARTIALS = '_x',
+            ARG_DIRECTIVES = '_y',
+            ARG_GLOBAL_DIRECTIVES = '_z',
+            ARG_TRANSITIONS = '_1',
+            ARG_GLOBAL_TRANSITIONS = '_2',
+            ARG_STACK = '_3';
+        ARG_VNODE = '_4';
+        ARG_CHILDREN = '_5';
+        ARG_COMPONENTS = '_6';
+        ARG_SCOPE = '_7';
+        ARG_KEYPATH = '_8';
+        ARG_LENGTH = '_9';
+        ARG_EVENT = '_10';
+        ARG_DATA = '_11';
     }
     else {
         VAR_LOCAL_PREFIX = 'var';
         ARG_INSTANCE = 'instance';
         RENDER_ELEMENT_VNODE = 'renderElementVnode';
         RENDER_COMPONENT_VNODE = 'renderComponentVnode';
-        ADD_ATTRIBUTE = 'addAttribute';
-        ADD_TEXT_VNODE = 'addTextVnode';
+        APPEND_ATTRIBUTE = 'appendAttribute';
+        APPEND_TEXT_VNODE = 'appendTextVnode';
         RENDER_TRANSITION = 'renderTransition';
         RENDER_MODEL = 'renderModel';
         RENDER_EVENT_METHOD = 'renderEventMethod';
@@ -4203,7 +4224,6 @@ function init() {
         RENDER_DIRECTIVE = 'renderDirective';
         RENDER_SPREAD = 'renderSpread';
         RENDER_SLOT = 'renderSlot';
-        DEFINE_PARTIAL = 'definePartial';
         RENDER_PARTIAL = 'renderPartial';
         RENDER_EACH = 'renderEach';
         RENDER_RANGE = 'renderRange';
@@ -4211,15 +4231,24 @@ function init() {
         RENDER_EXPRESSION_VALUE = 'renderExpressionValue';
         EXECUTE_FUNCTION = 'executeFunction';
         TO_STRING = 'toString';
-        ARG_STACK = 'stack';
+        ARG_FILTERS = 'filters',
+            ARG_GLOBAL_FILTERS = 'globalFilters',
+            ARG_LOCAL_PARTIALS = 'localPartials';
+        ARG_PARTIALS = 'partials',
+            ARG_GLOBAL_PARTIALS = 'globalPartials',
+            ARG_DIRECTIVES = 'directives',
+            ARG_GLOBAL_DIRECTIVES = 'globalDirectives',
+            ARG_TRANSITIONS = 'transition',
+            ARG_GLOBAL_TRANSITIONS = 'globalTransitions',
+            ARG_STACK = 'stack';
         ARG_VNODE = 'vnode';
         ARG_CHILDREN = 'children';
         ARG_COMPONENTS = 'components';
-        ARG_MAGIC_VAR_SCOPE = MAGIC_VAR_SCOPE;
-        ARG_MAGIC_VAR_KEYPATH = MAGIC_VAR_KEYPATH;
-        ARG_MAGIC_VAR_LENGTH = MAGIC_VAR_LENGTH;
-        ARG_MAGIC_VAR_EVENT = MAGIC_VAR_EVENT;
-        ARG_MAGIC_VAR_DATA = MAGIC_VAR_DATA;
+        ARG_SCOPE = MAGIC_VAR_SCOPE;
+        ARG_KEYPATH = MAGIC_VAR_KEYPATH;
+        ARG_LENGTH = MAGIC_VAR_LENGTH;
+        ARG_EVENT = MAGIC_VAR_EVENT;
+        ARG_DATA = MAGIC_VAR_DATA;
     }
     isUglify = PUBLIC_CONFIG.uglifyCompiled;
 }
@@ -4239,13 +4268,13 @@ function transformExpressionIdentifier(node) {
     if (has$2(magicVariables, name)) {
         switch (name) {
             case MAGIC_VAR_KEYPATH:
-                return toRaw(ARG_MAGIC_VAR_KEYPATH);
+                return toRaw(ARG_KEYPATH);
             case MAGIC_VAR_LENGTH:
-                return toRaw(ARG_MAGIC_VAR_LENGTH);
+                return toRaw(ARG_LENGTH);
             case MAGIC_VAR_EVENT:
-                return toRaw(ARG_MAGIC_VAR_EVENT);
+                return toRaw(ARG_EVENT);
             case MAGIC_VAR_DATA:
-                return toRaw(ARG_MAGIC_VAR_DATA);
+                return toRaw(ARG_DATA);
             default:
                 return toRaw(name);
         }
@@ -4258,8 +4287,8 @@ function transformExpressionIdentifier(node) {
         && lookup === FALSE$1
         && offset === 0) {
         return toRaw(name === EMPTY_STRING
-            ? ARG_MAGIC_VAR_SCOPE
-            : ARG_MAGIC_VAR_SCOPE
+            ? ARG_SCOPE
+            : ARG_SCOPE
                 + RAW_DOT
                 // 这里要把 list.0.a 转成 list[0].a
                 // . 是 Yox 特有的访问数组的语法，正常的 js 语法是 [index]
@@ -4271,7 +4300,7 @@ function generateHolderIfNeeded(node, holder) {
         ? node
         : toOperator(node, toRaw('value'));
 }
-function generateExpressionIdentifier(node, nodes, holder, stack, parentNode) {
+function generateExpressionIdentifier(node, keypath, nodes, holder, stack, parentNode) {
     let getIndex;
     if (node.root) {
         getIndex = toRaw(addLocalVar(toAnonymousFunction(UNDEFINED$1, UNDEFINED$1, toPrimitive(0))));
@@ -4297,8 +4326,8 @@ function generateExpressionIdentifier(node, nodes, holder, stack, parentNode) {
         stack
             ? toRaw(ARG_STACK)
             : toPrimitive(UNDEFINED$1),
-        parentNode && parentNode.type === CALL
-            ? toPrimitive(TRUE$1)
+        parentNode && parentNode.type === CALL && keypath
+            ? generateSelfAndGlobalReader(ARG_FILTERS, ARG_GLOBAL_FILTERS, keypath)
             : toPrimitive(UNDEFINED$1)
     ]), holder);
 }
@@ -4347,13 +4376,7 @@ function generateAttributeValue(value, expr, children) {
     return toPrimitive(UNDEFINED$1);
 }
 function generateNodesToTuple(nodes) {
-    const result = nodes.map(function (node) {
-        return nodeGenerator[node.type](node);
-    });
-    return toTuple(EMPTY_STRING, EMPTY_STRING, ';', TRUE$1, result);
-}
-function generateNodesToList(nodes) {
-    return toList(nodes.map(function (node) {
+    return toTuple(EMPTY_STRING, EMPTY_STRING, ';', TRUE$1, nodes.map(function (node) {
         return nodeGenerator[node.type](node);
     }));
 }
@@ -4372,17 +4395,24 @@ function generateNodesToStringIfNeeded(children) {
     }
     return toList(result);
 }
-function addDynamicChildVnode(node, isTextVnode) {
+function appendDynamicChildVnode(node, isTextVnode) {
     if (isTextVnode) {
-        return toCall(ADD_TEXT_VNODE, [
+        return toCall(APPEND_TEXT_VNODE, [
             toRaw(ARG_CHILDREN),
             node,
         ]);
     }
     return toPush(ARG_CHILDREN, node);
 }
-function addComponentVnode(node) {
+function appendComponentVnode(node) {
     return toPush(ARG_COMPONENTS, node);
+}
+function generateSelfAndGlobalReader(self, global, name) {
+    // 如果 name 包含 . 则只从全局取值，目前主要是处理全局过滤器，比如直接注册 lodash 整个对象进来
+    if (parse(name).length > 1) {
+        return toOperator(toRaw(global), toRaw(name));
+    }
+    return toBinary(toBinary(toRaw(self), '&&', toOperator(toRaw(self), toRaw(name))), '||', toOperator(toRaw(global), toRaw(name)));
 }
 function generateCommentVnode() {
     const result = toMap({
@@ -4391,7 +4421,7 @@ function generateCommentVnode() {
         text: toPrimitive(EMPTY_STRING),
     });
     return last(dynamicChildrenStack)
-        ? addDynamicChildVnode(result)
+        ? appendDynamicChildVnode(result)
         : result;
 }
 function generateTextVnode(text) {
@@ -4401,7 +4431,7 @@ function generateTextVnode(text) {
         text,
     });
     return last(dynamicChildrenStack)
-        ? addDynamicChildVnode(result, TRUE$1)
+        ? appendDynamicChildVnode(result, TRUE$1)
         : result;
 }
 function generateComponentSlots(children) {
@@ -4430,7 +4460,7 @@ function generateComponentSlots(children) {
         result.set(name, toAnonymousFunction([
             toRaw(ARG_CHILDREN),
             toRaw(ARG_COMPONENTS)
-        ], generateNodesToList(children)));
+        ], generateNodesToTuple(children)));
     });
     return result.isNotEmpty()
         ? result
@@ -4517,7 +4547,7 @@ nodeGenerator[ELEMENT] = function (node) {
             toRaw(ARG_CHILDREN),
         ];
         if (children) {
-            push(args, toAnonymousFunction(UNDEFINED$1, generateNodesToList(children)));
+            push(args, toAnonymousFunction(UNDEFINED$1, generateNodesToTuple(children)));
         }
         return toCall(RENDER_SLOT, args);
     }
@@ -4557,7 +4587,9 @@ nodeGenerator[ELEMENT] = function (node) {
                 ], generateNodesToTuple(children));
             }
             else {
-                data.set(CHILDREN, generateNodesToList(children));
+                data.set(CHILDREN, toList(children.map(function (node) {
+                    return nodeGenerator[node.type](node);
+                })));
             }
             pop(dynamicChildrenStack);
         }
@@ -4617,9 +4649,7 @@ nodeGenerator[ELEMENT] = function (node) {
             data.set(LAZY, lazy);
         }
         if (transition) {
-            data.set(TRANSITION, toCall(RENDER_TRANSITION, [
-                getTransitionValue(transition)
-            ]));
+            data.set(TRANSITION, getTransitionValue(transition));
         }
         if (model) {
             data.set(MODEL, getModelValue(model));
@@ -4670,7 +4700,7 @@ nodeGenerator[ELEMENT] = function (node) {
             outputAttrs,
             outputSlots
         ]);
-        result = addComponentVnode(result);
+        result = appendComponentVnode(result);
     }
     else {
         result = toCall(RENDER_ELEMENT_VNODE, [
@@ -4680,11 +4710,11 @@ nodeGenerator[ELEMENT] = function (node) {
         ]);
     }
     return last(dynamicChildrenStack)
-        ? addDynamicChildVnode(result)
+        ? appendDynamicChildVnode(result)
         : result;
 };
 nodeGenerator[ATTRIBUTE] = function (node) {
-    return toCall(ADD_ATTRIBUTE, [
+    return toCall(APPEND_ATTRIBUTE, [
         toRaw(ARG_VNODE),
         toPrimitive(last(componentStack)
             ? PROPERTIES
@@ -4694,7 +4724,7 @@ nodeGenerator[ATTRIBUTE] = function (node) {
     ]);
 };
 nodeGenerator[PROPERTY] = function (node) {
-    return toCall(ADD_ATTRIBUTE, [
+    return toCall(APPEND_ATTRIBUTE, [
         toRaw(ARG_VNODE),
         toPrimitive(NATIVE_PROPERTIES),
         generateAttributeValue(node.value, node.expr, node.children),
@@ -4705,7 +4735,10 @@ function getLazyValue(node) {
     return toPrimitive(node.value);
 }
 function getTransitionValue(node) {
-    return toPrimitive(node.value);
+    return toCall(RENDER_TRANSITION, [
+        toPrimitive(node.value),
+        generateSelfAndGlobalReader(ARG_TRANSITIONS, ARG_GLOBAL_TRANSITIONS, node.value)
+    ]);
 }
 function getModelValue(node) {
     return toCall(RENDER_MODEL, [
@@ -4754,8 +4787,8 @@ function getEventInfo(node) {
             push(args, toMap({
                 args: toAnonymousFunction([
                     toRaw(ARG_STACK),
-                    toRaw(ARG_MAGIC_VAR_EVENT),
-                    toRaw(ARG_MAGIC_VAR_DATA),
+                    toRaw(ARG_EVENT),
+                    toRaw(ARG_DATA),
                 ], UNDEFINED$1, toList(callNode.args.map(generateExpressionArg)))
             }));
         }
@@ -4793,6 +4826,8 @@ function getDirectiveArgs(node) {
     push(args, toPrimitive(node.modifier));
     // value
     push(args, toPrimitive(node.value));
+    // hooks
+    push(args, generateSelfAndGlobalReader(ARG_DIRECTIVES, ARG_GLOBAL_DIRECTIVES, node.name));
     // 尽可能把表达式编译成函数，这样对外界最友好
     //
     // 众所周知，事件指令会编译成函数，对于自定义指令来说，也要尽可能编译成函数
@@ -4839,7 +4874,7 @@ function getDirectiveArgs(node) {
 nodeGenerator[DIRECTIVE] = function (node) {
     switch (node.ns) {
         case DIRECTIVE_LAZY:
-            return toCall(ADD_ATTRIBUTE, [
+            return toCall(APPEND_ATTRIBUTE, [
                 toRaw(ARG_VNODE),
                 toPrimitive(LAZY),
                 getLazyValue(node),
@@ -4847,14 +4882,14 @@ nodeGenerator[DIRECTIVE] = function (node) {
             ]);
         // <div transition="name">
         case DIRECTIVE_TRANSITION:
-            return toCall(ADD_ATTRIBUTE, [
+            return toCall(APPEND_ATTRIBUTE, [
                 toRaw(ARG_VNODE),
                 toPrimitive(TRANSITION),
                 getTransitionValue(node),
             ]);
         // <input model="id">
         case DIRECTIVE_MODEL:
-            return toCall(ADD_ATTRIBUTE, [
+            return toCall(APPEND_ATTRIBUTE, [
                 toRaw(ARG_VNODE),
                 toPrimitive(MODEL),
                 getModelValue(node),
@@ -4862,14 +4897,14 @@ nodeGenerator[DIRECTIVE] = function (node) {
         // <div on-click="name">
         case DIRECTIVE_EVENT:
             const info = getEventInfo(node);
-            return toCall(ADD_ATTRIBUTE, [
+            return toCall(APPEND_ATTRIBUTE, [
                 toRaw(ARG_VNODE),
                 toPrimitive(EVENTS),
                 toCall(info.name, info.args),
                 toPrimitive(getDirectiveKey(node)),
             ]);
         default:
-            return toCall(ADD_ATTRIBUTE, [
+            return toCall(APPEND_ATTRIBUTE, [
                 toRaw(ARG_VNODE),
                 toPrimitive(DIRECTIVES),
                 toCall(RENDER_DIRECTIVE, getDirectiveArgs(node)),
@@ -4926,9 +4961,9 @@ nodeGenerator[ELSE] = function (node) {
 nodeGenerator[EACH] = function (node) {
     const { index, from, to, equal, next } = node, isSpecial = to || from.type === ARRAY || from.type === OBJECT;
     const args = [
-        toRaw(ARG_MAGIC_VAR_KEYPATH),
-        toRaw(ARG_MAGIC_VAR_LENGTH),
-        toRaw(ARG_MAGIC_VAR_SCOPE),
+        toRaw(ARG_KEYPATH),
+        toRaw(ARG_LENGTH),
+        toRaw(ARG_SCOPE),
     ];
     if (index) {
         push(args, toRaw(index));
@@ -4938,14 +4973,14 @@ nodeGenerator[EACH] = function (node) {
     // 在这种 each 中引用 this 无需追踪依赖，因此可直接认为 this 已用过，这样生成代码时，会直接引用局部变量，提高执行效率
     push(eachStack, isSpecial);
     // compiler 保证了 children 一定有值
-    const renderChildren = toAnonymousFunction(args, UNDEFINED$1, generateNodesToList(node.children));
+    const renderChildren = toAnonymousFunction(args, generateNodesToTuple(node.children));
     if (index) {
         pop(magicVariables);
     }
     pop(eachStack);
     // compiler 保证了 children 一定有值
     const renderElse = next
-        ? toAnonymousFunction(UNDEFINED$1, UNDEFINED$1, generateNodesToList(next.children))
+        ? toAnonymousFunction(UNDEFINED$1, generateNodesToTuple(next.children))
         : toPrimitive(UNDEFINED$1);
     // 遍历区间
     if (to) {
@@ -4965,21 +5000,21 @@ nodeGenerator[EACH] = function (node) {
     ]);
 };
 nodeGenerator[PARTIAL] = function (node) {
-    return toCall(DEFINE_PARTIAL, [
-        toPrimitive(node.name),
-        toAnonymousFunction([
-            toRaw(ARG_MAGIC_VAR_KEYPATH),
-            toRaw(ARG_CHILDREN),
-            toRaw(ARG_COMPONENTS),
-        ], UNDEFINED$1, generateNodesToList(node.children))
-    ]);
+    return toAssign(toOperator(toRaw(ARG_LOCAL_PARTIALS), toRaw(node.name)), toAnonymousFunction([
+        toRaw(ARG_KEYPATH),
+        toRaw(ARG_CHILDREN),
+        toRaw(ARG_COMPONENTS),
+    ], generateNodesToTuple(node.children)));
 };
 nodeGenerator[IMPORT] = function (node) {
+    const { name } = node;
     return toCall(RENDER_PARTIAL, [
-        toPrimitive(node.name),
-        toRaw(ARG_MAGIC_VAR_KEYPATH),
+        toPrimitive(name),
+        toRaw(ARG_KEYPATH),
         toRaw(ARG_CHILDREN),
-        toRaw(ARG_COMPONENTS)
+        toRaw(ARG_COMPONENTS),
+        toOperator(toRaw(ARG_LOCAL_PARTIALS), toRaw(name)),
+        generateSelfAndGlobalReader(ARG_PARTIALS, ARG_GLOBAL_PARTIALS, name)
     ]);
 };
 function generate(node) {
@@ -4993,8 +5028,8 @@ function generate(node) {
         toRaw(ARG_INSTANCE),
         toRaw(RENDER_ELEMENT_VNODE),
         toRaw(RENDER_COMPONENT_VNODE),
-        toRaw(ADD_ATTRIBUTE),
-        toRaw(ADD_TEXT_VNODE),
+        toRaw(APPEND_ATTRIBUTE),
+        toRaw(APPEND_TEXT_VNODE),
         toRaw(RENDER_TRANSITION),
         toRaw(RENDER_MODEL),
         toRaw(RENDER_EVENT_METHOD),
@@ -5002,7 +5037,6 @@ function generate(node) {
         toRaw(RENDER_DIRECTIVE),
         toRaw(RENDER_SPREAD),
         toRaw(RENDER_SLOT),
-        toRaw(DEFINE_PARTIAL),
         toRaw(RENDER_PARTIAL),
         toRaw(RENDER_EACH),
         toRaw(RENDER_RANGE),
@@ -5010,7 +5044,16 @@ function generate(node) {
         toRaw(RENDER_EXPRESSION_VALUE),
         toRaw(EXECUTE_FUNCTION),
         toRaw(TO_STRING),
-        toRaw(ARG_MAGIC_VAR_KEYPATH),
+        toRaw(ARG_FILTERS),
+        toRaw(ARG_GLOBAL_FILTERS),
+        toRaw(ARG_LOCAL_PARTIALS),
+        toRaw(ARG_PARTIALS),
+        toRaw(ARG_GLOBAL_PARTIALS),
+        toRaw(ARG_DIRECTIVES),
+        toRaw(ARG_GLOBAL_DIRECTIVES),
+        toRaw(ARG_TRANSITIONS),
+        toRaw(ARG_GLOBAL_TRANSITIONS),
+        toRaw(ARG_KEYPATH),
         toRaw(ARG_CHILDREN),
         toRaw(ARG_COMPONENTS),
     ], localVarMap, nodeGenerator[node.type](node));
@@ -6109,7 +6152,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.212";
+Yox.version = "1.0.0-alpha.213";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

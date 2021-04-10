@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.212
+ * yox.js v1.0.0-alpha.213
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -2337,15 +2337,15 @@
               data.children = children;
           }
           return data;
-      }, renderComponentVnode = function (data, createAttributes, slots) {
+      }, renderComponentVnode = function (data, createAttributes, createSlots) {
           if (createAttributes) {
               createAttributes(data);
           }
-          if (slots) {
+          if (createSlots) {
               var result = {};
-              for (var name in slots) {
+              for (var name in createSlots) {
                   var children = [], components = [];
-                  slots[name](children, components);
+                  createSlots[name](children, components);
                   // 就算是 undefined 也必须有值，用于覆盖旧值
                   result[name] = children.length
                       ? {
@@ -2359,7 +2359,7 @@
               data.slots = result;
           }
           return data;
-      }, addAttribute = function (vnode, key, value, name) {
+      }, appendAttribute = function (vnode, key, value, name) {
           if (name) {
               if (vnode[key]) {
                   vnode[key][name] = value;
@@ -2373,7 +2373,7 @@
           else {
               vnode[key] = value;
           }
-      }, addTextVnode = function (children, vnode) {
+      }, appendTextVnode = function (children, vnode) {
           var length = children.length;
           var lastChild = children[length - 1];
           if (lastChild && lastChild.isText) {
@@ -2381,8 +2381,7 @@
               return;
           }
           children[length] = vnode;
-      }, renderTransition = function (name) {
-          var transition = (transitions && transitions[name]) || globalTransitions[name];
+      }, renderTransition = function (name, transition) {
           return transition;
       }, 
       // holder 是全局共用的，这里要浅拷贝一次
@@ -2450,8 +2449,7 @@
                   ? runtime.args(runtime.stack)
                   : UNDEFINED);
           };
-      }, renderDirective = function (key, name, modifier, value, runtime, method) {
-          var hooks = (directives && directives[name]) || globalDirectives[name];
+      }, renderDirective = function (key, name, modifier, value, hooks, runtime, method) {
           if (runtime) {
               runtime.stack = contextStack;
           }
@@ -2469,7 +2467,7 @@
       }, renderSpread = function (vnode, key, value) {
           if (object$1(value)) {
               for (var name in value) {
-                  addAttribute(vnode, key, value[name], name);
+                  appendAttribute(vnode, key, value[name], name);
               }
           }
       }, 
@@ -2492,26 +2490,20 @@
           }
           render && render();
       }, 
-      // {{#partial name}}
-      //   xx
-      // {{/partial}}
-      definePartial = function (name, render) {
-          localPartials[name] = render;
-      }, 
       // {{> name}}
-      renderPartial = function (name, keypath, children, components) {
-          if (localPartials[name]) {
-              localPartials[name](keypath, children, components);
+      renderPartial = function (name, keypath, children, components, renderLocal, render) {
+          if (renderLocal) {
+              renderLocal(keypath, children, components);
               return;
           }
-          var partial = (partials && partials[name]) || globalPartials[name];
-          renderTemplate(partial, keypath, children, components);
+          renderTemplate(render, keypath, children, components);
       }, renderEach = function (holder, renderChildren, renderElse) {
           var keypath = holder.keypath;
           var value = holder.value;
-          var result = [], needKeypath = !!keypath, oldScopeStack = contextStack, currentKeypath = last(contextStack).keypath;
+          var length = 0, needKeypath = !!keypath, oldScopeStack = contextStack, currentKeypath = last(contextStack).keypath;
           if (array$1(value)) {
-              for (var i = 0, length = value.length; i < length; i++) {
+              length = value.length;
+              for (var i = 0; i < length; i++) {
                   if (needKeypath) {
                       currentKeypath = keypath + RAW_DOT + i;
                       // slice + push 比直接 concat 快多了
@@ -2521,11 +2513,14 @@
                           scope: value[i],
                       });
                   }
-                  result.push(renderChildren(currentKeypath, length, value[i], i));
+                  renderChildren(currentKeypath, length, value[i], i);
               }
           }
           else if (object$1(value)) {
-              for (var key in value) {
+              var keys$1 = keys(value);
+              length = keys$1.length;
+              for (var i$1 = 0; i$1 < length; i$1++) {
+                  var key = keys$1[i$1];
                   if (needKeypath) {
                       // 这里 key 虽然可能为空，但也必须直接拼接
                       // 因为不拼接就变成了原来的 keypath，这样更是错的，
@@ -2538,28 +2533,27 @@
                           scope: value[key],
                       });
                   }
-                  result.push(renderChildren(currentKeypath, UNDEFINED, value[key], key));
+                  renderChildren(currentKeypath, length, value[key], key);
               }
           }
           if (contextStack !== oldScopeStack) {
               contextStack = oldScopeStack;
           }
-          if (renderElse && result.length === 0) {
-              result = renderElse();
+          if (renderElse && length === 0) {
+              renderElse();
           }
-          return result;
       }, renderRange = function (from, to, equal, renderChildren, renderElse) {
-          var count = 0, length = 0, result = [], currentKeypath = last(contextStack).keypath;
+          var count = 0, length = 0, currentKeypath = last(contextStack).keypath;
           if (from < to) {
               length = to - from;
               if (equal) {
                   for (var i = from; i <= to; i++) {
-                      result.push(renderChildren(currentKeypath, length, i, count++));
+                      renderChildren(currentKeypath, length, i, count++);
                   }
               }
               else {
                   for (var i$1 = from; i$1 < to; i$1++) {
-                      result.push(renderChildren(currentKeypath, length, i$1, count++));
+                      renderChildren(currentKeypath, length, i$1, count++);
                   }
               }
           }
@@ -2567,20 +2561,19 @@
               length = from - to;
               if (equal) {
                   for (var i$2 = from; i$2 >= to; i$2--) {
-                      result.push(renderChildren(currentKeypath, length, i$2, count++));
+                      renderChildren(currentKeypath, length, i$2, count++);
                   }
               }
               else {
                   for (var i$3 = from; i$3 > to; i$3--) {
-                      result.push(renderChildren(currentKeypath, length, i$3, count++));
+                      renderChildren(currentKeypath, length, i$3, count++);
                   }
               }
           }
           if (renderElse && length === 0) {
-              result = renderElse();
+              renderElse();
           }
-          return result;
-      }, renderExpressionIdentifier = function (getIndex, tokens, lookup, stack, call) {
+      }, renderExpressionIdentifier = function (getIndex, tokens, lookup, stack, filter) {
           var currentStack = stack || contextStack, index = getIndex(currentStack);
           var ref = currentStack[index];
           var keypath = ref.keypath;
@@ -2601,23 +2594,10 @@
               if (lookup && index > 0) {
                   result = lookupValue(currentStack, index - 1, name);
               }
-              // 如果是函数调用，则最后尝试过滤器
-              if (!result && call) {
-                  if (filters) {
-                      result = get(filters, name);
-                  }
-                  if (!result) {
-                      result = get(globalFilters, name);
-                  }
-                  if (result) {
-                      // filter 不算数据
-                      result.keypath = UNDEFINED;
-                  }
-              }
               if (!result) {
                   result = holder;
-                  result.keypath = currentKeypath;
-                  result.value = UNDEFINED;
+                  result.keypath = filter ? UNDEFINED : currentKeypath;
+                  result.value = filter || UNDEFINED;
               }
           }
           if (result.keypath !== UNDEFINED) {
@@ -2638,7 +2618,7 @@
           holder.value = execute(fn, instance, args);
           return holder;
       }, renderTemplate = function (render, keypath, children, components) {
-          return render(instance, renderElementVnode, renderComponentVnode, addAttribute, addTextVnode, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, definePartial, renderPartial, renderEach, renderRange, renderExpressionIdentifier, renderExpressionValue, executeFunction, toString, keypath, children, components);
+          render(instance, renderElementVnode, renderComponentVnode, appendAttribute, appendTextVnode, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, renderExpressionIdentifier, renderExpressionValue, executeFunction, toString, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, keypath, children, components);
       };
       var children = [], components = [];
       renderTemplate(template, rootKeypath, children, components);
@@ -4378,7 +4358,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.212";
+  Yox.version = "1.0.0-alpha.213";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

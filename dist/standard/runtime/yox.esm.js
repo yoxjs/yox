@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.212
+ * yox.js v1.0.0-alpha.213
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -2281,15 +2281,15 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
             data.children = children;
         }
         return data;
-    }, renderComponentVnode = function (data, createAttributes, slots) {
+    }, renderComponentVnode = function (data, createAttributes, createSlots) {
         if (createAttributes) {
             createAttributes(data);
         }
-        if (slots) {
+        if (createSlots) {
             const result = {};
-            for (let name in slots) {
+            for (let name in createSlots) {
                 const children = [], components = [];
-                slots[name](children, components);
+                createSlots[name](children, components);
                 // 就算是 undefined 也必须有值，用于覆盖旧值
                 result[name] = children.length
                     ? {
@@ -2303,7 +2303,7 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
             data.slots = result;
         }
         return data;
-    }, addAttribute = function (vnode, key, value, name) {
+    }, appendAttribute = function (vnode, key, value, name) {
         if (name) {
             if (vnode[key]) {
                 vnode[key][name] = value;
@@ -2317,15 +2317,14 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
         else {
             vnode[key] = value;
         }
-    }, addTextVnode = function (children, vnode) {
+    }, appendTextVnode = function (children, vnode) {
         const { length } = children, lastChild = children[length - 1];
         if (lastChild && lastChild.isText) {
             lastChild.text += vnode.text;
             return;
         }
         children[length] = vnode;
-    }, renderTransition = function (name) {
-        const transition = (transitions && transitions[name]) || globalTransitions[name];
+    }, renderTransition = function (name, transition) {
         return transition;
     }, 
     // holder 是全局共用的，这里要浅拷贝一次
@@ -2393,8 +2392,7 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
                 ? runtime.args(runtime.stack)
                 : UNDEFINED);
         };
-    }, renderDirective = function (key, name, modifier, value, runtime, method) {
-        const hooks = (directives && directives[name]) || globalDirectives[name];
+    }, renderDirective = function (key, name, modifier, value, hooks, runtime, method) {
         if (runtime) {
             runtime.stack = contextStack;
         }
@@ -2412,7 +2410,7 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
     }, renderSpread = function (vnode, key, value) {
         if (object$1(value)) {
             for (let name in value) {
-                addAttribute(vnode, key, value[name], name);
+                appendAttribute(vnode, key, value[name], name);
             }
         }
     }, 
@@ -2434,24 +2432,18 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
         }
         render && render();
     }, 
-    // {{#partial name}}
-    //   xx
-    // {{/partial}}
-    definePartial = function (name, render) {
-        localPartials[name] = render;
-    }, 
     // {{> name}}
-    renderPartial = function (name, keypath, children, components) {
-        if (localPartials[name]) {
-            localPartials[name](keypath, children, components);
+    renderPartial = function (name, keypath, children, components, renderLocal, render) {
+        if (renderLocal) {
+            renderLocal(keypath, children, components);
             return;
         }
-        const partial = (partials && partials[name]) || globalPartials[name];
-        renderTemplate(partial, keypath, children, components);
+        renderTemplate(render, keypath, children, components);
     }, renderEach = function (holder, renderChildren, renderElse) {
-        let { keypath, value } = holder, result = [], needKeypath = !!keypath, oldScopeStack = contextStack, currentKeypath = last(contextStack).keypath;
+        let { keypath, value } = holder, length = 0, needKeypath = !!keypath, oldScopeStack = contextStack, currentKeypath = last(contextStack).keypath;
         if (array$1(value)) {
-            for (let i = 0, length = value.length; i < length; i++) {
+            length = value.length;
+            for (let i = 0; i < length; i++) {
                 if (needKeypath) {
                     currentKeypath = keypath + RAW_DOT + i;
                     // slice + push 比直接 concat 快多了
@@ -2461,11 +2453,14 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
                         scope: value[i],
                     });
                 }
-                result.push(renderChildren(currentKeypath, length, value[i], i));
+                renderChildren(currentKeypath, length, value[i], i);
             }
         }
         else if (object$1(value)) {
-            for (let key in value) {
+            const keys$1 = keys(value);
+            length = keys$1.length;
+            for (let i = 0; i < length; i++) {
+                const key = keys$1[i];
                 if (needKeypath) {
                     // 这里 key 虽然可能为空，但也必须直接拼接
                     // 因为不拼接就变成了原来的 keypath，这样更是错的，
@@ -2478,28 +2473,27 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
                         scope: value[key],
                     });
                 }
-                result.push(renderChildren(currentKeypath, UNDEFINED, value[key], key));
+                renderChildren(currentKeypath, length, value[key], key);
             }
         }
         if (contextStack !== oldScopeStack) {
             contextStack = oldScopeStack;
         }
-        if (renderElse && result.length === 0) {
-            result = renderElse();
+        if (renderElse && length === 0) {
+            renderElse();
         }
-        return result;
     }, renderRange = function (from, to, equal, renderChildren, renderElse) {
-        let count = 0, length = 0, result = [], currentKeypath = last(contextStack).keypath;
+        let count = 0, length = 0, currentKeypath = last(contextStack).keypath;
         if (from < to) {
             length = to - from;
             if (equal) {
                 for (let i = from; i <= to; i++) {
-                    result.push(renderChildren(currentKeypath, length, i, count++));
+                    renderChildren(currentKeypath, length, i, count++);
                 }
             }
             else {
                 for (let i = from; i < to; i++) {
-                    result.push(renderChildren(currentKeypath, length, i, count++));
+                    renderChildren(currentKeypath, length, i, count++);
                 }
             }
         }
@@ -2507,20 +2501,19 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
             length = from - to;
             if (equal) {
                 for (let i = from; i >= to; i--) {
-                    result.push(renderChildren(currentKeypath, length, i, count++));
+                    renderChildren(currentKeypath, length, i, count++);
                 }
             }
             else {
                 for (let i = from; i > to; i--) {
-                    result.push(renderChildren(currentKeypath, length, i, count++));
+                    renderChildren(currentKeypath, length, i, count++);
                 }
             }
         }
         if (renderElse && length === 0) {
-            result = renderElse();
+            renderElse();
         }
-        return result;
-    }, renderExpressionIdentifier = function (getIndex, tokens, lookup, stack, call) {
+    }, renderExpressionIdentifier = function (getIndex, tokens, lookup, stack, filter) {
         const currentStack = stack || contextStack, index = getIndex(currentStack), { keypath, scope } = currentStack[index], name = tokens ? tokens.join(RAW_DOT) : EMPTY_STRING, currentKeypath = join(keypath, name);
         let result;
         if (tokens) {
@@ -2537,23 +2530,10 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
             if (lookup && index > 0) {
                 result = lookupValue(currentStack, index - 1, name);
             }
-            // 如果是函数调用，则最后尝试过滤器
-            if (!result && call) {
-                if (filters) {
-                    result = get(filters, name);
-                }
-                if (!result) {
-                    result = get(globalFilters, name);
-                }
-                if (result) {
-                    // filter 不算数据
-                    result.keypath = UNDEFINED;
-                }
-            }
             if (!result) {
                 result = holder;
-                result.keypath = currentKeypath;
-                result.value = UNDEFINED;
+                result.keypath = filter ? UNDEFINED : currentKeypath;
+                result.value = filter || UNDEFINED;
             }
         }
         if (result.keypath !== UNDEFINED) {
@@ -2574,7 +2554,7 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
         holder.value = execute(fn, instance, args);
         return holder;
     }, renderTemplate = function (render, keypath, children, components) {
-        return render(instance, renderElementVnode, renderComponentVnode, addAttribute, addTextVnode, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, definePartial, renderPartial, renderEach, renderRange, renderExpressionIdentifier, renderExpressionValue, executeFunction, toString, keypath, children, components);
+        render(instance, renderElementVnode, renderComponentVnode, appendAttribute, appendTextVnode, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, renderExpressionIdentifier, renderExpressionValue, executeFunction, toString, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, keypath, children, components);
     };
     const children = [], components = [];
     renderTemplate(template, rootKeypath, children, components);
@@ -4259,7 +4239,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.212";
+Yox.version = "1.0.0-alpha.213";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
