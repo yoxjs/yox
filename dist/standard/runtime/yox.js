@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.213
+ * yox.js v1.0.0-alpha.214
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -746,7 +746,7 @@
    * @param callback 返回 false 可中断遍历
    */
   function each$1(keypath, callback) {
-      var tokens = string$1(keypath) ? getKeypathTokens(keypath) : keypath;
+      var tokens = getKeypathTokens(keypath);
       for (var i = 0, lastIndex = tokens.length - 1; i <= lastIndex; i++) {
           if (callback(tokens[i], i, lastIndex) === FALSE) {
               break;
@@ -2313,33 +2313,28 @@
               : 0;
   }
 
-  function render(instance, template, scope, filters, globalFilters, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions) {
-      var rootKeypath = EMPTY_STRING, contextStack = [
-          { keypath: rootKeypath, scope: scope, }
+  function render(instance, template, data, computed, filters, globalFilters, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions) {
+      var rootScope = merge(data, computed), rootKeypath = EMPTY_STRING, contextStack = [
+          { scope: rootScope, keypath: rootKeypath }
       ], localPartials = {}, 
       // 渲染模板的数据依赖
-      dependencies = {}, lookupValue = function (stack, index, key) {
-          var context = stack[index], keypath = join(context.keypath, key), result = get(context.scope, keypath);
-          if (result) {
-              result.keypath = keypath;
-              return result;
-          }
-          if (index > 0) {
-              return lookupValue(stack, index - 1, key);
-          }
-      }, renderElementVnode = function (data, createAttributes, createChildren) {
+      dependencies = {}, 
+      // 模板渲染过程收集的 vnode
+      children = [], 
+      // 模板渲染过程收集的组件
+      components = [], renderElementVnode = function (vnode, createAttributes, createChildren) {
           if (createAttributes) {
-              createAttributes(data);
+              createAttributes(vnode);
           }
           if (createChildren) {
               var children = [];
               createChildren(children);
-              data.children = children;
+              vnode.children = children;
           }
-          return data;
-      }, renderComponentVnode = function (data, createAttributes, createSlots) {
+          return vnode;
+      }, renderComponentVnode = function (vnode, createAttributes, createSlots) {
           if (createAttributes) {
-              createAttributes(data);
+              createAttributes(vnode);
           }
           if (createSlots) {
               var result = {};
@@ -2356,9 +2351,9 @@
                       }
                       : UNDEFINED;
               }
-              data.slots = result;
+              vnode.slots = result;
           }
-          return data;
+          return vnode;
       }, appendAttribute = function (vnode, key, value, name) {
           if (name) {
               if (vnode[key]) {
@@ -2474,7 +2469,7 @@
       // <slot name="xx"/>
       renderSlot = function (name, children, render) {
           dependencies[name] = TRUE;
-          var result = scope[name];
+          var result = rootScope[name];
           if (result) {
               var vnodes = result.vnodes;
               var components = result.components;
@@ -2491,12 +2486,12 @@
           render && render();
       }, 
       // {{> name}}
-      renderPartial = function (name, keypath, children, components, renderLocal, render) {
+      renderPartial = function (name, scope, keypath, children, components, renderLocal, render) {
           if (renderLocal) {
-              renderLocal(keypath, children, components);
+              renderLocal(scope, keypath, children, components);
               return;
           }
-          renderTemplate(render, keypath, children, components);
+          renderTemplate(render, scope, keypath, children, components);
       }, renderEach = function (holder, renderChildren, renderElse) {
           var keypath = holder.keypath;
           var value = holder.value;
@@ -2509,11 +2504,11 @@
                       // slice + push 比直接 concat 快多了
                       contextStack = oldScopeStack.slice();
                       contextStack.push({
-                          keypath: currentKeypath,
                           scope: value[i],
+                          keypath: currentKeypath,
                       });
                   }
-                  renderChildren(currentKeypath, length, value[i], i);
+                  renderChildren(value[i], currentKeypath, length, i);
               }
           }
           else if (object$1(value)) {
@@ -2529,11 +2524,11 @@
                       // slice + push 比直接 concat 快多了
                       contextStack = oldScopeStack.slice();
                       contextStack.push({
-                          keypath: currentKeypath,
                           scope: value[key],
+                          keypath: currentKeypath,
                       });
                   }
-                  renderChildren(currentKeypath, length, value[key], key);
+                  renderChildren(value[key], currentKeypath, length, key);
               }
           }
           if (contextStack !== oldScopeStack) {
@@ -2548,12 +2543,12 @@
               length = to - from;
               if (equal) {
                   for (var i = from; i <= to; i++) {
-                      renderChildren(currentKeypath, length, i, count++);
+                      renderChildren(i, currentKeypath, length, count++);
                   }
               }
               else {
                   for (var i$1 = from; i$1 < to; i$1++) {
-                      renderChildren(currentKeypath, length, i$1, count++);
+                      renderChildren(i$1, currentKeypath, length, count++);
                   }
               }
           }
@@ -2561,67 +2556,99 @@
               length = from - to;
               if (equal) {
                   for (var i$2 = from; i$2 >= to; i$2--) {
-                      renderChildren(currentKeypath, length, i$2, count++);
+                      renderChildren(i$2, currentKeypath, length, count++);
                   }
               }
               else {
                   for (var i$3 = from; i$3 > to; i$3--) {
-                      renderChildren(currentKeypath, length, i$3, count++);
+                      renderChildren(i$3, currentKeypath, length, count++);
                   }
               }
           }
           if (renderElse && length === 0) {
               renderElse();
           }
-      }, renderExpressionIdentifier = function (getIndex, tokens, lookup, stack, filter) {
-          var currentStack = stack || contextStack, index = getIndex(currentStack);
+      }, findKeypath = function (stack, index, keypath, lookup) {
+          var context = stack[index], currentKeypath = join(context.keypath, keypath), result = get(context.scope, keypath);
+          if (result) {
+              setHolder(result.value, currentKeypath);
+              return;
+          }
+          if (holder.keypath === UNDEFINED) {
+              setHolder(UNDEFINED, currentKeypath);
+          }
+          if (lookup && index > 0) {
+              findKeypath(stack, index - 1, keypath);
+          }
+      }, lookupKeypath = function (getIndex, keypath, lookup, stack, filter) {
+          var currentStack = stack || contextStack;
+          findKeypath(currentStack, getIndex(currentStack), keypath, lookup);
+          if (holder.value === UNDEFINED && filter) {
+              holder.value = filter;
+          }
+          return holder;
+      }, findProp = function (stack, index, name) {
+          var ref = stack[index];
+          var scope = ref.scope;
+          var keypath = ref.keypath;
+          var currentKeypath = keypath ? keypath + RAW_DOT + name : name;
+          if (name in scope) {
+              setHolder(scope[name], currentKeypath);
+              return;
+          }
+          if (index > 0) {
+              findProp(stack, index - 1, name);
+          }
+      }, lookupProp = function (name, value, stack, filter) {
+          var currentStack = stack || contextStack, index = currentStack.length - 1;
           var ref = currentStack[index];
           var keypath = ref.keypath;
+          setHolder(value, keypath ? keypath + RAW_DOT + name : name);
+          if (value === UNDEFINED && index > 0) {
+              findProp(currentStack, index - 1, name);
+          }
+          if (holder.value === UNDEFINED && filter) {
+              holder.value = filter;
+          }
+          return holder;
+      }, getThis = function (value, stack) {
+          var currentStack = stack || contextStack;
+          var ref = currentStack[currentStack.length - 1];
+          var keypath = ref.keypath;
+          return setHolder(value, keypath);
+      }, getThisByIndex = function (getIndex, stack) {
+          var currentStack = stack || contextStack;
+          var ref = currentStack[getIndex(currentStack)];
           var scope = ref.scope;
-          var name = tokens ? tokens.join(RAW_DOT) : EMPTY_STRING, currentKeypath = join(keypath, name);
-          var result;
-          if (tokens) {
-              result = get(scope, tokens);
+          var keypath = ref.keypath;
+          return setHolder(scope, keypath);
+      }, getProp = function (name, value, stack) {
+          var currentStack = stack || contextStack;
+          var ref = currentStack[currentStack.length - 1];
+          var keypath = ref.keypath;
+          return setHolder(value, keypath ? keypath + RAW_DOT + name : name);
+      }, getPropByIndex = function (getIndex, name, stack) {
+          var currentStack = stack || contextStack;
+          var ref = currentStack[getIndex(currentStack)];
+          var scope = ref.scope;
+          var keypath = ref.keypath;
+          return setHolder(scope[name], keypath ? keypath + RAW_DOT + name : name);
+      }, readKeypath = function (value, keypath) {
+          var result = get(value, keypath);
+          return setHolder(result ? result.value : UNDEFINED);
+      }, setHolder = function (value, keypath) {
+          holder.keypath = keypath;
+          holder.value = value && func(value.get)
+              ? value.get()
+              : value;
+          if (keypath !== UNDEFINED) {
+              dependencies[keypath] = TRUE;
           }
-          else {
-              result = holder;
-              result.value = scope;
-          }
-          if (result) {
-              result.keypath = currentKeypath;
-          }
-          else {
-              if (lookup && index > 0) {
-                  result = lookupValue(currentStack, index - 1, name);
-              }
-              if (!result) {
-                  result = holder;
-                  result.keypath = filter ? UNDEFINED : currentKeypath;
-                  result.value = filter || UNDEFINED;
-              }
-          }
-          if (result.keypath !== UNDEFINED) {
-              dependencies[result.keypath] = TRUE;
-          }
-          return result;
-      }, renderExpressionValue = function (value, tokens) {
-          var result = get(value, tokens);
-          if (result) {
-              result.keypath = UNDEFINED;
-              return result;
-          }
-          holder.keypath =
-              holder.value = UNDEFINED;
           return holder;
-      }, executeFunction = function (fn, args) {
-          holder.keypath = UNDEFINED;
-          holder.value = execute(fn, instance, args);
-          return holder;
-      }, renderTemplate = function (render, keypath, children, components) {
-          render(instance, renderElementVnode, renderComponentVnode, appendAttribute, appendTextVnode, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, renderExpressionIdentifier, renderExpressionValue, executeFunction, toString, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, keypath, children, components);
+      }, renderTemplate = function (render, scope, keypath, children, components) {
+          render(renderElementVnode, renderComponentVnode, appendAttribute, appendTextVnode, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
       };
-      var children = [], components = [];
-      renderTemplate(template, rootKeypath, children, components);
+      renderTemplate(template, rootScope, rootKeypath, children, components);
       return {
           vnode: children[0],
           dependencies: dependencies,
@@ -4169,7 +4196,7 @@
               var $observer = instance.$observer;
               var $dependencies = instance.$dependencies;
               var oldDependencies = $dependencies || EMPTY_OBJECT;
-              var ref = render(instance, instance.$template, merge($observer.data, $observer.computed), instance.$filters, globalFilters, instance.$partials, globalPartials, instance.$directives, globalDirectives, instance.$transitions, globalTransitions);
+              var ref = render(instance, instance.$template, $observer.data, $observer.computed, instance.$filters, globalFilters, instance.$partials, globalPartials, instance.$directives, globalDirectives, instance.$transitions, globalTransitions);
               var vnode = ref.vnode;
               var dependencies = ref.dependencies;
           for (var key in dependencies) {
@@ -4358,7 +4385,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.213";
+  Yox.version = "1.0.0-alpha.214";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

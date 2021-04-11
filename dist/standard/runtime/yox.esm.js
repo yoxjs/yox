@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.213
+ * yox.js v1.0.0-alpha.214
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -747,7 +747,7 @@ const getKeypathTokens = createOneKeyCache(function (keypath) {
  * @param callback 返回 false 可中断遍历
  */
 function each$1(keypath, callback) {
-    const tokens = string$1(keypath) ? getKeypathTokens(keypath) : keypath;
+    const tokens = getKeypathTokens(keypath);
     for (let i = 0, lastIndex = tokens.length - 1; i <= lastIndex; i++) {
         if (callback(tokens[i], i, lastIndex) === FALSE) {
             break;
@@ -2257,33 +2257,28 @@ function toNumber (target, defaultValue) {
             : 0;
 }
 
-function render(instance, template, scope, filters, globalFilters, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions) {
-    let rootKeypath = EMPTY_STRING, contextStack = [
-        { keypath: rootKeypath, scope, }
+function render(instance, template, data, computed, filters, globalFilters, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions) {
+    let rootScope = merge(data, computed), rootKeypath = EMPTY_STRING, contextStack = [
+        { scope: rootScope, keypath: rootKeypath }
     ], localPartials = {}, 
     // 渲染模板的数据依赖
-    dependencies = {}, lookupValue = function (stack, index, key) {
-        const context = stack[index], keypath = join(context.keypath, key), result = get(context.scope, keypath);
-        if (result) {
-            result.keypath = keypath;
-            return result;
-        }
-        if (index > 0) {
-            return lookupValue(stack, index - 1, key);
-        }
-    }, renderElementVnode = function (data, createAttributes, createChildren) {
+    dependencies = {}, 
+    // 模板渲染过程收集的 vnode
+    children = [], 
+    // 模板渲染过程收集的组件
+    components = [], renderElementVnode = function (vnode, createAttributes, createChildren) {
         if (createAttributes) {
-            createAttributes(data);
+            createAttributes(vnode);
         }
         if (createChildren) {
             const children = [];
             createChildren(children);
-            data.children = children;
+            vnode.children = children;
         }
-        return data;
-    }, renderComponentVnode = function (data, createAttributes, createSlots) {
+        return vnode;
+    }, renderComponentVnode = function (vnode, createAttributes, createSlots) {
         if (createAttributes) {
-            createAttributes(data);
+            createAttributes(vnode);
         }
         if (createSlots) {
             const result = {};
@@ -2300,9 +2295,9 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
                     }
                     : UNDEFINED;
             }
-            data.slots = result;
+            vnode.slots = result;
         }
-        return data;
+        return vnode;
     }, appendAttribute = function (vnode, key, value, name) {
         if (name) {
             if (vnode[key]) {
@@ -2417,7 +2412,7 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
     // <slot name="xx"/>
     renderSlot = function (name, children, render) {
         dependencies[name] = TRUE;
-        const result = scope[name];
+        const result = rootScope[name];
         if (result) {
             const { vnodes, components } = result;
             if (components) {
@@ -2433,12 +2428,12 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
         render && render();
     }, 
     // {{> name}}
-    renderPartial = function (name, keypath, children, components, renderLocal, render) {
+    renderPartial = function (name, scope, keypath, children, components, renderLocal, render) {
         if (renderLocal) {
-            renderLocal(keypath, children, components);
+            renderLocal(scope, keypath, children, components);
             return;
         }
-        renderTemplate(render, keypath, children, components);
+        renderTemplate(render, scope, keypath, children, components);
     }, renderEach = function (holder, renderChildren, renderElse) {
         let { keypath, value } = holder, length = 0, needKeypath = !!keypath, oldScopeStack = contextStack, currentKeypath = last(contextStack).keypath;
         if (array$1(value)) {
@@ -2449,11 +2444,11 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
                     // slice + push 比直接 concat 快多了
                     contextStack = oldScopeStack.slice();
                     contextStack.push({
-                        keypath: currentKeypath,
                         scope: value[i],
+                        keypath: currentKeypath,
                     });
                 }
-                renderChildren(currentKeypath, length, value[i], i);
+                renderChildren(value[i], currentKeypath, length, i);
             }
         }
         else if (object$1(value)) {
@@ -2469,11 +2464,11 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
                     // slice + push 比直接 concat 快多了
                     contextStack = oldScopeStack.slice();
                     contextStack.push({
-                        keypath: currentKeypath,
                         scope: value[key],
+                        keypath: currentKeypath,
                     });
                 }
-                renderChildren(currentKeypath, length, value[key], key);
+                renderChildren(value[key], currentKeypath, length, key);
             }
         }
         if (contextStack !== oldScopeStack) {
@@ -2488,12 +2483,12 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
             length = to - from;
             if (equal) {
                 for (let i = from; i <= to; i++) {
-                    renderChildren(currentKeypath, length, i, count++);
+                    renderChildren(i, currentKeypath, length, count++);
                 }
             }
             else {
                 for (let i = from; i < to; i++) {
-                    renderChildren(currentKeypath, length, i, count++);
+                    renderChildren(i, currentKeypath, length, count++);
                 }
             }
         }
@@ -2501,63 +2496,84 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
             length = from - to;
             if (equal) {
                 for (let i = from; i >= to; i--) {
-                    renderChildren(currentKeypath, length, i, count++);
+                    renderChildren(i, currentKeypath, length, count++);
                 }
             }
             else {
                 for (let i = from; i > to; i--) {
-                    renderChildren(currentKeypath, length, i, count++);
+                    renderChildren(i, currentKeypath, length, count++);
                 }
             }
         }
         if (renderElse && length === 0) {
             renderElse();
         }
-    }, renderExpressionIdentifier = function (getIndex, tokens, lookup, stack, filter) {
-        const currentStack = stack || contextStack, index = getIndex(currentStack), { keypath, scope } = currentStack[index], name = tokens ? tokens.join(RAW_DOT) : EMPTY_STRING, currentKeypath = join(keypath, name);
-        let result;
-        if (tokens) {
-            result = get(scope, tokens);
-        }
-        else {
-            result = holder;
-            result.value = scope;
-        }
+    }, findKeypath = function (stack, index, keypath, lookup) {
+        const context = stack[index], currentKeypath = join(context.keypath, keypath), result = get(context.scope, keypath);
         if (result) {
-            result.keypath = currentKeypath;
+            setHolder(result.value, currentKeypath);
+            return;
         }
-        else {
-            if (lookup && index > 0) {
-                result = lookupValue(currentStack, index - 1, name);
-            }
-            if (!result) {
-                result = holder;
-                result.keypath = filter ? UNDEFINED : currentKeypath;
-                result.value = filter || UNDEFINED;
-            }
+        if (holder.keypath === UNDEFINED) {
+            setHolder(UNDEFINED, currentKeypath);
         }
-        if (result.keypath !== UNDEFINED) {
-            dependencies[result.keypath] = TRUE;
+        if (lookup && index > 0) {
+            findKeypath(stack, index - 1, keypath);
         }
-        return result;
-    }, renderExpressionValue = function (value, tokens) {
-        const result = get(value, tokens);
-        if (result) {
-            result.keypath = UNDEFINED;
-            return result;
+    }, lookupKeypath = function (getIndex, keypath, lookup, stack, filter) {
+        const currentStack = stack || contextStack;
+        findKeypath(currentStack, getIndex(currentStack), keypath, lookup);
+        if (holder.value === UNDEFINED && filter) {
+            holder.value = filter;
         }
-        holder.keypath =
-            holder.value = UNDEFINED;
         return holder;
-    }, executeFunction = function (fn, args) {
-        holder.keypath = UNDEFINED;
-        holder.value = execute(fn, instance, args);
+    }, findProp = function (stack, index, name) {
+        const { scope, keypath } = stack[index], currentKeypath = keypath ? keypath + RAW_DOT + name : name;
+        if (name in scope) {
+            setHolder(scope[name], currentKeypath);
+            return;
+        }
+        if (index > 0) {
+            findProp(stack, index - 1, name);
+        }
+    }, lookupProp = function (name, value, stack, filter) {
+        const currentStack = stack || contextStack, index = currentStack.length - 1, { keypath } = currentStack[index];
+        setHolder(value, keypath ? keypath + RAW_DOT + name : name);
+        if (value === UNDEFINED && index > 0) {
+            findProp(currentStack, index - 1, name);
+        }
+        if (holder.value === UNDEFINED && filter) {
+            holder.value = filter;
+        }
         return holder;
-    }, renderTemplate = function (render, keypath, children, components) {
-        render(instance, renderElementVnode, renderComponentVnode, appendAttribute, appendTextVnode, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, renderExpressionIdentifier, renderExpressionValue, executeFunction, toString, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, keypath, children, components);
+    }, getThis = function (value, stack) {
+        const currentStack = stack || contextStack, { keypath } = currentStack[currentStack.length - 1];
+        return setHolder(value, keypath);
+    }, getThisByIndex = function (getIndex, stack) {
+        const currentStack = stack || contextStack, { scope, keypath } = currentStack[getIndex(currentStack)];
+        return setHolder(scope, keypath);
+    }, getProp = function (name, value, stack) {
+        const currentStack = stack || contextStack, { keypath } = currentStack[currentStack.length - 1];
+        return setHolder(value, keypath ? keypath + RAW_DOT + name : name);
+    }, getPropByIndex = function (getIndex, name, stack) {
+        const currentStack = stack || contextStack, { scope, keypath } = currentStack[getIndex(currentStack)];
+        return setHolder(scope[name], keypath ? keypath + RAW_DOT + name : name);
+    }, readKeypath = function (value, keypath) {
+        const result = get(value, keypath);
+        return setHolder(result ? result.value : UNDEFINED);
+    }, setHolder = function (value, keypath) {
+        holder.keypath = keypath;
+        holder.value = value && func(value.get)
+            ? value.get()
+            : value;
+        if (keypath !== UNDEFINED) {
+            dependencies[keypath] = TRUE;
+        }
+        return holder;
+    }, renderTemplate = function (render, scope, keypath, children, components) {
+        render(renderElementVnode, renderComponentVnode, appendAttribute, appendTextVnode, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
     };
-    const children = [], components = [];
-    renderTemplate(template, rootKeypath, children, components);
+    renderTemplate(template, rootScope, rootKeypath, children, components);
     return {
         vnode: children[0],
         dependencies,
@@ -4058,7 +4074,7 @@ class Yox {
      */
     render() {
         {
-            const instance = this, { $observer, $dependencies } = instance, oldDependencies = $dependencies || EMPTY_OBJECT, { vnode, dependencies } = render(instance, instance.$template, merge($observer.data, $observer.computed), instance.$filters, globalFilters, instance.$partials, globalPartials, instance.$directives, globalDirectives, instance.$transitions, globalTransitions);
+            const instance = this, { $observer, $dependencies } = instance, oldDependencies = $dependencies || EMPTY_OBJECT, { vnode, dependencies } = render(instance, instance.$template, $observer.data, $observer.computed, instance.$filters, globalFilters, instance.$partials, globalPartials, instance.$directives, globalDirectives, instance.$transitions, globalTransitions);
             for (let key in dependencies) {
                 if (!oldDependencies[key]) {
                     $observer.watch(key, markDirty);
@@ -4239,7 +4255,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.213";
+Yox.version = "1.0.0-alpha.214";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

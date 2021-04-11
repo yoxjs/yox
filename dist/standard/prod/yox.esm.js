@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.213
+ * yox.js v1.0.0-alpha.214
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -783,7 +783,7 @@ const getKeypathTokens = createOneKeyCache(function (keypath) {
  * @param callback 返回 false 可中断遍历
  */
 function each$1(keypath, callback) {
-    const tokens = string$1(keypath) ? getKeypathTokens(keypath) : keypath;
+    const tokens = getKeypathTokens(keypath);
     for (let i = 0, lastIndex = tokens.length - 1; i <= lastIndex; i++) {
         if (callback(tokens[i], i, lastIndex) === FALSE$1) {
             break;
@@ -1432,7 +1432,7 @@ class NextTask {
 const VNODE = '$vnode';
 const LOADING = '$loading';
 const LEAVING = '$leaving';
-const MODEL$1 = '$model';
+const MODEL = '$model';
 const EVENT$1 = '$event';
 
 function update$6(api, vnode, oldVnode) {
@@ -1762,23 +1762,23 @@ function update$2(api, vnode, oldVnode) {
     const { data, node, component, model } = vnode, oldModel = oldVnode && oldVnode.model;
     if (model) {
         if (!oldModel) {
-            data[MODEL$1] = addModel(api, node, component, vnode);
+            data[MODEL] = addModel(api, node, component, vnode);
         }
         else if (model.keypath !== oldModel.keypath) {
-            data[MODEL$1]();
-            data[MODEL$1] = addModel(api, node, component, vnode);
+            data[MODEL]();
+            data[MODEL] = addModel(api, node, component, vnode);
         }
     }
     else if (oldModel) {
-        data[MODEL$1]();
-        delete data[MODEL$1];
+        data[MODEL]();
+        delete data[MODEL];
     }
 }
 function remove$3(api, vnode) {
     const { data } = vnode;
-    if (data[MODEL$1]) {
-        data[MODEL$1]();
-        delete data[MODEL$1];
+    if (data[MODEL]) {
+        data[MODEL]();
+        delete data[MODEL];
     }
 }
 
@@ -4580,7 +4580,7 @@ function compile(content) {
     return nodeList;
 }
 
-const QUOTE_DOUBLE = '"', QUOTE_SINGLE = "'", COMMA = ',', OPAREN = '(', CPAREN = ')';
+const QUOTE_DOUBLE = '"', QUOTE_SINGLE = "'";
 // 下面这些值需要根据外部配置才能确定
 let isUglify$1 = UNDEFINED$1, isMinify = UNDEFINED$1, UNDEFINED = EMPTY_STRING, NULL = EMPTY_STRING, TRUE = EMPTY_STRING, FALSE = EMPTY_STRING, SPACE = EMPTY_STRING, INDENT = EMPTY_STRING, BREAK_LINE = EMPTY_STRING;
 class Raw {
@@ -4672,7 +4672,7 @@ class Map {
                 }
             });
         });
-        return toTuple('{', '}', COMMA, TRUE$1, items).toString(tabSize);
+        return toTuple('{', '}', ',', TRUE$1, items).toString(tabSize);
     }
 }
 class Call {
@@ -4681,10 +4681,10 @@ class Call {
         this.args = args;
     }
     toString(tabSize) {
-        const { name, args } = this, tuple = args
-            ? toTuple(OPAREN, CPAREN, COMMA, TRUE$1, trimArgs(args)).toString(tabSize)
-            : `${OPAREN}${CPAREN}`;
-        return `${name}${tuple}`;
+        const { name, args } = this, newArgs = args ? trimArgs(args) : [];
+        return newArgs.length
+            ? `${name}${toTuple('(', ')', ',', TRUE$1, newArgs).toString(tabSize)}`
+            : `${name}()`;
     }
 }
 class Unary {
@@ -4705,10 +4705,10 @@ class Binary {
     toString(tabSize) {
         let left = this.left.toString(tabSize), right = this.right.toString(tabSize);
         if (this.leftGroup) {
-            left = `${OPAREN}${left}${CPAREN}`;
+            left = `(${left})`;
         }
         if (this.rightGroup) {
-            right = `${OPAREN}${right}${CPAREN}`;
+            right = `(${right})`;
         }
         return `${left}${SPACE}${this.operator}${SPACE}${right}`;
     }
@@ -4730,7 +4730,7 @@ class AnonymousFunction {
         this.returnValue = returnValue;
     }
     toString(tabSize) {
-        const { args, body, returnValue } = this, currentTabSize = tabSize || 0, nextTabSize = currentTabSize + 1, currentIndentSize = repeat(INDENT, currentTabSize), nextIndentSize = repeat(INDENT, nextTabSize), tuple = args ? toTuple(EMPTY_STRING, EMPTY_STRING, COMMA, FALSE$1, args).toString(currentTabSize) : EMPTY_STRING, code = [];
+        const { args, body, returnValue } = this, currentTabSize = tabSize || 0, nextTabSize = currentTabSize + 1, currentIndentSize = repeat(INDENT, currentTabSize), nextIndentSize = repeat(INDENT, nextTabSize), tuple = args ? toTuple(EMPTY_STRING, EMPTY_STRING, ',', FALSE$1, args).toString(currentTabSize) : EMPTY_STRING, code = [];
         if (body) {
             push(code, body.toString(nextTabSize));
         }
@@ -4738,6 +4738,30 @@ class AnonymousFunction {
             push(code, `return ${returnValue.toString(nextTabSize)}`);
         }
         return `${RAW_FUNCTION}${SPACE}(${tuple})${SPACE}{${BREAK_LINE}${nextIndentSize}${join$1(code, BREAK_LINE + nextIndentSize)}${BREAK_LINE}${currentIndentSize}}`;
+    }
+}
+class Member {
+    constructor(base, props) {
+        this.base = base;
+        this.props = props;
+    }
+    toString(tabSize) {
+        const { base, props } = this;
+        let result = base.toString(tabSize);
+        each$2(props, function (prop) {
+            if (prop instanceof Primitive) {
+                if (numeric(prop.value)) {
+                    result += `[${prop.value}]`;
+                }
+                else {
+                    result += '.' + prop.value;
+                }
+            }
+            else {
+                result += `[${prop.toString(tabSize)}]`;
+            }
+        });
+        return result;
     }
 }
 class Operator {
@@ -4779,8 +4803,14 @@ function toPrimitive(value) {
 function toTuple(left, right, separator, breakLine, items) {
     return new Tuple(left, right, separator, breakLine, items);
 }
-function toList(items) {
-    return new Tuple('[', ']', COMMA, TRUE$1, items);
+function toList(items, join) {
+    let result = new Tuple('[', ']', ',', TRUE$1, items);
+    if (string$1(join)) {
+        result = toOperator(result, toCall('join', [
+            toPrimitive(join)
+        ]));
+    }
+    return result;
 }
 function toMap(fields) {
     return new Map(fields);
@@ -4799,6 +4829,9 @@ function toTernary(test, yes, no) {
 }
 function toAnonymousFunction(args, body, returnValue) {
     return new AnonymousFunction(args, body, returnValue);
+}
+function toMember(base, props) {
+    return new Member(base, props);
 }
 function toOperator(base, code) {
     return new Operator(base, code);
@@ -4900,7 +4933,7 @@ function generate$2(args, vars, code) {
     return toAnonymousFunction(args, toTuple(EMPTY_STRING, EMPTY_STRING, ';', TRUE$1, [
         {
             toString(tabSize) {
-                return `var ${toTuple(EMPTY_STRING, EMPTY_STRING, COMMA, FALSE$1, localVarList).toString(tabSize)}`;
+                return `var ${toTuple(EMPTY_STRING, EMPTY_STRING, ',', FALSE$1, localVarList).toString(tabSize)}`;
             }
         },
         code
@@ -4972,7 +5005,7 @@ function generate$1(node, transformIdentifier, generateIdentifier, generateValue
             hasHolder = TRUE$1;
             const identifierNode = node;
             value = transformIdentifier(identifierNode)
-                || generateIdentifier(identifierNode, identifierNode.name || UNDEFINED$1, identifierNode.name ? parse(identifierNode.name) : UNDEFINED$1, holder, stack, parentNode);
+                || generateIdentifier(identifierNode, identifierNode.name ? parse(identifierNode.name) : [], identifierNode.name, holder, stack, parentNode);
             break;
         case MEMBER:
             hasHolder = TRUE$1;
@@ -4981,7 +5014,7 @@ function generate$1(node, transformIdentifier, generateIdentifier, generateValue
                 // 只能是 a[b] 的形式，因为 a.b 已经在解析时转换成 Identifier 了
                 const leadNode = memberNode.lead, leadValue = transformIdentifier(leadNode), memberNodes = generateNodes(memberNode.nodes || []);
                 if (leadValue) {
-                    value = generateValue(leadValue, memberNodes, holder);
+                    value = generateValue(leadValue, memberNodes, UNDEFINED$1, holder);
                 }
                 else {
                     if (leadNode.name) {
@@ -4990,18 +5023,18 @@ function generate$1(node, transformIdentifier, generateIdentifier, generateValue
                             memberNodes.unshift(node);
                         }, TRUE$1);
                     }
-                    value = generateIdentifier(memberNode, UNDEFINED$1, memberNodes, holder, stack, parentNode);
+                    value = generateIdentifier(memberNode, memberNodes, UNDEFINED$1, holder, stack, parentNode);
                 }
             }
             else if (memberNode.nodes) {
                 // "xx"[length]
                 // format()[a][b]
-                value = generateValue(generateNode(memberNode.lead), generateNodes(memberNode.nodes || []), holder);
+                value = generateValue(generateNode(memberNode.lead), generateNodes(memberNode.nodes || []), UNDEFINED$1, holder);
             }
             else {
                 // "xx".length
                 // format().a.b
-                value = generateValue(generateNode(memberNode.lead), parse(memberNode.keypath), holder);
+                value = generateValue(generateNode(memberNode.lead), parse(memberNode.keypath), memberNode.keypath, holder);
             }
             break;
         default:
@@ -5020,16 +5053,6 @@ function generate$1(node, transformIdentifier, generateIdentifier, generateValue
     });
 }
 
-const NATIVE_ATTRIBUTES = 'nativeAttrs';
-const NATIVE_PROPERTIES = 'nativeProps';
-const PROPERTIES = 'props';
-const DIRECTIVES = 'directives';
-const EVENTS = 'events';
-const MODEL = 'model';
-const LAZY = 'lazy';
-const TRANSITION = 'transition';
-const CHILDREN = 'children';
-
 // 是否正在收集虚拟节点
 const vnodeStack = [TRUE$1], 
 // 是否正在处理组件节点
@@ -5041,58 +5064,63 @@ eachStack = [],
 // 是否正在收集字符串类型的值
 stringStack = [], 
 // 是否正在收集动态 child
-dynamicChildrenStack = [TRUE$1], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {};
+dynamicChildrenStack = [TRUE$1], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {}, FIELD_NATIVE_ATTRIBUTES = 'nativeAttrs', FIELD_NATIVE_PROPERTIES = 'nativeProps', FIELD_PROPERTIES = 'props', FIELD_DIRECTIVES = 'directives', FIELD_EVENTS = 'events', FIELD_MODEL = 'model', FIELD_LAZY = 'lazy', FIELD_TRANSITION = 'transition', FIELD_CHILDREN = 'children';
 // 下面这些值需要根据外部配置才能确定
 let isUglify = UNDEFINED$1, 
 // 下面 4 个变量用于分配局部变量名称
-localVarId = 0, localVarMap = {}, localVarCache = {}, VAR_LOCAL_PREFIX = EMPTY_STRING, ARG_INSTANCE = EMPTY_STRING, RENDER_ELEMENT_VNODE = EMPTY_STRING, RENDER_COMPONENT_VNODE = EMPTY_STRING, APPEND_ATTRIBUTE = EMPTY_STRING, APPEND_TEXT_VNODE = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, RENDER_EXPRESSION_IDENTIFIER = EMPTY_STRING, RENDER_EXPRESSION_VALUE = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, TO_STRING = EMPTY_STRING, ARG_FILTERS = EMPTY_STRING, ARG_GLOBAL_FILTERS = EMPTY_STRING, ARG_LOCAL_PARTIALS = EMPTY_STRING, ARG_PARTIALS = EMPTY_STRING, ARG_GLOBAL_PARTIALS = EMPTY_STRING, ARG_DIRECTIVES = EMPTY_STRING, ARG_GLOBAL_DIRECTIVES = EMPTY_STRING, ARG_TRANSITIONS = EMPTY_STRING, ARG_GLOBAL_TRANSITIONS = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_COMPONENTS = EMPTY_STRING, ARG_SCOPE = EMPTY_STRING, ARG_KEYPATH = EMPTY_STRING, ARG_LENGTH = EMPTY_STRING, ARG_EVENT = EMPTY_STRING, ARG_DATA = EMPTY_STRING;
+localVarId = 0, localVarMap = {}, localVarCache = {}, VAR_LOCAL_PREFIX = EMPTY_STRING, RENDER_ELEMENT_VNODE = EMPTY_STRING, RENDER_COMPONENT_VNODE = EMPTY_STRING, APPEND_ATTRIBUTE = EMPTY_STRING, APPEND_TEXT_VNODE = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, LOOKUP_KEYPATH = EMPTY_STRING, LOOKUP_PROP = EMPTY_STRING, GET_THIS = EMPTY_STRING, GET_THIS_BY_INDEX = EMPTY_STRING, GET_PROP = EMPTY_STRING, GET_PROP_BY_INDEX = EMPTY_STRING, READ_KEYPATH = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, SET_HOLDER = EMPTY_STRING, TO_STRING = EMPTY_STRING, ARG_INSTANCE = EMPTY_STRING, ARG_FILTERS = EMPTY_STRING, ARG_GLOBAL_FILTERS = EMPTY_STRING, ARG_LOCAL_PARTIALS = EMPTY_STRING, ARG_PARTIALS = EMPTY_STRING, ARG_GLOBAL_PARTIALS = EMPTY_STRING, ARG_DIRECTIVES = EMPTY_STRING, ARG_GLOBAL_DIRECTIVES = EMPTY_STRING, ARG_TRANSITIONS = EMPTY_STRING, ARG_GLOBAL_TRANSITIONS = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_COMPONENTS = EMPTY_STRING, ARG_SCOPE = EMPTY_STRING, ARG_KEYPATH = EMPTY_STRING, ARG_LENGTH = EMPTY_STRING, ARG_EVENT = EMPTY_STRING, ARG_DATA = EMPTY_STRING;
 function init() {
     if (isUglify === PUBLIC_CONFIG.uglifyCompiled) {
         return;
     }
     if (PUBLIC_CONFIG.uglifyCompiled) {
-        VAR_LOCAL_PREFIX = '_v';
-        ARG_INSTANCE = '_a';
-        RENDER_ELEMENT_VNODE = '_b';
-        RENDER_COMPONENT_VNODE = '_c';
-        APPEND_ATTRIBUTE = '_d';
-        APPEND_TEXT_VNODE = '_e';
-        RENDER_TRANSITION = '_f';
-        RENDER_MODEL = '_g';
-        RENDER_EVENT_METHOD = '_h';
-        RENDER_EVENT_NAME = '_i';
-        RENDER_DIRECTIVE = '_j';
-        RENDER_SPREAD = '_k';
-        RENDER_SLOT = '_l';
-        RENDER_PARTIAL = '_m';
-        RENDER_EACH = '_n';
-        RENDER_RANGE = '_o';
-        RENDER_EXPRESSION_IDENTIFIER = '_p';
-        RENDER_EXPRESSION_VALUE = '_q';
-        EXECUTE_FUNCTION = '_r';
-        TO_STRING = '_s';
-        ARG_FILTERS = '_t',
-            ARG_GLOBAL_FILTERS = '_u',
-            ARG_LOCAL_PARTIALS = '_v';
-        ARG_PARTIALS = '_w',
-            ARG_GLOBAL_PARTIALS = '_x',
-            ARG_DIRECTIVES = '_y',
-            ARG_GLOBAL_DIRECTIVES = '_z',
-            ARG_TRANSITIONS = '_1',
-            ARG_GLOBAL_TRANSITIONS = '_2',
-            ARG_STACK = '_3';
-        ARG_VNODE = '_4';
-        ARG_CHILDREN = '_5';
-        ARG_COMPONENTS = '_6';
-        ARG_SCOPE = '_7';
-        ARG_KEYPATH = '_8';
-        ARG_LENGTH = '_9';
-        ARG_EVENT = '_10';
-        ARG_DATA = '_11';
+        VAR_LOCAL_PREFIX = 'v';
+        RENDER_ELEMENT_VNODE = '_a';
+        RENDER_COMPONENT_VNODE = '_b';
+        APPEND_ATTRIBUTE = '_c';
+        APPEND_TEXT_VNODE = '_d';
+        RENDER_TRANSITION = '_e';
+        RENDER_MODEL = '_f';
+        RENDER_EVENT_METHOD = '_g';
+        RENDER_EVENT_NAME = '_h';
+        RENDER_DIRECTIVE = '_i';
+        RENDER_SPREAD = '_j';
+        RENDER_SLOT = '_k';
+        RENDER_PARTIAL = '_l';
+        RENDER_EACH = '_m';
+        RENDER_RANGE = '_n';
+        LOOKUP_KEYPATH = '_o';
+        LOOKUP_PROP = '_p';
+        GET_THIS = '_q';
+        GET_THIS_BY_INDEX = '_r';
+        GET_PROP = '_s';
+        GET_PROP_BY_INDEX = '_t';
+        READ_KEYPATH = '_u';
+        EXECUTE_FUNCTION = '_v';
+        SET_HOLDER = '_w';
+        TO_STRING = '_x';
+        ARG_INSTANCE = '_y';
+        ARG_FILTERS = '_z',
+            ARG_GLOBAL_FILTERS = '__a',
+            ARG_LOCAL_PARTIALS = '__b';
+        ARG_PARTIALS = '__c',
+            ARG_GLOBAL_PARTIALS = '__d',
+            ARG_DIRECTIVES = '__e',
+            ARG_GLOBAL_DIRECTIVES = '__f',
+            ARG_TRANSITIONS = '__g',
+            ARG_GLOBAL_TRANSITIONS = '__h',
+            ARG_STACK = '__i';
+        ARG_VNODE = '__j';
+        ARG_CHILDREN = '__k';
+        ARG_COMPONENTS = '__l';
+        ARG_SCOPE = '__m';
+        ARG_KEYPATH = '__n';
+        ARG_LENGTH = '__o';
+        ARG_EVENT = '__p';
+        ARG_DATA = '__q';
     }
     else {
         VAR_LOCAL_PREFIX = 'var';
-        ARG_INSTANCE = 'instance';
         RENDER_ELEMENT_VNODE = 'renderElementVnode';
         RENDER_COMPONENT_VNODE = 'renderComponentVnode';
         APPEND_ATTRIBUTE = 'appendAttribute';
@@ -5107,10 +5135,17 @@ function init() {
         RENDER_PARTIAL = 'renderPartial';
         RENDER_EACH = 'renderEach';
         RENDER_RANGE = 'renderRange';
-        RENDER_EXPRESSION_IDENTIFIER = 'renderExpressionIdentifier';
-        RENDER_EXPRESSION_VALUE = 'renderExpressionValue';
+        LOOKUP_KEYPATH = 'lookupKeypath';
+        LOOKUP_PROP = 'lookupProp';
+        GET_THIS = 'getThis';
+        GET_THIS_BY_INDEX = 'getThisByIndex';
+        GET_PROP = 'getProp';
+        GET_PROP_BY_INDEX = 'getPropByIndex';
+        READ_KEYPATH = 'readKeypath';
         EXECUTE_FUNCTION = 'executeFunction';
+        SET_HOLDER = 'setHolder';
         TO_STRING = 'toString';
+        ARG_INSTANCE = 'instance';
         ARG_FILTERS = 'filters',
             ARG_GLOBAL_FILTERS = 'globalFilters',
             ARG_LOCAL_PARTIALS = 'localPartials';
@@ -5166,63 +5201,162 @@ function transformExpressionIdentifier(node) {
         && root === FALSE$1
         && lookup === FALSE$1
         && offset === 0) {
-        return toRaw(name === EMPTY_STRING
-            ? ARG_SCOPE
-            : ARG_SCOPE
-                + RAW_DOT
-                // 这里要把 list.0.a 转成 list[0].a
-                // . 是 Yox 特有的访问数组的语法，正常的 js 语法是 [index]
-                + name.replace(/\.(\d+)/g, '[$1]'));
+        if (name === EMPTY_STRING) {
+            return toRaw(ARG_SCOPE);
+        }
+        return toMember(toRaw(ARG_SCOPE), parse(name));
     }
 }
 function generateHolderIfNeeded(node, holder) {
     return holder
         ? node
-        : toOperator(node, toRaw('value'));
+        : toMember(node, [
+            toPrimitive('value')
+        ]);
 }
-function generateExpressionIdentifier(node, keypath, nodes, holder, stack, parentNode) {
+function generateExpressionIdentifier(node, nodes, keypath, holder, stack, parentNode) {
+    const { root, lookup, offset } = node, { length } = nodes;
     let getIndex;
-    if (node.root) {
+    if (root) {
         getIndex = toRaw(addLocalVar(toAnonymousFunction(UNDEFINED$1, UNDEFINED$1, toPrimitive(0))));
     }
-    else if (node.offset) {
+    else if (offset) {
         getIndex = toRaw(addLocalVar(toAnonymousFunction([
             toRaw(ARG_STACK)
-        ], UNDEFINED$1, toOperator(toRaw(ARG_STACK), toBinary(toRaw('length'), '-', toPrimitive(1 + node.offset))))));
+        ], UNDEFINED$1, toBinary(toMember(toRaw(ARG_STACK), [
+            toPrimitive('length')
+        ]), '-', toPrimitive(1 + offset)))));
     }
     else {
         getIndex = toRaw(addLocalVar(toAnonymousFunction([
             toRaw(ARG_STACK)
-        ], UNDEFINED$1, toOperator(toRaw(ARG_STACK), toBinary(toRaw('length'), '-', toPrimitive(1))))));
+        ], UNDEFINED$1, toBinary(toMember(toRaw(ARG_STACK), [
+            toPrimitive('length')
+        ]), '-', toPrimitive(1)))));
     }
-    return generateHolderIfNeeded(toCall(RENDER_EXPRESSION_IDENTIFIER, [
+    let filter = toPrimitive(UNDEFINED$1);
+    // 函数调用
+    if (parentNode
+        && parentNode.type === CALL
+        // 调用过滤器肯定无需指定路径
+        && lookup
+        // 过滤器名称是简单的标识符，可支持多级属性，如 lodash.toUpper
+        && keypath
+        && length > 0) {
+        if (length > 1) {
+            filter = toMember(toRaw(ARG_GLOBAL_FILTERS), nodes);
+        }
+        else {
+            filter = generateSelfAndGlobalReader(ARG_FILTERS, ARG_GLOBAL_FILTERS, keypath);
+        }
+    }
+    let result = toCall(LOOKUP_KEYPATH, [
         getIndex,
-        nodes
-            ? toList(nodes)
-            : toPrimitive(UNDEFINED$1),
-        node.lookup
+        string$1(keypath)
+            ? toPrimitive(keypath)
+            : length === 1
+                ? nodes[0]
+                : toList(nodes, RAW_DOT),
+        lookup
             ? toPrimitive(TRUE$1)
             : toPrimitive(UNDEFINED$1),
         stack
             ? toRaw(ARG_STACK)
             : toPrimitive(UNDEFINED$1),
-        parentNode && parentNode.type === CALL && keypath
-            ? generateSelfAndGlobalReader(ARG_FILTERS, ARG_GLOBAL_FILTERS, keypath)
-            : toPrimitive(UNDEFINED$1)
-    ]), holder);
+        filter
+    ]);
+    // 如果是读取一级属性的场景，比如 this.x，这里可以优化成 scope.x
+    // 如果是读取多级属性的场景，比如 this.x.y，这里不做优化，因为 x 可能为空，导致整个表达式报错
+    // 处理一级属性
+    if (keypath && length === 1) {
+        // this.name
+        if (!root && !offset && !lookup) {
+            result = toCall(GET_PROP, [
+                toPrimitive(keypath),
+                toMember(toRaw(ARG_SCOPE), nodes),
+                stack
+                    ? toRaw(ARG_STACK)
+                    : toPrimitive(UNDEFINED$1)
+            ]);
+        }
+        // 未指定路径，如 name
+        else if (!root && !offset) {
+            result = toCall(LOOKUP_PROP, [
+                toPrimitive(keypath),
+                toMember(toRaw(ARG_SCOPE), nodes),
+                stack
+                    ? toRaw(ARG_STACK)
+                    : toPrimitive(UNDEFINED$1),
+                filter
+            ]);
+        }
+        // 指定了路径，如 ~/name 或 ../name
+        else {
+            result = toCall(GET_PROP_BY_INDEX, [
+                getIndex,
+                toPrimitive(keypath),
+                stack
+                    ? toRaw(ARG_STACK)
+                    : toPrimitive(UNDEFINED$1)
+            ]);
+        }
+    }
+    // 处理属性为空串，如 this、../this、~/this 之类的
+    else if (!keypath && !length) {
+        // this
+        if (!root && !offset && !lookup) {
+            result = toCall(GET_THIS, [
+                toRaw(ARG_SCOPE),
+                stack
+                    ? toRaw(ARG_STACK)
+                    : toPrimitive(UNDEFINED$1)
+            ]);
+        }
+        // 指定了路径，如 ~/name 或 ../name
+        else if (root || offset) {
+            result = toCall(GET_THIS_BY_INDEX, [
+                getIndex,
+                stack
+                    ? toRaw(ARG_STACK)
+                    : toPrimitive(UNDEFINED$1)
+            ]);
+        }
+    }
+    return generateHolderIfNeeded(result, holder);
 }
-function generateExpressionValue(value, keys, holder) {
-    return generateHolderIfNeeded(toCall(RENDER_EXPRESSION_VALUE, [
-        value,
-        toList(keys)
-    ]), holder);
+function generateExpressionValue(value, keys, keypath, holder) {
+    let result;
+    switch (keys.length) {
+        case 0:
+            result = toCall(SET_HOLDER, [
+                value,
+            ]);
+            break;
+        case 1:
+            result = toCall(SET_HOLDER, [
+                toMember(value, keys)
+            ]);
+            break;
+        default:
+            result = toCall(READ_KEYPATH, [
+                value,
+                keypath
+                    ? toPrimitive(keypath)
+                    : toList(keys, RAW_DOT)
+            ]);
+            break;
+    }
+    return generateHolderIfNeeded(result, holder);
 }
 function generateExpressionCall(fn, args, holder) {
-    return generateHolderIfNeeded(toCall(EXECUTE_FUNCTION, [
-        fn,
-        args
-            ? toList(args)
-            : toPrimitive(UNDEFINED$1)
+    return generateHolderIfNeeded(toCall(SET_HOLDER, [
+        toCall(EXECUTE_FUNCTION, [
+            fn,
+            toRaw(ARG_INSTANCE),
+            args
+                ? toList(args)
+                : toPrimitive(UNDEFINED$1)
+        ])
     ]), holder);
 }
 function generateExpression(expr) {
@@ -5269,9 +5403,7 @@ function generateNodesToStringIfNeeded(children) {
     }
     // 字符串拼接涉及表达式的优先级问题，改成 array.join 有利于一致性
     if (last(stringStack)) {
-        return toOperator(toList(result), toCall('join', [
-            toPrimitive(EMPTY_STRING)
-        ]));
+        return toList(result, EMPTY_STRING);
     }
     return toList(result);
 }
@@ -5288,11 +5420,11 @@ function appendComponentVnode(node) {
     return toPush(ARG_COMPONENTS, node);
 }
 function generateSelfAndGlobalReader(self, global, name) {
-    // 如果 name 包含 . 则只从全局取值，目前主要是处理全局过滤器，比如直接注册 lodash 整个对象进来
-    if (parse(name).length > 1) {
-        return toOperator(toRaw(global), toRaw(name));
-    }
-    return toBinary(toBinary(toRaw(self), '&&', toOperator(toRaw(self), toRaw(name))), '||', toOperator(toRaw(global), toRaw(name)));
+    return toBinary(toBinary(toRaw(self), '&&', toMember(toRaw(self), [
+        toPrimitive(name)
+    ])), '||', toMember(toRaw(global), [
+        toPrimitive(name)
+    ]));
 }
 function generateCommentVnode() {
     const result = toMap({
@@ -5467,7 +5599,7 @@ nodeGenerator[ELEMENT] = function (node) {
                 ], generateNodesToTuple(children));
             }
             else {
-                data.set(CHILDREN, toList(children.map(function (node) {
+                data.set(FIELD_CHILDREN, toList(children.map(function (node) {
                     return nodeGenerator[node.type](node);
                 })));
             }
@@ -5505,34 +5637,34 @@ nodeGenerator[ELEMENT] = function (node) {
             each$2(nativeAttributeList, function (node) {
                 nativeAttributes.set(node.name, generateAttributeValue(node.value, node.expr, node.children));
             });
-            data.set(NATIVE_ATTRIBUTES, nativeAttributes);
+            data.set(FIELD_NATIVE_ATTRIBUTES, nativeAttributes);
         }
         if (nativePropertyList.length) {
             const nativeProperties = toMap();
             each$2(nativePropertyList, function (node) {
                 nativeProperties.set(node.name, generateAttributeValue(node.value, node.expr, node.children));
             });
-            data.set(NATIVE_PROPERTIES, nativeProperties);
+            data.set(FIELD_NATIVE_PROPERTIES, nativeProperties);
         }
         if (propertyList.length) {
             const properties = toMap();
             each$2(propertyList, function (node) {
                 properties.set(node.name, generateAttributeValue(node.value, node.expr, node.children));
             });
-            data.set(PROPERTIES, properties);
+            data.set(FIELD_PROPERTIES, properties);
         }
         if (lazyList.length) {
             const lazy = toMap();
             each$2(lazyList, function (node) {
                 lazy.set(node.name, getLazyValue(node));
             });
-            data.set(LAZY, lazy);
+            data.set(FIELD_LAZY, lazy);
         }
         if (transition) {
-            data.set(TRANSITION, getTransitionValue(transition));
+            data.set(FIELD_TRANSITION, getTransitionValue(transition));
         }
         if (model) {
-            data.set(MODEL, getModelValue(model));
+            data.set(FIELD_MODEL, getModelValue(model));
         }
         if (eventList.length) {
             const events = toMap();
@@ -5540,14 +5672,14 @@ nodeGenerator[ELEMENT] = function (node) {
                 const info = getEventInfo(node);
                 events.set(getDirectiveKey(node), toCall(info.name, info.args));
             });
-            data.set(EVENTS, events);
+            data.set(FIELD_EVENTS, events);
         }
         if (customDirectiveList.length) {
             const directives = toMap();
             each$2(customDirectiveList, function (node) {
                 directives.set(getDirectiveKey(node), toCall(RENDER_DIRECTIVE, getDirectiveArgs(node)));
             });
-            data.set(DIRECTIVES, directives);
+            data.set(FIELD_DIRECTIVES, directives);
         }
         if (otherList.length) {
             outputAttrs = toAnonymousFunction([
@@ -5597,8 +5729,8 @@ nodeGenerator[ATTRIBUTE] = function (node) {
     return toCall(APPEND_ATTRIBUTE, [
         toRaw(ARG_VNODE),
         toPrimitive(last(componentStack)
-            ? PROPERTIES
-            : NATIVE_ATTRIBUTES),
+            ? FIELD_PROPERTIES
+            : FIELD_NATIVE_ATTRIBUTES),
         generateAttributeValue(node.value, node.expr, node.children),
         toPrimitive(node.name),
     ]);
@@ -5606,7 +5738,7 @@ nodeGenerator[ATTRIBUTE] = function (node) {
 nodeGenerator[PROPERTY] = function (node) {
     return toCall(APPEND_ATTRIBUTE, [
         toRaw(ARG_VNODE),
-        toPrimitive(NATIVE_PROPERTIES),
+        toPrimitive(FIELD_NATIVE_PROPERTIES),
         generateAttributeValue(node.value, node.expr, node.children),
         toPrimitive(node.name),
     ]);
@@ -5756,7 +5888,7 @@ nodeGenerator[DIRECTIVE] = function (node) {
         case DIRECTIVE_LAZY:
             return toCall(APPEND_ATTRIBUTE, [
                 toRaw(ARG_VNODE),
-                toPrimitive(LAZY),
+                toPrimitive(FIELD_LAZY),
                 getLazyValue(node),
                 toPrimitive(node.name),
             ]);
@@ -5764,14 +5896,14 @@ nodeGenerator[DIRECTIVE] = function (node) {
         case DIRECTIVE_TRANSITION:
             return toCall(APPEND_ATTRIBUTE, [
                 toRaw(ARG_VNODE),
-                toPrimitive(TRANSITION),
+                toPrimitive(FIELD_TRANSITION),
                 getTransitionValue(node),
             ]);
         // <input model="id">
         case DIRECTIVE_MODEL:
             return toCall(APPEND_ATTRIBUTE, [
                 toRaw(ARG_VNODE),
-                toPrimitive(MODEL),
+                toPrimitive(FIELD_MODEL),
                 getModelValue(node),
             ]);
         // <div on-click="name">
@@ -5779,14 +5911,14 @@ nodeGenerator[DIRECTIVE] = function (node) {
             const info = getEventInfo(node);
             return toCall(APPEND_ATTRIBUTE, [
                 toRaw(ARG_VNODE),
-                toPrimitive(EVENTS),
+                toPrimitive(FIELD_EVENTS),
                 toCall(info.name, info.args),
                 toPrimitive(getDirectiveKey(node)),
             ]);
         default:
             return toCall(APPEND_ATTRIBUTE, [
                 toRaw(ARG_VNODE),
-                toPrimitive(DIRECTIVES),
+                toPrimitive(FIELD_DIRECTIVES),
                 toCall(RENDER_DIRECTIVE, getDirectiveArgs(node)),
                 toPrimitive(getDirectiveKey(node)),
             ]);
@@ -5795,7 +5927,7 @@ nodeGenerator[DIRECTIVE] = function (node) {
 nodeGenerator[SPREAD] = function (node) {
     return toCall(RENDER_SPREAD, [
         toRaw(ARG_VNODE),
-        toPrimitive(PROPERTIES),
+        toPrimitive(FIELD_PROPERTIES),
         generateExpression(node.expr)
     ]);
 };
@@ -5841,9 +5973,9 @@ nodeGenerator[ELSE] = function (node) {
 nodeGenerator[EACH] = function (node) {
     const { index, from, to, equal, next } = node, isSpecial = to || from.type === ARRAY || from.type === OBJECT;
     const args = [
+        toRaw(ARG_SCOPE),
         toRaw(ARG_KEYPATH),
         toRaw(ARG_LENGTH),
-        toRaw(ARG_SCOPE),
     ];
     if (index) {
         push(args, toRaw(index));
@@ -5880,7 +6012,10 @@ nodeGenerator[EACH] = function (node) {
     ]);
 };
 nodeGenerator[PARTIAL] = function (node) {
-    return toAssign(toOperator(toRaw(ARG_LOCAL_PARTIALS), toRaw(node.name)), toAnonymousFunction([
+    return toAssign(toMember(toRaw(ARG_LOCAL_PARTIALS), [
+        toPrimitive(node.name)
+    ]), toAnonymousFunction([
+        toRaw(ARG_SCOPE),
         toRaw(ARG_KEYPATH),
         toRaw(ARG_CHILDREN),
         toRaw(ARG_COMPONENTS),
@@ -5890,10 +6025,13 @@ nodeGenerator[IMPORT] = function (node) {
     const { name } = node;
     return toCall(RENDER_PARTIAL, [
         toPrimitive(name),
+        toRaw(ARG_SCOPE),
         toRaw(ARG_KEYPATH),
         toRaw(ARG_CHILDREN),
         toRaw(ARG_COMPONENTS),
-        toOperator(toRaw(ARG_LOCAL_PARTIALS), toRaw(name)),
+        toMember(toRaw(ARG_LOCAL_PARTIALS), [
+            toPrimitive(name)
+        ]),
         generateSelfAndGlobalReader(ARG_PARTIALS, ARG_GLOBAL_PARTIALS, name)
     ]);
 };
@@ -5905,7 +6043,6 @@ function generate(node) {
     localVarMap = {};
     localVarCache = {};
     return generate$2([
-        toRaw(ARG_INSTANCE),
         toRaw(RENDER_ELEMENT_VNODE),
         toRaw(RENDER_COMPONENT_VNODE),
         toRaw(APPEND_ATTRIBUTE),
@@ -5920,10 +6057,17 @@ function generate(node) {
         toRaw(RENDER_PARTIAL),
         toRaw(RENDER_EACH),
         toRaw(RENDER_RANGE),
-        toRaw(RENDER_EXPRESSION_IDENTIFIER),
-        toRaw(RENDER_EXPRESSION_VALUE),
+        toRaw(LOOKUP_KEYPATH),
+        toRaw(LOOKUP_PROP),
+        toRaw(GET_THIS),
+        toRaw(GET_THIS_BY_INDEX),
+        toRaw(GET_PROP),
+        toRaw(GET_PROP_BY_INDEX),
+        toRaw(READ_KEYPATH),
         toRaw(EXECUTE_FUNCTION),
+        toRaw(SET_HOLDER),
         toRaw(TO_STRING),
+        toRaw(ARG_INSTANCE),
         toRaw(ARG_FILTERS),
         toRaw(ARG_GLOBAL_FILTERS),
         toRaw(ARG_LOCAL_PARTIALS),
@@ -5933,39 +6077,35 @@ function generate(node) {
         toRaw(ARG_GLOBAL_DIRECTIVES),
         toRaw(ARG_TRANSITIONS),
         toRaw(ARG_GLOBAL_TRANSITIONS),
+        toRaw(ARG_SCOPE),
         toRaw(ARG_KEYPATH),
         toRaw(ARG_CHILDREN),
         toRaw(ARG_COMPONENTS),
     ], localVarMap, nodeGenerator[node.type](node));
 }
 
-function render(instance, template, scope, filters, globalFilters, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions) {
-    let rootKeypath = EMPTY_STRING, contextStack = [
-        { keypath: rootKeypath, scope, }
+function render(instance, template, data, computed, filters, globalFilters, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions) {
+    let rootScope = merge(data, computed), rootKeypath = EMPTY_STRING, contextStack = [
+        { scope: rootScope, keypath: rootKeypath }
     ], localPartials = {}, 
     // 渲染模板的数据依赖
-    dependencies = {}, lookupValue = function (stack, index, key) {
-        const context = stack[index], keypath = join(context.keypath, key), result = get(context.scope, keypath);
-        if (result) {
-            result.keypath = keypath;
-            return result;
-        }
-        if (index > 0) {
-            return lookupValue(stack, index - 1, key);
-        }
-    }, renderElementVnode = function (data, createAttributes, createChildren) {
+    dependencies = {}, 
+    // 模板渲染过程收集的 vnode
+    children = [], 
+    // 模板渲染过程收集的组件
+    components = [], renderElementVnode = function (vnode, createAttributes, createChildren) {
         if (createAttributes) {
-            createAttributes(data);
+            createAttributes(vnode);
         }
         if (createChildren) {
             const children = [];
             createChildren(children);
-            data.children = children;
+            vnode.children = children;
         }
-        return data;
-    }, renderComponentVnode = function (data, createAttributes, createSlots) {
+        return vnode;
+    }, renderComponentVnode = function (vnode, createAttributes, createSlots) {
         if (createAttributes) {
-            createAttributes(data);
+            createAttributes(vnode);
         }
         if (createSlots) {
             const result = {};
@@ -5982,9 +6122,9 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
                     }
                     : UNDEFINED$1;
             }
-            data.slots = result;
+            vnode.slots = result;
         }
-        return data;
+        return vnode;
     }, appendAttribute = function (vnode, key, value, name) {
         if (name) {
             if (vnode[key]) {
@@ -6099,7 +6239,7 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
     // <slot name="xx"/>
     renderSlot = function (name, children, render) {
         dependencies[name] = TRUE$1;
-        const result = scope[name];
+        const result = rootScope[name];
         if (result) {
             const { vnodes, components } = result;
             if (components) {
@@ -6115,12 +6255,12 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
         render && render();
     }, 
     // {{> name}}
-    renderPartial = function (name, keypath, children, components, renderLocal, render) {
+    renderPartial = function (name, scope, keypath, children, components, renderLocal, render) {
         if (renderLocal) {
-            renderLocal(keypath, children, components);
+            renderLocal(scope, keypath, children, components);
             return;
         }
-        renderTemplate(render, keypath, children, components);
+        renderTemplate(render, scope, keypath, children, components);
     }, renderEach = function (holder, renderChildren, renderElse) {
         let { keypath, value } = holder, length = 0, needKeypath = !!keypath, oldScopeStack = contextStack, currentKeypath = last(contextStack).keypath;
         if (array$1(value)) {
@@ -6131,11 +6271,11 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
                     // slice + push 比直接 concat 快多了
                     contextStack = oldScopeStack.slice();
                     contextStack.push({
-                        keypath: currentKeypath,
                         scope: value[i],
+                        keypath: currentKeypath,
                     });
                 }
-                renderChildren(currentKeypath, length, value[i], i);
+                renderChildren(value[i], currentKeypath, length, i);
             }
         }
         else if (object$1(value)) {
@@ -6151,11 +6291,11 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
                     // slice + push 比直接 concat 快多了
                     contextStack = oldScopeStack.slice();
                     contextStack.push({
-                        keypath: currentKeypath,
                         scope: value[key],
+                        keypath: currentKeypath,
                     });
                 }
-                renderChildren(currentKeypath, length, value[key], key);
+                renderChildren(value[key], currentKeypath, length, key);
             }
         }
         if (contextStack !== oldScopeStack) {
@@ -6170,12 +6310,12 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
             length = to - from;
             if (equal) {
                 for (let i = from; i <= to; i++) {
-                    renderChildren(currentKeypath, length, i, count++);
+                    renderChildren(i, currentKeypath, length, count++);
                 }
             }
             else {
                 for (let i = from; i < to; i++) {
-                    renderChildren(currentKeypath, length, i, count++);
+                    renderChildren(i, currentKeypath, length, count++);
                 }
             }
         }
@@ -6183,63 +6323,84 @@ function render(instance, template, scope, filters, globalFilters, partials, glo
             length = from - to;
             if (equal) {
                 for (let i = from; i >= to; i--) {
-                    renderChildren(currentKeypath, length, i, count++);
+                    renderChildren(i, currentKeypath, length, count++);
                 }
             }
             else {
                 for (let i = from; i > to; i--) {
-                    renderChildren(currentKeypath, length, i, count++);
+                    renderChildren(i, currentKeypath, length, count++);
                 }
             }
         }
         if (renderElse && length === 0) {
             renderElse();
         }
-    }, renderExpressionIdentifier = function (getIndex, tokens, lookup, stack, filter) {
-        const currentStack = stack || contextStack, index = getIndex(currentStack), { keypath, scope } = currentStack[index], name = tokens ? tokens.join(RAW_DOT) : EMPTY_STRING, currentKeypath = join(keypath, name);
-        let result;
-        if (tokens) {
-            result = get(scope, tokens);
-        }
-        else {
-            result = holder;
-            result.value = scope;
-        }
+    }, findKeypath = function (stack, index, keypath, lookup) {
+        const context = stack[index], currentKeypath = join(context.keypath, keypath), result = get(context.scope, keypath);
         if (result) {
-            result.keypath = currentKeypath;
+            setHolder(result.value, currentKeypath);
+            return;
         }
-        else {
-            if (lookup && index > 0) {
-                result = lookupValue(currentStack, index - 1, name);
-            }
-            if (!result) {
-                result = holder;
-                result.keypath = filter ? UNDEFINED$1 : currentKeypath;
-                result.value = filter || UNDEFINED$1;
-            }
+        if (holder.keypath === UNDEFINED$1) {
+            setHolder(UNDEFINED$1, currentKeypath);
         }
-        if (result.keypath !== UNDEFINED$1) {
-            dependencies[result.keypath] = TRUE$1;
+        if (lookup && index > 0) {
+            findKeypath(stack, index - 1, keypath);
         }
-        return result;
-    }, renderExpressionValue = function (value, tokens) {
-        const result = get(value, tokens);
-        if (result) {
-            result.keypath = UNDEFINED$1;
-            return result;
+    }, lookupKeypath = function (getIndex, keypath, lookup, stack, filter) {
+        const currentStack = stack || contextStack;
+        findKeypath(currentStack, getIndex(currentStack), keypath, lookup);
+        if (holder.value === UNDEFINED$1 && filter) {
+            holder.value = filter;
         }
-        holder.keypath =
-            holder.value = UNDEFINED$1;
         return holder;
-    }, executeFunction = function (fn, args) {
-        holder.keypath = UNDEFINED$1;
-        holder.value = execute(fn, instance, args);
+    }, findProp = function (stack, index, name) {
+        const { scope, keypath } = stack[index], currentKeypath = keypath ? keypath + RAW_DOT + name : name;
+        if (name in scope) {
+            setHolder(scope[name], currentKeypath);
+            return;
+        }
+        if (index > 0) {
+            findProp(stack, index - 1, name);
+        }
+    }, lookupProp = function (name, value, stack, filter) {
+        const currentStack = stack || contextStack, index = currentStack.length - 1, { keypath } = currentStack[index];
+        setHolder(value, keypath ? keypath + RAW_DOT + name : name);
+        if (value === UNDEFINED$1 && index > 0) {
+            findProp(currentStack, index - 1, name);
+        }
+        if (holder.value === UNDEFINED$1 && filter) {
+            holder.value = filter;
+        }
         return holder;
-    }, renderTemplate = function (render, keypath, children, components) {
-        render(instance, renderElementVnode, renderComponentVnode, appendAttribute, appendTextVnode, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, renderExpressionIdentifier, renderExpressionValue, executeFunction, toString, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, keypath, children, components);
+    }, getThis = function (value, stack) {
+        const currentStack = stack || contextStack, { keypath } = currentStack[currentStack.length - 1];
+        return setHolder(value, keypath);
+    }, getThisByIndex = function (getIndex, stack) {
+        const currentStack = stack || contextStack, { scope, keypath } = currentStack[getIndex(currentStack)];
+        return setHolder(scope, keypath);
+    }, getProp = function (name, value, stack) {
+        const currentStack = stack || contextStack, { keypath } = currentStack[currentStack.length - 1];
+        return setHolder(value, keypath ? keypath + RAW_DOT + name : name);
+    }, getPropByIndex = function (getIndex, name, stack) {
+        const currentStack = stack || contextStack, { scope, keypath } = currentStack[getIndex(currentStack)];
+        return setHolder(scope[name], keypath ? keypath + RAW_DOT + name : name);
+    }, readKeypath = function (value, keypath) {
+        const result = get(value, keypath);
+        return setHolder(result ? result.value : UNDEFINED$1);
+    }, setHolder = function (value, keypath) {
+        holder.keypath = keypath;
+        holder.value = value && func(value.get)
+            ? value.get()
+            : value;
+        if (keypath !== UNDEFINED$1) {
+            dependencies[keypath] = TRUE$1;
+        }
+        return holder;
+    }, renderTemplate = function (render, scope, keypath, children, components) {
+        render(renderElementVnode, renderComponentVnode, appendAttribute, appendTextVnode, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
     };
-    const children = [], components = [];
-    renderTemplate(template, rootKeypath, children, components);
+    renderTemplate(template, rootScope, rootKeypath, children, components);
     return {
         vnode: children[0],
         dependencies,
@@ -7750,7 +7911,7 @@ class Yox {
      */
     render() {
         {
-            const instance = this, { $observer, $dependencies } = instance, oldDependencies = $dependencies || EMPTY_OBJECT, { vnode, dependencies } = render(instance, instance.$template, merge($observer.data, $observer.computed), instance.$filters, globalFilters, instance.$partials, globalPartials, instance.$directives, globalDirectives, instance.$transitions, globalTransitions);
+            const instance = this, { $observer, $dependencies } = instance, oldDependencies = $dependencies || EMPTY_OBJECT, { vnode, dependencies } = render(instance, instance.$template, $observer.data, $observer.computed, instance.$filters, globalFilters, instance.$partials, globalPartials, instance.$directives, globalDirectives, instance.$transitions, globalTransitions);
             for (let key in dependencies) {
                 if (!oldDependencies[key]) {
                     $observer.watch(key, markDirty);
@@ -7931,7 +8092,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.213";
+Yox.version = "1.0.0-alpha.214";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

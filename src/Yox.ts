@@ -1033,7 +1033,8 @@ export default class Yox implements YoxInterface {
       { vnode, dependencies } = templateRender.render(
         instance,
         instance.$template as Function,
-        object.merge($observer.data, $observer.computed) as Record<string, any>,
+        $observer.data,
+        $observer.computed,
         instance.$filters,
         globalFilters,
         instance.$partials,

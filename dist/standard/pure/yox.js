@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.213
+ * yox.js v1.0.0-alpha.214
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -696,7 +696,7 @@
    * @param callback 返回 false 可中断遍历
    */
   function each$1(keypath, callback) {
-      var tokens = string$1(keypath) ? getKeypathTokens(keypath) : keypath;
+      var tokens = getKeypathTokens(keypath);
       for (var i = 0, lastIndex = tokens.length - 1; i <= lastIndex; i++) {
           if (callback(tokens[i], i, lastIndex) === FALSE) {
               break;
@@ -2467,7 +2467,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.213";
+  Yox.version = "1.0.0-alpha.214";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
