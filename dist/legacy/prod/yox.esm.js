@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.214
+ * yox.js v1.0.0-alpha.215
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -6365,44 +6365,38 @@ function render(instance, template, data, computed, filters, globalFilters, part
         if (renderElse && length === 0) {
             renderElse();
         }
-    }, findKeypath = function (stack, index, keypath, lookup) {
-        const context = stack[index], currentKeypath = join(context.keypath, keypath), result = get(context.scope, keypath);
+    }, findKeypath = function (stack, index, name, lookup, isFirstCall) {
+        const { scope, keypath } = stack[index], currentKeypath = join(keypath, name), result = get(scope, name);
         if (result) {
-            setHolder(result.value, currentKeypath);
-            return;
+            return setHolder(result.value, currentKeypath);
         }
-        if (holder.keypath === UNDEFINED$1) {
+        if (isFirstCall) {
             setHolder(UNDEFINED$1, currentKeypath);
         }
         if (lookup && index > 0) {
-            findKeypath(stack, index - 1, keypath);
+            return findKeypath(stack, index - 1, name, lookup);
         }
     }, lookupKeypath = function (getIndex, keypath, lookup, stack, filter) {
         const currentStack = stack || contextStack;
-        findKeypath(currentStack, getIndex(currentStack), keypath, lookup);
-        if (holder.value === UNDEFINED$1 && filter) {
-            holder.value = filter;
-        }
-        return holder;
+        return findKeypath(currentStack, getIndex(currentStack), keypath, lookup, TRUE$1) || (filter
+            ? setHolder(filter)
+            : holder);
     }, findProp = function (stack, index, name) {
         const { scope, keypath } = stack[index], currentKeypath = keypath ? keypath + RAW_DOT + name : name;
         if (name in scope) {
-            setHolder(scope[name], currentKeypath);
-            return;
+            return setHolder(scope[name], currentKeypath);
         }
         if (index > 0) {
-            findProp(stack, index - 1, name);
+            return findProp(stack, index - 1, name);
         }
     }, lookupProp = function (name, value, stack, filter) {
-        const currentStack = stack || contextStack, index = currentStack.length - 1, { keypath } = currentStack[index];
-        setHolder(value, keypath ? keypath + RAW_DOT + name : name);
-        if (value === UNDEFINED$1 && index > 0) {
-            findProp(currentStack, index - 1, name);
+        const currentStack = stack || contextStack, index = currentStack.length - 1, { keypath } = currentStack[index], currentKeypath = keypath ? keypath + RAW_DOT + name : name;
+        if (value !== UNDEFINED$1) {
+            return setHolder(value, currentKeypath);
         }
-        if (holder.value === UNDEFINED$1 && filter) {
-            holder.value = filter;
-        }
-        return holder;
+        return index > 0 && findProp(currentStack, index - 1, name) || (filter
+            ? setHolder(filter)
+            : setHolder(UNDEFINED$1, currentKeypath));
     }, getThis = function (value, stack) {
         const currentStack = stack || contextStack, { keypath } = currentStack[currentStack.length - 1];
         return setHolder(value, keypath);
@@ -8213,7 +8207,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.214";
+Yox.version = "1.0.0-alpha.215";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

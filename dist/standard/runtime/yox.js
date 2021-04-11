@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.214
+ * yox.js v1.0.0-alpha.215
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -2568,49 +2568,47 @@
           if (renderElse && length === 0) {
               renderElse();
           }
-      }, findKeypath = function (stack, index, keypath, lookup) {
-          var context = stack[index], currentKeypath = join(context.keypath, keypath), result = get(context.scope, keypath);
+      }, findKeypath = function (stack, index, name, lookup, isFirstCall) {
+          var ref = stack[index];
+          var scope = ref.scope;
+          var keypath = ref.keypath;
+          var currentKeypath = join(keypath, name), result = get(scope, name);
           if (result) {
-              setHolder(result.value, currentKeypath);
-              return;
+              return setHolder(result.value, currentKeypath);
           }
-          if (holder.keypath === UNDEFINED) {
+          if (isFirstCall) {
               setHolder(UNDEFINED, currentKeypath);
           }
           if (lookup && index > 0) {
-              findKeypath(stack, index - 1, keypath);
+              return findKeypath(stack, index - 1, name, lookup);
           }
       }, lookupKeypath = function (getIndex, keypath, lookup, stack, filter) {
           var currentStack = stack || contextStack;
-          findKeypath(currentStack, getIndex(currentStack), keypath, lookup);
-          if (holder.value === UNDEFINED && filter) {
-              holder.value = filter;
-          }
-          return holder;
+          return findKeypath(currentStack, getIndex(currentStack), keypath, lookup, TRUE) || (filter
+              ? setHolder(filter)
+              : holder);
       }, findProp = function (stack, index, name) {
           var ref = stack[index];
           var scope = ref.scope;
           var keypath = ref.keypath;
           var currentKeypath = keypath ? keypath + RAW_DOT + name : name;
           if (name in scope) {
-              setHolder(scope[name], currentKeypath);
-              return;
+              return setHolder(scope[name], currentKeypath);
           }
           if (index > 0) {
-              findProp(stack, index - 1, name);
+              return findProp(stack, index - 1, name);
           }
       }, lookupProp = function (name, value, stack, filter) {
           var currentStack = stack || contextStack, index = currentStack.length - 1;
           var ref = currentStack[index];
           var keypath = ref.keypath;
-          setHolder(value, keypath ? keypath + RAW_DOT + name : name);
-          if (value === UNDEFINED && index > 0) {
-              findProp(currentStack, index - 1, name);
+          var currentKeypath = keypath ? keypath + RAW_DOT + name : name;
+          if (value !== UNDEFINED) {
+              return setHolder(value, currentKeypath);
           }
-          if (holder.value === UNDEFINED && filter) {
-              holder.value = filter;
-          }
-          return holder;
+          return index > 0 && findProp(currentStack, index - 1, name) || (filter
+              ? setHolder(filter)
+              : setHolder(UNDEFINED, currentKeypath));
       }, getThis = function (value, stack) {
           var currentStack = stack || contextStack;
           var ref = currentStack[currentStack.length - 1];
@@ -4385,7 +4383,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.214";
+  Yox.version = "1.0.0-alpha.215";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
