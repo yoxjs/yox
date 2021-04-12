@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.218
+ * yox.js v1.0.0-alpha.219
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -1885,40 +1885,29 @@
       update(api, vnode);
       return child;
   }
-  function createData() {
-      return {};
-  }
   function createVnode(api, vnode) {
       var tag = vnode.tag;
       var node = vnode.node;
-      var data = vnode.data;
-      var isComponent = vnode.isComponent;
-      var isComment = vnode.isComment;
-      var isText = vnode.isText;
-      var isStyle = vnode.isStyle;
-      var isOption = vnode.isOption;
       var children = vnode.children;
       var text = vnode.text;
       var html = vnode.html;
-      var context = vnode.context;
-      if (node && data) {
+      if (node) {
           return;
       }
-      data = createData();
-      vnode.data = data;
-      if (isText) {
+      if (vnode.isText) {
           vnode.node = api.createText(text);
           return;
       }
-      if (isComment) {
+      if (vnode.isComment) {
           vnode.node = api.createComment(text);
           return;
       }
-      if (isComponent) {
+      if (vnode.isComponent) {
+          var data = vnode.data = {};
           var componentOptions = UNDEFINED;
           // 动态组件，tag 可能为空
           if (tag) {
-              context.loadComponent(tag, function (options) {
+              vnode.context.loadComponent(tag, function (options) {
                   if (has(data, LOADING)) {
                       // 异步组件
                       if (data[LOADING]) {
@@ -1952,17 +1941,20 @@
               addVnodes(api, node, children);
           }
           else if (text) {
-              api.setText(node, text, isStyle, isOption);
+              api.setText(node, text, vnode.isStyle, vnode.isOption);
           }
           else if (html) {
-              api.setHtml(node, html, isStyle, isOption);
+              api.setHtml(node, html, vnode.isStyle, vnode.isOption);
           }
           update$6(api, vnode);
           update$5(api, vnode);
-          update$4(api, vnode);
-          update$3(api, vnode);
-          update$2(api, vnode);
-          update$1(api, vnode);
+          if (!vnode.isPure) {
+              vnode.data = {};
+              update$4(api, vnode);
+              update$3(api, vnode);
+              update$2(api, vnode);
+              update$1(api, vnode);
+          }
       }
   }
   function addVnodes(api, parentNode, vnodes, startIndex, endIndex, before) {
@@ -1995,7 +1987,7 @@
                   enterVnode(vnode, component);
               };
           }
-          else if (!vnode.isStatic && !vnode.isText && !vnode.isComment) {
+          else if (!vnode.isPure) {
               enter = function () {
                   enterVnode(vnode);
               };
@@ -2023,7 +2015,7 @@
   function removeVnode(api, parentNode, vnode) {
       var node = vnode.node;
       var component = vnode.component;
-      if (vnode.isStatic || vnode.isText || vnode.isComment) {
+      if (vnode.isPure) {
           api.remove(parentNode, node);
       }
       else {
@@ -2040,8 +2032,6 @@
       }
   }
   function destroyVnode(api, vnode) {
-      var data = vnode.data;
-      var children = vnode.children;
       if (vnode.isComponent) {
           if (vnode.component) {
               remove$5(api, vnode);
@@ -2050,18 +2040,20 @@
               remove$2(api, vnode);
               remove$1(api, vnode);
           }
-          else
-              { [
-                  data[LOADING] = FALSE
-              ]; }
+          else {
+              vnode.data[LOADING] = FALSE;
+          }
       }
       else {
+          if (vnode.isPure) {
+              return;
+          }
           remove$5(api, vnode);
           remove$4(api, vnode);
           remove$3(api, vnode);
           remove$2(api, vnode);
-          if (children) {
-              each$2(children, function (child) {
+          if (vnode.children) {
+              each$2(vnode.children, function (child) {
                   destroyVnode(api, child);
               });
           }
@@ -2200,6 +2192,7 @@
       var data = oldVnode.data;
       var node = oldVnode.node;
       var isComponent = oldVnode.isComponent;
+      var isPure = oldVnode.isPure;
       // 如果不能 patch，则删除重建
       if (!isPatchable(vnode, oldVnode)) {
           // 同步加载的组件，初始化时不会传入占位节点
@@ -2218,7 +2211,7 @@
       vnode.component = oldVnode.component;
       // 组件正在异步加载，更新为最新的 vnode
       // 当异步加载完成时才能用上最新的 vnode
-      if (oldVnode.isComponent && data[LOADING]) {
+      if (isComponent && data[LOADING]) {
           data[VNODE] = vnode;
           return;
       }
@@ -2229,10 +2222,12 @@
       // 先处理 directive 再处理 component
       // 因为组件只是单纯的更新 props，而 directive 则有可能要销毁
       // 如果顺序反过来，会导致某些本该销毁的指令先被数据的变化触发执行了
-      update$4(api, vnode, oldVnode);
-      update$3(api, vnode, oldVnode);
-      update$2(api, vnode, oldVnode);
-      update$1(api, vnode, oldVnode);
+      if (!isPure) {
+          update$4(api, vnode, oldVnode);
+          update$3(api, vnode, oldVnode);
+          update$2(api, vnode, oldVnode);
+          update$1(api, vnode, oldVnode);
+      }
       if (isComponent) {
           update(api, vnode, oldVnode);
       }
@@ -2276,20 +2271,22 @@
   }
   function create(api, node, context) {
       var vnode = {
-          data: createData(),
           node: node,
           context: context,
       };
       switch (node.nodeType) {
           case 1:
+              vnode.data = {};
               vnode.tag = api.tag(node);
               break;
           case 3:
-              vnode.isText = TRUE;
+              vnode.isPure =
+                  vnode.isText = TRUE;
               vnode.text = node.nodeValue;
               break;
           case 8:
-              vnode.isComment = TRUE;
+              vnode.isPure =
+                  vnode.isComment = TRUE;
               vnode.text = node.nodeValue;
               break;
       }
@@ -2391,13 +2388,13 @@
               }
               instance.fire(event, data);
           };
-      }, createEventMethodListener = function (name, runtime, isComponent) {
+      }, createEventMethodListener = function (method, runtime, isComponent) {
           return function (event, data) {
               // 监听组件事件不用处理父组件传下来的事件
               if (isComponent && event.phase === CustomEvent.PHASE_DOWNWARD) {
                   return;
               }
-              var result = execute(instance[name], instance, runtime
+              var result = execute(method, instance, runtime
                   ? runtime.args(runtime.stack, event, data)
                   : (data ? [event, data] : event));
               if (result === FALSE) {
@@ -2430,9 +2427,9 @@
           return function () {
               return runtime.expr(runtime.stack);
           };
-      }, createDirectiveHandler = function (name, runtime) {
+      }, createDirectiveHandler = function (method, runtime) {
           return function () {
-              execute(instance[name], instance, runtime
+              execute(method, instance, runtime
                   ? runtime.args(runtime.stack)
                   : UNDEFINED);
           };
@@ -2636,7 +2633,7 @@
           }
           return holder;
       }, renderTemplate = function (render, scope, keypath, children, components) {
-          render(renderElementVnode, renderComponentVnode, appendAttribute, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
+          render(renderElementVnode, renderComponentVnode, appendAttribute, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
       };
       renderTemplate(template, rootScope, rootKeypath, children, components);
       return {
@@ -3811,10 +3808,9 @@
               // 在开发阶段，template 是原始的 html 模板
               // 在产品阶段，template 是编译后的渲染函数
               // 当然，具体是什么需要外部自己控制
-              var createRender = string$1(template)
+              instance.$template = string$1(template)
                   ? Yox.compile(template)
                   : template;
-              instance.$template = createRender(instance);
               if (!vnode) {
                   vnode = create(domApi, placeholder, instance);
               }
@@ -4376,7 +4372,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.218";
+  Yox.version = "1.0.0-alpha.219";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

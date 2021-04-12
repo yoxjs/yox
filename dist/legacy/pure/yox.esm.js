@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.218
+ * yox.js v1.0.0-alpha.219
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -4024,7 +4024,7 @@ function parse(keypath) {
     })
         .map(toPrimitive);
 }
-function generate$2(args1, args2, code) {
+function generate$2(args, code) {
     const varList = [];
     each(varMap, function (value, key) {
         push(varList, {
@@ -4033,7 +4033,10 @@ function generate$2(args1, args2, code) {
             }
         });
     });
-    return toAnonymousFunction(args1, toTuple('var ', ';', ',', FALSE$1, 0, varList), toAnonymousFunction(args2, code)).toString();
+    return toAnonymousFunction(args, toTuple(EMPTY_STRING, EMPTY_STRING, ';', TRUE$1, 0, [
+        toTuple('var ', EMPTY_STRING, ',', FALSE$1, 0, varList),
+        code
+    ])).toString();
 }
 
 /**
@@ -4162,13 +4165,12 @@ stringStack = [],
 // 是否正在收集动态 child
 dynamicChildrenStack = [TRUE$1], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {}, FIELD_NATIVE_ATTRIBUTES = 'nativeAttrs', FIELD_NATIVE_PROPERTIES = 'nativeProps', FIELD_PROPERTIES = 'props', FIELD_DIRECTIVES = 'directives', FIELD_EVENTS = 'events', FIELD_MODEL = 'model', FIELD_LAZY = 'lazy', FIELD_TRANSITION = 'transition', FIELD_CHILDREN = 'children';
 // 下面这些值需要根据外部配置才能确定
-let isUglify = UNDEFINED$1, ARG_INSTANCE = EMPTY_STRING, RENDER_ELEMENT_VNODE = EMPTY_STRING, RENDER_COMPONENT_VNODE = EMPTY_STRING, APPEND_ATTRIBUTE = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, LOOKUP_KEYPATH = EMPTY_STRING, LOOKUP_PROP = EMPTY_STRING, GET_THIS = EMPTY_STRING, GET_THIS_BY_INDEX = EMPTY_STRING, GET_PROP = EMPTY_STRING, GET_PROP_BY_INDEX = EMPTY_STRING, READ_KEYPATH = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, SET_HOLDER = EMPTY_STRING, TO_STRING = EMPTY_STRING, ARG_FILTERS = EMPTY_STRING, ARG_GLOBAL_FILTERS = EMPTY_STRING, ARG_LOCAL_PARTIALS = EMPTY_STRING, ARG_PARTIALS = EMPTY_STRING, ARG_GLOBAL_PARTIALS = EMPTY_STRING, ARG_DIRECTIVES = EMPTY_STRING, ARG_GLOBAL_DIRECTIVES = EMPTY_STRING, ARG_TRANSITIONS = EMPTY_STRING, ARG_GLOBAL_TRANSITIONS = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_COMPONENTS = EMPTY_STRING, ARG_SCOPE = EMPTY_STRING, ARG_KEYPATH = EMPTY_STRING, ARG_LENGTH = EMPTY_STRING, ARG_EVENT = EMPTY_STRING, ARG_DATA = EMPTY_STRING;
+let isUglify = UNDEFINED$1, RENDER_ELEMENT_VNODE = EMPTY_STRING, RENDER_COMPONENT_VNODE = EMPTY_STRING, APPEND_ATTRIBUTE = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, LOOKUP_KEYPATH = EMPTY_STRING, LOOKUP_PROP = EMPTY_STRING, GET_THIS = EMPTY_STRING, GET_THIS_BY_INDEX = EMPTY_STRING, GET_PROP = EMPTY_STRING, GET_PROP_BY_INDEX = EMPTY_STRING, READ_KEYPATH = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, SET_HOLDER = EMPTY_STRING, TO_STRING = EMPTY_STRING, ARG_INSTANCE = EMPTY_STRING, ARG_FILTERS = EMPTY_STRING, ARG_GLOBAL_FILTERS = EMPTY_STRING, ARG_LOCAL_PARTIALS = EMPTY_STRING, ARG_PARTIALS = EMPTY_STRING, ARG_GLOBAL_PARTIALS = EMPTY_STRING, ARG_DIRECTIVES = EMPTY_STRING, ARG_GLOBAL_DIRECTIVES = EMPTY_STRING, ARG_TRANSITIONS = EMPTY_STRING, ARG_GLOBAL_TRANSITIONS = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_COMPONENTS = EMPTY_STRING, ARG_SCOPE = EMPTY_STRING, ARG_KEYPATH = EMPTY_STRING, ARG_LENGTH = EMPTY_STRING, ARG_EVENT = EMPTY_STRING, ARG_DATA = EMPTY_STRING;
 function init() {
     if (isUglify === PUBLIC_CONFIG.uglifyCompiled) {
         return;
     }
     if (PUBLIC_CONFIG.uglifyCompiled) {
-        ARG_INSTANCE = '$$';
         RENDER_ELEMENT_VNODE = '_a';
         RENDER_COMPONENT_VNODE = '_b';
         APPEND_ATTRIBUTE = '_c';
@@ -4192,27 +4194,27 @@ function init() {
         EXECUTE_FUNCTION = '_u';
         SET_HOLDER = '_v';
         TO_STRING = '_w';
-        ARG_FILTERS = '_x',
-            ARG_GLOBAL_FILTERS = '_y',
-            ARG_LOCAL_PARTIALS = '_z';
-        ARG_PARTIALS = '__a',
-            ARG_GLOBAL_PARTIALS = '__b',
-            ARG_DIRECTIVES = '__c',
-            ARG_GLOBAL_DIRECTIVES = '__d',
-            ARG_TRANSITIONS = '__e',
-            ARG_GLOBAL_TRANSITIONS = '__f',
-            ARG_STACK = '__g';
-        ARG_VNODE = '__h';
-        ARG_CHILDREN = '__i';
-        ARG_COMPONENTS = '__j';
-        ARG_SCOPE = '__k';
-        ARG_KEYPATH = '__l';
-        ARG_LENGTH = '__m';
-        ARG_EVENT = '__n';
-        ARG_DATA = '__o';
+        ARG_INSTANCE = '_x';
+        ARG_FILTERS = '_y',
+            ARG_GLOBAL_FILTERS = '_z',
+            ARG_LOCAL_PARTIALS = '__a';
+        ARG_PARTIALS = '__b',
+            ARG_GLOBAL_PARTIALS = '__c',
+            ARG_DIRECTIVES = '__d',
+            ARG_GLOBAL_DIRECTIVES = '__e',
+            ARG_TRANSITIONS = '__f',
+            ARG_GLOBAL_TRANSITIONS = '__g',
+            ARG_STACK = '__h';
+        ARG_VNODE = '__i';
+        ARG_CHILDREN = '__j';
+        ARG_COMPONENTS = '__k';
+        ARG_SCOPE = '__l';
+        ARG_KEYPATH = '__m';
+        ARG_LENGTH = '__n';
+        ARG_EVENT = '__o';
+        ARG_DATA = '__p';
     }
     else {
-        ARG_INSTANCE = 'instance';
         RENDER_ELEMENT_VNODE = 'renderElementVnode';
         RENDER_COMPONENT_VNODE = 'renderComponentVnode';
         APPEND_ATTRIBUTE = 'appendAttribute';
@@ -4236,6 +4238,7 @@ function init() {
         EXECUTE_FUNCTION = 'executeFunction';
         SET_HOLDER = 'setHolder';
         TO_STRING = 'toString';
+        ARG_INSTANCE = 'instance';
         ARG_FILTERS = 'filters',
             ARG_GLOBAL_FILTERS = 'globalFilters',
             ARG_LOCAL_PARTIALS = 'localPartials';
@@ -4502,6 +4505,7 @@ function generateSelfAndGlobalReader(self, global, name) {
 }
 function generateCommentVnode() {
     const result = toMap({
+        isPure: toPrimitive(TRUE$1),
         isComment: toPrimitive(TRUE$1),
         text: toPrimitive(EMPTY_STRING),
     });
@@ -4511,6 +4515,7 @@ function generateCommentVnode() {
 }
 function generateTextVnode(text) {
     const result = toMap({
+        isPure: toPrimitive(TRUE$1),
         isText: toPrimitive(TRUE$1),
         text,
     });
@@ -4776,6 +4781,7 @@ nodeGenerator[ELEMENT] = function (node) {
     }
     if (node.isStatic) {
         data.set('isStatic', toPrimitive(TRUE$1));
+        data.set('isPure', toPrimitive(TRUE$1));
     }
     let result;
     if (isComponent) {
@@ -4874,7 +4880,9 @@ function getEventInfo(node) {
         const callNode = expr;
         // compiler 保证了函数调用的 name 是标识符
         // method
-        push(args, toPrimitive(callNode.name.name));
+        push(args, toMember(ARG_INSTANCE, [
+            toPrimitive(callNode.name.name)
+        ]));
         // 为了实现运行时动态收集参数，这里序列化成函数
         if (!falsy$2(callNode.args)) {
             // runtime
@@ -4948,7 +4956,9 @@ function getDirectiveArgs(node) {
             }
             // compiler 保证了函数调用的 name 是标识符
             // method
-            push(args, toPrimitive(callNode.name.name));
+            push(args, toMember(ARG_INSTANCE, [
+                toPrimitive(callNode.name.name)
+            ]));
         }
         else {
             // 取值函数
@@ -5121,8 +5131,6 @@ function generate(node) {
     init();
     init$1();
     return generate$2([
-        ARG_INSTANCE,
-    ], [
         RENDER_ELEMENT_VNODE,
         RENDER_COMPONENT_VNODE,
         APPEND_ATTRIBUTE,
@@ -5146,6 +5154,7 @@ function generate(node) {
         EXECUTE_FUNCTION,
         SET_HOLDER,
         TO_STRING,
+        ARG_INSTANCE,
         ARG_FILTERS,
         ARG_GLOBAL_FILTERS,
         ARG_LOCAL_PARTIALS,
@@ -6255,7 +6264,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.218";
+Yox.version = "1.0.0-alpha.219";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

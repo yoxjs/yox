@@ -580,11 +580,9 @@ export default class Yox implements YoxInterface {
         // 在开发阶段，template 是原始的 html 模板
         // 在产品阶段，template 是编译后的渲染函数
         // 当然，具体是什么需要外部自己控制
-        const createRender = is.string(template)
+        instance.$template = is.string(template)
           ? Yox.compile(template as string) as Function
           : template as Function
-
-        instance.$template = createRender(instance)
 
         if (!vnode) {
 

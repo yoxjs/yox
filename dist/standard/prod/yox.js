@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.218
+ * yox.js v1.0.0-alpha.219
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -1921,40 +1921,29 @@
       update(api, vnode);
       return child;
   }
-  function createData() {
-      return {};
-  }
   function createVnode(api, vnode) {
       var tag = vnode.tag;
       var node = vnode.node;
-      var data = vnode.data;
-      var isComponent = vnode.isComponent;
-      var isComment = vnode.isComment;
-      var isText = vnode.isText;
-      var isStyle = vnode.isStyle;
-      var isOption = vnode.isOption;
       var children = vnode.children;
       var text = vnode.text;
       var html = vnode.html;
-      var context = vnode.context;
-      if (node && data) {
+      if (node) {
           return;
       }
-      data = createData();
-      vnode.data = data;
-      if (isText) {
+      if (vnode.isText) {
           vnode.node = api.createText(text);
           return;
       }
-      if (isComment) {
+      if (vnode.isComment) {
           vnode.node = api.createComment(text);
           return;
       }
-      if (isComponent) {
+      if (vnode.isComponent) {
+          var data = vnode.data = {};
           var componentOptions = UNDEFINED$1;
           // 动态组件，tag 可能为空
           if (tag) {
-              context.loadComponent(tag, function (options) {
+              vnode.context.loadComponent(tag, function (options) {
                   if (has(data, LOADING)) {
                       // 异步组件
                       if (data[LOADING]) {
@@ -1988,17 +1977,20 @@
               addVnodes(api, node, children);
           }
           else if (text) {
-              api.setText(node, text, isStyle, isOption);
+              api.setText(node, text, vnode.isStyle, vnode.isOption);
           }
           else if (html) {
-              api.setHtml(node, html, isStyle, isOption);
+              api.setHtml(node, html, vnode.isStyle, vnode.isOption);
           }
           update$6(api, vnode);
           update$5(api, vnode);
-          update$4(api, vnode);
-          update$3(api, vnode);
-          update$2(api, vnode);
-          update$1(api, vnode);
+          if (!vnode.isPure) {
+              vnode.data = {};
+              update$4(api, vnode);
+              update$3(api, vnode);
+              update$2(api, vnode);
+              update$1(api, vnode);
+          }
       }
   }
   function addVnodes(api, parentNode, vnodes, startIndex, endIndex, before) {
@@ -2031,7 +2023,7 @@
                   enterVnode(vnode, component);
               };
           }
-          else if (!vnode.isStatic && !vnode.isText && !vnode.isComment) {
+          else if (!vnode.isPure) {
               enter = function () {
                   enterVnode(vnode);
               };
@@ -2059,7 +2051,7 @@
   function removeVnode(api, parentNode, vnode) {
       var node = vnode.node;
       var component = vnode.component;
-      if (vnode.isStatic || vnode.isText || vnode.isComment) {
+      if (vnode.isPure) {
           api.remove(parentNode, node);
       }
       else {
@@ -2076,8 +2068,6 @@
       }
   }
   function destroyVnode(api, vnode) {
-      var data = vnode.data;
-      var children = vnode.children;
       if (vnode.isComponent) {
           if (vnode.component) {
               remove$5(api, vnode);
@@ -2086,18 +2076,20 @@
               remove$2(api, vnode);
               remove$1(api, vnode);
           }
-          else
-              { [
-                  data[LOADING] = FALSE$1
-              ]; }
+          else {
+              vnode.data[LOADING] = FALSE$1;
+          }
       }
       else {
+          if (vnode.isPure) {
+              return;
+          }
           remove$5(api, vnode);
           remove$4(api, vnode);
           remove$3(api, vnode);
           remove$2(api, vnode);
-          if (children) {
-              each$2(children, function (child) {
+          if (vnode.children) {
+              each$2(vnode.children, function (child) {
                   destroyVnode(api, child);
               });
           }
@@ -2236,6 +2228,7 @@
       var data = oldVnode.data;
       var node = oldVnode.node;
       var isComponent = oldVnode.isComponent;
+      var isPure = oldVnode.isPure;
       // 如果不能 patch，则删除重建
       if (!isPatchable(vnode, oldVnode)) {
           // 同步加载的组件，初始化时不会传入占位节点
@@ -2254,7 +2247,7 @@
       vnode.component = oldVnode.component;
       // 组件正在异步加载，更新为最新的 vnode
       // 当异步加载完成时才能用上最新的 vnode
-      if (oldVnode.isComponent && data[LOADING]) {
+      if (isComponent && data[LOADING]) {
           data[VNODE] = vnode;
           return;
       }
@@ -2265,10 +2258,12 @@
       // 先处理 directive 再处理 component
       // 因为组件只是单纯的更新 props，而 directive 则有可能要销毁
       // 如果顺序反过来，会导致某些本该销毁的指令先被数据的变化触发执行了
-      update$4(api, vnode, oldVnode);
-      update$3(api, vnode, oldVnode);
-      update$2(api, vnode, oldVnode);
-      update$1(api, vnode, oldVnode);
+      if (!isPure) {
+          update$4(api, vnode, oldVnode);
+          update$3(api, vnode, oldVnode);
+          update$2(api, vnode, oldVnode);
+          update$1(api, vnode, oldVnode);
+      }
       if (isComponent) {
           update(api, vnode, oldVnode);
       }
@@ -2312,20 +2307,22 @@
   }
   function create(api, node, context) {
       var vnode = {
-          data: createData(),
           node: node,
           context: context,
       };
       switch (node.nodeType) {
           case 1:
+              vnode.data = {};
               vnode.tag = api.tag(node);
               break;
           case 3:
-              vnode.isText = TRUE$1;
+              vnode.isPure =
+                  vnode.isText = TRUE$1;
               vnode.text = node.nodeValue;
               break;
           case 8:
-              vnode.isComment = TRUE$1;
+              vnode.isPure =
+                  vnode.isComment = TRUE$1;
               vnode.text = node.nodeValue;
               break;
       }
@@ -4964,7 +4961,7 @@
       })
           .map(toPrimitive);
   }
-  function generate$2(args1, args2, code) {
+  function generate$2(args, code) {
       var varList = [];
       each(varMap, function (value, key) {
           push(varList, {
@@ -4973,7 +4970,10 @@
               }
           });
       });
-      return toAnonymousFunction(args1, toTuple('var ', ';', ',', FALSE$1, 0, varList), toAnonymousFunction(args2, code)).toString();
+      return toAnonymousFunction(args, toTuple(EMPTY_STRING, EMPTY_STRING, ';', TRUE$1, 0, [
+          toTuple('var ', EMPTY_STRING, ',', FALSE$1, 0, varList),
+          code
+      ])).toString();
   }
 
   /**
@@ -5102,13 +5102,12 @@
   // 是否正在收集动态 child
   dynamicChildrenStack = [TRUE$1], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {}, FIELD_NATIVE_ATTRIBUTES = 'nativeAttrs', FIELD_NATIVE_PROPERTIES = 'nativeProps', FIELD_PROPERTIES = 'props', FIELD_DIRECTIVES = 'directives', FIELD_EVENTS = 'events', FIELD_MODEL = 'model', FIELD_LAZY = 'lazy', FIELD_TRANSITION = 'transition', FIELD_CHILDREN = 'children';
   // 下面这些值需要根据外部配置才能确定
-  var isUglify = UNDEFINED$1, ARG_INSTANCE = EMPTY_STRING, RENDER_ELEMENT_VNODE = EMPTY_STRING, RENDER_COMPONENT_VNODE = EMPTY_STRING, APPEND_ATTRIBUTE = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, LOOKUP_KEYPATH = EMPTY_STRING, LOOKUP_PROP = EMPTY_STRING, GET_THIS = EMPTY_STRING, GET_THIS_BY_INDEX = EMPTY_STRING, GET_PROP = EMPTY_STRING, GET_PROP_BY_INDEX = EMPTY_STRING, READ_KEYPATH = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, SET_HOLDER = EMPTY_STRING, TO_STRING = EMPTY_STRING, ARG_FILTERS = EMPTY_STRING, ARG_GLOBAL_FILTERS = EMPTY_STRING, ARG_LOCAL_PARTIALS = EMPTY_STRING, ARG_PARTIALS = EMPTY_STRING, ARG_GLOBAL_PARTIALS = EMPTY_STRING, ARG_DIRECTIVES = EMPTY_STRING, ARG_GLOBAL_DIRECTIVES = EMPTY_STRING, ARG_TRANSITIONS = EMPTY_STRING, ARG_GLOBAL_TRANSITIONS = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_COMPONENTS = EMPTY_STRING, ARG_SCOPE = EMPTY_STRING, ARG_KEYPATH = EMPTY_STRING, ARG_LENGTH = EMPTY_STRING, ARG_EVENT = EMPTY_STRING, ARG_DATA = EMPTY_STRING;
+  var isUglify = UNDEFINED$1, RENDER_ELEMENT_VNODE = EMPTY_STRING, RENDER_COMPONENT_VNODE = EMPTY_STRING, APPEND_ATTRIBUTE = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, LOOKUP_KEYPATH = EMPTY_STRING, LOOKUP_PROP = EMPTY_STRING, GET_THIS = EMPTY_STRING, GET_THIS_BY_INDEX = EMPTY_STRING, GET_PROP = EMPTY_STRING, GET_PROP_BY_INDEX = EMPTY_STRING, READ_KEYPATH = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, SET_HOLDER = EMPTY_STRING, TO_STRING = EMPTY_STRING, ARG_INSTANCE = EMPTY_STRING, ARG_FILTERS = EMPTY_STRING, ARG_GLOBAL_FILTERS = EMPTY_STRING, ARG_LOCAL_PARTIALS = EMPTY_STRING, ARG_PARTIALS = EMPTY_STRING, ARG_GLOBAL_PARTIALS = EMPTY_STRING, ARG_DIRECTIVES = EMPTY_STRING, ARG_GLOBAL_DIRECTIVES = EMPTY_STRING, ARG_TRANSITIONS = EMPTY_STRING, ARG_GLOBAL_TRANSITIONS = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_COMPONENTS = EMPTY_STRING, ARG_SCOPE = EMPTY_STRING, ARG_KEYPATH = EMPTY_STRING, ARG_LENGTH = EMPTY_STRING, ARG_EVENT = EMPTY_STRING, ARG_DATA = EMPTY_STRING;
   function init() {
       if (isUglify === PUBLIC_CONFIG.uglifyCompiled) {
           return;
       }
       if (PUBLIC_CONFIG.uglifyCompiled) {
-          ARG_INSTANCE = '$$';
           RENDER_ELEMENT_VNODE = '_a';
           RENDER_COMPONENT_VNODE = '_b';
           APPEND_ATTRIBUTE = '_c';
@@ -5132,27 +5131,27 @@
           EXECUTE_FUNCTION = '_u';
           SET_HOLDER = '_v';
           TO_STRING = '_w';
-          ARG_FILTERS = '_x',
-              ARG_GLOBAL_FILTERS = '_y',
-              ARG_LOCAL_PARTIALS = '_z';
-          ARG_PARTIALS = '__a',
-              ARG_GLOBAL_PARTIALS = '__b',
-              ARG_DIRECTIVES = '__c',
-              ARG_GLOBAL_DIRECTIVES = '__d',
-              ARG_TRANSITIONS = '__e',
-              ARG_GLOBAL_TRANSITIONS = '__f',
-              ARG_STACK = '__g';
-          ARG_VNODE = '__h';
-          ARG_CHILDREN = '__i';
-          ARG_COMPONENTS = '__j';
-          ARG_SCOPE = '__k';
-          ARG_KEYPATH = '__l';
-          ARG_LENGTH = '__m';
-          ARG_EVENT = '__n';
-          ARG_DATA = '__o';
+          ARG_INSTANCE = '_x';
+          ARG_FILTERS = '_y',
+              ARG_GLOBAL_FILTERS = '_z',
+              ARG_LOCAL_PARTIALS = '__a';
+          ARG_PARTIALS = '__b',
+              ARG_GLOBAL_PARTIALS = '__c',
+              ARG_DIRECTIVES = '__d',
+              ARG_GLOBAL_DIRECTIVES = '__e',
+              ARG_TRANSITIONS = '__f',
+              ARG_GLOBAL_TRANSITIONS = '__g',
+              ARG_STACK = '__h';
+          ARG_VNODE = '__i';
+          ARG_CHILDREN = '__j';
+          ARG_COMPONENTS = '__k';
+          ARG_SCOPE = '__l';
+          ARG_KEYPATH = '__m';
+          ARG_LENGTH = '__n';
+          ARG_EVENT = '__o';
+          ARG_DATA = '__p';
       }
       else {
-          ARG_INSTANCE = 'instance';
           RENDER_ELEMENT_VNODE = 'renderElementVnode';
           RENDER_COMPONENT_VNODE = 'renderComponentVnode';
           APPEND_ATTRIBUTE = 'appendAttribute';
@@ -5176,6 +5175,7 @@
           EXECUTE_FUNCTION = 'executeFunction';
           SET_HOLDER = 'setHolder';
           TO_STRING = 'toString';
+          ARG_INSTANCE = 'instance';
           ARG_FILTERS = 'filters',
               ARG_GLOBAL_FILTERS = 'globalFilters',
               ARG_LOCAL_PARTIALS = 'localPartials';
@@ -5447,6 +5447,7 @@
   }
   function generateCommentVnode() {
       var result = toMap({
+          isPure: toPrimitive(TRUE$1),
           isComment: toPrimitive(TRUE$1),
           text: toPrimitive(EMPTY_STRING),
       });
@@ -5456,6 +5457,7 @@
   }
   function generateTextVnode(text) {
       var result = toMap({
+          isPure: toPrimitive(TRUE$1),
           isText: toPrimitive(TRUE$1),
           text: text,
       });
@@ -5747,6 +5749,7 @@
       }
       if (node.isStatic) {
           data.set('isStatic', toPrimitive(TRUE$1));
+          data.set('isPure', toPrimitive(TRUE$1));
       }
       var result;
       if (isComponent) {
@@ -5843,7 +5846,9 @@
           var callNode = expr;
           // compiler 保证了函数调用的 name 是标识符
           // method
-          push(args, toPrimitive(callNode.name.name));
+          push(args, toMember(ARG_INSTANCE, [
+              toPrimitive(callNode.name.name)
+          ]));
           // 为了实现运行时动态收集参数，这里序列化成函数
           if (!falsy$2(callNode.args)) {
               // runtime
@@ -5915,7 +5920,9 @@
               }
               // compiler 保证了函数调用的 name 是标识符
               // method
-              push(args, toPrimitive(callNode.name.name));
+              push(args, toMember(ARG_INSTANCE, [
+                  toPrimitive(callNode.name.name)
+              ]));
           }
           else {
               // 取值函数
@@ -6087,7 +6094,6 @@
       init();
       init$1();
       return generate$2([
-          ARG_INSTANCE ], [
           RENDER_ELEMENT_VNODE,
           RENDER_COMPONENT_VNODE,
           APPEND_ATTRIBUTE,
@@ -6111,6 +6117,7 @@
           EXECUTE_FUNCTION,
           SET_HOLDER,
           TO_STRING,
+          ARG_INSTANCE,
           ARG_FILTERS,
           ARG_GLOBAL_FILTERS,
           ARG_LOCAL_PARTIALS,
@@ -6204,13 +6211,13 @@
               }
               instance.fire(event, data);
           };
-      }, createEventMethodListener = function (name, runtime, isComponent) {
+      }, createEventMethodListener = function (method, runtime, isComponent) {
           return function (event, data) {
               // 监听组件事件不用处理父组件传下来的事件
               if (isComponent && event.phase === CustomEvent.PHASE_DOWNWARD) {
                   return;
               }
-              var result = execute(instance[name], instance, runtime
+              var result = execute(method, instance, runtime
                   ? runtime.args(runtime.stack, event, data)
                   : (data ? [event, data] : event));
               if (result === FALSE$1) {
@@ -6243,9 +6250,9 @@
           return function () {
               return runtime.expr(runtime.stack);
           };
-      }, createDirectiveHandler = function (name, runtime) {
+      }, createDirectiveHandler = function (method, runtime) {
           return function () {
-              execute(instance[name], instance, runtime
+              execute(method, instance, runtime
                   ? runtime.args(runtime.stack)
                   : UNDEFINED$1);
           };
@@ -6449,7 +6456,7 @@
           }
           return holder;
       }, renderTemplate = function (render, scope, keypath, children, components) {
-          render(renderElementVnode, renderComponentVnode, appendAttribute, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
+          render(renderElementVnode, renderComponentVnode, appendAttribute, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
       };
       renderTemplate(template, rootScope, rootKeypath, children, components);
       return {
@@ -7627,10 +7634,9 @@
               // 在开发阶段，template 是原始的 html 模板
               // 在产品阶段，template 是编译后的渲染函数
               // 当然，具体是什么需要外部自己控制
-              var createRender = string$1(template)
+              instance.$template = string$1(template)
                   ? Yox.compile(template)
                   : template;
-              instance.$template = createRender(instance);
               if (!vnode) {
                   vnode = create(domApi, placeholder, instance);
               }
@@ -8199,7 +8205,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.218";
+  Yox.version = "1.0.0-alpha.219";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

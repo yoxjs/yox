@@ -135,6 +135,7 @@ export interface VNode {
 	readonly isStyle?: boolean;
 	readonly isOption?: boolean;
 	readonly isStatic?: boolean;
+	readonly isPure?: boolean;
 	readonly slots?: Slots;
 	readonly props?: Data;
 	readonly nativeProps?: Data;
