@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.216
+ * yox.js v1.0.0-alpha.217
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -2013,7 +2013,11 @@ function removeVnodes(api, parentNode, vnodes, startIndex, endIndex) {
 }
 function removeVnode(api, parentNode, vnode) {
     const { node, component } = vnode;
-    if (vnode.isStatic || vnode.isText || vnode.isComment) {
+    if (vnode.isStatic) {
+        destroyStaticVnode(api, vnode);
+        api.remove(parentNode, node);
+    }
+    else if (vnode.isText || vnode.isComment) {
         api.remove(parentNode, node);
     }
     else {
@@ -2027,6 +2031,16 @@ function removeVnode(api, parentNode, vnode) {
             return;
         }
         leaveVnode(vnode, component, done);
+    }
+}
+function destroyStaticVnode(api, vnode) {
+    const { children } = vnode;
+    vnode.data =
+        vnode.node = UNDEFINED$1;
+    if (children) {
+        each$2(children, function (child) {
+            destroyStaticVnode(api, child);
+        });
     }
 }
 function destroyVnode(api, vnode) {
@@ -2279,6 +2293,9 @@ function destroy(api, vnode, isRemove) {
     if (isRemove) {
         const parentNode = api.parent(vnode.node);
         removeVnode(api, parentNode, vnode);
+    }
+    else if (vnode.isStatic) {
+        destroyStaticVnode(api, vnode);
     }
     else {
         destroyVnode(api, vnode);
@@ -4657,11 +4674,12 @@ class Map {
         return keys(this.fields).length > 0;
     }
     toString(tabSize) {
-        const items = [];
-        each(this.fields, function (value, key) {
+        const { fields } = this, items = [], keys$1 = keys(fields);
+        // 按字典排序显得比较有规律
+        each$2(keys$1.sort(), function (key) {
             push(items, {
                 toString(tabSize) {
-                    return toObjectPair(key, value.toString(tabSize));
+                    return toObjectPair(key, fields[key].toString(tabSize));
                 }
             });
         });
@@ -4903,7 +4921,7 @@ function parse(keypath) {
     })
         .map(toPrimitive);
 }
-function generate$2(args, code) {
+function generate$2(args1, args2, code) {
     const varList = [];
     each(varMap, function (value, key) {
         push(varList, {
@@ -4912,8 +4930,7 @@ function generate$2(args, code) {
             }
         });
     });
-    // 自执行函数
-    return `(${toAnonymousFunction(UNDEFINED$1, toTuple('var ', ';', ',', FALSE$1, 0, varList), toAnonymousFunction(args, code)).toString()})()`;
+    return toAnonymousFunction(args1, toTuple('var ', ';', ',', FALSE$1, 0, varList), toAnonymousFunction(args2, code)).toString();
 }
 
 /**
@@ -5042,12 +5059,13 @@ stringStack = [],
 // 是否正在收集动态 child
 dynamicChildrenStack = [TRUE$1], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {}, FIELD_NATIVE_ATTRIBUTES = 'nativeAttrs', FIELD_NATIVE_PROPERTIES = 'nativeProps', FIELD_PROPERTIES = 'props', FIELD_DIRECTIVES = 'directives', FIELD_EVENTS = 'events', FIELD_MODEL = 'model', FIELD_LAZY = 'lazy', FIELD_TRANSITION = 'transition', FIELD_CHILDREN = 'children';
 // 下面这些值需要根据外部配置才能确定
-let isUglify = UNDEFINED$1, RENDER_ELEMENT_VNODE = EMPTY_STRING, RENDER_COMPONENT_VNODE = EMPTY_STRING, APPEND_ATTRIBUTE = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, LOOKUP_KEYPATH = EMPTY_STRING, LOOKUP_PROP = EMPTY_STRING, GET_THIS = EMPTY_STRING, GET_THIS_BY_INDEX = EMPTY_STRING, GET_PROP = EMPTY_STRING, GET_PROP_BY_INDEX = EMPTY_STRING, READ_KEYPATH = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, SET_HOLDER = EMPTY_STRING, TO_STRING = EMPTY_STRING, ARG_INSTANCE = EMPTY_STRING, ARG_FILTERS = EMPTY_STRING, ARG_GLOBAL_FILTERS = EMPTY_STRING, ARG_LOCAL_PARTIALS = EMPTY_STRING, ARG_PARTIALS = EMPTY_STRING, ARG_GLOBAL_PARTIALS = EMPTY_STRING, ARG_DIRECTIVES = EMPTY_STRING, ARG_GLOBAL_DIRECTIVES = EMPTY_STRING, ARG_TRANSITIONS = EMPTY_STRING, ARG_GLOBAL_TRANSITIONS = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_COMPONENTS = EMPTY_STRING, ARG_SCOPE = EMPTY_STRING, ARG_KEYPATH = EMPTY_STRING, ARG_LENGTH = EMPTY_STRING, ARG_EVENT = EMPTY_STRING, ARG_DATA = EMPTY_STRING;
+let isUglify = UNDEFINED$1, ARG_INSTANCE = EMPTY_STRING, RENDER_ELEMENT_VNODE = EMPTY_STRING, RENDER_COMPONENT_VNODE = EMPTY_STRING, APPEND_ATTRIBUTE = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, LOOKUP_KEYPATH = EMPTY_STRING, LOOKUP_PROP = EMPTY_STRING, GET_THIS = EMPTY_STRING, GET_THIS_BY_INDEX = EMPTY_STRING, GET_PROP = EMPTY_STRING, GET_PROP_BY_INDEX = EMPTY_STRING, READ_KEYPATH = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, SET_HOLDER = EMPTY_STRING, TO_STRING = EMPTY_STRING, ARG_FILTERS = EMPTY_STRING, ARG_GLOBAL_FILTERS = EMPTY_STRING, ARG_LOCAL_PARTIALS = EMPTY_STRING, ARG_PARTIALS = EMPTY_STRING, ARG_GLOBAL_PARTIALS = EMPTY_STRING, ARG_DIRECTIVES = EMPTY_STRING, ARG_GLOBAL_DIRECTIVES = EMPTY_STRING, ARG_TRANSITIONS = EMPTY_STRING, ARG_GLOBAL_TRANSITIONS = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_COMPONENTS = EMPTY_STRING, ARG_SCOPE = EMPTY_STRING, ARG_KEYPATH = EMPTY_STRING, ARG_LENGTH = EMPTY_STRING, ARG_EVENT = EMPTY_STRING, ARG_DATA = EMPTY_STRING;
 function init() {
     if (isUglify === PUBLIC_CONFIG.uglifyCompiled) {
         return;
     }
     if (PUBLIC_CONFIG.uglifyCompiled) {
+        ARG_INSTANCE = '$$';
         RENDER_ELEMENT_VNODE = '_a';
         RENDER_COMPONENT_VNODE = '_b';
         APPEND_ATTRIBUTE = '_c';
@@ -5071,27 +5089,27 @@ function init() {
         EXECUTE_FUNCTION = '_u';
         SET_HOLDER = '_v';
         TO_STRING = '_w';
-        ARG_INSTANCE = '_x';
-        ARG_FILTERS = '_y',
-            ARG_GLOBAL_FILTERS = '_z',
-            ARG_LOCAL_PARTIALS = '__a';
-        ARG_PARTIALS = '__b',
-            ARG_GLOBAL_PARTIALS = '__c',
-            ARG_DIRECTIVES = '__d',
-            ARG_GLOBAL_DIRECTIVES = '__e',
-            ARG_TRANSITIONS = '__f',
-            ARG_GLOBAL_TRANSITIONS = '__g',
-            ARG_STACK = '__h';
-        ARG_VNODE = '__i';
-        ARG_CHILDREN = '__j';
-        ARG_COMPONENTS = '__k';
-        ARG_SCOPE = '__l';
-        ARG_KEYPATH = '__m';
-        ARG_LENGTH = '__n';
-        ARG_EVENT = '__o';
-        ARG_DATA = '__p';
+        ARG_FILTERS = '_x',
+            ARG_GLOBAL_FILTERS = '_y',
+            ARG_LOCAL_PARTIALS = '_z';
+        ARG_PARTIALS = '__a',
+            ARG_GLOBAL_PARTIALS = '__b',
+            ARG_DIRECTIVES = '__c',
+            ARG_GLOBAL_DIRECTIVES = '__d',
+            ARG_TRANSITIONS = '__e',
+            ARG_GLOBAL_TRANSITIONS = '__f',
+            ARG_STACK = '__g';
+        ARG_VNODE = '__h';
+        ARG_CHILDREN = '__i';
+        ARG_COMPONENTS = '__j';
+        ARG_SCOPE = '__k';
+        ARG_KEYPATH = '__l';
+        ARG_LENGTH = '__m';
+        ARG_EVENT = '__n';
+        ARG_DATA = '__o';
     }
     else {
+        ARG_INSTANCE = 'instance';
         RENDER_ELEMENT_VNODE = 'renderElementVnode';
         RENDER_COMPONENT_VNODE = 'renderComponentVnode';
         APPEND_ATTRIBUTE = 'appendAttribute';
@@ -5115,7 +5133,6 @@ function init() {
         EXECUTE_FUNCTION = 'executeFunction';
         SET_HOLDER = 'setHolder';
         TO_STRING = 'toString';
-        ARG_INSTANCE = 'instance';
         ARG_FILTERS = 'filters',
             ARG_GLOBAL_FILTERS = 'globalFilters',
             ARG_LOCAL_PARTIALS = 'localPartials';
@@ -5382,6 +5399,7 @@ function generateSelfAndGlobalReader(self, global, name) {
 }
 function generateCommentVnode() {
     const result = addVar(toMap({
+        isStatic: toPrimitive(TRUE$1),
         isComment: toPrimitive(TRUE$1),
         text: toPrimitive(EMPTY_STRING),
     }));
@@ -5391,6 +5409,7 @@ function generateCommentVnode() {
 }
 function generateTextVnode(text, isStatic) {
     let result = toMap({
+        isStatic: toPrimitive(isStatic),
         isText: toPrimitive(TRUE$1),
         text,
     });
@@ -6009,6 +6028,8 @@ function generate(node) {
     init();
     init$1();
     return generate$2([
+        ARG_INSTANCE,
+    ], [
         RENDER_ELEMENT_VNODE,
         RENDER_COMPONENT_VNODE,
         APPEND_ATTRIBUTE,
@@ -6032,7 +6053,6 @@ function generate(node) {
         EXECUTE_FUNCTION,
         SET_HOLDER,
         TO_STRING,
-        ARG_INSTANCE,
         ARG_FILTERS,
         ARG_GLOBAL_FILTERS,
         ARG_LOCAL_PARTIALS,
@@ -6350,7 +6370,7 @@ function render(instance, template, data, computed, filters, globalFilters, part
         }
         return holder;
     }, renderTemplate = function (render, scope, keypath, children, components) {
-        render(renderElementVnode, renderComponentVnode, appendAttribute, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
+        render(renderElementVnode, renderComponentVnode, appendAttribute, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
     };
     renderTemplate(template, rootScope, rootKeypath, children, components);
     return {
@@ -7499,9 +7519,10 @@ class Yox {
                 // 在开发阶段，template 是原始的 html 模板
                 // 在产品阶段，template 是编译后的渲染函数
                 // 当然，具体是什么需要外部自己控制
-                instance.$template = string$1(template)
+                const createRender = string$1(template)
                     ? Yox.compile(template)
                     : template;
+                instance.$template = createRender(instance);
                 if (!vnode) {
                     vnode = create(domApi, placeholder, instance);
                 }
@@ -8044,7 +8065,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.216";
+Yox.version = "1.0.0-alpha.217";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
