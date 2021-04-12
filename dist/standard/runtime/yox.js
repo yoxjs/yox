@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.215
+ * yox.js v1.0.0-alpha.216
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -2368,14 +2368,6 @@
           else {
               vnode[key] = value;
           }
-      }, appendTextVnode = function (children, vnode) {
-          var length = children.length;
-          var lastChild = children[length - 1];
-          if (lastChild && lastChild.isText) {
-              lastChild.text += vnode.text;
-              return;
-          }
-          children[length] = vnode;
       }, renderTransition = function (name, transition) {
           return transition;
       }, 
@@ -2644,7 +2636,7 @@
           }
           return holder;
       }, renderTemplate = function (render, scope, keypath, children, components) {
-          render(renderElementVnode, renderComponentVnode, appendAttribute, appendTextVnode, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
+          render(renderElementVnode, renderComponentVnode, appendAttribute, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
       };
       renderTemplate(template, rootScope, rootKeypath, children, components);
       return {
@@ -4383,7 +4375,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.215";
+  Yox.version = "1.0.0-alpha.216";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

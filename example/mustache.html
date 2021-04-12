@@ -252,6 +252,8 @@
     <script src="../dist/standard/dev/yox.js"></script>
     <script>
         Yox.config.logLevel = Yox.logger.WARN
+        Yox.config.uglifyCompiled = true
+        Yox.config.minifyCompiled = true
         var instance = new Yox({
             el: '#app',
             template: Yox.dom.find('#template').value,
