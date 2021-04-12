@@ -4,7 +4,7 @@
 
 ## 特性
 
-* 比 Vue 更低的学习门槛，比 Vue 更好的兼容性，比 Vue 更小的文件体积（`runtime` 版本：Vue [63.4KB](https://github.com/vuejs/vue/blob/dev/dist/vue.runtime.min.js) Yox [34KB](https://github.com/yoxjs/yox/blob/master/dist/standard/runtime/yox.min.js)）
+* 比 Vue 更低的学习门槛，比 Vue 更好的兼容性，比 Vue 更小的文件体积（`runtime` 版本：Vue [63.4KB](https://github.com/vuejs/vue/blob/dev/dist/vue.runtime.min.js) Yox [33KB](https://github.com/yoxjs/yox/blob/master/dist/standard/runtime/yox.min.js)）
 * 采用 `TypeScript` 开发，带来更好的工程化开发体验
 * 无需记忆繁冗的语法糖和 API，脱离文档开发不是梦
 * 高仿 [Handlebars](http://handlebarsjs.com/) 风格的模板引擎，借力 `.hbs` 文件的语法高亮
@@ -22,10 +22,10 @@
 
 每个大版本分别提供四个小版本，如下：
 
-* **dev**: 具有**完整功能**和丰富的**报错信息**，适合开发调试（Gzipped Size：`24.5KB`）
-* **prod**: 不包含**报错信息**，相比 `runtime` 版本，此版本适合不在意性能的懒人（Gzipped Size：`22.1KB`）
-* **runtime**：不包含**报错信息**和**模板编译器**，性能提升巨大，适合线上运行（Gzipped Size：`12.6KB`）
-* **pure**：不包含**报错信息**和**视图层代码**，文件体积最小，适合全局数据存储和观察（Gzipped Size：`6.6KB`）
+* **dev**: 具有**完整功能**和丰富的**报错信息**，适合开发调试（Gzipped Size：`25KB`）
+* **prod**: 不包含**报错信息**，相比 `runtime` 版本，此版本适合不在意性能的懒人（Gzipped Size：`22.4KB`）
+* **runtime**：不包含**报错信息**和**模板编译器**，性能提升巨大，适合线上运行（Gzipped Size：`11.9KB`）
+* **pure**：不包含**报错信息**和**视图层代码**，文件体积最小，适合全局数据存储和观察（Gzipped Size：`6.1KB`）
 
 ## 适合人群
 
