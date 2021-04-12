@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.217
+ * yox.js v1.0.0-alpha.218
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -2067,11 +2067,7 @@ function removeVnodes(api, parentNode, vnodes, startIndex, endIndex) {
 }
 function removeVnode(api, parentNode, vnode) {
     const { node, component } = vnode;
-    if (vnode.isStatic) {
-        destroyStaticVnode(api, vnode);
-        api.remove(parentNode, node);
-    }
-    else if (vnode.isText || vnode.isComment) {
+    if (vnode.isStatic || vnode.isText || vnode.isComment) {
         api.remove(parentNode, node);
     }
     else {
@@ -2085,16 +2081,6 @@ function removeVnode(api, parentNode, vnode) {
             return;
         }
         leaveVnode(vnode, component, done);
-    }
-}
-function destroyStaticVnode(api, vnode) {
-    const { children } = vnode;
-    vnode.data =
-        vnode.node = UNDEFINED$1;
-    if (children) {
-        each$2(children, function (child) {
-            destroyStaticVnode(api, child);
-        });
     }
 }
 function destroyVnode(api, vnode) {
@@ -2352,9 +2338,6 @@ function destroy(api, vnode, isRemove) {
             }
         }
         removeVnode(api, parentNode, vnode);
-    }
-    else if (vnode.isStatic) {
-        destroyStaticVnode(api, vnode);
     }
     else {
         destroyVnode(api, vnode);
@@ -5149,14 +5132,14 @@ class Map {
         return keys(this.fields).length > 0;
     }
     toString(tabSize) {
-        const { fields } = this, items = [], keys$1 = keys(fields);
+        const { fields } = this, 
         // 按字典排序显得比较有规律
-        each$2(keys$1.sort(), function (key) {
-            push(items, {
+        items = keys(fields).sort().map(function (key) {
+            return {
                 toString(tabSize) {
                     return toObjectPair(key, fields[key].toString(tabSize));
                 }
-            });
+            };
         });
         return toTuple('{', '}', ',', TRUE$1, 1, items).toString(tabSize);
     }
@@ -5873,24 +5856,19 @@ function generateSelfAndGlobalReader(self, global, name) {
     ]));
 }
 function generateCommentVnode() {
-    const result = addVar(toMap({
-        isStatic: toPrimitive(TRUE$1),
+    const result = toMap({
         isComment: toPrimitive(TRUE$1),
         text: toPrimitive(EMPTY_STRING),
-    }));
+    });
     return last(dynamicChildrenStack)
         ? appendDynamicChildVnode(result)
         : result;
 }
-function generateTextVnode(text, isStatic) {
-    let result = toMap({
-        isStatic: toPrimitive(isStatic),
+function generateTextVnode(text) {
+    const result = toMap({
         isText: toPrimitive(TRUE$1),
         text,
     });
-    if (isStatic) {
-        result = addVar(result);
-    }
     return last(dynamicChildrenStack)
         ? appendDynamicChildVnode(result)
         : result;
@@ -6012,6 +5990,7 @@ nodeGenerator[ELEMENT] = function (node) {
         }
         return toCall(RENDER_SLOT, args);
     }
+    data.set('context', ARG_INSTANCE);
     // 如果是动态组件，tag 会是一个标识符表达式
     data.set('tag', dynamicTag
         ? generateExpression(dynamicTag)
@@ -6153,9 +6132,6 @@ nodeGenerator[ELEMENT] = function (node) {
     if (node.isStatic) {
         data.set('isStatic', toPrimitive(TRUE$1));
     }
-    else {
-        data.set('context', ARG_INSTANCE);
-    }
     let result;
     if (isComponent) {
         if (outputAttrs || outputSlots) {
@@ -6180,9 +6156,6 @@ nodeGenerator[ELEMENT] = function (node) {
         }
         else {
             result = data;
-        }
-        if (node.isStatic) {
-            result = addVar(result);
         }
     }
     return last(dynamicChildrenStack)
@@ -6398,7 +6371,7 @@ nodeGenerator[SPREAD] = function (node) {
 nodeGenerator[TEXT] = function (node) {
     const text = toPrimitive(node.text);
     return last(vnodeStack)
-        ? generateTextVnode(text, TRUE$1)
+        ? generateTextVnode(text)
         : text;
 };
 nodeGenerator[EXPRESSION] = function (node) {
@@ -8745,7 +8718,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.217";
+Yox.version = "1.0.0-alpha.218";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
