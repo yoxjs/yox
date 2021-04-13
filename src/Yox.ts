@@ -60,8 +60,6 @@ import {
   MODIFER_NATIVE,
 } from 'yox-config/src/config'
 
-import execute from 'yox-common/src/function/execute'
-
 import Emitter from 'yox-common/src/util/Emitter'
 import NextTask from 'yox-common/src/util/NextTask'
 import CustomEvent from 'yox-common/src/util/CustomEvent'
@@ -355,7 +353,10 @@ export default class Yox implements YoxInterface {
       }
 
       // 建立好父子连接后，立即触发钩子
-      execute($options[HOOK_BEFORE_CREATE], instance, $options)
+      const beforeCreateHook = $options[HOOK_BEFORE_CREATE]
+      if (beforeCreateHook) {
+        beforeCreateHook.call(instance, $options)
+      }
 
       lifeCycle.fire(
         instance,
@@ -444,7 +445,7 @@ export default class Yox implements YoxInterface {
       }
     }
 
-    const extend = is.func(data) ? execute(data, instance, options) : data
+    const extend = is.func(data) ? (data as Function).call(instance, options) : data
     if (is.object(extend)) {
       object.each(
         extend,
@@ -569,7 +570,10 @@ export default class Yox implements YoxInterface {
         }
 
         if (process.env.NODE_ENV !== 'pure') {
-          execute(instance.$options[HOOK_AFTER_CREATE], instance)
+          const afterCreateHook = $options[HOOK_AFTER_CREATE]
+          if (afterCreateHook) {
+            afterCreateHook.call(instance)
+          }
           lifeCycle.fire(
             instance,
             HOOK_AFTER_CREATE
@@ -621,7 +625,10 @@ export default class Yox implements YoxInterface {
     }
 
     if (process.env.NODE_ENV !== 'pure') {
-      execute(instance.$options[HOOK_AFTER_CREATE], instance)
+      const afterCreateHook = $options[HOOK_AFTER_CREATE]
+      if (afterCreateHook) {
+        afterCreateHook.call(instance)
+      }
       lifeCycle.fire(
         instance,
         HOOK_AFTER_CREATE
@@ -1001,7 +1008,10 @@ export default class Yox implements YoxInterface {
       if ($vnode) {
 
         if (props) {
-          execute($options[HOOK_BEFORE_PROPS_UPDATE], instance, props)
+          const beforePropsUpdateHook = $options[HOOK_BEFORE_PROPS_UPDATE]
+          if (beforePropsUpdateHook) {
+            beforePropsUpdateHook.call(instance, props)
+          }
           instance.set(props)
         }
 
@@ -1077,26 +1087,32 @@ export default class Yox implements YoxInterface {
 
       { $vnode, $options } = instance,
 
-      afterHook: string
+      afterHookName: string
 
       if ($vnode) {
-        execute($options[HOOK_BEFORE_UPDATE], instance)
+        const beforeUpdateHook = $options[HOOK_BEFORE_UPDATE]
+        if (beforeUpdateHook) {
+          beforeUpdateHook.call(instance)
+        }
         lifeCycle.fire(
           instance,
           HOOK_BEFORE_UPDATE
         )
         snabbdom.patch(domApi, vnode, oldVnode)
-        afterHook = HOOK_AFTER_UPDATE
+        afterHookName = HOOK_AFTER_UPDATE
       }
       else {
-        execute($options[HOOK_BEFORE_MOUNT], instance)
+        const beforeMountHook = $options[HOOK_BEFORE_MOUNT]
+        if (beforeMountHook) {
+          beforeMountHook.call(instance)
+        }
         lifeCycle.fire(
           instance,
           HOOK_BEFORE_MOUNT
         )
         snabbdom.patch(domApi, vnode, oldVnode)
         instance.$el = vnode.node as HTMLElement
-        afterHook = HOOK_AFTER_MOUNT
+        afterHookName = HOOK_AFTER_MOUNT
       }
 
       instance.$vnode = vnode
@@ -1106,10 +1122,13 @@ export default class Yox implements YoxInterface {
       Yox.nextTick(
         function () {
           if (instance.$vnode) {
-            execute($options[afterHook], instance)
+            const afterHook = $options[afterHookName]
+            if (afterHook) {
+              afterHook.call(instance)
+            }
             lifeCycle.fire(
               instance,
-              afterHook
+              afterHookName
             )
           }
         }
@@ -1145,7 +1164,11 @@ export default class Yox implements YoxInterface {
 
     if (process.env.NODE_ENV !== 'pure') {
 
-      execute($options[HOOK_BEFORE_DESTROY], instance)
+      const beforeDestroyHook = $options[HOOK_BEFORE_DESTROY]
+      if (beforeDestroyHook) {
+        beforeDestroyHook.call(instance)
+      }
+
       lifeCycle.fire(
         instance,
         HOOK_BEFORE_DESTROY
@@ -1168,11 +1191,17 @@ export default class Yox implements YoxInterface {
     $observer.destroy()
 
     if (process.env.NODE_ENV !== 'pure') {
-      execute($options[HOOK_AFTER_DESTROY], instance)
+
+      const afterDestroyHook = $options[HOOK_AFTER_DESTROY]
+      if (afterDestroyHook) {
+        afterDestroyHook.call(instance)
+      }
+
       lifeCycle.fire(
         instance,
         HOOK_AFTER_DESTROY
       )
+
     }
 
     // 发完 after destroy 事件再解绑所有事件
@@ -1353,7 +1382,9 @@ function checkProp(componentName: string | undefined, key: string, value: any, r
 
 function setFlexibleOptions(instance: YoxInterface, key: string, value: Function | Data | void) {
   if (is.func(value)) {
-    instance[key](execute(value, instance))
+    instance[key](
+      (value as Function).call(instance)
+    )
   }
   else if (is.object(value)) {
     instance[key](value)
