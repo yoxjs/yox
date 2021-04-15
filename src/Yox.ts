@@ -1040,9 +1040,12 @@ export default class Yox implements YoxInterface {
 
       oldDependencies = $dependencies || constant.EMPTY_OBJECT,
 
-      { vnode, dependencies } = templateRender.render(
+      dependencies = { },
+
+      vnode = templateRender.render(
         instance,
         instance.$template as Function,
+        dependencies,
         $observer.data,
         $observer.computed,
         instance.$filters,
@@ -1056,14 +1059,14 @@ export default class Yox implements YoxInterface {
       )
 
       for (let key in dependencies) {
-        if (!oldDependencies[key]) {
+        if (!(key in oldDependencies)) {
           $observer.watch(key, markDirty)
         }
       }
 
       if ($dependencies) {
         for (let key in $dependencies) {
-          if (!dependencies[key]) {
+          if (!(key in dependencies)) {
             $observer.unwatch(key, markDirty)
           }
         }
