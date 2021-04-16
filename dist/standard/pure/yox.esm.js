@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.219
+ * yox.js v1.0.0-alpha.220
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -147,15 +147,13 @@ var is = /*#__PURE__*/Object.freeze({
  * @return 调用函数的返回值
  */
 function execute (fn, context, args) {
-    if (func(fn)) {
-        return array$1(args)
-            ? fn.apply(context, args)
-            : context !== UNDEFINED
-                ? fn.call(context, args)
-                : args !== UNDEFINED
-                    ? fn(args)
-                    : fn();
-    }
+    return array$1(args)
+        ? fn.apply(context, args)
+        : context !== UNDEFINED
+            ? fn.call(context, args)
+            : args !== UNDEFINED
+                ? fn(args)
+                : fn();
 }
 
 class CustomEvent {
@@ -1873,11 +1871,7 @@ class Observer {
             }
             emitter.on(keypath, listener);
             if (options.immediate) {
-                execute(options.watcher, context, [
-                    instance.get(keypath),
-                    UNDEFINED,
-                    keypath
-                ]);
+                options.watcher.call(context, instance.get(keypath), UNDEFINED, keypath);
             }
         };
         if (string$1(keypath)) {
@@ -2078,7 +2072,7 @@ class Yox {
                 observer.addComputed(keypath, options);
             });
         }
-        const extend$1 = func(data) ? execute(data, instance, options) : data;
+        const extend$1 = func(data) ? data.call(instance, options) : data;
         if (object$1(extend$1)) {
             each(extend$1, function (value, key) {
                 source[key] = value;
@@ -2321,9 +2315,9 @@ class Yox {
      * 更新 virtual dom
      *
      * @param vnode
-     * @param oldVnode
+     * @param oldVNode
      */
-    update(vnode, oldVnode) {
+    update(vnode, oldVNode) {
     }
     /**
      * 校验组件参数
@@ -2439,7 +2433,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.219";
+Yox.version = "1.0.0-alpha.220";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

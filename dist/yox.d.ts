@@ -122,6 +122,7 @@ export interface Slots {
 	components: VNode[] | void;
 }
 export interface VNode {
+	type: number;
 	data: Data;
 	node: Node;
 	parent?: YoxInterface;
@@ -199,8 +200,7 @@ export declare type DataGenerator<T> = (options: ComponentOptions<T>) => Data;
 export declare type Accessors<T, V> = {
 	[K in keyof T]: V;
 };
-export declare type ComponentOptionsBeforeCreateHook = (options: ComponentOptions) => void;
-export declare type ComponentOptionsOtherHook = () => void;
+export declare type ComponentOptionsHook = () => void;
 export interface ComponentOptions<Computed = any, Watchers = any, Events = any, Methods = any> {
 	name?: string;
 	propTypes?: Record<string, PropRule>;
@@ -225,14 +225,14 @@ export interface ComponentOptions<Computed = any, Watchers = any, Events = any, 
 	partials?: Record<string, string>;
 	filters?: Record<string, Filter>;
 	extensions?: Data;
-	[HOOK_BEFORE_CREATE]?: ComponentOptionsBeforeCreateHook;
-	[HOOK_AFTER_CREATE]?: ComponentOptionsOtherHook;
-	[HOOK_BEFORE_MOUNT]?: ComponentOptionsOtherHook;
-	[HOOK_AFTER_MOUNT]?: ComponentOptionsOtherHook;
-	[HOOK_BEFORE_UPDATE]?: ComponentOptionsOtherHook;
-	[HOOK_AFTER_UPDATE]?: ComponentOptionsOtherHook;
-	[HOOK_BEFORE_DESTROY]?: ComponentOptionsOtherHook;
-	[HOOK_AFTER_DESTROY]?: ComponentOptionsOtherHook;
+	[HOOK_BEFORE_CREATE]?: (options: ComponentOptions) => void;
+	[HOOK_AFTER_CREATE]?: ComponentOptionsHook;
+	[HOOK_BEFORE_MOUNT]?: ComponentOptionsHook;
+	[HOOK_AFTER_MOUNT]?: ComponentOptionsHook;
+	[HOOK_BEFORE_UPDATE]?: ComponentOptionsHook;
+	[HOOK_AFTER_UPDATE]?: ComponentOptionsHook;
+	[HOOK_BEFORE_DESTROY]?: ComponentOptionsHook;
+	[HOOK_AFTER_DESTROY]?: ComponentOptionsHook;
 	[HOOK_BEFORE_PROPS_UPDATE]?: (props: Data) => void;
 }
 export declare type Data = Record<string, any>;
@@ -810,9 +810,9 @@ export default class Yox implements YoxInterface {
 	 * 更新 virtual dom
 	 *
 	 * @param vnode
-	 * @param oldVnode
+	 * @param oldVNode
 	 */
-	update(vnode: VNode, oldVnode: VNode): void;
+	update(vnode: VNode, oldVNode: VNode): void;
 	/**
 	 * 校验组件参数
 	 *

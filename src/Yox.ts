@@ -1082,9 +1082,9 @@ export default class Yox implements YoxInterface {
    * 更新 virtual dom
    *
    * @param vnode
-   * @param oldVnode
+   * @param oldVNode
    */
-  update(vnode: VNode, oldVnode: VNode) {
+  update(vnode: VNode, oldVNode: VNode) {
     if (process.env.NODE_ENV !== 'pure') {
       let instance = this,
 
@@ -1101,7 +1101,7 @@ export default class Yox implements YoxInterface {
           instance,
           HOOK_BEFORE_UPDATE
         )
-        snabbdom.patch(domApi, vnode, oldVnode)
+        snabbdom.patch(domApi, vnode, oldVNode)
         afterHookName = HOOK_AFTER_UPDATE
       }
       else {
@@ -1113,7 +1113,7 @@ export default class Yox implements YoxInterface {
           instance,
           HOOK_BEFORE_MOUNT
         )
-        snabbdom.patch(domApi, vnode, oldVnode)
+        snabbdom.patch(domApi, vnode, oldVNode)
         instance.$el = vnode.node as HTMLElement
         afterHookName = HOOK_AFTER_MOUNT
       }

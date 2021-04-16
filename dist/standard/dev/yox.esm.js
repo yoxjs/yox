@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.219
+ * yox.js v1.0.0-alpha.220
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -17,6 +17,10 @@ const SLOT_NAME_DEFAULT = 'children';
 const HINT_STRING = 1;
 const HINT_NUMBER = 2;
 const HINT_BOOLEAN = 3;
+const VNODE_TYPE_TEXT = 1;
+const VNODE_TYPE_COMMENT = 2;
+const VNODE_TYPE_ELEMENT = 3;
+const VNODE_TYPE_COMPONENT = 4;
 const DIRECTIVE_ON = 'on';
 const DIRECTIVE_LAZY = 'lazy';
 const DIRECTIVE_MODEL = 'model';
@@ -233,15 +237,13 @@ var is = /*#__PURE__*/Object.freeze({
  * @return 调用函数的返回值
  */
 function execute (fn, context, args) {
-    if (func(fn)) {
-        return array$1(args)
-            ? fn.apply(context, args)
-            : context !== UNDEFINED$1
-                ? fn.call(context, args)
-                : args !== UNDEFINED$1
-                    ? fn(args)
-                    : fn();
-    }
+    return array$1(args)
+        ? fn.apply(context, args)
+        : context !== UNDEFINED$1
+            ? fn.call(context, args)
+            : args !== UNDEFINED$1
+                ? fn(args)
+                : fn();
 }
 
 class CustomEvent {
@@ -1452,9 +1454,9 @@ const LEAVING = '$leaving';
 const MODEL = '$model';
 const EVENT$1 = '$event';
 
-function update$6(api, vnode, oldVnode) {
-    const { node, nativeAttrs } = vnode, oldNativeAttrs = oldVnode && oldVnode.nativeAttrs;
-    if (nativeAttrs || oldNativeAttrs) {
+function update$6(api, vnode, oldVNode) {
+    const { node, nativeAttrs } = vnode, oldNativeAttrs = oldVNode && oldVNode.nativeAttrs;
+    if (nativeAttrs !== oldNativeAttrs) {
         if (nativeAttrs) {
             const oldValue = oldNativeAttrs || EMPTY_OBJECT;
             for (let name in nativeAttrs) {
@@ -1475,9 +1477,9 @@ function update$6(api, vnode, oldVnode) {
     }
 }
 
-function update$5(api, vnode, oldVnode) {
-    const { node, nativeProps } = vnode, oldNativeProps = oldVnode && oldVnode.nativeProps;
-    if (nativeProps || oldNativeProps) {
+function update$5(api, vnode, oldVNode) {
+    const { node, nativeProps } = vnode, oldNativeProps = oldVNode && oldVNode.nativeProps;
+    if (nativeProps !== oldNativeProps) {
         if (nativeProps) {
             const oldValue = oldNativeProps || EMPTY_OBJECT;
             for (let name in nativeProps) {
@@ -1501,8 +1503,8 @@ function update$5(api, vnode, oldVnode) {
 // 删除 ref 的时候，要确保是相同的节点
 // 因为模板中可能出现同一个 ref 名字，出现在不同的地方，
 // 这样就可能出现一种特殊情况，即前面刚创建了 ref1，后面又把这个这个新创建的 ref1 删除了
-function update$4(api, vnode, oldVnode) {
-    const { context, ref } = vnode, oldRef = oldVnode && oldVnode.ref;
+function update$4(api, vnode, oldVNode) {
+    const { context, ref } = vnode, oldRef = oldVNode && oldVNode.ref;
     if (ref || oldRef) {
         let refs = context.$refs, value = vnode.component || vnode.node;
         if (ref) {
@@ -1598,9 +1600,9 @@ function addEvent$1(api, element, component, lazy, event) {
         api.off(element, name, listener);
     };
 }
-function update$3(api, vnode, oldVnode) {
-    const { data, lazy, events } = vnode, oldEvents = oldVnode && oldVnode.events;
-    if (events || oldEvents) {
+function update$3(api, vnode, oldVNode) {
+    const { data, lazy, events } = vnode, oldEvents = oldVNode && oldVNode.events;
+    if (events !== oldEvents) {
         const element = vnode.node, component = vnode.component, destroy = data[EVENT$1] || (data[EVENT$1] = {});
         if (events) {
             const oldValue = oldEvents || EMPTY_OBJECT;
@@ -1775,8 +1777,8 @@ function addModel(api, element, component, vnode) {
         destroy();
     };
 }
-function update$2(api, vnode, oldVnode) {
-    const { data, node, component, model } = vnode, oldModel = oldVnode && oldVnode.model;
+function update$2(api, vnode, oldVNode) {
+    const { data, node, component, model } = vnode, oldModel = oldVNode && oldVNode.model;
     if (model) {
         if (!oldModel) {
             data[MODEL] = addModel(api, node, component, vnode);
@@ -1799,9 +1801,9 @@ function remove$3(api, vnode) {
     }
 }
 
-function update$1(api, vnode, oldVnode) {
-    const { directives } = vnode, oldDirectives = oldVnode && oldVnode.directives;
-    if (directives || oldDirectives) {
+function update$1(api, vnode, oldVNode) {
+    const { directives } = vnode, oldDirectives = oldVNode && oldVNode.directives;
+    if (directives !== oldDirectives) {
         const node = vnode.component || vnode.node;
         if (directives) {
             const oldValue = oldDirectives || EMPTY_OBJECT;
@@ -1812,7 +1814,7 @@ function update$1(api, vnode, oldVnode) {
                 }
                 else if (directive.value !== oldDirective.value) {
                     if (unbind) {
-                        unbind(node, oldDirective, oldVnode);
+                        unbind(node, oldDirective, oldVNode);
                     }
                     bind(node, directive, vnode);
                 }
@@ -1829,7 +1831,7 @@ function update$1(api, vnode, oldVnode) {
                 if (!newValue[name]) {
                     const { unbind } = oldDirectives[name].hooks;
                     if (unbind) {
-                        unbind(node, oldDirectives[name], oldVnode);
+                        unbind(node, oldDirectives[name], oldVNode);
                     }
                 }
             }
@@ -1849,11 +1851,11 @@ function remove$2(api, vnode) {
     }
 }
 
-function update(api, vnode, oldVnode) {
+function update(api, vnode, oldVNode) {
     const { component, props, slots } = vnode;
     // 更新时才要 set
     // 因为初始化时，所有这些都经过构造函数完成了
-    if (component && oldVnode) {
+    if (component && oldVNode) {
         {
             if (props) {
                 for (let key in props) {
@@ -1875,11 +1877,184 @@ function remove$1(api, vnode) {
     }
 }
 
-function isPatchable(vnode, oldVnode) {
-    return vnode.isText && oldVnode.isText
-        || vnode.isComment && oldVnode.isComment
-        || (vnode.tag === oldVnode.tag
-            && vnode.key === oldVnode.key);
+const createMap = {}, updateMap = {}, destroyMap = {};
+createMap[VNODE_TYPE_TEXT] = function (api, vnode) {
+    vnode.node = api.createText(vnode.text);
+};
+createMap[VNODE_TYPE_COMMENT] = function (api, vnode) {
+    vnode.node = api.createComment(vnode.text);
+};
+createMap[VNODE_TYPE_ELEMENT] = function (api, vnode) {
+    const node = vnode.node = api.createElement(vnode.tag, vnode.isSvg);
+    vnode.data = {};
+    if (vnode.children) {
+        addVNodes(api, node, vnode.children);
+    }
+    else if (vnode.text) {
+        api.setText(node, vnode.text, vnode.isStyle, vnode.isOption);
+    }
+    else if (vnode.html) {
+        api.setHtml(node, vnode.html, vnode.isStyle, vnode.isOption);
+    }
+    update$6(api, vnode);
+    update$5(api, vnode);
+    if (!vnode.isPure) {
+        update$4(api, vnode);
+        update$3(api, vnode);
+        update$2(api, vnode);
+        update$1(api, vnode);
+    }
+};
+createMap[VNODE_TYPE_COMPONENT] = function (api, vnode) {
+    const data = vnode.data = {};
+    let componentOptions = UNDEFINED$1;
+    // 动态组件，tag 可能为空
+    if (vnode.tag) {
+        vnode.context.loadComponent(vnode.tag, function (options) {
+            if (has(data, LOADING)) {
+                // 异步组件
+                if (data[LOADING]) {
+                    // 尝试使用最新的 vnode
+                    if (data[VNODE]) {
+                        vnode = data[VNODE];
+                        // 用完就删掉
+                        delete data[VNODE];
+                    }
+                    enterVNode(vnode, createComponent(api, vnode, options));
+                }
+            }
+            // 同步组件
+            else {
+                componentOptions = options;
+            }
+        });
+    }
+    // 不论是同步还是异步组件，都需要一个占位元素
+    vnode.node = api.createComment(RAW_COMPONENT);
+    if (componentOptions) {
+        createComponent(api, vnode, componentOptions);
+    }
+    else {
+        data[LOADING] = TRUE$1;
+    }
+};
+updateMap[VNODE_TYPE_TEXT] = function (api, vnode, oldVNode) {
+    const { node } = oldVNode;
+    vnode.node = node;
+    if (vnode.text !== oldVNode.text) {
+        api.setText(node, vnode.text, vnode.isStyle, vnode.isOption);
+    }
+};
+updateMap[VNODE_TYPE_COMMENT] = function (api, vnode, oldVNode) {
+    const { node } = oldVNode;
+    vnode.node = node;
+    if (vnode.text !== oldVNode.text) {
+        api.setText(node, vnode.text);
+    }
+};
+updateMap[VNODE_TYPE_ELEMENT] = function (api, vnode, oldVNode) {
+    const { node } = oldVNode;
+    vnode.data = oldVNode.data;
+    vnode.node = node;
+    update$6(api, vnode, oldVNode);
+    update$5(api, vnode, oldVNode);
+    update$4(api, vnode, oldVNode);
+    update$3(api, vnode, oldVNode);
+    update$2(api, vnode, oldVNode);
+    update$1(api, vnode, oldVNode);
+    const { text, html, children, isStyle, isOption } = vnode, oldText = oldVNode.text, oldHtml = oldVNode.html, oldChildren = oldVNode.children;
+    if (string$1(text)) {
+        if (oldChildren) {
+            removeVNodes(api, node, oldChildren);
+        }
+        if (text !== oldText) {
+            api.setText(node, text, isStyle, isOption);
+        }
+    }
+    else if (string$1(html)) {
+        if (oldChildren) {
+            removeVNodes(api, node, oldChildren);
+        }
+        if (html !== oldHtml) {
+            api.setHtml(node, html, isStyle, isOption);
+        }
+    }
+    else if (children) {
+        // 两个都有需要 diff
+        if (oldChildren) {
+            if (children !== oldChildren) {
+                updateChildren(api, node, children, oldChildren);
+            }
+        }
+        // 有新的没旧的 - 新增节点
+        else {
+            if (oldText || oldHtml) {
+                api.setText(node, EMPTY_STRING, isStyle);
+            }
+            addVNodes(api, node, children);
+        }
+    }
+    // 有旧的没新的 - 删除节点
+    else if (oldChildren) {
+        removeVNodes(api, node, oldChildren);
+    }
+    // 有旧的 text 没有新的 text
+    else if (oldText || oldHtml) {
+        api.setText(node, EMPTY_STRING, isStyle);
+    }
+};
+updateMap[VNODE_TYPE_COMPONENT] = function (api, vnode, oldVNode) {
+    const { data } = oldVNode;
+    vnode.data = data;
+    vnode.node = oldVNode.node;
+    vnode.component = oldVNode.component;
+    // 组件正在异步加载，更新为最新的 vnode
+    // 当异步加载完成时才能用上最新的 vnode
+    if (data[LOADING]) {
+        data[VNODE] = vnode;
+        return;
+    }
+    // 先处理 directive 再处理 component
+    // 因为组件只是单纯的更新 props，而 directive 则有可能要销毁
+    // 如果顺序反过来，会导致某些本该销毁的指令先被数据的变化触发执行了
+    update$4(api, vnode, oldVNode);
+    update$3(api, vnode, oldVNode);
+    update$2(api, vnode, oldVNode);
+    update$1(api, vnode, oldVNode);
+    update(api, vnode, oldVNode);
+};
+destroyMap[VNODE_TYPE_TEXT] =
+    destroyMap[VNODE_TYPE_COMMENT] = EMPTY_FUNCTION;
+destroyMap[VNODE_TYPE_ELEMENT] = function (api, vnode) {
+    if (vnode.isPure) {
+        return;
+    }
+    remove$5(api, vnode);
+    remove$4(api, vnode);
+    remove$3(api, vnode);
+    remove$2(api, vnode);
+    if (vnode.children) {
+        each$2(vnode.children, function (child) {
+            destroyVNode(api, child);
+        });
+    }
+};
+destroyMap[VNODE_TYPE_COMPONENT] = function (api, vnode) {
+    if (vnode.component) {
+        remove$5(api, vnode);
+        remove$4(api, vnode);
+        remove$3(api, vnode);
+        remove$2(api, vnode);
+        remove$1(api, vnode);
+    }
+    else {
+        vnode.data[LOADING] = FALSE$1;
+    }
+};
+function isPatchable(vnode, oldVNode) {
+    return vnode.type === oldVNode.type
+        && vnode.tag === oldVNode.tag
+        && vnode.key === oldVNode.key;
 }
 function createKeyToIndex(vnodes, startIndex, endIndex) {
     let result, vnode, key;
@@ -1914,84 +2089,21 @@ function createComponent(api, vnode, options) {
     update(api, vnode);
     return child;
 }
-function createVnode(api, vnode) {
-    let { tag, node, children, text, html } = vnode;
-    if (node) {
-        return;
-    }
-    if (vnode.isText) {
-        vnode.node = api.createText(text);
-        return;
-    }
-    if (vnode.isComment) {
-        vnode.node = api.createComment(text);
-        return;
-    }
-    if (vnode.isComponent) {
-        const data = vnode.data = {};
-        let componentOptions = UNDEFINED$1;
-        // 动态组件，tag 可能为空
-        if (tag) {
-            vnode.context.loadComponent(tag, function (options) {
-                if (has(data, LOADING)) {
-                    // 异步组件
-                    if (data[LOADING]) {
-                        // 尝试使用最新的 vnode
-                        if (data[VNODE]) {
-                            vnode = data[VNODE];
-                            // 用完就删掉
-                            delete data[VNODE];
-                        }
-                        enterVnode(vnode, createComponent(api, vnode, options));
-                    }
-                }
-                // 同步组件
-                else {
-                    componentOptions = options;
-                }
-            });
-        }
-        // 不论是同步还是异步组件，都需要一个占位元素
-        vnode.node = api.createComment(RAW_COMPONENT);
-        if (componentOptions) {
-            createComponent(api, vnode, componentOptions);
-        }
-        else {
-            data[LOADING] = TRUE$1;
-        }
-    }
-    else {
-        node = vnode.node = api.createElement(vnode.tag, vnode.isSvg);
-        if (children) {
-            addVnodes(api, node, children);
-        }
-        else if (text) {
-            api.setText(node, text, vnode.isStyle, vnode.isOption);
-        }
-        else if (html) {
-            api.setHtml(node, html, vnode.isStyle, vnode.isOption);
-        }
-        update$6(api, vnode);
-        update$5(api, vnode);
-        if (!vnode.isPure) {
-            vnode.data = {};
-            update$4(api, vnode);
-            update$3(api, vnode);
-            update$2(api, vnode);
-            update$1(api, vnode);
-        }
+function createVNode(api, vnode) {
+    if (!vnode.node) {
+        createMap[vnode.type](api, vnode);
     }
 }
-function addVnodes(api, parentNode, vnodes, startIndex, endIndex, before) {
+function addVNodes(api, parentNode, vnodes, startIndex, endIndex, before) {
     let vnode, start = startIndex || 0, end = endIndex !== UNDEFINED$1 ? endIndex : vnodes.length - 1;
     while (start <= end) {
         vnode = vnodes[start];
-        createVnode(api, vnode);
-        insertVnode(api, parentNode, vnode, before);
+        createVNode(api, vnode);
+        insertVNode(api, parentNode, vnode, before);
         start++;
     }
 }
-function insertVnode(api, parentNode, vnode, before) {
+function insertVNode(api, parentNode, vnode, before) {
     const { node, component, context } = vnode, hasParent = api.parent(node);
     // 这里不调用 insertBefore，避免判断两次
     if (before) {
@@ -2006,12 +2118,12 @@ function insertVnode(api, parentNode, vnode, before) {
         let enter = UNDEFINED$1;
         if (vnode.isComponent && component) {
             enter = function () {
-                enterVnode(vnode, component);
+                enterVNode(vnode, component);
             };
         }
         else if (!vnode.isPure) {
             enter = function () {
-                enterVnode(vnode);
+                enterVNode(vnode);
             };
         }
         if (enter) {
@@ -2024,24 +2136,24 @@ function insertVnode(api, parentNode, vnode, before) {
         }
     }
 }
-function removeVnodes(api, parentNode, vnodes, startIndex, endIndex) {
+function removeVNodes(api, parentNode, vnodes, startIndex, endIndex) {
     let vnode, start = startIndex || 0, end = endIndex !== UNDEFINED$1 ? endIndex : vnodes.length - 1;
     while (start <= end) {
         vnode = vnodes[start];
         if (vnode) {
-            removeVnode(api, parentNode, vnode);
+            removeVNode(api, parentNode, vnode);
         }
         start++;
     }
 }
-function removeVnode(api, parentNode, vnode) {
+function removeVNode(api, parentNode, vnode) {
     const { node, component } = vnode;
     if (vnode.isPure) {
         api.remove(parentNode, node);
     }
     else {
         const done = function () {
-            destroyVnode(api, vnode);
+            destroyVNode(api, vnode);
             api.remove(parentNode, node);
         };
         // 异步组件，还没加载成功就被删除了
@@ -2049,41 +2161,16 @@ function removeVnode(api, parentNode, vnode) {
             done();
             return;
         }
-        leaveVnode(vnode, component, done);
+        leaveVNode(vnode, component, done);
     }
 }
-function destroyVnode(api, vnode) {
-    if (vnode.isComponent) {
-        if (vnode.component) {
-            remove$5(api, vnode);
-            remove$4(api, vnode);
-            remove$3(api, vnode);
-            remove$2(api, vnode);
-            remove$1(api, vnode);
-        }
-        else {
-            vnode.data[LOADING] = FALSE$1;
-        }
-    }
-    else {
-        if (vnode.isPure) {
-            return;
-        }
-        remove$5(api, vnode);
-        remove$4(api, vnode);
-        remove$3(api, vnode);
-        remove$2(api, vnode);
-        if (vnode.children) {
-            each$2(vnode.children, function (child) {
-                destroyVnode(api, child);
-            });
-        }
-    }
+function destroyVNode(api, vnode) {
+    destroyMap[vnode.type](api, vnode);
 }
 /**
  * vnode 触发 enter hook 时，外部一般会做一些淡入动画
  */
-function enterVnode(vnode, component) {
+function enterVNode(vnode, component) {
     // 如果组件根元素和组件本身都写了 transition
     // 优先用外面定义的
     // 因为这明确是在覆盖配置
@@ -2092,12 +2179,14 @@ function enterVnode(vnode, component) {
         // 再看组件根元素是否有 transition
         transition = component.$vnode.transition;
     }
-    execute(data[LEAVING]);
+    const leaving = data[LEAVING];
+    if (leaving) {
+        leaving();
+    }
     if (transition) {
         const { enter } = transition;
         if (enter) {
             enter(vnode.node);
-            return;
         }
     }
 }
@@ -2106,7 +2195,7 @@ function enterVnode(vnode, component) {
  * 动画结束后才能移除节点，否则无法产生动画
  * 这里由外部调用 done 来通知内部动画结束
  */
-function leaveVnode(vnode, component, done) {
+function leaveVNode(vnode, component, done) {
     // 如果组件根元素和组件本身都写了 transition
     // 优先用外面定义的
     // 因为这明确是在覆盖配置
@@ -2131,49 +2220,49 @@ function leaveVnode(vnode, component, done) {
     done();
 }
 function updateChildren(api, parentNode, children, oldChildren) {
-    let startIndex = 0, endIndex = children.length - 1, startVnode = children[startIndex], endVnode = children[endIndex], oldStartIndex = 0, oldEndIndex = oldChildren.length - 1, oldStartVnode = oldChildren[oldStartIndex], oldEndVnode = oldChildren[oldEndIndex], oldKeyToIndex, oldIndex;
+    let startIndex = 0, endIndex = children.length - 1, startVNode = children[startIndex], endVNode = children[endIndex], oldStartIndex = 0, oldEndIndex = oldChildren.length - 1, oldStartVNode = oldChildren[oldStartIndex], oldEndVNode = oldChildren[oldEndIndex], oldKeyToIndex, oldIndex;
     while (oldStartIndex <= oldEndIndex && startIndex <= endIndex) {
         // 下面有设为 UNDEFINED 的逻辑
-        if (!startVnode) {
-            startVnode = children[++startIndex];
+        if (!startVNode) {
+            startVNode = children[++startIndex];
         }
-        else if (!endVnode) {
-            endVnode = children[--endIndex];
+        else if (!endVNode) {
+            endVNode = children[--endIndex];
         }
-        else if (!oldStartVnode) {
-            oldStartVnode = oldChildren[++oldStartIndex];
+        else if (!oldStartVNode) {
+            oldStartVNode = oldChildren[++oldStartIndex];
         }
-        else if (!oldEndVnode) {
-            oldEndVnode = oldChildren[--oldEndIndex];
+        else if (!oldEndVNode) {
+            oldEndVNode = oldChildren[--oldEndIndex];
         }
         // 从头到尾比较，位置相同且值得 patch
-        else if (isPatchable(startVnode, oldStartVnode)) {
-            patch(api, startVnode, oldStartVnode);
-            startVnode = children[++startIndex];
-            oldStartVnode = oldChildren[++oldStartIndex];
+        else if (isPatchable(startVNode, oldStartVNode)) {
+            updateVNode(api, startVNode, oldStartVNode);
+            startVNode = children[++startIndex];
+            oldStartVNode = oldChildren[++oldStartIndex];
         }
         // 从尾到头比较，位置相同且值得 patch
-        else if (isPatchable(endVnode, oldEndVnode)) {
-            patch(api, endVnode, oldEndVnode);
-            endVnode = children[--endIndex];
-            oldEndVnode = oldChildren[--oldEndIndex];
+        else if (isPatchable(endVNode, oldEndVNode)) {
+            updateVNode(api, endVNode, oldEndVNode);
+            endVNode = children[--endIndex];
+            oldEndVNode = oldChildren[--oldEndIndex];
         }
         // 比较完两侧的节点，剩下就是 位置发生改变的节点 和 全新的节点
-        // 当 endVnode 和 oldStartVnode 值得 patch
+        // 当 endVNode 和 oldStartVNode 值得 patch
         // 说明元素被移到右边了
-        else if (isPatchable(endVnode, oldStartVnode)) {
-            patch(api, endVnode, oldStartVnode);
-            insertBefore(api, parentNode, oldStartVnode.node, api.next(oldEndVnode.node));
-            endVnode = children[--endIndex];
-            oldStartVnode = oldChildren[++oldStartIndex];
+        else if (isPatchable(endVNode, oldStartVNode)) {
+            updateVNode(api, endVNode, oldStartVNode);
+            insertBefore(api, parentNode, oldStartVNode.node, api.next(oldEndVNode.node));
+            endVNode = children[--endIndex];
+            oldStartVNode = oldChildren[++oldStartIndex];
         }
-        // 当 oldEndVnode 和 startVnode 值得 patch
+        // 当 oldEndVNode 和 startVNode 值得 patch
         // 说明元素被移到左边了
-        else if (isPatchable(startVnode, oldEndVnode)) {
-            patch(api, startVnode, oldEndVnode);
-            insertBefore(api, parentNode, oldEndVnode.node, oldStartVnode.node);
-            startVnode = children[++startIndex];
-            oldEndVnode = oldChildren[--oldEndIndex];
+        else if (isPatchable(startVNode, oldEndVNode)) {
+            updateVNode(api, startVNode, oldEndVNode);
+            insertBefore(api, parentNode, oldEndVNode.node, oldStartVNode.node);
+            startVNode = children[++startIndex];
+            oldEndVNode = oldChildren[--oldEndIndex];
         }
         // 尝试同级元素的 key
         else {
@@ -2181,104 +2270,52 @@ function updateChildren(api, parentNode, children, oldChildren) {
                 oldKeyToIndex = createKeyToIndex(oldChildren, oldStartIndex, oldEndIndex);
             }
             // 新节点之前的位置
-            oldIndex = startVnode.key
-                ? oldKeyToIndex[startVnode.key]
+            oldIndex = startVNode.key
+                ? oldKeyToIndex[startVNode.key]
                 : UNDEFINED$1;
             // 移动元素
             if (oldIndex !== UNDEFINED$1) {
-                patch(api, startVnode, oldChildren[oldIndex]);
+                patch(api, startVNode, oldChildren[oldIndex]);
                 oldChildren[oldIndex] = UNDEFINED$1;
             }
             // 新元素
             else {
-                createVnode(api, startVnode);
+                createVNode(api, startVNode);
             }
-            insertVnode(api, parentNode, startVnode, oldStartVnode);
-            startVnode = children[++startIndex];
+            insertVNode(api, parentNode, startVNode, oldStartVNode);
+            startVNode = children[++startIndex];
         }
     }
     if (oldStartIndex > oldEndIndex) {
-        addVnodes(api, parentNode, children, startIndex, endIndex, children[endIndex + 1]);
+        addVNodes(api, parentNode, children, startIndex, endIndex, children[endIndex + 1]);
     }
     else if (startIndex > endIndex) {
-        removeVnodes(api, parentNode, oldChildren, oldStartIndex, oldEndIndex);
+        removeVNodes(api, parentNode, oldChildren, oldStartIndex, oldEndIndex);
     }
 }
-function patch(api, vnode, oldVnode) {
-    if (vnode === oldVnode) {
+function updateVNode(api, vnode, oldVNode) {
+    if (vnode !== oldVNode) {
+        updateMap[vnode.type](api, vnode, oldVNode);
+    }
+}
+function patch(api, vnode, oldVNode) {
+    if (vnode === oldVNode) {
         return;
     }
-    const { data, node, isComponent, isPure } = oldVnode;
     // 如果不能 patch，则删除重建
-    if (!isPatchable(vnode, oldVnode)) {
+    if (!isPatchable(vnode, oldVNode)) {
         // 同步加载的组件，初始化时不会传入占位节点
         // 它内部会自动生成一个注释节点，当它的根 vnode 和注释节点对比时，必然无法 patch
         // 于是走进此分支，为新组件创建一个 DOM 节点，然后继续 createComponent 后面的流程
-        const parentNode = api.parent(node);
-        createVnode(api, vnode);
+        const parentNode = api.parent(oldVNode.node);
+        createVNode(api, vnode);
         if (parentNode) {
-            insertVnode(api, parentNode, vnode, oldVnode);
-            removeVnode(api, parentNode, oldVnode);
+            insertVNode(api, parentNode, vnode, oldVNode);
+            removeVNode(api, parentNode, oldVNode);
         }
         return;
     }
-    vnode.data = data;
-    vnode.node = node;
-    vnode.component = oldVnode.component;
-    // 组件正在异步加载，更新为最新的 vnode
-    // 当异步加载完成时才能用上最新的 vnode
-    if (isComponent && data[LOADING]) {
-        data[VNODE] = vnode;
-        return;
-    }
-    if (!isComponent) {
-        update$6(api, vnode, oldVnode);
-        update$5(api, vnode, oldVnode);
-    }
-    // 先处理 directive 再处理 component
-    // 因为组件只是单纯的更新 props，而 directive 则有可能要销毁
-    // 如果顺序反过来，会导致某些本该销毁的指令先被数据的变化触发执行了
-    if (!isPure) {
-        update$4(api, vnode, oldVnode);
-        update$3(api, vnode, oldVnode);
-        update$2(api, vnode, oldVnode);
-        update$1(api, vnode, oldVnode);
-    }
-    if (isComponent) {
-        update(api, vnode, oldVnode);
-    }
-    const { text, html, children, isStyle, isOption } = vnode, oldText = oldVnode.text, oldHtml = oldVnode.html, oldChildren = oldVnode.children;
-    if (string$1(text)) {
-        if (text !== oldText) {
-            api.setText(node, text, isStyle, isOption);
-        }
-    }
-    else if (string$1(html)) {
-        if (html !== oldHtml) {
-            api.setHtml(node, html, isStyle, isOption);
-        }
-    }
-    // 两个都有需要 diff
-    else if (children && oldChildren) {
-        if (children !== oldChildren) {
-            updateChildren(api, node, children, oldChildren);
-        }
-    }
-    // 有新的没旧的 - 新增节点
-    else if (children) {
-        if (string$1(oldText) || string$1(oldHtml)) {
-            api.setText(node, EMPTY_STRING, isStyle);
-        }
-        addVnodes(api, node, children);
-    }
-    // 有旧的没新的 - 删除节点
-    else if (oldChildren) {
-        removeVnodes(api, node, oldChildren);
-    }
-    // 有旧的 text 没有新的 text
-    else if (string$1(oldText) || string$1(oldHtml)) {
-        api.setText(node, EMPTY_STRING, isStyle);
-    }
+    updateVNode(api, vnode, oldVNode);
 }
 function create(api, node, context) {
     const vnode = {
@@ -2289,16 +2326,19 @@ function create(api, node, context) {
         case 1:
             vnode.data = {};
             vnode.tag = api.tag(node);
+            vnode.type = VNODE_TYPE_ELEMENT;
             break;
         case 3:
             vnode.isPure =
                 vnode.isText = TRUE$1;
             vnode.text = node.nodeValue;
+            vnode.type = VNODE_TYPE_TEXT;
             break;
         case 8:
             vnode.isPure =
                 vnode.isComment = TRUE$1;
             vnode.text = node.nodeValue;
+            vnode.type = VNODE_TYPE_COMMENT;
             break;
     }
     return vnode;
@@ -2311,10 +2351,10 @@ function destroy(api, vnode, isRemove) {
                 fatal(`The vnode can't be destroyed without a parent node.`);
             }
         }
-        removeVnode(api, parentNode, vnode);
+        removeVNode(api, parentNode, vnode);
     }
     else {
-        destroyVnode(api, vnode);
+        destroyVNode(api, vnode);
     }
 }
 
@@ -4714,38 +4754,38 @@ function compile(content) {
         function (source) {
             if (startsWith(source, SYNTAX_IMPORT)) {
                 source = slicePrefix(source, SYNTAX_IMPORT);
-                if (source) {
-                    {
-                        if (currentElement) {
-                            fatal$1(currentAttribute
-                                ? `The "import" block can't be appear in an attribute value.`
-                                : `The "import" block can't be appear in attribute level.`);
-                        }
+                {
+                    if (!source) {
+                        fatal$1(`Invalid import`);
                     }
-                    return createImport(source);
                 }
                 {
-                    fatal$1(`Invalid import`);
+                    if (currentElement) {
+                        fatal$1(currentAttribute
+                            ? `The "import" block can't be appear in an attribute value.`
+                            : `The "import" block can't be appear in attribute level.`);
+                    }
                 }
+                return createImport(source);
             }
         },
         // {{#partial name}}
         function (source) {
             if (startsWith(source, SYNTAX_PARTIAL)) {
                 source = slicePrefix(source, SYNTAX_PARTIAL);
-                if (source) {
-                    {
-                        if (currentElement) {
-                            fatal$1(currentAttribute
-                                ? `The "partial" block can't be appear in an attribute value.`
-                                : `The "partial" block can't be appear in attribute level.`);
-                        }
+                {
+                    if (!source) {
+                        fatal$1(`Invalid partial`);
                     }
-                    return createPartial(source);
                 }
                 {
-                    fatal$1(`Invalid partial`);
+                    if (currentElement) {
+                        fatal$1(currentAttribute
+                            ? `The "partial" block can't be appear in an attribute value.`
+                            : `The "partial" block can't be appear in attribute level.`);
+                    }
                 }
+                return createPartial(source);
             }
         },
         // {{#if expr}}
@@ -4753,12 +4793,12 @@ function compile(content) {
             if (startsWith(source, SYNTAX_IF)) {
                 source = slicePrefix(source, SYNTAX_IF);
                 const expr = compile$1(source);
-                if (expr) {
-                    return createIf(expr);
-                }
                 {
-                    fatal$1(`Invalid if`);
+                    if (!expr) {
+                        fatal$1(`Invalid if`);
+                    }
                 }
+                return createIf(expr);
             }
         },
         // {{else if expr}}
@@ -4766,24 +4806,24 @@ function compile(content) {
             if (startsWith(source, SYNTAX_ELSE_IF)) {
                 source = slicePrefix(source, SYNTAX_ELSE_IF);
                 const expr = compile$1(source);
-                if (expr) {
-                    return createElseIf(expr);
-                }
                 {
-                    fatal$1(`Invalid else if`);
+                    if (!expr) {
+                        fatal$1(`Invalid else if`);
+                    }
                 }
+                return createElseIf(expr);
             }
         },
         // {{else}}
         function (source) {
             if (startsWith(source, SYNTAX_ELSE)) {
                 source = slicePrefix(source, SYNTAX_ELSE);
-                if (!trim(source)) {
-                    return createElse();
-                }
                 {
-                    fatal$1(`The "else" must not be followed by anything.`);
+                    if (trim(source)) {
+                        fatal$1(`The "else" must not be followed by anything.`);
+                    }
                 }
+                return createElse();
             }
         },
         // {{...obj}}
@@ -4791,16 +4831,16 @@ function compile(content) {
             if (startsWith(source, SYNTAX_SPREAD)) {
                 source = slicePrefix(source, SYNTAX_SPREAD);
                 const expr = compile$1(source);
-                if (expr) {
-                    if (currentElement && currentElement.isComponent) {
-                        return createSpread(expr);
-                    }
-                    else {
-                        fatal$1(`The spread can only be used by a component.`);
+                {
+                    if (!expr) {
+                        fatal$1(`Invalid spread`);
                     }
                 }
-                {
-                    fatal$1(`Invalid spread`);
+                if (currentElement && currentElement.isComponent) {
+                    return createSpread(expr);
+                }
+                else {
+                    fatal$1(`The spread can only be used by a component.`);
                 }
             }
         },
@@ -4809,12 +4849,12 @@ function compile(content) {
             if (!SYNTAX_COMMENT.test(source)) {
                 source = trim(source);
                 const expr = compile$1(source);
-                if (expr) {
-                    return createExpression(expr, blockMode === BLOCK_MODE_SAFE);
-                }
                 {
-                    fatal$1(`Invalid expression`);
+                    if (!expr) {
+                        fatal$1(`Invalid expression`);
+                    }
                 }
+                return createExpression(expr, blockMode === BLOCK_MODE_SAFE);
             }
         },
     ], parseHtml = function (code) {
@@ -5130,6 +5170,32 @@ class Call {
             : `${name}()`;
     }
 }
+class Precedence {
+    constructor(value) {
+        this.value = value;
+    }
+    toString(tabSize) {
+        return `(${this.value.toString(tabSize)})`;
+    }
+}
+class StringBuffer {
+    append(text) {
+        const { buffer } = this;
+        if (buffer) {
+            this.buffer = toBinary(buffer instanceof Ternary
+                ? toPrecedence(buffer)
+                : buffer, '+', text instanceof Ternary
+                ? toPrecedence(text)
+                : text);
+        }
+        else {
+            this.buffer = text;
+        }
+    }
+    toString(tabSize) {
+        return this.buffer.toString(tabSize);
+    }
+}
 class Unary {
     constructor(operator, value) {
         this.operator = operator;
@@ -5146,14 +5212,7 @@ class Binary {
         this.right = right;
     }
     toString(tabSize) {
-        let left = this.left.toString(tabSize), right = this.right.toString(tabSize);
-        if (this.leftGroup) {
-            left = `(${left})`;
-        }
-        if (this.rightGroup) {
-            right = `(${right})`;
-        }
-        return `${left}${SPACE}${this.operator}${SPACE}${right}`;
+        return `${this.left.toString(tabSize)}${SPACE}${this.operator}${SPACE}${this.right.toString(tabSize)}`;
     }
 }
 class Ternary {
@@ -5194,14 +5253,14 @@ class Member {
         each$2(props, function (prop) {
             if (prop instanceof Primitive) {
                 if (numeric(prop.value)) {
-                    result += `[${prop.value}]`;
+                    result += `[${SPACE}${prop.value}${SPACE}]`;
                 }
                 else {
                     result += '.' + prop.value;
                 }
             }
             else {
-                result += `[${prop.toString(tabSize)}]`;
+                result += `[${SPACE}${prop.toString(tabSize)}${SPACE}]`;
             }
         });
         return result;
@@ -5224,7 +5283,11 @@ class Push {
     }
     toString(tabSize) {
         const { array, item } = this;
-        return toAssign(`${array}[${SPACE}${array}.length${SPACE}]`, item).toString(tabSize);
+        return toAssign(toMember(array, [
+            toMember(array, [
+                toPrimitive('length')
+            ])
+        ]), item).toString(tabSize);
     }
 }
 function toPrimitive(value) {
@@ -5249,6 +5312,12 @@ function toMap(fields) {
 }
 function toCall(name, args) {
     return new Call(name, args);
+}
+function toPrecedence(value) {
+    return new Precedence(value);
+}
+function toStringBuffer() {
+    return new StringBuffer();
 }
 function toUnary(operator, value) {
     return new Unary(operator, value);
@@ -5362,10 +5431,8 @@ function generate$2(args, code) {
             }
         });
     });
-    return toAnonymousFunction(args, toTuple(EMPTY_STRING, EMPTY_STRING, ';', TRUE$1, 0, [
-        toTuple('var ', EMPTY_STRING, ',', FALSE$1, 0, varList),
-        code
-    ])).toString();
+    const result = toAnonymousFunction(UNDEFINED$1, toTuple('var ', ';', ',', FALSE$1, 0, varList), toAnonymousFunction(args, code));
+    return `(${result.toString()})()`;
 }
 
 /**
@@ -5404,14 +5471,14 @@ function generate$1(node, transformIdentifier, generateIdentifier, generateValue
             value = toUnary(unaryNode.operator, generateNode(unaryNode.node));
             break;
         case BINARY:
-            const binaryNode = node, left = generateNode(binaryNode.left), right = generateNode(binaryNode.right), newBinary = toBinary(left, binaryNode.operator, right);
+            let binaryNode = node, left = generateNode(binaryNode.left), right = generateNode(binaryNode.right);
             if (compareOperatorPrecedence(binaryNode.left, binaryNode.operator) < 0) {
-                newBinary.leftGroup = TRUE$1;
+                left = toPrecedence(left);
             }
             if (compareOperatorPrecedence(binaryNode.right, binaryNode.operator) < 0) {
-                newBinary.rightGroup = TRUE$1;
+                right = toPrecedence(right);
             }
-            value = newBinary;
+            value = toBinary(left, binaryNode.operator, right);
             break;
         case TERNARY:
             const ternaryNode = node, test = generateNode(ternaryNode.test), yes = generateNode(ternaryNode.yes), no = generateNode(ternaryNode.no);
@@ -5489,12 +5556,12 @@ componentStack = [],
 attributeStack = [], 
 // 是否正在处理特殊 each，包括 遍历 range 和 遍历数组字面量和对象字面量
 eachStack = [], 
-// 是否正在收集字符串类型的值
-stringStack = [], 
 // 是否正在收集动态 child
-dynamicChildrenStack = [TRUE$1], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {}, FIELD_NATIVE_ATTRIBUTES = 'nativeAttrs', FIELD_NATIVE_PROPERTIES = 'nativeProps', FIELD_PROPERTIES = 'props', FIELD_DIRECTIVES = 'directives', FIELD_EVENTS = 'events', FIELD_MODEL = 'model', FIELD_LAZY = 'lazy', FIELD_TRANSITION = 'transition', FIELD_CHILDREN = 'children';
+dynamicChildrenStack = [TRUE$1], 
+// 收集属性值
+attributeValueStack = [], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {}, FIELD_NATIVE_ATTRIBUTES = 'nativeAttrs', FIELD_NATIVE_PROPERTIES = 'nativeProps', FIELD_PROPERTIES = 'props', FIELD_DIRECTIVES = 'directives', FIELD_EVENTS = 'events', FIELD_MODEL = 'model', FIELD_LAZY = 'lazy', FIELD_TRANSITION = 'transition', FIELD_CHILDREN = 'children';
 // 下面这些值需要根据外部配置才能确定
-let isUglify = UNDEFINED$1, RENDER_ELEMENT_VNODE = EMPTY_STRING, RENDER_COMPONENT_VNODE = EMPTY_STRING, APPEND_ATTRIBUTE = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, LOOKUP_KEYPATH = EMPTY_STRING, LOOKUP_PROP = EMPTY_STRING, GET_THIS = EMPTY_STRING, GET_THIS_BY_INDEX = EMPTY_STRING, GET_PROP = EMPTY_STRING, GET_PROP_BY_INDEX = EMPTY_STRING, READ_KEYPATH = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, SET_HOLDER = EMPTY_STRING, TO_STRING = EMPTY_STRING, ARG_INSTANCE = EMPTY_STRING, ARG_FILTERS = EMPTY_STRING, ARG_GLOBAL_FILTERS = EMPTY_STRING, ARG_LOCAL_PARTIALS = EMPTY_STRING, ARG_PARTIALS = EMPTY_STRING, ARG_GLOBAL_PARTIALS = EMPTY_STRING, ARG_DIRECTIVES = EMPTY_STRING, ARG_GLOBAL_DIRECTIVES = EMPTY_STRING, ARG_TRANSITIONS = EMPTY_STRING, ARG_GLOBAL_TRANSITIONS = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_COMPONENTS = EMPTY_STRING, ARG_SCOPE = EMPTY_STRING, ARG_KEYPATH = EMPTY_STRING, ARG_LENGTH = EMPTY_STRING, ARG_EVENT = EMPTY_STRING, ARG_DATA = EMPTY_STRING;
+let isUglify = UNDEFINED$1, currentTextVNode = UNDEFINED$1, RENDER_ELEMENT_VNODE = EMPTY_STRING, RENDER_COMPONENT_VNODE = EMPTY_STRING, APPEND_ATTRIBUTE = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, LOOKUP_KEYPATH = EMPTY_STRING, LOOKUP_PROP = EMPTY_STRING, GET_THIS = EMPTY_STRING, GET_THIS_BY_INDEX = EMPTY_STRING, GET_PROP = EMPTY_STRING, GET_PROP_BY_INDEX = EMPTY_STRING, READ_KEYPATH = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, SET_HOLDER = EMPTY_STRING, TO_STRING = EMPTY_STRING, ARG_INSTANCE = EMPTY_STRING, ARG_FILTERS = EMPTY_STRING, ARG_GLOBAL_FILTERS = EMPTY_STRING, ARG_LOCAL_PARTIALS = EMPTY_STRING, ARG_PARTIALS = EMPTY_STRING, ARG_GLOBAL_PARTIALS = EMPTY_STRING, ARG_DIRECTIVES = EMPTY_STRING, ARG_GLOBAL_DIRECTIVES = EMPTY_STRING, ARG_TRANSITIONS = EMPTY_STRING, ARG_GLOBAL_TRANSITIONS = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_COMPONENTS = EMPTY_STRING, ARG_SCOPE = EMPTY_STRING, ARG_KEYPATH = EMPTY_STRING, ARG_LENGTH = EMPTY_STRING, ARG_EVENT = EMPTY_STRING, ARG_DATA = EMPTY_STRING;
 function init() {
     if (isUglify === PUBLIC_CONFIG.uglifyCompiled) {
         return;
@@ -5544,8 +5611,8 @@ function init() {
         ARG_DATA = '__p';
     }
     else {
-        RENDER_ELEMENT_VNODE = 'renderElementVnode';
-        RENDER_COMPONENT_VNODE = 'renderComponentVnode';
+        RENDER_ELEMENT_VNODE = 'renderElementVNode';
+        RENDER_COMPONENT_VNODE = 'renderComponentVNode';
         APPEND_ATTRIBUTE = 'appendAttribute';
         RENDER_TRANSITION = 'renderTransition';
         RENDER_MODEL = 'renderModel';
@@ -5588,6 +5655,36 @@ function init() {
         ARG_DATA = MAGIC_VAR_DATA;
     }
     isUglify = PUBLIC_CONFIG.uglifyCompiled;
+}
+class CommentVNode {
+    constructor(text) {
+        this.text = text;
+    }
+    toString(tabSize) {
+        return toMap({
+            type: toPrimitive(VNODE_TYPE_COMMENT),
+            isPure: toPrimitive(TRUE$1),
+            isComment: toPrimitive(TRUE$1),
+            text: this.text,
+        }).toString(tabSize);
+    }
+}
+class TextVNode {
+    constructor(text) {
+        this.buffer = toStringBuffer();
+        this.append(text);
+    }
+    append(text) {
+        this.buffer.append(text);
+    }
+    toString(tabSize) {
+        return toMap({
+            type: toPrimitive(VNODE_TYPE_TEXT),
+            isPure: toPrimitive(TRUE$1),
+            isText: toPrimitive(TRUE$1),
+            text: this.buffer,
+        }).toString(tabSize);
+    }
 }
 function transformExpressionIdentifier(node) {
     const { name, root, lookup, offset } = node;
@@ -5780,6 +5877,15 @@ function generateExpressionHolder(expr) {
 function generateExpressionArg(expr) {
     return generate$1(expr, transformExpressionIdentifier, generateExpressionIdentifier, generateExpressionValue, generateExpressionCall, FALSE$1, TRUE$1);
 }
+function createAttributeValue(nodes) {
+    const attributeValue = toStringBuffer();
+    push(attributeValueStack, attributeValue);
+    each$2(nodes, function (node) {
+        nodeGenerator[node.type](node);
+    });
+    pop(attributeValueStack);
+    return attributeValue;
+}
 function generateAttributeValue(value, expr, children) {
     if (isDef(value)) {
         return toPrimitive(value);
@@ -5794,36 +5900,37 @@ function generateAttributeValue(value, expr, children) {
         // compiler 会把原始字符串编译成 value
         // compiler 会把单个插值编译成 expr
         // 因此走到这里，一定是多个插值或是单个特殊插值（比如 If)
-        push(stringStack, TRUE$1);
-        const result = generateNodesToStringIfNeeded(children);
-        pop(stringStack);
-        return result;
+        return createAttributeValue(children);
     }
     return toPrimitive(UNDEFINED$1);
 }
-function generateNodesToTuple(nodes) {
-    return toTuple(EMPTY_STRING, EMPTY_STRING, ';', TRUE$1, 1, nodes.map(function (node) {
-        return nodeGenerator[node.type](node);
-    }));
-}
-function generateNodesToStringIfNeeded(children) {
-    const result = children.map(function (node) {
-        return nodeGenerator[node.type](node);
+function mapNodes(nodes) {
+    currentTextVNode = UNDEFINED$1;
+    const result = [];
+    each$2(nodes, function (node) {
+        const item = nodeGenerator[node.type](node);
+        if (item instanceof Primitive
+            && item.value === UNDEFINED$1) {
+            return;
+        }
+        push(result, item);
     });
-    if (result.length === 1) {
-        return result[0];
-    }
-    // 字符串拼接涉及表达式的优先级问题，改成 array.join 有利于一致性
-    if (last(stringStack)) {
-        return toList(result, EMPTY_STRING);
-    }
-    return toList(result);
+    return result;
 }
-function appendDynamicChildVnode(node) {
-    return toPush(ARG_CHILDREN, node);
+function generateNodesToTuple(nodes) {
+    return toTuple(EMPTY_STRING, EMPTY_STRING, ';', TRUE$1, 0, mapNodes(nodes));
 }
-function appendComponentVnode(node) {
-    return toPush(ARG_COMPONENTS, node);
+function generateNodesToList(nodes) {
+    return toList(mapNodes(nodes));
+}
+function appendDynamicChildVNode(vnode) {
+    currentTextVNode = vnode instanceof TextVNode
+        ? vnode
+        : UNDEFINED$1;
+    return toPush(ARG_CHILDREN, vnode);
+}
+function appendComponentVNode(vnode) {
+    return toPush(ARG_COMPONENTS, vnode);
 }
 function generateSelfAndGlobalReader(self, global, name) {
     return toBinary(toBinary(self, '&&', toMember(self, [
@@ -5832,25 +5939,21 @@ function generateSelfAndGlobalReader(self, global, name) {
         toPrimitive(name)
     ]));
 }
-function generateCommentVnode() {
-    const result = toMap({
-        isPure: toPrimitive(TRUE$1),
-        isComment: toPrimitive(TRUE$1),
-        text: toPrimitive(EMPTY_STRING),
-    });
+function generateCommentVNode() {
+    const vnode = new CommentVNode(toPrimitive(EMPTY_STRING));
     return last(dynamicChildrenStack)
-        ? appendDynamicChildVnode(result)
-        : result;
+        ? appendDynamicChildVNode(vnode)
+        : vnode;
 }
-function generateTextVnode(text) {
-    const result = toMap({
-        isPure: toPrimitive(TRUE$1),
-        isText: toPrimitive(TRUE$1),
-        text,
-    });
+function generateTextVNode(text) {
+    if (currentTextVNode) {
+        currentTextVNode.append(text);
+        return toPrimitive(UNDEFINED$1);
+    }
+    const vnode = new TextVNode(text);
     return last(dynamicChildrenStack)
-        ? appendDynamicChildVnode(result)
-        : result;
+        ? appendDynamicChildVNode(vnode)
+        : vnode;
 }
 function generateComponentSlots(children) {
     const result = toMap(), slots = {}, addSlot = function (name, nodes) {
@@ -5956,7 +6059,15 @@ function sortAttrs(attrs, isComponent) {
     return result;
 }
 nodeGenerator[ELEMENT] = function (node) {
-    let { tag, dynamicTag, isComponent, ref, key, html, text, attrs, children } = node, data = toMap(), outputAttrs = UNDEFINED$1, outputChildren = UNDEFINED$1, outputSlots = UNDEFINED$1;
+    let { tag, dynamicTag, isComponent, ref, key, html, text, attrs, children } = node, data = toMap({
+        context: ARG_INSTANCE,
+        type: toPrimitive(isComponent
+            ? VNODE_TYPE_COMPONENT
+            : VNODE_TYPE_ELEMENT),
+        tag: dynamicTag
+            ? generateExpression(dynamicTag)
+            : toPrimitive(tag)
+    }), outputAttrs = UNDEFINED$1, outputChildren = UNDEFINED$1, outputSlots = UNDEFINED$1;
     if (tag === RAW_SLOT) {
         // slot 不可能有 html、text 属性
         // 因此 slot 的子节点只存在于 children 中
@@ -5969,11 +6080,6 @@ nodeGenerator[ELEMENT] = function (node) {
         }
         return toCall(RENDER_SLOT, args);
     }
-    data.set('context', ARG_INSTANCE);
-    // 如果是动态组件，tag 会是一个标识符表达式
-    data.set('tag', dynamicTag
-        ? generateExpression(dynamicTag)
-        : toPrimitive(tag));
     // 先序列化 children，再序列化 attrs，原因需要举两个例子：
     // 例子1：
     // <div on-click="output(this)"></div> 如果 this 序列化成 $scope，如果外部修改了 this，因为模板没有计入此依赖，不会刷新，因此 item 是旧的
@@ -6005,9 +6111,7 @@ nodeGenerator[ELEMENT] = function (node) {
                 ], generateNodesToTuple(children));
             }
             else {
-                data.set(FIELD_CHILDREN, toList(children.map(function (node) {
-                    return nodeGenerator[node.type](node);
-                })));
+                data.set(FIELD_CHILDREN, generateNodesToList(children));
             }
             pop(dynamicChildrenStack);
         }
@@ -6037,20 +6141,30 @@ nodeGenerator[ELEMENT] = function (node) {
             ]));
     }
     if (attrs) {
-        const { nativeAttributeList, nativePropertyList, propertyList, lazyList, transition, model, eventList, customDirectiveList, otherList, } = parseAttrs(attrs, isComponent);
+        const { nativeAttributeList, nativePropertyList, propertyList, lazyList, transition, model, eventList, customDirectiveList, otherList, } = parseAttrs(attrs, isComponent), hasDynamicAttrs = otherList.length > 0;
         if (nativeAttributeList.length) {
-            const nativeAttributes = toMap();
+            let nativeAttributes = toMap(), isDynamic = hasDynamicAttrs;
             each$2(nativeAttributeList, function (node) {
+                if (!node.isStatic) {
+                    isDynamic = TRUE$1;
+                }
                 nativeAttributes.set(node.name, generateAttributeValue(node.value, node.expr, node.children));
             });
-            data.set(FIELD_NATIVE_ATTRIBUTES, nativeAttributes);
+            data.set(FIELD_NATIVE_ATTRIBUTES, isDynamic
+                ? nativeAttributes
+                : addVar(nativeAttributes, TRUE$1));
         }
         if (nativePropertyList.length) {
-            const nativeProperties = toMap();
+            let nativeProperties = toMap(), isDynamic = hasDynamicAttrs;
             each$2(nativePropertyList, function (node) {
+                if (!node.isStatic) {
+                    isDynamic = TRUE$1;
+                }
                 nativeProperties.set(node.name, generateAttributeValue(node.value, node.expr, node.children));
             });
-            data.set(FIELD_NATIVE_PROPERTIES, nativeProperties);
+            data.set(FIELD_NATIVE_PROPERTIES, isDynamic
+                ? nativeProperties
+                : addVar(nativeProperties, TRUE$1));
         }
         if (propertyList.length) {
             const properties = toMap();
@@ -6124,7 +6238,7 @@ nodeGenerator[ELEMENT] = function (node) {
         else {
             result = data;
         }
-        result = appendComponentVnode(result);
+        result = appendComponentVNode(result);
     }
     else {
         if (outputAttrs || outputChildren) {
@@ -6139,7 +6253,7 @@ nodeGenerator[ELEMENT] = function (node) {
         }
     }
     return last(dynamicChildrenStack)
-        ? appendDynamicChildVnode(result)
+        ? appendDynamicChildVNode(result)
         : result;
 };
 nodeGenerator[ATTRIBUTE] = function (node) {
@@ -6354,42 +6468,68 @@ nodeGenerator[SPREAD] = function (node) {
 };
 nodeGenerator[TEXT] = function (node) {
     const text = toPrimitive(node.text);
-    return last(vnodeStack)
-        ? generateTextVnode(text)
-        : text;
+    if (last(vnodeStack)) {
+        return generateTextVNode(text);
+    }
+    const attributeValue = last(attributeValueStack);
+    if (attributeValue) {
+        attributeValue.append(text);
+        return toPrimitive(UNDEFINED$1);
+    }
+    return text;
 };
 nodeGenerator[EXPRESSION] = function (node) {
     const value = generateExpression(node.expr);
-    return last(vnodeStack)
-        ? generateTextVnode(toCall(TO_STRING, [
+    if (last(vnodeStack)) {
+        return generateTextVNode(toCall(TO_STRING, [
             value
-        ]))
-        : value;
+        ]));
+    }
+    const attributeValue = last(attributeValueStack);
+    if (attributeValue) {
+        attributeValue.append(toCall(TO_STRING, [
+            value
+        ]));
+        return toPrimitive(UNDEFINED$1);
+    }
+    return value;
 };
-nodeGenerator[IF] =
-    nodeGenerator[ELSE_IF] = function (node) {
-        let { children, next } = node, defaultValue = last(vnodeStack)
-            ? generateCommentVnode()
-            : toPrimitive(UNDEFINED$1), value;
-        if (children) {
-            if (last(attributeStack)) {
-                children = sortAttrs(children, last(componentStack));
-            }
-            value = generateNodesToStringIfNeeded(children);
-        }
-        return toTernary(generateExpression(node.expr), value || defaultValue, next ? nodeGenerator[next.type](next) : defaultValue);
-    };
-nodeGenerator[ELSE] = function (node) {
-    let { children } = node, defaultValue = last(vnodeStack)
-        ? generateCommentVnode()
-        : toPrimitive(UNDEFINED$1), value;
+function getBranchDefaultValue() {
+    return last(vnodeStack)
+        ? generateCommentVNode()
+        : last(attributeValueStack)
+            ? toPrimitive(EMPTY_STRING)
+            : toPrimitive(UNDEFINED$1);
+}
+function getBranchValue(children) {
     if (children) {
         if (last(attributeStack)) {
             children = sortAttrs(children, last(componentStack));
         }
-        value = generateNodesToStringIfNeeded(children);
+        if (last(attributeValueStack)) {
+            return createAttributeValue(children);
+        }
+        const nodes = mapNodes(children);
+        if (nodes.length === 1) {
+            return nodes[0];
+        }
+        return toTuple('(', ')', ',', TRUE$1, 1, nodes);
     }
-    return value || defaultValue;
+}
+nodeGenerator[IF] = function (node) {
+    const { next } = node, attributeValue = last(attributeValueStack), defaultValue = getBranchDefaultValue(), result = toTernary(generateExpression(node.expr), getBranchValue(node.children) || defaultValue, next ? nodeGenerator[next.type](next) : defaultValue);
+    if (attributeValue) {
+        attributeValue.append(result);
+        return toPrimitive(UNDEFINED$1);
+    }
+    return result;
+};
+nodeGenerator[ELSE_IF] = function (node) {
+    const { next } = node, defaultValue = getBranchDefaultValue();
+    return toTernary(generateExpression(node.expr), getBranchValue(node.children) || defaultValue, next ? nodeGenerator[next.type](next) : defaultValue);
+};
+nodeGenerator[ELSE] = function (node) {
+    return getBranchValue(node.children) || getBranchDefaultValue();
 };
 nodeGenerator[EACH] = function (node) {
     const { index, from, to, equal, next } = node, isSpecial = to || from.type === ARRAY || from.type === OBJECT;
@@ -6500,16 +6640,14 @@ function generate(node) {
     ], nodeGenerator[node.type](node));
 }
 
-function render(instance, template, data, computed, filters, globalFilters, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions) {
+function render(instance, template, dependencies, data, computed, filters, globalFilters, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions) {
     let rootScope = merge(data, computed), rootKeypath = EMPTY_STRING, contextStack = [
         { scope: rootScope, keypath: rootKeypath }
     ], localPartials = {}, 
-    // 渲染模板的数据依赖
-    dependencies = {}, 
     // 模板渲染过程收集的 vnode
     children = [], 
     // 模板渲染过程收集的组件
-    components = [], renderElementVnode = function (vnode, createAttributes, createChildren) {
+    components = [], renderElementVNode = function (vnode, createAttributes, createChildren) {
         if (createAttributes) {
             createAttributes(vnode);
         }
@@ -6519,7 +6657,7 @@ function render(instance, template, data, computed, filters, globalFilters, part
             vnode.children = children;
         }
         return vnode;
-    }, renderComponentVnode = function (vnode, createAttributes, createSlots) {
+    }, renderComponentVNode = function (vnode, createAttributes, createSlots) {
         if (createAttributes) {
             createAttributes(vnode);
         }
@@ -6664,7 +6802,7 @@ function render(instance, template, data, computed, filters, globalFilters, part
     }, 
     // <slot name="xx"/>
     renderSlot = function (name, children, render) {
-        dependencies[name] = TRUE$1;
+        dependencies[name] = children;
         const result = rootScope[name];
         if (result) {
             const { vnodes, components } = result;
@@ -6820,16 +6958,17 @@ function render(instance, template, data, computed, filters, globalFilters, part
         const result = get(value, keypath);
         return setHolder(result ? result.value : UNDEFINED$1);
     }, setHolder = function (value, keypath) {
+        if (value && func(value.get)) {
+            value = value.get();
+        }
         holder.keypath = keypath;
-        holder.value = value && func(value.get)
-            ? value.get()
-            : value;
+        holder.value = value;
         if (keypath !== UNDEFINED$1) {
-            dependencies[keypath] = TRUE$1;
+            dependencies[keypath] = value;
         }
         return holder;
     }, renderTemplate = function (render, scope, keypath, children, components) {
-        render(renderElementVnode, renderComponentVnode, appendAttribute, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString$1, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
+        render(renderElementVNode, renderComponentVNode, appendAttribute, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString$1, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
     };
     renderTemplate(template, rootScope, rootKeypath, children, components);
     {
@@ -6837,10 +6976,7 @@ function render(instance, template, data, computed, filters, globalFilters, part
             fatal(`The template should have just one root element.`);
         }
     }
-    return {
-        vnode: children[0],
-        dependencies,
-    };
+    return children[0];
 }
 
 let guid = 0, 
@@ -7665,11 +7801,7 @@ class Observer {
             }
             emitter.on(keypath, listener);
             if (options.immediate) {
-                execute(options.watcher, context, [
-                    instance.get(keypath),
-                    UNDEFINED$1,
-                    keypath
-                ]);
+                options.watcher.call(context, instance.get(keypath), UNDEFINED$1, keypath);
             }
         };
         if (string$1(keypath)) {
@@ -7884,7 +8016,10 @@ class Yox {
                 instance.$parent = $options.parent;
             }
             // 建立好父子连接后，立即触发钩子
-            execute($options[HOOK_BEFORE_CREATE], instance, $options);
+            const beforeCreateHook = $options[HOOK_BEFORE_CREATE];
+            if (beforeCreateHook) {
+                beforeCreateHook.call(instance, $options);
+            }
             lifeCycle.fire(instance, HOOK_BEFORE_CREATE, {
                 options: $options,
             });
@@ -7937,7 +8072,7 @@ class Yox {
                 warn(`The "data" option of child component should be a function which return an object.`);
             }
         }
-        const extend$1 = func(data) ? execute(data, instance, options) : data;
+        const extend$1 = func(data) ? data.call(instance, options) : data;
         if (object$1(extend$1)) {
             each(extend$1, function (value, key) {
                 {
@@ -8023,7 +8158,10 @@ class Yox {
                     observer.watch(watchers);
                 }
                 {
-                    execute(instance.$options[HOOK_AFTER_CREATE], instance);
+                    const afterCreateHook = $options[HOOK_AFTER_CREATE];
+                    if (afterCreateHook) {
+                        afterCreateHook.call(instance);
+                    }
                     lifeCycle.fire(instance, HOOK_AFTER_CREATE);
                 }
                 // 编译模板
@@ -8054,7 +8192,10 @@ class Yox {
             observer.watch(watchers);
         }
         {
-            execute(instance.$options[HOOK_AFTER_CREATE], instance);
+            const afterCreateHook = $options[HOOK_AFTER_CREATE];
+            if (afterCreateHook) {
+                afterCreateHook.call(instance);
+            }
             lifeCycle.fire(instance, HOOK_AFTER_CREATE);
         }
     }
@@ -8399,7 +8540,10 @@ class Yox {
             const instance = this, { $options, $vnode, $nextTask } = instance;
             if ($vnode) {
                 if (props) {
-                    execute($options[HOOK_BEFORE_PROPS_UPDATE], instance, props);
+                    const beforePropsUpdateHook = $options[HOOK_BEFORE_PROPS_UPDATE];
+                    if (beforePropsUpdateHook) {
+                        beforePropsUpdateHook.call(instance, props);
+                    }
                     instance.set(props);
                 }
                 // 当前可能正在进行下一轮更新
@@ -8416,15 +8560,15 @@ class Yox {
      */
     render() {
         {
-            const instance = this, { $observer, $dependencies } = instance, oldDependencies = $dependencies || EMPTY_OBJECT, { vnode, dependencies } = render(instance, instance.$template, $observer.data, $observer.computed, instance.$filters, globalFilters, instance.$partials, globalPartials, instance.$directives, globalDirectives, instance.$transitions, globalTransitions);
+            const instance = this, { $observer, $dependencies } = instance, oldDependencies = $dependencies || EMPTY_OBJECT, dependencies = {}, vnode = render(instance, instance.$template, dependencies, $observer.data, $observer.computed, instance.$filters, globalFilters, instance.$partials, globalPartials, instance.$directives, globalDirectives, instance.$transitions, globalTransitions);
             for (let key in dependencies) {
-                if (!oldDependencies[key]) {
+                if (!(key in oldDependencies)) {
                     $observer.watch(key, markDirty);
                 }
             }
             if ($dependencies) {
                 for (let key in $dependencies) {
-                    if (!dependencies[key]) {
+                    if (!(key in dependencies)) {
                         $observer.unwatch(key, markDirty);
                     }
                 }
@@ -8437,31 +8581,40 @@ class Yox {
      * 更新 virtual dom
      *
      * @param vnode
-     * @param oldVnode
+     * @param oldVNode
      */
-    update(vnode, oldVnode) {
+    update(vnode, oldVNode) {
         {
-            let instance = this, { $vnode, $options } = instance, afterHook;
+            let instance = this, { $vnode, $options } = instance, afterHookName;
             if ($vnode) {
-                execute($options[HOOK_BEFORE_UPDATE], instance);
+                const beforeUpdateHook = $options[HOOK_BEFORE_UPDATE];
+                if (beforeUpdateHook) {
+                    beforeUpdateHook.call(instance);
+                }
                 lifeCycle.fire(instance, HOOK_BEFORE_UPDATE);
-                patch(domApi, vnode, oldVnode);
-                afterHook = HOOK_AFTER_UPDATE;
+                patch(domApi, vnode, oldVNode);
+                afterHookName = HOOK_AFTER_UPDATE;
             }
             else {
-                execute($options[HOOK_BEFORE_MOUNT], instance);
+                const beforeMountHook = $options[HOOK_BEFORE_MOUNT];
+                if (beforeMountHook) {
+                    beforeMountHook.call(instance);
+                }
                 lifeCycle.fire(instance, HOOK_BEFORE_MOUNT);
-                patch(domApi, vnode, oldVnode);
+                patch(domApi, vnode, oldVNode);
                 instance.$el = vnode.node;
-                afterHook = HOOK_AFTER_MOUNT;
+                afterHookName = HOOK_AFTER_MOUNT;
             }
             instance.$vnode = vnode;
             // 跟 nextTask 保持一个节奏
             // 这样可以预留一些优化的余地
             Yox.nextTick(function () {
                 if (instance.$vnode) {
-                    execute($options[afterHook], instance);
-                    lifeCycle.fire(instance, afterHook);
+                    const afterHook = $options[afterHookName];
+                    if (afterHook) {
+                        afterHook.call(instance);
+                    }
+                    lifeCycle.fire(instance, afterHookName);
                 }
             });
         }
@@ -8488,7 +8641,10 @@ class Yox {
     destroy() {
         const instance = this, { $parent, $options, $emitter, $observer } = instance;
         {
-            execute($options[HOOK_BEFORE_DESTROY], instance);
+            const beforeDestroyHook = $options[HOOK_BEFORE_DESTROY];
+            if (beforeDestroyHook) {
+                beforeDestroyHook.call(instance);
+            }
             lifeCycle.fire(instance, HOOK_BEFORE_DESTROY);
             const { $vnode } = instance;
             if ($parent && $parent.$children) {
@@ -8502,7 +8658,10 @@ class Yox {
         }
         $observer.destroy();
         {
-            execute($options[HOOK_AFTER_DESTROY], instance);
+            const afterDestroyHook = $options[HOOK_AFTER_DESTROY];
+            if (afterDestroyHook) {
+                afterDestroyHook.call(instance);
+            }
             lifeCycle.fire(instance, HOOK_AFTER_DESTROY);
         }
         // 发完 after destroy 事件再解绑所有事件
@@ -8606,7 +8765,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.219";
+Yox.version = "1.0.0-alpha.220";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
@@ -8672,7 +8831,7 @@ function checkProp(componentName, key, value, rule) {
 }
 function setFlexibleOptions(instance, key, value) {
     if (func(value)) {
-        instance[key](execute(value, instance));
+        instance[key](value.call(instance));
     }
     else if (object$1(value)) {
         instance[key](value);

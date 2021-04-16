@@ -1,10 +1,14 @@
 /**
- * yox.js v1.0.0-alpha.219
+ * yox.js v1.0.0-alpha.220
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
 
 const SLOT_DATA_PREFIX = '$slot_';
+const VNODE_TYPE_TEXT = 1;
+const VNODE_TYPE_COMMENT = 2;
+const VNODE_TYPE_ELEMENT = 3;
+const VNODE_TYPE_COMPONENT = 4;
 const DIRECTIVE_MODEL = 'model';
 const DIRECTIVE_CUSTOM = 'o';
 const MODEL_PROP_DEFAULT = 'value';
@@ -197,15 +201,13 @@ var is = /*#__PURE__*/Object.freeze({
  * @return 调用函数的返回值
  */
 function execute (fn, context, args) {
-    if (func(fn)) {
-        return array$1(args)
-            ? fn.apply(context, args)
-            : context !== UNDEFINED
-                ? fn.call(context, args)
-                : args !== UNDEFINED
-                    ? fn(args)
-                    : fn();
-    }
+    return array$1(args)
+        ? fn.apply(context, args)
+        : context !== UNDEFINED
+            ? fn.call(context, args)
+            : args !== UNDEFINED
+                ? fn(args)
+                : fn();
 }
 
 class CustomEvent {
@@ -1399,9 +1401,9 @@ const LEAVING = '$leaving';
 const MODEL = '$model';
 const EVENT$1 = '$event';
 
-function update$6(api, vnode, oldVnode) {
-    const { node, nativeAttrs } = vnode, oldNativeAttrs = oldVnode && oldVnode.nativeAttrs;
-    if (nativeAttrs || oldNativeAttrs) {
+function update$6(api, vnode, oldVNode) {
+    const { node, nativeAttrs } = vnode, oldNativeAttrs = oldVNode && oldVNode.nativeAttrs;
+    if (nativeAttrs !== oldNativeAttrs) {
         if (nativeAttrs) {
             const oldValue = oldNativeAttrs || EMPTY_OBJECT;
             for (let name in nativeAttrs) {
@@ -1422,9 +1424,9 @@ function update$6(api, vnode, oldVnode) {
     }
 }
 
-function update$5(api, vnode, oldVnode) {
-    const { node, nativeProps } = vnode, oldNativeProps = oldVnode && oldVnode.nativeProps;
-    if (nativeProps || oldNativeProps) {
+function update$5(api, vnode, oldVNode) {
+    const { node, nativeProps } = vnode, oldNativeProps = oldVNode && oldVNode.nativeProps;
+    if (nativeProps !== oldNativeProps) {
         if (nativeProps) {
             const oldValue = oldNativeProps || EMPTY_OBJECT;
             for (let name in nativeProps) {
@@ -1448,8 +1450,8 @@ function update$5(api, vnode, oldVnode) {
 // 删除 ref 的时候，要确保是相同的节点
 // 因为模板中可能出现同一个 ref 名字，出现在不同的地方，
 // 这样就可能出现一种特殊情况，即前面刚创建了 ref1，后面又把这个这个新创建的 ref1 删除了
-function update$4(api, vnode, oldVnode) {
-    const { context, ref } = vnode, oldRef = oldVnode && oldVnode.ref;
+function update$4(api, vnode, oldVNode) {
+    const { context, ref } = vnode, oldRef = oldVNode && oldVNode.ref;
     if (ref || oldRef) {
         let refs = context.$refs, value = vnode.component || vnode.node;
         if (ref) {
@@ -1545,9 +1547,9 @@ function addEvent$1(api, element, component, lazy, event) {
         api.off(element, name, listener);
     };
 }
-function update$3(api, vnode, oldVnode) {
-    const { data, lazy, events } = vnode, oldEvents = oldVnode && oldVnode.events;
-    if (events || oldEvents) {
+function update$3(api, vnode, oldVNode) {
+    const { data, lazy, events } = vnode, oldEvents = oldVNode && oldVNode.events;
+    if (events !== oldEvents) {
         const element = vnode.node, component = vnode.component, destroy = data[EVENT$1] || (data[EVENT$1] = {});
         if (events) {
             const oldValue = oldEvents || EMPTY_OBJECT;
@@ -1722,8 +1724,8 @@ function addModel(api, element, component, vnode) {
         destroy();
     };
 }
-function update$2(api, vnode, oldVnode) {
-    const { data, node, component, model } = vnode, oldModel = oldVnode && oldVnode.model;
+function update$2(api, vnode, oldVNode) {
+    const { data, node, component, model } = vnode, oldModel = oldVNode && oldVNode.model;
     if (model) {
         if (!oldModel) {
             data[MODEL] = addModel(api, node, component, vnode);
@@ -1746,9 +1748,9 @@ function remove$3(api, vnode) {
     }
 }
 
-function update$1(api, vnode, oldVnode) {
-    const { directives } = vnode, oldDirectives = oldVnode && oldVnode.directives;
-    if (directives || oldDirectives) {
+function update$1(api, vnode, oldVNode) {
+    const { directives } = vnode, oldDirectives = oldVNode && oldVNode.directives;
+    if (directives !== oldDirectives) {
         const node = vnode.component || vnode.node;
         if (directives) {
             const oldValue = oldDirectives || EMPTY_OBJECT;
@@ -1759,7 +1761,7 @@ function update$1(api, vnode, oldVnode) {
                 }
                 else if (directive.value !== oldDirective.value) {
                     if (unbind) {
-                        unbind(node, oldDirective, oldVnode);
+                        unbind(node, oldDirective, oldVNode);
                     }
                     bind(node, directive, vnode);
                 }
@@ -1776,7 +1778,7 @@ function update$1(api, vnode, oldVnode) {
                 if (!newValue[name]) {
                     const { unbind } = oldDirectives[name].hooks;
                     if (unbind) {
-                        unbind(node, oldDirectives[name], oldVnode);
+                        unbind(node, oldDirectives[name], oldVNode);
                     }
                 }
             }
@@ -1796,11 +1798,11 @@ function remove$2(api, vnode) {
     }
 }
 
-function update(api, vnode, oldVnode) {
+function update(api, vnode, oldVNode) {
     const { component, props, slots } = vnode;
     // 更新时才要 set
     // 因为初始化时，所有这些都经过构造函数完成了
-    if (component && oldVnode) {
+    if (component && oldVNode) {
         const result = merge(props, slots);
         if (result) {
             component.forceUpdate(result);
@@ -1815,11 +1817,184 @@ function remove$1(api, vnode) {
     }
 }
 
-function isPatchable(vnode, oldVnode) {
-    return vnode.isText && oldVnode.isText
-        || vnode.isComment && oldVnode.isComment
-        || (vnode.tag === oldVnode.tag
-            && vnode.key === oldVnode.key);
+const createMap = {}, updateMap = {}, destroyMap = {};
+createMap[VNODE_TYPE_TEXT] = function (api, vnode) {
+    vnode.node = api.createText(vnode.text);
+};
+createMap[VNODE_TYPE_COMMENT] = function (api, vnode) {
+    vnode.node = api.createComment(vnode.text);
+};
+createMap[VNODE_TYPE_ELEMENT] = function (api, vnode) {
+    const node = vnode.node = api.createElement(vnode.tag, vnode.isSvg);
+    vnode.data = {};
+    if (vnode.children) {
+        addVNodes(api, node, vnode.children);
+    }
+    else if (vnode.text) {
+        api.setText(node, vnode.text, vnode.isStyle, vnode.isOption);
+    }
+    else if (vnode.html) {
+        api.setHtml(node, vnode.html, vnode.isStyle, vnode.isOption);
+    }
+    update$6(api, vnode);
+    update$5(api, vnode);
+    if (!vnode.isPure) {
+        update$4(api, vnode);
+        update$3(api, vnode);
+        update$2(api, vnode);
+        update$1(api, vnode);
+    }
+};
+createMap[VNODE_TYPE_COMPONENT] = function (api, vnode) {
+    const data = vnode.data = {};
+    let componentOptions = UNDEFINED;
+    // 动态组件，tag 可能为空
+    if (vnode.tag) {
+        vnode.context.loadComponent(vnode.tag, function (options) {
+            if (has(data, LOADING)) {
+                // 异步组件
+                if (data[LOADING]) {
+                    // 尝试使用最新的 vnode
+                    if (data[VNODE]) {
+                        vnode = data[VNODE];
+                        // 用完就删掉
+                        delete data[VNODE];
+                    }
+                    enterVNode(vnode, createComponent(api, vnode, options));
+                }
+            }
+            // 同步组件
+            else {
+                componentOptions = options;
+            }
+        });
+    }
+    // 不论是同步还是异步组件，都需要一个占位元素
+    vnode.node = api.createComment(RAW_COMPONENT);
+    if (componentOptions) {
+        createComponent(api, vnode, componentOptions);
+    }
+    else {
+        data[LOADING] = TRUE;
+    }
+};
+updateMap[VNODE_TYPE_TEXT] = function (api, vnode, oldVNode) {
+    const { node } = oldVNode;
+    vnode.node = node;
+    if (vnode.text !== oldVNode.text) {
+        api.setText(node, vnode.text, vnode.isStyle, vnode.isOption);
+    }
+};
+updateMap[VNODE_TYPE_COMMENT] = function (api, vnode, oldVNode) {
+    const { node } = oldVNode;
+    vnode.node = node;
+    if (vnode.text !== oldVNode.text) {
+        api.setText(node, vnode.text);
+    }
+};
+updateMap[VNODE_TYPE_ELEMENT] = function (api, vnode, oldVNode) {
+    const { node } = oldVNode;
+    vnode.data = oldVNode.data;
+    vnode.node = node;
+    update$6(api, vnode, oldVNode);
+    update$5(api, vnode, oldVNode);
+    update$4(api, vnode, oldVNode);
+    update$3(api, vnode, oldVNode);
+    update$2(api, vnode, oldVNode);
+    update$1(api, vnode, oldVNode);
+    const { text, html, children, isStyle, isOption } = vnode, oldText = oldVNode.text, oldHtml = oldVNode.html, oldChildren = oldVNode.children;
+    if (string$1(text)) {
+        if (oldChildren) {
+            removeVNodes(api, node, oldChildren);
+        }
+        if (text !== oldText) {
+            api.setText(node, text, isStyle, isOption);
+        }
+    }
+    else if (string$1(html)) {
+        if (oldChildren) {
+            removeVNodes(api, node, oldChildren);
+        }
+        if (html !== oldHtml) {
+            api.setHtml(node, html, isStyle, isOption);
+        }
+    }
+    else if (children) {
+        // 两个都有需要 diff
+        if (oldChildren) {
+            if (children !== oldChildren) {
+                updateChildren(api, node, children, oldChildren);
+            }
+        }
+        // 有新的没旧的 - 新增节点
+        else {
+            if (oldText || oldHtml) {
+                api.setText(node, EMPTY_STRING, isStyle);
+            }
+            addVNodes(api, node, children);
+        }
+    }
+    // 有旧的没新的 - 删除节点
+    else if (oldChildren) {
+        removeVNodes(api, node, oldChildren);
+    }
+    // 有旧的 text 没有新的 text
+    else if (oldText || oldHtml) {
+        api.setText(node, EMPTY_STRING, isStyle);
+    }
+};
+updateMap[VNODE_TYPE_COMPONENT] = function (api, vnode, oldVNode) {
+    const { data } = oldVNode;
+    vnode.data = data;
+    vnode.node = oldVNode.node;
+    vnode.component = oldVNode.component;
+    // 组件正在异步加载，更新为最新的 vnode
+    // 当异步加载完成时才能用上最新的 vnode
+    if (data[LOADING]) {
+        data[VNODE] = vnode;
+        return;
+    }
+    // 先处理 directive 再处理 component
+    // 因为组件只是单纯的更新 props，而 directive 则有可能要销毁
+    // 如果顺序反过来，会导致某些本该销毁的指令先被数据的变化触发执行了
+    update$4(api, vnode, oldVNode);
+    update$3(api, vnode, oldVNode);
+    update$2(api, vnode, oldVNode);
+    update$1(api, vnode, oldVNode);
+    update(api, vnode, oldVNode);
+};
+destroyMap[VNODE_TYPE_TEXT] =
+    destroyMap[VNODE_TYPE_COMMENT] = EMPTY_FUNCTION;
+destroyMap[VNODE_TYPE_ELEMENT] = function (api, vnode) {
+    if (vnode.isPure) {
+        return;
+    }
+    remove$5(api, vnode);
+    remove$4(api, vnode);
+    remove$3(api, vnode);
+    remove$2(api, vnode);
+    if (vnode.children) {
+        each$2(vnode.children, function (child) {
+            destroyVNode(api, child);
+        });
+    }
+};
+destroyMap[VNODE_TYPE_COMPONENT] = function (api, vnode) {
+    if (vnode.component) {
+        remove$5(api, vnode);
+        remove$4(api, vnode);
+        remove$3(api, vnode);
+        remove$2(api, vnode);
+        remove$1(api, vnode);
+    }
+    else {
+        vnode.data[LOADING] = FALSE;
+    }
+};
+function isPatchable(vnode, oldVNode) {
+    return vnode.type === oldVNode.type
+        && vnode.tag === oldVNode.tag
+        && vnode.key === oldVNode.key;
 }
 function createKeyToIndex(vnodes, startIndex, endIndex) {
     let result, vnode, key;
@@ -1854,84 +2029,21 @@ function createComponent(api, vnode, options) {
     update(api, vnode);
     return child;
 }
-function createVnode(api, vnode) {
-    let { tag, node, children, text, html } = vnode;
-    if (node) {
-        return;
-    }
-    if (vnode.isText) {
-        vnode.node = api.createText(text);
-        return;
-    }
-    if (vnode.isComment) {
-        vnode.node = api.createComment(text);
-        return;
-    }
-    if (vnode.isComponent) {
-        const data = vnode.data = {};
-        let componentOptions = UNDEFINED;
-        // 动态组件，tag 可能为空
-        if (tag) {
-            vnode.context.loadComponent(tag, function (options) {
-                if (has(data, LOADING)) {
-                    // 异步组件
-                    if (data[LOADING]) {
-                        // 尝试使用最新的 vnode
-                        if (data[VNODE]) {
-                            vnode = data[VNODE];
-                            // 用完就删掉
-                            delete data[VNODE];
-                        }
-                        enterVnode(vnode, createComponent(api, vnode, options));
-                    }
-                }
-                // 同步组件
-                else {
-                    componentOptions = options;
-                }
-            });
-        }
-        // 不论是同步还是异步组件，都需要一个占位元素
-        vnode.node = api.createComment(RAW_COMPONENT);
-        if (componentOptions) {
-            createComponent(api, vnode, componentOptions);
-        }
-        else {
-            data[LOADING] = TRUE;
-        }
-    }
-    else {
-        node = vnode.node = api.createElement(vnode.tag, vnode.isSvg);
-        if (children) {
-            addVnodes(api, node, children);
-        }
-        else if (text) {
-            api.setText(node, text, vnode.isStyle, vnode.isOption);
-        }
-        else if (html) {
-            api.setHtml(node, html, vnode.isStyle, vnode.isOption);
-        }
-        update$6(api, vnode);
-        update$5(api, vnode);
-        if (!vnode.isPure) {
-            vnode.data = {};
-            update$4(api, vnode);
-            update$3(api, vnode);
-            update$2(api, vnode);
-            update$1(api, vnode);
-        }
+function createVNode(api, vnode) {
+    if (!vnode.node) {
+        createMap[vnode.type](api, vnode);
     }
 }
-function addVnodes(api, parentNode, vnodes, startIndex, endIndex, before) {
+function addVNodes(api, parentNode, vnodes, startIndex, endIndex, before) {
     let vnode, start = startIndex || 0, end = endIndex !== UNDEFINED ? endIndex : vnodes.length - 1;
     while (start <= end) {
         vnode = vnodes[start];
-        createVnode(api, vnode);
-        insertVnode(api, parentNode, vnode, before);
+        createVNode(api, vnode);
+        insertVNode(api, parentNode, vnode, before);
         start++;
     }
 }
-function insertVnode(api, parentNode, vnode, before) {
+function insertVNode(api, parentNode, vnode, before) {
     const { node, component, context } = vnode, hasParent = api.parent(node);
     // 这里不调用 insertBefore，避免判断两次
     if (before) {
@@ -1946,12 +2058,12 @@ function insertVnode(api, parentNode, vnode, before) {
         let enter = UNDEFINED;
         if (vnode.isComponent && component) {
             enter = function () {
-                enterVnode(vnode, component);
+                enterVNode(vnode, component);
             };
         }
         else if (!vnode.isPure) {
             enter = function () {
-                enterVnode(vnode);
+                enterVNode(vnode);
             };
         }
         if (enter) {
@@ -1964,24 +2076,24 @@ function insertVnode(api, parentNode, vnode, before) {
         }
     }
 }
-function removeVnodes(api, parentNode, vnodes, startIndex, endIndex) {
+function removeVNodes(api, parentNode, vnodes, startIndex, endIndex) {
     let vnode, start = startIndex || 0, end = endIndex !== UNDEFINED ? endIndex : vnodes.length - 1;
     while (start <= end) {
         vnode = vnodes[start];
         if (vnode) {
-            removeVnode(api, parentNode, vnode);
+            removeVNode(api, parentNode, vnode);
         }
         start++;
     }
 }
-function removeVnode(api, parentNode, vnode) {
+function removeVNode(api, parentNode, vnode) {
     const { node, component } = vnode;
     if (vnode.isPure) {
         api.remove(parentNode, node);
     }
     else {
         const done = function () {
-            destroyVnode(api, vnode);
+            destroyVNode(api, vnode);
             api.remove(parentNode, node);
         };
         // 异步组件，还没加载成功就被删除了
@@ -1989,41 +2101,16 @@ function removeVnode(api, parentNode, vnode) {
             done();
             return;
         }
-        leaveVnode(vnode, component, done);
+        leaveVNode(vnode, component, done);
     }
 }
-function destroyVnode(api, vnode) {
-    if (vnode.isComponent) {
-        if (vnode.component) {
-            remove$5(api, vnode);
-            remove$4(api, vnode);
-            remove$3(api, vnode);
-            remove$2(api, vnode);
-            remove$1(api, vnode);
-        }
-        else {
-            vnode.data[LOADING] = FALSE;
-        }
-    }
-    else {
-        if (vnode.isPure) {
-            return;
-        }
-        remove$5(api, vnode);
-        remove$4(api, vnode);
-        remove$3(api, vnode);
-        remove$2(api, vnode);
-        if (vnode.children) {
-            each$2(vnode.children, function (child) {
-                destroyVnode(api, child);
-            });
-        }
-    }
+function destroyVNode(api, vnode) {
+    destroyMap[vnode.type](api, vnode);
 }
 /**
  * vnode 触发 enter hook 时，外部一般会做一些淡入动画
  */
-function enterVnode(vnode, component) {
+function enterVNode(vnode, component) {
     // 如果组件根元素和组件本身都写了 transition
     // 优先用外面定义的
     // 因为这明确是在覆盖配置
@@ -2032,12 +2119,14 @@ function enterVnode(vnode, component) {
         // 再看组件根元素是否有 transition
         transition = component.$vnode.transition;
     }
-    execute(data[LEAVING]);
+    const leaving = data[LEAVING];
+    if (leaving) {
+        leaving();
+    }
     if (transition) {
         const { enter } = transition;
         if (enter) {
             enter(vnode.node);
-            return;
         }
     }
 }
@@ -2046,7 +2135,7 @@ function enterVnode(vnode, component) {
  * 动画结束后才能移除节点，否则无法产生动画
  * 这里由外部调用 done 来通知内部动画结束
  */
-function leaveVnode(vnode, component, done) {
+function leaveVNode(vnode, component, done) {
     // 如果组件根元素和组件本身都写了 transition
     // 优先用外面定义的
     // 因为这明确是在覆盖配置
@@ -2071,49 +2160,49 @@ function leaveVnode(vnode, component, done) {
     done();
 }
 function updateChildren(api, parentNode, children, oldChildren) {
-    let startIndex = 0, endIndex = children.length - 1, startVnode = children[startIndex], endVnode = children[endIndex], oldStartIndex = 0, oldEndIndex = oldChildren.length - 1, oldStartVnode = oldChildren[oldStartIndex], oldEndVnode = oldChildren[oldEndIndex], oldKeyToIndex, oldIndex;
+    let startIndex = 0, endIndex = children.length - 1, startVNode = children[startIndex], endVNode = children[endIndex], oldStartIndex = 0, oldEndIndex = oldChildren.length - 1, oldStartVNode = oldChildren[oldStartIndex], oldEndVNode = oldChildren[oldEndIndex], oldKeyToIndex, oldIndex;
     while (oldStartIndex <= oldEndIndex && startIndex <= endIndex) {
         // 下面有设为 UNDEFINED 的逻辑
-        if (!startVnode) {
-            startVnode = children[++startIndex];
+        if (!startVNode) {
+            startVNode = children[++startIndex];
         }
-        else if (!endVnode) {
-            endVnode = children[--endIndex];
+        else if (!endVNode) {
+            endVNode = children[--endIndex];
         }
-        else if (!oldStartVnode) {
-            oldStartVnode = oldChildren[++oldStartIndex];
+        else if (!oldStartVNode) {
+            oldStartVNode = oldChildren[++oldStartIndex];
         }
-        else if (!oldEndVnode) {
-            oldEndVnode = oldChildren[--oldEndIndex];
+        else if (!oldEndVNode) {
+            oldEndVNode = oldChildren[--oldEndIndex];
         }
         // 从头到尾比较，位置相同且值得 patch
-        else if (isPatchable(startVnode, oldStartVnode)) {
-            patch(api, startVnode, oldStartVnode);
-            startVnode = children[++startIndex];
-            oldStartVnode = oldChildren[++oldStartIndex];
+        else if (isPatchable(startVNode, oldStartVNode)) {
+            updateVNode(api, startVNode, oldStartVNode);
+            startVNode = children[++startIndex];
+            oldStartVNode = oldChildren[++oldStartIndex];
         }
         // 从尾到头比较，位置相同且值得 patch
-        else if (isPatchable(endVnode, oldEndVnode)) {
-            patch(api, endVnode, oldEndVnode);
-            endVnode = children[--endIndex];
-            oldEndVnode = oldChildren[--oldEndIndex];
+        else if (isPatchable(endVNode, oldEndVNode)) {
+            updateVNode(api, endVNode, oldEndVNode);
+            endVNode = children[--endIndex];
+            oldEndVNode = oldChildren[--oldEndIndex];
         }
         // 比较完两侧的节点，剩下就是 位置发生改变的节点 和 全新的节点
-        // 当 endVnode 和 oldStartVnode 值得 patch
+        // 当 endVNode 和 oldStartVNode 值得 patch
         // 说明元素被移到右边了
-        else if (isPatchable(endVnode, oldStartVnode)) {
-            patch(api, endVnode, oldStartVnode);
-            insertBefore(api, parentNode, oldStartVnode.node, api.next(oldEndVnode.node));
-            endVnode = children[--endIndex];
-            oldStartVnode = oldChildren[++oldStartIndex];
+        else if (isPatchable(endVNode, oldStartVNode)) {
+            updateVNode(api, endVNode, oldStartVNode);
+            insertBefore(api, parentNode, oldStartVNode.node, api.next(oldEndVNode.node));
+            endVNode = children[--endIndex];
+            oldStartVNode = oldChildren[++oldStartIndex];
         }
-        // 当 oldEndVnode 和 startVnode 值得 patch
+        // 当 oldEndVNode 和 startVNode 值得 patch
         // 说明元素被移到左边了
-        else if (isPatchable(startVnode, oldEndVnode)) {
-            patch(api, startVnode, oldEndVnode);
-            insertBefore(api, parentNode, oldEndVnode.node, oldStartVnode.node);
-            startVnode = children[++startIndex];
-            oldEndVnode = oldChildren[--oldEndIndex];
+        else if (isPatchable(startVNode, oldEndVNode)) {
+            updateVNode(api, startVNode, oldEndVNode);
+            insertBefore(api, parentNode, oldEndVNode.node, oldStartVNode.node);
+            startVNode = children[++startIndex];
+            oldEndVNode = oldChildren[--oldEndIndex];
         }
         // 尝试同级元素的 key
         else {
@@ -2121,104 +2210,52 @@ function updateChildren(api, parentNode, children, oldChildren) {
                 oldKeyToIndex = createKeyToIndex(oldChildren, oldStartIndex, oldEndIndex);
             }
             // 新节点之前的位置
-            oldIndex = startVnode.key
-                ? oldKeyToIndex[startVnode.key]
+            oldIndex = startVNode.key
+                ? oldKeyToIndex[startVNode.key]
                 : UNDEFINED;
             // 移动元素
             if (oldIndex !== UNDEFINED) {
-                patch(api, startVnode, oldChildren[oldIndex]);
+                patch(api, startVNode, oldChildren[oldIndex]);
                 oldChildren[oldIndex] = UNDEFINED;
             }
             // 新元素
             else {
-                createVnode(api, startVnode);
+                createVNode(api, startVNode);
             }
-            insertVnode(api, parentNode, startVnode, oldStartVnode);
-            startVnode = children[++startIndex];
+            insertVNode(api, parentNode, startVNode, oldStartVNode);
+            startVNode = children[++startIndex];
         }
     }
     if (oldStartIndex > oldEndIndex) {
-        addVnodes(api, parentNode, children, startIndex, endIndex, children[endIndex + 1]);
+        addVNodes(api, parentNode, children, startIndex, endIndex, children[endIndex + 1]);
     }
     else if (startIndex > endIndex) {
-        removeVnodes(api, parentNode, oldChildren, oldStartIndex, oldEndIndex);
+        removeVNodes(api, parentNode, oldChildren, oldStartIndex, oldEndIndex);
     }
 }
-function patch(api, vnode, oldVnode) {
-    if (vnode === oldVnode) {
+function updateVNode(api, vnode, oldVNode) {
+    if (vnode !== oldVNode) {
+        updateMap[vnode.type](api, vnode, oldVNode);
+    }
+}
+function patch(api, vnode, oldVNode) {
+    if (vnode === oldVNode) {
         return;
     }
-    const { data, node, isComponent, isPure } = oldVnode;
     // 如果不能 patch，则删除重建
-    if (!isPatchable(vnode, oldVnode)) {
+    if (!isPatchable(vnode, oldVNode)) {
         // 同步加载的组件，初始化时不会传入占位节点
         // 它内部会自动生成一个注释节点，当它的根 vnode 和注释节点对比时，必然无法 patch
         // 于是走进此分支，为新组件创建一个 DOM 节点，然后继续 createComponent 后面的流程
-        const parentNode = api.parent(node);
-        createVnode(api, vnode);
+        const parentNode = api.parent(oldVNode.node);
+        createVNode(api, vnode);
         if (parentNode) {
-            insertVnode(api, parentNode, vnode, oldVnode);
-            removeVnode(api, parentNode, oldVnode);
+            insertVNode(api, parentNode, vnode, oldVNode);
+            removeVNode(api, parentNode, oldVNode);
         }
         return;
     }
-    vnode.data = data;
-    vnode.node = node;
-    vnode.component = oldVnode.component;
-    // 组件正在异步加载，更新为最新的 vnode
-    // 当异步加载完成时才能用上最新的 vnode
-    if (isComponent && data[LOADING]) {
-        data[VNODE] = vnode;
-        return;
-    }
-    if (!isComponent) {
-        update$6(api, vnode, oldVnode);
-        update$5(api, vnode, oldVnode);
-    }
-    // 先处理 directive 再处理 component
-    // 因为组件只是单纯的更新 props，而 directive 则有可能要销毁
-    // 如果顺序反过来，会导致某些本该销毁的指令先被数据的变化触发执行了
-    if (!isPure) {
-        update$4(api, vnode, oldVnode);
-        update$3(api, vnode, oldVnode);
-        update$2(api, vnode, oldVnode);
-        update$1(api, vnode, oldVnode);
-    }
-    if (isComponent) {
-        update(api, vnode, oldVnode);
-    }
-    const { text, html, children, isStyle, isOption } = vnode, oldText = oldVnode.text, oldHtml = oldVnode.html, oldChildren = oldVnode.children;
-    if (string$1(text)) {
-        if (text !== oldText) {
-            api.setText(node, text, isStyle, isOption);
-        }
-    }
-    else if (string$1(html)) {
-        if (html !== oldHtml) {
-            api.setHtml(node, html, isStyle, isOption);
-        }
-    }
-    // 两个都有需要 diff
-    else if (children && oldChildren) {
-        if (children !== oldChildren) {
-            updateChildren(api, node, children, oldChildren);
-        }
-    }
-    // 有新的没旧的 - 新增节点
-    else if (children) {
-        if (string$1(oldText) || string$1(oldHtml)) {
-            api.setText(node, EMPTY_STRING, isStyle);
-        }
-        addVnodes(api, node, children);
-    }
-    // 有旧的没新的 - 删除节点
-    else if (oldChildren) {
-        removeVnodes(api, node, oldChildren);
-    }
-    // 有旧的 text 没有新的 text
-    else if (string$1(oldText) || string$1(oldHtml)) {
-        api.setText(node, EMPTY_STRING, isStyle);
-    }
+    updateVNode(api, vnode, oldVNode);
 }
 function create(api, node, context) {
     const vnode = {
@@ -2229,16 +2266,19 @@ function create(api, node, context) {
         case 1:
             vnode.data = {};
             vnode.tag = api.tag(node);
+            vnode.type = VNODE_TYPE_ELEMENT;
             break;
         case 3:
             vnode.isPure =
                 vnode.isText = TRUE;
             vnode.text = node.nodeValue;
+            vnode.type = VNODE_TYPE_TEXT;
             break;
         case 8:
             vnode.isPure =
                 vnode.isComment = TRUE;
             vnode.text = node.nodeValue;
+            vnode.type = VNODE_TYPE_COMMENT;
             break;
     }
     return vnode;
@@ -2246,10 +2286,10 @@ function create(api, node, context) {
 function destroy(api, vnode, isRemove) {
     if (isRemove) {
         const parentNode = api.parent(vnode.node);
-        removeVnode(api, parentNode, vnode);
+        removeVNode(api, parentNode, vnode);
     }
     else {
-        destroyVnode(api, vnode);
+        destroyVNode(api, vnode);
     }
 }
 
@@ -2261,16 +2301,14 @@ function toNumber (target, defaultValue) {
             : 0;
 }
 
-function render(instance, template, data, computed, filters, globalFilters, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions) {
+function render(instance, template, dependencies, data, computed, filters, globalFilters, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions) {
     let rootScope = merge(data, computed), rootKeypath = EMPTY_STRING, contextStack = [
         { scope: rootScope, keypath: rootKeypath }
     ], localPartials = {}, 
-    // 渲染模板的数据依赖
-    dependencies = {}, 
     // 模板渲染过程收集的 vnode
     children = [], 
     // 模板渲染过程收集的组件
-    components = [], renderElementVnode = function (vnode, createAttributes, createChildren) {
+    components = [], renderElementVNode = function (vnode, createAttributes, createChildren) {
         if (createAttributes) {
             createAttributes(vnode);
         }
@@ -2280,7 +2318,7 @@ function render(instance, template, data, computed, filters, globalFilters, part
             vnode.children = children;
         }
         return vnode;
-    }, renderComponentVnode = function (vnode, createAttributes, createSlots) {
+    }, renderComponentVNode = function (vnode, createAttributes, createSlots) {
         if (createAttributes) {
             createAttributes(vnode);
         }
@@ -2408,7 +2446,7 @@ function render(instance, template, data, computed, filters, globalFilters, part
     }, 
     // <slot name="xx"/>
     renderSlot = function (name, children, render) {
-        dependencies[name] = TRUE;
+        dependencies[name] = children;
         const result = rootScope[name];
         if (result) {
             const { vnodes, components } = result;
@@ -2553,22 +2591,20 @@ function render(instance, template, data, computed, filters, globalFilters, part
         const result = get(value, keypath);
         return setHolder(result ? result.value : UNDEFINED);
     }, setHolder = function (value, keypath) {
+        if (value && func(value.get)) {
+            value = value.get();
+        }
         holder.keypath = keypath;
-        holder.value = value && func(value.get)
-            ? value.get()
-            : value;
+        holder.value = value;
         if (keypath !== UNDEFINED) {
-            dependencies[keypath] = TRUE;
+            dependencies[keypath] = value;
         }
         return holder;
     }, renderTemplate = function (render, scope, keypath, children, components) {
-        render(renderElementVnode, renderComponentVnode, appendAttribute, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
+        render(renderElementVNode, renderComponentVNode, appendAttribute, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
     };
     renderTemplate(template, rootScope, rootKeypath, children, components);
-    return {
-        vnode: children[0],
-        dependencies,
-    };
+    return children[0];
 }
 
 let guid = 0, 
@@ -3381,11 +3417,7 @@ class Observer {
             }
             emitter.on(keypath, listener);
             if (options.immediate) {
-                execute(options.watcher, context, [
-                    instance.get(keypath),
-                    UNDEFINED,
-                    keypath
-                ]);
+                options.watcher.call(context, instance.get(keypath), UNDEFINED, keypath);
             }
         };
         if (string$1(keypath)) {
@@ -3592,7 +3624,10 @@ class Yox {
                 instance.$parent = $options.parent;
             }
             // 建立好父子连接后，立即触发钩子
-            execute($options[HOOK_BEFORE_CREATE], instance, $options);
+            const beforeCreateHook = $options[HOOK_BEFORE_CREATE];
+            if (beforeCreateHook) {
+                beforeCreateHook.call(instance, $options);
+            }
             lifeCycle.fire(instance, HOOK_BEFORE_CREATE, {
                 options: $options,
             });
@@ -3636,7 +3671,7 @@ class Yox {
                 observer.addComputed(keypath, options);
             });
         }
-        const extend$1 = func(data) ? execute(data, instance, options) : data;
+        const extend$1 = func(data) ? data.call(instance, options) : data;
         if (object$1(extend$1)) {
             each(extend$1, function (value, key) {
                 source[key] = value;
@@ -3701,7 +3736,10 @@ class Yox {
                     observer.watch(watchers);
                 }
                 {
-                    execute(instance.$options[HOOK_AFTER_CREATE], instance);
+                    const afterCreateHook = $options[HOOK_AFTER_CREATE];
+                    if (afterCreateHook) {
+                        afterCreateHook.call(instance);
+                    }
                     lifeCycle.fire(instance, HOOK_AFTER_CREATE);
                 }
                 // 编译模板
@@ -3722,7 +3760,10 @@ class Yox {
             observer.watch(watchers);
         }
         {
-            execute(instance.$options[HOOK_AFTER_CREATE], instance);
+            const afterCreateHook = $options[HOOK_AFTER_CREATE];
+            if (afterCreateHook) {
+                afterCreateHook.call(instance);
+            }
             lifeCycle.fire(instance, HOOK_AFTER_CREATE);
         }
     }
@@ -4048,7 +4089,10 @@ class Yox {
             const instance = this, { $options, $vnode, $nextTask } = instance;
             if ($vnode) {
                 if (props) {
-                    execute($options[HOOK_BEFORE_PROPS_UPDATE], instance, props);
+                    const beforePropsUpdateHook = $options[HOOK_BEFORE_PROPS_UPDATE];
+                    if (beforePropsUpdateHook) {
+                        beforePropsUpdateHook.call(instance, props);
+                    }
                     instance.set(props);
                 }
                 // 当前可能正在进行下一轮更新
@@ -4065,15 +4109,15 @@ class Yox {
      */
     render() {
         {
-            const instance = this, { $observer, $dependencies } = instance, oldDependencies = $dependencies || EMPTY_OBJECT, { vnode, dependencies } = render(instance, instance.$template, $observer.data, $observer.computed, instance.$filters, globalFilters, instance.$partials, globalPartials, instance.$directives, globalDirectives, instance.$transitions, globalTransitions);
+            const instance = this, { $observer, $dependencies } = instance, oldDependencies = $dependencies || EMPTY_OBJECT, dependencies = {}, vnode = render(instance, instance.$template, dependencies, $observer.data, $observer.computed, instance.$filters, globalFilters, instance.$partials, globalPartials, instance.$directives, globalDirectives, instance.$transitions, globalTransitions);
             for (let key in dependencies) {
-                if (!oldDependencies[key]) {
+                if (!(key in oldDependencies)) {
                     $observer.watch(key, markDirty);
                 }
             }
             if ($dependencies) {
                 for (let key in $dependencies) {
-                    if (!dependencies[key]) {
+                    if (!(key in dependencies)) {
                         $observer.unwatch(key, markDirty);
                     }
                 }
@@ -4086,31 +4130,40 @@ class Yox {
      * 更新 virtual dom
      *
      * @param vnode
-     * @param oldVnode
+     * @param oldVNode
      */
-    update(vnode, oldVnode) {
+    update(vnode, oldVNode) {
         {
-            let instance = this, { $vnode, $options } = instance, afterHook;
+            let instance = this, { $vnode, $options } = instance, afterHookName;
             if ($vnode) {
-                execute($options[HOOK_BEFORE_UPDATE], instance);
+                const beforeUpdateHook = $options[HOOK_BEFORE_UPDATE];
+                if (beforeUpdateHook) {
+                    beforeUpdateHook.call(instance);
+                }
                 lifeCycle.fire(instance, HOOK_BEFORE_UPDATE);
-                patch(domApi, vnode, oldVnode);
-                afterHook = HOOK_AFTER_UPDATE;
+                patch(domApi, vnode, oldVNode);
+                afterHookName = HOOK_AFTER_UPDATE;
             }
             else {
-                execute($options[HOOK_BEFORE_MOUNT], instance);
+                const beforeMountHook = $options[HOOK_BEFORE_MOUNT];
+                if (beforeMountHook) {
+                    beforeMountHook.call(instance);
+                }
                 lifeCycle.fire(instance, HOOK_BEFORE_MOUNT);
-                patch(domApi, vnode, oldVnode);
+                patch(domApi, vnode, oldVNode);
                 instance.$el = vnode.node;
-                afterHook = HOOK_AFTER_MOUNT;
+                afterHookName = HOOK_AFTER_MOUNT;
             }
             instance.$vnode = vnode;
             // 跟 nextTask 保持一个节奏
             // 这样可以预留一些优化的余地
             Yox.nextTick(function () {
                 if (instance.$vnode) {
-                    execute($options[afterHook], instance);
-                    lifeCycle.fire(instance, afterHook);
+                    const afterHook = $options[afterHookName];
+                    if (afterHook) {
+                        afterHook.call(instance);
+                    }
+                    lifeCycle.fire(instance, afterHookName);
                 }
             });
         }
@@ -4128,7 +4181,10 @@ class Yox {
     destroy() {
         const instance = this, { $parent, $options, $emitter, $observer } = instance;
         {
-            execute($options[HOOK_BEFORE_DESTROY], instance);
+            const beforeDestroyHook = $options[HOOK_BEFORE_DESTROY];
+            if (beforeDestroyHook) {
+                beforeDestroyHook.call(instance);
+            }
             lifeCycle.fire(instance, HOOK_BEFORE_DESTROY);
             const { $vnode } = instance;
             if ($parent && $parent.$children) {
@@ -4142,7 +4198,10 @@ class Yox {
         }
         $observer.destroy();
         {
-            execute($options[HOOK_AFTER_DESTROY], instance);
+            const afterDestroyHook = $options[HOOK_AFTER_DESTROY];
+            if (afterDestroyHook) {
+                afterDestroyHook.call(instance);
+            }
             lifeCycle.fire(instance, HOOK_AFTER_DESTROY);
         }
         // 发完 after destroy 事件再解绑所有事件
@@ -4246,7 +4305,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.219";
+Yox.version = "1.0.0-alpha.220";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
@@ -4265,7 +4324,7 @@ Yox.config = PUBLIC_CONFIG;
 Yox.lifeCycle = lifeCycle;
 function setFlexibleOptions(instance, key, value) {
     if (func(value)) {
-        instance[key](execute(value, instance));
+        instance[key](value.call(instance));
     }
     else if (object$1(value)) {
         instance[key](value);

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.219
+ * yox.js v1.0.0-alpha.220
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -17,6 +17,10 @@ const SLOT_NAME_DEFAULT = 'children';
 const HINT_STRING = 1;
 const HINT_NUMBER = 2;
 const HINT_BOOLEAN = 3;
+const VNODE_TYPE_TEXT = 1;
+const VNODE_TYPE_COMMENT = 2;
+const VNODE_TYPE_ELEMENT = 3;
+const VNODE_TYPE_COMPONENT = 4;
 const DIRECTIVE_ON = 'on';
 const DIRECTIVE_LAZY = 'lazy';
 const DIRECTIVE_MODEL = 'model';
@@ -187,15 +191,13 @@ var is = /*#__PURE__*/Object.freeze({
  * @return 调用函数的返回值
  */
 function execute (fn, context, args) {
-    if (func(fn)) {
-        return array$1(args)
-            ? fn.apply(context, args)
-            : context !== UNDEFINED$1
-                ? fn.call(context, args)
-                : args !== UNDEFINED$1
-                    ? fn(args)
-                    : fn();
-    }
+    return array$1(args)
+        ? fn.apply(context, args)
+        : context !== UNDEFINED$1
+            ? fn.call(context, args)
+            : args !== UNDEFINED$1
+                ? fn(args)
+                : fn();
 }
 
 class CustomEvent {
@@ -3451,18 +3453,14 @@ function compile(content) {
         function (source) {
             if (startsWith(source, SYNTAX_IMPORT)) {
                 source = slicePrefix(source, SYNTAX_IMPORT);
-                if (source) {
-                    return createImport(source);
-                }
+                return createImport(source);
             }
         },
         // {{#partial name}}
         function (source) {
             if (startsWith(source, SYNTAX_PARTIAL)) {
                 source = slicePrefix(source, SYNTAX_PARTIAL);
-                if (source) {
-                    return createPartial(source);
-                }
+                return createPartial(source);
             }
         },
         // {{#if expr}}
@@ -3470,9 +3468,7 @@ function compile(content) {
             if (startsWith(source, SYNTAX_IF)) {
                 source = slicePrefix(source, SYNTAX_IF);
                 const expr = compile$1(source);
-                if (expr) {
-                    return createIf(expr);
-                }
+                return createIf(expr);
             }
         },
         // {{else if expr}}
@@ -3480,18 +3476,14 @@ function compile(content) {
             if (startsWith(source, SYNTAX_ELSE_IF)) {
                 source = slicePrefix(source, SYNTAX_ELSE_IF);
                 const expr = compile$1(source);
-                if (expr) {
-                    return createElseIf(expr);
-                }
+                return createElseIf(expr);
             }
         },
         // {{else}}
         function (source) {
             if (startsWith(source, SYNTAX_ELSE)) {
                 source = slicePrefix(source, SYNTAX_ELSE);
-                if (!trim(source)) {
-                    return createElse();
-                }
+                return createElse();
             }
         },
         // {{...obj}}
@@ -3499,10 +3491,8 @@ function compile(content) {
             if (startsWith(source, SYNTAX_SPREAD)) {
                 source = slicePrefix(source, SYNTAX_SPREAD);
                 const expr = compile$1(source);
-                if (expr) {
-                    if (currentElement && currentElement.isComponent) {
-                        return createSpread(expr);
-                    }
+                if (currentElement && currentElement.isComponent) {
+                    return createSpread(expr);
                 }
             }
         },
@@ -3511,9 +3501,7 @@ function compile(content) {
             if (!SYNTAX_COMMENT.test(source)) {
                 source = trim(source);
                 const expr = compile$1(source);
-                if (expr) {
-                    return createExpression(expr, blockMode === BLOCK_MODE_SAFE);
-                }
+                return createExpression(expr, blockMode === BLOCK_MODE_SAFE);
             }
         },
     ], parseHtml = function (code) {
@@ -3801,6 +3789,32 @@ class Call {
             : `${name}()`;
     }
 }
+class Precedence {
+    constructor(value) {
+        this.value = value;
+    }
+    toString(tabSize) {
+        return `(${this.value.toString(tabSize)})`;
+    }
+}
+class StringBuffer {
+    append(text) {
+        const { buffer } = this;
+        if (buffer) {
+            this.buffer = toBinary(buffer instanceof Ternary
+                ? toPrecedence(buffer)
+                : buffer, '+', text instanceof Ternary
+                ? toPrecedence(text)
+                : text);
+        }
+        else {
+            this.buffer = text;
+        }
+    }
+    toString(tabSize) {
+        return this.buffer.toString(tabSize);
+    }
+}
 class Unary {
     constructor(operator, value) {
         this.operator = operator;
@@ -3817,14 +3831,7 @@ class Binary {
         this.right = right;
     }
     toString(tabSize) {
-        let left = this.left.toString(tabSize), right = this.right.toString(tabSize);
-        if (this.leftGroup) {
-            left = `(${left})`;
-        }
-        if (this.rightGroup) {
-            right = `(${right})`;
-        }
-        return `${left}${SPACE}${this.operator}${SPACE}${right}`;
+        return `${this.left.toString(tabSize)}${SPACE}${this.operator}${SPACE}${this.right.toString(tabSize)}`;
     }
 }
 class Ternary {
@@ -3865,14 +3872,14 @@ class Member {
         each$2(props, function (prop) {
             if (prop instanceof Primitive) {
                 if (numeric(prop.value)) {
-                    result += `[${prop.value}]`;
+                    result += `[${SPACE}${prop.value}${SPACE}]`;
                 }
                 else {
                     result += '.' + prop.value;
                 }
             }
             else {
-                result += `[${prop.toString(tabSize)}]`;
+                result += `[${SPACE}${prop.toString(tabSize)}${SPACE}]`;
             }
         });
         return result;
@@ -3895,7 +3902,11 @@ class Push {
     }
     toString(tabSize) {
         const { array, item } = this;
-        return toAssign(`${array}[${SPACE}${array}.length${SPACE}]`, item).toString(tabSize);
+        return toAssign(toMember(array, [
+            toMember(array, [
+                toPrimitive('length')
+            ])
+        ]), item).toString(tabSize);
     }
 }
 function toPrimitive(value) {
@@ -3920,6 +3931,12 @@ function toMap(fields) {
 }
 function toCall(name, args) {
     return new Call(name, args);
+}
+function toPrecedence(value) {
+    return new Precedence(value);
+}
+function toStringBuffer() {
+    return new StringBuffer();
 }
 function toUnary(operator, value) {
     return new Unary(operator, value);
@@ -4033,10 +4050,8 @@ function generate$2(args, code) {
             }
         });
     });
-    return toAnonymousFunction(args, toTuple(EMPTY_STRING, EMPTY_STRING, ';', TRUE$1, 0, [
-        toTuple('var ', EMPTY_STRING, ',', FALSE$1, 0, varList),
-        code
-    ])).toString();
+    const result = toAnonymousFunction(UNDEFINED$1, toTuple('var ', ';', ',', FALSE$1, 0, varList), toAnonymousFunction(args, code));
+    return `(${result.toString()})()`;
 }
 
 /**
@@ -4075,14 +4090,14 @@ function generate$1(node, transformIdentifier, generateIdentifier, generateValue
             value = toUnary(unaryNode.operator, generateNode(unaryNode.node));
             break;
         case BINARY:
-            const binaryNode = node, left = generateNode(binaryNode.left), right = generateNode(binaryNode.right), newBinary = toBinary(left, binaryNode.operator, right);
+            let binaryNode = node, left = generateNode(binaryNode.left), right = generateNode(binaryNode.right);
             if (compareOperatorPrecedence(binaryNode.left, binaryNode.operator) < 0) {
-                newBinary.leftGroup = TRUE$1;
+                left = toPrecedence(left);
             }
             if (compareOperatorPrecedence(binaryNode.right, binaryNode.operator) < 0) {
-                newBinary.rightGroup = TRUE$1;
+                right = toPrecedence(right);
             }
-            value = newBinary;
+            value = toBinary(left, binaryNode.operator, right);
             break;
         case TERNARY:
             const ternaryNode = node, test = generateNode(ternaryNode.test), yes = generateNode(ternaryNode.yes), no = generateNode(ternaryNode.no);
@@ -4160,12 +4175,12 @@ componentStack = [],
 attributeStack = [], 
 // 是否正在处理特殊 each，包括 遍历 range 和 遍历数组字面量和对象字面量
 eachStack = [], 
-// 是否正在收集字符串类型的值
-stringStack = [], 
 // 是否正在收集动态 child
-dynamicChildrenStack = [TRUE$1], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {}, FIELD_NATIVE_ATTRIBUTES = 'nativeAttrs', FIELD_NATIVE_PROPERTIES = 'nativeProps', FIELD_PROPERTIES = 'props', FIELD_DIRECTIVES = 'directives', FIELD_EVENTS = 'events', FIELD_MODEL = 'model', FIELD_LAZY = 'lazy', FIELD_TRANSITION = 'transition', FIELD_CHILDREN = 'children';
+dynamicChildrenStack = [TRUE$1], 
+// 收集属性值
+attributeValueStack = [], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {}, FIELD_NATIVE_ATTRIBUTES = 'nativeAttrs', FIELD_NATIVE_PROPERTIES = 'nativeProps', FIELD_PROPERTIES = 'props', FIELD_DIRECTIVES = 'directives', FIELD_EVENTS = 'events', FIELD_MODEL = 'model', FIELD_LAZY = 'lazy', FIELD_TRANSITION = 'transition', FIELD_CHILDREN = 'children';
 // 下面这些值需要根据外部配置才能确定
-let isUglify = UNDEFINED$1, RENDER_ELEMENT_VNODE = EMPTY_STRING, RENDER_COMPONENT_VNODE = EMPTY_STRING, APPEND_ATTRIBUTE = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, LOOKUP_KEYPATH = EMPTY_STRING, LOOKUP_PROP = EMPTY_STRING, GET_THIS = EMPTY_STRING, GET_THIS_BY_INDEX = EMPTY_STRING, GET_PROP = EMPTY_STRING, GET_PROP_BY_INDEX = EMPTY_STRING, READ_KEYPATH = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, SET_HOLDER = EMPTY_STRING, TO_STRING = EMPTY_STRING, ARG_INSTANCE = EMPTY_STRING, ARG_FILTERS = EMPTY_STRING, ARG_GLOBAL_FILTERS = EMPTY_STRING, ARG_LOCAL_PARTIALS = EMPTY_STRING, ARG_PARTIALS = EMPTY_STRING, ARG_GLOBAL_PARTIALS = EMPTY_STRING, ARG_DIRECTIVES = EMPTY_STRING, ARG_GLOBAL_DIRECTIVES = EMPTY_STRING, ARG_TRANSITIONS = EMPTY_STRING, ARG_GLOBAL_TRANSITIONS = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_COMPONENTS = EMPTY_STRING, ARG_SCOPE = EMPTY_STRING, ARG_KEYPATH = EMPTY_STRING, ARG_LENGTH = EMPTY_STRING, ARG_EVENT = EMPTY_STRING, ARG_DATA = EMPTY_STRING;
+let isUglify = UNDEFINED$1, currentTextVNode = UNDEFINED$1, RENDER_ELEMENT_VNODE = EMPTY_STRING, RENDER_COMPONENT_VNODE = EMPTY_STRING, APPEND_ATTRIBUTE = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, LOOKUP_KEYPATH = EMPTY_STRING, LOOKUP_PROP = EMPTY_STRING, GET_THIS = EMPTY_STRING, GET_THIS_BY_INDEX = EMPTY_STRING, GET_PROP = EMPTY_STRING, GET_PROP_BY_INDEX = EMPTY_STRING, READ_KEYPATH = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, SET_HOLDER = EMPTY_STRING, TO_STRING = EMPTY_STRING, ARG_INSTANCE = EMPTY_STRING, ARG_FILTERS = EMPTY_STRING, ARG_GLOBAL_FILTERS = EMPTY_STRING, ARG_LOCAL_PARTIALS = EMPTY_STRING, ARG_PARTIALS = EMPTY_STRING, ARG_GLOBAL_PARTIALS = EMPTY_STRING, ARG_DIRECTIVES = EMPTY_STRING, ARG_GLOBAL_DIRECTIVES = EMPTY_STRING, ARG_TRANSITIONS = EMPTY_STRING, ARG_GLOBAL_TRANSITIONS = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_COMPONENTS = EMPTY_STRING, ARG_SCOPE = EMPTY_STRING, ARG_KEYPATH = EMPTY_STRING, ARG_LENGTH = EMPTY_STRING, ARG_EVENT = EMPTY_STRING, ARG_DATA = EMPTY_STRING;
 function init() {
     if (isUglify === PUBLIC_CONFIG.uglifyCompiled) {
         return;
@@ -4215,8 +4230,8 @@ function init() {
         ARG_DATA = '__p';
     }
     else {
-        RENDER_ELEMENT_VNODE = 'renderElementVnode';
-        RENDER_COMPONENT_VNODE = 'renderComponentVnode';
+        RENDER_ELEMENT_VNODE = 'renderElementVNode';
+        RENDER_COMPONENT_VNODE = 'renderComponentVNode';
         APPEND_ATTRIBUTE = 'appendAttribute';
         RENDER_TRANSITION = 'renderTransition';
         RENDER_MODEL = 'renderModel';
@@ -4259,6 +4274,36 @@ function init() {
         ARG_DATA = MAGIC_VAR_DATA;
     }
     isUglify = PUBLIC_CONFIG.uglifyCompiled;
+}
+class CommentVNode {
+    constructor(text) {
+        this.text = text;
+    }
+    toString(tabSize) {
+        return toMap({
+            type: toPrimitive(VNODE_TYPE_COMMENT),
+            isPure: toPrimitive(TRUE$1),
+            isComment: toPrimitive(TRUE$1),
+            text: this.text,
+        }).toString(tabSize);
+    }
+}
+class TextVNode {
+    constructor(text) {
+        this.buffer = toStringBuffer();
+        this.append(text);
+    }
+    append(text) {
+        this.buffer.append(text);
+    }
+    toString(tabSize) {
+        return toMap({
+            type: toPrimitive(VNODE_TYPE_TEXT),
+            isPure: toPrimitive(TRUE$1),
+            isText: toPrimitive(TRUE$1),
+            text: this.buffer,
+        }).toString(tabSize);
+    }
 }
 function transformExpressionIdentifier(node) {
     const { name, root, lookup, offset } = node;
@@ -4451,6 +4496,15 @@ function generateExpressionHolder(expr) {
 function generateExpressionArg(expr) {
     return generate$1(expr, transformExpressionIdentifier, generateExpressionIdentifier, generateExpressionValue, generateExpressionCall, FALSE$1, TRUE$1);
 }
+function createAttributeValue(nodes) {
+    const attributeValue = toStringBuffer();
+    push(attributeValueStack, attributeValue);
+    each$2(nodes, function (node) {
+        nodeGenerator[node.type](node);
+    });
+    pop(attributeValueStack);
+    return attributeValue;
+}
 function generateAttributeValue(value, expr, children) {
     if (isDef(value)) {
         return toPrimitive(value);
@@ -4465,36 +4519,37 @@ function generateAttributeValue(value, expr, children) {
         // compiler 会把原始字符串编译成 value
         // compiler 会把单个插值编译成 expr
         // 因此走到这里，一定是多个插值或是单个特殊插值（比如 If)
-        push(stringStack, TRUE$1);
-        const result = generateNodesToStringIfNeeded(children);
-        pop(stringStack);
-        return result;
+        return createAttributeValue(children);
     }
     return toPrimitive(UNDEFINED$1);
 }
-function generateNodesToTuple(nodes) {
-    return toTuple(EMPTY_STRING, EMPTY_STRING, ';', TRUE$1, 1, nodes.map(function (node) {
-        return nodeGenerator[node.type](node);
-    }));
-}
-function generateNodesToStringIfNeeded(children) {
-    const result = children.map(function (node) {
-        return nodeGenerator[node.type](node);
+function mapNodes(nodes) {
+    currentTextVNode = UNDEFINED$1;
+    const result = [];
+    each$2(nodes, function (node) {
+        const item = nodeGenerator[node.type](node);
+        if (item instanceof Primitive
+            && item.value === UNDEFINED$1) {
+            return;
+        }
+        push(result, item);
     });
-    if (result.length === 1) {
-        return result[0];
-    }
-    // 字符串拼接涉及表达式的优先级问题，改成 array.join 有利于一致性
-    if (last(stringStack)) {
-        return toList(result, EMPTY_STRING);
-    }
-    return toList(result);
+    return result;
 }
-function appendDynamicChildVnode(node) {
-    return toPush(ARG_CHILDREN, node);
+function generateNodesToTuple(nodes) {
+    return toTuple(EMPTY_STRING, EMPTY_STRING, ';', TRUE$1, 0, mapNodes(nodes));
 }
-function appendComponentVnode(node) {
-    return toPush(ARG_COMPONENTS, node);
+function generateNodesToList(nodes) {
+    return toList(mapNodes(nodes));
+}
+function appendDynamicChildVNode(vnode) {
+    currentTextVNode = vnode instanceof TextVNode
+        ? vnode
+        : UNDEFINED$1;
+    return toPush(ARG_CHILDREN, vnode);
+}
+function appendComponentVNode(vnode) {
+    return toPush(ARG_COMPONENTS, vnode);
 }
 function generateSelfAndGlobalReader(self, global, name) {
     return toBinary(toBinary(self, '&&', toMember(self, [
@@ -4503,25 +4558,21 @@ function generateSelfAndGlobalReader(self, global, name) {
         toPrimitive(name)
     ]));
 }
-function generateCommentVnode() {
-    const result = toMap({
-        isPure: toPrimitive(TRUE$1),
-        isComment: toPrimitive(TRUE$1),
-        text: toPrimitive(EMPTY_STRING),
-    });
+function generateCommentVNode() {
+    const vnode = new CommentVNode(toPrimitive(EMPTY_STRING));
     return last(dynamicChildrenStack)
-        ? appendDynamicChildVnode(result)
-        : result;
+        ? appendDynamicChildVNode(vnode)
+        : vnode;
 }
-function generateTextVnode(text) {
-    const result = toMap({
-        isPure: toPrimitive(TRUE$1),
-        isText: toPrimitive(TRUE$1),
-        text,
-    });
+function generateTextVNode(text) {
+    if (currentTextVNode) {
+        currentTextVNode.append(text);
+        return toPrimitive(UNDEFINED$1);
+    }
+    const vnode = new TextVNode(text);
     return last(dynamicChildrenStack)
-        ? appendDynamicChildVnode(result)
-        : result;
+        ? appendDynamicChildVNode(vnode)
+        : vnode;
 }
 function generateComponentSlots(children) {
     const result = toMap(), slots = {}, addSlot = function (name, nodes) {
@@ -4627,7 +4678,15 @@ function sortAttrs(attrs, isComponent) {
     return result;
 }
 nodeGenerator[ELEMENT] = function (node) {
-    let { tag, dynamicTag, isComponent, ref, key, html, text, attrs, children } = node, data = toMap(), outputAttrs = UNDEFINED$1, outputChildren = UNDEFINED$1, outputSlots = UNDEFINED$1;
+    let { tag, dynamicTag, isComponent, ref, key, html, text, attrs, children } = node, data = toMap({
+        context: ARG_INSTANCE,
+        type: toPrimitive(isComponent
+            ? VNODE_TYPE_COMPONENT
+            : VNODE_TYPE_ELEMENT),
+        tag: dynamicTag
+            ? generateExpression(dynamicTag)
+            : toPrimitive(tag)
+    }), outputAttrs = UNDEFINED$1, outputChildren = UNDEFINED$1, outputSlots = UNDEFINED$1;
     if (tag === RAW_SLOT) {
         // slot 不可能有 html、text 属性
         // 因此 slot 的子节点只存在于 children 中
@@ -4640,11 +4699,6 @@ nodeGenerator[ELEMENT] = function (node) {
         }
         return toCall(RENDER_SLOT, args);
     }
-    data.set('context', ARG_INSTANCE);
-    // 如果是动态组件，tag 会是一个标识符表达式
-    data.set('tag', dynamicTag
-        ? generateExpression(dynamicTag)
-        : toPrimitive(tag));
     // 先序列化 children，再序列化 attrs，原因需要举两个例子：
     // 例子1：
     // <div on-click="output(this)"></div> 如果 this 序列化成 $scope，如果外部修改了 this，因为模板没有计入此依赖，不会刷新，因此 item 是旧的
@@ -4676,9 +4730,7 @@ nodeGenerator[ELEMENT] = function (node) {
                 ], generateNodesToTuple(children));
             }
             else {
-                data.set(FIELD_CHILDREN, toList(children.map(function (node) {
-                    return nodeGenerator[node.type](node);
-                })));
+                data.set(FIELD_CHILDREN, generateNodesToList(children));
             }
             pop(dynamicChildrenStack);
         }
@@ -4708,20 +4760,30 @@ nodeGenerator[ELEMENT] = function (node) {
             ]));
     }
     if (attrs) {
-        const { nativeAttributeList, nativePropertyList, propertyList, lazyList, transition, model, eventList, customDirectiveList, otherList, } = parseAttrs(attrs, isComponent);
+        const { nativeAttributeList, nativePropertyList, propertyList, lazyList, transition, model, eventList, customDirectiveList, otherList, } = parseAttrs(attrs, isComponent), hasDynamicAttrs = otherList.length > 0;
         if (nativeAttributeList.length) {
-            const nativeAttributes = toMap();
+            let nativeAttributes = toMap(), isDynamic = hasDynamicAttrs;
             each$2(nativeAttributeList, function (node) {
+                if (!node.isStatic) {
+                    isDynamic = TRUE$1;
+                }
                 nativeAttributes.set(node.name, generateAttributeValue(node.value, node.expr, node.children));
             });
-            data.set(FIELD_NATIVE_ATTRIBUTES, nativeAttributes);
+            data.set(FIELD_NATIVE_ATTRIBUTES, isDynamic
+                ? nativeAttributes
+                : addVar(nativeAttributes, TRUE$1));
         }
         if (nativePropertyList.length) {
-            const nativeProperties = toMap();
+            let nativeProperties = toMap(), isDynamic = hasDynamicAttrs;
             each$2(nativePropertyList, function (node) {
+                if (!node.isStatic) {
+                    isDynamic = TRUE$1;
+                }
                 nativeProperties.set(node.name, generateAttributeValue(node.value, node.expr, node.children));
             });
-            data.set(FIELD_NATIVE_PROPERTIES, nativeProperties);
+            data.set(FIELD_NATIVE_PROPERTIES, isDynamic
+                ? nativeProperties
+                : addVar(nativeProperties, TRUE$1));
         }
         if (propertyList.length) {
             const properties = toMap();
@@ -4795,7 +4857,7 @@ nodeGenerator[ELEMENT] = function (node) {
         else {
             result = data;
         }
-        result = appendComponentVnode(result);
+        result = appendComponentVNode(result);
     }
     else {
         if (outputAttrs || outputChildren) {
@@ -4810,7 +4872,7 @@ nodeGenerator[ELEMENT] = function (node) {
         }
     }
     return last(dynamicChildrenStack)
-        ? appendDynamicChildVnode(result)
+        ? appendDynamicChildVNode(result)
         : result;
 };
 nodeGenerator[ATTRIBUTE] = function (node) {
@@ -5025,42 +5087,68 @@ nodeGenerator[SPREAD] = function (node) {
 };
 nodeGenerator[TEXT] = function (node) {
     const text = toPrimitive(node.text);
-    return last(vnodeStack)
-        ? generateTextVnode(text)
-        : text;
+    if (last(vnodeStack)) {
+        return generateTextVNode(text);
+    }
+    const attributeValue = last(attributeValueStack);
+    if (attributeValue) {
+        attributeValue.append(text);
+        return toPrimitive(UNDEFINED$1);
+    }
+    return text;
 };
 nodeGenerator[EXPRESSION] = function (node) {
     const value = generateExpression(node.expr);
-    return last(vnodeStack)
-        ? generateTextVnode(toCall(TO_STRING, [
+    if (last(vnodeStack)) {
+        return generateTextVNode(toCall(TO_STRING, [
             value
-        ]))
-        : value;
+        ]));
+    }
+    const attributeValue = last(attributeValueStack);
+    if (attributeValue) {
+        attributeValue.append(toCall(TO_STRING, [
+            value
+        ]));
+        return toPrimitive(UNDEFINED$1);
+    }
+    return value;
 };
-nodeGenerator[IF] =
-    nodeGenerator[ELSE_IF] = function (node) {
-        let { children, next } = node, defaultValue = last(vnodeStack)
-            ? generateCommentVnode()
-            : toPrimitive(UNDEFINED$1), value;
-        if (children) {
-            if (last(attributeStack)) {
-                children = sortAttrs(children, last(componentStack));
-            }
-            value = generateNodesToStringIfNeeded(children);
-        }
-        return toTernary(generateExpression(node.expr), value || defaultValue, next ? nodeGenerator[next.type](next) : defaultValue);
-    };
-nodeGenerator[ELSE] = function (node) {
-    let { children } = node, defaultValue = last(vnodeStack)
-        ? generateCommentVnode()
-        : toPrimitive(UNDEFINED$1), value;
+function getBranchDefaultValue() {
+    return last(vnodeStack)
+        ? generateCommentVNode()
+        : last(attributeValueStack)
+            ? toPrimitive(EMPTY_STRING)
+            : toPrimitive(UNDEFINED$1);
+}
+function getBranchValue(children) {
     if (children) {
         if (last(attributeStack)) {
             children = sortAttrs(children, last(componentStack));
         }
-        value = generateNodesToStringIfNeeded(children);
+        if (last(attributeValueStack)) {
+            return createAttributeValue(children);
+        }
+        const nodes = mapNodes(children);
+        if (nodes.length === 1) {
+            return nodes[0];
+        }
+        return toTuple('(', ')', ',', TRUE$1, 1, nodes);
     }
-    return value || defaultValue;
+}
+nodeGenerator[IF] = function (node) {
+    const { next } = node, attributeValue = last(attributeValueStack), defaultValue = getBranchDefaultValue(), result = toTernary(generateExpression(node.expr), getBranchValue(node.children) || defaultValue, next ? nodeGenerator[next.type](next) : defaultValue);
+    if (attributeValue) {
+        attributeValue.append(result);
+        return toPrimitive(UNDEFINED$1);
+    }
+    return result;
+};
+nodeGenerator[ELSE_IF] = function (node) {
+    const { next } = node, defaultValue = getBranchDefaultValue();
+    return toTernary(generateExpression(node.expr), getBranchValue(node.children) || defaultValue, next ? nodeGenerator[next.type](next) : defaultValue);
+};
+nodeGenerator[ELSE] = function (node) {
+    return getBranchValue(node.children) || getBranchDefaultValue();
 };
 nodeGenerator[EACH] = function (node) {
     const { index, from, to, equal, next } = node, isSpecial = to || from.type === ARRAY || from.type === OBJECT;
@@ -5694,11 +5782,7 @@ class Observer {
             }
             emitter.on(keypath, listener);
             if (options.immediate) {
-                execute(options.watcher, context, [
-                    instance.get(keypath),
-                    UNDEFINED$1,
-                    keypath
-                ]);
+                options.watcher.call(context, instance.get(keypath), UNDEFINED$1, keypath);
             }
         };
         if (string$1(keypath)) {
@@ -5903,7 +5987,7 @@ class Yox {
                 observer.addComputed(keypath, options);
             });
         }
-        const extend$1 = func(data) ? execute(data, instance, options) : data;
+        const extend$1 = func(data) ? data.call(instance, options) : data;
         if (object$1(extend$1)) {
             each(extend$1, function (value, key) {
                 source[key] = value;
@@ -6146,9 +6230,9 @@ class Yox {
      * 更新 virtual dom
      *
      * @param vnode
-     * @param oldVnode
+     * @param oldVNode
      */
-    update(vnode, oldVnode) {
+    update(vnode, oldVNode) {
     }
     /**
      * 校验组件参数
@@ -6264,7 +6348,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.219";
+Yox.version = "1.0.0-alpha.220";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
