@@ -200,13 +200,12 @@ export default class Yox implements YoxInterface {
 
   public static Event = CustomEvent
   public static Emitter = Emitter
+  public static lifeCycle = lifeCycle
 
   /**
    * 外部可配置的对象
    */
   public static config = constant.PUBLIC_CONFIG
-
-  public static lifeCycle = lifeCycle
 
   /**
    * 定义组件对象

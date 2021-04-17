@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.220
+ * yox.js v1.0.0-alpha.221
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -5532,6 +5532,7 @@
           }
           push(result, item);
       });
+      currentTextVNode = UNDEFINED$1;
       return result;
   }
   function generateNodesToTuple(nodes) {
@@ -8454,7 +8455,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.220";
+  Yox.version = "1.0.0-alpha.221";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
@@ -8466,11 +8467,11 @@
   Yox.logger = logger;
   Yox.Event = CustomEvent;
   Yox.Emitter = Emitter;
+  Yox.lifeCycle = lifeCycle;
   /**
    * 外部可配置的对象
    */
   Yox.config = PUBLIC_CONFIG;
-  Yox.lifeCycle = lifeCycle;
   function setFlexibleOptions(instance, key, value) {
       if (func(value)) {
           instance[key](value.call(instance));
