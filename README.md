@@ -54,12 +54,6 @@ yarn add yox
 * [HTML](http://jsrun.pro/2xyKp/edit)
 * [Mustache](http://jsrun.pro/yByKp/edit)
 
-#### Partial
-
-* [Global Partial](http://jsrun.pro/FRyKp/edit)
-* [Component Partial](http://jsrun.pro/JRyKp/edit)
-* [Local Partial](http://jsrun.pro/9xyKp/edit)
-
 #### Ref
 
 * [HTML Element](http://jsrun.pro/sMyKp/edit)
