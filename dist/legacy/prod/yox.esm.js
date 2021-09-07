@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.221
+ * yox.js v1.0.0-alpha.222
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -6578,8 +6578,8 @@ addElementClass = function (node, className) {
                     }
                 }
                 // textContent 不兼容 IE678
-                // 改用 data 属性
-                textContent = 'data';
+                // 改用 innerText 属性
+                textContent = 'innerText';
                 createEvent = function (event, element) {
                     return new IEEvent(event, element);
                 };
@@ -8317,7 +8317,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.221";
+Yox.version = "1.0.0-alpha.222";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
