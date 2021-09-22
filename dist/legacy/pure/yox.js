@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.222
+ * yox.js v1.0.0-alpha.223
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -173,8 +173,7 @@
    * @return
    */
   function numeric(value) {
-      return number(value)
-          || (string$1(value) && !isNaN(parseFloat(value)) && isFinite(value));
+      return !isNaN(value - parseFloat(value));
   }
 
   var is = /*#__PURE__*/Object.freeze({
@@ -1954,7 +1953,7 @@
               firstName = join$1(staticNodes, RAW_DOT);
               // a.b.c
               if (isLiteral) {
-                  firstNode = createIdentifierInner(raw, firstName, root, lookup, offset);
+                  firstNode = createIdentifierInner(raw, firstName, root, lookup, offset, staticNodes);
               }
               // a[b]
               // this.a[b]
@@ -1971,7 +1970,7 @@
                       }
                       firstRaw += separator + staticRaw;
                   }
-                  firstNode = createMemberInner(raw, createIdentifierInner(firstRaw, firstName, root, lookup, offset), UNDEFINED$1, dynamicNodes, root, lookup, offset);
+                  firstNode = createMemberInner(raw, createIdentifierInner(firstRaw, firstName, root, lookup, offset, staticNodes), UNDEFINED$1, dynamicNodes, root, lookup, offset);
               }
           }
           else {
@@ -1991,7 +1990,7 @@
       }
       return firstNode;
   }
-  function createIdentifierInner(raw, name, root, lookup, offset) {
+  function createIdentifierInner(raw, name, root, lookup, offset, literals) {
       return {
           type: IDENTIFIER,
           raw: raw,
@@ -1999,6 +1998,7 @@
           root: root,
           lookup: lookup,
           offset: offset,
+          literals: literals && literals.length > 1 ? literals : UNDEFINED$1,
       };
   }
   function createMemberInner(raw, lead, keypath, nodes, root, lookup, offset) {
@@ -3091,7 +3091,7 @@
       }, bindSpecialAttr = function (element, attr) {
           var name = attr.name;
           var value = attr.value;
-          var isStringValueRequired = name === RAW_NAME || name === RAW_SLOT;
+          var isStringValueRequired = name === RAW_SLOT;
           element[name] = isStringValueRequired ? value : attr;
           replaceChild(attr);
           if (attr.isStatic) {
@@ -4305,12 +4305,7 @@
           text: this.buffer,
       }).toString(tabSize);
   };
-  function transformExpressionIdentifier(node) {
-      var name = node.name;
-      var root = node.root;
-      var lookup = node.lookup;
-      var offset = node.offset;
-      // 魔法变量，直接转换
+  function replaceMagicVariable(name) {
       if (has$2(magicVariables, name)) {
           switch (name) {
               case MAGIC_VAR_KEYPATH:
@@ -4323,6 +4318,27 @@
                   return ARG_DATA;
               default:
                   return name;
+          }
+      }
+  }
+  function transformExpressionIdentifier(node) {
+      var name = node.name;
+      var root = node.root;
+      var lookup = node.lookup;
+      var offset = node.offset;
+      var literals = node.literals;
+      if (literals) {
+          var variable = replaceMagicVariable(literals[0]);
+          if (isDef(variable)) {
+              var result = copy(literals);
+              result[0] = variable;
+              return join$1(result, RAW_DOT);
+          }
+      }
+      else {
+          var variable$1 = replaceMagicVariable(name);
+          if (isDef(variable$1)) {
+              return variable$1;
           }
       }
       // this 仅在 each 中有意义
@@ -4510,21 +4526,21 @@
       pop(attributeValueStack);
       return attributeValue;
   }
-  function generateAttributeValue(value, expr, children) {
-      if (isDef(value)) {
-          return toPrimitive(value);
+  function generateAttributeValue(attr) {
+      if (isDef(attr.value)) {
+          return toPrimitive(attr.value);
       }
       // 只有一个表达式时，保持原始类型
-      if (expr) {
-          return generateExpression(expr);
+      if (attr.expr) {
+          return generateExpression(attr.expr);
       }
       // 多个值拼接时，要求是字符串
-      if (children) {
+      if (attr.children) {
           // 常见的应用场景是序列化 HTML 元素属性值，处理值时要求字符串，在处理属性名这个级别，不要求字符串
           // compiler 会把原始字符串编译成 value
           // compiler 会把单个插值编译成 expr
           // 因此走到这里，一定是多个插值或是单个特殊插值（比如 If)
-          return createAttributeValue(children);
+          return createAttributeValue(attr.children);
       }
       return toPrimitive(UNDEFINED$1);
   }
@@ -4715,7 +4731,8 @@
           // slot 不可能有 html、text 属性
           // 因此 slot 的子节点只存在于 children 中
           var args = [
-              toPrimitive(SLOT_DATA_PREFIX + node.name),
+              toPrimitive(SLOT_DATA_PREFIX
+                  + generateAttributeValue(node.name)),
               ARG_CHILDREN ];
           if (children) {
               push(args, toAnonymousFunction(UNDEFINED$1, generateNodesToTuple(children)));
@@ -4763,10 +4780,10 @@
       attributeStack[attributeStack.length - 1] = TRUE$1;
       // 在 vnodeStack 为 false 时取值
       if (ref) {
-          data.set('ref', generateAttributeValue(ref.value, ref.expr, ref.children));
+          data.set('ref', generateAttributeValue(ref));
       }
       if (key) {
-          data.set('key', generateAttributeValue(key.value, key.expr, key.children));
+          data.set('key', generateAttributeValue(key));
       }
       if (html) {
           data.set('html', string$1(html)
@@ -4800,7 +4817,7 @@
                   if (!node.isStatic) {
                       isDynamic$1 = TRUE$1;
                   }
-                  nativeAttributes.set(node.name, generateAttributeValue(node.value, node.expr, node.children));
+                  nativeAttributes.set(node.name, generateAttributeValue(node));
               });
               data.set(FIELD_NATIVE_ATTRIBUTES, isDynamic$1
                   ? nativeAttributes
@@ -4812,7 +4829,7 @@
                   if (!node.isStatic) {
                       isDynamic$2 = TRUE$1;
                   }
-                  nativeProperties.set(node.name, generateAttributeValue(node.value, node.expr, node.children));
+                  nativeProperties.set(node.name, generateAttributeValue(node));
               });
               data.set(FIELD_NATIVE_PROPERTIES, isDynamic$2
                   ? nativeProperties
@@ -4821,7 +4838,7 @@
           if (propertyList.length) {
               var properties = toMap();
               each$2(propertyList, function (node) {
-                  properties.set(node.name, generateAttributeValue(node.value, node.expr, node.children));
+                  properties.set(node.name, generateAttributeValue(node));
               });
               data.set(FIELD_PROPERTIES, properties);
           }
@@ -4913,14 +4930,14 @@
           toPrimitive(last(componentStack)
               ? FIELD_PROPERTIES
               : FIELD_NATIVE_ATTRIBUTES),
-          generateAttributeValue(node.value, node.expr, node.children),
+          generateAttributeValue(node),
           toPrimitive(node.name) ]);
   };
   nodeGenerator[PROPERTY] = function (node) {
       return toCall(APPEND_ATTRIBUTE, [
           ARG_VNODE,
           toPrimitive(FIELD_NATIVE_PROPERTIES),
-          generateAttributeValue(node.value, node.expr, node.children),
+          generateAttributeValue(node),
           toPrimitive(node.name) ]);
   };
   function getLazyValue(node) {
@@ -6401,7 +6418,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.222";
+  Yox.version = "1.0.0-alpha.223";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
