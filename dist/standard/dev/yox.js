@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.223
+ * yox.js v1.0.0-alpha.224
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -6152,8 +6152,7 @@
           // slot 不可能有 html、text 属性
           // 因此 slot 的子节点只存在于 children 中
           var args = [
-              toPrimitive(SLOT_DATA_PREFIX
-                  + generateAttributeValue(node.name)),
+              toBinary(toPrimitive(SLOT_DATA_PREFIX), '+', generateAttributeValue(node.name)),
               ARG_CHILDREN ];
           if (children) {
               push(args, toAnonymousFunction(UNDEFINED$1, generateNodesToTuple(children)));
@@ -8927,7 +8926,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.223";
+  Yox.version = "1.0.0-alpha.224";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
