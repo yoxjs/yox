@@ -685,11 +685,11 @@ export default class Yox implements YoxInterface {
 	static logger: LoggerApi;
 	static Event: typeof CustomEvent;
 	static Emitter: typeof Emitter;
+	static lifeCycle: LifeCycle;
 	/**
 	 * 外部可配置的对象
 	 */
 	static config: Record<string, any>;
-	static lifeCycle: LifeCycle;
 	/**
 	 * 定义组件对象
 	 */

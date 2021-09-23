@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.224
+ * yox.js v1.0.0-alpha.225
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -4019,7 +4019,9 @@ function compile(content) {
         }
         // <slot /> 如果没写 name，自动加上默认名称
         else if (isSlot && !element.name) {
-            element.name = SLOT_NAME_DEFAULT;
+            const attr = createAttribute(element, RAW_NAME);
+            attr.value = SLOT_NAME_DEFAULT;
+            element.name = attr;
         }
         // 处理浏览器兼容问题
         else {
@@ -4308,7 +4310,7 @@ function compile(content) {
                         const parts = name.split(':');
                         node = parts.length === 2
                             ? createAttribute(currentElement, parts[1], parts[0])
-                            : createAttribute(currentElement, name, UNDEFINED$1);
+                            : createAttribute(currentElement, name);
                     }
                     addChild(node);
                     // 这里先记下，下一个 handler 要匹配结束引号
@@ -8318,7 +8320,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.224";
+Yox.version = "1.0.0-alpha.225";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
