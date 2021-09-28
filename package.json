@@ -1,6 +1,6 @@
 {
   "name": "yox",
-  "version": "1.0.0-alpha.225",
+  "version": "1.0.0-alpha.226",
   "description": "A lightweight mvvm framework",
   "main": "dist/standard/dev/yox.js",
   "module": "dist/standard/dev/yox.esm.js",

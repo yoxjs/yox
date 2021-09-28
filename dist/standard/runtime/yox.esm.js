@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.225
+ * yox.js v1.0.0-alpha.226
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -168,7 +168,7 @@ function number(value) {
  * @return
  */
 function boolean(value) {
-    return typeof value === 'boolean';
+    return value === TRUE || value === FALSE;
 }
 /**
  * Check if value is numeric.
@@ -1400,7 +1400,7 @@ const LEAVING = '$leaving';
 const MODEL = '$model';
 const EVENT$1 = '$event';
 
-function update$6(api, vnode, oldVNode) {
+function update$7(api, vnode, oldVNode) {
     const { node, nativeAttrs } = vnode, oldNativeAttrs = oldVNode && oldVNode.nativeAttrs;
     if (nativeAttrs !== oldNativeAttrs) {
         if (nativeAttrs) {
@@ -1423,7 +1423,7 @@ function update$6(api, vnode, oldVNode) {
     }
 }
 
-function update$5(api, vnode, oldVNode) {
+function update$6(api, vnode, oldVNode) {
     const { node, nativeProps } = vnode, oldNativeProps = oldVNode && oldVNode.nativeProps;
     if (nativeProps !== oldNativeProps) {
         if (nativeProps) {
@@ -1440,6 +1440,30 @@ function update$5(api, vnode, oldVNode) {
             for (let name in oldNativeProps) {
                 if (newValue[name] === UNDEFINED) {
                     api.removeProp(node, name);
+                }
+            }
+        }
+    }
+}
+
+function update$5(api, vnode, oldVNode) {
+    const { node, nativeStyles } = vnode, oldNativeStyles = oldVNode && oldVNode.nativeStyles;
+    if (nativeStyles !== oldNativeStyles) {
+        const nodeStyle = node.style;
+        if (nativeStyles) {
+            const oldValue = oldNativeStyles || EMPTY_OBJECT;
+            for (let name in nativeStyles) {
+                if (oldValue[name] === UNDEFINED
+                    || nativeStyles[name] !== oldValue[name]) {
+                    api.setStyle(nodeStyle, name, nativeStyles[name]);
+                }
+            }
+        }
+        if (oldNativeStyles) {
+            const newValue = nativeStyles || EMPTY_OBJECT;
+            for (let name in oldNativeStyles) {
+                if (newValue[name] === UNDEFINED) {
+                    api.removeStyle(nodeStyle, name);
                 }
             }
         }
@@ -1835,6 +1859,7 @@ createMap[VNODE_TYPE_ELEMENT] = function (api, vnode) {
     else if (vnode.html) {
         api.setHtml(node, vnode.html, vnode.isStyle, vnode.isOption);
     }
+    update$7(api, vnode);
     update$6(api, vnode);
     update$5(api, vnode);
     if (!vnode.isPure) {
@@ -1895,6 +1920,7 @@ updateMap[VNODE_TYPE_ELEMENT] = function (api, vnode, oldVNode) {
     const { node } = oldVNode;
     vnode.data = oldVNode.data;
     vnode.node = node;
+    update$7(api, vnode, oldVNode);
     update$6(api, vnode, oldVNode);
     update$5(api, vnode, oldVNode);
     update$4(api, vnode, oldVNode);
@@ -2292,6 +2318,21 @@ function destroy(api, vnode, isRemove) {
     }
 }
 
+function parseStyleString(value, callback) {
+    const parts = value.split(';');
+    for (let i = 0, len = parts.length; i < len; i++) {
+        const item = parts[i];
+        const index = item.indexOf(':');
+        if (index > 0) {
+            const key = trim(item.substr(0, index));
+            const value = trim(item.substr(index + 1));
+            if (key && value) {
+                callback(camelize(key), value);
+            }
+        }
+    }
+}
+
 function toNumber (target, defaultValue) {
     return numeric(target)
         ? +target
@@ -2352,6 +2393,31 @@ function render(instance, template, dependencies, data, computed, filters, globa
         }
         else {
             vnode[key] = value;
+        }
+    }, renderStyleString = function (value) {
+        const styles = {};
+        parseStyleString(value, function (key, value) {
+            styles[key] = value;
+        });
+        return styles;
+    }, renderStyleExpr = function (value) {
+        if (array$1(value)) {
+            const styles = {};
+            for (let i = 0, len = value.length; i < len; i++) {
+                const item = renderStyleExpr(value[i]);
+                if (item) {
+                    for (let key in item) {
+                        styles[key] = item[key];
+                    }
+                }
+            }
+            return styles;
+        }
+        if (object$1(value)) {
+            return value;
+        }
+        if (string$1(value)) {
+            return renderStyleString(value);
         }
     }, renderTransition = function (name, transition) {
         return transition;
@@ -2600,7 +2666,7 @@ function render(instance, template, dependencies, data, computed, filters, globa
         }
         return holder;
     }, renderTemplate = function (render, scope, keypath, children, components) {
-        render(renderElementVNode, renderComponentVNode, appendAttribute, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
+        render(renderElementVNode, renderComponentVNode, appendAttribute, renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
     };
     renderTemplate(template, rootScope, rootKeypath, children, components);
     return children[0];
@@ -2608,7 +2674,7 @@ function render(instance, template, dependencies, data, computed, filters, globa
 
 let guid = 0, 
 // 这里先写 IE9 支持的接口
-textContent = 'textContent', innerHTML = 'innerHTML', createEvent = function (event, node) {
+textContent = 'textContent', innerHTML = 'innerHTML', cssFloat = 'cssFloat', createEvent = function (event, node) {
     return event;
 }, findElement = function (selector) {
     const node = DOCUMENT.querySelector(selector);
@@ -2628,6 +2694,11 @@ addElementClass = function (node, className) {
 };
 {
     if (DOCUMENT) {
+        let testElement = DOCUMENT.body;
+        if (!(cssFloat in testElement.style)) {
+            cssFloat = 'styleFloat';
+        }
+        testElement = UNDEFINED;
         // 此时 document.body 不一定有值，比如 script 放在 head 里
         if (!DOCUMENT.documentElement.classList) {
             addElementClass = function (node, className) {
@@ -2699,33 +2770,19 @@ function createText(text) {
 function createComment(text) {
     return DOCUMENT.createComment(text);
 }
-function prop(node, name, value) {
-    if (value !== UNDEFINED) {
-        setProp(node, name, value);
-    }
-    else {
-        const holder = get(node, name);
-        if (holder) {
-            return holder.value;
-        }
-    }
+function getProp(node, name) {
+    return node[name];
 }
 function setProp(node, name, value) {
-    set(node, name, value, FALSE);
+    node[name] = value;
 }
 function removeProp(node, name) {
-    set(node, name, UNDEFINED);
+    node[name] = UNDEFINED;
 }
-function attr(node, name, value) {
-    if (value !== UNDEFINED) {
-        setAttr(node, name, value);
-    }
-    else {
-        // value 还可能是 null
-        const value = node.getAttribute(name);
-        if (value != NULL) {
-            return value;
-        }
+function getAttr(node, name) {
+    const value = node.getAttribute(name);
+    if (value != NULL) {
+        return value;
     }
 }
 function setAttr(node, name, value) {
@@ -2733,6 +2790,18 @@ function setAttr(node, name, value) {
 }
 function removeAttr(node, name) {
     node.removeAttribute(name);
+}
+// 这里不传 HTMLElement 是因为外面会在循环里调用，频繁读取 node.style 挺浪费性能的
+function setStyle(style, name, value) {
+    if (value == NULL) {
+        style[name] = EMPTY_STRING;
+        return;
+    }
+    style[name === 'float' ? cssFloat : name] = value;
+}
+// 这里不传 HTMLElement 是因为外面会在循环里调用，频繁读取 node.style 挺浪费性能的
+function removeStyle(style, name) {
+    style[name] = EMPTY_STRING;
 }
 function before(parentNode, node, beforeNode) {
     parentNode.insertBefore(node, beforeNode);
@@ -2868,12 +2937,14 @@ var domApi = /*#__PURE__*/Object.freeze({
   createElement: createElement,
   createText: createText,
   createComment: createComment,
-  prop: prop,
+  getProp: getProp,
   setProp: setProp,
   removeProp: removeProp,
-  attr: attr,
+  getAttr: getAttr,
   setAttr: setAttr,
   removeAttr: removeAttr,
+  setStyle: setStyle,
+  removeStyle: removeStyle,
   before: before,
   append: append,
   replace: replace,
@@ -4304,7 +4375,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.225";
+Yox.version = "1.0.0-alpha.226";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

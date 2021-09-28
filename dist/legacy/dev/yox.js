@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.225
+ * yox.js v1.0.0-alpha.226
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -210,7 +210,7 @@
    * @return
    */
   function boolean(value) {
-      return typeof value === 'boolean';
+      return value === TRUE$1 || value === FALSE$1;
   }
   /**
    * Check if value is numeric.
@@ -1484,7 +1484,7 @@
   var MODEL = '$model';
   var EVENT$1 = '$event';
 
-  function update$6(api, vnode, oldVNode) {
+  function update$7(api, vnode, oldVNode) {
       var node = vnode.node;
       var nativeAttrs = vnode.nativeAttrs;
       var oldNativeAttrs = oldVNode && oldVNode.nativeAttrs;
@@ -1509,7 +1509,7 @@
       }
   }
 
-  function update$5(api, vnode, oldVNode) {
+  function update$6(api, vnode, oldVNode) {
       var node = vnode.node;
       var nativeProps = vnode.nativeProps;
       var oldNativeProps = oldVNode && oldVNode.nativeProps;
@@ -1528,6 +1528,32 @@
               for (var name$1 in oldNativeProps) {
                   if (newValue[name$1] === UNDEFINED$1) {
                       api.removeProp(node, name$1);
+                  }
+              }
+          }
+      }
+  }
+
+  function update$5(api, vnode, oldVNode) {
+      var node = vnode.node;
+      var nativeStyles = vnode.nativeStyles;
+      var oldNativeStyles = oldVNode && oldVNode.nativeStyles;
+      if (nativeStyles !== oldNativeStyles) {
+          var nodeStyle = node.style;
+          if (nativeStyles) {
+              var oldValue = oldNativeStyles || EMPTY_OBJECT;
+              for (var name in nativeStyles) {
+                  if (oldValue[name] === UNDEFINED$1
+                      || nativeStyles[name] !== oldValue[name]) {
+                      api.setStyle(nodeStyle, name, nativeStyles[name]);
+                  }
+              }
+          }
+          if (oldNativeStyles) {
+              var newValue = nativeStyles || EMPTY_OBJECT;
+              for (var name$1 in oldNativeStyles) {
+                  if (newValue[name$1] === UNDEFINED$1) {
+                      api.removeStyle(nodeStyle, name$1);
                   }
               }
           }
@@ -1956,6 +1982,7 @@
       else if (vnode.html) {
           api.setHtml(node, vnode.html, vnode.isStyle, vnode.isOption);
       }
+      update$7(api, vnode);
       update$6(api, vnode);
       update$5(api, vnode);
       if (!vnode.isPure) {
@@ -2016,6 +2043,7 @@
       var node = oldVNode.node;
       vnode.data = oldVNode.data;
       vnode.node = node;
+      update$7(api, vnode, oldVNode);
       update$6(api, vnode, oldVNode);
       update$5(api, vnode, oldVNode);
       update$4(api, vnode, oldVNode);
@@ -2446,41 +2474,45 @@
    */
   var PROPERTY = 4;
   /**
+   * 样式 节点
+   */
+  var STYLE = 5;
+  /**
    * 文本 节点
    */
-  var TEXT = 5;
+  var TEXT = 6;
   /**
    * if 节点
    */
-  var IF = 6;
+  var IF = 7;
   /**
    * else if 节点
    */
-  var ELSE_IF = 7;
+  var ELSE_IF = 8;
   /**
    * else 节点
    */
-  var ELSE = 8;
+  var ELSE = 9;
   /**
    * each 节点
    */
-  var EACH = 9;
+  var EACH = 10;
   /**
    * partial 节点
    */
-  var PARTIAL = 10;
+  var PARTIAL = 11;
   /**
    * import 节点
    */
-  var IMPORT = 11;
+  var IMPORT = 12;
   /**
    * 表达式 节点
    */
-  var EXPRESSION = 12;
+  var EXPRESSION = 13;
   /**
    * 延展操作 节点
    */
-  var SPREAD = 13;
+  var SPREAD = 14;
 
   // 特殊标签
   var specialTags = {};
@@ -2496,6 +2528,20 @@
   name2Type['if'] = IF;
   name2Type['each'] = EACH;
   name2Type['partial'] = PARTIAL;
+  function parseStyleString(value, callback) {
+      var parts = value.split(';');
+      for (var i = 0, len = parts.length; i < len; i++) {
+          var item = parts[i];
+          var index = item.indexOf(':');
+          if (index > 0) {
+              var key = trim(item.substr(0, index));
+              var value$1 = trim(item.substr(index + 1));
+              if (key && value$1) {
+                  callback(camelize(key), value$1);
+              }
+          }
+      }
+  }
 
   /**
    * 字面量
@@ -2560,6 +2606,12 @@
           value: value,
           expr: expr,
           children: children,
+      };
+  }
+  function createStyle() {
+      return {
+          type: STYLE,
+          isStatic: TRUE$1,
       };
   }
   function createEach(from, to, equal, index) {
@@ -2672,7 +2724,6 @@
   attr2Prop['for'] = 'htmlFor';
   attr2Prop['class'] = 'className';
   attr2Prop['accesskey'] = 'accessKey';
-  attr2Prop['style'] = 'style.cssText';
   attr2Prop['novalidate'] = 'noValidate';
   attr2Prop['readonly'] = 'readOnly';
   attr2Prop['tabindex'] = 'tabIndex';
@@ -2696,8 +2747,11 @@
       else {
           // 把 attr 优化成 prop
           var lowerName = lower(name);
+          if (name === 'style') {
+              return createStyle();
+          }
           // <slot> 、<template> 或 svg 中的属性不用识别为 property
-          if (specialTags[element.tag] || element.isSvg) {
+          else if (specialTags[element.tag] || element.isSvg) {
               return createAttribute$1(name, ns);
           }
           // 尝试识别成 property
@@ -4006,7 +4060,7 @@
                   fatal$1("The type of poping node is not expected.");
               }
           }
-          var branchNode = node, isElement = type === ELEMENT, isAttribute = type === ATTRIBUTE, isProperty = type === PROPERTY, isDirective = type === DIRECTIVE, parentBranchNode = last(nodeStack);
+          var branchNode = node, isElement = type === ELEMENT, isAttribute = type === ATTRIBUTE, isProperty = type === PROPERTY, isStyle = type === STYLE, isDirective = type === DIRECTIVE, parentBranchNode = last(nodeStack);
           {
               if (isElement
                   && tagName
@@ -4043,6 +4097,9 @@
                           else if (isProperty) {
                               processPropertySingleText(branchNode, onlyChild);
                           }
+                          else if (isStyle) {
+                              processStyleSingleText(branchNode, onlyChild);
+                          }
                           else if (isDirective) {
                               processDirectiveSingleText(branchNode, onlyChild);
                           }
@@ -4051,7 +4108,7 @@
                           if (isElement) {
                               processElementSingleExpression(branchNode, onlyChild);
                           }
-                          else if (isAttribute || isProperty || isDirective) {
+                          else if (isAttribute || isProperty || isStyle || isDirective) {
                               processAttributeSingleExpression(branchNode, onlyChild);
                           }
                           break;
@@ -4065,6 +4122,9 @@
               }
               else if (isProperty) {
                   processPropertyEmptyChildren(currentElement, branchNode);
+              }
+              else if (isStyle) {
+                  processStyleEmptyChildren(currentElement, branchNode);
               }
               else if (isDirective) {
                   processDirectiveEmptyChildren(currentElement, branchNode);
@@ -4134,6 +4194,18 @@
               prop.value = text;
           }
           prop.children = UNDEFINED$1;
+      }, processStyleEmptyChildren = function (element, style) {
+          // 如果不写值，直接忽略
+          replaceChild(style);
+      }, processStyleSingleText = function (style, child) {
+          if (child.text) {
+              style.value = child.text;
+              style.children = UNDEFINED$1;
+          }
+          else {
+              // 如果是 style=""，直接忽略
+              replaceChild(style);
+          }
       }, processAttributeEmptyChildren = function (element, attr) {
           if (isSpecialAttr(element, attr)) {
               {
@@ -5635,9 +5707,9 @@
   // 是否正在收集动态 child
   dynamicChildrenStack = [TRUE$1], 
   // 收集属性值
-  attributeValueStack = [], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {}, FIELD_NATIVE_ATTRIBUTES = 'nativeAttrs', FIELD_NATIVE_PROPERTIES = 'nativeProps', FIELD_PROPERTIES = 'props', FIELD_DIRECTIVES = 'directives', FIELD_EVENTS = 'events', FIELD_MODEL = 'model', FIELD_LAZY = 'lazy', FIELD_TRANSITION = 'transition', FIELD_CHILDREN = 'children';
+  attributeValueStack = [], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {}, FIELD_NATIVE_ATTRIBUTES = 'nativeAttrs', FIELD_NATIVE_PROPERTIES = 'nativeProps', FIELD_NATIVE_STYLES = 'nativeStyles', FIELD_PROPERTIES = 'props', FIELD_DIRECTIVES = 'directives', FIELD_EVENTS = 'events', FIELD_MODEL = 'model', FIELD_LAZY = 'lazy', FIELD_TRANSITION = 'transition', FIELD_CHILDREN = 'children';
   // 下面这些值需要根据外部配置才能确定
-  var isUglify = UNDEFINED$1, currentTextVNode = UNDEFINED$1, RENDER_ELEMENT_VNODE = EMPTY_STRING, RENDER_COMPONENT_VNODE = EMPTY_STRING, APPEND_ATTRIBUTE = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, LOOKUP_KEYPATH = EMPTY_STRING, LOOKUP_PROP = EMPTY_STRING, GET_THIS = EMPTY_STRING, GET_THIS_BY_INDEX = EMPTY_STRING, GET_PROP = EMPTY_STRING, GET_PROP_BY_INDEX = EMPTY_STRING, READ_KEYPATH = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, SET_HOLDER = EMPTY_STRING, TO_STRING = EMPTY_STRING, ARG_INSTANCE = EMPTY_STRING, ARG_FILTERS = EMPTY_STRING, ARG_GLOBAL_FILTERS = EMPTY_STRING, ARG_LOCAL_PARTIALS = EMPTY_STRING, ARG_PARTIALS = EMPTY_STRING, ARG_GLOBAL_PARTIALS = EMPTY_STRING, ARG_DIRECTIVES = EMPTY_STRING, ARG_GLOBAL_DIRECTIVES = EMPTY_STRING, ARG_TRANSITIONS = EMPTY_STRING, ARG_GLOBAL_TRANSITIONS = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_COMPONENTS = EMPTY_STRING, ARG_SCOPE = EMPTY_STRING, ARG_KEYPATH = EMPTY_STRING, ARG_LENGTH = EMPTY_STRING, ARG_EVENT = EMPTY_STRING, ARG_DATA = EMPTY_STRING;
+  var isUglify = UNDEFINED$1, currentTextVNode = UNDEFINED$1, RENDER_ELEMENT_VNODE = EMPTY_STRING, RENDER_COMPONENT_VNODE = EMPTY_STRING, APPEND_ATTRIBUTE = EMPTY_STRING, RENDER_STYLE_STRING = EMPTY_STRING, RENDER_STYLE_EXPR = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, LOOKUP_KEYPATH = EMPTY_STRING, LOOKUP_PROP = EMPTY_STRING, GET_THIS = EMPTY_STRING, GET_THIS_BY_INDEX = EMPTY_STRING, GET_PROP = EMPTY_STRING, GET_PROP_BY_INDEX = EMPTY_STRING, READ_KEYPATH = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, SET_HOLDER = EMPTY_STRING, TO_STRING = EMPTY_STRING, ARG_INSTANCE = EMPTY_STRING, ARG_FILTERS = EMPTY_STRING, ARG_GLOBAL_FILTERS = EMPTY_STRING, ARG_LOCAL_PARTIALS = EMPTY_STRING, ARG_PARTIALS = EMPTY_STRING, ARG_GLOBAL_PARTIALS = EMPTY_STRING, ARG_DIRECTIVES = EMPTY_STRING, ARG_GLOBAL_DIRECTIVES = EMPTY_STRING, ARG_TRANSITIONS = EMPTY_STRING, ARG_GLOBAL_TRANSITIONS = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_COMPONENTS = EMPTY_STRING, ARG_SCOPE = EMPTY_STRING, ARG_KEYPATH = EMPTY_STRING, ARG_LENGTH = EMPTY_STRING, ARG_EVENT = EMPTY_STRING, ARG_DATA = EMPTY_STRING;
   function init() {
       if (isUglify === PUBLIC_CONFIG.uglifyCompiled) {
           return;
@@ -5646,50 +5718,54 @@
           RENDER_ELEMENT_VNODE = '_a';
           RENDER_COMPONENT_VNODE = '_b';
           APPEND_ATTRIBUTE = '_c';
-          RENDER_TRANSITION = '_d';
-          RENDER_MODEL = '_e';
-          RENDER_EVENT_METHOD = '_f';
-          RENDER_EVENT_NAME = '_g';
-          RENDER_DIRECTIVE = '_h';
-          RENDER_SPREAD = '_i';
-          RENDER_SLOT = '_j';
-          RENDER_PARTIAL = '_k';
-          RENDER_EACH = '_l';
-          RENDER_RANGE = '_m';
-          LOOKUP_KEYPATH = '_n';
-          LOOKUP_PROP = '_o';
-          GET_THIS = '_p';
-          GET_THIS_BY_INDEX = '_q';
-          GET_PROP = '_r';
-          GET_PROP_BY_INDEX = '_s';
-          READ_KEYPATH = '_t';
-          EXECUTE_FUNCTION = '_u';
-          SET_HOLDER = '_v';
-          TO_STRING = '_w';
-          ARG_INSTANCE = '_x';
-          ARG_FILTERS = '_y',
-              ARG_GLOBAL_FILTERS = '_z',
-              ARG_LOCAL_PARTIALS = '__a';
-          ARG_PARTIALS = '__b',
-              ARG_GLOBAL_PARTIALS = '__c',
-              ARG_DIRECTIVES = '__d',
-              ARG_GLOBAL_DIRECTIVES = '__e',
-              ARG_TRANSITIONS = '__f',
-              ARG_GLOBAL_TRANSITIONS = '__g',
-              ARG_STACK = '__h';
-          ARG_VNODE = '__i';
-          ARG_CHILDREN = '__j';
-          ARG_COMPONENTS = '__k';
-          ARG_SCOPE = '__l';
-          ARG_KEYPATH = '__m';
-          ARG_LENGTH = '__n';
-          ARG_EVENT = '__o';
-          ARG_DATA = '__p';
+          RENDER_STYLE_STRING = '_d';
+          RENDER_STYLE_EXPR = '_e';
+          RENDER_TRANSITION = '_f';
+          RENDER_MODEL = '_g';
+          RENDER_EVENT_METHOD = '_h';
+          RENDER_EVENT_NAME = '_i';
+          RENDER_DIRECTIVE = '_j';
+          RENDER_SPREAD = '_k';
+          RENDER_SLOT = '_l';
+          RENDER_PARTIAL = '_m';
+          RENDER_EACH = '_n';
+          RENDER_RANGE = '_o';
+          LOOKUP_KEYPATH = '_p';
+          LOOKUP_PROP = '_q';
+          GET_THIS = '_r';
+          GET_THIS_BY_INDEX = '_s';
+          GET_PROP = '_t';
+          GET_PROP_BY_INDEX = '_u';
+          READ_KEYPATH = '_v';
+          EXECUTE_FUNCTION = '_w';
+          SET_HOLDER = '_x';
+          TO_STRING = '_y';
+          ARG_INSTANCE = '_z';
+          ARG_FILTERS = '__a';
+          ARG_GLOBAL_FILTERS = '__b';
+          ARG_LOCAL_PARTIALS = '__c';
+          ARG_PARTIALS = '__d';
+          ARG_GLOBAL_PARTIALS = '__e';
+          ARG_DIRECTIVES = '__f';
+          ARG_GLOBAL_DIRECTIVES = '__g';
+          ARG_TRANSITIONS = '__h';
+          ARG_GLOBAL_TRANSITIONS = '__i';
+          ARG_STACK = '__j';
+          ARG_VNODE = '__k';
+          ARG_CHILDREN = '__l';
+          ARG_COMPONENTS = '__m';
+          ARG_SCOPE = '__n';
+          ARG_KEYPATH = '__o';
+          ARG_LENGTH = '__p';
+          ARG_EVENT = '__q';
+          ARG_DATA = '__r';
       }
       else {
           RENDER_ELEMENT_VNODE = 'renderElementVNode';
           RENDER_COMPONENT_VNODE = 'renderComponentVNode';
           APPEND_ATTRIBUTE = 'appendAttribute';
+          RENDER_STYLE_STRING = 'renderStyleStyle';
+          RENDER_STYLE_EXPR = 'renderStyleExpr';
           RENDER_TRANSITION = 'renderTransition';
           RENDER_MODEL = 'renderModel';
           RENDER_EVENT_METHOD = 'renderEventMethod';
@@ -5711,16 +5787,16 @@
           SET_HOLDER = 'setHolder';
           TO_STRING = 'toString';
           ARG_INSTANCE = 'instance';
-          ARG_FILTERS = 'filters',
-              ARG_GLOBAL_FILTERS = 'globalFilters',
-              ARG_LOCAL_PARTIALS = 'localPartials';
-          ARG_PARTIALS = 'partials',
-              ARG_GLOBAL_PARTIALS = 'globalPartials',
-              ARG_DIRECTIVES = 'directives',
-              ARG_GLOBAL_DIRECTIVES = 'globalDirectives',
-              ARG_TRANSITIONS = 'transition',
-              ARG_GLOBAL_TRANSITIONS = 'globalTransitions',
-              ARG_STACK = 'stack';
+          ARG_FILTERS = 'filters';
+          ARG_GLOBAL_FILTERS = 'globalFilters';
+          ARG_LOCAL_PARTIALS = 'localPartials';
+          ARG_PARTIALS = 'partials';
+          ARG_GLOBAL_PARTIALS = 'globalPartials';
+          ARG_DIRECTIVES = 'directives';
+          ARG_GLOBAL_DIRECTIVES = 'globalDirectives';
+          ARG_TRANSITIONS = 'transition';
+          ARG_GLOBAL_TRANSITIONS = 'globalTransitions';
+          ARG_STACK = 'stack';
           ARG_VNODE = 'vnode';
           ARG_CHILDREN = 'children';
           ARG_COMPONENTS = 'components';
@@ -6033,21 +6109,20 @@
           toPrimitive(name)
       ]));
   }
-  function generateCommentVNode() {
-      var vnode = new CommentVNode(toPrimitive(EMPTY_STRING));
+  function generateVNode(vnode) {
       return last(dynamicChildrenStack)
           ? appendDynamicChildVNode(vnode)
           : vnode;
+  }
+  function generateCommentVNode() {
+      return generateVNode(new CommentVNode(toPrimitive(EMPTY_STRING)));
   }
   function generateTextVNode(text) {
       if (currentTextVNode) {
           currentTextVNode.append(text);
           return toPrimitive(UNDEFINED$1);
       }
-      var vnode = new TextVNode(text);
-      return last(dynamicChildrenStack)
-          ? appendDynamicChildVNode(vnode)
-          : vnode;
+      return generateVNode(new TextVNode(text));
   }
   function generateComponentSlots(children) {
       var result = toMap(), slots = {}, addSlot = function (name, nodes) {
@@ -6082,7 +6157,7 @@
       }
   }
   function parseAttrs(attrs, isComponent) {
-      var nativeAttributeList = [], nativePropertyList = [], propertyList = [], lazyList = [], transition = UNDEFINED$1, model = UNDEFINED$1, 
+      var nativeAttributeList = [], nativePropertyList = [], propertyList = [], style = UNDEFINED$1, lazyList = [], transition = UNDEFINED$1, model = UNDEFINED$1, 
       // 最后收集事件指令、自定义指令、动态属性
       eventList = [], customDirectiveList = [], otherList = [];
       each$2(attrs, function (attr) {
@@ -6096,8 +6171,10 @@
               }
           }
           else if (attr.type === PROPERTY) {
-              var propertyNode = attr;
-              push(nativePropertyList, propertyNode);
+              push(nativePropertyList, attr);
+          }
+          else if (attr.type === STYLE) {
+              style = attr;
           }
           else if (attr.type === DIRECTIVE) {
               var directiveNode = attr;
@@ -6126,6 +6203,7 @@
           nativeAttributeList: nativeAttributeList,
           nativePropertyList: nativePropertyList,
           propertyList: propertyList,
+          style: style,
           lazyList: lazyList,
           transition: transition,
           model: model,
@@ -6139,6 +6217,7 @@
       var nativeAttributeList = ref.nativeAttributeList;
       var nativePropertyList = ref.nativePropertyList;
       var propertyList = ref.propertyList;
+      var style = ref.style;
       var lazyList = ref.lazyList;
       var transition = ref.transition;
       var model = ref.model;
@@ -6149,6 +6228,9 @@
       push(result, nativeAttributeList);
       push(result, nativePropertyList);
       push(result, propertyList);
+      if (style) {
+          push(result, style);
+      }
       push(result, lazyList);
       if (transition) {
           push(result, transition);
@@ -6160,6 +6242,29 @@
       push(result, customDirectiveList);
       push(result, otherList);
       return result;
+  }
+  function parseChildren(children) {
+      var dynamicChildren = UNDEFINED$1, staticChildren = UNDEFINED$1, isDynamic = FALSE$1;
+      each$2(children, function (node) {
+          if (!node.isStatic) {
+              isDynamic = TRUE$1;
+              return FALSE$1;
+          }
+      });
+      push(dynamicChildrenStack, isDynamic);
+      if (isDynamic) {
+          dynamicChildren = toAnonymousFunction([
+              ARG_CHILDREN
+          ], generateNodesToTuple(children));
+      }
+      else {
+          staticChildren = generateNodesToList(children);
+      }
+      pop(dynamicChildrenStack);
+      return {
+          dynamicChildren: dynamicChildren,
+          staticChildren: staticChildren,
+      };
   }
   nodeGenerator[ELEMENT] = function (node) {
       var tag = node.tag;
@@ -6208,23 +6313,15 @@
               outputSlots = generateComponentSlots(children);
           }
           else {
-              var isDynamic = FALSE$1;
-              each$2(children, function (node) {
-                  if (!node.isStatic) {
-                      isDynamic = TRUE$1;
-                      return FALSE$1;
-                  }
-              });
-              push(dynamicChildrenStack, isDynamic);
-              if (isDynamic) {
-                  outputChildren = toAnonymousFunction([
-                      ARG_CHILDREN
-                  ], generateNodesToTuple(children));
+              var ref$1 = parseChildren(children);
+              var dynamicChildren = ref$1.dynamicChildren;
+              var staticChildren = ref$1.staticChildren;
+              if (dynamicChildren) {
+                  outputChildren = dynamicChildren;
               }
-              else {
-                  data.set(FIELD_CHILDREN, generateNodesToList(children));
+              else if (staticChildren) {
+                  data.set(FIELD_CHILDREN, staticChildren);
               }
-              pop(dynamicChildrenStack);
           }
       }
       // 开始序列化 attrs，原则也是先序列化非动态部分，再序列化动态部分，即指令留在最后序列化
@@ -6252,38 +6349,39 @@
               ]));
       }
       if (attrs) {
-          var ref$1 = parseAttrs(attrs, isComponent);
-          var nativeAttributeList = ref$1.nativeAttributeList;
-          var nativePropertyList = ref$1.nativePropertyList;
-          var propertyList = ref$1.propertyList;
-          var lazyList = ref$1.lazyList;
-          var transition = ref$1.transition;
-          var model = ref$1.model;
-          var eventList = ref$1.eventList;
-          var customDirectiveList = ref$1.customDirectiveList;
-          var otherList = ref$1.otherList;
+          var ref$2 = parseAttrs(attrs, isComponent);
+          var nativeAttributeList = ref$2.nativeAttributeList;
+          var nativePropertyList = ref$2.nativePropertyList;
+          var propertyList = ref$2.propertyList;
+          var style = ref$2.style;
+          var lazyList = ref$2.lazyList;
+          var transition = ref$2.transition;
+          var model = ref$2.model;
+          var eventList = ref$2.eventList;
+          var customDirectiveList = ref$2.customDirectiveList;
+          var otherList = ref$2.otherList;
           var hasDynamicAttrs = otherList.length > 0;
           if (nativeAttributeList.length) {
-              var nativeAttributes = toMap(), isDynamic$1 = hasDynamicAttrs;
+              var nativeAttributes = toMap(), isDynamic = hasDynamicAttrs;
               each$2(nativeAttributeList, function (node) {
                   if (!node.isStatic) {
-                      isDynamic$1 = TRUE$1;
+                      isDynamic = TRUE$1;
                   }
                   nativeAttributes.set(node.name, generateAttributeValue(node));
               });
-              data.set(FIELD_NATIVE_ATTRIBUTES, isDynamic$1
+              data.set(FIELD_NATIVE_ATTRIBUTES, isDynamic
                   ? nativeAttributes
                   : addVar(nativeAttributes, TRUE$1));
           }
           if (nativePropertyList.length) {
-              var nativeProperties = toMap(), isDynamic$2 = hasDynamicAttrs;
+              var nativeProperties = toMap(), isDynamic$1 = hasDynamicAttrs;
               each$2(nativePropertyList, function (node) {
                   if (!node.isStatic) {
-                      isDynamic$2 = TRUE$1;
+                      isDynamic$1 = TRUE$1;
                   }
                   nativeProperties.set(node.name, generateAttributeValue(node));
               });
-              data.set(FIELD_NATIVE_PROPERTIES, isDynamic$2
+              data.set(FIELD_NATIVE_PROPERTIES, isDynamic$1
                   ? nativeProperties
                   : addVar(nativeProperties, TRUE$1));
           }
@@ -6293,6 +6391,9 @@
                   properties.set(node.name, generateAttributeValue(node));
               });
               data.set(FIELD_PROPERTIES, properties);
+          }
+          if (style) {
+              data.set(FIELD_NATIVE_STYLES, getStyleValue(style));
           }
           if (lazyList.length) {
               var lazy = toMap();
@@ -6372,9 +6473,7 @@
               result = data;
           }
       }
-      return last(dynamicChildrenStack)
-          ? appendDynamicChildVNode(result)
-          : result;
+      return generateVNode(result);
   };
   nodeGenerator[ATTRIBUTE] = function (node) {
       return toCall(APPEND_ATTRIBUTE, [
@@ -6392,6 +6491,32 @@
           generateAttributeValue(node),
           toPrimitive(node.name) ]);
   };
+  nodeGenerator[STYLE] = function (node) {
+      return toAssign(toMember(ARG_VNODE, [
+          toPrimitive(FIELD_NATIVE_STYLES)
+      ]), getStyleValue(node));
+  };
+  function getStyleValue(node) {
+      if (isDef(node.value)) {
+          var styles = toMap();
+          parseStyleString(node.value, function (key, value) {
+              styles.set(key, toPrimitive(value));
+          });
+          return styles;
+      }
+      if (node.expr) {
+          if (node.expr.type === OBJECT) {
+              return generateExpression(node.expr);
+          }
+          return toCall(RENDER_STYLE_EXPR, [
+              generateExpression(node.expr)
+          ]);
+      }
+      // 多值拼接，compiler 保证了 children 必然有值
+      return toCall(RENDER_STYLE_STRING, [
+          createAttributeValue(node.children)
+      ]);
+  }
   function getLazyValue(node) {
       return toPrimitive(node.value);
   }
@@ -6718,6 +6843,8 @@
           RENDER_ELEMENT_VNODE,
           RENDER_COMPONENT_VNODE,
           APPEND_ATTRIBUTE,
+          RENDER_STYLE_STRING,
+          RENDER_STYLE_EXPR,
           RENDER_TRANSITION,
           RENDER_MODEL,
           RENDER_EVENT_METHOD,
@@ -6806,6 +6933,31 @@
           }
           else {
               vnode[key] = value;
+          }
+      }, renderStyleString = function (value) {
+          var styles = {};
+          parseStyleString(value, function (key, value) {
+              styles[key] = value;
+          });
+          return styles;
+      }, renderStyleExpr = function (value) {
+          if (array$1(value)) {
+              var styles = {};
+              for (var i = 0, len = value.length; i < len; i++) {
+                  var item = renderStyleExpr(value[i]);
+                  if (item) {
+                      for (var key in item) {
+                          styles[key] = item[key];
+                      }
+                  }
+              }
+              return styles;
+          }
+          if (object$1(value)) {
+              return value;
+          }
+          if (string$1(value)) {
+              return renderStyleString(value);
           }
       }, renderTransition = function (name, transition) {
           {
@@ -7107,7 +7259,7 @@
           }
           return holder;
       }, renderTemplate = function (render, scope, keypath, children, components) {
-          render(renderElementVNode, renderComponentVNode, appendAttribute, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString$1, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
+          render(renderElementVNode, renderComponentVNode, appendAttribute, renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString$1, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
       };
       renderTemplate(template, rootScope, rootKeypath, children, components);
       {
@@ -7120,7 +7272,7 @@
 
   var guid = 0, 
   // 这里先写 IE9 支持的接口
-  textContent = 'textContent', innerHTML = 'innerHTML', createEvent = function (event, node) {
+  textContent = 'textContent', innerHTML = 'innerHTML', cssFloat = 'cssFloat', createEvent = function (event, node) {
       return event;
   }, findElement = function (selector) {
       var node = DOCUMENT.querySelector(selector);
@@ -7140,6 +7292,11 @@
   };
   {
       if (DOCUMENT) {
+          var testElement = DOCUMENT.body;
+          if (!(cssFloat in testElement.style)) {
+              cssFloat = 'styleFloat';
+          }
+          testElement = UNDEFINED$1;
           // 此时 document.body 不一定有值，比如 script 放在 head 里
           if (!DOCUMENT.documentElement.classList) {
               addElementClass = function (node, className) {
@@ -7287,33 +7444,19 @@
   function createComment(text) {
       return DOCUMENT.createComment(text);
   }
-  function prop(node, name, value) {
-      if (value !== UNDEFINED$1) {
-          setProp(node, name, value);
-      }
-      else {
-          var holder = get(node, name);
-          if (holder) {
-              return holder.value;
-          }
-      }
+  function getProp(node, name) {
+      return node[name];
   }
   function setProp(node, name, value) {
-      set(node, name, value, FALSE$1);
+      node[name] = value;
   }
   function removeProp(node, name) {
-      set(node, name, UNDEFINED$1);
+      node[name] = UNDEFINED$1;
   }
-  function attr(node, name, value) {
-      if (value !== UNDEFINED$1) {
-          setAttr(node, name, value);
-      }
-      else {
-          // value 还可能是 null
-          var value$1 = node.getAttribute(name);
-          if (value$1 != NULL$1) {
-              return value$1;
-          }
+  function getAttr(node, name) {
+      var value = node.getAttribute(name);
+      if (value != NULL$1) {
+          return value;
       }
   }
   function setAttr(node, name, value) {
@@ -7321,6 +7464,18 @@
   }
   function removeAttr(node, name) {
       node.removeAttribute(name);
+  }
+  // 这里不传 HTMLElement 是因为外面会在循环里调用，频繁读取 node.style 挺浪费性能的
+  function setStyle(style, name, value) {
+      if (value == NULL$1) {
+          style[name] = EMPTY_STRING;
+          return;
+      }
+      style[name === 'float' ? cssFloat : name] = value;
+  }
+  // 这里不传 HTMLElement 是因为外面会在循环里调用，频繁读取 node.style 挺浪费性能的
+  function removeStyle(style, name) {
+      style[name] = EMPTY_STRING;
   }
   function before(parentNode, node, beforeNode) {
       parentNode.insertBefore(node, beforeNode);
@@ -7478,12 +7633,14 @@
     createElement: createElement,
     createText: createText,
     createComment: createComment,
-    prop: prop,
+    getProp: getProp,
     setProp: setProp,
     removeProp: removeProp,
-    attr: attr,
+    getAttr: getAttr,
     setAttr: setAttr,
     removeAttr: removeAttr,
+    setStyle: setStyle,
+    removeStyle: removeStyle,
     before: before,
     append: append,
     replace: replace,
@@ -9050,7 +9207,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.225";
+  Yox.version = "1.0.0-alpha.226";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.225
+ * yox.js v1.0.0-alpha.226
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -174,7 +174,7 @@
    * @return
    */
   function boolean(value) {
-      return typeof value === 'boolean';
+      return value === TRUE || value === FALSE;
   }
   /**
    * Check if value is numeric.
@@ -1401,7 +1401,7 @@
   var MODEL = '$model';
   var EVENT$1 = '$event';
 
-  function update$6(api, vnode, oldVNode) {
+  function update$7(api, vnode, oldVNode) {
       var node = vnode.node;
       var nativeAttrs = vnode.nativeAttrs;
       var oldNativeAttrs = oldVNode && oldVNode.nativeAttrs;
@@ -1426,7 +1426,7 @@
       }
   }
 
-  function update$5(api, vnode, oldVNode) {
+  function update$6(api, vnode, oldVNode) {
       var node = vnode.node;
       var nativeProps = vnode.nativeProps;
       var oldNativeProps = oldVNode && oldVNode.nativeProps;
@@ -1445,6 +1445,32 @@
               for (var name$1 in oldNativeProps) {
                   if (newValue[name$1] === UNDEFINED) {
                       api.removeProp(node, name$1);
+                  }
+              }
+          }
+      }
+  }
+
+  function update$5(api, vnode, oldVNode) {
+      var node = vnode.node;
+      var nativeStyles = vnode.nativeStyles;
+      var oldNativeStyles = oldVNode && oldVNode.nativeStyles;
+      if (nativeStyles !== oldNativeStyles) {
+          var nodeStyle = node.style;
+          if (nativeStyles) {
+              var oldValue = oldNativeStyles || EMPTY_OBJECT;
+              for (var name in nativeStyles) {
+                  if (oldValue[name] === UNDEFINED
+                      || nativeStyles[name] !== oldValue[name]) {
+                      api.setStyle(nodeStyle, name, nativeStyles[name]);
+                  }
+              }
+          }
+          if (oldNativeStyles) {
+              var newValue = nativeStyles || EMPTY_OBJECT;
+              for (var name$1 in oldNativeStyles) {
+                  if (newValue[name$1] === UNDEFINED) {
+                      api.removeStyle(nodeStyle, name$1);
                   }
               }
           }
@@ -1866,6 +1892,7 @@
       else if (vnode.html) {
           api.setHtml(node, vnode.html, vnode.isStyle, vnode.isOption);
       }
+      update$7(api, vnode);
       update$6(api, vnode);
       update$5(api, vnode);
       if (!vnode.isPure) {
@@ -1926,6 +1953,7 @@
       var node = oldVNode.node;
       vnode.data = oldVNode.data;
       vnode.node = node;
+      update$7(api, vnode, oldVNode);
       update$6(api, vnode, oldVNode);
       update$5(api, vnode, oldVNode);
       update$4(api, vnode, oldVNode);
@@ -2334,6 +2362,21 @@
       }
   }
 
+  function parseStyleString(value, callback) {
+      var parts = value.split(';');
+      for (var i = 0, len = parts.length; i < len; i++) {
+          var item = parts[i];
+          var index = item.indexOf(':');
+          if (index > 0) {
+              var key = trim(item.substr(0, index));
+              var value$1 = trim(item.substr(index + 1));
+              if (key && value$1) {
+                  callback(camelize(key), value$1);
+              }
+          }
+      }
+  }
+
   function toNumber (target, defaultValue) {
       return numeric(target)
           ? +target
@@ -2394,6 +2437,31 @@
           }
           else {
               vnode[key] = value;
+          }
+      }, renderStyleString = function (value) {
+          var styles = {};
+          parseStyleString(value, function (key, value) {
+              styles[key] = value;
+          });
+          return styles;
+      }, renderStyleExpr = function (value) {
+          if (array$1(value)) {
+              var styles = {};
+              for (var i = 0, len = value.length; i < len; i++) {
+                  var item = renderStyleExpr(value[i]);
+                  if (item) {
+                      for (var key in item) {
+                          styles[key] = item[key];
+                      }
+                  }
+              }
+              return styles;
+          }
+          if (object$1(value)) {
+              return value;
+          }
+          if (string$1(value)) {
+              return renderStyleString(value);
           }
       }, renderTransition = function (name, transition) {
           return transition;
@@ -2664,7 +2732,7 @@
           }
           return holder;
       }, renderTemplate = function (render, scope, keypath, children, components) {
-          render(renderElementVNode, renderComponentVNode, appendAttribute, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
+          render(renderElementVNode, renderComponentVNode, appendAttribute, renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlot, renderPartial, renderEach, renderRange, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
       };
       renderTemplate(template, rootScope, rootKeypath, children, components);
       return children[0];
@@ -2672,7 +2740,7 @@
 
   var guid = 0, 
   // 这里先写 IE9 支持的接口
-  textContent = 'textContent', innerHTML = 'innerHTML', createEvent = function (event, node) {
+  textContent = 'textContent', innerHTML = 'innerHTML', cssFloat = 'cssFloat', createEvent = function (event, node) {
       return event;
   }, findElement = function (selector) {
       var node = DOCUMENT.querySelector(selector);
@@ -2692,6 +2760,11 @@
   };
   {
       if (DOCUMENT) {
+          var testElement = DOCUMENT.body;
+          if (!(cssFloat in testElement.style)) {
+              cssFloat = 'styleFloat';
+          }
+          testElement = UNDEFINED;
           // 此时 document.body 不一定有值，比如 script 放在 head 里
           if (!DOCUMENT.documentElement.classList) {
               addElementClass = function (node, className) {
@@ -2763,33 +2836,19 @@
   function createComment(text) {
       return DOCUMENT.createComment(text);
   }
-  function prop(node, name, value) {
-      if (value !== UNDEFINED) {
-          setProp(node, name, value);
-      }
-      else {
-          var holder = get(node, name);
-          if (holder) {
-              return holder.value;
-          }
-      }
+  function getProp(node, name) {
+      return node[name];
   }
   function setProp(node, name, value) {
-      set(node, name, value, FALSE);
+      node[name] = value;
   }
   function removeProp(node, name) {
-      set(node, name, UNDEFINED);
+      node[name] = UNDEFINED;
   }
-  function attr(node, name, value) {
-      if (value !== UNDEFINED) {
-          setAttr(node, name, value);
-      }
-      else {
-          // value 还可能是 null
-          var value$1 = node.getAttribute(name);
-          if (value$1 != NULL) {
-              return value$1;
-          }
+  function getAttr(node, name) {
+      var value = node.getAttribute(name);
+      if (value != NULL) {
+          return value;
       }
   }
   function setAttr(node, name, value) {
@@ -2797,6 +2856,18 @@
   }
   function removeAttr(node, name) {
       node.removeAttribute(name);
+  }
+  // 这里不传 HTMLElement 是因为外面会在循环里调用，频繁读取 node.style 挺浪费性能的
+  function setStyle(style, name, value) {
+      if (value == NULL) {
+          style[name] = EMPTY_STRING;
+          return;
+      }
+      style[name === 'float' ? cssFloat : name] = value;
+  }
+  // 这里不传 HTMLElement 是因为外面会在循环里调用，频繁读取 node.style 挺浪费性能的
+  function removeStyle(style, name) {
+      style[name] = EMPTY_STRING;
   }
   function before(parentNode, node, beforeNode) {
       parentNode.insertBefore(node, beforeNode);
@@ -2932,12 +3003,14 @@
     createElement: createElement,
     createText: createText,
     createComment: createComment,
-    prop: prop,
+    getProp: getProp,
     setProp: setProp,
     removeProp: removeProp,
-    attr: attr,
+    getAttr: getAttr,
     setAttr: setAttr,
     removeAttr: removeAttr,
+    setStyle: setStyle,
+    removeStyle: removeStyle,
     before: before,
     append: append,
     replace: replace,
@@ -4420,7 +4493,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.225";
+  Yox.version = "1.0.0-alpha.226";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
