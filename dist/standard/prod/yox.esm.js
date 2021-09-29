@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.226
+ * yox.js v1.0.0-alpha.227
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -6673,13 +6673,12 @@ addElementClass = function (node, className) {
 };
 {
     if (DOCUMENT) {
-        let testElement = DOCUMENT.body;
+        // 此时 document.body 不一定有值，比如 script 放在 head 里
+        let testElement = DOCUMENT.documentElement;
         if (!(cssFloat in testElement.style)) {
             cssFloat = 'styleFloat';
         }
-        testElement = UNDEFINED$1;
-        // 此时 document.body 不一定有值，比如 script 放在 head 里
-        if (!DOCUMENT.documentElement.classList) {
+        if (!testElement.classList) {
             addElementClass = function (node, className) {
                 const classes = node.className.split(CHAR_WHITESPACE);
                 if (!has$2(classes, className)) {
@@ -6694,6 +6693,7 @@ addElementClass = function (node, className) {
                 }
             };
         }
+        testElement = UNDEFINED$1;
     }
 }
 const CHAR_WHITESPACE = ' ', 
@@ -8364,7 +8364,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.226";
+Yox.version = "1.0.0-alpha.227";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
