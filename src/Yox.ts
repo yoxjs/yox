@@ -127,9 +127,13 @@ lifeCycle = new LifeCycle(),
 
 compileTemplate = cache.createOneKeyCache(
   function (template: string) {
-    return templateGenerator.generate(
-      templateCompiler.compile(template)
-    )
+    const nodes = templateCompiler.compile(template)
+    if (process.env.NODE_ENV === 'development') {
+      if (nodes.length !== 1) {
+        logger.fatal(`The "template" option should have just one root element.`)
+      }
+    }
+    return templateGenerator.generate(nodes[0])
   }
 ),
 
@@ -873,10 +877,9 @@ export default class Yox implements YoxInterface {
         child
       )
 
-      const childVNode = child.$vnode
-      if (childVNode) {
-        vnode.node = childVNode.node
-        vnode.fragment = childVNode.fragment
+      const node = child.$el
+      if (node) {
+        vnode.node = node
       }
       else if (process.env.NODE_ENV === 'development') {
         logger.fatal(`The root element of component "${vnode.tag}" is not found.`)
@@ -1180,8 +1183,6 @@ export default class Yox implements YoxInterface {
       }
 
       if ($vnode) {
-        // virtual dom 通过判断 parent.$vnode 知道宿主组件是否正在销毁
-        instance.$vnode = constant.UNDEFINED
         snabbdom.destroy(domApi, $vnode, !$parent)
       }
 
@@ -1206,7 +1207,7 @@ export default class Yox implements YoxInterface {
     // 发完 after destroy 事件再解绑所有事件
     $emitter.off()
 
-    object.clear(instance)
+    instance.$el = constant.UNDEFINED
 
   }
 
