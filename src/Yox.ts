@@ -127,13 +127,9 @@ lifeCycle = new LifeCycle(),
 
 compileTemplate = cache.createOneKeyCache(
   function (template: string) {
-    const nodes = templateCompiler.compile(template)
-    if (process.env.NODE_ENV === 'development') {
-      if (nodes.length !== 1) {
-        logger.fatal(`The "template" option should have just one root element.`)
-      }
-    }
-    return templateGenerator.generate(nodes[0])
+    return templateGenerator.generate(
+      templateCompiler.compile(template)
+    )
   }
 ),
 
@@ -877,9 +873,10 @@ export default class Yox implements YoxInterface {
         child
       )
 
-      const node = child.$el
-      if (node) {
-        vnode.node = node
+      const childVNode = child.$vnode
+      if (childVNode) {
+        vnode.node = childVNode.node
+        vnode.fragment = childVNode.fragment
       }
       else if (process.env.NODE_ENV === 'development') {
         logger.fatal(`The root element of component "${vnode.tag}" is not found.`)
