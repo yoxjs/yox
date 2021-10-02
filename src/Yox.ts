@@ -507,7 +507,7 @@ export default class Yox implements YoxInterface {
         if (selectorPattern.test(template as string)) {
           placeholder = domApi.find(template as string)
           if (placeholder) {
-            template = domApi.html(placeholder as Element) as string
+            template = domApi.getHtml(placeholder as Element) as string
             placeholder = constant.UNDEFINED
           }
           else if (process.env.NODE_ENV === 'development') {
