@@ -19,11 +19,17 @@
     <div id="app"></div>
     <script id="template" type="plain/text">
       <div id="root">
-          <div on-click="toggle('visible')">
-            toggle
+          <div on-click="toggle('elementVisible')">
+            toggle element
           </div>
-          {{#if visible}}
+          {{#if elementVisible}}
             <div class="box" transition="fade"></div>
+          {{/if}}
+          <div on-click="toggle('componentVisible')">
+            toggle component
+          </div>
+          {{#if componentVisible}}
+            <Button transition="fade" />
           {{/if}}
       </div>
     </script>
@@ -34,7 +40,8 @@
             el: '#app',
             template: '#template',
             data: {
-              visible: true,
+              elementVisible: false,
+              componentVisible: false,
             },
             transitions: {
               fade: {
@@ -48,6 +55,11 @@
                     500,
                   )
                 }
+              }
+            },
+            components: {
+              Button: {
+                template: `<div class="box button">button</div>`
               }
             }
         });

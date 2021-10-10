@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ref</title>
+</head>
+<body>
+    <div id="app"></div>
+    <script src="../dist/standard/dev/yox.js"></script>
+    <script>
+
+    	Yox.component({
+    		Button: {
+    			template: `
+    				<div>
+    					<slot ref="main" on-click="click()">
+    						<span>
+    							default context
+    						</span>
+    					</slot>
+    				</div>
+    			`,
+    			methods: {
+    				click() {
+    					console.log('click')
+    				}
+    			},
+    			afterMount() {
+    				console.log('refs', this.$refs)
+    			}
+    		},
+    		Text: {
+    			template: `
+    				<div class="text">
+    					Text
+    				</div>
+    			`,
+    		}
+    	})
+
+        var instance = new Yox({
+            el: '#app',
+            template: `
+                <Button>
+                </Button>
+            `,
+        });
+
+    </script>
+</body>
+</html>

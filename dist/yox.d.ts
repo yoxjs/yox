@@ -84,6 +84,100 @@ export interface TransitionHooks {
 	enter?: (node: HTMLElement) => void;
 	leave?: (node: HTMLElement, done: () => void) => void;
 }
+export interface DomApi {
+	getBodyElement(): Element;
+	createElement(tag: string, isSvg?: boolean): Element;
+	createText(text: string): Text;
+	createComment(text: string): Comment;
+	getProp(node: HTMLElement, name: string): string | number | boolean | void;
+	setProp(node: HTMLElement, name: string, value: string | number | boolean): void;
+	removeProp(node: HTMLElement, name: string): void;
+	getAttr(node: HTMLElement, name: string): string | void;
+	setAttr(node: HTMLElement, name: string, value: string): void;
+	removeAttr(node: HTMLElement, name: string): void;
+	setStyle(style: CSSStyleDeclaration, name: string, value: string | number | void): void;
+	removeStyle(style: CSSStyleDeclaration, name: string): void;
+	before(parentNode: Node, node: Node, beforeNode: Node): void;
+	append(parentNode: Node, node: Node): void;
+	replace(parentNode: Node, node: Node, oldNode: Node): void;
+	remove(parentNode: Node, node: Node): void;
+	parent(node: Node): Node | void;
+	next(node: Node): Node | void;
+	find(selector: string): Element | void;
+	tag(node: Node): string | void;
+	getText(node: Node): string | void;
+	setText(node: Node, text: string, isStyle?: boolean, isOption?: boolean): void;
+	getHtml(node: Element): string | void;
+	setHtml(node: Element, html: string, isStyle?: boolean, isOption?: boolean): void;
+	addClass(node: HTMLElement, className: string): void;
+	removeClass(node: HTMLElement, className: string): void;
+	on(node: HTMLElement | Window | Document, type: string, listener: Listener): void;
+	off(node: HTMLElement | Window | Document, type: string, listener: Function): void;
+	addSpecialEvent(type: string, hooks: SpecialEventHooks): void;
+}
+export interface ArrayApi {
+	each<T>(array: T[], callback: (item: T, index: number) => boolean | void, reversed?: boolean): void;
+	push<T>(array: T[], target: T | T[]): void;
+	unshift<T>(array: T[], target: T | T[]): void;
+	indexOf<T>(array: T[], target: T, strict?: boolean): number;
+	last<T>(array: T[]): T | void;
+	pop<T>(array: T[]): T | void;
+	remove<T>(array: T[], target: T, strict?: boolean): number;
+	has<T>(array: T[], target: T, strict?: boolean): boolean;
+	toArray<T>(array: T[] | ArrayLike<T>): T[];
+	toObject(array: any[], key?: string | null, value?: any): object;
+	join(array: string[], separator: string): string;
+	falsy(array: any): boolean;
+}
+export interface IsApi {
+	func(value: any): boolean;
+	array(value: any): boolean;
+	object(value: any): boolean;
+	string(value: any): boolean;
+	number(value: any): boolean;
+	boolean(value: any): boolean;
+	numeric(value: any): boolean;
+}
+export interface LoggerApi {
+	DEBUG: number;
+	INFO: number;
+	WARN: number;
+	ERROR: number;
+	FATAL: number;
+	debug(msg: string, tag?: string): void;
+	info(msg: string, tag?: string): void;
+	warn(msg: string, tag?: string): void;
+	error(msg: string, tag?: string): void;
+	fatal(msg: string, tag?: string): void;
+}
+export interface ObjectApi {
+	keys(object: Data): string[];
+	each(object: Data, callback: (value: any, key: string) => boolean | void): void;
+	extend(original: Data, object: Data): Data;
+	merge(object1: Data | void, object2: Data | void): Data | void;
+	copy(object: any, deep?: boolean): any;
+	get(object: any, keypath: string): ValueHolder | undefined;
+	set(object: Data, keypath: string, value: any, autofill?: boolean): void;
+	has(object: Data, key: string | number): boolean;
+	falsy(object: any): boolean;
+}
+export interface StringApi {
+	camelize(str: string): string;
+	hyphenate(str: string): string;
+	capitalize(str: string): string;
+	trim(str: any): string;
+	slice(str: string, start: number, end?: number): string;
+	indexOf(str: string, part: string, start?: number): number;
+	lastIndexOf(str: string, part: string, end?: number): number;
+	startsWith(str: string, part: string): boolean;
+	endsWith(str: string, part: string): boolean;
+	charAt(str: string, index?: number): string;
+	codeAt(str: string, index?: number): number;
+	upper(str: string): string;
+	lower(str: string): string;
+	has(str: string, part: string): boolean;
+	falsy(str: any): boolean;
+}
 export interface DirectiveRuntime {
 	args?: (stack: any[]) => any[];
 	expr?: (stack: any[]) => any;
@@ -121,17 +215,30 @@ export interface Slots {
 	vnodes: VNode[];
 	components: VNode[] | void;
 }
+export interface VNodeOperator {
+	create(api: DomApi, vnode: VNode): void;
+	update(api: DomApi, vnode: VNode, oldVNode: VNode): void;
+	destroy(api: DomApi, vnode: VNode): void;
+	insert(api: DomApi, parentNode: Node, vnode: VNode, before?: VNode): void;
+	remove(api: DomApi, vnode: VNode): void;
+	enter(vnode: VNode): void;
+	leave(vnode: VNode, done: Function): void;
+}
 export interface VNode {
 	type: number;
-	data: Data;
-	node: Node;
+	data?: Data;
+	node?: Node;
+	parentNode?: Node;
+	target?: Node;
+	shadow?: VNode;
 	parent?: YoxInterface;
 	component?: YoxInterface;
 	readonly context: YoxInterface;
+	readonly operator: VNodeOperator;
 	readonly tag?: string;
 	readonly isComponent?: boolean;
-	readonly isComment?: boolean;
-	readonly isText?: boolean;
+	readonly isFragment?: boolean;
+	readonly isSlot?: boolean;
 	readonly isSvg?: boolean;
 	readonly isStyle?: boolean;
 	readonly isOption?: boolean;
@@ -147,6 +254,7 @@ export interface VNode {
 	readonly lazy?: Record<string, LazyValue>;
 	readonly transition?: TransitionHooks;
 	readonly model?: ModelValue;
+	readonly to?: string;
 	readonly ref?: string;
 	readonly key?: string;
 	readonly text?: string;
@@ -269,100 +377,6 @@ export declare type PropRule = {
 	value?: any | PropValueFunction;
 	required?: boolean;
 };
-export interface DomApi {
-	createElement(tag: string, isSvg?: boolean): Element;
-	createText(text: string): Text;
-	createComment(text: string): Comment;
-	getProp(node: HTMLElement, name: string): string | number | boolean | void;
-	setProp(node: HTMLElement, name: string, value: string | number | boolean): void;
-	removeProp(node: HTMLElement, name: string): void;
-	getAttr(node: HTMLElement, name: string): string | void;
-	setAttr(node: HTMLElement, name: string, value: string): void;
-	removeAttr(node: HTMLElement, name: string): void;
-	setStyle(style: CSSStyleDeclaration, name: string, value: string | number | void): void;
-	removeStyle(style: CSSStyleDeclaration, name: string): void;
-	before(parentNode: Node, node: Node, beforeNode: Node): void;
-	append(parentNode: Node, node: Node): void;
-	replace(parentNode: Node, node: Node, oldNode: Node): void;
-	remove(parentNode: Node, node: Node): void;
-	parent(node: Node): Node | void;
-	next(node: Node): Node | void;
-	find(selector: string): Element | void;
-	tag(node: Node): string | void;
-	text(node: Node, text?: string, isStyle?: boolean, isOption?: boolean): string | void;
-	setText(node: Node, text: string, isStyle?: boolean, isOption?: boolean): string | void;
-	html(node: Element, html?: string, isStyle?: boolean, isOption?: boolean): string | void;
-	setHtml(node: Element, html: string, isStyle?: boolean, isOption?: boolean): string | void;
-	addClass(node: HTMLElement, className: string): void;
-	removeClass(node: HTMLElement, className: string): void;
-	on(node: HTMLElement | Window | Document, type: string, listener: Listener): void;
-	off(node: HTMLElement | Window | Document, type: string, listener: Function): void;
-	addSpecialEvent(type: string, hooks: SpecialEventHooks): void;
-}
-export interface ArrayApi {
-	each<T>(array: T[], callback: (item: T, index: number) => boolean | void, reversed?: boolean): void;
-	push<T>(array: T[], target: T | T[]): void;
-	unshift<T>(array: T[], target: T | T[]): void;
-	indexOf<T>(array: T[], target: T, strict?: boolean): number;
-	last<T>(array: T[]): T | void;
-	pop<T>(array: T[]): T | void;
-	remove<T>(array: T[], target: T, strict?: boolean): number;
-	has<T>(array: T[], target: T, strict?: boolean): boolean;
-	toArray<T>(array: T[] | ArrayLike<T>): T[];
-	toObject(array: any[], key?: string | null, value?: any): object;
-	join(array: string[], separator: string): string;
-	falsy(array: any): boolean;
-}
-export interface IsApi {
-	func(value: any): boolean;
-	array(value: any): boolean;
-	object(value: any): boolean;
-	string(value: any): boolean;
-	number(value: any): boolean;
-	boolean(value: any): boolean;
-	numeric(value: any): boolean;
-}
-export interface LoggerApi {
-	DEBUG: number;
-	INFO: number;
-	WARN: number;
-	ERROR: number;
-	FATAL: number;
-	debug(msg: string, tag?: string): void;
-	info(msg: string, tag?: string): void;
-	warn(msg: string, tag?: string): void;
-	error(msg: string, tag?: string): void;
-	fatal(msg: string, tag?: string): void;
-}
-export interface ObjectApi {
-	keys(object: Data): string[];
-	each(object: Data, callback: (value: any, key: string) => boolean | void): void;
-	clear(object: Data): void;
-	extend(original: Data, object: Data): Data;
-	merge(object1: Data | void, object2: Data | void): Data | void;
-	copy(object: any, deep?: boolean): any;
-	get(object: any, keypath: string): ValueHolder | undefined;
-	set(object: Data, keypath: string, value: any, autofill?: boolean): void;
-	has(object: Data, key: string | number): boolean;
-	falsy(object: any): boolean;
-}
-export interface StringApi {
-	camelize(str: string): string;
-	hyphenate(str: string): string;
-	capitalize(str: string): string;
-	trim(str: any): string;
-	slice(str: string, start: number, end?: number): string;
-	indexOf(str: string, part: string, start?: number): number;
-	lastIndexOf(str: string, part: string, end?: number): number;
-	startsWith(str: string, part: string): boolean;
-	endsWith(str: string, part: string): boolean;
-	charAt(str: string, index?: number): string;
-	codeAt(str: string, index?: number): number;
-	upper(str: string): string;
-	lower(str: string): string;
-	has(str: string, part: string): boolean;
-	falsy(str: any): boolean;
-}
 declare class Emitter {
 	/**
 	 * 是否开启命名空间

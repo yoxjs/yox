@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.227
+ * yox.js v1.0.0-alpha.230
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -13,6 +13,7 @@ const NULL = null;
 const UNDEFINED = void 0;
 const RAW_UNDEFINED = 'undefined';
 const RAW_FUNCTION = 'function';
+const RAW_LENGTH = 'length';
 const RAW_WILDCARD = '*';
 const RAW_DOT = '.';
 /**
@@ -769,16 +770,6 @@ function each(object, callback) {
     }
 }
 /**
- * 清空对象所有的键值对
- *
- * @param object
- */
-function clear(object) {
-    each(object, function (_, key) {
-        delete object[key];
-    });
-}
-/**
  * 扩展对象
  *
  * @return
@@ -921,7 +912,6 @@ var object = /*#__PURE__*/Object.freeze({
   __proto__: null,
   keys: keys,
   each: each,
-  clear: clear,
   extend: extend,
   merge: merge,
   copy: copy,
@@ -1461,7 +1451,7 @@ function readValue (source, keypath) {
 function diffString (newValue, oldValue, callback) {
     const newIsString = string$1(newValue), oldIsString = string$1(oldValue);
     if (newIsString || oldIsString) {
-        callback('length', newIsString ? newValue.length : UNDEFINED, oldIsString ? oldValue.length : UNDEFINED);
+        callback(RAW_LENGTH, newIsString ? newValue.length : UNDEFINED, oldIsString ? oldValue.length : UNDEFINED);
         return TRUE;
     }
 }
@@ -1477,7 +1467,7 @@ function diffArray (newValue, oldValue, callback) {
     const newIsArray = array$1(newValue), oldIsArray = array$1(oldValue);
     if (newIsArray || oldIsArray) {
         const newLength = newIsArray ? newValue.length : UNDEFINED, oldLength = oldIsArray ? oldValue.length : UNDEFINED;
-        callback('length', newLength, oldLength);
+        callback(RAW_LENGTH, newLength, oldLength);
         for (let i = 0, length = Math.max(newLength || 0, oldLength || 0); i < length; i++) {
             callback(
             // 把 number 转成 string
@@ -2035,7 +2025,7 @@ class Observer {
         instance.syncEmitter.off();
         instance.asyncEmitter.off();
         instance.nextTask.clear();
-        clear(instance);
+        instance.data = {};
     }
 }
 
@@ -2333,7 +2323,7 @@ class Yox {
         $observer.destroy();
         // 发完 after destroy 事件再解绑所有事件
         $emitter.off();
-        clear(instance);
+        instance.$el = UNDEFINED;
     }
     /**
      * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
@@ -2432,7 +2422,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.227";
+Yox.version = "1.0.0-alpha.230";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

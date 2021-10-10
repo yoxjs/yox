@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.227
+ * yox.js v1.0.0-alpha.230
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -19,6 +19,7 @@
   var UNDEFINED = void 0;
   var RAW_UNDEFINED = 'undefined';
   var RAW_FUNCTION = 'function';
+  var RAW_LENGTH = 'length';
   var RAW_WILDCARD = '*';
   var RAW_DOT = '.';
   /**
@@ -768,16 +769,6 @@
       }
   }
   /**
-   * 清空对象所有的键值对
-   *
-   * @param object
-   */
-  function clear(object) {
-      each(object, function (_, key) {
-          delete object[key];
-      });
-  }
-  /**
    * 扩展对象
    *
    * @return
@@ -920,7 +911,6 @@
     __proto__: null,
     keys: keys,
     each: each,
-    clear: clear,
     extend: extend,
     merge: merge,
     copy: copy,
@@ -1466,7 +1456,7 @@
   function diffString (newValue, oldValue, callback) {
       var newIsString = string$1(newValue), oldIsString = string$1(oldValue);
       if (newIsString || oldIsString) {
-          callback('length', newIsString ? newValue.length : UNDEFINED, oldIsString ? oldValue.length : UNDEFINED);
+          callback(RAW_LENGTH, newIsString ? newValue.length : UNDEFINED, oldIsString ? oldValue.length : UNDEFINED);
           return TRUE;
       }
   }
@@ -1482,7 +1472,7 @@
       var newIsArray = array$1(newValue), oldIsArray = array$1(oldValue);
       if (newIsArray || oldIsArray) {
           var newLength = newIsArray ? newValue.length : UNDEFINED, oldLength = oldIsArray ? oldValue.length : UNDEFINED;
-          callback('length', newLength, oldLength);
+          callback(RAW_LENGTH, newLength, oldLength);
           for (var i = 0, length = Math.max(newLength || 0, oldLength || 0); i < length; i++) {
               callback(
               // 把 number 转成 string
@@ -2051,7 +2041,7 @@
       instance.syncEmitter.off();
       instance.asyncEmitter.off();
       instance.nextTask.clear();
-      clear(instance);
+      instance.data = {};
   };
 
   var Yox = function(options) {
@@ -2362,7 +2352,7 @@
       $observer.destroy();
       // 发完 after destroy 事件再解绑所有事件
       $emitter.off();
-      clear(instance);
+      instance.$el = UNDEFINED;
   };
   /**
    * 因为组件采用的是异步更新机制，为了在更新之后进行一些操作，可使用 nextTick
@@ -2460,7 +2450,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.227";
+  Yox.version = "1.0.0-alpha.230";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
