@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.230
+ * yox.js v1.0.0-alpha.231
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -1890,7 +1890,7 @@ function vnodeCreateChildrenOperator(api, vnode) {
     });
 }
 function vnodeUpdateChildrenOperator(api, parentNode, vnode, oldVNode) {
-    updateChildren(api, parentNode, vnode.children, oldVNode.children || EMPTY_ARRAY);
+    updateChildren(api, parentNode, vnode.children, oldVNode.children);
 }
 function vnodeDestroyChildrenOperator(api, vnode) {
     each$2(vnode.children, function (child) {
@@ -2169,10 +2169,13 @@ const portalVNodeOperator = {
             target = api.getBodyElement();
         }
         vnode.target = target;
-        vnodeCreateChildrenOperator(api, vnode);
         // 用注释占用节点在模板里的位置
         // 这样删除或替换节点，才有找到它应该在的位置
         vnode.node = api.createComment(EMPTY_STRING);
+        each$2(vnode.children, function (child) {
+            createVNode(api, child);
+            insertVNode(api, target, child);
+        });
     },
     update(api, vnode, oldVNode) {
         const { target } = oldVNode;
@@ -2181,15 +2184,14 @@ const portalVNodeOperator = {
         vnode.target = target;
         vnodeUpdateChildrenOperator(api, target, vnode, oldVNode);
     },
-    destroy: vnodeDestroyChildrenOperator,
-    insert(api, parentNode, vnode) {
-        vnodeInsertOperator(api, parentNode, vnode);
-        vnodeInsertChildrenOperator(api, vnode.target, vnode);
+    destroy(api, vnode) {
+        each$2(vnode.children, function (child) {
+            destroyVNode(api, child);
+            removeVNode(api, child);
+        });
     },
-    remove(api, vnode) {
-        vnodeRemoveOperator(api, vnode);
-        vnodeRemoveChildrenOperator(api, vnode);
-    },
+    insert: vnodeInsertOperator,
+    remove: vnodeRemoveOperator,
     enter: EMPTY_FUNCTION,
     leave: vnodeLeaveOperator,
 };
@@ -2434,9 +2436,9 @@ function patch(api, vnode, oldVNode) {
 }
 function create(api, node, context) {
     const vnode = {
-        parentNode: api.parent(node),
-        node,
         context,
+        node,
+        parentNode: api.parent(node),
     };
     switch (node.nodeType) {
         case 1:
@@ -4538,7 +4540,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.230";
+Yox.version = "1.0.0-alpha.231";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
