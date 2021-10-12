@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.231
+ * yox.js v1.0.0-alpha.232
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -2373,18 +2373,7 @@
       var operator = vnode.operator;
       operator.insert(api, parentNode, vnode, before);
       vnode.parentNode = parentNode;
-      // 普通元素和组件的占位节点都会走到这里
-      // 但是占位节点不用 enter，而是等组件加载回来之后再调 enter
-      if (operator.enter !== EMPTY_FUNCTION) {
-          // 执行到这时，组件还没有挂载到 DOM 树
-          // 如果此时直接触发 enter，外部还需要做多余的工作，比如 setTimeout
-          // 索性这里直接等挂载到 DOM 数之后再触发
-          // 注意：YoxInterface 没有声明 $nextTask，因为不想让外部访问，
-          // 但是这里要用一次，所以加了 as any
-          vnode.context.$nextTask.prepend(function () {
-              operator.enter(vnode);
-          });
-      }
+      operator.enter(vnode);
   }
   function removeVNodes(api, vnodes, startIndex, endIndex) {
       var vnode, start = startIndex || 0, end = endIndex !== UNDEFINED$1 ? endIndex : vnodes.length - 1;
@@ -2408,26 +2397,30 @@
       });
   }
   function enterVNode(vnode, node) {
-      var data = vnode.data, transition = vnode.transition, leaving = data[LEAVING];
+      var context = vnode.context;
+      var transition = vnode.transition;
+      var data = vnode.data, leaving = data[LEAVING];
       if (leaving) {
           leaving();
       }
       if (transition) {
           var enter = transition.enter;
           if (enter) {
-              enter.call(vnode.context, node);
+              enter.call(context, node);
           }
       }
   }
   function leaveVNode(vnode, node, done) {
-      var data = vnode.data, transition = vnode.transition, leaving = data[LEAVING];
+      var context = vnode.context;
+      var transition = vnode.transition;
+      var data = vnode.data, leaving = data[LEAVING];
       if (leaving) {
           leaving();
       }
       if (transition) {
           var leave = transition.leave;
           if (leave) {
-              leave.call(vnode.context, node, data[LEAVING] = function () {
+              leave.call(context, node, data[LEAVING] = function () {
                   if (data[LEAVING]) {
                       done();
                       data[LEAVING] = UNDEFINED$1;
@@ -9312,7 +9305,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.231";
+  Yox.version = "1.0.0-alpha.232";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
