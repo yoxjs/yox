@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.232
+ * yox.js v1.0.0-alpha.233
  * (c) 2017-2021 musicode
  * Released under the MIT License.
  */
@@ -6184,7 +6184,7 @@
               // 如果 name 是字面量，直接拼出结果
               argName = isDef(nameAttr.value)
                   ? toPrimitive(SLOT_DATA_PREFIX + nameAttr.value)
-                  : toBinary(toPrimitive(SLOT_DATA_PREFIX), '+', generateAttributeValue(nameAttr));
+                  : toBinary(toPrimitive(SLOT_DATA_PREFIX), '+', toPrecedence(generateAttributeValue(nameAttr)));
           }
           var renderSlot = toCall(RENDER_SLOT_CHILDREN, [
               argName,
@@ -8828,7 +8828,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.232";
+  Yox.version = "1.0.0-alpha.233";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
