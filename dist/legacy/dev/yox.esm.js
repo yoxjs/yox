@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.234
+ * yox.js v1.0.0-alpha.235
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -4172,22 +4172,24 @@ function compile(content) {
                         if (isElement) {
                             processElementSingleText(branchNode, onlyChild);
                         }
-                        else if (isAttribute) {
-                            processAttributeSingleText(branchNode, onlyChild);
-                        }
-                        else if (isStyle) {
-                            processStyleSingleText(branchNode, onlyChild);
-                        }
-                        else if (isDirective) {
-                            processDirectiveSingleText(branchNode, onlyChild);
+                        else if (currentElement) {
+                            if (isAttribute) {
+                                processAttributeSingleText(currentElement, branchNode, onlyChild);
+                            }
+                            else if (isStyle) {
+                                processStyleSingleText(currentElement, branchNode, onlyChild);
+                            }
+                            else if (isDirective) {
+                                processDirectiveSingleText(currentElement, branchNode, onlyChild);
+                            }
                         }
                         break;
                     case EXPRESSION:
                         if (isElement) {
                             processElementSingleExpression(branchNode, onlyChild);
                         }
-                        else if (isAttribute || isStyle || isDirective) {
-                            processAttributeSingleExpression(branchNode, onlyChild);
+                        else if (currentElement && (isAttribute || isStyle || isDirective)) {
+                            processAttributeSingleExpression(currentElement, branchNode, onlyChild);
                         }
                         break;
                 }
@@ -4242,7 +4244,7 @@ function compile(content) {
     }, processStyleEmptyChildren = function (element, style) {
         // 如果不写值，直接忽略
         replaceChild(style);
-    }, processStyleSingleText = function (style, child) {
+    }, processStyleSingleText = function (element, style, child) {
         if (child.text) {
             style.value = child.text;
             style.children = UNDEFINED$1;
@@ -4260,14 +4262,16 @@ function compile(content) {
         else {
             attr.value = getAttributeDefaultValue(element, attr.name);
         }
-    }, processAttributeSingleText = function (attr, child) {
-        attr.value = formatNativeAttributeValue(attr.name, child.text);
+    }, processAttributeSingleText = function (element, attr, child) {
+        attr.value = element.isComponent
+            ? child.text
+            : formatNativeAttributeValue(attr.name, child.text);
         attr.children = UNDEFINED$1;
-    }, processAttributeSingleExpression = function (attr, child) {
+    }, processAttributeSingleExpression = function (element, attr, child) {
         const { expr } = child;
         if (expr.type === LITERAL) {
             let value = expr.value;
-            if (attr.type === ATTRIBUTE) {
+            if (!element.isComponent && attr.type === ATTRIBUTE) {
                 value = formatNativeAttributeValue(attr.name, value);
             }
             attr.value = value;
@@ -4278,7 +4282,7 @@ function compile(content) {
         attr.children = UNDEFINED$1;
     }, processDirectiveEmptyChildren = function (element, directive) {
         directive.value = TRUE$1;
-    }, processDirectiveSingleText = function (directive, child) {
+    }, processDirectiveSingleText = function (element, directive, child) {
         let { ns } = directive, { text } = child, 
         // model="xx" model="this.x" 值只能是标识符或 Member
         isModel = ns === DIRECTIVE_MODEL, 
@@ -9270,7 +9274,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.234";
+Yox.version = "1.0.0-alpha.235";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
