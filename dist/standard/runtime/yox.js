@@ -1,6 +1,6 @@
 /**
- * yox.js v1.0.0-alpha.233
- * (c) 2017-2021 musicode
+ * yox.js v1.0.0-alpha.234
+ * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
 
@@ -34,6 +34,7 @@
   var FALSE = false;
   var NULL = null;
   var UNDEFINED = void 0;
+  var RAW_TRUE = 'true';
   var RAW_UNDEFINED = 'undefined';
   var RAW_FILTER = 'filter';
   var RAW_PARTIAL = 'partial';
@@ -1390,7 +1391,7 @@
   var MODEL = '$model';
   var EVENT$1 = '$event';
 
-  function update$7(api, vnode, oldVNode) {
+  function update$6(api, vnode, oldVNode) {
       var node = vnode.node;
       var nativeAttrs = vnode.nativeAttrs;
       var oldNativeAttrs = oldVNode && oldVNode.nativeAttrs;
@@ -1409,31 +1410,6 @@
               for (var name$1 in oldNativeAttrs) {
                   if (newValue[name$1] === UNDEFINED) {
                       api.removeAttr(node, name$1);
-                  }
-              }
-          }
-      }
-  }
-
-  function update$6(api, vnode, oldVNode) {
-      var node = vnode.node;
-      var nativeProps = vnode.nativeProps;
-      var oldNativeProps = oldVNode && oldVNode.nativeProps;
-      if (nativeProps !== oldNativeProps) {
-          if (nativeProps) {
-              var oldValue = oldNativeProps || EMPTY_OBJECT;
-              for (var name in nativeProps) {
-                  if (oldValue[name] === UNDEFINED
-                      || nativeProps[name] !== oldValue[name]) {
-                      api.setProp(node, name, nativeProps[name]);
-                  }
-              }
-          }
-          if (oldNativeProps) {
-              var newValue = nativeProps || EMPTY_OBJECT;
-              for (var name$1 in oldNativeProps) {
-                  if (newValue[name$1] === UNDEFINED) {
-                      api.removeProp(node, name$1);
                   }
               }
           }
@@ -1692,7 +1668,7 @@
       var context = vnode.context;
       var model = vnode.model;
       var lazy = vnode.lazy;
-      var nativeProps = vnode.nativeProps;
+      var nativeAttrs = vnode.nativeAttrs;
       var keypath = model.keypath;
       var value = model.value;
       var lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[EMPTY_STRING]), update, destroy;
@@ -1717,7 +1693,7 @@
           // checkbox,radio,select 监听的是 change 事件
           eventName = EVENT_CHANGE;
           if (control === inputControl) {
-              var type = nativeProps && nativeProps.type;
+              var type = nativeAttrs && nativeAttrs.type;
               if (type === 'radio') {
                   control = radioControl;
               }
@@ -1965,7 +1941,6 @@
           else if (vnode.html) {
               api.setHtml(node, vnode.html, vnode.isStyle, vnode.isOption);
           }
-          update$7(api, vnode);
           update$6(api, vnode);
           update$5(api, vnode);
           if (!vnode.isPure) {
@@ -1981,7 +1956,6 @@
           vnode.node = node;
           vnode.parentNode = oldVNode.parentNode;
           vnode.data = oldVNode.data;
-          update$7(api, vnode, oldVNode);
           update$6(api, vnode, oldVNode);
           update$5(api, vnode, oldVNode);
           if (!vnode.isPure) {
@@ -2504,7 +2478,6 @@
           isPure: vnode.isPure,
           slots: vnode.slots,
           props: vnode.props,
-          nativeProps: vnode.nativeProps,
           nativeAttrs: vnode.nativeAttrs,
           nativeStyles: vnode.nativeStyles,
           directives: vnode.directives,
@@ -2539,12 +2512,14 @@
       }
   }
 
-  function toNumber (target, defaultValue) {
-      return numeric(target)
-          ? +target
-          : defaultValue !== UNDEFINED
-              ? defaultValue
-              : 0;
+  function formatNumberNativeAttributeValue(name, value) {
+      return toString(value);
+  }
+  function formatBooleanNativeAttributeValue(name, value) {
+      // 布尔类型的属性，只有值为 true 或 属性名 才表示 true
+      return value === TRUE || value === RAW_TRUE || value === name
+          ? EMPTY_STRING
+          : UNDEFINED;
   }
 
   function render(instance, template, dependencies, data, computed, filters, globalFilters, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions) {
@@ -2558,19 +2533,14 @@
           if (vnode.children.length) {
               children[children.length] = vnode;
           }
-      }, appendAttribute = function (vnode, key, value, name) {
-          if (name) {
-              if (vnode[key]) {
-                  vnode[key][name] = value;
-              }
-              else {
-                  var map = {};
-                  map[name] = value;
-                  vnode[key] = map;
-              }
+      }, appendVNodeProperty = function (vnode, key, name, value) {
+          if (vnode[key]) {
+              vnode[key][name] = value;
           }
           else {
-              vnode[key] = value;
+              var map = {};
+              map[name] = value;
+              vnode[key] = map;
           }
       }, renderStyleString = function (value) {
           var styles = {};
@@ -2683,7 +2653,7 @@
       }, renderSpread = function (vnode, key, value) {
           if (object$1(value)) {
               for (var name in value) {
-                  appendAttribute(vnode, key, value[name], name);
+                  appendVNodeProperty(vnode, key, value[name], name);
               }
           }
       }, renderSlots = function (render) {
@@ -2881,7 +2851,7 @@
           }
           return holder;
       }, renderTemplate = function (render, scope, keypath, children, components) {
-          render(renderComposeVNode, appendAttribute, renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlots, renderSlotChildren, renderPartial, renderEach, renderRange, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString, textVNodeOperator, commentVNodeOperator, elementVNodeOperator, componentVNodeOperator, fragmentVNodeOperator, portalVNodeOperator, slotVNodeOperator, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
+          render(renderComposeVNode, renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlots, renderSlotChildren, renderPartial, renderEach, renderRange, appendVNodeProperty, formatNumberNativeAttributeValue, formatBooleanNativeAttributeValue, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString, textVNodeOperator, commentVNodeOperator, elementVNodeOperator, componentVNodeOperator, fragmentVNodeOperator, portalVNodeOperator, slotVNodeOperator, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
       };
       renderTemplate(template, rootScope, rootKeypath, children, components);
       return children[0];
@@ -2988,15 +2958,6 @@
   function createComment(text) {
       return DOCUMENT.createComment(text);
   }
-  function getProp(node, name) {
-      return node[name];
-  }
-  function setProp(node, name, value) {
-      node[name] = value;
-  }
-  function removeProp(node, name) {
-      node[name] = UNDEFINED;
-  }
   function getAttr(node, name) {
       var value = node.getAttribute(name);
       if (value != NULL) {
@@ -3004,7 +2965,12 @@
       }
   }
   function setAttr(node, name, value) {
-      node.setAttribute(name, value);
+      if (value === UNDEFINED) {
+          node.removeAttribute(name);
+      }
+      else {
+          node.setAttribute(name, value);
+      }
   }
   function removeAttr(node, name) {
       node.removeAttribute(name);
@@ -3148,9 +3114,6 @@
     createElement: createElement,
     createText: createText,
     createComment: createComment,
-    getProp: getProp,
-    setProp: setProp,
-    removeProp: removeProp,
     getAttr: getAttr,
     setAttr: setAttr,
     removeAttr: removeAttr,
@@ -3174,6 +3137,14 @@
     off: off,
     addSpecialEvent: addSpecialEvent
   });
+
+  function toNumber (target, defaultValue) {
+      return numeric(target)
+          ? +target
+          : defaultValue !== UNDEFINED
+              ? defaultValue
+              : 0;
+  }
 
   /**
    * 计算属性
@@ -4036,11 +4007,11 @@
           if (context) {
               instance.$context = context;
           }
-          setFlexibleOptions(instance, RAW_TRANSITION, transitions);
-          setFlexibleOptions(instance, RAW_COMPONENT, components);
-          setFlexibleOptions(instance, RAW_DIRECTIVE, directives);
-          setFlexibleOptions(instance, RAW_PARTIAL, partials);
-          setFlexibleOptions(instance, RAW_FILTER, filters);
+          setOptionsSmartly(instance, RAW_TRANSITION, transitions);
+          setOptionsSmartly(instance, RAW_COMPONENT, components);
+          setOptionsSmartly(instance, RAW_DIRECTIVE, directives);
+          setOptionsSmartly(instance, RAW_PARTIAL, partials);
+          setOptionsSmartly(instance, RAW_FILTER, filters);
           if (template) {
               if (watchers) {
                   observer.watch(watchers);
@@ -4113,7 +4084,9 @@
           if (string$1(name) && !directive$1) {
               return getResource(globalDirectives, name);
           }
-          setResource(globalDirectives, name, directive$1);
+          {
+              setResourceSmartly(globalDirectives, name, directive$1);
+          }
       }
   };
   /**
@@ -4124,7 +4097,9 @@
           if (string$1(name) && !transition$1) {
               return getResource(globalTransitions, name);
           }
-          setResource(globalTransitions, name, transition$1);
+          {
+              setResourceSmartly(globalTransitions, name, transition$1);
+          }
       }
   };
   /**
@@ -4135,7 +4110,9 @@
           if (string$1(name) && !component$1) {
               return getResource(globalComponents, name);
           }
-          setResource(globalComponents, name, component$1);
+          {
+              setResourceSmartly(globalComponents, name, component$1);
+          }
       }
   };
   /**
@@ -4146,7 +4123,11 @@
           if (string$1(name) && !partial$1) {
               return getResource(globalPartials, name);
           }
-          setResource(globalPartials, name, partial$1, Yox.compile);
+          {
+              setResourceSmartly(globalPartials, name, partial$1, {
+                  format: Yox.compile,
+              });
+          }
       }
   };
   /**
@@ -4157,7 +4138,20 @@
           if (string$1(name) && !filter$1) {
               return getResource(globalFilters, name);
           }
-          setResource(globalFilters, name, filter$1);
+          {
+              setResourceSmartly(globalFilters, name, filter$1);
+          }
+      }
+  };
+  /**
+   * 注册全局方法
+   */
+  Yox.method = function (name, method$1) {
+      if (string$1(name) && !method$1) {
+          return Yox.prototype[name];
+      }
+      {
+          setResourceSmartly(Yox.prototype, name, method$1);
       }
   };
   /**
@@ -4182,14 +4176,14 @@
    * 监听事件，支持链式调用
    */
   Yox.prototype.on = function (type, listener) {
-      addEvents(this, type, listener);
+      addEventSmartly(this, type, listener);
       return this;
   };
   /**
    * 监听一次事件，支持链式调用
    */
   Yox.prototype.once = function (type, listener) {
-      addEvents(this, type, listener, TRUE);
+      addEventSmartly(this, type, listener, TRUE);
       return this;
   };
   /**
@@ -4346,7 +4340,9 @@
           if (string$1(name) && !directive$1) {
               return getResource($directives, name, Yox.directive);
           }
-          setResource($directives || (instance.$directives = {}), name, directive$1);
+          {
+              setResourceSmartly($directives || (instance.$directives = {}), name, directive$1);
+          }
       }
   };
   /**
@@ -4359,7 +4355,9 @@
           if (string$1(name) && !transition$1) {
               return getResource($transitions, name, Yox.transition);
           }
-          setResource($transitions || (instance.$transitions = {}), name, transition$1);
+          {
+              setResourceSmartly($transitions || (instance.$transitions = {}), name, transition$1);
+          }
       }
   };
   /**
@@ -4372,7 +4370,9 @@
           if (string$1(name) && !component$1) {
               return getResource($components, name, Yox.component);
           }
-          setResource($components || (instance.$components = {}), name, component$1);
+          {
+              setResourceSmartly($components || (instance.$components = {}), name, component$1);
+          }
       }
   };
   /**
@@ -4385,7 +4385,11 @@
           if (string$1(name) && !partial$1) {
               return getResource($partials, name, Yox.partial);
           }
-          setResource($partials || (instance.$partials = {}), name, partial$1, Yox.compile);
+          {
+              setResourceSmartly($partials || (instance.$partials = {}), name, partial$1, {
+                  format: Yox.compile
+              });
+          }
       }
   };
   /**
@@ -4398,7 +4402,9 @@
           if (string$1(name) && !filter$1) {
               return getResource($filters, name, Yox.filter);
           }
-          setResource($filters || (instance.$filters = {}), name, filter$1);
+          {
+              setResourceSmartly($filters || (instance.$filters = {}), name, filter$1);
+          }
       }
   };
   /**
@@ -4636,7 +4642,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.233";
+  Yox.version = "1.0.0-alpha.234";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
@@ -4653,37 +4659,6 @@
    * 外部可配置的对象
    */
   Yox.config = PUBLIC_CONFIG;
-  function setFlexibleOptions(instance, key, value) {
-      if (func(value)) {
-          instance[key](value.call(instance));
-      }
-      else if (object$1(value)) {
-          instance[key](value);
-      }
-  }
-  function addEvent(instance, type, listener, once) {
-      var $emitter = instance.$emitter;
-      var filter = $emitter.toFilter(type, listener);
-      var options = {
-          listener: filter.listener,
-          ns: filter.ns,
-          ctx: instance,
-      };
-      if (once) {
-          options.max = 1;
-      }
-      $emitter.on(filter.type, options);
-  }
-  function addEvents(instance, type, listener, once) {
-      if (string$1(type)) {
-          addEvent(instance, type, listener, once);
-      }
-      else {
-          each(type, function (value, key) {
-              addEvent(instance, key, value, once);
-          });
-      }
-  }
   function loadComponent(registry, name, callback) {
       if (registry && registry[name]) {
           var component = registry[name];
@@ -4720,13 +4695,50 @@
           return lookup(name);
       }
   }
-  function setResource(registry, name, value, formatValue) {
+  function setResourceItem(registry, name, value, options) {
+      if (options && options.format) {
+          value = options.format(value);
+      }
+      registry[name] = value;
+  }
+  function setResourceSmartly(registry, name, value, options) {
       if (string$1(name)) {
-          registry[name] = formatValue ? formatValue(value) : value;
+          setResourceItem(registry, name, value, options);
       }
       else {
           each(name, function (value, key) {
-              registry[key] = formatValue ? formatValue(value) : value;
+              setResourceItem(registry, key, value, options);
+          });
+      }
+  }
+  function setOptionsSmartly(instance, key, value) {
+      if (func(value)) {
+          instance[key](value.call(instance));
+      }
+      else if (object$1(value)) {
+          instance[key](value);
+      }
+  }
+  function addEvent(instance, type, listener, once) {
+      var $emitter = instance.$emitter;
+      var filter = $emitter.toFilter(type, listener);
+      var options = {
+          listener: filter.listener,
+          ns: filter.ns,
+          ctx: instance,
+      };
+      if (once) {
+          options.max = 1;
+      }
+      $emitter.on(filter.type, options);
+  }
+  function addEventSmartly(instance, type, listener, once) {
+      if (string$1(type)) {
+          addEvent(instance, type, listener, once);
+      }
+      else {
+          each(type, function (value, key) {
+              addEvent(instance, key, value, once);
           });
       }
   }

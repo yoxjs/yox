@@ -267,7 +267,25 @@ export default class Yox implements YoxInterface {
       if (is.string(name) && !directive) {
         return getResource(globalDirectives, name as string)
       }
-      setResource(globalDirectives, name, directive)
+      if (process.env.NODE_ENV === 'development') {
+        setResourceSmartly(
+          globalDirectives,
+          name,
+          directive,
+          {
+            conflict(name) {
+              logger.warn(`The global directive "${name}" already exists.`)
+            }
+          }
+        )
+      }
+      else {
+        setResourceSmartly(
+          globalDirectives,
+          name,
+          directive,
+        )
+      }
     }
   }
 
@@ -282,7 +300,25 @@ export default class Yox implements YoxInterface {
       if (is.string(name) && !transition) {
         return getResource(globalTransitions, name as string)
       }
-      setResource(globalTransitions, name, transition)
+      if (process.env.NODE_ENV === 'development') {
+        setResourceSmartly(
+          globalTransitions,
+          name,
+          transition,
+          {
+            conflict(name) {
+              logger.warn(`The global transition "${name}" already exists.`)
+            }
+          }
+        )
+      }
+      else {
+        setResourceSmartly(
+          globalTransitions,
+          name,
+          transition
+        )
+      }
     }
   }
 
@@ -297,7 +333,25 @@ export default class Yox implements YoxInterface {
       if (is.string(name) && !component) {
         return getResource(globalComponents, name as string)
       }
-      setResource(globalComponents, name, component)
+      if (process.env.NODE_ENV === 'development') {
+        setResourceSmartly(
+          globalComponents,
+          name,
+          component,
+          {
+            conflict(name) {
+              logger.warn(`The global component "${name}" already exists.`)
+            }
+          }
+        )
+      }
+      else {
+        setResourceSmartly(
+          globalComponents,
+          name,
+          component
+        )
+      }
     }
   }
 
@@ -312,7 +366,29 @@ export default class Yox implements YoxInterface {
       if (is.string(name) && !partial) {
         return getResource(globalPartials, name as string)
       }
-      setResource(globalPartials, name, partial, Yox.compile)
+      if (process.env.NODE_ENV === 'development') {
+        setResourceSmartly(
+          globalPartials,
+          name,
+          partial,
+          {
+            format: Yox.compile,
+            conflict(name) {
+              logger.warn(`The global partial "${name}" already exists.`)
+            }
+          }
+        )
+      }
+      else {
+        setResourceSmartly(
+          globalPartials,
+          name,
+          partial,
+          {
+            format: Yox.compile,
+          }
+        )
+      }
     }
   }
 
@@ -327,7 +403,56 @@ export default class Yox implements YoxInterface {
       if (is.string(name) && !filter) {
         return getResource(globalFilters, name as string)
       }
-      setResource(globalFilters, name, filter)
+      if (process.env.NODE_ENV === 'development') {
+        setResourceSmartly(
+          globalFilters,
+          name,
+          filter,
+          {
+            conflict(name) {
+              logger.warn(`The global filter "${name}" already exists.`)
+            }
+          }
+        )
+      }
+      else {
+        setResourceSmartly(
+          globalFilters,
+          name,
+          filter
+        )
+      }
+    }
+  }
+
+  /**
+   * 注册全局方法
+   */
+   public static method(
+    name: string | Record<string, Function>,
+    method?: Function
+  ): Filter | void {
+    if (is.string(name) && !method) {
+      return Yox.prototype[name as string]
+    }
+    if (process.env.NODE_ENV === 'development') {
+      setResourceSmartly(
+        Yox.prototype,
+        name,
+        method,
+        {
+          conflict(name) {
+            logger.warn(`The global method "${name}" already exists.`)
+          }
+        }
+      )
+    }
+    else {
+      setResourceSmartly(
+        Yox.prototype,
+        name,
+        method
+      )
     }
   }
 
@@ -556,11 +681,11 @@ export default class Yox implements YoxInterface {
         instance.$context = context
       }
 
-      setFlexibleOptions(instance, constant.RAW_TRANSITION, transitions)
-      setFlexibleOptions(instance, constant.RAW_COMPONENT, components)
-      setFlexibleOptions(instance, constant.RAW_DIRECTIVE, directives)
-      setFlexibleOptions(instance, constant.RAW_PARTIAL, partials)
-      setFlexibleOptions(instance, constant.RAW_FILTER, filters)
+      setOptionsSmartly(instance, constant.RAW_TRANSITION, transitions)
+      setOptionsSmartly(instance, constant.RAW_COMPONENT, components)
+      setOptionsSmartly(instance, constant.RAW_DIRECTIVE, directives)
+      setOptionsSmartly(instance, constant.RAW_PARTIAL, partials)
+      setOptionsSmartly(instance, constant.RAW_FILTER, filters)
 
       if (template) {
 
@@ -668,7 +793,7 @@ export default class Yox implements YoxInterface {
     type: string | Record<string, ThisListener<this> | ThisListenerOptions>,
     listener?: ThisListener<this> | ThisListenerOptions
   ): this {
-    addEvents(this, type, listener)
+    addEventSmartly(this, type, listener)
     return this
   }
 
@@ -679,7 +804,7 @@ export default class Yox implements YoxInterface {
     type: string | Record<string, ThisListener<this> | ThisListenerOptions>,
     listener?: ThisListener<this> | ThisListenerOptions
   ): this {
-    addEvents(this, type, listener, constant.TRUE)
+    addEventSmartly(this, type, listener, constant.TRUE)
     return this
   }
 
@@ -904,11 +1029,25 @@ export default class Yox implements YoxInterface {
       if (is.string(name) && !directive) {
         return getResource($directives, name as string, Yox.directive)
       }
-      setResource(
-        $directives || (instance.$directives = {}),
-        name,
-        directive
-      )
+      if (process.env.NODE_ENV === 'development') {
+        setResourceSmartly(
+          $directives || (instance.$directives = {}),
+          name,
+          directive,
+          {
+            conflict(name) {
+              logger.warn(`The instance directive "${name}" already exists.`)
+            }
+          }
+        )
+      }
+      else {
+        setResourceSmartly(
+          $directives || (instance.$directives = {}),
+          name,
+          directive
+        )
+      }
     }
   }
 
@@ -924,11 +1063,25 @@ export default class Yox implements YoxInterface {
       if (is.string(name) && !transition) {
         return getResource($transitions, name as string, Yox.transition)
       }
-      setResource(
-        $transitions || (instance.$transitions = {}),
-        name,
-        transition
-      )
+      if (process.env.NODE_ENV === 'development') {
+        setResourceSmartly(
+          $transitions || (instance.$transitions = {}),
+          name,
+          transition,
+          {
+            conflict(name) {
+              logger.warn(`The instance transition "${name}" already exists.`)
+            }
+          }
+        )
+      }
+      else {
+        setResourceSmartly(
+          $transitions || (instance.$transitions = {}),
+          name,
+          transition
+        )
+      }
     }
   }
 
@@ -944,11 +1097,25 @@ export default class Yox implements YoxInterface {
       if (is.string(name) && !component) {
         return getResource($components, name as string, Yox.component)
       }
-      setResource(
-        $components || (instance.$components = {}),
-        name,
-        component
-      )
+      if (process.env.NODE_ENV === 'development') {
+        setResourceSmartly(
+          $components || (instance.$components = {}),
+          name,
+          component,
+          {
+            conflict(name) {
+              logger.warn(`The instance component "${name}" already exists.`)
+            }
+          }
+        )
+      }
+      else {
+        setResourceSmartly(
+          $components || (instance.$components = {}),
+          name,
+          component
+        )
+      }
     }
   }
 
@@ -964,12 +1131,29 @@ export default class Yox implements YoxInterface {
       if (is.string(name) && !partial) {
         return getResource($partials, name as string, Yox.partial)
       }
-      setResource(
-        $partials || (instance.$partials = {}),
-        name,
-        partial,
-        Yox.compile
-      )
+      if (process.env.NODE_ENV === 'development') {
+        setResourceSmartly(
+          $partials || (instance.$partials = {}),
+          name,
+          partial,
+          {
+            format: Yox.compile,
+            conflict(name) {
+              logger.warn(`The instance partial "${name}" already exists.`)
+            }
+          }
+        )
+      }
+      else {
+        setResourceSmartly(
+          $partials || (instance.$partials = {}),
+          name,
+          partial,
+          {
+            format: Yox.compile
+          }
+        )
+      }
     }
   }
 
@@ -985,11 +1169,25 @@ export default class Yox implements YoxInterface {
       if (is.string(name) && !filter) {
         return getResource($filters, name as string, Yox.filter)
       }
-      setResource(
-        $filters || (instance.$filters = {}),
-        name,
-        filter
-      )
+      if (process.env.NODE_ENV === 'development') {
+        setResourceSmartly(
+          $filters || (instance.$filters = {}),
+          name,
+          filter,
+          {
+            conflict(name) {
+              logger.warn(`The instance filter "${name}" already exists.`)
+            }
+          }
+        )
+      }
+      else {
+        setResourceSmartly(
+          $filters || (instance.$filters = {}),
+          name,
+          filter
+        )
+      }
     }
   }
 
@@ -1380,54 +1578,6 @@ function checkProp(componentName: string | undefined, key: string, value: any, r
 
 }
 
-function setFlexibleOptions(instance: YoxInterface, key: string, value: Function | Data | void) {
-  if (is.func(value)) {
-    instance[key](
-      (value as Function).call(instance)
-    )
-  }
-  else if (is.object(value)) {
-    instance[key](value)
-  }
-}
-
-function addEvent(instance: Yox, type: string, listener?: Listener | ListenerOptions, once?: true) {
-
-  const { $emitter } = instance, filter = $emitter.toFilter(type, listener)
-
-  const options: EmitterOptions = {
-    listener: filter.listener as Function,
-    ns: filter.ns,
-    ctx: instance,
-  }
-
-  if (once) {
-    options.max = 1
-  }
-
-  $emitter.on(filter.type as string, options)
-
-}
-
-function addEvents(
-  instance: Yox,
-  type: string | Record<string, Listener | ListenerOptions>,
-  listener?: Listener | ListenerOptions,
-  once?: true
-) {
-  if (is.string(type)) {
-    addEvent(instance, type as string, listener, once)
-  }
-  else {
-    object.each(
-      type as Record<string, Listener | ListenerOptions>,
-      function (value: Listener | ListenerOptions, key: string) {
-        addEvent(instance, key, value, once)
-      }
-    )
-  }
-}
-
 function loadComponent(
   registry: Record<string, Component | ComponentCallback[]> | void,
   name: string,
@@ -1489,15 +1639,85 @@ function getResource(registry: Data | void, name: string, lookup?: Function) {
   }
 }
 
-function setResource(registry: Data, name: string | Data, value?: any, formatValue?: (value: any) => any) {
+type ResourceOptions = {
+  format?: (value: any) => any
+  conflict?: (name: string) => void | void,
+}
+
+function setResourceItem(registry: Data, name: string, value: any, options?: ResourceOptions) {
+
+  if (process.env.NODE_ENV === 'development') {
+    if (name in registry && options && options.conflict) {
+      options.conflict(name)
+    }
+  }
+
+  if (options && options.format) {
+    value = options.format(value)
+  }
+
+  registry[name] = value
+
+}
+
+function setResourceSmartly(registry: Data, name: string | Data, value?: any, options?: ResourceOptions) {
   if (is.string(name)) {
-    registry[name as string] = formatValue ? formatValue(value) : value
+    setResourceItem(registry, name as string, value, options)
   }
   else {
     object.each(
       name as Data,
       function (value, key) {
-        registry[key] = formatValue ? formatValue(value) : value
+        setResourceItem(registry, key, value, options)
+      }
+    )
+  }
+}
+
+function setOptionsSmartly(instance: YoxInterface, key: string, value: Function | Data | void) {
+  if (is.func(value)) {
+    instance[key](
+      (value as Function).call(instance)
+    )
+  }
+  else if (is.object(value)) {
+    instance[key](value)
+  }
+}
+
+
+function addEvent(instance: Yox, type: string, listener?: Listener | ListenerOptions, once?: true) {
+
+  const { $emitter } = instance, filter = $emitter.toFilter(type, listener)
+
+  const options: EmitterOptions = {
+    listener: filter.listener as Function,
+    ns: filter.ns,
+    ctx: instance,
+  }
+
+  if (once) {
+    options.max = 1
+  }
+
+  $emitter.on(filter.type as string, options)
+
+}
+
+function addEventSmartly(
+  instance: Yox,
+  type: string | Record<string, Listener | ListenerOptions>,
+  listener?: Listener | ListenerOptions,
+  once?: true
+) {
+  if (is.string(type)) {
+    addEvent(instance, type as string, listener, once)
+  }
+  else {
+    object.each(
+      type as Record<string, Listener | ListenerOptions>,
+      function (value: Listener | ListenerOptions, key: string) {
+        addEvent(instance, key, value, once)
       }
     )
   }

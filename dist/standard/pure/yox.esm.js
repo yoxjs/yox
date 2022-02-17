@@ -1,6 +1,6 @@
 /**
- * yox.js v1.0.0-alpha.233
- * (c) 2017-2021 musicode
+ * yox.js v1.0.0-alpha.234
+ * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
 
@@ -2130,6 +2130,17 @@ class Yox {
     static filter(name, filter) {
     }
     /**
+     * 注册全局方法
+     */
+    static method(name, method) {
+        if (string$1(name) && !method) {
+            return Yox.prototype[name];
+        }
+        {
+            setResourceSmartly(Yox.prototype, name, method);
+        }
+    }
+    /**
      * 取值
      */
     get(keypath, defaultValue) {
@@ -2150,14 +2161,14 @@ class Yox {
      * 监听事件，支持链式调用
      */
     on(type, listener) {
-        addEvents(this, type, listener);
+        addEventSmartly(this, type, listener);
         return this;
     }
     /**
      * 监听一次事件，支持链式调用
      */
     once(type, listener) {
-        addEvents(this, type, listener, TRUE);
+        addEventSmartly(this, type, listener, TRUE);
         return this;
     }
     /**
@@ -2422,7 +2433,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.233";
+Yox.version = "1.0.0-alpha.234";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
@@ -2437,6 +2448,22 @@ Yox.Emitter = Emitter;
  * 外部可配置的对象
  */
 Yox.config = PUBLIC_CONFIG;
+function setResourceItem(registry, name, value, options) {
+    if (options && options.format) {
+        value = options.format(value);
+    }
+    registry[name] = value;
+}
+function setResourceSmartly(registry, name, value, options) {
+    if (string$1(name)) {
+        setResourceItem(registry, name, value, options);
+    }
+    else {
+        each(name, function (value, key) {
+            setResourceItem(registry, key, value, options);
+        });
+    }
+}
 function addEvent(instance, type, listener, once) {
     const { $emitter } = instance, filter = $emitter.toFilter(type, listener);
     const options = {
@@ -2449,7 +2476,7 @@ function addEvent(instance, type, listener, once) {
     }
     $emitter.on(filter.type, options);
 }
-function addEvents(instance, type, listener, once) {
+function addEventSmartly(instance, type, listener, once) {
     if (string$1(type)) {
         addEvent(instance, type, listener, once);
     }

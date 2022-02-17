@@ -89,9 +89,6 @@ export interface DomApi {
 	createElement(tag: string, isSvg?: boolean): Element;
 	createText(text: string): Text;
 	createComment(text: string): Comment;
-	getProp(node: HTMLElement, name: string): string | number | boolean | void;
-	setProp(node: HTMLElement, name: string, value: string | number | boolean): void;
-	removeProp(node: HTMLElement, name: string): void;
 	getAttr(node: HTMLElement, name: string): string | void;
 	setAttr(node: HTMLElement, name: string, value: string): void;
 	removeAttr(node: HTMLElement, name: string): void;
@@ -246,7 +243,6 @@ export interface VNode {
 	readonly isPure?: boolean;
 	readonly slots?: Slots;
 	readonly props?: Data;
-	readonly nativeProps?: Data;
 	readonly nativeAttrs?: Record<string, string>;
 	readonly nativeStyles?: Data;
 	readonly directives?: Record<string, Directive>;
@@ -747,6 +743,10 @@ export default class Yox implements YoxInterface {
 	 * 注册全局过滤器
 	 */
 	static filter(name: string | Record<string, Filter>, filter?: Filter): Filter | void;
+	/**
+	 * 注册全局方法
+	 */
+	static method(name: string | Record<string, Function>, method?: Function): Filter | void;
 	constructor(options?: ComponentOptions);
 	/**
 	 * 取值

@@ -1,6 +1,6 @@
 /**
- * yox.js v1.0.0-alpha.233
- * (c) 2017-2021 musicode
+ * yox.js v1.0.0-alpha.234
+ * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
 
@@ -28,6 +28,7 @@ const TRUE = true;
 const FALSE = false;
 const NULL = null;
 const UNDEFINED = void 0;
+const RAW_TRUE = 'true';
 const RAW_UNDEFINED = 'undefined';
 const RAW_FILTER = 'filter';
 const RAW_PARTIAL = 'partial';
@@ -1389,7 +1390,7 @@ const LEAVING = '$leaving';
 const MODEL = '$model';
 const EVENT$1 = '$event';
 
-function update$7(api, vnode, oldVNode) {
+function update$6(api, vnode, oldVNode) {
     const { node, nativeAttrs } = vnode, oldNativeAttrs = oldVNode && oldVNode.nativeAttrs;
     if (nativeAttrs !== oldNativeAttrs) {
         if (nativeAttrs) {
@@ -1406,29 +1407,6 @@ function update$7(api, vnode, oldVNode) {
             for (let name in oldNativeAttrs) {
                 if (newValue[name] === UNDEFINED) {
                     api.removeAttr(node, name);
-                }
-            }
-        }
-    }
-}
-
-function update$6(api, vnode, oldVNode) {
-    const { node, nativeProps } = vnode, oldNativeProps = oldVNode && oldVNode.nativeProps;
-    if (nativeProps !== oldNativeProps) {
-        if (nativeProps) {
-            const oldValue = oldNativeProps || EMPTY_OBJECT;
-            for (let name in nativeProps) {
-                if (oldValue[name] === UNDEFINED
-                    || nativeProps[name] !== oldValue[name]) {
-                    api.setProp(node, name, nativeProps[name]);
-                }
-            }
-        }
-        if (oldNativeProps) {
-            const newValue = nativeProps || EMPTY_OBJECT;
-            for (let name in oldNativeProps) {
-                if (newValue[name] === UNDEFINED) {
-                    api.removeProp(node, name);
                 }
             }
         }
@@ -1679,7 +1657,7 @@ const inputControl = {
     name: 'value'
 };
 function addModel(api, element, component, vnode) {
-    let { context, model, lazy, nativeProps } = vnode, { keypath, value } = model, lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[EMPTY_STRING]), update, destroy;
+    let { context, model, lazy, nativeAttrs } = vnode, { keypath, value } = model, lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[EMPTY_STRING]), update, destroy;
     if (component) {
         let viewBinding = component.$model, viewSyncing = debounceIfNeeded(function (newValue) {
             context.set(keypath, newValue);
@@ -1701,7 +1679,7 @@ function addModel(api, element, component, vnode) {
         // checkbox,radio,select 监听的是 change 事件
         eventName = EVENT_CHANGE;
         if (control === inputControl) {
-            const type = nativeProps && nativeProps.type;
+            const type = nativeAttrs && nativeAttrs.type;
             if (type === 'radio') {
                 control = radioControl;
             }
@@ -1941,7 +1919,6 @@ const elementVNodeOperator = {
         else if (vnode.html) {
             api.setHtml(node, vnode.html, vnode.isStyle, vnode.isOption);
         }
-        update$7(api, vnode);
         update$6(api, vnode);
         update$5(api, vnode);
         if (!vnode.isPure) {
@@ -1957,7 +1934,6 @@ const elementVNodeOperator = {
         vnode.node = node;
         vnode.parentNode = oldVNode.parentNode;
         vnode.data = oldVNode.data;
-        update$7(api, vnode, oldVNode);
         update$6(api, vnode, oldVNode);
         update$5(api, vnode, oldVNode);
         if (!vnode.isPure) {
@@ -2471,7 +2447,6 @@ function clone(vnode) {
         isPure: vnode.isPure,
         slots: vnode.slots,
         props: vnode.props,
-        nativeProps: vnode.nativeProps,
         nativeAttrs: vnode.nativeAttrs,
         nativeStyles: vnode.nativeStyles,
         directives: vnode.directives,
@@ -2506,12 +2481,14 @@ function parseStyleString(value, callback) {
     }
 }
 
-function toNumber (target, defaultValue) {
-    return numeric(target)
-        ? +target
-        : defaultValue !== UNDEFINED
-            ? defaultValue
-            : 0;
+function formatNumberNativeAttributeValue(name, value) {
+    return toString(value);
+}
+function formatBooleanNativeAttributeValue(name, value) {
+    // 布尔类型的属性，只有值为 true 或 属性名 才表示 true
+    return value === TRUE || value === RAW_TRUE || value === name
+        ? EMPTY_STRING
+        : UNDEFINED;
 }
 
 function render(instance, template, dependencies, data, computed, filters, globalFilters, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions) {
@@ -2525,19 +2502,14 @@ function render(instance, template, dependencies, data, computed, filters, globa
         if (vnode.children.length) {
             children[children.length] = vnode;
         }
-    }, appendAttribute = function (vnode, key, value, name) {
-        if (name) {
-            if (vnode[key]) {
-                vnode[key][name] = value;
-            }
-            else {
-                const map = {};
-                map[name] = value;
-                vnode[key] = map;
-            }
+    }, appendVNodeProperty = function (vnode, key, name, value) {
+        if (vnode[key]) {
+            vnode[key][name] = value;
         }
         else {
-            vnode[key] = value;
+            const map = {};
+            map[name] = value;
+            vnode[key] = map;
         }
     }, renderStyleString = function (value) {
         const styles = {};
@@ -2650,7 +2622,7 @@ function render(instance, template, dependencies, data, computed, filters, globa
     }, renderSpread = function (vnode, key, value) {
         if (object$1(value)) {
             for (let name in value) {
-                appendAttribute(vnode, key, value[name], name);
+                appendVNodeProperty(vnode, key, value[name], name);
             }
         }
     }, renderSlots = function (render) {
@@ -2826,7 +2798,7 @@ function render(instance, template, dependencies, data, computed, filters, globa
         }
         return holder;
     }, renderTemplate = function (render, scope, keypath, children, components) {
-        render(renderComposeVNode, appendAttribute, renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlots, renderSlotChildren, renderPartial, renderEach, renderRange, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString, textVNodeOperator, commentVNodeOperator, elementVNodeOperator, componentVNodeOperator, fragmentVNodeOperator, portalVNodeOperator, slotVNodeOperator, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
+        render(renderComposeVNode, renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlots, renderSlotChildren, renderPartial, renderEach, renderRange, appendVNodeProperty, formatNumberNativeAttributeValue, formatBooleanNativeAttributeValue, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString, textVNodeOperator, commentVNodeOperator, elementVNodeOperator, componentVNodeOperator, fragmentVNodeOperator, portalVNodeOperator, slotVNodeOperator, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
     };
     renderTemplate(template, rootScope, rootKeypath, children, components);
     return children[0];
@@ -2933,15 +2905,6 @@ function createText(text) {
 function createComment(text) {
     return DOCUMENT.createComment(text);
 }
-function getProp(node, name) {
-    return node[name];
-}
-function setProp(node, name, value) {
-    node[name] = value;
-}
-function removeProp(node, name) {
-    node[name] = UNDEFINED;
-}
 function getAttr(node, name) {
     const value = node.getAttribute(name);
     if (value != NULL) {
@@ -2949,7 +2912,12 @@ function getAttr(node, name) {
     }
 }
 function setAttr(node, name, value) {
-    node.setAttribute(name, value);
+    if (value === UNDEFINED) {
+        node.removeAttribute(name);
+    }
+    else {
+        node.setAttribute(name, value);
+    }
 }
 function removeAttr(node, name) {
     node.removeAttribute(name);
@@ -3093,9 +3061,6 @@ var domApi = /*#__PURE__*/Object.freeze({
   createElement: createElement,
   createText: createText,
   createComment: createComment,
-  getProp: getProp,
-  setProp: setProp,
-  removeProp: removeProp,
   getAttr: getAttr,
   setAttr: setAttr,
   removeAttr: removeAttr,
@@ -3119,6 +3084,14 @@ var domApi = /*#__PURE__*/Object.freeze({
   off: off,
   addSpecialEvent: addSpecialEvent
 });
+
+function toNumber (target, defaultValue) {
+    return numeric(target)
+        ? +target
+        : defaultValue !== UNDEFINED
+            ? defaultValue
+            : 0;
+}
 
 /**
  * 计算属性
@@ -3952,11 +3925,11 @@ class Yox {
             if (context) {
                 instance.$context = context;
             }
-            setFlexibleOptions(instance, RAW_TRANSITION, transitions);
-            setFlexibleOptions(instance, RAW_COMPONENT, components);
-            setFlexibleOptions(instance, RAW_DIRECTIVE, directives);
-            setFlexibleOptions(instance, RAW_PARTIAL, partials);
-            setFlexibleOptions(instance, RAW_FILTER, filters);
+            setOptionsSmartly(instance, RAW_TRANSITION, transitions);
+            setOptionsSmartly(instance, RAW_COMPONENT, components);
+            setOptionsSmartly(instance, RAW_DIRECTIVE, directives);
+            setOptionsSmartly(instance, RAW_PARTIAL, partials);
+            setOptionsSmartly(instance, RAW_FILTER, filters);
             if (template) {
                 if (watchers) {
                     observer.watch(watchers);
@@ -4029,7 +4002,9 @@ class Yox {
             if (string$1(name) && !directive) {
                 return getResource(globalDirectives, name);
             }
-            setResource(globalDirectives, name, directive);
+            {
+                setResourceSmartly(globalDirectives, name, directive);
+            }
         }
     }
     /**
@@ -4040,7 +4015,9 @@ class Yox {
             if (string$1(name) && !transition) {
                 return getResource(globalTransitions, name);
             }
-            setResource(globalTransitions, name, transition);
+            {
+                setResourceSmartly(globalTransitions, name, transition);
+            }
         }
     }
     /**
@@ -4051,7 +4028,9 @@ class Yox {
             if (string$1(name) && !component) {
                 return getResource(globalComponents, name);
             }
-            setResource(globalComponents, name, component);
+            {
+                setResourceSmartly(globalComponents, name, component);
+            }
         }
     }
     /**
@@ -4062,7 +4041,11 @@ class Yox {
             if (string$1(name) && !partial) {
                 return getResource(globalPartials, name);
             }
-            setResource(globalPartials, name, partial, Yox.compile);
+            {
+                setResourceSmartly(globalPartials, name, partial, {
+                    format: Yox.compile,
+                });
+            }
         }
     }
     /**
@@ -4073,7 +4056,20 @@ class Yox {
             if (string$1(name) && !filter) {
                 return getResource(globalFilters, name);
             }
-            setResource(globalFilters, name, filter);
+            {
+                setResourceSmartly(globalFilters, name, filter);
+            }
+        }
+    }
+    /**
+     * 注册全局方法
+     */
+    static method(name, method) {
+        if (string$1(name) && !method) {
+            return Yox.prototype[name];
+        }
+        {
+            setResourceSmartly(Yox.prototype, name, method);
         }
     }
     /**
@@ -4097,14 +4093,14 @@ class Yox {
      * 监听事件，支持链式调用
      */
     on(type, listener) {
-        addEvents(this, type, listener);
+        addEventSmartly(this, type, listener);
         return this;
     }
     /**
      * 监听一次事件，支持链式调用
      */
     once(type, listener) {
-        addEvents(this, type, listener, TRUE);
+        addEventSmartly(this, type, listener, TRUE);
         return this;
     }
     /**
@@ -4255,7 +4251,9 @@ class Yox {
             if (string$1(name) && !directive) {
                 return getResource($directives, name, Yox.directive);
             }
-            setResource($directives || (instance.$directives = {}), name, directive);
+            {
+                setResourceSmartly($directives || (instance.$directives = {}), name, directive);
+            }
         }
     }
     /**
@@ -4267,7 +4265,9 @@ class Yox {
             if (string$1(name) && !transition) {
                 return getResource($transitions, name, Yox.transition);
             }
-            setResource($transitions || (instance.$transitions = {}), name, transition);
+            {
+                setResourceSmartly($transitions || (instance.$transitions = {}), name, transition);
+            }
         }
     }
     /**
@@ -4279,7 +4279,9 @@ class Yox {
             if (string$1(name) && !component) {
                 return getResource($components, name, Yox.component);
             }
-            setResource($components || (instance.$components = {}), name, component);
+            {
+                setResourceSmartly($components || (instance.$components = {}), name, component);
+            }
         }
     }
     /**
@@ -4291,7 +4293,11 @@ class Yox {
             if (string$1(name) && !partial) {
                 return getResource($partials, name, Yox.partial);
             }
-            setResource($partials || (instance.$partials = {}), name, partial, Yox.compile);
+            {
+                setResourceSmartly($partials || (instance.$partials = {}), name, partial, {
+                    format: Yox.compile
+                });
+            }
         }
     }
     /**
@@ -4303,7 +4309,9 @@ class Yox {
             if (string$1(name) && !filter) {
                 return getResource($filters, name, Yox.filter);
             }
-            setResource($filters || (instance.$filters = {}), name, filter);
+            {
+                setResourceSmartly($filters || (instance.$filters = {}), name, filter);
+            }
         }
     }
     /**
@@ -4529,7 +4537,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.233";
+Yox.version = "1.0.0-alpha.234";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
@@ -4546,36 +4554,6 @@ Yox.lifeCycle = lifeCycle;
  * 外部可配置的对象
  */
 Yox.config = PUBLIC_CONFIG;
-function setFlexibleOptions(instance, key, value) {
-    if (func(value)) {
-        instance[key](value.call(instance));
-    }
-    else if (object$1(value)) {
-        instance[key](value);
-    }
-}
-function addEvent(instance, type, listener, once) {
-    const { $emitter } = instance, filter = $emitter.toFilter(type, listener);
-    const options = {
-        listener: filter.listener,
-        ns: filter.ns,
-        ctx: instance,
-    };
-    if (once) {
-        options.max = 1;
-    }
-    $emitter.on(filter.type, options);
-}
-function addEvents(instance, type, listener, once) {
-    if (string$1(type)) {
-        addEvent(instance, type, listener, once);
-    }
-    else {
-        each(type, function (value, key) {
-            addEvent(instance, key, value, once);
-        });
-    }
-}
 function loadComponent(registry, name, callback) {
     if (registry && registry[name]) {
         const component = registry[name];
@@ -4612,13 +4590,49 @@ function getResource(registry, name, lookup) {
         return lookup(name);
     }
 }
-function setResource(registry, name, value, formatValue) {
+function setResourceItem(registry, name, value, options) {
+    if (options && options.format) {
+        value = options.format(value);
+    }
+    registry[name] = value;
+}
+function setResourceSmartly(registry, name, value, options) {
     if (string$1(name)) {
-        registry[name] = formatValue ? formatValue(value) : value;
+        setResourceItem(registry, name, value, options);
     }
     else {
         each(name, function (value, key) {
-            registry[key] = formatValue ? formatValue(value) : value;
+            setResourceItem(registry, key, value, options);
+        });
+    }
+}
+function setOptionsSmartly(instance, key, value) {
+    if (func(value)) {
+        instance[key](value.call(instance));
+    }
+    else if (object$1(value)) {
+        instance[key](value);
+    }
+}
+function addEvent(instance, type, listener, once) {
+    const { $emitter } = instance, filter = $emitter.toFilter(type, listener);
+    const options = {
+        listener: filter.listener,
+        ns: filter.ns,
+        ctx: instance,
+    };
+    if (once) {
+        options.max = 1;
+    }
+    $emitter.on(filter.type, options);
+}
+function addEventSmartly(instance, type, listener, once) {
+    if (string$1(type)) {
+        addEvent(instance, type, listener, once);
+    }
+    else {
+        each(type, function (value, key) {
+            addEvent(instance, key, value, once);
         });
     }
 }

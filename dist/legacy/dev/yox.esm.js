@@ -1,6 +1,6 @@
 /**
- * yox.js v1.0.0-alpha.233
- * (c) 2017-2021 musicode
+ * yox.js v1.0.0-alpha.234
+ * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
 
@@ -23,9 +23,6 @@ const ATTR_SLOT = 'slot';
 const ATTR_NAME = 'name';
 const SLOT_DATA_PREFIX = '$slot_';
 const SLOT_NAME_DEFAULT = 'children';
-const HINT_STRING = 1;
-const HINT_NUMBER = 2;
-const HINT_BOOLEAN = 3;
 const VNODE_TYPE_TEXT = 1;
 const VNODE_TYPE_COMMENT = 2;
 const VNODE_TYPE_ELEMENT = 3;
@@ -1480,7 +1477,7 @@ const LEAVING = '$leaving';
 const MODEL = '$model';
 const EVENT$1 = '$event';
 
-function update$7(api, vnode, oldVNode) {
+function update$6(api, vnode, oldVNode) {
     const { node, nativeAttrs } = vnode, oldNativeAttrs = oldVNode && oldVNode.nativeAttrs;
     if (nativeAttrs !== oldNativeAttrs) {
         if (nativeAttrs) {
@@ -1497,29 +1494,6 @@ function update$7(api, vnode, oldVNode) {
             for (let name in oldNativeAttrs) {
                 if (newValue[name] === UNDEFINED$1) {
                     api.removeAttr(node, name);
-                }
-            }
-        }
-    }
-}
-
-function update$6(api, vnode, oldVNode) {
-    const { node, nativeProps } = vnode, oldNativeProps = oldVNode && oldVNode.nativeProps;
-    if (nativeProps !== oldNativeProps) {
-        if (nativeProps) {
-            const oldValue = oldNativeProps || EMPTY_OBJECT;
-            for (let name in nativeProps) {
-                if (oldValue[name] === UNDEFINED$1
-                    || nativeProps[name] !== oldValue[name]) {
-                    api.setProp(node, name, nativeProps[name]);
-                }
-            }
-        }
-        if (oldNativeProps) {
-            const newValue = nativeProps || EMPTY_OBJECT;
-            for (let name in oldNativeProps) {
-                if (newValue[name] === UNDEFINED$1) {
-                    api.removeProp(node, name);
                 }
             }
         }
@@ -1770,7 +1744,7 @@ const inputControl = {
     name: 'value'
 };
 function addModel(api, element, component, vnode) {
-    let { context, model, lazy, nativeProps } = vnode, { keypath, value } = model, lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[EMPTY_STRING]), update, destroy;
+    let { context, model, lazy, nativeAttrs } = vnode, { keypath, value } = model, lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[EMPTY_STRING]), update, destroy;
     if (component) {
         let viewBinding = component.$model, viewSyncing = debounceIfNeeded(function (newValue) {
             context.set(keypath, newValue);
@@ -1792,7 +1766,7 @@ function addModel(api, element, component, vnode) {
         // checkbox,radio,select 监听的是 change 事件
         eventName = EVENT_CHANGE;
         if (control === inputControl) {
-            const type = nativeProps && nativeProps.type;
+            const type = nativeAttrs && nativeAttrs.type;
             if (type === 'radio') {
                 control = radioControl;
             }
@@ -2039,7 +2013,6 @@ const elementVNodeOperator = {
         else if (vnode.html) {
             api.setHtml(node, vnode.html, vnode.isStyle, vnode.isOption);
         }
-        update$7(api, vnode);
         update$6(api, vnode);
         update$5(api, vnode);
         if (!vnode.isPure) {
@@ -2055,7 +2028,6 @@ const elementVNodeOperator = {
         vnode.node = node;
         vnode.parentNode = oldVNode.parentNode;
         vnode.data = oldVNode.data;
-        update$7(api, vnode, oldVNode);
         update$6(api, vnode, oldVNode);
         update$5(api, vnode, oldVNode);
         if (!vnode.isPure) {
@@ -2574,7 +2546,6 @@ function clone(vnode) {
         isPure: vnode.isPure,
         slots: vnode.slots,
         props: vnode.props,
-        nativeProps: vnode.nativeProps,
         nativeAttrs: vnode.nativeAttrs,
         nativeStyles: vnode.nativeStyles,
         directives: vnode.directives,
@@ -2607,49 +2578,45 @@ const ATTRIBUTE = 2;
  */
 const DIRECTIVE = 3;
 /**
- * 属性 节点
- */
-const PROPERTY = 4;
-/**
  * 样式 节点
  */
-const STYLE = 5;
+const STYLE = 4;
 /**
  * 文本 节点
  */
-const TEXT = 6;
+const TEXT = 5;
 /**
  * if 节点
  */
-const IF = 7;
+const IF = 6;
 /**
  * else if 节点
  */
-const ELSE_IF = 8;
+const ELSE_IF = 7;
 /**
  * else 节点
  */
-const ELSE = 9;
+const ELSE = 8;
 /**
  * each 节点
  */
-const EACH = 10;
+const EACH = 9;
 /**
  * partial 节点
  */
-const PARTIAL = 11;
+const PARTIAL = 10;
 /**
  * import 节点
  */
-const IMPORT = 12;
+const IMPORT = 11;
 /**
  * 表达式 节点
  */
-const EXPRESSION = 13;
+const EXPRESSION = 12;
 /**
  * 延展操作 节点
  */
-const SPREAD = 14;
+const SPREAD = 13;
 
 // 特殊标签
 const specialTags = {};
@@ -2736,18 +2703,6 @@ function createDirective(name, ns, modifier) {
         ns,
         name,
         modifier,
-    };
-}
-function createProperty(name, ns, hint, value, expr, children) {
-    return {
-        type: PROPERTY,
-        isStatic: TRUE$1,
-        name,
-        ns,
-        hint,
-        value,
-        expr,
-        children,
     };
 }
 function createStyle() {
@@ -2853,30 +2808,10 @@ htmlEntityPattern = /&[#\w\d]{2,6};/,
 selfClosingTagNames = split2Map('area,base,embed,track,source,param,input,col,img,br,hr') , 
 // 常见的 svg 标签
 svgTagNames = split2Map('svg,g,defs,desc,metadata,symbol,use,image,path,rect,circle,line,ellipse,polyline,polygon,text,tspan,tref,textpath,marker,pattern,clippath,mask,filter,cursor,view,animate,font,font-face,glyph,missing-glyph,animateColor,animateMotion,animateTransform,textPath,foreignObject') , 
-// 常见的字符串类型的属性
-// 注意：autocomplete,autocapitalize 不是布尔类型
-stringPropertyNames = split2Map('id,class,name,value,for,accesskey,title,style,src,type,href,target,alt,placeholder,preload,poster,wrap,accept,pattern,dir,autocomplete,autocapitalize,valign') , 
 // 常见的数字类型的属性（width,height,cellpadding,cellspacing 支持百分比，因此不计入数字类型）
-numberPropertyNames = split2Map('min,minlength,max,maxlength,step,size,rows,cols,tabindex,colspan,rowspan,frameborder') , 
+numberAttributeNames = split2Map('min,minlength,max,maxlength,step,size,rows,cols,tabindex,colspan,rowspan,frameborder') , 
 // 常见的布尔类型的属性
-booleanPropertyNames = split2Map('disabled,checked,required,multiple,readonly,autofocus,autoplay,controls,loop,muted,novalidate,draggable,contenteditable,hidden,spellcheck') , 
-// 某些属性 attribute name 和 property name 不同
-attr2Prop = {};
-// 列举几个常见的
-attr2Prop['for'] = 'htmlFor';
-attr2Prop['class'] = 'className';
-attr2Prop['accesskey'] = 'accessKey';
-attr2Prop['novalidate'] = 'noValidate';
-attr2Prop['readonly'] = 'readOnly';
-attr2Prop['tabindex'] = 'tabIndex';
-attr2Prop['minlength'] = 'minLength';
-attr2Prop['maxlength'] = 'maxLength';
-attr2Prop['cellpadding'] = 'cellPadding';
-attr2Prop['cellspacing'] = 'cellSpacing';
-attr2Prop['colspan'] = 'colSpan';
-attr2Prop['rowspan'] = 'rowSpan';
-attr2Prop['valign'] = 'vAlign';
-attr2Prop['frameborder'] = 'frameBorder';
+booleanAttributeNames = split2Map('disabled,checked,required,multiple,readonly,autofocus,autoplay,controls,loop,muted,novalidate,draggable,contenteditable,hidden,spellcheck') ;
 function isSelfClosing(tagName) {
     return selfClosingTagNames[tagName] !== UNDEFINED$1;
 }
@@ -2886,39 +2821,52 @@ function createAttribute(element, name, ns) {
         return createAttribute$1(camelize(name), ns);
     }
     // 原生 dom 属性
-    else {
-        // 把 attr 优化成 prop
-        const lowerName = lower(name);
-        if (name === 'style') {
-            return createStyle();
-        }
-        // <slot> 、<template> 或 svg 中的属性不用识别为 property
-        else if (specialTags[element.tag] || element.isSvg) {
-            return createAttribute$1(name, ns);
-        }
-        // 尝试识别成 property
-        else if (stringPropertyNames[lowerName]) {
-            return createProperty(attr2Prop[lowerName] || lowerName, ns, HINT_STRING);
-        }
-        else if (numberPropertyNames[lowerName]) {
-            return createProperty(attr2Prop[lowerName] || lowerName, ns, HINT_NUMBER);
-        }
-        else if (booleanPropertyNames[lowerName]) {
-            return createProperty(attr2Prop[lowerName] || lowerName, ns, HINT_BOOLEAN);
-        }
-        // 没辙，还是个 attribute
-        return createAttribute$1(name, ns);
-    }
+    return name === 'style'
+        ? createStyle()
+        : createAttribute$1(name, ns);
 }
 function getAttributeDefaultValue(element, name) {
     // 比如 <Dog isLive>
     if (element.isComponent) {
         return TRUE$1;
     }
-    // <div data-name checked>
-    return startsWith(name, 'data-')
+    // 无视 <input min> 无效写法
+    if (isNumberNativeAttribute(name)) {
+        return UNDEFINED$1;
+    }
+    // 布尔类型或字符串类型的 attribute，统一返回空字符串即可
+    return EMPTY_STRING;
+}
+function formatNativeAttributeValue(name, value) {
+    if (isNumberNativeAttribute(name)) {
+        return formatNumberNativeAttributeValue(name, value);
+    }
+    else if (isBooleanNativeAttribute(name)) {
+        return formatBooleanNativeAttributeValue(name, value);
+    }
+    // 字符串类型的属性，保持原样即可
+    return value;
+}
+function isNumberNativeAttribute(name) {
+    return numberAttributeNames[name];
+}
+function isBooleanNativeAttribute(name) {
+    return booleanAttributeNames[name];
+}
+function formatNumberNativeAttributeValue(name, value) {
+    // 数字类型需要严格校验格式，比如 width="100%" 要打印报错信息，提示用户类型错误
+    {
+        if (!numeric(value)) {
+            warn(`The value of "${name}" is not a number: ${value}.`);
+        }
+    }
+    return toString$1(value);
+}
+function formatBooleanNativeAttributeValue(name, value) {
+    // 布尔类型的属性，只有值为 true 或 属性名 才表示 true
+    return value === TRUE$1 || value === RAW_TRUE || value === name
         ? EMPTY_STRING
-        : name;
+        : UNDEFINED$1;
 }
 function isNativeElement(node) {
     if (node.type !== ELEMENT) {
@@ -2952,7 +2900,7 @@ function compatElement(element) {
     let { tag, attrs } = element, hasType = FALSE$1, hasValue = FALSE$1;
     if (attrs) {
         each$2(attrs, function (attr) {
-            const name = attr.type === PROPERTY
+            const name = attr.type === ATTRIBUTE
                 ? attr.name
                 : UNDEFINED$1;
             if (name === 'type') {
@@ -2967,7 +2915,9 @@ function compatElement(element) {
     // style 如果没有 type 则加一个 type="text/css"
     // 因为低版本 IE 没这个属性，没法正常渲染样式
     if (element.isStyle && !hasType) {
-        push(element.attrs || (element.attrs = []), createProperty('type', UNDEFINED$1, HINT_STRING, 'text/css'));
+        const attr = createAttribute$1('type');
+        attr.value = 'text/css';
+        push(element.attrs || (element.attrs = []), attr);
     }
     // 低版本 IE 需要给 option 标签强制加 value
     else if (tag === 'option' && !hasValue) {
@@ -2995,14 +2945,6 @@ function setElementHtml(element, expr) {
 
 function isDef (target) {
     return target !== UNDEFINED$1;
-}
-
-function toNumber (target, defaultValue) {
-    return numeric(target)
-        ? +target
-        : defaultValue !== UNDEFINED$1
-            ? defaultValue
-            : 0;
 }
 
 function createArray(nodes, raw) {
@@ -4199,7 +4141,7 @@ function compile(content) {
                 fatal$1(`The type of poping node is not expected.`);
             }
         }
-        const branchNode = node, isElement = type === ELEMENT, isAttribute = type === ATTRIBUTE, isProperty = type === PROPERTY, isStyle = type === STYLE, isDirective = type === DIRECTIVE, parentBranchNode = last(nodeStack);
+        const branchNode = node, isElement = type === ELEMENT, isAttribute = type === ATTRIBUTE, isStyle = type === STYLE, isDirective = type === DIRECTIVE, parentBranchNode = last(nodeStack);
         {
             if (isElement
                 && tagName
@@ -4233,9 +4175,6 @@ function compile(content) {
                         else if (isAttribute) {
                             processAttributeSingleText(branchNode, onlyChild);
                         }
-                        else if (isProperty) {
-                            processPropertySingleText(branchNode, onlyChild);
-                        }
                         else if (isStyle) {
                             processStyleSingleText(branchNode, onlyChild);
                         }
@@ -4247,7 +4186,7 @@ function compile(content) {
                         if (isElement) {
                             processElementSingleExpression(branchNode, onlyChild);
                         }
-                        else if (isAttribute || isProperty || isStyle || isDirective) {
+                        else if (isAttribute || isStyle || isDirective) {
                             processAttributeSingleExpression(branchNode, onlyChild);
                         }
                         break;
@@ -4258,9 +4197,6 @@ function compile(content) {
         else if (currentElement) {
             if (isAttribute) {
                 processAttributeEmptyChildren(currentElement, branchNode);
-            }
-            else if (isProperty) {
-                processPropertyEmptyChildren(currentElement, branchNode);
             }
             else if (isStyle) {
                 processStyleEmptyChildren(currentElement, branchNode);
@@ -4303,34 +4239,6 @@ function compile(content) {
                 element.children = UNDEFINED$1;
             }
         }
-    }, processPropertyEmptyChildren = function (element, prop) {
-        if (prop.hint === HINT_BOOLEAN) {
-            prop.value = TRUE$1;
-        }
-        else {
-            // string 或 number 类型的属性，如果不写值，直接忽略
-            replaceChild(prop);
-        }
-    }, processPropertySingleText = function (prop, child) {
-        const { text } = child;
-        // 数字类型需要严格校验格式，比如 width="100%" 要打印报错信息，提示用户类型错误
-        if (prop.hint === HINT_NUMBER) {
-            {
-                if (!numeric(text)) {
-                    fatal$1(`The value of "${prop.name}" is not a number: ${text}.`);
-                }
-            }
-            prop.value = toNumber(text);
-        }
-        // 布尔类型的属性，只有值为 true 或 属性名 才表示 true
-        else if (prop.hint === HINT_BOOLEAN) {
-            prop.value = text === RAW_TRUE || text === prop.name;
-        }
-        // 字符串类型的属性，保持原样即可
-        else {
-            prop.value = text;
-        }
-        prop.children = UNDEFINED$1;
     }, processStyleEmptyChildren = function (element, style) {
         // 如果不写值，直接忽略
         replaceChild(style);
@@ -4353,12 +4261,16 @@ function compile(content) {
             attr.value = getAttributeDefaultValue(element, attr.name);
         }
     }, processAttributeSingleText = function (attr, child) {
-        attr.value = child.text;
+        attr.value = formatNativeAttributeValue(attr.name, child.text);
         attr.children = UNDEFINED$1;
     }, processAttributeSingleExpression = function (attr, child) {
         const { expr } = child;
         if (expr.type === LITERAL) {
-            attr.value = expr.value;
+            let value = expr.value;
+            if (attr.type === ATTRIBUTE) {
+                value = formatNativeAttributeValue(attr.name, value);
+            }
+            attr.value = value;
         }
         else {
             attr.expr = expr;
@@ -5855,69 +5767,70 @@ eachStack = [],
 // 是否正在收集动态 child
 dynamicChildrenStack = [TRUE$1], 
 // 收集属性值
-attributeValueStack = [], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {}, FIELD_NATIVE_ATTRIBUTES = 'nativeAttrs', FIELD_NATIVE_PROPERTIES = 'nativeProps', FIELD_NATIVE_STYLES = 'nativeStyles', FIELD_PROPERTIES = 'props', FIELD_DIRECTIVES = 'directives', FIELD_EVENTS = 'events', FIELD_MODEL = 'model', FIELD_LAZY = 'lazy', FIELD_TRANSITION = 'transition', FIELD_CHILDREN = 'children', FIELD_SLOTS = 'slots';
+attributeValueStack = [], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {}, FIELD_NATIVE_ATTRIBUTES = 'nativeAttrs', FIELD_NATIVE_STYLES = 'nativeStyles', FIELD_PROPERTIES = 'props', FIELD_DIRECTIVES = 'directives', FIELD_EVENTS = 'events', FIELD_MODEL = 'model', FIELD_LAZY = 'lazy', FIELD_TRANSITION = 'transition', FIELD_CHILDREN = 'children', FIELD_SLOTS = 'slots';
 // 下面这些值需要根据外部配置才能确定
-let isUglify = UNDEFINED$1, currentTextVNode = UNDEFINED$1, RENDER_COMPOSE_VNODE = EMPTY_STRING, APPEND_ATTRIBUTE = EMPTY_STRING, RENDER_STYLE_STRING = EMPTY_STRING, RENDER_STYLE_EXPR = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_SLOTS = EMPTY_STRING, RENDER_SLOT_CHILDREN = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, LOOKUP_KEYPATH = EMPTY_STRING, LOOKUP_PROP = EMPTY_STRING, GET_THIS = EMPTY_STRING, GET_THIS_BY_INDEX = EMPTY_STRING, GET_PROP = EMPTY_STRING, GET_PROP_BY_INDEX = EMPTY_STRING, READ_KEYPATH = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, SET_HOLDER = EMPTY_STRING, TO_STRING = EMPTY_STRING, OPERATOR_TEXT_VNODE = EMPTY_STRING, OPERATOR_COMMENT_VNODE = EMPTY_STRING, OPERATOR_ELEMENT_VNODE = EMPTY_STRING, OPERATOR_COMPONENT_VNODE = EMPTY_STRING, OPERATOR_FRAGMENT_VNODE = EMPTY_STRING, OPERATOR_PORTAL_VNODE = EMPTY_STRING, OPERATOR_SLOT_VNODE = EMPTY_STRING, ARG_INSTANCE = EMPTY_STRING, ARG_FILTERS = EMPTY_STRING, ARG_GLOBAL_FILTERS = EMPTY_STRING, ARG_LOCAL_PARTIALS = EMPTY_STRING, ARG_PARTIALS = EMPTY_STRING, ARG_GLOBAL_PARTIALS = EMPTY_STRING, ARG_DIRECTIVES = EMPTY_STRING, ARG_GLOBAL_DIRECTIVES = EMPTY_STRING, ARG_TRANSITIONS = EMPTY_STRING, ARG_GLOBAL_TRANSITIONS = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_COMPONENTS = EMPTY_STRING, ARG_SCOPE = EMPTY_STRING, ARG_KEYPATH = EMPTY_STRING, ARG_LENGTH = EMPTY_STRING, ARG_EVENT = EMPTY_STRING, ARG_DATA = EMPTY_STRING;
+let isUglify = UNDEFINED$1, currentTextVNode = UNDEFINED$1, RENDER_COMPOSE_VNODE = EMPTY_STRING, RENDER_STYLE_STRING = EMPTY_STRING, RENDER_STYLE_EXPR = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_SLOTS = EMPTY_STRING, RENDER_SLOT_CHILDREN = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, APPEND_VNODE_PROPERTY = EMPTY_STRING, FORMAT_NATIVE_ATTRIBUTE_NUMBER_VALUE = EMPTY_STRING, FORMAT_NATIVE_ATTRIBUTE_BOOLEAN_VALUE = EMPTY_STRING, LOOKUP_KEYPATH = EMPTY_STRING, LOOKUP_PROP = EMPTY_STRING, GET_THIS = EMPTY_STRING, GET_THIS_BY_INDEX = EMPTY_STRING, GET_PROP = EMPTY_STRING, GET_PROP_BY_INDEX = EMPTY_STRING, READ_KEYPATH = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, SET_HOLDER = EMPTY_STRING, TO_STRING = EMPTY_STRING, OPERATOR_TEXT_VNODE = EMPTY_STRING, OPERATOR_COMMENT_VNODE = EMPTY_STRING, OPERATOR_ELEMENT_VNODE = EMPTY_STRING, OPERATOR_COMPONENT_VNODE = EMPTY_STRING, OPERATOR_FRAGMENT_VNODE = EMPTY_STRING, OPERATOR_PORTAL_VNODE = EMPTY_STRING, OPERATOR_SLOT_VNODE = EMPTY_STRING, ARG_INSTANCE = EMPTY_STRING, ARG_FILTERS = EMPTY_STRING, ARG_GLOBAL_FILTERS = EMPTY_STRING, ARG_LOCAL_PARTIALS = EMPTY_STRING, ARG_PARTIALS = EMPTY_STRING, ARG_GLOBAL_PARTIALS = EMPTY_STRING, ARG_DIRECTIVES = EMPTY_STRING, ARG_GLOBAL_DIRECTIVES = EMPTY_STRING, ARG_TRANSITIONS = EMPTY_STRING, ARG_GLOBAL_TRANSITIONS = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_COMPONENTS = EMPTY_STRING, ARG_SCOPE = EMPTY_STRING, ARG_KEYPATH = EMPTY_STRING, ARG_LENGTH = EMPTY_STRING, ARG_EVENT = EMPTY_STRING, ARG_DATA = EMPTY_STRING;
 function init() {
     if (isUglify === PUBLIC_CONFIG.uglifyCompiled) {
         return;
     }
     if (PUBLIC_CONFIG.uglifyCompiled) {
         RENDER_COMPOSE_VNODE = '_a';
-        APPEND_ATTRIBUTE = '_b';
-        RENDER_STYLE_STRING = '_c';
-        RENDER_STYLE_EXPR = '_d';
-        RENDER_TRANSITION = '_e';
-        RENDER_MODEL = '_f';
-        RENDER_EVENT_METHOD = '_g';
-        RENDER_EVENT_NAME = '_h';
-        RENDER_DIRECTIVE = '_i';
-        RENDER_SPREAD = '_j';
-        RENDER_SLOTS = '_k';
-        RENDER_SLOT_CHILDREN = '_l';
-        RENDER_PARTIAL = '_m';
-        RENDER_EACH = '_n';
-        RENDER_RANGE = '_o';
-        LOOKUP_KEYPATH = '_p';
-        LOOKUP_PROP = '_q';
-        GET_THIS = '_r';
-        GET_THIS_BY_INDEX = '_s';
-        GET_PROP = '_t';
-        GET_PROP_BY_INDEX = '_u';
-        READ_KEYPATH = '_v';
-        EXECUTE_FUNCTION = '_w';
-        SET_HOLDER = '_x';
-        TO_STRING = '_y';
-        OPERATOR_TEXT_VNODE = '_z';
-        OPERATOR_COMMENT_VNODE = '_A';
-        OPERATOR_ELEMENT_VNODE = '_B';
-        OPERATOR_COMPONENT_VNODE = '_C';
-        OPERATOR_FRAGMENT_VNODE = '_D';
-        OPERATOR_PORTAL_VNODE = '_E';
-        OPERATOR_SLOT_VNODE = '_F';
-        ARG_INSTANCE = '_G';
-        ARG_FILTERS = '_H';
-        ARG_GLOBAL_FILTERS = '_I';
-        ARG_LOCAL_PARTIALS = '_J';
-        ARG_PARTIALS = '_K';
-        ARG_GLOBAL_PARTIALS = '_L';
-        ARG_DIRECTIVES = '_M';
-        ARG_GLOBAL_DIRECTIVES = '_N';
-        ARG_TRANSITIONS = '_O';
-        ARG_GLOBAL_TRANSITIONS = '_P';
-        ARG_STACK = '_Q';
-        ARG_VNODE = '_R';
-        ARG_CHILDREN = '_S';
-        ARG_COMPONENTS = '_T';
-        ARG_SCOPE = '_U';
-        ARG_KEYPATH = '_V';
-        ARG_LENGTH = '_W';
-        ARG_EVENT = '_X';
-        ARG_DATA = '_Y';
+        RENDER_STYLE_STRING = '_b';
+        RENDER_STYLE_EXPR = '_c';
+        RENDER_TRANSITION = '_d';
+        RENDER_MODEL = '_e';
+        RENDER_EVENT_METHOD = '_f';
+        RENDER_EVENT_NAME = '_g';
+        RENDER_DIRECTIVE = '_h';
+        RENDER_SPREAD = '_i';
+        RENDER_SLOTS = '_j';
+        RENDER_SLOT_CHILDREN = '_k';
+        RENDER_PARTIAL = '_l';
+        RENDER_EACH = '_m';
+        RENDER_RANGE = '_n';
+        APPEND_VNODE_PROPERTY = '_o';
+        FORMAT_NATIVE_ATTRIBUTE_NUMBER_VALUE = '_p';
+        FORMAT_NATIVE_ATTRIBUTE_BOOLEAN_VALUE = '_q';
+        LOOKUP_KEYPATH = '_r';
+        LOOKUP_PROP = '_s';
+        GET_THIS = '_t';
+        GET_THIS_BY_INDEX = '_u';
+        GET_PROP = '_v';
+        GET_PROP_BY_INDEX = '_w';
+        READ_KEYPATH = '_x';
+        EXECUTE_FUNCTION = '_y';
+        SET_HOLDER = '_z';
+        TO_STRING = '_A';
+        OPERATOR_TEXT_VNODE = '_B';
+        OPERATOR_COMMENT_VNODE = '_C';
+        OPERATOR_ELEMENT_VNODE = '_D';
+        OPERATOR_COMPONENT_VNODE = '_E';
+        OPERATOR_FRAGMENT_VNODE = '_F';
+        OPERATOR_PORTAL_VNODE = '_G';
+        OPERATOR_SLOT_VNODE = '_H';
+        ARG_INSTANCE = '_I';
+        ARG_FILTERS = '_J';
+        ARG_GLOBAL_FILTERS = '_K';
+        ARG_LOCAL_PARTIALS = '_L';
+        ARG_PARTIALS = '_M';
+        ARG_GLOBAL_PARTIALS = '_N';
+        ARG_DIRECTIVES = '_O';
+        ARG_GLOBAL_DIRECTIVES = '_P';
+        ARG_TRANSITIONS = '_Q';
+        ARG_GLOBAL_TRANSITIONS = '_R';
+        ARG_STACK = '_S';
+        ARG_VNODE = '_T';
+        ARG_CHILDREN = '_U';
+        ARG_COMPONENTS = '_V';
+        ARG_SCOPE = '_W';
+        ARG_KEYPATH = '_X';
+        ARG_LENGTH = '_Y';
+        ARG_EVENT = '_Z';
+        ARG_DATA = '_1';
     }
     else {
         RENDER_COMPOSE_VNODE = 'renderComposeVNode';
-        APPEND_ATTRIBUTE = 'appendAttribute';
         RENDER_STYLE_STRING = 'renderStyleStyle';
         RENDER_STYLE_EXPR = 'renderStyleExpr';
         RENDER_TRANSITION = 'renderTransition';
@@ -5931,6 +5844,9 @@ function init() {
         RENDER_PARTIAL = 'renderPartial';
         RENDER_EACH = 'renderEach';
         RENDER_RANGE = 'renderRange';
+        APPEND_VNODE_PROPERTY = 'appendVNodeProperty';
+        FORMAT_NATIVE_ATTRIBUTE_NUMBER_VALUE = 'formatNativeAttributeNumberValue';
+        FORMAT_NATIVE_ATTRIBUTE_BOOLEAN_VALUE = 'formatNativeAttributeBooleanValue';
         LOOKUP_KEYPATH = 'lookupKeypath';
         LOOKUP_PROP = 'lookupProp';
         GET_THIS = 'getThis';
@@ -6322,7 +6238,7 @@ function generateComponentSlots(children) {
     }
 }
 function parseAttrs(attrs, isComponent) {
-    let nativeAttributeList = [], nativePropertyList = [], propertyList = [], style = UNDEFINED$1, lazyList = [], transition = UNDEFINED$1, model = UNDEFINED$1, 
+    let nativeAttributeList = [], propertyList = [], style = UNDEFINED$1, lazyList = [], transition = UNDEFINED$1, model = UNDEFINED$1, 
     // 最后收集事件指令、自定义指令、动态属性
     eventList = [], customDirectiveList = [], otherList = [];
     for (let i = 0, len = attrs.length; i < len; i++) {
@@ -6335,9 +6251,6 @@ function parseAttrs(attrs, isComponent) {
             else {
                 push(nativeAttributeList, attributeNode);
             }
-        }
-        else if (attr.type === PROPERTY) {
-            push(nativePropertyList, attr);
         }
         else if (attr.type === STYLE) {
             style = attr;
@@ -6367,7 +6280,6 @@ function parseAttrs(attrs, isComponent) {
     }
     return {
         nativeAttributeList,
-        nativePropertyList,
         propertyList,
         style,
         lazyList,
@@ -6379,10 +6291,9 @@ function parseAttrs(attrs, isComponent) {
     };
 }
 function sortAttrs(attrs, isComponent) {
-    const { nativeAttributeList, nativePropertyList, propertyList, style, lazyList, transition, model, eventList, customDirectiveList, otherList, } = parseAttrs(attrs, isComponent);
+    const { nativeAttributeList, propertyList, style, lazyList, transition, model, eventList, customDirectiveList, otherList, } = parseAttrs(attrs, isComponent);
     const result = [];
     push(result, nativeAttributeList);
-    push(result, nativePropertyList);
     push(result, propertyList);
     if (style) {
         push(result, style);
@@ -6398,6 +6309,25 @@ function sortAttrs(attrs, isComponent) {
     push(result, customDirectiveList);
     push(result, otherList);
     return result;
+}
+function generateNativeAttributeValue(node) {
+    const { name } = node;
+    let value = generateAttributeValue(node);
+    if (!(value instanceof Primitive)) {
+        if (isNumberNativeAttribute(name)) {
+            value = toCall(FORMAT_NATIVE_ATTRIBUTE_NUMBER_VALUE, [
+                toPrimitive(name),
+                value
+            ]);
+        }
+        else if (isBooleanNativeAttribute(name)) {
+            value = toCall(FORMAT_NATIVE_ATTRIBUTE_BOOLEAN_VALUE, [
+                toPrimitive(name),
+                value
+            ]);
+        }
+    }
+    return value;
 }
 function parseChildren(children, forceDynamic) {
     let dynamicChildren = UNDEFINED$1, staticChildren = UNDEFINED$1, isDynamic = forceDynamic || FALSE$1;
@@ -6491,30 +6421,18 @@ nodeGenerator[ELEMENT] = function (node) {
             ]));
     }
     if (attrs) {
-        const { nativeAttributeList, nativePropertyList, propertyList, style, lazyList, transition, model, eventList, customDirectiveList, otherList, } = parseAttrs(attrs, isComponent), hasDynamicAttrs = otherList.length > 0;
+        const { nativeAttributeList, propertyList, style, lazyList, transition, model, eventList, customDirectiveList, otherList, } = parseAttrs(attrs, isComponent), hasDynamicAttrs = otherList.length > 0;
         if (nativeAttributeList.length) {
             let nativeAttributes = toMap(), isDynamic = hasDynamicAttrs;
             each$2(nativeAttributeList, function (node) {
                 if (!node.isStatic) {
                     isDynamic = TRUE$1;
                 }
-                nativeAttributes.set(node.name, generateAttributeValue(node));
+                nativeAttributes.set(node.name, generateNativeAttributeValue(node));
             });
             vnode.set(FIELD_NATIVE_ATTRIBUTES, isDynamic
                 ? nativeAttributes
                 : addVar(nativeAttributes, TRUE$1));
-        }
-        if (nativePropertyList.length) {
-            let nativeProperties = toMap(), isDynamic = hasDynamicAttrs;
-            each$2(nativePropertyList, function (node) {
-                if (!node.isStatic) {
-                    isDynamic = TRUE$1;
-                }
-                nativeProperties.set(node.name, generateAttributeValue(node));
-            });
-            vnode.set(FIELD_NATIVE_PROPERTIES, isDynamic
-                ? nativeProperties
-                : addVar(nativeProperties, TRUE$1));
         }
         if (propertyList.length) {
             const properties = toMap();
@@ -6638,21 +6556,13 @@ nodeGenerator[ELEMENT] = function (node) {
         : generateStatementIfNeeded(list));
 };
 nodeGenerator[ATTRIBUTE] = function (node) {
-    return toCall(APPEND_ATTRIBUTE, [
+    return toCall(APPEND_VNODE_PROPERTY, [
         ARG_VNODE,
         toPrimitive(last(componentStack)
             ? FIELD_PROPERTIES
             : FIELD_NATIVE_ATTRIBUTES),
-        generateAttributeValue(node),
         toPrimitive(node.name),
-    ]);
-};
-nodeGenerator[PROPERTY] = function (node) {
-    return toCall(APPEND_ATTRIBUTE, [
-        ARG_VNODE,
-        toPrimitive(FIELD_NATIVE_PROPERTIES),
-        generateAttributeValue(node),
-        toPrimitive(node.name),
+        generateNativeAttributeValue(node),
     ]);
 };
 nodeGenerator[STYLE] = function (node) {
@@ -6828,41 +6738,37 @@ function getDirectiveArgs(node) {
 nodeGenerator[DIRECTIVE] = function (node) {
     switch (node.ns) {
         case DIRECTIVE_LAZY:
-            return toCall(APPEND_ATTRIBUTE, [
+            return toCall(APPEND_VNODE_PROPERTY, [
                 ARG_VNODE,
                 toPrimitive(FIELD_LAZY),
-                getLazyValue(node),
                 toPrimitive(node.name),
+                getLazyValue(node),
             ]);
         // <div transition="name">
         case DIRECTIVE_TRANSITION:
-            return toCall(APPEND_ATTRIBUTE, [
-                ARG_VNODE,
-                toPrimitive(FIELD_TRANSITION),
-                getTransitionValue(node),
-            ]);
+            return toAssign(toMember(ARG_VNODE, [
+                toPrimitive(FIELD_TRANSITION)
+            ]), getTransitionValue(node));
         // <input model="id">
         case DIRECTIVE_MODEL:
-            return toCall(APPEND_ATTRIBUTE, [
-                ARG_VNODE,
-                toPrimitive(FIELD_MODEL),
-                getModelValue(node),
-            ]);
+            return toAssign(toMember(ARG_VNODE, [
+                toPrimitive(FIELD_MODEL)
+            ]), getModelValue(node));
         // <div on-click="name">
         case DIRECTIVE_EVENT:
             const info = getEventInfo(node);
-            return toCall(APPEND_ATTRIBUTE, [
+            return toCall(APPEND_VNODE_PROPERTY, [
                 ARG_VNODE,
                 toPrimitive(FIELD_EVENTS),
-                toCall(info.name, info.args),
                 toPrimitive(getDirectiveKey(node)),
+                toCall(info.name, info.args),
             ]);
         default:
-            return toCall(APPEND_ATTRIBUTE, [
+            return toCall(APPEND_VNODE_PROPERTY, [
                 ARG_VNODE,
                 toPrimitive(FIELD_DIRECTIVES),
-                toCall(RENDER_DIRECTIVE, getDirectiveArgs(node)),
                 toPrimitive(getDirectiveKey(node)),
+                toCall(RENDER_DIRECTIVE, getDirectiveArgs(node)),
             ]);
     }
 };
@@ -7008,7 +6914,6 @@ function generate(node) {
     init$1();
     return generate$2([
         RENDER_COMPOSE_VNODE,
-        APPEND_ATTRIBUTE,
         RENDER_STYLE_STRING,
         RENDER_STYLE_EXPR,
         RENDER_TRANSITION,
@@ -7022,6 +6927,9 @@ function generate(node) {
         RENDER_PARTIAL,
         RENDER_EACH,
         RENDER_RANGE,
+        APPEND_VNODE_PROPERTY,
+        FORMAT_NATIVE_ATTRIBUTE_NUMBER_VALUE,
+        FORMAT_NATIVE_ATTRIBUTE_BOOLEAN_VALUE,
         LOOKUP_KEYPATH,
         LOOKUP_PROP,
         GET_THIS,
@@ -7067,19 +6975,14 @@ function render(instance, template, dependencies, data, computed, filters, globa
         if (vnode.children.length) {
             children[children.length] = vnode;
         }
-    }, appendAttribute = function (vnode, key, value, name) {
-        if (name) {
-            if (vnode[key]) {
-                vnode[key][name] = value;
-            }
-            else {
-                const map = {};
-                map[name] = value;
-                vnode[key] = map;
-            }
+    }, appendVNodeProperty = function (vnode, key, name, value) {
+        if (vnode[key]) {
+            vnode[key][name] = value;
         }
         else {
-            vnode[key] = value;
+            const map = {};
+            map[name] = value;
+            vnode[key] = map;
         }
     }, renderStyleString = function (value) {
         const styles = {};
@@ -7209,7 +7112,7 @@ function render(instance, template, dependencies, data, computed, filters, globa
                 }
             }
             for (let name in value) {
-                appendAttribute(vnode, key, value[name], name);
+                appendVNodeProperty(vnode, key, value[name], name);
             }
         }
     }, renderSlots = function (render) {
@@ -7399,7 +7302,7 @@ function render(instance, template, dependencies, data, computed, filters, globa
         }
         return holder;
     }, renderTemplate = function (render, scope, keypath, children, components) {
-        render(renderComposeVNode, appendAttribute, renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlots, renderSlotChildren, renderPartial, renderEach, renderRange, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString$1, textVNodeOperator, commentVNodeOperator, elementVNodeOperator, componentVNodeOperator, fragmentVNodeOperator, portalVNodeOperator, slotVNodeOperator, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
+        render(renderComposeVNode, renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlots, renderSlotChildren, renderPartial, renderEach, renderRange, appendVNodeProperty, formatNumberNativeAttributeValue, formatBooleanNativeAttributeValue, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString$1, textVNodeOperator, commentVNodeOperator, elementVNodeOperator, componentVNodeOperator, fragmentVNodeOperator, portalVNodeOperator, slotVNodeOperator, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
     };
     renderTemplate(template, rootScope, rootKeypath, children, components);
     {
@@ -7589,15 +7492,6 @@ function createText(text) {
 function createComment(text) {
     return DOCUMENT.createComment(text);
 }
-function getProp(node, name) {
-    return node[name];
-}
-function setProp(node, name, value) {
-    node[name] = value;
-}
-function removeProp(node, name) {
-    node[name] = UNDEFINED$1;
-}
 function getAttr(node, name) {
     const value = node.getAttribute(name);
     if (value != NULL$1) {
@@ -7605,7 +7499,12 @@ function getAttr(node, name) {
     }
 }
 function setAttr(node, name, value) {
-    node.setAttribute(name, value);
+    if (value === UNDEFINED$1) {
+        node.removeAttribute(name);
+    }
+    else {
+        node.setAttribute(name, value);
+    }
 }
 function removeAttr(node, name) {
     node.removeAttribute(name);
@@ -7771,9 +7670,6 @@ var domApi = /*#__PURE__*/Object.freeze({
   createElement: createElement,
   createText: createText,
   createComment: createComment,
-  getProp: getProp,
-  setProp: setProp,
-  removeProp: removeProp,
   getAttr: getAttr,
   setAttr: setAttr,
   removeAttr: removeAttr,
@@ -7797,6 +7693,14 @@ var domApi = /*#__PURE__*/Object.freeze({
   off: off,
   addSpecialEvent: addSpecialEvent
 });
+
+function toNumber (target, defaultValue) {
+    return numeric(target)
+        ? +target
+        : defaultValue !== UNDEFINED$1
+            ? defaultValue
+            : 0;
+}
 
 /**
  * 计算属性
@@ -8674,11 +8578,11 @@ class Yox {
             if (context) {
                 instance.$context = context;
             }
-            setFlexibleOptions(instance, RAW_TRANSITION, transitions);
-            setFlexibleOptions(instance, RAW_COMPONENT, components);
-            setFlexibleOptions(instance, RAW_DIRECTIVE, directives);
-            setFlexibleOptions(instance, RAW_PARTIAL, partials);
-            setFlexibleOptions(instance, RAW_FILTER, filters);
+            setOptionsSmartly(instance, RAW_TRANSITION, transitions);
+            setOptionsSmartly(instance, RAW_COMPONENT, components);
+            setOptionsSmartly(instance, RAW_DIRECTIVE, directives);
+            setOptionsSmartly(instance, RAW_PARTIAL, partials);
+            setOptionsSmartly(instance, RAW_FILTER, filters);
             if (template) {
                 if (watchers) {
                     observer.watch(watchers);
@@ -8768,7 +8672,13 @@ class Yox {
             if (string$1(name) && !directive) {
                 return getResource(globalDirectives, name);
             }
-            setResource(globalDirectives, name, directive);
+            {
+                setResourceSmartly(globalDirectives, name, directive, {
+                    conflict(name) {
+                        warn(`The global directive "${name}" already exists.`);
+                    }
+                });
+            }
         }
     }
     /**
@@ -8779,7 +8689,13 @@ class Yox {
             if (string$1(name) && !transition) {
                 return getResource(globalTransitions, name);
             }
-            setResource(globalTransitions, name, transition);
+            {
+                setResourceSmartly(globalTransitions, name, transition, {
+                    conflict(name) {
+                        warn(`The global transition "${name}" already exists.`);
+                    }
+                });
+            }
         }
     }
     /**
@@ -8790,7 +8706,13 @@ class Yox {
             if (string$1(name) && !component) {
                 return getResource(globalComponents, name);
             }
-            setResource(globalComponents, name, component);
+            {
+                setResourceSmartly(globalComponents, name, component, {
+                    conflict(name) {
+                        warn(`The global component "${name}" already exists.`);
+                    }
+                });
+            }
         }
     }
     /**
@@ -8801,7 +8723,14 @@ class Yox {
             if (string$1(name) && !partial) {
                 return getResource(globalPartials, name);
             }
-            setResource(globalPartials, name, partial, Yox.compile);
+            {
+                setResourceSmartly(globalPartials, name, partial, {
+                    format: Yox.compile,
+                    conflict(name) {
+                        warn(`The global partial "${name}" already exists.`);
+                    }
+                });
+            }
         }
     }
     /**
@@ -8812,7 +8741,28 @@ class Yox {
             if (string$1(name) && !filter) {
                 return getResource(globalFilters, name);
             }
-            setResource(globalFilters, name, filter);
+            {
+                setResourceSmartly(globalFilters, name, filter, {
+                    conflict(name) {
+                        warn(`The global filter "${name}" already exists.`);
+                    }
+                });
+            }
+        }
+    }
+    /**
+     * 注册全局方法
+     */
+    static method(name, method) {
+        if (string$1(name) && !method) {
+            return Yox.prototype[name];
+        }
+        {
+            setResourceSmartly(Yox.prototype, name, method, {
+                conflict(name) {
+                    warn(`The global method "${name}" already exists.`);
+                }
+            });
         }
     }
     /**
@@ -8836,14 +8786,14 @@ class Yox {
      * 监听事件，支持链式调用
      */
     on(type, listener) {
-        addEvents(this, type, listener);
+        addEventSmartly(this, type, listener);
         return this;
     }
     /**
      * 监听一次事件，支持链式调用
      */
     once(type, listener) {
-        addEvents(this, type, listener, TRUE$1);
+        addEventSmartly(this, type, listener, TRUE$1);
         return this;
     }
     /**
@@ -9006,7 +8956,13 @@ class Yox {
             if (string$1(name) && !directive) {
                 return getResource($directives, name, Yox.directive);
             }
-            setResource($directives || (instance.$directives = {}), name, directive);
+            {
+                setResourceSmartly($directives || (instance.$directives = {}), name, directive, {
+                    conflict(name) {
+                        warn(`The instance directive "${name}" already exists.`);
+                    }
+                });
+            }
         }
     }
     /**
@@ -9018,7 +8974,13 @@ class Yox {
             if (string$1(name) && !transition) {
                 return getResource($transitions, name, Yox.transition);
             }
-            setResource($transitions || (instance.$transitions = {}), name, transition);
+            {
+                setResourceSmartly($transitions || (instance.$transitions = {}), name, transition, {
+                    conflict(name) {
+                        warn(`The instance transition "${name}" already exists.`);
+                    }
+                });
+            }
         }
     }
     /**
@@ -9030,7 +8992,13 @@ class Yox {
             if (string$1(name) && !component) {
                 return getResource($components, name, Yox.component);
             }
-            setResource($components || (instance.$components = {}), name, component);
+            {
+                setResourceSmartly($components || (instance.$components = {}), name, component, {
+                    conflict(name) {
+                        warn(`The instance component "${name}" already exists.`);
+                    }
+                });
+            }
         }
     }
     /**
@@ -9042,7 +9010,14 @@ class Yox {
             if (string$1(name) && !partial) {
                 return getResource($partials, name, Yox.partial);
             }
-            setResource($partials || (instance.$partials = {}), name, partial, Yox.compile);
+            {
+                setResourceSmartly($partials || (instance.$partials = {}), name, partial, {
+                    format: Yox.compile,
+                    conflict(name) {
+                        warn(`The instance partial "${name}" already exists.`);
+                    }
+                });
+            }
         }
     }
     /**
@@ -9054,7 +9029,13 @@ class Yox {
             if (string$1(name) && !filter) {
                 return getResource($filters, name, Yox.filter);
             }
-            setResource($filters || (instance.$filters = {}), name, filter);
+            {
+                setResourceSmartly($filters || (instance.$filters = {}), name, filter, {
+                    conflict(name) {
+                        warn(`The instance filter "${name}" already exists.`);
+                    }
+                });
+            }
         }
     }
     /**
@@ -9289,7 +9270,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.233";
+Yox.version = "1.0.0-alpha.234";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
@@ -9353,36 +9334,6 @@ function checkProp(componentName, key, value, rule) {
         warn(`The prop "${key}" is marked as required, but its value is undefined.`, componentName);
     }
 }
-function setFlexibleOptions(instance, key, value) {
-    if (func(value)) {
-        instance[key](value.call(instance));
-    }
-    else if (object$1(value)) {
-        instance[key](value);
-    }
-}
-function addEvent(instance, type, listener, once) {
-    const { $emitter } = instance, filter = $emitter.toFilter(type, listener);
-    const options = {
-        listener: filter.listener,
-        ns: filter.ns,
-        ctx: instance,
-    };
-    if (once) {
-        options.max = 1;
-    }
-    $emitter.on(filter.type, options);
-}
-function addEvents(instance, type, listener, once) {
-    if (string$1(type)) {
-        addEvent(instance, type, listener, once);
-    }
-    else {
-        each(type, function (value, key) {
-            addEvent(instance, key, value, once);
-        });
-    }
-}
 function loadComponent(registry, name, callback) {
     if (registry && registry[name]) {
         const component = registry[name];
@@ -9419,13 +9370,54 @@ function getResource(registry, name, lookup) {
         return lookup(name);
     }
 }
-function setResource(registry, name, value, formatValue) {
+function setResourceItem(registry, name, value, options) {
+    {
+        if (name in registry && options && options.conflict) {
+            options.conflict(name);
+        }
+    }
+    if (options && options.format) {
+        value = options.format(value);
+    }
+    registry[name] = value;
+}
+function setResourceSmartly(registry, name, value, options) {
     if (string$1(name)) {
-        registry[name] = formatValue ? formatValue(value) : value;
+        setResourceItem(registry, name, value, options);
     }
     else {
         each(name, function (value, key) {
-            registry[key] = formatValue ? formatValue(value) : value;
+            setResourceItem(registry, key, value, options);
+        });
+    }
+}
+function setOptionsSmartly(instance, key, value) {
+    if (func(value)) {
+        instance[key](value.call(instance));
+    }
+    else if (object$1(value)) {
+        instance[key](value);
+    }
+}
+function addEvent(instance, type, listener, once) {
+    const { $emitter } = instance, filter = $emitter.toFilter(type, listener);
+    const options = {
+        listener: filter.listener,
+        ns: filter.ns,
+        ctx: instance,
+    };
+    if (once) {
+        options.max = 1;
+    }
+    $emitter.on(filter.type, options);
+}
+function addEventSmartly(instance, type, listener, once) {
+    if (string$1(type)) {
+        addEvent(instance, type, listener, once);
+    }
+    else {
+        each(type, function (value, key) {
+            addEvent(instance, key, value, once);
         });
     }
 }
