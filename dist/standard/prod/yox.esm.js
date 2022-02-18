@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.235
+ * yox.js v1.0.0-alpha.236
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -6601,7 +6601,7 @@ function render(instance, template, dependencies, data, computed, filters, globa
     }, renderSpread = function (vnode, key, value) {
         if (object$1(value)) {
             for (let name in value) {
-                appendVNodeProperty(vnode, key, value[name], name);
+                appendVNodeProperty(vnode, key, name, value[name]);
             }
         }
     }, renderSlots = function (render) {
@@ -8526,7 +8526,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.235";
+Yox.version = "1.0.0-alpha.236";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
