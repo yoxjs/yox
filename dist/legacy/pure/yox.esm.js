@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.236
+ * yox.js v1.0.0-alpha.237
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -5040,9 +5040,7 @@ function getEventInfo(node) {
         const callNode = expr;
         // compiler 保证了函数调用的 name 是标识符
         // method
-        push(args, toMember(ARG_INSTANCE, [
-            toPrimitive(callNode.name.name)
-        ]));
+        push(args, toPrimitive(callNode.name.name));
         // 为了实现运行时动态收集参数，这里序列化成函数
         if (!falsy$2(callNode.args)) {
             // runtime
@@ -6472,7 +6470,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.236";
+Yox.version = "1.0.0-alpha.237";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
@@ -6503,25 +6501,27 @@ function setResourceSmartly(registry, name, value, options) {
         });
     }
 }
-function addEvent(instance, type, listener, once) {
-    const { $emitter } = instance, filter = $emitter.toFilter(type, listener);
-    const options = {
+function addEvent(instance, filter, once) {
+    instance.$emitter.on(filter.type, {
         listener: filter.listener,
         ns: filter.ns,
+        max: once ? 1 : -1,
         ctx: instance,
-    };
-    if (once) {
-        options.max = 1;
-    }
-    $emitter.on(filter.type, options);
+    });
 }
 function addEventSmartly(instance, type, listener, once) {
+    const { $emitter } = instance;
     if (string$1(type)) {
-        addEvent(instance, type, listener, once);
+        addEvent(instance, $emitter.toFilter(type, listener), once);
+    }
+    else if (array$1(type)) {
+        each$2(type, function (filter) {
+            addEvent(instance, filter, once);
+        });
     }
     else {
         each(type, function (value, key) {
-            addEvent(instance, key, value, once);
+            addEvent(instance, $emitter.toFilter(key, value), once);
         });
     }
 }

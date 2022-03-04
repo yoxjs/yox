@@ -44,8 +44,8 @@ export interface YoxInterface {
 	$refs?: Record<string, YoxInterface | HTMLElement>;
 	get(keypath: string, defaultValue?: any): any;
 	set(keypath: string | Data, value?: any): void;
-	on(type: string | Record<string, ThisListener<this> | ThisListenerOptions>, listener?: ThisListener<this> | ThisListenerOptions): this;
-	once(type: string | Record<string, ThisListener<this> | ThisListenerOptions>, listener?: ThisListener<this> | ThisListenerOptions): this;
+	on(type: string | Record<string, ThisListener<this> | ThisListenerOptions> | EmitterFilter[], listener?: ThisListener<this> | ThisListenerOptions): this;
+	once(type: string | Record<string, ThisListener<this> | ThisListenerOptions> | EmitterFilter[], listener?: ThisListener<this> | ThisListenerOptions): this;
 	off(type?: string, listener?: ThisListener<this> | ThisListenerOptions): this;
 	fire(type: string | EmitterEvent | CustomEventInterface, data?: Data | boolean, downward?: boolean): boolean;
 	watch(keypath: string | Record<string, ThisWatcher<this> | ThisWatcherOptions<this>>, watcher?: ThisWatcher<this> | ThisWatcherOptions<this>, immediate?: boolean): this;
@@ -759,11 +759,11 @@ export default class Yox implements YoxInterface {
 	/**
 	 * 监听事件，支持链式调用
 	 */
-	on(type: string | Record<string, ThisListener<this> | ThisListenerOptions>, listener?: ThisListener<this> | ThisListenerOptions): this;
+	on(type: string | Record<string, ThisListener<this> | ThisListenerOptions> | EmitterFilter[], listener?: ThisListener<this> | ThisListenerOptions): this;
 	/**
 	 * 监听一次事件，支持链式调用
 	 */
-	once(type: string | Record<string, ThisListener<this> | ThisListenerOptions>, listener?: ThisListener<this> | ThisListenerOptions): this;
+	once(type: string | Record<string, ThisListener<this> | ThisListenerOptions> | EmitterFilter[], listener?: ThisListener<this> | ThisListenerOptions): this;
 	/**
 	 * 取消监听事件，支持链式调用
 	 */
