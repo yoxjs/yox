@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.237
+ * yox.js v1.0.0-alpha.238
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -6531,7 +6531,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.237";
+  Yox.version = "1.0.0-alpha.238";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
@@ -6562,10 +6562,10 @@
           });
       }
   }
-  function addEvent(instance, filter, once) {
-      instance.$emitter.on(filter.type, {
-          listener: filter.listener,
-          ns: filter.ns,
+  function addEvent(instance, options, once) {
+      instance.$emitter.on(options.type, {
+          listener: options.listener,
+          ns: options.ns,
           max: once ? 1 : -1,
           ctx: instance,
       });

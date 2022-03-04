@@ -24,12 +24,13 @@ import {
 } from 'yox-type/src/hooks'
 
 import {
-  EmitterFilter,
   EmitterEvent,
   ListenerOptions,
+  TypeListenerOptions,
   ComponentOptions,
   ThisWatcherOptions,
   ThisListenerOptions,
+  ThisTypeListenerOptions,
 } from 'yox-type/src/options'
 
 import {
@@ -431,7 +432,7 @@ export default class Yox implements YoxInterface {
   public static method(
     name: string | Record<string, Function>,
     method?: Function
-  ): Filter | void {
+  ): Function | void {
     if (is.string(name) && !method) {
       return Yox.prototype[name as string]
     }
@@ -790,7 +791,7 @@ export default class Yox implements YoxInterface {
    * 监听事件，支持链式调用
    */
   on(
-    type: string | Record<string, ThisListener<this> | ThisListenerOptions> | EmitterFilter[],
+    type: string | Record<string, ThisListener<this> | ThisListenerOptions> | ThisTypeListenerOptions[],
     listener?: ThisListener<this> | ThisListenerOptions
   ): this {
     addEventSmartly(this, type, listener)
@@ -801,7 +802,7 @@ export default class Yox implements YoxInterface {
    * 监听一次事件，支持链式调用
    */
   once(
-    type: string | Record<string, ThisListener<this> | ThisListenerOptions> | EmitterFilter[],
+    type: string | Record<string, ThisListener<this> | ThisListenerOptions> | ThisTypeListenerOptions[],
     listener?: ThisListener<this> | ThisListenerOptions
   ): this {
     addEventSmartly(this, type, listener, constant.TRUE)
@@ -1685,12 +1686,12 @@ function setOptionsSmartly(instance: YoxInterface, key: string, value: Function 
   }
 }
 
-function addEvent(instance: Yox, filter: EmitterFilter, once?: true) {
+function addEvent(instance: Yox, options: TypeListenerOptions, once?: true) {
   instance.$emitter.on(
-    filter.type as string,
+    options.type as string,
     {
-      listener: filter.listener as Function,
-      ns: filter.ns,
+      listener: options.listener as Function,
+      ns: options.ns,
       max: once ? 1 : -1,
       ctx: instance,
     }
@@ -1699,7 +1700,7 @@ function addEvent(instance: Yox, filter: EmitterFilter, once?: true) {
 
 function addEventSmartly(
   instance: Yox,
-  type: string | Record<string, Listener | ListenerOptions> | EmitterFilter[],
+  type: string | Record<string, Listener | ListenerOptions> | TypeListenerOptions[],
   listener?: Listener | ListenerOptions,
   once?: true
 ) {
@@ -1709,13 +1710,13 @@ function addEventSmartly(
   if (is.string(type)) {
     addEvent(
       instance,
-      $emitter.toFilter(type as string, listener),
+      $emitter.toFilter(type as string, listener) as TypeListenerOptions,
       once
     )
   }
   else if (is.array(type)) {
     array.each(
-      type as EmitterFilter[],
+      type as TypeListenerOptions[],
       function (filter) {
         addEvent(instance, filter, once)
       }
@@ -1727,7 +1728,7 @@ function addEventSmartly(
       function (value: Listener | ListenerOptions, key: string) {
         addEvent(
           instance,
-          $emitter.toFilter(key, value),
+          $emitter.toFilter(key, value) as TypeListenerOptions,
           once
         )
       }

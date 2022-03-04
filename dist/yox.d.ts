@@ -44,8 +44,8 @@ export interface YoxInterface {
 	$refs?: Record<string, YoxInterface | HTMLElement>;
 	get(keypath: string, defaultValue?: any): any;
 	set(keypath: string | Data, value?: any): void;
-	on(type: string | Record<string, ThisListener<this> | ThisListenerOptions> | EmitterFilter[], listener?: ThisListener<this> | ThisListenerOptions): this;
-	once(type: string | Record<string, ThisListener<this> | ThisListenerOptions> | EmitterFilter[], listener?: ThisListener<this> | ThisListenerOptions): this;
+	on(type: string | Record<string, ThisListener<this> | ThisListenerOptions> | ThisTypeListenerOptions[], listener?: ThisListener<this> | ThisListenerOptions): this;
+	once(type: string | Record<string, ThisListener<this> | ThisListenerOptions> | ThisTypeListenerOptions[], listener?: ThisListener<this> | ThisListenerOptions): this;
 	off(type?: string, listener?: ThisListener<this> | ThisListenerOptions): this;
 	fire(type: string | EmitterEvent | CustomEventInterface, data?: Data | boolean, downward?: boolean): boolean;
 	watch(keypath: string | Record<string, ThisWatcher<this> | ThisWatcherOptions<this>>, watcher?: ThisWatcher<this> | ThisWatcherOptions<this>, immediate?: boolean): this;
@@ -278,11 +278,21 @@ export interface ThisWatcherOptions<This = any> {
 }
 export interface ListenerOptions {
 	listener: Listener;
-	ns?: string;
+	ns: string;
 }
 export interface ThisListenerOptions<This = any> {
 	listener: ThisListener<This>;
-	ns?: string;
+	ns: string;
+}
+export interface TypeListenerOptions {
+	type: string;
+	listener: Listener;
+	ns: string;
+}
+export interface ThisTypeListenerOptions<This = any> {
+	type: string;
+	listener: ThisListener<This>;
+	ns: string;
 }
 export interface EmitterEvent {
 	type: string;
@@ -322,7 +332,7 @@ export interface ComponentOptions<Computed = any, Watchers = any, Events = any, 
 	slots?: Slots;
 	computed?: Accessors<Computed, ComputedGetter | ComputedOptions>;
 	watchers?: Accessors<Watchers, Watcher | WatcherOptions>;
-	events?: Accessors<Events, Listener | ListenerOptions>;
+	events?: Accessors<Events, Listener | ListenerOptions> | TypeListenerOptions[];
 	methods?: Methods;
 	transitions?: Record<string, TransitionHooks>;
 	components?: Record<string, ComponentOptions>;
@@ -746,7 +756,7 @@ export default class Yox implements YoxInterface {
 	/**
 	 * 注册全局方法
 	 */
-	static method(name: string | Record<string, Function>, method?: Function): Filter | void;
+	static method(name: string | Record<string, Function>, method?: Function): Function | void;
 	constructor(options?: ComponentOptions);
 	/**
 	 * 取值
@@ -759,11 +769,11 @@ export default class Yox implements YoxInterface {
 	/**
 	 * 监听事件，支持链式调用
 	 */
-	on(type: string | Record<string, ThisListener<this> | ThisListenerOptions> | EmitterFilter[], listener?: ThisListener<this> | ThisListenerOptions): this;
+	on(type: string | Record<string, ThisListener<this> | ThisListenerOptions> | ThisTypeListenerOptions[], listener?: ThisListener<this> | ThisListenerOptions): this;
 	/**
 	 * 监听一次事件，支持链式调用
 	 */
-	once(type: string | Record<string, ThisListener<this> | ThisListenerOptions> | EmitterFilter[], listener?: ThisListener<this> | ThisListenerOptions): this;
+	once(type: string | Record<string, ThisListener<this> | ThisListenerOptions> | ThisTypeListenerOptions[], listener?: ThisListener<this> | ThisListenerOptions): this;
 	/**
 	 * 取消监听事件，支持链式调用
 	 */
