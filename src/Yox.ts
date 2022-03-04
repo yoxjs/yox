@@ -24,8 +24,8 @@ import {
 } from 'yox-type/src/hooks'
 
 import {
+  EmitterFilter,
   EmitterEvent,
-  EmitterOptions,
   ListenerOptions,
   ComponentOptions,
   ThisWatcherOptions,
@@ -428,7 +428,7 @@ export default class Yox implements YoxInterface {
   /**
    * 注册全局方法
    */
-   public static method(
+  public static method(
     name: string | Record<string, Function>,
     method?: Function
   ): Filter | void {
@@ -790,7 +790,7 @@ export default class Yox implements YoxInterface {
    * 监听事件，支持链式调用
    */
   on(
-    type: string | Record<string, ThisListener<this> | ThisListenerOptions>,
+    type: string | Record<string, ThisListener<this> | ThisListenerOptions> | EmitterFilter[],
     listener?: ThisListener<this> | ThisListenerOptions
   ): this {
     addEventSmartly(this, type, listener)
@@ -801,7 +801,7 @@ export default class Yox implements YoxInterface {
    * 监听一次事件，支持链式调用
    */
   once(
-    type: string | Record<string, ThisListener<this> | ThisListenerOptions>,
+    type: string | Record<string, ThisListener<this> | ThisListenerOptions> | EmitterFilter[],
     listener?: ThisListener<this> | ThisListenerOptions
   ): this {
     addEventSmartly(this, type, listener, constant.TRUE)
@@ -1685,39 +1685,51 @@ function setOptionsSmartly(instance: YoxInterface, key: string, value: Function 
   }
 }
 
-
-function addEvent(instance: Yox, type: string, listener?: Listener | ListenerOptions, once?: true) {
-
-  const { $emitter } = instance, filter = $emitter.toFilter(type, listener)
-
-  const options: EmitterOptions = {
-    listener: filter.listener as Function,
-    ns: filter.ns,
-    ctx: instance,
-  }
-
-  if (once) {
-    options.max = 1
-  }
-
-  $emitter.on(filter.type as string, options)
-
+function addEvent(instance: Yox, filter: EmitterFilter, once?: true) {
+  instance.$emitter.on(
+    filter.type as string,
+    {
+      listener: filter.listener as Function,
+      ns: filter.ns,
+      max: once ? 1 : -1,
+      ctx: instance,
+    }
+  )
 }
 
 function addEventSmartly(
   instance: Yox,
-  type: string | Record<string, Listener | ListenerOptions>,
+  type: string | Record<string, Listener | ListenerOptions> | EmitterFilter[],
   listener?: Listener | ListenerOptions,
   once?: true
 ) {
+
+  const { $emitter } = instance
+
   if (is.string(type)) {
-    addEvent(instance, type as string, listener, once)
+    addEvent(
+      instance,
+      $emitter.toFilter(type as string, listener),
+      once
+    )
+  }
+  else if (is.array(type)) {
+    array.each(
+      type as EmitterFilter[],
+      function (filter) {
+        addEvent(instance, filter, once)
+      }
+    )
   }
   else {
     object.each(
       type as Record<string, Listener | ListenerOptions>,
       function (value: Listener | ListenerOptions, key: string) {
-        addEvent(instance, key, value, once)
+        addEvent(
+          instance,
+          $emitter.toFilter(key, value),
+          once
+        )
       }
     )
   }
