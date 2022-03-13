@@ -45,7 +45,7 @@ Yox 只有两个内置指令，如下：
 
 如果你写了修饰符，`[modifier]` 会设置到指令对象的 `modifier` 属性上；如果没有写修饰符，那么 `modifier` 属性将是 `undefined`。
 
-为了方便理解，我们特地准备了一个在线示例：[传送门](http://jsrun.pro/8jyKp/edit)。
+为了方便理解，我们特地准备了一个在线示例：[传送门](http://jsrun.net/8jyKp/edit)。
 
 
 ### 钩子函数
