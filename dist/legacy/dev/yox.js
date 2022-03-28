@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.238
+ * yox.js v1.0.0-alpha.239
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -2865,7 +2865,11 @@
       if (isNumberNativeAttribute(name)) {
           return UNDEFINED$1;
       }
-      // 布尔类型或字符串类型的 attribute，统一返回空字符串即可
+      // 布尔类型返回 'true'
+      if (isBooleanNativeAttribute(name)) {
+          return RAW_TRUE;
+      }
+      // 字符串类型返回空字符串
       return EMPTY_STRING;
   }
   function formatNativeAttributeValue(name, value) {
@@ -2896,7 +2900,7 @@
   function formatBooleanNativeAttributeValue(name, value) {
       // 布尔类型的属性，只有值为 true 或 属性名 才表示 true
       return value === TRUE$1 || value === RAW_TRUE || value === name
-          ? EMPTY_STRING
+          ? RAW_TRUE
           : UNDEFINED$1;
   }
   function isNativeElement(node) {
@@ -9415,7 +9419,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.238";
+  Yox.version = "1.0.0-alpha.239";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

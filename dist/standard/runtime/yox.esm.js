@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.238
+ * yox.js v1.0.0-alpha.239
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -2487,7 +2487,7 @@ function formatNumberNativeAttributeValue(name, value) {
 function formatBooleanNativeAttributeValue(name, value) {
     // 布尔类型的属性，只有值为 true 或 属性名 才表示 true
     return value === TRUE || value === RAW_TRUE || value === name
-        ? EMPTY_STRING
+        ? RAW_TRUE
         : UNDEFINED;
 }
 
@@ -4538,7 +4538,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.238";
+Yox.version = "1.0.0-alpha.239";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
