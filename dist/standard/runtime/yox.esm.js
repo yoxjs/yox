@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.239
+ * yox.js v1.0.0-alpha.240
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -29,6 +29,7 @@ const FALSE = false;
 const NULL = null;
 const UNDEFINED = void 0;
 const RAW_TRUE = 'true';
+const RAW_FALSE = 'false';
 const RAW_UNDEFINED = 'undefined';
 const RAW_FILTER = 'filter';
 const RAW_PARTIAL = 'partial';
@@ -2486,9 +2487,15 @@ function formatNumberNativeAttributeValue(name, value) {
 }
 function formatBooleanNativeAttributeValue(name, value) {
     // 布尔类型的属性，只有值为 true 或 属性名 才表示 true
-    return value === TRUE || value === RAW_TRUE || value === name
-        ? RAW_TRUE
-        : UNDEFINED;
+    if (value === TRUE || value === RAW_TRUE || value === name) {
+        return RAW_TRUE;
+    }
+    // 有些元素的布尔类型属性值，默认是 true，因此如果开发者明确传了 false，还是要用 false
+    // 而不是用 undefined，否则会用回元素的默认值，即 true
+    if (value === FALSE || value === RAW_FALSE) {
+        return RAW_FALSE;
+    }
+    return UNDEFINED;
 }
 
 function render(instance, template, dependencies, data, computed, filters, globalFilters, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions) {
@@ -4538,7 +4545,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.239";
+Yox.version = "1.0.0-alpha.240";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
