@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.240
+ * yox.js v1.0.0-alpha.250
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -817,6 +817,12 @@
       }
       return result;
   }
+  function getCallback(value) {
+      // 如果是计算属性，取计算属性的值
+      return func(value.get)
+          ? value.get()
+          : value;
+  }
   /**
    * 从对象中查找一个 keypath
    *
@@ -826,7 +832,7 @@
    * @param keypath
    * @return
    */
-  function get(object, keypath) {
+  function get(object, keypath, callback) {
       var result = object;
       each$1(keypath, function (key, index, lastIndex) {
           if (result != NULL) {
@@ -835,9 +841,11 @@
               // 紧接着判断值是否存在
               // 下面会处理计算属性的值，不能在它后面设置 hasValue
               hasValue = value !== UNDEFINED;
-              // 如果是计算属性，取计算属性的值
-              if (value && func(value.get)) {
-                  value = value.get();
+              // 为什么不用 hasValue 判断呢？
+              // 因为这里需要处理的 value 要么是函数，要么是对象，基础类型无需加工
+              if (value) {
+                  // 如果数据中没有计算属性，也可以自定义
+                  value = (callback || getCallback)(value);
               }
               if (index === lastIndex) {
                   if (hasValue) {
@@ -2352,6 +2360,14 @@
   Yox.prototype.checkProp = function (key, value) {
   };
   /**
+   * 渲染 slots
+   *
+   * @param props
+   * @param slots
+   */
+  Yox.prototype.renderSlots = function (props, slots) {
+  };
+  /**
    * 销毁组件
    */
   Yox.prototype.destroy = function () {
@@ -2461,7 +2477,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.240";
+  Yox.version = "1.0.0-alpha.250";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

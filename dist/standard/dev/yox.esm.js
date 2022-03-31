@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.240
+ * yox.js v1.0.0-alpha.250
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -912,6 +912,12 @@ function copy(object, deep) {
     }
     return result;
 }
+function getCallback(value) {
+    // 如果是计算属性，取计算属性的值
+    return func(value.get)
+        ? value.get()
+        : value;
+}
 /**
  * 从对象中查找一个 keypath
  *
@@ -921,7 +927,7 @@ function copy(object, deep) {
  * @param keypath
  * @return
  */
-function get(object, keypath) {
+function get(object, keypath, callback) {
     let result = object;
     each$1(keypath, function (key, index, lastIndex) {
         if (result != NULL$1) {
@@ -930,9 +936,11 @@ function get(object, keypath) {
             // 紧接着判断值是否存在
             // 下面会处理计算属性的值，不能在它后面设置 hasValue
             hasValue = value !== UNDEFINED$1;
-            // 如果是计算属性，取计算属性的值
-            if (value && func(value.get)) {
-                value = value.get();
+            // 为什么不用 hasValue 判断呢？
+            // 因为这里需要处理的 value 要么是函数，要么是对象，基础类型无需加工
+            if (value) {
+                // 如果数据中没有计算属性，也可以自定义
+                value = (callback || getCallback)(value);
             }
             if (index === lastIndex) {
                 if (hasValue) {
@@ -1858,9 +1866,12 @@ function update(api, vnode, oldVNode) {
                 }
             }
         }
-        const result = merge(props, slots);
-        if (result) {
-            component.forceUpdate(result);
+        let nextProps = props;
+        if (slots) {
+            component.renderSlots(nextProps || (nextProps = {}), slots);
+        }
+        if (nextProps) {
+            component.forceUpdate(nextProps);
         }
     }
 }
@@ -2501,38 +2512,6 @@ function destroy(api, vnode, isRemove) {
     if (isRemove) {
         removeVNode(api, vnode);
     }
-}
-function clone(vnode) {
-    return {
-        type: vnode.type,
-        tag: vnode.tag,
-        isComponent: vnode.isComponent,
-        isFragment: vnode.isFragment,
-        isSlot: vnode.isSlot,
-        isSvg: vnode.isSvg,
-        isStyle: vnode.isStyle,
-        isOption: vnode.isOption,
-        isStatic: vnode.isStatic,
-        isPure: vnode.isPure,
-        slots: vnode.slots,
-        props: vnode.props,
-        nativeAttrs: vnode.nativeAttrs,
-        nativeStyles: vnode.nativeStyles,
-        directives: vnode.directives,
-        events: vnode.events,
-        lazy: vnode.lazy,
-        transition: vnode.transition,
-        model: vnode.model,
-        to: vnode.to,
-        ref: vnode.ref,
-        key: vnode.key,
-        text: vnode.text,
-        html: vnode.html,
-        children: vnode.children,
-        parent: vnode.parent,
-        context: vnode.context,
-        operator: vnode.operator,
-    };
 }
 
 /**
@@ -4926,7 +4905,10 @@ function compile(content) {
                     }
                 }
                 else {
-                    const expr = compile$1(literal);
+                    // 如果 literal 包含 @，如 @children 或 ~/@children
+                    // 表示要遍历 slot，至于为啥要这么设计，因为想复用 each 的逻辑，减少重复代码
+                    // 再加上这个特性一般在业务逻辑中很少使用，只有 UI 库才可能用到，因此这里不必纠结这个语法设计
+                    const expr = compile$1(literal.replace(/(^|\/)@/, '$1' + SLOT_DATA_PREFIX));
                     if (expr) {
                         return createEach(expr, UNDEFINED$1, FALSE$1, index);
                     }
@@ -5257,7 +5239,7 @@ function compile(content) {
 
 const QUOTE_DOUBLE = '"', QUOTE_SINGLE = "'";
 // 下面这些值需要根据外部配置才能确定
-let isUglify$1 = UNDEFINED$1, isMinify = UNDEFINED$1, varId = 0, varMap = {}, varCache = {}, VAR_PREFIX = EMPTY_STRING, UNDEFINED = EMPTY_STRING, NULL = EMPTY_STRING, TRUE = EMPTY_STRING, FALSE = EMPTY_STRING, SPACE = EMPTY_STRING, INDENT = EMPTY_STRING, BREAK_LINE = EMPTY_STRING;
+let isUglify$1 = UNDEFINED$1, isMinify = UNDEFINED$1, varId = 0, varMap = {}, varCache = {}, VAR_PREFIX = EMPTY_STRING, TEMP = EMPTY_STRING, UNDEFINED = EMPTY_STRING, NULL = EMPTY_STRING, TRUE = EMPTY_STRING, FALSE = EMPTY_STRING, SPACE = EMPTY_STRING, INDENT = EMPTY_STRING, BREAK_LINE = EMPTY_STRING;
 class Primitive {
     constructor(value) {
         this.value = value;
@@ -5453,13 +5435,17 @@ class Member {
     }
 }
 class Assign {
-    constructor(name, value) {
+    constructor(name, value, isDeclaration) {
         this.name = name;
         this.value = value;
+        this.isDeclaration = isDeclaration;
     }
     toString(tabSize) {
-        const { name, value } = this;
-        return `${name.toString(tabSize)}${SPACE}=${SPACE}${value.toString(tabSize)}`;
+        const { name, value, isDeclaration } = this;
+        const statement = `${name.toString(tabSize)}${SPACE}=${SPACE}${value.toString(tabSize)}`;
+        return isDeclaration
+            ? `var ${statement}`
+            : statement;
     }
 }
 class Push {
@@ -5469,11 +5455,11 @@ class Push {
     }
     toString(tabSize) {
         const { array, item } = this;
-        return toAssign(toMember(array, [
-            toMember(array, [
-                toPrimitive(RAW_LENGTH)
-            ])
-        ]), item).toString(tabSize);
+        return toCall(toMember(array, [
+            toPrimitive('push')
+        ]), [
+            item
+        ]).toString(tabSize);
     }
 }
 function toPrimitive(value) {
@@ -5526,11 +5512,14 @@ function toAnonymousFunction(args, body, returnValue) {
 function toMember(base, props) {
     return new Member(base, props);
 }
-function toAssign(name, value) {
-    return new Assign(name, value);
+function toAssign(name, value, isDeclaration) {
+    return new Assign(name, value, isDeclaration);
 }
 function toPush(array, item) {
     return new Push(array, item);
+}
+function getTempName() {
+    return TEMP;
 }
 /**
  * 目的是 保证调用参数顺序稳定，减少运行时判断
@@ -5569,7 +5558,9 @@ function toObjectPair(key, value) {
     return `${key}:${SPACE}${value}`;
 }
 function toVarPair(key, value) {
-    return `${key}${SPACE}=${SPACE}${value}`;
+    return value !== UNDEFINED$1
+        ? `${key}${SPACE}=${SPACE}${value}`
+        : key;
 }
 function init$1() {
     if (isUglify$1 !== PUBLIC_CONFIG.uglifyCompiled) {
@@ -5590,19 +5581,20 @@ function init$1() {
     varId = 0;
     varMap = {};
     varCache = {};
+    TEMP = addVar();
     UNDEFINED = addVar('void 0');
     NULL = addVar('null');
     TRUE = addVar('!0');
     FALSE = addVar('!1');
 }
 function addVar(value, cache) {
-    const hash = value.toString();
-    if (cache && varCache[hash]) {
+    const hash = value ? value.toString() : UNDEFINED$1;
+    if (cache && hash && varCache[hash]) {
         return varCache[hash];
     }
     const key = VAR_PREFIX + (varId++);
     varMap[key] = value;
-    if (cache) {
+    if (cache && hash) {
         varCache[hash] = key;
     }
     return key;
@@ -5619,11 +5611,13 @@ function generate$2(args, code) {
     each(varMap, function (value, key) {
         push(varList, {
             toString(tabSize) {
-                return toVarPair(key, value.toString(tabSize));
+                return toVarPair(key, value
+                    ? value.toString(tabSize)
+                    : UNDEFINED$1);
             }
         });
     });
-    const result = toAnonymousFunction(UNDEFINED$1, toTuple('var ', ';', ',', FALSE$1, 0, varList), toAnonymousFunction(args, code));
+    const result = toAnonymousFunction(UNDEFINED$1, toTuple('var ', EMPTY_STRING, ',', FALSE$1, 0, varList), toAnonymousFunction(args, code));
     return `(${result.toString()})()`;
 }
 
@@ -5748,73 +5742,73 @@ componentStack = [],
 attributeStack = [], 
 // 是否正在处理特殊 each，包括 遍历 range 和 遍历数组字面量和对象字面量
 eachStack = [], 
+// 是否正在处理 slot
+slotStack = [], 
 // 是否正在收集动态 child
 dynamicChildrenStack = [TRUE$1], 
 // 收集属性值
-attributeValueStack = [], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {}, FIELD_NATIVE_ATTRIBUTES = 'nativeAttrs', FIELD_NATIVE_STYLES = 'nativeStyles', FIELD_PROPERTIES = 'props', FIELD_DIRECTIVES = 'directives', FIELD_EVENTS = 'events', FIELD_MODEL = 'model', FIELD_LAZY = 'lazy', FIELD_TRANSITION = 'transition', FIELD_CHILDREN = 'children', FIELD_SLOTS = 'slots';
+attributeValueStack = [], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {}, FIELD_NATIVE_ATTRIBUTES = 'nativeAttrs', FIELD_NATIVE_STYLES = 'nativeStyles', FIELD_PROPERTIES = 'props', FIELD_DIRECTIVES = 'directives', FIELD_EVENTS = 'events', FIELD_MODEL = 'model', FIELD_LAZY = 'lazy', FIELD_TRANSITION = 'transition', FIELD_CHILDREN = 'children', FIELD_SLOTS = 'slots', FIELD_OPERATOR = 'operator';
 // 下面这些值需要根据外部配置才能确定
-let isUglify = UNDEFINED$1, currentTextVNode = UNDEFINED$1, RENDER_COMPOSE_VNODE = EMPTY_STRING, RENDER_STYLE_STRING = EMPTY_STRING, RENDER_STYLE_EXPR = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_SLOTS = EMPTY_STRING, RENDER_SLOT_CHILDREN = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, APPEND_VNODE_PROPERTY = EMPTY_STRING, FORMAT_NATIVE_ATTRIBUTE_NUMBER_VALUE = EMPTY_STRING, FORMAT_NATIVE_ATTRIBUTE_BOOLEAN_VALUE = EMPTY_STRING, LOOKUP_KEYPATH = EMPTY_STRING, LOOKUP_PROP = EMPTY_STRING, GET_THIS = EMPTY_STRING, GET_THIS_BY_INDEX = EMPTY_STRING, GET_PROP = EMPTY_STRING, GET_PROP_BY_INDEX = EMPTY_STRING, READ_KEYPATH = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, SET_HOLDER = EMPTY_STRING, TO_STRING = EMPTY_STRING, OPERATOR_TEXT_VNODE = EMPTY_STRING, OPERATOR_COMMENT_VNODE = EMPTY_STRING, OPERATOR_ELEMENT_VNODE = EMPTY_STRING, OPERATOR_COMPONENT_VNODE = EMPTY_STRING, OPERATOR_FRAGMENT_VNODE = EMPTY_STRING, OPERATOR_PORTAL_VNODE = EMPTY_STRING, OPERATOR_SLOT_VNODE = EMPTY_STRING, ARG_INSTANCE = EMPTY_STRING, ARG_FILTERS = EMPTY_STRING, ARG_GLOBAL_FILTERS = EMPTY_STRING, ARG_LOCAL_PARTIALS = EMPTY_STRING, ARG_PARTIALS = EMPTY_STRING, ARG_GLOBAL_PARTIALS = EMPTY_STRING, ARG_DIRECTIVES = EMPTY_STRING, ARG_GLOBAL_DIRECTIVES = EMPTY_STRING, ARG_TRANSITIONS = EMPTY_STRING, ARG_GLOBAL_TRANSITIONS = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_COMPONENTS = EMPTY_STRING, ARG_SCOPE = EMPTY_STRING, ARG_KEYPATH = EMPTY_STRING, ARG_LENGTH = EMPTY_STRING, ARG_EVENT = EMPTY_STRING, ARG_DATA = EMPTY_STRING;
+let isUglify = UNDEFINED$1, currentTextVNode = UNDEFINED$1, RENDER_STYLE_STRING = EMPTY_STRING, RENDER_STYLE_EXPR = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, RENDER_SLOT_DIRECTLY = EMPTY_STRING, RENDER_SLOT_INDIRECTLY = EMPTY_STRING, APPEND_VNODE_PROPERTY = EMPTY_STRING, FORMAT_NATIVE_ATTRIBUTE_NUMBER_VALUE = EMPTY_STRING, FORMAT_NATIVE_ATTRIBUTE_BOOLEAN_VALUE = EMPTY_STRING, LOOKUP_KEYPATH = EMPTY_STRING, LOOKUP_PROP = EMPTY_STRING, GET_THIS = EMPTY_STRING, GET_THIS_BY_INDEX = EMPTY_STRING, GET_PROP = EMPTY_STRING, GET_PROP_BY_INDEX = EMPTY_STRING, READ_KEYPATH = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, SET_VALUE_HOLDER = EMPTY_STRING, TO_STRING = EMPTY_STRING, OPERATOR_TEXT_VNODE = EMPTY_STRING, OPERATOR_COMMENT_VNODE = EMPTY_STRING, OPERATOR_ELEMENT_VNODE = EMPTY_STRING, OPERATOR_COMPONENT_VNODE = EMPTY_STRING, OPERATOR_FRAGMENT_VNODE = EMPTY_STRING, OPERATOR_PORTAL_VNODE = EMPTY_STRING, OPERATOR_SLOT_VNODE = EMPTY_STRING, ARG_INSTANCE = EMPTY_STRING, ARG_FILTERS = EMPTY_STRING, ARG_GLOBAL_FILTERS = EMPTY_STRING, ARG_LOCAL_PARTIALS = EMPTY_STRING, ARG_PARTIALS = EMPTY_STRING, ARG_GLOBAL_PARTIALS = EMPTY_STRING, ARG_DIRECTIVES = EMPTY_STRING, ARG_GLOBAL_DIRECTIVES = EMPTY_STRING, ARG_TRANSITIONS = EMPTY_STRING, ARG_GLOBAL_TRANSITIONS = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_PARENT = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_SCOPE = EMPTY_STRING, ARG_KEYPATH = EMPTY_STRING, ARG_LENGTH = EMPTY_STRING, ARG_EVENT = EMPTY_STRING, ARG_DATA = EMPTY_STRING;
 function init() {
     if (isUglify === PUBLIC_CONFIG.uglifyCompiled) {
         return;
     }
     if (PUBLIC_CONFIG.uglifyCompiled) {
-        RENDER_COMPOSE_VNODE = '_a';
-        RENDER_STYLE_STRING = '_b';
-        RENDER_STYLE_EXPR = '_c';
-        RENDER_TRANSITION = '_d';
-        RENDER_MODEL = '_e';
-        RENDER_EVENT_METHOD = '_f';
-        RENDER_EVENT_NAME = '_g';
-        RENDER_DIRECTIVE = '_h';
-        RENDER_SPREAD = '_i';
-        RENDER_SLOTS = '_j';
-        RENDER_SLOT_CHILDREN = '_k';
-        RENDER_PARTIAL = '_l';
-        RENDER_EACH = '_m';
-        RENDER_RANGE = '_n';
-        APPEND_VNODE_PROPERTY = '_o';
-        FORMAT_NATIVE_ATTRIBUTE_NUMBER_VALUE = '_p';
-        FORMAT_NATIVE_ATTRIBUTE_BOOLEAN_VALUE = '_q';
-        LOOKUP_KEYPATH = '_r';
-        LOOKUP_PROP = '_s';
-        GET_THIS = '_t';
-        GET_THIS_BY_INDEX = '_u';
-        GET_PROP = '_v';
-        GET_PROP_BY_INDEX = '_w';
-        READ_KEYPATH = '_x';
-        EXECUTE_FUNCTION = '_y';
-        SET_HOLDER = '_z';
-        TO_STRING = '_A';
-        OPERATOR_TEXT_VNODE = '_B';
-        OPERATOR_COMMENT_VNODE = '_C';
-        OPERATOR_ELEMENT_VNODE = '_D';
-        OPERATOR_COMPONENT_VNODE = '_E';
-        OPERATOR_FRAGMENT_VNODE = '_F';
-        OPERATOR_PORTAL_VNODE = '_G';
-        OPERATOR_SLOT_VNODE = '_H';
-        ARG_INSTANCE = '_I';
-        ARG_FILTERS = '_J';
-        ARG_GLOBAL_FILTERS = '_K';
-        ARG_LOCAL_PARTIALS = '_L';
-        ARG_PARTIALS = '_M';
-        ARG_GLOBAL_PARTIALS = '_N';
-        ARG_DIRECTIVES = '_O';
-        ARG_GLOBAL_DIRECTIVES = '_P';
-        ARG_TRANSITIONS = '_Q';
-        ARG_GLOBAL_TRANSITIONS = '_R';
-        ARG_STACK = '_S';
+        RENDER_STYLE_STRING = '_a';
+        RENDER_STYLE_EXPR = '_b';
+        RENDER_TRANSITION = '_c';
+        RENDER_MODEL = '_d';
+        RENDER_EVENT_METHOD = '_e';
+        RENDER_EVENT_NAME = '_f';
+        RENDER_DIRECTIVE = '_g';
+        RENDER_SPREAD = '_h';
+        RENDER_PARTIAL = '_i';
+        RENDER_EACH = '_j';
+        RENDER_RANGE = '_k';
+        RENDER_SLOT_DIRECTLY = '_l';
+        RENDER_SLOT_INDIRECTLY = '_m';
+        APPEND_VNODE_PROPERTY = '_n';
+        FORMAT_NATIVE_ATTRIBUTE_NUMBER_VALUE = '_o';
+        FORMAT_NATIVE_ATTRIBUTE_BOOLEAN_VALUE = '_p';
+        LOOKUP_KEYPATH = '_q';
+        LOOKUP_PROP = '_r';
+        GET_THIS = '_s';
+        GET_THIS_BY_INDEX = '_t';
+        GET_PROP = '_u';
+        GET_PROP_BY_INDEX = '_v';
+        READ_KEYPATH = '_w';
+        EXECUTE_FUNCTION = '_x';
+        SET_VALUE_HOLDER = '_y';
+        TO_STRING = '_z';
+        OPERATOR_TEXT_VNODE = '_A';
+        OPERATOR_COMMENT_VNODE = '_B';
+        OPERATOR_ELEMENT_VNODE = '_C';
+        OPERATOR_COMPONENT_VNODE = '_D';
+        OPERATOR_FRAGMENT_VNODE = '_E';
+        OPERATOR_PORTAL_VNODE = '_F';
+        OPERATOR_SLOT_VNODE = '_G';
+        ARG_INSTANCE = '_H';
+        ARG_FILTERS = '_I';
+        ARG_GLOBAL_FILTERS = '_J';
+        ARG_LOCAL_PARTIALS = '_K';
+        ARG_PARTIALS = '_L';
+        ARG_GLOBAL_PARTIALS = '_M';
+        ARG_DIRECTIVES = '_N';
+        ARG_GLOBAL_DIRECTIVES = '_O';
+        ARG_TRANSITIONS = '_P';
+        ARG_GLOBAL_TRANSITIONS = '_Q';
+        ARG_STACK = '_R';
+        ARG_PARENT = '_S';
         ARG_VNODE = '_T';
         ARG_CHILDREN = '_U';
-        ARG_COMPONENTS = '_V';
-        ARG_SCOPE = '_W';
-        ARG_KEYPATH = '_X';
-        ARG_LENGTH = '_Y';
-        ARG_EVENT = '_Z';
-        ARG_DATA = '_1';
+        ARG_SCOPE = '_V';
+        ARG_KEYPATH = '_W';
+        ARG_LENGTH = '_X';
+        ARG_EVENT = '_Y';
+        ARG_DATA = '_Z';
     }
     else {
-        RENDER_COMPOSE_VNODE = 'renderComposeVNode';
         RENDER_STYLE_STRING = 'renderStyleStyle';
         RENDER_STYLE_EXPR = 'renderStyleExpr';
         RENDER_TRANSITION = 'renderTransition';
@@ -5823,11 +5817,11 @@ function init() {
         RENDER_EVENT_NAME = 'renderEventName';
         RENDER_DIRECTIVE = 'renderDirective';
         RENDER_SPREAD = 'renderSpread';
-        RENDER_SLOTS = 'renderSlots';
-        RENDER_SLOT_CHILDREN = 'renderSlotChildren';
         RENDER_PARTIAL = 'renderPartial';
         RENDER_EACH = 'renderEach';
         RENDER_RANGE = 'renderRange';
+        RENDER_SLOT_DIRECTLY = 'renderSlotDirectly';
+        RENDER_SLOT_INDIRECTLY = 'renderSlotIndirectly';
         APPEND_VNODE_PROPERTY = 'appendVNodeProperty';
         FORMAT_NATIVE_ATTRIBUTE_NUMBER_VALUE = 'formatNativeAttributeNumberValue';
         FORMAT_NATIVE_ATTRIBUTE_BOOLEAN_VALUE = 'formatNativeAttributeBooleanValue';
@@ -5839,7 +5833,7 @@ function init() {
         GET_PROP_BY_INDEX = 'getPropByIndex';
         READ_KEYPATH = 'readKeypath';
         EXECUTE_FUNCTION = 'executeFunction';
-        SET_HOLDER = 'setHolder';
+        SET_VALUE_HOLDER = 'setValueHolder';
         TO_STRING = 'toString';
         OPERATOR_TEXT_VNODE = 'textVNodeOperator';
         OPERATOR_COMMENT_VNODE = 'commentVNodeOperator';
@@ -5859,9 +5853,9 @@ function init() {
         ARG_TRANSITIONS = 'transition';
         ARG_GLOBAL_TRANSITIONS = 'globalTransitions';
         ARG_STACK = 'stack';
+        ARG_PARENT = 'parent';
         ARG_VNODE = 'vnode';
         ARG_CHILDREN = 'children';
-        ARG_COMPONENTS = 'components';
         ARG_SCOPE = MAGIC_VAR_SCOPE;
         ARG_KEYPATH = MAGIC_VAR_KEYPATH;
         ARG_LENGTH = MAGIC_VAR_LENGTH;
@@ -5952,26 +5946,29 @@ function generateHolderIfNeeded(node, holder) {
             toPrimitive('value')
         ]);
 }
-function generateExpressionIdentifier(node, nodes, keypath, holder, stack, parentNode) {
-    const { root, lookup, offset } = node, { length } = nodes;
-    let getIndex;
+function generateExpressionIndex(root, offset) {
+    let result;
     if (root) {
-        getIndex = addVar(toAnonymousFunction(UNDEFINED$1, UNDEFINED$1, toPrimitive(0)), TRUE$1);
+        result = addVar(toAnonymousFunction(UNDEFINED$1, UNDEFINED$1, toPrimitive(0)), TRUE$1);
     }
     else if (offset) {
-        getIndex = addVar(toAnonymousFunction([
+        result = addVar(toAnonymousFunction([
             ARG_STACK
         ], UNDEFINED$1, toBinary(toMember(ARG_STACK, [
             toPrimitive(RAW_LENGTH)
         ]), '-', toPrimitive(1 + offset))), TRUE$1);
     }
     else {
-        getIndex = addVar(toAnonymousFunction([
+        result = addVar(toAnonymousFunction([
             ARG_STACK
         ], UNDEFINED$1, toBinary(toMember(ARG_STACK, [
             toPrimitive(RAW_LENGTH)
         ]), '-', toPrimitive(1))), TRUE$1);
     }
+    return result;
+}
+function generateExpressionIdentifier(node, nodes, keypath, holder, stack, parentNode) {
+    const { root, lookup, offset } = node, { length } = nodes, getIndex = generateExpressionIndex(root, offset);
     let filter = toPrimitive(UNDEFINED$1);
     // 函数调用
     if (parentNode
@@ -6066,12 +6063,12 @@ function generateExpressionValue(value, keys, keypath, holder) {
     let result;
     switch (keys.length) {
         case 0:
-            result = toCall(SET_HOLDER, [
+            result = toCall(SET_VALUE_HOLDER, [
                 value,
             ]);
             break;
         case 1:
-            result = toCall(SET_HOLDER, [
+            result = toCall(SET_VALUE_HOLDER, [
                 toMember(value, keys)
             ]);
             break;
@@ -6087,7 +6084,7 @@ function generateExpressionValue(value, keys, keypath, holder) {
     return generateHolderIfNeeded(result, holder);
 }
 function generateExpressionCall(fn, args, holder) {
-    return generateHolderIfNeeded(toCall(SET_HOLDER, [
+    return generateHolderIfNeeded(toCall(SET_VALUE_HOLDER, [
         toCall(EXECUTE_FUNCTION, [
             fn,
             ARG_INSTANCE,
@@ -6153,6 +6150,14 @@ function generateNodesToTuple(nodes) {
 function generateNodesToList(nodes) {
     return toList(mapNodes(nodes));
 }
+function generateNodesToChildren(nodes, args) {
+    const tuple = generateNodesToTuple(nodes);
+    // 用 ARG_CHILDREN 收集所有的节点
+    tuple.unshift(toAssign(ARG_CHILDREN, toList(), TRUE$1));
+    return toAnonymousFunction(args, tuple, toTernary(toMember(ARG_CHILDREN, [
+        toPrimitive(RAW_LENGTH)
+    ]), ARG_CHILDREN, toPrimitive(UNDEFINED$1)));
+}
 function generateStatementIfNeeded(nodes) {
     return nodes.length === 1
         ? nodes[0]
@@ -6163,9 +6168,6 @@ function appendDynamicChildVNode(vnode) {
         ? vnode
         : UNDEFINED$1;
     return toPush(ARG_CHILDREN, vnode);
-}
-function appendComponentVNode(vnode) {
-    return toPush(ARG_COMPONENTS, vnode);
 }
 function generateSelfAndGlobalReader(self, global, name) {
     return toBinary(toBinary(self, '&&', toMember(self, [
@@ -6196,6 +6198,7 @@ function generateComponentSlots(children) {
             push(slots[name] || (slots[name] = []), nodes);
         }
     };
+    push(slotStack, TRUE$1);
     each$2(children, function (child) {
         // 找到具名 slot
         if (child.type === ELEMENT) {
@@ -6212,11 +6215,11 @@ function generateComponentSlots(children) {
         addSlot(SLOT_NAME_DEFAULT, [child]);
     });
     each(slots, function (children, name) {
-        result.set(name, toAnonymousFunction([
-            ARG_CHILDREN,
-            ARG_COMPONENTS
-        ], generateNodesToTuple(children)));
+        result.set(name, generateNodesToChildren(children, [
+            ARG_PARENT
+        ]));
     });
+    pop(slotStack);
     if (result.isNotEmpty()) {
         return result;
     }
@@ -6325,9 +6328,7 @@ function parseChildren(children, forceDynamic) {
     }
     push(dynamicChildrenStack, isDynamic);
     if (isDynamic) {
-        dynamicChildren = toAnonymousFunction([
-            ARG_CHILDREN
-        ], generateNodesToTuple(children), ARG_CHILDREN);
+        dynamicChildren = toCall(generateNodesToChildren(children));
     }
     else {
         staticChildren = generateNodesToList(children);
@@ -6347,7 +6348,7 @@ nodeGenerator[ELEMENT] = function (node) {
         tag: dynamicTag
             ? generateExpression(dynamicTag)
             : toPrimitive(tag)
-    }), isFragment = vnodeType === VNODE_TYPE_FRAGMENT, isPortal = vnodeType === VNODE_TYPE_PORTAL, isSlot = vnodeType === VNODE_TYPE_SLOT, outputAttrs = UNDEFINED$1, outputChildren = UNDEFINED$1, outputSlots = UNDEFINED$1;
+    }), isFragment = vnodeType === VNODE_TYPE_FRAGMENT, isPortal = vnodeType === VNODE_TYPE_PORTAL, isSlot = vnodeType === VNODE_TYPE_SLOT, outputAttrs = UNDEFINED$1, outputChildren = UNDEFINED$1, outputSlots = UNDEFINED$1, renderSlot = UNDEFINED$1;
     // 先序列化 children，再序列化 attrs，原因需要举两个例子：
     // 例子1：
     // <div on-click="output(this)"></div> 如果 this 序列化成 $scope，如果外部修改了 this，因为模板没有计入此依赖，不会刷新，因此 item 是旧的
@@ -6361,10 +6362,7 @@ nodeGenerator[ELEMENT] = function (node) {
     push(attributeStack, FALSE$1);
     push(componentStack, isComponent);
     if (children) {
-        if (isSlot) {
-            outputChildren = toStatement(mapNodes(children), TRUE$1);
-        }
-        else if (isComponent) {
+        if (isComponent) {
             outputSlots = generateComponentSlots(children);
         }
         else {
@@ -6373,7 +6371,12 @@ nodeGenerator[ELEMENT] = function (node) {
                 outputChildren = dynamicChildren;
             }
             else if (staticChildren) {
-                vnode.set(FIELD_CHILDREN, staticChildren);
+                if (isSlot) {
+                    outputChildren = staticChildren;
+                }
+                else {
+                    vnode.set(FIELD_CHILDREN, staticChildren);
+                }
             }
         }
     }
@@ -6396,6 +6399,26 @@ nodeGenerator[ELEMENT] = function (node) {
             : toCall(TO_STRING, [
                 generateExpression(html)
             ]));
+    }
+    if (isSlot) {
+        let nameAttr = node.name, outputName = toPrimitive(SLOT_DATA_PREFIX + SLOT_NAME_DEFAULT);
+        if (nameAttr) {
+            // 如果 name 是字面量，直接拼出结果
+            outputName = isDef(nameAttr.value)
+                ? toPrimitive(SLOT_DATA_PREFIX + nameAttr.value)
+                : toBinary(toPrimitive(SLOT_DATA_PREFIX), '+', toPrecedence(generateAttributeValue(nameAttr)));
+        }
+        if (last(slotStack)) {
+            renderSlot = toCall(RENDER_SLOT_INDIRECTLY, [
+                outputName,
+                ARG_PARENT
+            ]);
+        }
+        else {
+            renderSlot = toCall(RENDER_SLOT_DIRECTLY, [
+                outputName
+            ]);
+        }
     }
     if (text) {
         vnode.set('text', string$1(text)
@@ -6466,38 +6489,33 @@ nodeGenerator[ELEMENT] = function (node) {
     pop(attributeStack);
     pop(componentStack);
     if (vnodeType === VNODE_TYPE_ELEMENT) {
-        vnode.set('operator', OPERATOR_ELEMENT_VNODE);
+        vnode.set(FIELD_OPERATOR, OPERATOR_ELEMENT_VNODE);
     }
     else if (isFragment) {
         vnode.set('isFragment', toPrimitive(TRUE$1));
-        vnode.set('operator', OPERATOR_FRAGMENT_VNODE);
+        vnode.set(FIELD_OPERATOR, OPERATOR_FRAGMENT_VNODE);
     }
     else if (isPortal) {
-        vnode.set('operator', OPERATOR_PORTAL_VNODE);
+        vnode.set('isPortal', toPrimitive(TRUE$1));
+        vnode.set(FIELD_OPERATOR, OPERATOR_PORTAL_VNODE);
     }
     else if (isComponent) {
         vnode.set('isComponent', toPrimitive(TRUE$1));
-        vnode.set('operator', OPERATOR_COMPONENT_VNODE);
+        vnode.set(FIELD_OPERATOR, OPERATOR_COMPONENT_VNODE);
+        if (last(slotStack)) {
+            vnode.set('parent', ARG_PARENT);
+        }
     }
     else if (isSlot) {
         vnode.set('isSlot', toPrimitive(TRUE$1));
-        vnode.set('operator', OPERATOR_SLOT_VNODE);
-        let nameAttr = node.name, argName = toPrimitive(SLOT_DATA_PREFIX + SLOT_NAME_DEFAULT);
-        if (nameAttr) {
-            // 如果 name 是字面量，直接拼出结果
-            argName = isDef(nameAttr.value)
-                ? toPrimitive(SLOT_DATA_PREFIX + nameAttr.value)
-                : toBinary(toPrimitive(SLOT_DATA_PREFIX), '+', toPrecedence(generateAttributeValue(nameAttr)));
-        }
-        const renderSlot = toCall(RENDER_SLOT_CHILDREN, [
-            argName,
-            ARG_CHILDREN
-        ]);
-        outputChildren = toAnonymousFunction([
-            ARG_CHILDREN
-        ], outputChildren
+        vnode.set(FIELD_OPERATOR, OPERATOR_SLOT_VNODE);
+        // 如果 renderSlot 没内容，则取 slot 元素的 children 作为内容
+        // <slot>
+        //  default
+        // </slot>
+        outputChildren = outputChildren
             ? toBinary(renderSlot, '||', outputChildren)
-            : renderSlot, ARG_CHILDREN);
+            : renderSlot;
     }
     if (node.isOption) {
         vnode.set('isOption', toPrimitive(TRUE$1));
@@ -6513,14 +6531,10 @@ nodeGenerator[ELEMENT] = function (node) {
         vnode.set('isPure', toPrimitive(TRUE$1));
     }
     if (outputChildren) {
-        vnode.set(FIELD_CHILDREN, toCall(outputChildren, [
-            toList()
-        ]));
+        vnode.set(FIELD_CHILDREN, outputChildren);
     }
     if (outputSlots) {
-        vnode.set(FIELD_SLOTS, toCall(RENDER_SLOTS, [
-            outputSlots
-        ]));
+        vnode.set(FIELD_SLOTS, outputSlots);
     }
     const list = [], result = outputAttrs
         ? toCall(outputAttrs, [
@@ -6528,16 +6542,19 @@ nodeGenerator[ELEMENT] = function (node) {
         ])
         : vnode;
     if (isFragment || isPortal || isSlot) {
-        push(list, toCall(RENDER_COMPOSE_VNODE, [
-            result,
-            ARG_CHILDREN,
-        ]));
+        const varName = getTempName();
+        // temp = vnode
+        push(list, toAssign(varName, result));
+        // temp.children && temp.children.length && childre.push(temp)
+        push(list, toBinary(toBinary(toMember(varName, [
+            toPrimitive(FIELD_CHILDREN)
+        ]), '&&', toMember(varName, [
+            toPrimitive(FIELD_CHILDREN),
+            toPrimitive(RAW_LENGTH)
+        ])), '&&', toPush(ARG_CHILDREN, varName)));
         return generateStatementIfNeeded(list);
     }
-    push(list, result);
-    return generateVNode(isComponent
-        ? appendComponentVNode(generateStatementIfNeeded(list))
-        : generateStatementIfNeeded(list));
+    return generateVNode(result);
 };
 nodeGenerator[ATTRIBUTE] = function (node) {
     return toCall(APPEND_VNODE_PROPERTY, [
@@ -6874,7 +6891,6 @@ nodeGenerator[PARTIAL] = function (node) {
         ARG_SCOPE,
         ARG_KEYPATH,
         ARG_CHILDREN,
-        ARG_COMPONENTS,
     ], generateNodesToTuple(node.children)));
 };
 nodeGenerator[IMPORT] = function (node) {
@@ -6884,7 +6900,6 @@ nodeGenerator[IMPORT] = function (node) {
         ARG_SCOPE,
         ARG_KEYPATH,
         ARG_CHILDREN,
-        ARG_COMPONENTS,
         toMember(ARG_LOCAL_PARTIALS, [
             toPrimitive(name)
         ]),
@@ -6895,7 +6910,6 @@ function generate(node) {
     init();
     init$1();
     return generate$2([
-        RENDER_COMPOSE_VNODE,
         RENDER_STYLE_STRING,
         RENDER_STYLE_EXPR,
         RENDER_TRANSITION,
@@ -6904,11 +6918,11 @@ function generate(node) {
         RENDER_EVENT_NAME,
         RENDER_DIRECTIVE,
         RENDER_SPREAD,
-        RENDER_SLOTS,
-        RENDER_SLOT_CHILDREN,
         RENDER_PARTIAL,
         RENDER_EACH,
         RENDER_RANGE,
+        RENDER_SLOT_DIRECTLY,
+        RENDER_SLOT_INDIRECTLY,
         APPEND_VNODE_PROPERTY,
         FORMAT_NATIVE_ATTRIBUTE_NUMBER_VALUE,
         FORMAT_NATIVE_ATTRIBUTE_BOOLEAN_VALUE,
@@ -6920,7 +6934,7 @@ function generate(node) {
         GET_PROP_BY_INDEX,
         READ_KEYPATH,
         EXECUTE_FUNCTION,
-        SET_HOLDER,
+        SET_VALUE_HOLDER,
         TO_STRING,
         OPERATOR_TEXT_VNODE,
         OPERATOR_COMMENT_VNODE,
@@ -6942,22 +6956,15 @@ function generate(node) {
         ARG_SCOPE,
         ARG_KEYPATH,
         ARG_CHILDREN,
-        ARG_COMPONENTS,
     ], nodeGenerator[node.type](node));
 }
 
-function render(instance, template, dependencies, data, computed, filters, globalFilters, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions) {
+function render(instance, template, data, computed, slots, filters, globalFilters, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, addDependency) {
     let rootScope = merge(data, computed), rootKeypath = EMPTY_STRING, contextStack = [
         { scope: rootScope, keypath: rootKeypath }
     ], localPartials = {}, 
     // 模板渲染过程收集的 vnode
-    children = [], 
-    // 模板渲染过程收集的组件
-    components = [], renderComposeVNode = function (vnode, children) {
-        if (vnode.children.length) {
-            children[children.length] = vnode;
-        }
-    }, appendVNodeProperty = function (vnode, key, name, value) {
+    children = [], appendVNodeProperty = function (vnode, key, name, value) {
         if (vnode[key]) {
             vnode[key][name] = value;
         }
@@ -7103,47 +7110,14 @@ function render(instance, template, dependencies, data, computed, filters, globa
                 appendVNodeProperty(vnode, key, name, value[name]);
             }
         }
-    }, renderSlots = function (render) {
-        const result = {};
-        for (let name in render) {
-            const children = [], components = [];
-            render[name](children, components);
-            // 就算是 undefined 也必须有值，用于覆盖旧值
-            result[name] = children.length
-                ? {
-                    vnodes: children,
-                    components: components.length
-                        ? components
-                        : UNDEFINED$1
-                }
-                : UNDEFINED$1;
-        }
-        return result;
-    }, 
-    // <slot name="xx"/>
-    renderSlotChildren = function (name, children) {
-        dependencies[name] = children;
-        const result = rootScope[name];
-        if (result) {
-            const { vnodes, components } = result;
-            if (components) {
-                for (let i = 0, length = components.length; i < length; i++) {
-                    components[i].parent = instance;
-                }
-            }
-            for (let i = 0, length = vnodes.length; i < length; i++) {
-                children[children.length] = clone(vnodes[i]);
-            }
-            return TRUE$1;
-        }
     }, 
     // {{> name}}
-    renderPartial = function (name, scope, keypath, children, components, renderLocal, render) {
+    renderPartial = function (name, scope, keypath, children, renderLocal, render) {
         {
             warn('Partial is not recommended for use, it may be removed in the future.');
         }
         if (renderLocal) {
-            renderLocal(scope, keypath, children, components);
+            renderLocal(scope, keypath, children);
             return;
         }
         {
@@ -7151,7 +7125,7 @@ function render(instance, template, dependencies, data, computed, filters, globa
                 fatal(`The partial "${name}" can't be found.`);
             }
         }
-        renderTemplate(render, scope, keypath, children, components);
+        renderTemplate(render, scope, keypath, children);
     }, renderEach = function (holder, renderChildren, renderElse) {
         let { keypath, value } = holder, length = 0, needKeypath = !!keypath, oldScopeStack = contextStack, currentKeypath = last(contextStack).keypath;
         if (array$1(value)) {
@@ -7226,13 +7200,56 @@ function render(instance, template, dependencies, data, computed, filters, globa
         if (renderElse && length === 0) {
             renderElse();
         }
+    }, 
+    /**
+     * 直接渲染 slot，如下
+     * <Button>
+     *  click
+     * </Button>
+     *
+     * 在 Button 组件模板中，如果直接使用了 slot，则属于直接渲染，如下
+     * <div class="button">
+     *  <slot />
+     * </div>
+     */
+    renderSlotDirectly = function (name) {
+        return setSlotHodler(name, get(rootScope, name));
+    }, 
+    /**
+     * 间接渲染 slot，如下
+     * <Button>
+     *  click
+     * </Button>
+     *
+     * 在 Button 组件模板中，如果未直接使用 slot，而是透传给了其他组件，则属于间接渲染，如下
+     * <div class="button">
+     *  <Text>
+     *    <slot />
+     *  </Text>
+     * </div>
+     */
+    renderSlotIndirectly = function (name, parent) {
+        return setSlotHodler(name, get(slots, name, function (value) {
+            return func(value)
+                ? value(parent)
+                : value;
+        }));
+    }, setSlotHodler = function (name, holder) {
+        addDependency(name);
+        if (holder) {
+            const { value } = holder;
+            // slot 内容必须是个数组
+            return array$1(value)
+                ? value
+                : [value];
+        }
     }, findKeypath = function (stack, index, name, lookup, isFirstCall) {
         const { scope, keypath } = stack[index], currentKeypath = join(keypath, name), result = get(scope, name);
         if (result) {
-            return setHolder(result.value, currentKeypath);
+            return setValueHolder(result.value, currentKeypath);
         }
         if (isFirstCall) {
-            setHolder(UNDEFINED$1, currentKeypath);
+            setValueHolder(UNDEFINED$1, currentKeypath);
         }
         if (lookup && index > 0) {
             {
@@ -7243,12 +7260,12 @@ function render(instance, template, dependencies, data, computed, filters, globa
     }, lookupKeypath = function (getIndex, keypath, lookup, stack, filter) {
         const currentStack = stack || contextStack;
         return findKeypath(currentStack, getIndex(currentStack), keypath, lookup, TRUE$1) || (filter
-            ? setHolder(filter)
+            ? setValueHolder(filter)
             : holder);
     }, findProp = function (stack, index, name) {
         const { scope, keypath } = stack[index], currentKeypath = keypath ? keypath + RAW_DOT + name : name;
         if (name in scope) {
-            return setHolder(scope[name], currentKeypath);
+            return setValueHolder(scope[name], currentKeypath);
         }
         if (index > 0) {
             {
@@ -7259,40 +7276,40 @@ function render(instance, template, dependencies, data, computed, filters, globa
     }, lookupProp = function (name, value, stack, filter) {
         const currentStack = stack || contextStack, index = currentStack.length - 1, { keypath } = currentStack[index], currentKeypath = keypath ? keypath + RAW_DOT + name : name;
         if (value !== UNDEFINED$1) {
-            return setHolder(value, currentKeypath);
+            return setValueHolder(value, currentKeypath);
         }
         return index > 0 && findProp(currentStack, index - 1, name) || (filter
-            ? setHolder(filter)
-            : setHolder(UNDEFINED$1, currentKeypath));
+            ? setValueHolder(filter)
+            : setValueHolder(UNDEFINED$1, currentKeypath));
     }, getThis = function (value, stack) {
         const currentStack = stack || contextStack, { keypath } = currentStack[currentStack.length - 1];
-        return setHolder(value, keypath);
+        return setValueHolder(value, keypath);
     }, getThisByIndex = function (getIndex, stack) {
         const currentStack = stack || contextStack, { scope, keypath } = currentStack[getIndex(currentStack)];
-        return setHolder(scope, keypath);
+        return setValueHolder(scope, keypath);
     }, getProp = function (name, value, stack) {
         const currentStack = stack || contextStack, { keypath } = currentStack[currentStack.length - 1];
-        return setHolder(value, keypath ? keypath + RAW_DOT + name : name);
+        return setValueHolder(value, keypath ? keypath + RAW_DOT + name : name);
     }, getPropByIndex = function (getIndex, name, stack) {
         const currentStack = stack || contextStack, { scope, keypath } = currentStack[getIndex(currentStack)];
-        return setHolder(scope[name], keypath ? keypath + RAW_DOT + name : name);
+        return setValueHolder(scope[name], keypath ? keypath + RAW_DOT + name : name);
     }, readKeypath = function (value, keypath) {
         const result = get(value, keypath);
-        return setHolder(result ? result.value : UNDEFINED$1);
-    }, setHolder = function (value, keypath) {
+        return setValueHolder(result ? result.value : UNDEFINED$1);
+    }, setValueHolder = function (value, keypath) {
         if (value && func(value.get)) {
             value = value.get();
         }
         holder.keypath = keypath;
         holder.value = value;
         if (keypath !== UNDEFINED$1) {
-            dependencies[keypath] = value;
+            addDependency(keypath);
         }
         return holder;
-    }, renderTemplate = function (render, scope, keypath, children, components) {
-        render(renderComposeVNode, renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlots, renderSlotChildren, renderPartial, renderEach, renderRange, appendVNodeProperty, formatNumberNativeAttributeValue, formatBooleanNativeAttributeValue, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString$1, textVNodeOperator, commentVNodeOperator, elementVNodeOperator, componentVNodeOperator, fragmentVNodeOperator, portalVNodeOperator, slotVNodeOperator, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
+    }, renderTemplate = function (render, scope, keypath, children) {
+        render(renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderPartial, renderEach, renderRange, renderSlotDirectly, renderSlotIndirectly, appendVNodeProperty, formatNumberNativeAttributeValue, formatBooleanNativeAttributeValue, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setValueHolder, toString$1, textVNodeOperator, commentVNodeOperator, elementVNodeOperator, componentVNodeOperator, fragmentVNodeOperator, portalVNodeOperator, slotVNodeOperator, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children);
     };
-    renderTemplate(template, rootScope, rootKeypath, children, components);
+    renderTemplate(template, rootScope, rootKeypath, children);
     {
         if (children.length > 1) {
             fatal(`The template should have just one root element.`);
@@ -8374,6 +8391,11 @@ class Yox {
                     }
                 });
             }
+            const { slots } = $options;
+            if (slots) {
+                // 把 slots 放进数据里，方便 get
+                instance.renderSlots(source, slots);
+            }
         }
         // 先放 props
         // 当 data 是函数时，可以通过 this.get() 获取到外部数据
@@ -8418,13 +8440,9 @@ class Yox {
             });
         }
         {
-            let placeholder = UNDEFINED$1, { el, root, model, context, replace, template, transitions, components, directives, partials, filters, slots, } = $options;
+            let placeholder = UNDEFINED$1, { el, root, model, context, replace, template, transitions, components, directives, partials, filters, } = $options;
             if (model) {
                 instance.$model = model;
-            }
-            // 把 slots 放进数据里，方便 get
-            if (slots) {
-                extend(source, slots);
             }
             // 检查 template
             if (string$1(template)) {
@@ -8961,21 +8979,20 @@ class Yox {
      */
     render() {
         {
-            const instance = this, { $observer, $dependencies } = instance, oldDependencies = $dependencies || EMPTY_OBJECT, dependencies = {}, vnode = render(instance, instance.$template, dependencies, $observer.data, $observer.computed, instance.$filters, globalFilters, instance.$partials, globalPartials, instance.$directives, globalDirectives, instance.$transitions, globalTransitions);
-            for (let key in dependencies) {
-                if (!(key in oldDependencies)) {
-                    $observer.watch(key, markDirty);
-                }
-            }
+            const instance = this, { $observer, $dependencies } = instance, dependencies = {};
             if ($dependencies) {
                 for (let key in $dependencies) {
-                    if (!(key in dependencies)) {
-                        $observer.unwatch(key, markDirty);
-                    }
+                    $observer.unwatch(key, markDirty);
                 }
             }
             instance.$dependencies = dependencies;
-            return vnode;
+            return render(instance, instance.$template, $observer.data, $observer.computed, instance.$slots, instance.$filters, globalFilters, instance.$partials, globalPartials, instance.$directives, globalDirectives, instance.$transitions, globalTransitions, function (keypath) {
+                if (!dependencies[keypath]
+                    && instance.$dependencies === dependencies) {
+                    $observer.watch(keypath, markDirty);
+                    dependencies[keypath] = TRUE$1;
+                }
+            });
         }
     }
     /**
@@ -9033,6 +9050,20 @@ class Yox {
                 if (rule) {
                     checkProp(name, key, value, rule);
                 }
+            }
+        }
+    }
+    /**
+     * 渲染 slots
+     *
+     * @param props
+     * @param slots
+     */
+    renderSlots(props, slots) {
+        {
+            this.$slots = slots;
+            for (let name in slots) {
+                props[name] = slots[name](this);
             }
         }
     }
@@ -9164,7 +9195,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.240";
+Yox.version = "1.0.0-alpha.250";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

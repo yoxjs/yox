@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.240
+ * yox.js v1.0.0-alpha.250
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -872,6 +872,12 @@
       }
       return result;
   }
+  function getCallback(value) {
+      // 如果是计算属性，取计算属性的值
+      return func(value.get)
+          ? value.get()
+          : value;
+  }
   /**
    * 从对象中查找一个 keypath
    *
@@ -881,7 +887,7 @@
    * @param keypath
    * @return
    */
-  function get(object, keypath) {
+  function get(object, keypath, callback) {
       var result = object;
       each$1(keypath, function (key, index, lastIndex) {
           if (result != NULL) {
@@ -890,9 +896,11 @@
               // 紧接着判断值是否存在
               // 下面会处理计算属性的值，不能在它后面设置 hasValue
               hasValue = value !== UNDEFINED;
-              // 如果是计算属性，取计算属性的值
-              if (value && func(value.get)) {
-                  value = value.get();
+              // 为什么不用 hasValue 判断呢？
+              // 因为这里需要处理的 value 要么是函数，要么是对象，基础类型无需加工
+              if (value) {
+                  // 如果数据中没有计算属性，也可以自定义
+                  value = (callback || getCallback)(value);
               }
               if (index === lastIndex) {
                   if (hasValue) {
@@ -1817,9 +1825,12 @@
       // 更新时才要 set
       // 因为初始化时，所有这些都经过构造函数完成了
       if (component && oldVNode) {
-          var result = merge(props, slots);
-          if (result) {
-              component.forceUpdate(result);
+          var nextProps = props;
+          if (slots) {
+              component.renderSlots(nextProps || (nextProps = {}), slots);
+          }
+          if (nextProps) {
+              component.forceUpdate(nextProps);
           }
       }
   }
@@ -2465,38 +2476,6 @@
           removeVNode(api, vnode);
       }
   }
-  function clone(vnode) {
-      return {
-          type: vnode.type,
-          tag: vnode.tag,
-          isComponent: vnode.isComponent,
-          isFragment: vnode.isFragment,
-          isSlot: vnode.isSlot,
-          isSvg: vnode.isSvg,
-          isStyle: vnode.isStyle,
-          isOption: vnode.isOption,
-          isStatic: vnode.isStatic,
-          isPure: vnode.isPure,
-          slots: vnode.slots,
-          props: vnode.props,
-          nativeAttrs: vnode.nativeAttrs,
-          nativeStyles: vnode.nativeStyles,
-          directives: vnode.directives,
-          events: vnode.events,
-          lazy: vnode.lazy,
-          transition: vnode.transition,
-          model: vnode.model,
-          to: vnode.to,
-          ref: vnode.ref,
-          key: vnode.key,
-          text: vnode.text,
-          html: vnode.html,
-          children: vnode.children,
-          parent: vnode.parent,
-          context: vnode.context,
-          operator: vnode.operator,
-      };
-  }
 
   function parseStyleString(value, callback) {
       var parts = value.split(';');
@@ -2529,18 +2508,12 @@
       return UNDEFINED;
   }
 
-  function render(instance, template, dependencies, data, computed, filters, globalFilters, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions) {
+  function render(instance, template, data, computed, slots, filters, globalFilters, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, addDependency) {
       var rootScope = merge(data, computed), rootKeypath = EMPTY_STRING, contextStack = [
           { scope: rootScope, keypath: rootKeypath }
       ], localPartials = {}, 
       // 模板渲染过程收集的 vnode
-      children = [], 
-      // 模板渲染过程收集的组件
-      components = [], renderComposeVNode = function (vnode, children) {
-          if (vnode.children.length) {
-              children[children.length] = vnode;
-          }
-      }, appendVNodeProperty = function (vnode, key, name, value) {
+      children = [], appendVNodeProperty = function (vnode, key, name, value) {
           if (vnode[key]) {
               vnode[key][name] = value;
           }
@@ -2664,48 +2637,14 @@
                   appendVNodeProperty(vnode, key, name, value[name]);
               }
           }
-      }, renderSlots = function (render) {
-          var result = {};
-          for (var name in render) {
-              var children = [], components = [];
-              render[name](children, components);
-              // 就算是 undefined 也必须有值，用于覆盖旧值
-              result[name] = children.length
-                  ? {
-                      vnodes: children,
-                      components: components.length
-                          ? components
-                          : UNDEFINED
-                  }
-                  : UNDEFINED;
-          }
-          return result;
-      }, 
-      // <slot name="xx"/>
-      renderSlotChildren = function (name, children) {
-          dependencies[name] = children;
-          var result = rootScope[name];
-          if (result) {
-              var vnodes = result.vnodes;
-              var components = result.components;
-              if (components) {
-                  for (var i = 0, length = components.length; i < length; i++) {
-                      components[i].parent = instance;
-                  }
-              }
-              for (var i$1 = 0, length$1 = vnodes.length; i$1 < length$1; i$1++) {
-                  children[children.length] = clone(vnodes[i$1]);
-              }
-              return TRUE;
-          }
       }, 
       // {{> name}}
-      renderPartial = function (name, scope, keypath, children, components, renderLocal, render) {
+      renderPartial = function (name, scope, keypath, children, renderLocal, render) {
           if (renderLocal) {
-              renderLocal(scope, keypath, children, components);
+              renderLocal(scope, keypath, children);
               return;
           }
-          renderTemplate(render, scope, keypath, children, components);
+          renderTemplate(render, scope, keypath, children);
       }, renderEach = function (holder, renderChildren, renderElse) {
           var keypath = holder.keypath;
           var value = holder.value;
@@ -2782,16 +2721,59 @@
           if (renderElse && length === 0) {
               renderElse();
           }
+      }, 
+      /**
+       * 直接渲染 slot，如下
+       * <Button>
+       *  click
+       * </Button>
+       *
+       * 在 Button 组件模板中，如果直接使用了 slot，则属于直接渲染，如下
+       * <div class="button">
+       *  <slot />
+       * </div>
+       */
+      renderSlotDirectly = function (name) {
+          return setSlotHodler(name, get(rootScope, name));
+      }, 
+      /**
+       * 间接渲染 slot，如下
+       * <Button>
+       *  click
+       * </Button>
+       *
+       * 在 Button 组件模板中，如果未直接使用 slot，而是透传给了其他组件，则属于间接渲染，如下
+       * <div class="button">
+       *  <Text>
+       *    <slot />
+       *  </Text>
+       * </div>
+       */
+      renderSlotIndirectly = function (name, parent) {
+          return setSlotHodler(name, get(slots, name, function (value) {
+              return func(value)
+                  ? value(parent)
+                  : value;
+          }));
+      }, setSlotHodler = function (name, holder) {
+          addDependency(name);
+          if (holder) {
+              var value = holder.value;
+              // slot 内容必须是个数组
+              return array$1(value)
+                  ? value
+                  : [value];
+          }
       }, findKeypath = function (stack, index, name, lookup, isFirstCall) {
           var ref = stack[index];
           var scope = ref.scope;
           var keypath = ref.keypath;
           var currentKeypath = join(keypath, name), result = get(scope, name);
           if (result) {
-              return setHolder(result.value, currentKeypath);
+              return setValueHolder(result.value, currentKeypath);
           }
           if (isFirstCall) {
-              setHolder(UNDEFINED, currentKeypath);
+              setValueHolder(UNDEFINED, currentKeypath);
           }
           if (lookup && index > 0) {
               return findKeypath(stack, index - 1, name, lookup);
@@ -2799,7 +2781,7 @@
       }, lookupKeypath = function (getIndex, keypath, lookup, stack, filter) {
           var currentStack = stack || contextStack;
           return findKeypath(currentStack, getIndex(currentStack), keypath, lookup, TRUE) || (filter
-              ? setHolder(filter)
+              ? setValueHolder(filter)
               : holder);
       }, findProp = function (stack, index, name) {
           var ref = stack[index];
@@ -2807,7 +2789,7 @@
           var keypath = ref.keypath;
           var currentKeypath = keypath ? keypath + RAW_DOT + name : name;
           if (name in scope) {
-              return setHolder(scope[name], currentKeypath);
+              return setValueHolder(scope[name], currentKeypath);
           }
           if (index > 0) {
               return findProp(stack, index - 1, name);
@@ -2818,50 +2800,50 @@
           var keypath = ref.keypath;
           var currentKeypath = keypath ? keypath + RAW_DOT + name : name;
           if (value !== UNDEFINED) {
-              return setHolder(value, currentKeypath);
+              return setValueHolder(value, currentKeypath);
           }
           return index > 0 && findProp(currentStack, index - 1, name) || (filter
-              ? setHolder(filter)
-              : setHolder(UNDEFINED, currentKeypath));
+              ? setValueHolder(filter)
+              : setValueHolder(UNDEFINED, currentKeypath));
       }, getThis = function (value, stack) {
           var currentStack = stack || contextStack;
           var ref = currentStack[currentStack.length - 1];
           var keypath = ref.keypath;
-          return setHolder(value, keypath);
+          return setValueHolder(value, keypath);
       }, getThisByIndex = function (getIndex, stack) {
           var currentStack = stack || contextStack;
           var ref = currentStack[getIndex(currentStack)];
           var scope = ref.scope;
           var keypath = ref.keypath;
-          return setHolder(scope, keypath);
+          return setValueHolder(scope, keypath);
       }, getProp = function (name, value, stack) {
           var currentStack = stack || contextStack;
           var ref = currentStack[currentStack.length - 1];
           var keypath = ref.keypath;
-          return setHolder(value, keypath ? keypath + RAW_DOT + name : name);
+          return setValueHolder(value, keypath ? keypath + RAW_DOT + name : name);
       }, getPropByIndex = function (getIndex, name, stack) {
           var currentStack = stack || contextStack;
           var ref = currentStack[getIndex(currentStack)];
           var scope = ref.scope;
           var keypath = ref.keypath;
-          return setHolder(scope[name], keypath ? keypath + RAW_DOT + name : name);
+          return setValueHolder(scope[name], keypath ? keypath + RAW_DOT + name : name);
       }, readKeypath = function (value, keypath) {
           var result = get(value, keypath);
-          return setHolder(result ? result.value : UNDEFINED);
-      }, setHolder = function (value, keypath) {
+          return setValueHolder(result ? result.value : UNDEFINED);
+      }, setValueHolder = function (value, keypath) {
           if (value && func(value.get)) {
               value = value.get();
           }
           holder.keypath = keypath;
           holder.value = value;
           if (keypath !== UNDEFINED) {
-              dependencies[keypath] = value;
+              addDependency(keypath);
           }
           return holder;
-      }, renderTemplate = function (render, scope, keypath, children, components) {
-          render(renderComposeVNode, renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderSlots, renderSlotChildren, renderPartial, renderEach, renderRange, appendVNodeProperty, formatNumberNativeAttributeValue, formatBooleanNativeAttributeValue, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setHolder, toString, textVNodeOperator, commentVNodeOperator, elementVNodeOperator, componentVNodeOperator, fragmentVNodeOperator, portalVNodeOperator, slotVNodeOperator, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children, components);
+      }, renderTemplate = function (render, scope, keypath, children) {
+          render(renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderPartial, renderEach, renderRange, renderSlotDirectly, renderSlotIndirectly, appendVNodeProperty, formatNumberNativeAttributeValue, formatBooleanNativeAttributeValue, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setValueHolder, toString, textVNodeOperator, commentVNodeOperator, elementVNodeOperator, componentVNodeOperator, fragmentVNodeOperator, portalVNodeOperator, slotVNodeOperator, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children);
       };
-      renderTemplate(template, rootScope, rootKeypath, children, components);
+      renderTemplate(template, rootScope, rootKeypath, children);
       return children[0];
   }
 
@@ -3932,6 +3914,11 @@
                   }
               });
           }
+          var slots = $options.slots;
+          if (slots) {
+              // 把 slots 放进数据里，方便 get
+              instance.renderSlots(source, slots);
+          }
       }
       // 先放 props
       // 当 data 是函数时，可以通过 this.get() 获取到外部数据
@@ -3972,13 +3959,8 @@
           var directives = $options.directives;
           var partials = $options.partials;
           var filters = $options.filters;
-          var slots = $options.slots;
           if (model) {
               instance.$model = model;
-          }
-          // 把 slots 放进数据里，方便 get
-          if (slots) {
-              extend(source, slots);
           }
           // 检查 template
           if (string$1(template)) {
@@ -4450,21 +4432,20 @@
           var instance = this;
               var $observer = instance.$observer;
               var $dependencies = instance.$dependencies;
-              var oldDependencies = $dependencies || EMPTY_OBJECT, dependencies = {}, vnode = render(instance, instance.$template, dependencies, $observer.data, $observer.computed, instance.$filters, globalFilters, instance.$partials, globalPartials, instance.$directives, globalDirectives, instance.$transitions, globalTransitions);
-          for (var key in dependencies) {
-              if (!(key in oldDependencies)) {
-                  $observer.watch(key, markDirty);
-              }
-          }
+              var dependencies = {};
           if ($dependencies) {
-              for (var key$1 in $dependencies) {
-                  if (!(key$1 in dependencies)) {
-                      $observer.unwatch(key$1, markDirty);
-                  }
+              for (var key in $dependencies) {
+                  $observer.unwatch(key, markDirty);
               }
           }
           instance.$dependencies = dependencies;
-          return vnode;
+          return render(instance, instance.$template, $observer.data, $observer.computed, instance.$slots, instance.$filters, globalFilters, instance.$partials, globalPartials, instance.$directives, globalDirectives, instance.$transitions, globalTransitions, function (keypath) {
+              if (!dependencies[keypath]
+                  && instance.$dependencies === dependencies) {
+                  $observer.watch(keypath, markDirty);
+                  dependencies[keypath] = TRUE;
+              }
+          });
       }
   };
   /**
@@ -4518,6 +4499,20 @@
    * @param props
    */
   Yox.prototype.checkProp = function (key, value) {
+  };
+  /**
+   * 渲染 slots
+   *
+   * @param props
+   * @param slots
+   */
+  Yox.prototype.renderSlots = function (props, slots) {
+      {
+          this.$slots = slots;
+          for (var name in slots) {
+              props[name] = slots[name](this);
+          }
+      }
   };
   /**
    * 销毁组件
@@ -4650,7 +4645,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.240";
+  Yox.version = "1.0.0-alpha.250";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

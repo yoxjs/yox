@@ -58,6 +58,7 @@ export interface YoxInterface {
 	partial(name: string | Record<string, Partial>, partial?: Partial): Function | void;
 	filter(name: string | Record<string, Filter>, filter?: Filter): Filter | void;
 	checkProp(key: string, value: any): void;
+	renderSlots(props: Data, slots: Slots): void;
 	forceUpdate(props?: Data): void;
 	destroy(): void;
 	nextTick(task: ThisTask<this>): void;
@@ -208,10 +209,7 @@ export interface ModelValue {
 	keypath: string;
 	value: any;
 }
-export interface Slots {
-	vnodes: VNode[];
-	components: VNode[] | void;
-}
+export declare type Slots = Record<string, (parent: YoxInterface) => VNode[] | void>;
 export interface VNodeOperator {
 	create(api: DomApi, vnode: VNode): void;
 	update(api: DomApi, vnode: VNode, oldVNode: VNode): void;
@@ -235,6 +233,7 @@ export interface VNode {
 	readonly tag?: string;
 	readonly isComponent?: boolean;
 	readonly isFragment?: boolean;
+	readonly isPortal?: boolean;
 	readonly isSlot?: boolean;
 	readonly isSvg?: boolean;
 	readonly isStyle?: boolean;
@@ -678,6 +677,7 @@ export default class Yox implements YoxInterface {
 	$emitter: Emitter;
 	$el?: HTMLElement;
 	$template?: Function;
+	$slots?: Slots;
 	$refs?: Record<string, YoxInterface | HTMLElement>;
 	$model?: string;
 	$root?: YoxInterface;
@@ -846,6 +846,13 @@ export default class Yox implements YoxInterface {
 	 * @param props
 	 */
 	checkProp(key: string, value: any): void;
+	/**
+	 * 渲染 slots
+	 *
+	 * @param props
+	 * @param slots
+	 */
+	renderSlots(props: Data, slots: Slots): void;
 	/**
 	 * 销毁组件
 	 */
