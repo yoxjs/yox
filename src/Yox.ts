@@ -155,6 +155,8 @@ export default class Yox implements YoxInterface {
 
   $template?: Function
 
+  $slots?: Slots
+
   $refs?: Record<string, YoxInterface | HTMLElement>
 
   $model?: string
@@ -535,9 +537,11 @@ export default class Yox implements YoxInterface {
           }
         )
       }
-      // 把 slots 放进数据里，方便 get
-      if ($options.slots) {
-        instance.renderSlots(source, $options.slots)
+
+      const { slots } = $options
+      if (slots) {
+        // 把 slots 放进数据里，方便 get
+        instance.renderSlots(source, slots)
       }
     }
 
@@ -1250,6 +1254,7 @@ export default class Yox implements YoxInterface {
         instance.$template as Function,
         $observer.data,
         $observer.computed,
+        instance.$slots,
         instance.$filters,
         globalFilters,
         instance.$partials,
@@ -1356,6 +1361,7 @@ export default class Yox implements YoxInterface {
    */
   renderSlots(props: Data, slots: Slots): void {
     if (process.env.NODE_ENV !== 'pure') {
+      this.$slots = slots
       for (let name in slots) {
         props[name] = slots[name](this)
       }
