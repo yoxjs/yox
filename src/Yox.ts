@@ -15,6 +15,7 @@ import {
 } from 'yox-type/src/type'
 
 import {
+  Slots,
   VNode,
 } from 'yox-type/src/vnode'
 
@@ -534,6 +535,10 @@ export default class Yox implements YoxInterface {
           }
         )
       }
+      // 把 slots 放进数据里，方便 get
+      if ($options.slots) {
+        instance.renderSlots(source, $options.slots)
+      }
     }
 
     // 先放 props
@@ -615,16 +620,10 @@ export default class Yox implements YoxInterface {
         directives,
         partials,
         filters,
-        slots,
       } = $options
 
       if (model) {
         instance.$model = model
-      }
-
-      // 把 slots 放进数据里，方便 get
-      if (slots) {
-        object.extend(source, slots)
       }
 
       // 检查 template
@@ -1236,14 +1235,19 @@ export default class Yox implements YoxInterface {
 
       { $observer, $dependencies } = instance,
 
-      oldDependencies = $dependencies || constant.EMPTY_OBJECT,
+      dependencies: Record<string, any> = { }
 
-      dependencies = { },
+      if ($dependencies) {
+        for (let key in $dependencies) {
+          $observer.unwatch(key, markDirty)
+        }
+      }
 
-      vnode = templateRender.render(
+      instance.$dependencies = dependencies
+
+      return templateRender.render(
         instance,
         instance.$template as Function,
-        dependencies,
         $observer.data,
         $observer.computed,
         instance.$filters,
@@ -1253,26 +1257,16 @@ export default class Yox implements YoxInterface {
         instance.$directives,
         globalDirectives,
         instance.$transitions,
-        globalTransitions
-      )
-
-      for (let key in dependencies) {
-        if (!(key in oldDependencies)) {
-          $observer.watch(key, markDirty)
-        }
-      }
-
-      if ($dependencies) {
-        for (let key in $dependencies) {
-          if (!(key in dependencies)) {
-            $observer.unwatch(key, markDirty)
+        globalTransitions,
+        function (keypath) {
+          if (!dependencies[keypath]
+            && instance.$dependencies === dependencies
+          ) {
+            $observer.watch(keypath, markDirty)
+            dependencies[keypath] = constant.TRUE
           }
         }
-      }
-
-      instance.$dependencies = dependencies
-
-      return vnode
+      )
     }
   }
 
@@ -1350,6 +1344,20 @@ export default class Yox implements YoxInterface {
         if (rule) {
           checkProp(name, key, value, rule)
         }
+      }
+    }
+  }
+
+  /**
+   * 渲染 slots
+   *
+   * @param props
+   * @param slots
+   */
+  renderSlots(props: Data, slots: Slots): void {
+    if (process.env.NODE_ENV !== 'pure') {
+      for (let name in slots) {
+        props[name] = slots[name](this)
       }
     }
   }
