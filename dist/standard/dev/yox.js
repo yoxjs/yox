@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.250
+ * yox.js v1.0.0-alpha.251
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -1626,8 +1626,7 @@
                       destroy[key] = addEvent$1(api, element, component, lazy, event);
                   }
                   else if (oldEvent.runtime && event.runtime) {
-                      extend(oldEvent.runtime, event.runtime);
-                      // 在当前节点传递 oldEvent.runtime 的引用
+                      oldEvent.runtime.execute = event.runtime.execute;
                       event.runtime = oldEvent.runtime;
                   }
               }
@@ -1840,8 +1839,7 @@
                       bind(node, directive, vnode);
                   }
                   else if (oldDirective.runtime && directive.runtime) {
-                      extend(oldDirective.runtime, directive.runtime);
-                      // 在当前节点传递 oldDirective.runtime 的引用
+                      oldDirective.runtime.execute = directive.runtime.execute;
                       directive.runtime = oldDirective.runtime;
                   }
               }
@@ -5674,10 +5672,10 @@
       }
       return 0;
   }
-  function generate$1(node, transformIdentifier, generateIdentifier, generateValue, generateCall, holder, stack, parentNode) {
+  function generate$1(node, transformIdentifier, generateIdentifier, generateValue, generateCall, holder, parentNode) {
       var value, hasHolder = FALSE$1, generateNode = function (node, parentNode) {
           return generate$1(node, transformIdentifier, generateIdentifier, generateValue, generateCall, FALSE$1, // 如果是内部临时值，不需要 holder
-          stack, parentNode);
+          parentNode);
       }, generateNodes = function (nodes, parentNode) {
           return nodes.map(function (node) {
               return generateNode(node, parentNode);
@@ -5722,7 +5720,7 @@
               hasHolder = TRUE$1;
               var identifierNode = node;
               value = transformIdentifier(identifierNode)
-                  || generateIdentifier(identifierNode, identifierNode.name ? parse(identifierNode.name) : [], identifierNode.name, holder, stack, parentNode);
+                  || generateIdentifier(identifierNode, identifierNode.name ? parse(identifierNode.name) : [], identifierNode.name, holder, parentNode);
               break;
           case MEMBER:
               hasHolder = TRUE$1;
@@ -5740,7 +5738,7 @@
                               memberNodes.unshift(node);
                           }, TRUE$1);
                       }
-                      value = generateIdentifier(memberNode, memberNodes, UNDEFINED$1, holder, stack, parentNode);
+                      value = generateIdentifier(memberNode, memberNodes, UNDEFINED$1, holder, parentNode);
                   }
               }
               else if (memberNode.nodes) {
@@ -5783,7 +5781,7 @@
   // 是否正在收集动态 child
   dynamicChildrenStack = [TRUE$1], 
   // 收集属性值
-  attributeValueStack = [], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {}, FIELD_NATIVE_ATTRIBUTES = 'nativeAttrs', FIELD_NATIVE_STYLES = 'nativeStyles', FIELD_PROPERTIES = 'props', FIELD_DIRECTIVES = 'directives', FIELD_EVENTS = 'events', FIELD_MODEL = 'model', FIELD_LAZY = 'lazy', FIELD_TRANSITION = 'transition', FIELD_CHILDREN = 'children', FIELD_SLOTS = 'slots', FIELD_OPERATOR = 'operator';
+  attributeValueStack = [], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {}, FIELD_NATIVE_ATTRIBUTES = 'nativeAttrs', FIELD_NATIVE_STYLES = 'nativeStyles', FIELD_PROPERTIES = 'props', FIELD_DIRECTIVES = 'directives', FIELD_EVENTS = 'events', FIELD_MODEL = 'model', FIELD_LAZY = 'lazy', FIELD_TRANSITION = 'transition', FIELD_CHILDREN = 'children', FIELD_SLOTS = 'slots', FIELD_OPERATOR = 'operator', PRIMITIVE_UNDEFINED = toPrimitive(UNDEFINED$1), PRIMITIVE_TRUE = toPrimitive(TRUE$1);
   // 下面这些值需要根据外部配置才能确定
   var isUglify = UNDEFINED$1, currentTextVNode = UNDEFINED$1, RENDER_STYLE_STRING = EMPTY_STRING, RENDER_STYLE_EXPR = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, RENDER_SLOT_DIRECTLY = EMPTY_STRING, RENDER_SLOT_INDIRECTLY = EMPTY_STRING, APPEND_VNODE_PROPERTY = EMPTY_STRING, FORMAT_NATIVE_ATTRIBUTE_NUMBER_VALUE = EMPTY_STRING, FORMAT_NATIVE_ATTRIBUTE_BOOLEAN_VALUE = EMPTY_STRING, LOOKUP_KEYPATH = EMPTY_STRING, LOOKUP_PROP = EMPTY_STRING, GET_THIS = EMPTY_STRING, GET_THIS_BY_INDEX = EMPTY_STRING, GET_PROP = EMPTY_STRING, GET_PROP_BY_INDEX = EMPTY_STRING, READ_KEYPATH = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, SET_VALUE_HOLDER = EMPTY_STRING, TO_STRING = EMPTY_STRING, OPERATOR_TEXT_VNODE = EMPTY_STRING, OPERATOR_COMMENT_VNODE = EMPTY_STRING, OPERATOR_ELEMENT_VNODE = EMPTY_STRING, OPERATOR_COMPONENT_VNODE = EMPTY_STRING, OPERATOR_FRAGMENT_VNODE = EMPTY_STRING, OPERATOR_PORTAL_VNODE = EMPTY_STRING, OPERATOR_SLOT_VNODE = EMPTY_STRING, ARG_INSTANCE = EMPTY_STRING, ARG_FILTERS = EMPTY_STRING, ARG_GLOBAL_FILTERS = EMPTY_STRING, ARG_LOCAL_PARTIALS = EMPTY_STRING, ARG_PARTIALS = EMPTY_STRING, ARG_GLOBAL_PARTIALS = EMPTY_STRING, ARG_DIRECTIVES = EMPTY_STRING, ARG_GLOBAL_DIRECTIVES = EMPTY_STRING, ARG_TRANSITIONS = EMPTY_STRING, ARG_GLOBAL_TRANSITIONS = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_PARENT = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_SCOPE = EMPTY_STRING, ARG_KEYPATH = EMPTY_STRING, ARG_LENGTH = EMPTY_STRING, ARG_EVENT = EMPTY_STRING, ARG_DATA = EMPTY_STRING;
   function init() {
@@ -5906,7 +5904,7 @@
   CommentVNode.prototype.toString = function (tabSize) {
       return toMap({
           type: toPrimitive(VNODE_TYPE_COMMENT),
-          isPure: toPrimitive(TRUE$1),
+          isPure: PRIMITIVE_TRUE,
           operator: OPERATOR_COMMENT_VNODE,
           text: this.text,
       }).toString(tabSize);
@@ -5921,7 +5919,7 @@
   TextVNode.prototype.toString = function (tabSize) {
       return toMap({
           type: toPrimitive(VNODE_TYPE_TEXT),
-          isPure: toPrimitive(TRUE$1),
+          isPure: PRIMITIVE_TRUE,
           operator: OPERATOR_TEXT_VNODE,
           text: this.buffer,
       }).toString(tabSize);
@@ -6003,13 +6001,13 @@
       }
       return result;
   }
-  function generateExpressionIdentifier(node, nodes, keypath, holder, stack, parentNode) {
+  function generateExpressionIdentifier(node, nodes, keypath, holder, parentNode) {
       var root = node.root;
       var lookup = node.lookup;
       var offset = node.offset;
       var length = nodes.length;
       var getIndex = generateExpressionIndex(root, offset);
-      var filter = toPrimitive(UNDEFINED$1);
+      var filter = PRIMITIVE_UNDEFINED;
       // 函数调用
       if (parentNode
           && parentNode.type === CALL
@@ -6026,6 +6024,7 @@
           }
       }
       var result = toCall(LOOKUP_KEYPATH, [
+          ARG_STACK,
           getIndex,
           string$1(keypath)
               ? toPrimitive(keypath)
@@ -6033,11 +6032,8 @@
                   ? nodes[0]
                   : toList(nodes, RAW_DOT),
           lookup
-              ? toPrimitive(TRUE$1)
-              : toPrimitive(UNDEFINED$1),
-          stack
-              ? ARG_STACK
-              : toPrimitive(UNDEFINED$1),
+              ? PRIMITIVE_TRUE
+              : PRIMITIVE_UNDEFINED,
           filter
       ]);
       // 如果是读取一级属性的场景，比如 this.x，这里可以优化成 scope.x
@@ -6047,32 +6043,26 @@
           // this.name
           if (!root && !offset && !lookup) {
               result = toCall(GET_PROP, [
+                  ARG_STACK,
                   toPrimitive(keypath),
-                  toMember(ARG_SCOPE, nodes),
-                  stack
-                      ? ARG_STACK
-                      : toPrimitive(UNDEFINED$1)
+                  toMember(ARG_SCOPE, nodes)
               ]);
           }
           // 未指定路径，如 name
           else if (!root && !offset) {
               result = toCall(LOOKUP_PROP, [
+                  ARG_STACK,
                   toPrimitive(keypath),
                   toMember(ARG_SCOPE, nodes),
-                  stack
-                      ? ARG_STACK
-                      : toPrimitive(UNDEFINED$1),
                   filter
               ]);
           }
           // 指定了路径，如 ~/name 或 ../name
           else {
               result = toCall(GET_PROP_BY_INDEX, [
+                  ARG_STACK,
                   getIndex,
-                  toPrimitive(keypath),
-                  stack
-                      ? ARG_STACK
-                      : toPrimitive(UNDEFINED$1)
+                  toPrimitive(keypath)
               ]);
           }
       }
@@ -6081,19 +6071,15 @@
           // this
           if (!root && !offset && !lookup) {
               result = toCall(GET_THIS, [
-                  ARG_SCOPE,
-                  stack
-                      ? ARG_STACK
-                      : toPrimitive(UNDEFINED$1)
+                  ARG_STACK,
+                  ARG_SCOPE
               ]);
           }
           // 指定了路径，如 ~/name 或 ../name
           else if (root || offset) {
               result = toCall(GET_THIS_BY_INDEX, [
-                  getIndex,
-                  stack
-                      ? ARG_STACK
-                      : toPrimitive(UNDEFINED$1)
+                  ARG_STACK,
+                  getIndex
               ]);
           }
       }
@@ -6129,7 +6115,7 @@
               ARG_INSTANCE,
               args
                   ? toList(args)
-                  : toPrimitive(UNDEFINED$1)
+                  : PRIMITIVE_UNDEFINED
           ])
       ]), holder);
   }
@@ -6138,9 +6124,6 @@
   }
   function generateExpressionHolder(expr) {
       return generate$1(expr, transformExpressionIdentifier, generateExpressionIdentifier, generateExpressionValue, generateExpressionCall, TRUE$1);
-  }
-  function generateExpressionArg(expr) {
-      return generate$1(expr, transformExpressionIdentifier, generateExpressionIdentifier, generateExpressionValue, generateExpressionCall, FALSE$1, TRUE$1);
   }
   function createAttributeValue(nodes) {
       var attributeValue = toStringBuffer();
@@ -6167,7 +6150,7 @@
           // 因此走到这里，一定是多个插值或是单个特殊插值（比如 If)
           return createAttributeValue(attr.children);
       }
-      return toPrimitive(UNDEFINED$1);
+      return PRIMITIVE_UNDEFINED;
   }
   function mapNodes(nodes) {
       currentTextVNode = UNDEFINED$1;
@@ -6226,7 +6209,7 @@
   function generateTextVNode(text) {
       if (currentTextVNode) {
           currentTextVNode.append(text);
-          return toPrimitive(UNDEFINED$1);
+          return PRIMITIVE_UNDEFINED;
       }
       return generateVNode(new TextVNode(text));
   }
@@ -6562,22 +6545,22 @@
           vnode.set(FIELD_OPERATOR, OPERATOR_ELEMENT_VNODE);
       }
       else if (isFragment) {
-          vnode.set('isFragment', toPrimitive(TRUE$1));
+          vnode.set('isFragment', PRIMITIVE_TRUE);
           vnode.set(FIELD_OPERATOR, OPERATOR_FRAGMENT_VNODE);
       }
       else if (isPortal) {
-          vnode.set('isPortal', toPrimitive(TRUE$1));
+          vnode.set('isPortal', PRIMITIVE_TRUE);
           vnode.set(FIELD_OPERATOR, OPERATOR_PORTAL_VNODE);
       }
       else if (isComponent) {
-          vnode.set('isComponent', toPrimitive(TRUE$1));
+          vnode.set('isComponent', PRIMITIVE_TRUE);
           vnode.set(FIELD_OPERATOR, OPERATOR_COMPONENT_VNODE);
           if (last(slotStack)) {
               vnode.set('parent', ARG_PARENT);
           }
       }
       else if (isSlot) {
-          vnode.set('isSlot', toPrimitive(TRUE$1));
+          vnode.set('isSlot', PRIMITIVE_TRUE);
           vnode.set(FIELD_OPERATOR, OPERATOR_SLOT_VNODE);
           // 如果 renderSlot 没内容，则取 slot 元素的 children 作为内容
           // <slot>
@@ -6588,17 +6571,17 @@
               : renderSlot;
       }
       if (node.isOption) {
-          vnode.set('isOption', toPrimitive(TRUE$1));
+          vnode.set('isOption', PRIMITIVE_TRUE);
       }
       if (node.isStyle) {
-          vnode.set('isStyle', toPrimitive(TRUE$1));
+          vnode.set('isStyle', PRIMITIVE_TRUE);
       }
       if (node.isSvg) {
-          vnode.set('isSvg', toPrimitive(TRUE$1));
+          vnode.set('isSvg', PRIMITIVE_TRUE);
       }
       if (node.isStatic) {
-          vnode.set('isStatic', toPrimitive(TRUE$1));
-          vnode.set('isPure', toPrimitive(TRUE$1));
+          vnode.set('isStatic', PRIMITIVE_TRUE);
+          vnode.set('isPure', PRIMITIVE_TRUE);
       }
       if (outputChildren) {
           vnode.set(FIELD_CHILDREN, outputChildren);
@@ -6676,17 +6659,17 @@
   }
   function addEventBooleanInfo(args, node) {
       // isComponent
-      push(args, toPrimitive(UNDEFINED$1));
+      push(args, PRIMITIVE_UNDEFINED);
       // isNative
-      push(args, toPrimitive(UNDEFINED$1));
+      push(args, PRIMITIVE_UNDEFINED);
       if (last(componentStack)) {
           if (node.modifier === MODIFER_NATIVE) {
               // isNative
-              args[args.length - 1] = toPrimitive(TRUE$1);
+              args[args.length - 1] = PRIMITIVE_TRUE;
           }
           else {
               // isComponent
-              args[args.length - 2] = toPrimitive(TRUE$1);
+              args[args.length - 2] = PRIMITIVE_TRUE;
           }
       }
   }
@@ -6713,17 +6696,14 @@
           push(args, toPrimitive(callNode.name.name));
           // 为了实现运行时动态收集参数，这里序列化成函数
           if (!falsy$2(callNode.args)) {
-              // runtime
-              push(args, toMap({
-                  args: toAnonymousFunction([
-                      ARG_STACK,
-                      ARG_EVENT,
-                      ARG_DATA ], UNDEFINED$1, toList(callNode.args.map(generateExpressionArg)))
-              }));
+              // args
+              push(args, toAnonymousFunction([
+                  ARG_EVENT,
+                  ARG_DATA ], UNDEFINED$1, toList(callNode.args.map(generateExpression))));
           }
           else {
-              // runtime
-              push(args, toPrimitive(UNDEFINED$1));
+              // args
+              push(args, PRIMITIVE_UNDEFINED);
           }
           addEventBooleanInfo(args, node);
           return {
@@ -6770,32 +6750,23 @@
               var callNode = expr;
               // 为了实现运行时动态收集参数，这里序列化成函数
               if (!falsy$2(callNode.args)) {
-                  // runtime
-                  push(args, toMap({
-                      args: toAnonymousFunction([
-                          ARG_STACK ], UNDEFINED$1, toList(callNode.args.map(generateExpressionArg)))
-                  }));
+                  // args
+                  push(args, toAnonymousFunction(UNDEFINED$1, UNDEFINED$1, toList(callNode.args.map(generateExpression))));
               }
               else {
-                  // runtime
-                  push(args, toPrimitive(UNDEFINED$1));
+                  // args
+                  push(args, PRIMITIVE_UNDEFINED);
               }
               // compiler 保证了函数调用的 name 是标识符
               // method
-              push(args, toMember(ARG_INSTANCE, [
-                  toPrimitive(callNode.name.name)
-              ]));
+              push(args, toPrimitive(callNode.name.name));
           }
           else {
               // 取值函数
               // getter 函数在触发事件时调用，调用时会传入它的作用域，因此这里要加一个参数
               if (expr.type !== LITERAL) {
-                  // runtime
-                  push(args, toMap({
-                      expr: toAnonymousFunction([
-                          ARG_STACK
-                      ], UNDEFINED$1, generateExpressionArg(expr))
-                  }));
+                  // args
+                  push(args, toAnonymousFunction(UNDEFINED$1, UNDEFINED$1, generateExpression(expr)));
               }
           }
       }
@@ -6850,7 +6821,7 @@
       var attributeValue = last(attributeValueStack);
       if (attributeValue) {
           attributeValue.append(text);
-          return toPrimitive(UNDEFINED$1);
+          return PRIMITIVE_UNDEFINED;
       }
       return text;
   };
@@ -6866,7 +6837,7 @@
           attributeValue.append(toCall(TO_STRING, [
               value
           ]));
-          return toPrimitive(UNDEFINED$1);
+          return PRIMITIVE_UNDEFINED;
       }
       return value;
   };
@@ -6875,7 +6846,7 @@
           ? generateCommentVNode()
           : last(attributeValueStack)
               ? toPrimitive(EMPTY_STRING)
-              : toPrimitive(UNDEFINED$1);
+              : PRIMITIVE_UNDEFINED;
   }
   function getBranchValue(children) {
       if (children) {
@@ -6895,7 +6866,7 @@
           : defaultValue);
       if (attributeValue) {
           attributeValue.append(result);
-          return toPrimitive(UNDEFINED$1);
+          return PRIMITIVE_UNDEFINED;
       }
       return result;
   };
@@ -6917,6 +6888,7 @@
       var next = node.next;
       var isSpecial = to || from.type === ARRAY || from.type === OBJECT;
       var args = [
+          ARG_STACK,
           ARG_SCOPE,
           ARG_KEYPATH,
           ARG_LENGTH ];
@@ -6936,7 +6908,7 @@
       // compiler 保证了 children 一定有值
       var renderElse = next
           ? toAnonymousFunction(UNDEFINED$1, generateNodesToTuple(next.children))
-          : toPrimitive(UNDEFINED$1);
+          : PRIMITIVE_UNDEFINED;
       // 遍历区间
       if (to) {
           return toCall(RENDER_RANGE, [
@@ -7020,6 +6992,7 @@
           ARG_GLOBAL_DIRECTIVES,
           ARG_TRANSITIONS,
           ARG_GLOBAL_TRANSITIONS,
+          ARG_STACK,
           ARG_SCOPE,
           ARG_KEYPATH,
           ARG_CHILDREN ], nodeGenerator[node.type](node));
@@ -7098,31 +7071,27 @@
               if (isComponent && event.phase === CustomEvent.PHASE_DOWNWARD) {
                   return;
               }
-              var methodFunc = instance[method];
-              {
-                  if (!methodFunc) {
-                      fatal(("The method \"" + method + "\" can't be found."));
-                  }
-              }
-              var result = execute(methodFunc, instance, runtime
-                  ? runtime.args(runtime.stack, event, data)
-                  : (data ? [event, data] : event));
+              var result = callMethod(method, runtime
+                  ? runtime.execute(event, data)
+                  : (data ? [event, data] : [event]));
               if (result === FALSE$1) {
                   event.prevent().stop();
               }
           };
-      }, renderEventMethod = function (key, value, name, ns, method, runtime, isComponent, isNative) {
-          if (runtime) {
-              runtime.stack = contextStack;
-          }
+      }, renderEventMethod = function (key, value, name, ns, method, args, isComponent, isNative) {
+          var runtime = args
+              ? {
+                  execute: args
+              }
+              : UNDEFINED$1;
           return {
               key: key,
               value: value,
               name: name,
               ns: ns,
               isNative: isNative,
-              listener: createEventMethodListener(method, runtime, isComponent),
               runtime: runtime,
+              listener: createEventMethodListener(method, runtime, isComponent),
           };
       }, renderEventName = function (key, value, name, ns, to, toNs, isComponent, isNative) {
           return {
@@ -7133,36 +7102,48 @@
               isNative: isNative,
               listener: createEventNameListener(to, toNs, isComponent),
           };
-      }, createDirectiveGetter = function (runtime) {
-          return function () {
-              return runtime.expr(runtime.stack);
-          };
-      }, createDirectiveHandler = function (method, runtime) {
-          return function () {
-              execute(method, instance, runtime
-                  ? runtime.args(runtime.stack)
-                  : UNDEFINED$1);
-          };
-      }, renderDirective = function (key, name, modifier, value, hooks, runtime, method) {
+      }, renderDirective = function (key, name, modifier, value, hooks, args, method) {
           {
               if (!hooks) {
                   fatal(("The directive \"" + name + "\" can't be found."));
               }
           }
-          if (runtime) {
-              runtime.stack = contextStack;
-          }
+          var runtime = args
+              ? {
+                  execute: args
+              }
+              : UNDEFINED$1;
           return {
               ns: DIRECTIVE_CUSTOM,
               key: key,
               name: name,
               value: value,
               modifier: modifier,
-              getter: runtime && runtime.expr ? createDirectiveGetter(runtime) : UNDEFINED$1,
-              handler: method ? createDirectiveHandler(method, runtime) : UNDEFINED$1,
+              getter: runtime && !method
+                  ? function () {
+                      return runtime.execute();
+                  }
+                  : UNDEFINED$1,
+              handler: method
+                  ? function () {
+                      callMethod(method, runtime
+                          ? runtime.execute()
+                          : UNDEFINED$1);
+                  }
+                  : UNDEFINED$1,
               hooks: hooks,
-              runtime: runtime,
           };
+      }, callMethod = function (name, args) {
+          var method = instance[name];
+          {
+              if (!method) {
+                  fatal(("The method \"" + name + "\" can't be found."));
+              }
+          }
+          if (args && args.length > 0) {
+              return execute(method, instance, args);
+          }
+          return instance[name]();
       }, renderSpread = function (vnode, key, value) {
           if (object$1(value)) {
               // 数组也算一种对象
@@ -7208,7 +7189,7 @@
                           keypath: currentKeypath,
                       });
                   }
-                  renderChildren(value[i], currentKeypath, length, i);
+                  renderChildren(contextStack, value[i], currentKeypath, length, i);
               }
           }
           else if (object$1(value)) {
@@ -7228,7 +7209,7 @@
                           keypath: currentKeypath,
                       });
                   }
-                  renderChildren(value[key], currentKeypath, length, key);
+                  renderChildren(contextStack, value[key], currentKeypath, length, key);
               }
           }
           if (contextStack !== oldScopeStack) {
@@ -7243,12 +7224,12 @@
               length = to - from;
               if (equal) {
                   for (var i = from; i <= to; i++) {
-                      renderChildren(i, currentKeypath, length, count++);
+                      renderChildren(contextStack, i, currentKeypath, length, count++);
                   }
               }
               else {
                   for (var i$1 = from; i$1 < to; i$1++) {
-                      renderChildren(i$1, currentKeypath, length, count++);
+                      renderChildren(contextStack, i$1, currentKeypath, length, count++);
                   }
               }
           }
@@ -7256,12 +7237,12 @@
               length = from - to;
               if (equal) {
                   for (var i$2 = from; i$2 >= to; i$2--) {
-                      renderChildren(i$2, currentKeypath, length, count++);
+                      renderChildren(contextStack, i$2, currentKeypath, length, count++);
                   }
               }
               else {
                   for (var i$3 = from; i$3 > to; i$3--) {
-                      renderChildren(i$3, currentKeypath, length, count++);
+                      renderChildren(contextStack, i$3, currentKeypath, length, count++);
                   }
               }
           }
@@ -7328,9 +7309,8 @@
               }
               return findKeypath(stack, index - 1, name, lookup);
           }
-      }, lookupKeypath = function (getIndex, keypath, lookup, stack, filter) {
-          var currentStack = stack || contextStack;
-          return findKeypath(currentStack, getIndex(currentStack), keypath, lookup, TRUE$1) || (filter
+      }, lookupKeypath = function (stack, getIndex, keypath, lookup, filter) {
+          return findKeypath(stack, getIndex(stack), keypath, lookup, TRUE$1) || (filter
               ? setValueHolder(filter)
               : holder);
       }, findProp = function (stack, index, name) {
@@ -7347,36 +7327,32 @@
               }
               return findProp(stack, index - 1, name);
           }
-      }, lookupProp = function (name, value, stack, filter) {
-          var currentStack = stack || contextStack, index = currentStack.length - 1;
-          var ref = currentStack[index];
+      }, lookupProp = function (stack, name, value, filter) {
+          var index = stack.length - 1;
+          var ref = stack[index];
           var keypath = ref.keypath;
           var currentKeypath = keypath ? keypath + RAW_DOT + name : name;
           if (value !== UNDEFINED$1) {
               return setValueHolder(value, currentKeypath);
           }
-          return index > 0 && findProp(currentStack, index - 1, name) || (filter
+          return index > 0 && findProp(stack, index - 1, name) || (filter
               ? setValueHolder(filter)
               : setValueHolder(UNDEFINED$1, currentKeypath));
-      }, getThis = function (value, stack) {
-          var currentStack = stack || contextStack;
-          var ref = currentStack[currentStack.length - 1];
+      }, getThis = function (stack, value) {
+          var ref = stack[stack.length - 1];
           var keypath = ref.keypath;
           return setValueHolder(value, keypath);
-      }, getThisByIndex = function (getIndex, stack) {
-          var currentStack = stack || contextStack;
-          var ref = currentStack[getIndex(currentStack)];
+      }, getThisByIndex = function (stack, getIndex) {
+          var ref = stack[getIndex(stack)];
           var scope = ref.scope;
           var keypath = ref.keypath;
           return setValueHolder(scope, keypath);
-      }, getProp = function (name, value, stack) {
-          var currentStack = stack || contextStack;
-          var ref = currentStack[currentStack.length - 1];
+      }, getProp = function (stack, name, value) {
+          var ref = stack[stack.length - 1];
           var keypath = ref.keypath;
           return setValueHolder(value, keypath ? keypath + RAW_DOT + name : name);
-      }, getPropByIndex = function (getIndex, name, stack) {
-          var currentStack = stack || contextStack;
-          var ref = currentStack[getIndex(currentStack)];
+      }, getPropByIndex = function (stack, getIndex, name) {
+          var ref = stack[getIndex(stack)];
           var scope = ref.scope;
           var keypath = ref.keypath;
           return setValueHolder(scope[name], keypath ? keypath + RAW_DOT + name : name);
@@ -7394,7 +7370,7 @@
           }
           return holder;
       }, renderTemplate = function (render, scope, keypath, children) {
-          render(renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderPartial, renderEach, renderRange, renderSlotDirectly, renderSlotIndirectly, appendVNodeProperty, formatNumberNativeAttributeValue, formatBooleanNativeAttributeValue, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setValueHolder, toString$1, textVNodeOperator, commentVNodeOperator, elementVNodeOperator, componentVNodeOperator, fragmentVNodeOperator, portalVNodeOperator, slotVNodeOperator, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children);
+          render(renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderPartial, renderEach, renderRange, renderSlotDirectly, renderSlotIndirectly, appendVNodeProperty, formatNumberNativeAttributeValue, formatBooleanNativeAttributeValue, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setValueHolder, toString$1, textVNodeOperator, commentVNodeOperator, elementVNodeOperator, componentVNodeOperator, fragmentVNodeOperator, portalVNodeOperator, slotVNodeOperator, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, contextStack, scope, keypath, children);
       };
       renderTemplate(template, rootScope, rootKeypath, children);
       {
@@ -9335,7 +9311,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.250";
+  Yox.version = "1.0.0-alpha.251";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

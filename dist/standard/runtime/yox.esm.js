@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.250
+ * yox.js v1.0.0-alpha.251
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -1562,8 +1562,7 @@ function update$3(api, vnode, oldVNode) {
                     destroy[key] = addEvent$1(api, element, component, lazy, event);
                 }
                 else if (oldEvent.runtime && event.runtime) {
-                    extend(oldEvent.runtime, event.runtime);
-                    // 在当前节点传递 oldEvent.runtime 的引用
+                    oldEvent.runtime.execute = event.runtime.execute;
                     event.runtime = oldEvent.runtime;
                 }
             }
@@ -1766,8 +1765,7 @@ function update$1(api, vnode, oldVNode) {
                     bind(node, directive, vnode);
                 }
                 else if (oldDirective.runtime && directive.runtime) {
-                    extend(oldDirective.runtime, directive.runtime);
-                    // 在当前节点传递 oldDirective.runtime 的引用
+                    oldDirective.runtime.execute = directive.runtime.execute;
                     directive.runtime = oldDirective.runtime;
                 }
             }
@@ -2545,26 +2543,27 @@ function render(instance, template, data, computed, slots, filters, globalFilter
             if (isComponent && event.phase === CustomEvent.PHASE_DOWNWARD) {
                 return;
             }
-            const methodFunc = instance[method];
-            const result = execute(methodFunc, instance, runtime
-                ? runtime.args(runtime.stack, event, data)
-                : (data ? [event, data] : event));
+            const result = callMethod(method, runtime
+                ? runtime.execute(event, data)
+                : (data ? [event, data] : [event]));
             if (result === FALSE) {
                 event.prevent().stop();
             }
         };
-    }, renderEventMethod = function (key, value, name, ns, method, runtime, isComponent, isNative) {
-        if (runtime) {
-            runtime.stack = contextStack;
-        }
+    }, renderEventMethod = function (key, value, name, ns, method, args, isComponent, isNative) {
+        const runtime = args
+            ? {
+                execute: args
+            }
+            : UNDEFINED;
         return {
             key,
             value,
             name,
             ns,
             isNative,
-            listener: createEventMethodListener(method, runtime, isComponent),
             runtime,
+            listener: createEventMethodListener(method, runtime, isComponent),
         };
     }, renderEventName = function (key, value, name, ns, to, toNs, isComponent, isNative) {
         return {
@@ -2575,31 +2574,38 @@ function render(instance, template, data, computed, slots, filters, globalFilter
             isNative,
             listener: createEventNameListener(to, toNs, isComponent),
         };
-    }, createDirectiveGetter = function (runtime) {
-        return function () {
-            return runtime.expr(runtime.stack);
-        };
-    }, createDirectiveHandler = function (method, runtime) {
-        return function () {
-            execute(method, instance, runtime
-                ? runtime.args(runtime.stack)
-                : UNDEFINED);
-        };
-    }, renderDirective = function (key, name, modifier, value, hooks, runtime, method) {
-        if (runtime) {
-            runtime.stack = contextStack;
-        }
+    }, renderDirective = function (key, name, modifier, value, hooks, args, method) {
+        const runtime = args
+            ? {
+                execute: args
+            }
+            : UNDEFINED;
         return {
             ns: DIRECTIVE_CUSTOM,
             key,
             name,
             value,
             modifier,
-            getter: runtime && runtime.expr ? createDirectiveGetter(runtime) : UNDEFINED,
-            handler: method ? createDirectiveHandler(method, runtime) : UNDEFINED,
+            getter: runtime && !method
+                ? function () {
+                    return runtime.execute();
+                }
+                : UNDEFINED,
+            handler: method
+                ? function () {
+                    callMethod(method, runtime
+                        ? runtime.execute()
+                        : UNDEFINED);
+                }
+                : UNDEFINED,
             hooks,
-            runtime,
         };
+    }, callMethod = function (name, args) {
+        const method = instance[name];
+        if (args && args.length > 0) {
+            return execute(method, instance, args);
+        }
+        return instance[name]();
     }, renderSpread = function (vnode, key, value) {
         if (object$1(value)) {
             for (let name in value) {
@@ -2628,7 +2634,7 @@ function render(instance, template, data, computed, slots, filters, globalFilter
                         keypath: currentKeypath,
                     });
                 }
-                renderChildren(value[i], currentKeypath, length, i);
+                renderChildren(contextStack, value[i], currentKeypath, length, i);
             }
         }
         else if (object$1(value)) {
@@ -2648,7 +2654,7 @@ function render(instance, template, data, computed, slots, filters, globalFilter
                         keypath: currentKeypath,
                     });
                 }
-                renderChildren(value[key], currentKeypath, length, key);
+                renderChildren(contextStack, value[key], currentKeypath, length, key);
             }
         }
         if (contextStack !== oldScopeStack) {
@@ -2663,12 +2669,12 @@ function render(instance, template, data, computed, slots, filters, globalFilter
             length = to - from;
             if (equal) {
                 for (let i = from; i <= to; i++) {
-                    renderChildren(i, currentKeypath, length, count++);
+                    renderChildren(contextStack, i, currentKeypath, length, count++);
                 }
             }
             else {
                 for (let i = from; i < to; i++) {
-                    renderChildren(i, currentKeypath, length, count++);
+                    renderChildren(contextStack, i, currentKeypath, length, count++);
                 }
             }
         }
@@ -2676,12 +2682,12 @@ function render(instance, template, data, computed, slots, filters, globalFilter
             length = from - to;
             if (equal) {
                 for (let i = from; i >= to; i--) {
-                    renderChildren(i, currentKeypath, length, count++);
+                    renderChildren(contextStack, i, currentKeypath, length, count++);
                 }
             }
             else {
                 for (let i = from; i > to; i--) {
-                    renderChildren(i, currentKeypath, length, count++);
+                    renderChildren(contextStack, i, currentKeypath, length, count++);
                 }
             }
         }
@@ -2742,9 +2748,8 @@ function render(instance, template, data, computed, slots, filters, globalFilter
         if (lookup && index > 0) {
             return findKeypath(stack, index - 1, name, lookup);
         }
-    }, lookupKeypath = function (getIndex, keypath, lookup, stack, filter) {
-        const currentStack = stack || contextStack;
-        return findKeypath(currentStack, getIndex(currentStack), keypath, lookup, TRUE) || (filter
+    }, lookupKeypath = function (stack, getIndex, keypath, lookup, filter) {
+        return findKeypath(stack, getIndex(stack), keypath, lookup, TRUE) || (filter
             ? setValueHolder(filter)
             : holder);
     }, findProp = function (stack, index, name) {
@@ -2755,25 +2760,25 @@ function render(instance, template, data, computed, slots, filters, globalFilter
         if (index > 0) {
             return findProp(stack, index - 1, name);
         }
-    }, lookupProp = function (name, value, stack, filter) {
-        const currentStack = stack || contextStack, index = currentStack.length - 1, { keypath } = currentStack[index], currentKeypath = keypath ? keypath + RAW_DOT + name : name;
+    }, lookupProp = function (stack, name, value, filter) {
+        const index = stack.length - 1, { keypath } = stack[index], currentKeypath = keypath ? keypath + RAW_DOT + name : name;
         if (value !== UNDEFINED) {
             return setValueHolder(value, currentKeypath);
         }
-        return index > 0 && findProp(currentStack, index - 1, name) || (filter
+        return index > 0 && findProp(stack, index - 1, name) || (filter
             ? setValueHolder(filter)
             : setValueHolder(UNDEFINED, currentKeypath));
-    }, getThis = function (value, stack) {
-        const currentStack = stack || contextStack, { keypath } = currentStack[currentStack.length - 1];
+    }, getThis = function (stack, value) {
+        const { keypath } = stack[stack.length - 1];
         return setValueHolder(value, keypath);
-    }, getThisByIndex = function (getIndex, stack) {
-        const currentStack = stack || contextStack, { scope, keypath } = currentStack[getIndex(currentStack)];
+    }, getThisByIndex = function (stack, getIndex) {
+        const { scope, keypath } = stack[getIndex(stack)];
         return setValueHolder(scope, keypath);
-    }, getProp = function (name, value, stack) {
-        const currentStack = stack || contextStack, { keypath } = currentStack[currentStack.length - 1];
+    }, getProp = function (stack, name, value) {
+        const { keypath } = stack[stack.length - 1];
         return setValueHolder(value, keypath ? keypath + RAW_DOT + name : name);
-    }, getPropByIndex = function (getIndex, name, stack) {
-        const currentStack = stack || contextStack, { scope, keypath } = currentStack[getIndex(currentStack)];
+    }, getPropByIndex = function (stack, getIndex, name) {
+        const { scope, keypath } = stack[getIndex(stack)];
         return setValueHolder(scope[name], keypath ? keypath + RAW_DOT + name : name);
     }, readKeypath = function (value, keypath) {
         const result = get(value, keypath);
@@ -2789,7 +2794,7 @@ function render(instance, template, data, computed, slots, filters, globalFilter
         }
         return holder;
     }, renderTemplate = function (render, scope, keypath, children) {
-        render(renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderPartial, renderEach, renderRange, renderSlotDirectly, renderSlotIndirectly, appendVNodeProperty, formatNumberNativeAttributeValue, formatBooleanNativeAttributeValue, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setValueHolder, toString, textVNodeOperator, commentVNodeOperator, elementVNodeOperator, componentVNodeOperator, fragmentVNodeOperator, portalVNodeOperator, slotVNodeOperator, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, scope, keypath, children);
+        render(renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderPartial, renderEach, renderRange, renderSlotDirectly, renderSlotIndirectly, appendVNodeProperty, formatNumberNativeAttributeValue, formatBooleanNativeAttributeValue, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setValueHolder, toString, textVNodeOperator, commentVNodeOperator, elementVNodeOperator, componentVNodeOperator, fragmentVNodeOperator, portalVNodeOperator, slotVNodeOperator, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, contextStack, scope, keypath, children);
     };
     renderTemplate(template, rootScope, rootKeypath, children);
     return children[0];
@@ -4542,7 +4547,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.250";
+Yox.version = "1.0.0-alpha.251";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
