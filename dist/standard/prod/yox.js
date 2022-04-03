@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.251
+ * yox.js v1.0.0-alpha.252
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -19,6 +19,7 @@
   var SYNTAX_SPREAD = '...';
   var SYNTAX_COMMENT = /^!(?:\s|--)/;
   var TAG_SLOT = 'slot';
+  var TAG_VNODE = 'vnode';
   var TAG_PORTAL = 'portal';
   var TAG_FRAGMENT = 'fragment';
   var TAG_TEMPLATE = 'template';
@@ -27,6 +28,7 @@
   var ATTR_REF = 'ref';
   var ATTR_SLOT = 'slot';
   var ATTR_NAME = 'name';
+  var ATTR_VALUE = 'value';
   var SLOT_DATA_PREFIX = '$slot_';
   var SLOT_NAME_DEFAULT = 'children';
   var VNODE_TYPE_TEXT = 1;
@@ -2576,16 +2578,25 @@
   // 标签名 -> vnode 类型的映射
   var specialTag2VNodeType = {};
   specialTags[TAG_SLOT] =
-      specialTags[TAG_TEMPLATE] =
-          specialAttrs[ATTR_KEY] =
-              specialAttrs[ATTR_REF] =
-                  specialAttrs[TAG_SLOT] = TRUE$1;
+      specialTags[TAG_VNODE] =
+          specialTags[TAG_PORTAL] =
+              specialTags[TAG_FRAGMENT] =
+                  specialTags[TAG_TEMPLATE] =
+                      specialAttrs[ATTR_KEY] =
+                          specialAttrs[ATTR_REF] =
+                              specialAttrs[TAG_SLOT] = TRUE$1;
   name2Type['if'] = IF;
   name2Type['each'] = EACH;
   name2Type['partial'] = PARTIAL;
   specialTag2VNodeType[TAG_FRAGMENT] = VNODE_TYPE_FRAGMENT;
   specialTag2VNodeType[TAG_PORTAL] = VNODE_TYPE_PORTAL;
   specialTag2VNodeType[TAG_SLOT] = VNODE_TYPE_SLOT;
+  function isSpecialAttr(element, attr) {
+      return specialAttrs[attr.name]
+          || element.tag === TAG_PORTAL && attr.name === ATTR_TO
+          || element.tag === TAG_SLOT && attr.name === ATTR_NAME
+          || element.tag === TAG_VNODE && attr.name === ATTR_VALUE;
+  }
   function parseStyleString(value, callback) {
       var parts = value.split(';');
       for (var i = 0, len = parts.length; i < len; i++) {
@@ -3890,11 +3901,6 @@
           return createText$1(toString(node.expr.value));
       }
   }
-  function isSpecialAttr(element, attr) {
-      return specialAttrs[attr.name]
-          || element.tag === TAG_SLOT && attr.name === ATTR_NAME
-          || element.tag === TAG_PORTAL && attr.name === ATTR_TO;
-  }
   function removeComment(children) {
       // 类似 <!-- xx {{name}} yy {{age}} zz --> 这样的注释里包含插值
       // 按照目前的解析逻辑，是根据定界符进行模板分拆
@@ -4007,7 +4013,7 @@
                   }
               }
           }
-          // 除了 helper.specialAttrs 里指定的特殊属性，attrs 里的任何节点都不能单独拎出来赋给 element
+          // 除了符合 isSpecialAttr() 定义的特殊属性，attrs 里的任何节点都不能单独拎出来赋给 element
           // 因为 attrs 可能存在 if，所以每个 attr 最终都不一定会存在
           if (children) {
               // 优化单个子节点
@@ -4198,7 +4204,7 @@
           var value = attr.value;
           var isSlot = name === ATTR_SLOT;
           if (isSpecialAttr(element, attr)) {
-              var isStringValueRequired = isSlot;
+              var isStringValueRequired = isSlot; element.tag === TAG_VNODE && name === ATTR_VALUE;
               element[name] = isStringValueRequired ? value : attr;
               replaceChild(attr);
               if (attr.isStatic) {
@@ -5316,7 +5322,7 @@
   // 收集属性值
   attributeValueStack = [], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {}, FIELD_NATIVE_ATTRIBUTES = 'nativeAttrs', FIELD_NATIVE_STYLES = 'nativeStyles', FIELD_PROPERTIES = 'props', FIELD_DIRECTIVES = 'directives', FIELD_EVENTS = 'events', FIELD_MODEL = 'model', FIELD_LAZY = 'lazy', FIELD_TRANSITION = 'transition', FIELD_CHILDREN = 'children', FIELD_SLOTS = 'slots', FIELD_OPERATOR = 'operator', PRIMITIVE_UNDEFINED = toPrimitive(UNDEFINED$1), PRIMITIVE_TRUE = toPrimitive(TRUE$1);
   // 下面这些值需要根据外部配置才能确定
-  var isUglify = UNDEFINED$1, currentTextVNode = UNDEFINED$1, RENDER_STYLE_STRING = EMPTY_STRING, RENDER_STYLE_EXPR = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, RENDER_SLOT_DIRECTLY = EMPTY_STRING, RENDER_SLOT_INDIRECTLY = EMPTY_STRING, APPEND_VNODE_PROPERTY = EMPTY_STRING, FORMAT_NATIVE_ATTRIBUTE_NUMBER_VALUE = EMPTY_STRING, FORMAT_NATIVE_ATTRIBUTE_BOOLEAN_VALUE = EMPTY_STRING, LOOKUP_KEYPATH = EMPTY_STRING, LOOKUP_PROP = EMPTY_STRING, GET_THIS = EMPTY_STRING, GET_THIS_BY_INDEX = EMPTY_STRING, GET_PROP = EMPTY_STRING, GET_PROP_BY_INDEX = EMPTY_STRING, READ_KEYPATH = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, SET_VALUE_HOLDER = EMPTY_STRING, TO_STRING = EMPTY_STRING, OPERATOR_TEXT_VNODE = EMPTY_STRING, OPERATOR_COMMENT_VNODE = EMPTY_STRING, OPERATOR_ELEMENT_VNODE = EMPTY_STRING, OPERATOR_COMPONENT_VNODE = EMPTY_STRING, OPERATOR_FRAGMENT_VNODE = EMPTY_STRING, OPERATOR_PORTAL_VNODE = EMPTY_STRING, OPERATOR_SLOT_VNODE = EMPTY_STRING, ARG_INSTANCE = EMPTY_STRING, ARG_FILTERS = EMPTY_STRING, ARG_GLOBAL_FILTERS = EMPTY_STRING, ARG_LOCAL_PARTIALS = EMPTY_STRING, ARG_PARTIALS = EMPTY_STRING, ARG_GLOBAL_PARTIALS = EMPTY_STRING, ARG_DIRECTIVES = EMPTY_STRING, ARG_GLOBAL_DIRECTIVES = EMPTY_STRING, ARG_TRANSITIONS = EMPTY_STRING, ARG_GLOBAL_TRANSITIONS = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_PARENT = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_SCOPE = EMPTY_STRING, ARG_KEYPATH = EMPTY_STRING, ARG_LENGTH = EMPTY_STRING, ARG_EVENT = EMPTY_STRING, ARG_DATA = EMPTY_STRING;
+  var isUglify = UNDEFINED$1, currentTextVNode = UNDEFINED$1, RENDER_STYLE_STRING = EMPTY_STRING, RENDER_STYLE_EXPR = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_PARTIAL = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, RENDER_SLOT_DIRECTLY = EMPTY_STRING, RENDER_SLOT_INDIRECTLY = EMPTY_STRING, APPEND_VNODE_PROPERTY = EMPTY_STRING, FORMAT_NATIVE_ATTRIBUTE_NUMBER_VALUE = EMPTY_STRING, FORMAT_NATIVE_ATTRIBUTE_BOOLEAN_VALUE = EMPTY_STRING, LOOKUP_KEYPATH = EMPTY_STRING, LOOKUP_PROP = EMPTY_STRING, GET_THIS_BY_INDEX = EMPTY_STRING, GET_PROP = EMPTY_STRING, GET_PROP_BY_INDEX = EMPTY_STRING, READ_KEYPATH = EMPTY_STRING, EXECUTE_FUNCTION = EMPTY_STRING, SET_VALUE_HOLDER = EMPTY_STRING, TO_STRING = EMPTY_STRING, OPERATOR_TEXT_VNODE = EMPTY_STRING, OPERATOR_COMMENT_VNODE = EMPTY_STRING, OPERATOR_ELEMENT_VNODE = EMPTY_STRING, OPERATOR_COMPONENT_VNODE = EMPTY_STRING, OPERATOR_FRAGMENT_VNODE = EMPTY_STRING, OPERATOR_PORTAL_VNODE = EMPTY_STRING, OPERATOR_SLOT_VNODE = EMPTY_STRING, ARG_INSTANCE = EMPTY_STRING, ARG_FILTERS = EMPTY_STRING, ARG_GLOBAL_FILTERS = EMPTY_STRING, ARG_LOCAL_PARTIALS = EMPTY_STRING, ARG_PARTIALS = EMPTY_STRING, ARG_GLOBAL_PARTIALS = EMPTY_STRING, ARG_DIRECTIVES = EMPTY_STRING, ARG_GLOBAL_DIRECTIVES = EMPTY_STRING, ARG_TRANSITIONS = EMPTY_STRING, ARG_GLOBAL_TRANSITIONS = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_PARENT = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_SCOPE = EMPTY_STRING, ARG_KEYPATH = EMPTY_STRING, ARG_LENGTH = EMPTY_STRING, ARG_EVENT = EMPTY_STRING, ARG_DATA = EMPTY_STRING;
   function init() {
       if (isUglify === PUBLIC_CONFIG.uglifyCompiled) {
           return;
@@ -5340,40 +5346,39 @@
           FORMAT_NATIVE_ATTRIBUTE_BOOLEAN_VALUE = '_p';
           LOOKUP_KEYPATH = '_q';
           LOOKUP_PROP = '_r';
-          GET_THIS = '_s';
-          GET_THIS_BY_INDEX = '_t';
-          GET_PROP = '_u';
-          GET_PROP_BY_INDEX = '_v';
-          READ_KEYPATH = '_w';
-          EXECUTE_FUNCTION = '_x';
-          SET_VALUE_HOLDER = '_y';
-          TO_STRING = '_z';
-          OPERATOR_TEXT_VNODE = '_A';
-          OPERATOR_COMMENT_VNODE = '_B';
-          OPERATOR_ELEMENT_VNODE = '_C';
-          OPERATOR_COMPONENT_VNODE = '_D';
-          OPERATOR_FRAGMENT_VNODE = '_E';
-          OPERATOR_PORTAL_VNODE = '_F';
-          OPERATOR_SLOT_VNODE = '_G';
-          ARG_INSTANCE = '_H';
-          ARG_FILTERS = '_I';
-          ARG_GLOBAL_FILTERS = '_J';
-          ARG_LOCAL_PARTIALS = '_K';
-          ARG_PARTIALS = '_L';
-          ARG_GLOBAL_PARTIALS = '_M';
-          ARG_DIRECTIVES = '_N';
-          ARG_GLOBAL_DIRECTIVES = '_O';
-          ARG_TRANSITIONS = '_P';
-          ARG_GLOBAL_TRANSITIONS = '_Q';
-          ARG_STACK = '_R';
-          ARG_PARENT = '_S';
-          ARG_VNODE = '_T';
-          ARG_CHILDREN = '_U';
-          ARG_SCOPE = '_V';
-          ARG_KEYPATH = '_W';
-          ARG_LENGTH = '_X';
-          ARG_EVENT = '_Y';
-          ARG_DATA = '_Z';
+          GET_THIS_BY_INDEX = '_s';
+          GET_PROP = '_t';
+          GET_PROP_BY_INDEX = '_u';
+          READ_KEYPATH = '_v';
+          EXECUTE_FUNCTION = '_w';
+          SET_VALUE_HOLDER = '_x';
+          TO_STRING = '_y';
+          OPERATOR_TEXT_VNODE = '_z';
+          OPERATOR_COMMENT_VNODE = '_A';
+          OPERATOR_ELEMENT_VNODE = '_B';
+          OPERATOR_COMPONENT_VNODE = '_C';
+          OPERATOR_FRAGMENT_VNODE = '_D';
+          OPERATOR_PORTAL_VNODE = '_E';
+          OPERATOR_SLOT_VNODE = '_F';
+          ARG_INSTANCE = '_G';
+          ARG_FILTERS = '_H';
+          ARG_GLOBAL_FILTERS = '_I';
+          ARG_LOCAL_PARTIALS = '_J';
+          ARG_PARTIALS = '_K';
+          ARG_GLOBAL_PARTIALS = '_L';
+          ARG_DIRECTIVES = '_M';
+          ARG_GLOBAL_DIRECTIVES = '_N';
+          ARG_TRANSITIONS = '_O';
+          ARG_GLOBAL_TRANSITIONS = '_P';
+          ARG_STACK = '_Q';
+          ARG_PARENT = '_R';
+          ARG_VNODE = '_S';
+          ARG_CHILDREN = '_T';
+          ARG_SCOPE = '_U';
+          ARG_KEYPATH = '_V';
+          ARG_LENGTH = '_W';
+          ARG_EVENT = '_X';
+          ARG_DATA = '_Y';
       }
       else {
           RENDER_STYLE_STRING = 'renderStyleStyle';
@@ -5394,7 +5399,6 @@
           FORMAT_NATIVE_ATTRIBUTE_BOOLEAN_VALUE = 'formatNativeAttributeBooleanValue';
           LOOKUP_KEYPATH = 'lookupKeypath';
           LOOKUP_PROP = 'lookupProp';
-          GET_THIS = 'getThis';
           GET_THIS_BY_INDEX = 'getThisByIndex';
           GET_PROP = 'getProp';
           GET_PROP_BY_INDEX = 'getPropByIndex';
@@ -5437,6 +5441,7 @@
   CommentVNode.prototype.toString = function (tabSize) {
       return toMap({
           type: toPrimitive(VNODE_TYPE_COMMENT),
+          isComment: PRIMITIVE_TRUE,
           isPure: PRIMITIVE_TRUE,
           operator: OPERATOR_COMMENT_VNODE,
           text: this.text,
@@ -5514,32 +5519,19 @@
           ]);
   }
   function generateExpressionIndex(root, offset) {
-      var result;
       if (root) {
-          result = addVar(toAnonymousFunction(UNDEFINED$1, UNDEFINED$1, toPrimitive(0)), TRUE$1);
+          return toPrimitive(0);
       }
-      else if (offset) {
-          result = addVar(toAnonymousFunction([
-              ARG_STACK
-          ], UNDEFINED$1, toBinary(toMember(ARG_STACK, [
-              toPrimitive(RAW_LENGTH)
-          ]), '-', toPrimitive(1 + offset))), TRUE$1);
-      }
-      else {
-          result = addVar(toAnonymousFunction([
-              ARG_STACK
-          ], UNDEFINED$1, toBinary(toMember(ARG_STACK, [
-              toPrimitive(RAW_LENGTH)
-          ]), '-', toPrimitive(1))), TRUE$1);
-      }
-      return result;
+      return toBinary(toMember(ARG_STACK, [
+          toPrimitive(RAW_LENGTH)
+      ]), '-', toPrimitive(1 + (offset ? offset : 0)));
   }
   function generateExpressionIdentifier(node, nodes, keypath, holder, parentNode) {
       var root = node.root;
       var lookup = node.lookup;
       var offset = node.offset;
       var length = nodes.length;
-      var getIndex = generateExpressionIndex(root, offset);
+      var index = generateExpressionIndex(root, offset);
       var filter = PRIMITIVE_UNDEFINED;
       // 函数调用
       if (parentNode
@@ -5558,7 +5550,7 @@
       }
       var result = toCall(LOOKUP_KEYPATH, [
           ARG_STACK,
-          getIndex,
+          index,
           string$1(keypath)
               ? toPrimitive(keypath)
               : length === 1
@@ -5594,27 +5586,17 @@
           else {
               result = toCall(GET_PROP_BY_INDEX, [
                   ARG_STACK,
-                  getIndex,
+                  index,
                   toPrimitive(keypath)
               ]);
           }
       }
       // 处理属性为空串，如 this、../this、~/this 之类的
       else if (!keypath && !length) {
-          // this
-          if (!root && !offset && !lookup) {
-              result = toCall(GET_THIS, [
-                  ARG_STACK,
-                  ARG_SCOPE
-              ]);
-          }
-          // 指定了路径，如 ~/name 或 ../name
-          else if (root || offset) {
-              result = toCall(GET_THIS_BY_INDEX, [
-                  ARG_STACK,
-                  getIndex
-              ]);
-          }
+          result = toCall(GET_THIS_BY_INDEX, [
+              ARG_STACK,
+              index
+          ]);
       }
       return generateHolderIfNeeded(result, holder);
   }
@@ -5652,11 +5634,8 @@
           ])
       ]), holder);
   }
-  function generateExpression(expr) {
-      return generate$1(expr, transformExpressionIdentifier, generateExpressionIdentifier, generateExpressionValue, generateExpressionCall);
-  }
-  function generateExpressionHolder(expr) {
-      return generate$1(expr, transformExpressionIdentifier, generateExpressionIdentifier, generateExpressionValue, generateExpressionCall, TRUE$1);
+  function generateExpression(expr, holder) {
+      return generate$1(expr, transformExpressionIdentifier, generateExpressionIdentifier, generateExpressionValue, generateExpressionCall, holder);
   }
   function createAttributeValue(nodes) {
       var attributeValue = toStringBuffer();
@@ -5922,7 +5901,10 @@
           tag: dynamicTag
               ? generateExpression(dynamicTag)
               : toPrimitive(tag)
-      }), isFragment = vnodeType === VNODE_TYPE_FRAGMENT, isPortal = vnodeType === VNODE_TYPE_PORTAL, isSlot = vnodeType === VNODE_TYPE_SLOT, outputAttrs = UNDEFINED$1, outputChildren = UNDEFINED$1, outputSlots = UNDEFINED$1, renderSlot = UNDEFINED$1;
+      }), isFragment = vnodeType === VNODE_TYPE_FRAGMENT, isPortal = vnodeType === VNODE_TYPE_PORTAL, isSlot = vnodeType === VNODE_TYPE_SLOT, 
+      // isVNode 不用 vnodeType 判断
+      // 因为 <vnode value="{{expr}}"> 不会创建实际的 vnode，它只是把 value 直接输出
+      isVNode = tag === TAG_VNODE, outputAttrs = UNDEFINED$1, outputChildren = UNDEFINED$1, outputSlots = UNDEFINED$1, renderSlot = UNDEFINED$1, renderVNode = UNDEFINED$1;
       // 先序列化 children，再序列化 attrs，原因需要举两个例子：
       // 例子1：
       // <div on-click="output(this)"></div> 如果 this 序列化成 $scope，如果外部修改了 this，因为模板没有计入此依赖，不会刷新，因此 item 是旧的
@@ -5975,26 +5957,6 @@
               : toCall(TO_STRING, [
                   generateExpression(html)
               ]));
-      }
-      if (isSlot) {
-          var nameAttr = node.name, outputName = toPrimitive(SLOT_DATA_PREFIX + SLOT_NAME_DEFAULT);
-          if (nameAttr) {
-              // 如果 name 是字面量，直接拼出结果
-              outputName = isDef(nameAttr.value)
-                  ? toPrimitive(SLOT_DATA_PREFIX + nameAttr.value)
-                  : toBinary(toPrimitive(SLOT_DATA_PREFIX), '+', toPrecedence(generateAttributeValue(nameAttr)));
-          }
-          if (last(slotStack)) {
-              renderSlot = toCall(RENDER_SLOT_INDIRECTLY, [
-                  outputName,
-                  ARG_PARENT
-              ]);
-          }
-          else {
-              renderSlot = toCall(RENDER_SLOT_DIRECTLY, [
-                  outputName
-              ]);
-          }
       }
       if (text) {
           vnode.set('text', string$1(text)
@@ -6071,9 +6033,37 @@
               ], generateNodesToTuple(otherList), ARG_VNODE);
           }
       }
+      if (isSlot) {
+          var nameAttr = node.name;
+          var outputName = toPrimitive(SLOT_DATA_PREFIX + SLOT_NAME_DEFAULT);
+          if (nameAttr) {
+              // 如果 name 是字面量，直接拼出结果
+              outputName = isDef(nameAttr.value)
+                  ? toPrimitive(SLOT_DATA_PREFIX + nameAttr.value)
+                  : toBinary(toPrimitive(SLOT_DATA_PREFIX), '+', toPrecedence(generateAttributeValue(nameAttr)));
+          }
+          if (last(slotStack)) {
+              renderSlot = toCall(RENDER_SLOT_INDIRECTLY, [
+                  outputName,
+                  ARG_PARENT
+              ]);
+          }
+          else {
+              renderSlot = toCall(RENDER_SLOT_DIRECTLY, [
+                  outputName
+              ]);
+          }
+      }
+      if (isVNode) {
+          // 编译器保证了 value 一定是 Attribute
+          renderVNode = generateAttributeValue(node.value);
+      }
       pop(vnodeStack);
       pop(attributeStack);
       pop(componentStack);
+      if (renderVNode) {
+          return generateVNode(renderVNode);
+      }
       if (vnodeType === VNODE_TYPE_ELEMENT) {
           vnode.set(FIELD_OPERATOR, OPERATOR_ELEMENT_VNODE);
       }
@@ -6187,7 +6177,7 @@
   }
   function getModelValue(node) {
       return toCall(RENDER_MODEL, [
-          generateExpressionHolder(node.expr)
+          generateExpression(node.expr, TRUE$1)
       ]);
   }
   function addEventBooleanInfo(args, node) {
@@ -6229,13 +6219,17 @@
           push(args, toPrimitive(callNode.name.name));
           // 为了实现运行时动态收集参数，这里序列化成函数
           if (!falsy$2(callNode.args)) {
-              // args
-              push(args, toAnonymousFunction([
-                  ARG_EVENT,
-                  ARG_DATA ], UNDEFINED$1, toList(callNode.args.map(generateExpression))));
+              // runtime
+              push(args, toMap({
+                  execute: toAnonymousFunction([
+                      ARG_EVENT,
+                      ARG_DATA ], UNDEFINED$1, toList(callNode.args.map(function (arg) {
+                      return generateExpression(arg);
+                  })))
+              }));
           }
           else {
-              // args
+              // runtime
               push(args, PRIMITIVE_UNDEFINED);
           }
           addEventBooleanInfo(args, node);
@@ -6283,11 +6277,15 @@
               var callNode = expr;
               // 为了实现运行时动态收集参数，这里序列化成函数
               if (!falsy$2(callNode.args)) {
-                  // args
-                  push(args, toAnonymousFunction(UNDEFINED$1, UNDEFINED$1, toList(callNode.args.map(generateExpression))));
+                  // runtime
+                  push(args, toMap({
+                      execute: toAnonymousFunction(UNDEFINED$1, UNDEFINED$1, toList(callNode.args.map(function (arg) {
+                          return generateExpression(arg);
+                      })))
+                  }));
               }
               else {
-                  // args
+                  // runtime
                   push(args, PRIMITIVE_UNDEFINED);
               }
               // compiler 保证了函数调用的 name 是标识符
@@ -6296,10 +6294,11 @@
           }
           else {
               // 取值函数
-              // getter 函数在触发事件时调用，调用时会传入它的作用域，因此这里要加一个参数
               if (expr.type !== LITERAL) {
-                  // args
-                  push(args, toAnonymousFunction(UNDEFINED$1, UNDEFINED$1, generateExpression(expr)));
+                  // runtime
+                  push(args, toMap({
+                      execute: toAnonymousFunction(UNDEFINED$1, UNDEFINED$1, generateExpression(expr))
+                  }));
               }
           }
       }
@@ -6453,7 +6452,7 @@
       }
       // 遍历数组和对象
       return toCall(RENDER_EACH, [
-          generateExpressionHolder(from),
+          generateExpression(from, TRUE$1),
           renderChildren,
           renderElse ]);
   };
@@ -6500,7 +6499,6 @@
           FORMAT_NATIVE_ATTRIBUTE_BOOLEAN_VALUE,
           LOOKUP_KEYPATH,
           LOOKUP_PROP,
-          GET_THIS,
           GET_THIS_BY_INDEX,
           GET_PROP,
           GET_PROP_BY_INDEX,
@@ -6606,12 +6604,7 @@
                   event.prevent().stop();
               }
           };
-      }, renderEventMethod = function (key, value, name, ns, method, args, isComponent, isNative) {
-          var runtime = args
-              ? {
-                  execute: args
-              }
-              : UNDEFINED$1;
+      }, renderEventMethod = function (key, value, name, ns, method, runtime, isComponent, isNative) {
           return {
               key: key,
               value: value,
@@ -6630,12 +6623,7 @@
               isNative: isNative,
               listener: createEventNameListener(to, toNs, isComponent),
           };
-      }, renderDirective = function (key, name, modifier, value, hooks, args, method) {
-          var runtime = args
-              ? {
-                  execute: args
-              }
-              : UNDEFINED$1;
+      }, renderDirective = function (key, name, modifier, value, hooks, runtime, method) {
           return {
               ns: DIRECTIVE_CUSTOM,
               key: key,
@@ -6765,7 +6753,8 @@
        * </div>
        */
       renderSlotDirectly = function (name) {
-          return setSlotHodler(name, get(rootScope, name));
+          addDependency(name);
+          return rootScope[name];
       }, 
       /**
        * 间接渲染 slot，如下
@@ -6781,20 +6770,9 @@
        * </div>
        */
       renderSlotIndirectly = function (name, parent) {
-          return setSlotHodler(name, get(slots, name, function (value) {
-              return func(value)
-                  ? value(parent)
-                  : value;
-          }));
-      }, setSlotHodler = function (name, holder) {
           addDependency(name);
-          if (holder) {
-              var value = holder.value;
-              // slot 内容必须是个数组
-              return array$1(value)
-                  ? value
-                  : [value];
-          }
+          var render = slots && slots[name];
+          return render ? render(parent) : UNDEFINED$1;
       }, findKeypath = function (stack, index, name, lookup, isFirstCall) {
           var ref = stack[index];
           var scope = ref.scope;
@@ -6809,8 +6787,8 @@
           if (lookup && index > 0) {
               return findKeypath(stack, index - 1, name, lookup);
           }
-      }, lookupKeypath = function (stack, getIndex, keypath, lookup, filter) {
-          return findKeypath(stack, getIndex(stack), keypath, lookup, TRUE$1) || (filter
+      }, lookupKeypath = function (stack, index, keypath, lookup, filter) {
+          return findKeypath(stack, index, keypath, lookup, TRUE$1) || (filter
               ? setValueHolder(filter)
               : holder);
       }, findProp = function (stack, index, name) {
@@ -6835,12 +6813,8 @@
           return index > 0 && findProp(stack, index - 1, name) || (filter
               ? setValueHolder(filter)
               : setValueHolder(UNDEFINED$1, currentKeypath));
-      }, getThis = function (stack, value) {
-          var ref = stack[stack.length - 1];
-          var keypath = ref.keypath;
-          return setValueHolder(value, keypath);
-      }, getThisByIndex = function (stack, getIndex) {
-          var ref = stack[getIndex(stack)];
+      }, getThisByIndex = function (stack, index) {
+          var ref = stack[index];
           var scope = ref.scope;
           var keypath = ref.keypath;
           return setValueHolder(scope, keypath);
@@ -6848,8 +6822,8 @@
           var ref = stack[stack.length - 1];
           var keypath = ref.keypath;
           return setValueHolder(value, keypath ? keypath + RAW_DOT + name : name);
-      }, getPropByIndex = function (stack, getIndex, name) {
-          var ref = stack[getIndex(stack)];
+      }, getPropByIndex = function (stack, index, name) {
+          var ref = stack[index];
           var scope = ref.scope;
           var keypath = ref.keypath;
           return setValueHolder(scope[name], keypath ? keypath + RAW_DOT + name : name);
@@ -6867,7 +6841,7 @@
           }
           return holder;
       }, renderTemplate = function (render, scope, keypath, children) {
-          render(renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderPartial, renderEach, renderRange, renderSlotDirectly, renderSlotIndirectly, appendVNodeProperty, formatNumberNativeAttributeValue, formatBooleanNativeAttributeValue, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setValueHolder, toString, textVNodeOperator, commentVNodeOperator, elementVNodeOperator, componentVNodeOperator, fragmentVNodeOperator, portalVNodeOperator, slotVNodeOperator, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, contextStack, scope, keypath, children);
+          render(renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderPartial, renderEach, renderRange, renderSlotDirectly, renderSlotIndirectly, appendVNodeProperty, formatNumberNativeAttributeValue, formatBooleanNativeAttributeValue, lookupKeypath, lookupProp, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setValueHolder, toString, textVNodeOperator, commentVNodeOperator, elementVNodeOperator, componentVNodeOperator, fragmentVNodeOperator, portalVNodeOperator, slotVNodeOperator, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, contextStack, scope, keypath, children);
       };
       renderTemplate(template, rootScope, rootKeypath, children);
       return children[0];
@@ -8681,7 +8655,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.251";
+  Yox.version = "1.0.0-alpha.252";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

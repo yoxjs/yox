@@ -176,14 +176,13 @@ export interface StringApi {
 	has(str: string, part: string): boolean;
 	falsy(str: any): boolean;
 }
-export interface DirectiveRuntime {
-	args?: (stack: any[]) => any[];
-	expr?: (stack: any[]) => any;
-	stack: any[];
-}
+export declare type EventArgs = (event: CustomEventInterface, data?: Data) => any[];
+export declare type DirectiveArgs = () => any;
 export interface EventRuntime {
-	args: (stack: any[], event: CustomEventInterface, data?: Data) => any[];
-	stack: any[];
+	execute: EventArgs;
+}
+export interface DirectiveRuntime {
+	execute: DirectiveArgs;
 }
 export interface Directive {
 	key: string;
@@ -232,6 +231,7 @@ export interface VNode {
 	readonly operator: VNodeOperator;
 	readonly tag?: string;
 	readonly isComponent?: boolean;
+	readonly isComment?: boolean;
 	readonly isFragment?: boolean;
 	readonly isPortal?: boolean;
 	readonly isSlot?: boolean;

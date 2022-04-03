@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.251
+ * yox.js v1.0.0-alpha.252
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -2581,12 +2581,7 @@
                   event.prevent().stop();
               }
           };
-      }, renderEventMethod = function (key, value, name, ns, method, args, isComponent, isNative) {
-          var runtime = args
-              ? {
-                  execute: args
-              }
-              : UNDEFINED;
+      }, renderEventMethod = function (key, value, name, ns, method, runtime, isComponent, isNative) {
           return {
               key: key,
               value: value,
@@ -2605,12 +2600,7 @@
               isNative: isNative,
               listener: createEventNameListener(to, toNs, isComponent),
           };
-      }, renderDirective = function (key, name, modifier, value, hooks, args, method) {
-          var runtime = args
-              ? {
-                  execute: args
-              }
-              : UNDEFINED;
+      }, renderDirective = function (key, name, modifier, value, hooks, runtime, method) {
           return {
               ns: DIRECTIVE_CUSTOM,
               key: key,
@@ -2740,7 +2730,8 @@
        * </div>
        */
       renderSlotDirectly = function (name) {
-          return setSlotHodler(name, get(rootScope, name));
+          addDependency(name);
+          return rootScope[name];
       }, 
       /**
        * 间接渲染 slot，如下
@@ -2756,20 +2747,9 @@
        * </div>
        */
       renderSlotIndirectly = function (name, parent) {
-          return setSlotHodler(name, get(slots, name, function (value) {
-              return func(value)
-                  ? value(parent)
-                  : value;
-          }));
-      }, setSlotHodler = function (name, holder) {
           addDependency(name);
-          if (holder) {
-              var value = holder.value;
-              // slot 内容必须是个数组
-              return array$1(value)
-                  ? value
-                  : [value];
-          }
+          var render = slots && slots[name];
+          return render ? render(parent) : UNDEFINED;
       }, findKeypath = function (stack, index, name, lookup, isFirstCall) {
           var ref = stack[index];
           var scope = ref.scope;
@@ -2784,8 +2764,8 @@
           if (lookup && index > 0) {
               return findKeypath(stack, index - 1, name, lookup);
           }
-      }, lookupKeypath = function (stack, getIndex, keypath, lookup, filter) {
-          return findKeypath(stack, getIndex(stack), keypath, lookup, TRUE) || (filter
+      }, lookupKeypath = function (stack, index, keypath, lookup, filter) {
+          return findKeypath(stack, index, keypath, lookup, TRUE) || (filter
               ? setValueHolder(filter)
               : holder);
       }, findProp = function (stack, index, name) {
@@ -2810,12 +2790,8 @@
           return index > 0 && findProp(stack, index - 1, name) || (filter
               ? setValueHolder(filter)
               : setValueHolder(UNDEFINED, currentKeypath));
-      }, getThis = function (stack, value) {
-          var ref = stack[stack.length - 1];
-          var keypath = ref.keypath;
-          return setValueHolder(value, keypath);
-      }, getThisByIndex = function (stack, getIndex) {
-          var ref = stack[getIndex(stack)];
+      }, getThisByIndex = function (stack, index) {
+          var ref = stack[index];
           var scope = ref.scope;
           var keypath = ref.keypath;
           return setValueHolder(scope, keypath);
@@ -2823,8 +2799,8 @@
           var ref = stack[stack.length - 1];
           var keypath = ref.keypath;
           return setValueHolder(value, keypath ? keypath + RAW_DOT + name : name);
-      }, getPropByIndex = function (stack, getIndex, name) {
-          var ref = stack[getIndex(stack)];
+      }, getPropByIndex = function (stack, index, name) {
+          var ref = stack[index];
           var scope = ref.scope;
           var keypath = ref.keypath;
           return setValueHolder(scope[name], keypath ? keypath + RAW_DOT + name : name);
@@ -2842,7 +2818,7 @@
           }
           return holder;
       }, renderTemplate = function (render, scope, keypath, children) {
-          render(renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderPartial, renderEach, renderRange, renderSlotDirectly, renderSlotIndirectly, appendVNodeProperty, formatNumberNativeAttributeValue, formatBooleanNativeAttributeValue, lookupKeypath, lookupProp, getThis, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setValueHolder, toString, textVNodeOperator, commentVNodeOperator, elementVNodeOperator, componentVNodeOperator, fragmentVNodeOperator, portalVNodeOperator, slotVNodeOperator, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, contextStack, scope, keypath, children);
+          render(renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderPartial, renderEach, renderRange, renderSlotDirectly, renderSlotIndirectly, appendVNodeProperty, formatNumberNativeAttributeValue, formatBooleanNativeAttributeValue, lookupKeypath, lookupProp, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setValueHolder, toString, textVNodeOperator, commentVNodeOperator, elementVNodeOperator, componentVNodeOperator, fragmentVNodeOperator, portalVNodeOperator, slotVNodeOperator, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, contextStack, scope, keypath, children);
       };
       renderTemplate(template, rootScope, rootKeypath, children);
       return children[0];
@@ -4646,7 +4622,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.251";
+  Yox.version = "1.0.0-alpha.252";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
