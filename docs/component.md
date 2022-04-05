@@ -541,7 +541,7 @@ function oneOf(values) {
 </div>
 ```
 
-### 判断 slot
+### 判断 slot（低于 `1.0.0-alpha.253` 版本）
 
 你可以通过 `hasSlot(name)` 过滤器判断外部是否传入某个节点，如下：
 
@@ -565,6 +565,27 @@ function oneOf(values) {
 
 > 应该去掉 `if`，否则会判断两次
 
+### 判断 slot（`1.0.0-alpha.253` 版本+）
+
+你可以通过 `@[name]` 语法判断外部是否传入某个节点，如下：
+
+```html
+<div class="button{{#if @icon}} button-icon{{/if}}">
+  <slot name="icon" />
+</div>
+```
+
+渲染 `<slot>` 节点时，内部会自动判断外部是否传入该名称的节点，如果没传入，则不会渲染该 `<slot>`，因此没有必要像下面这样加一个判断：
+
+```html
+<div>
+  {{#if @left}}
+    <slot name="left" />
+  {{/if}}
+</div>
+```
+
+> 应该去掉 `if`，否则会判断两次
 
 ## 通信
 
