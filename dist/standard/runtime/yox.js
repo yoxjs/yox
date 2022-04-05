@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.252
+ * yox.js v1.0.0-alpha.253
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -4622,7 +4622,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.252";
+  Yox.version = "1.0.0-alpha.253";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
@@ -4727,9 +4727,6 @@
       // 全局注册内置过滤器
       Yox.filter({
           hasSlot: function(name) {
-              // 不鼓励在过滤器使用 this
-              // 因此过滤器没有 this 的类型声明
-              // 这个内置过滤器是不得不用 this
               return this.get(SLOT_DATA_PREFIX + name) !== UNDEFINED;
           }
       });

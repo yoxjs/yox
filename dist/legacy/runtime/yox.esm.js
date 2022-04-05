@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.252
+ * yox.js v1.0.0-alpha.253
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -2903,6 +2903,96 @@ function isDef (target) {
     return target !== UNDEFINED$1;
 }
 
+const CODE_EOF = 0; //
+const CODE_DOT = 46; // .
+const CODE_COMMA = 44; // ,
+const CODE_SLASH = 47; // /
+const CODE_BACKSLASH = 92; // \
+const CODE_SQUOTE = 39; // '
+const CODE_DQUOTE = 34; // "
+const CODE_OPAREN = 40; // (
+const CODE_CPAREN = 41; // )
+const CODE_OBRACK = 91; // [
+const CODE_CBRACK = 93; // ]
+const CODE_OBRACE = 123; // {
+const CODE_CBRACE = 125; // }
+const CODE_QUESTION = 63; // ?
+const CODE_COLON = 58; // :
+const CODE_PLUS = 43; // +
+const CODE_MINUS = 45; // -
+const CODE_MULTIPLY = 42; // *
+const CODE_DIVIDE = 47; // /
+const CODE_MODULO = 37; // %
+const CODE_WAVE = 126; // ~
+const CODE_AND = 38; // &
+const CODE_OR = 124; // |
+const CODE_XOR = 94; // ^
+const CODE_NOT = 33; // !
+const CODE_LESS = 60; // <
+const CODE_EQUAL = 61; // =
+const CODE_GREAT = 62; // >
+const CODE_AT = 64; // @
+/**
+ * 区分关键字和普通变量
+ * 举个例子：a === true
+ * 从解析器的角度来说，a 和 true 是一样的 token
+ */
+const keywordLiterals = {};
+keywordLiterals[RAW_TRUE] = TRUE$1;
+keywordLiterals[RAW_FALSE] = FALSE$1;
+keywordLiterals[RAW_NULL] = NULL$1;
+keywordLiterals[RAW_UNDEFINED] = UNDEFINED$1;
+/**
+ * 是否是空白符，用下面的代码在浏览器测试一下
+ *
+ * ```
+ * for (var i = 0; i < 200; i++) {
+ *   console.log(i, String.fromCharCode(i))
+ * }
+ * ```
+ *
+ * 从 0 到 32 全是空白符，100 往上分布比较散且较少用，唯一需要注意的是 160
+ *
+ * 160 表示 non-breaking space
+ * http://www.adamkoch.com/2009/07/25/white-space-and-character-160/
+ */
+function isWhitespace(code) {
+    return (code > 0 && code < 33) || code === 160;
+}
+/**
+ * 是否是数字
+ */
+function isDigit(code) {
+    return code > 47 && code < 58; // 0...9
+}
+/**
+ * 是否是数字
+ */
+function isNumber(code) {
+    return isDigit(code) || code === CODE_DOT;
+}
+/**
+ * 是否是插槽变量，@name 表示引用 name 所指定的插槽
+ */
+function isSlotIdentifierStart(code) {
+    return code === CODE_AT;
+}
+/**
+ * 变量开始字符必须是 字母、下划线、$
+ */
+function isIdentifierStart(code) {
+    return code === 36 // $
+        || code === 95 // _
+        || (code > 96 && code < 123) // a...z
+        || (code > 64 && code < 91); // A...Z
+}
+/**
+ * 变量剩余的字符必须是 字母、下划线、$、数字
+ */
+function isIdentifierPart(code) {
+    return isIdentifierStart(code) || isDigit(code);
+}
+
 function createArray(nodes, raw) {
     return {
         type: ARRAY,
@@ -2942,6 +3032,9 @@ function createIdentifier(raw, name, isProp) {
         name = EMPTY_STRING;
         root = TRUE$1;
         lookup = FALSE$1;
+    }
+    else {
+        name = replaceSlotIdentifierIfNeeded(name);
     }
     // 对象属性需要区分 a.b 和 a[b]
     // 如果不借用 Literal 无法实现这个判断
@@ -3061,6 +3154,7 @@ function createMemberIfNeeded(raw, nodes) {
             let firstName = identifierNode.name;
             // 不是 KEYPATH_THIS 或 KEYPATH_PARENT 或 KEYPATH_ROOT
             if (firstName) {
+                firstName = replaceSlotIdentifierIfNeeded(firstName, identifierNode);
                 unshift(staticNodes, firstName);
             }
             // 转成 Identifier
@@ -3126,6 +3220,16 @@ function createMemberInner(raw, lead, keypath, nodes, root, lookup, offset) {
         lookup,
         offset,
     };
+}
+function replaceSlotIdentifierIfNeeded(name, identifierNode) {
+    // 如果是插槽变量，则进行替换
+    if (isSlotIdentifierStart(codeAt(name, 0))) {
+        name = SLOT_DATA_PREFIX + slice(name, 1);
+        if (identifierNode) {
+            identifierNode.name = name;
+        }
+    }
+    return name;
 }
 
 const unary = {
@@ -3245,9 +3349,9 @@ class Parser {
      */
     scanToken() {
         const instance = this, { code, index } = instance;
-        if (isIdentifierStart(code)) {
+        if (isIdentifierStart(code) || isSlotIdentifierStart(code)) {
             return instance.scanTail(index, [
-                instance.scanIdentifier(index)
+                instance.scanIdentifier(index, code)
             ]);
         }
         if (isDigit(code)) {
@@ -3461,7 +3565,7 @@ class Parser {
      */
     scanPath(startIndex) {
         let instance = this, nodes = [], name;
-        // 进入此函数时，已确定前一个 code 是 CODE_DOT
+        // 进入此函数时，已确定前一个 code 是 helper.CODE_DOT
         // 此时只需判断接下来是 ./ 还是 / 就行了
         while (TRUE$1) {
             name = KEYPATH_CURRENT;
@@ -3479,9 +3583,9 @@ class Parser {
             // 如果以 / 结尾，则命中 ./ 或 ../
             if (instance.is(CODE_SLASH)) {
                 instance.go();
-                // 没写错，这里不必强调 isIdentifierStart，数字开头也可以吧
-                if (isIdentifierPart(instance.code)) {
-                    push(nodes, instance.scanIdentifier(instance.index, TRUE$1));
+                const { index, code } = instance;
+                if (isIdentifierStart(code) || isSlotIdentifierStart(code)) {
+                    push(nodes, instance.scanIdentifier(index, code, TRUE$1));
                     return instance.scanTail(startIndex, nodes);
                 }
                 else if (instance.is(CODE_DOT)) {
@@ -3529,7 +3633,7 @@ class Parser {
                     // 接下来的字符，可能是数字，也可能是标识符，如果不是就报错
                     if (isIdentifierPart(instance.code)) {
                         // 无需识别关键字
-                        push(nodes, instance.scanIdentifier(instance.index, TRUE$1));
+                        push(nodes, instance.scanIdentifier(instance.index, instance.code, TRUE$1));
                         break;
                     }
                     else {
@@ -3560,12 +3664,19 @@ class Parser {
      * @param isProp 是否是对象的属性
      * @return
      */
-    scanIdentifier(startIndex, isProp) {
+    scanIdentifier(startIndex, startCode, isProp) {
         const instance = this;
-        while (isIdentifierPart(instance.code)) {
+        // 标识符的第一个字符在外面已经判断过，肯定符合要求
+        // 因此这里先前进一步
+        do {
             instance.go();
-        }
+        } while (isIdentifierPart(instance.code));
         const raw = instance.pick(startIndex);
+        // 插槽变量，@ 后面必须有其他字符
+        if (raw.length === 1
+            && isSlotIdentifierStart(startCode)) {
+            instance.fatal(startIndex, 'A slot identifier must be followed by its name.');
+        }
         return !isProp && raw in keywordLiterals
             ? createLiteral(keywordLiterals[raw], raw)
             : createIdentifier(raw, raw, isProp);
@@ -3753,88 +3864,6 @@ class Parser {
     }
     fatal(start, message) {
     }
-}
-const CODE_EOF = 0, //
-CODE_DOT = 46, // .
-CODE_COMMA = 44, // ,
-CODE_SLASH = 47, // /
-CODE_BACKSLASH = 92, // \
-CODE_SQUOTE = 39, // '
-CODE_DQUOTE = 34, // "
-CODE_OPAREN = 40, // (
-CODE_CPAREN = 41, // )
-CODE_OBRACK = 91, // [
-CODE_CBRACK = 93, // ]
-CODE_OBRACE = 123, // {
-CODE_CBRACE = 125, // }
-CODE_QUESTION = 63, // ?
-CODE_COLON = 58, // :
-CODE_PLUS = 43, // +
-CODE_MINUS = 45, // -
-CODE_MULTIPLY = 42, // *
-CODE_DIVIDE = 47, // /
-CODE_MODULO = 37, // %
-CODE_WAVE = 126, // ~
-CODE_AND = 38, // &
-CODE_OR = 124, // |
-CODE_XOR = 94, // ^
-CODE_NOT = 33, // !
-CODE_LESS = 60, // <
-CODE_EQUAL = 61, // =
-CODE_GREAT = 62, // >
-/**
- * 区分关键字和普通变量
- * 举个例子：a === true
- * 从解析器的角度来说，a 和 true 是一样的 token
- */
-keywordLiterals = {};
-keywordLiterals[RAW_TRUE] = TRUE$1;
-keywordLiterals[RAW_FALSE] = FALSE$1;
-keywordLiterals[RAW_NULL] = NULL$1;
-keywordLiterals[RAW_UNDEFINED] = UNDEFINED$1;
-/**
- * 是否是空白符，用下面的代码在浏览器测试一下
- *
- * ```
- * for (var i = 0; i < 200; i++) {
- *   console.log(i, String.fromCharCode(i))
- * }
- * ```
- *
- * 从 0 到 32 全是空白符，100 往上分布比较散且较少用，唯一需要注意的是 160
- *
- * 160 表示 non-breaking space
- * http://www.adamkoch.com/2009/07/25/white-space-and-character-160/
- */
-function isWhitespace(code) {
-    return (code > 0 && code < 33) || code === 160;
-}
-/**
- * 是否是数字
- */
-function isDigit(code) {
-    return code > 47 && code < 58; // 0...9
-}
-/**
- * 是否是数字
- */
-function isNumber(code) {
-    return isDigit(code) || code === CODE_DOT;
-}
-/**
- * 变量开始字符必须是 字母、下划线、$
- */
-function isIdentifierStart(code) {
-    return code === 36 // $
-        || code === 95 // _
-        || (code > 96 && code < 123) // a...z
-        || (code > 64 && code < 91); // A...Z
-}
-/**
- * 变量剩余的字符必须是 字母、下划线、$、数字
- */
-function isIdentifierPart(code) {
-    return isIdentifierStart(code) || isDigit(code);
 }
 const compile$1 = createOneKeyCache(function (content) {
     const parser = new Parser(content);
@@ -4547,10 +4576,7 @@ function compile(content) {
                     }
                 }
                 else {
-                    // 如果 literal 包含 @，如 @children 或 ~/@children
-                    // 表示要遍历 slot，至于为啥要这么设计，因为想复用 each 的逻辑，减少重复代码
-                    // 再加上这个特性一般在业务逻辑中很少使用，只有 UI 库才可能用到，因此这里不必纠结这个语法设计
-                    const expr = compile$1(literal.replace(/(^|\/)@/, '$1' + SLOT_DATA_PREFIX));
+                    const expr = compile$1(literal);
                     if (expr) {
                         return createEach(expr, UNDEFINED$1, FALSE$1, index);
                     }
@@ -8627,7 +8653,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.252";
+Yox.version = "1.0.0-alpha.253";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
@@ -8732,9 +8758,6 @@ function addEventSmartly(instance, type, listener, once) {
     // 全局注册内置过滤器
     Yox.filter({
         hasSlot(name) {
-            // 不鼓励在过滤器使用 this
-            // 因此过滤器没有 this 的类型声明
-            // 这个内置过滤器是不得不用 this
             return this.get(SLOT_DATA_PREFIX + name) !== UNDEFINED$1;
         }
     });

@@ -1754,9 +1754,10 @@ if (process.env.NODE_ENV !== 'pure') {
   // 全局注册内置过滤器
   Yox.filter({
     hasSlot(name: string): boolean {
-      // 不鼓励在过滤器使用 this
-      // 因此过滤器没有 this 的类型声明
-      // 这个内置过滤器是不得不用 this
+      // hasSlot 正式废弃之后，filter 将不再把 this 传入，回归到纯正的工具函数
+      if (process.env.NODE_ENV === 'development') {
+        logger.warn(`"hasSlot('${name}')" is not recommended for use, it may be removed in the future, please use "@${name}" directly.`)
+      }
       return (this as YoxInterface).get(SLOT_DATA_PREFIX + name) !== constant.UNDEFINED
     }
   })
