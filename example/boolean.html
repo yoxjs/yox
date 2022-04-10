@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>布尔属性</title>
+</head>
+
+<body>
+  <div id="app"></div>
+  <script id="template" type="plain/text">
+
+      <div>
+        <div
+          spellcheck
+        >
+          div
+        </div>
+
+        <br>
+
+        <div
+          spellcheck="true"
+        >
+          div
+        </div>
+
+        <br>
+
+        <div
+          spellcheck="false"
+        >
+          div
+        </div>
+
+        <br>
+
+        <div
+          spellcheck="{{yes}}"
+        >
+          div
+        </div>
+
+        <br>
+
+        <a
+          draggable
+        >
+          link
+        </a>
+
+        <br>
+
+        <a
+          draggable="true"
+        >
+          link
+        </a>
+
+        <br>
+
+        <a
+          draggable="false"
+        >
+          link
+        </a>
+
+        <br>
+
+        <a
+          draggable="{{yes}}"
+        >
+          link
+        </a>
+
+        <br>
+
+        <img
+          draggable
+          src="https://mbdp01.bdstatic.com/static/landing-pc/img/logo_top.79fdb8c2.png"
+        >
+
+        <br>
+
+        <img
+          draggable="true"
+          src="https://mbdp01.bdstatic.com/static/landing-pc/img/logo_top.79fdb8c2.png"
+        >
+
+        <br>
+
+        <img
+          draggable="false"
+          src="https://mbdp01.bdstatic.com/static/landing-pc/img/logo_top.79fdb8c2.png"
+        >
+
+        <br>
+
+        <img
+          draggable="{{yes}}"
+          src="https://mbdp01.bdstatic.com/static/landing-pc/img/logo_top.79fdb8c2.png"
+        >
+
+        <br>
+
+        <input
+          type="checkbox"
+          checked
+        />
+
+        <br>
+
+        <input
+          type="checkbox"
+          checked="true"
+        />
+
+        <br>
+
+        <input
+          type="checkbox"
+          checked="false"
+        />
+
+        <br>
+
+        <input
+          type="checkbox"
+          checked="{{yes}}"
+        />
+
+        <br>
+
+        <input
+          disabled
+        />
+
+        <br>
+
+        <input
+          disabled="true"
+        />
+
+        <br>
+
+        <input
+          disabled="false"
+        />
+
+        <br>
+
+        <input
+          disabled="{{yes}}"
+        />
+
+      </div>
+
+  </script>
+
+  <script src="../dist/standard/dev/yox.js"></script>
+  <script>
+    var instance = new Yox({
+      el: '#app',
+      template: '#template',
+      data: {
+        yes: false,
+      }
+    });
+
+  </script>
+</body>
+
+</html>

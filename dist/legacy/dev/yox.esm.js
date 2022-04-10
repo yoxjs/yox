@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.253
+ * yox.js v1.0.0-alpha.254
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -2799,7 +2799,7 @@ svgTagNames = split2Map('svg,g,defs,desc,metadata,symbol,use,image,path,rect,cir
 // 常见的数字类型的属性（width,height,cellpadding,cellspacing 支持百分比，因此不计入数字类型）
 numberAttributeNames = split2Map('min,minlength,max,maxlength,step,size,rows,cols,tabindex,colspan,rowspan,frameborder') , 
 // 常见的布尔类型的属性
-booleanAttributeNames = split2Map('disabled,checked,required,multiple,readonly,autofocus,autoplay,controls,loop,muted,novalidate,draggable,contenteditable,hidden,spellcheck') ;
+booleanAttributeNames = split2Map('disabled,checked,required,multiple,readonly,autofocus,autoplay,reversed,selected,controls,default,loop,muted,novalidate,draggable,contenteditable,hidden,spellcheck,allowfullscreen') ;
 function isSelfClosing(tagName) {
     return selfClosingTagNames[tagName] !== UNDEFINED$1;
 }
@@ -2809,11 +2809,18 @@ function createAttribute(element, name, ns) {
         return createAttribute$1(camelize(name), ns);
     }
     // 原生 dom 属性
-    return name === 'style'
-        ? createStyle()
-        : createAttribute$1(name, ns);
+    if (name === 'style') {
+        return createStyle();
+    }
+    const attribute = createAttribute$1(name, ns);
+    if (isBooleanNativeAttribute(name)) {
+        // 默认为 true 的布尔属性只有以下两种情况
+        attribute.defaultValue = name === 'spellcheck'
+            || (element.tag === 'img' && name === 'draggable');
+    }
+    return attribute;
 }
-function getAttributeDefaultValue(element, name) {
+function getAttributeDefaultValue(element, name, defaultValue) {
     // 比如 <Dog isLive>
     if (element.isComponent) {
         return TRUE$1;
@@ -2822,19 +2829,19 @@ function getAttributeDefaultValue(element, name) {
     if (isNumberNativeAttribute(name)) {
         return UNDEFINED$1;
     }
-    // 布尔类型返回 'true'
+    // 布尔类型取决于 defaultValue
     if (isBooleanNativeAttribute(name)) {
-        return RAW_TRUE;
+        return formatBooleanNativeAttributeValue(name, TRUE$1, defaultValue);
     }
     // 字符串类型返回空字符串
     return EMPTY_STRING;
 }
-function formatNativeAttributeValue(name, value) {
+function formatNativeAttributeValue(name, value, defaultValue) {
     if (isNumberNativeAttribute(name)) {
         return formatNumberNativeAttributeValue(name, value);
     }
     else if (isBooleanNativeAttribute(name)) {
-        return formatBooleanNativeAttributeValue(name, value);
+        return formatBooleanNativeAttributeValue(name, value, defaultValue);
     }
     // 字符串类型的属性，保持原样即可
     return value;
@@ -2854,17 +2861,12 @@ function formatNumberNativeAttributeValue(name, value) {
     }
     return toString$1(value);
 }
-function formatBooleanNativeAttributeValue(name, value) {
+function formatBooleanNativeAttributeValue(name, value, defaultValue) {
     // 布尔类型的属性，只有值为 true 或 属性名 才表示 true
-    if (value === TRUE$1 || value === RAW_TRUE || value === name) {
-        return RAW_TRUE;
-    }
-    // 有些元素的布尔类型属性值，默认是 true，因此如果开发者明确传了 false，还是要用 false
-    // 而不是用 undefined，否则会用回元素的默认值，即 true
-    if (value === FALSE$1 || value === RAW_FALSE) {
-        return RAW_FALSE;
-    }
-    return UNDEFINED$1;
+    const isTrue = value === TRUE$1 || value === RAW_TRUE || value === name;
+    return isTrue === defaultValue
+        ? UNDEFINED$1
+        : (isTrue ? RAW_TRUE : RAW_FALSE);
 }
 function isNativeElement(node) {
     if (node.type !== ELEMENT) {
@@ -3391,10 +3393,20 @@ class Parser {
      */
     scanToken() {
         const instance = this, { code, index } = instance;
-        if (isIdentifierStart(code) || isSlotIdentifierStart(code)) {
+        let isSlotIdentifier = FALSE$1;
+        if (isSlotIdentifierStart(code)) {
+            isSlotIdentifier = TRUE$1;
+            instance.go();
+        }
+        // 因为上面可能前进了一步，因此这里用 instance.code
+        if (isIdentifierStart(instance.code)) {
             return instance.scanTail(index, [
-                instance.scanIdentifier(index, code)
+                instance.scanIdentifier(index, isSlotIdentifier)
             ]);
+        }
+        // @后面是个标识符才行，否则回退
+        else if (isSlotIdentifier) {
+            instance.go(-1);
         }
         if (isDigit(code)) {
             return instance.scanNumber(index);
@@ -3659,21 +3671,33 @@ class Parser {
             if (instance.is(CODE_SLASH)) {
                 instance.go();
                 const { index, code } = instance;
-                if (isIdentifierStart(code) || isSlotIdentifierStart(code)) {
-                    push(nodes, instance.scanIdentifier(index, code, TRUE$1));
+                let isSlotIdentifier = FALSE$1;
+                if (isSlotIdentifierStart(code)) {
+                    isSlotIdentifier = TRUE$1;
+                    instance.go();
+                }
+                // 因为上面可能前进了一步，因此这里用 instance.code
+                if (isIdentifierStart(instance.code)) {
+                    push(nodes, instance.scanIdentifier(index, isSlotIdentifier, TRUE$1));
                     return instance.scanTail(startIndex, nodes);
                 }
-                else if (instance.is(CODE_DOT)) {
-                    // 先跳过第一个 .
-                    instance.go();
-                    // 继续循环
-                }
                 else {
-                    // 类似 ./ 或 ../ 这样后面不跟标识符是想干嘛？报错可好？
-                    {
-                        instance.fatal(startIndex, `${last(nodes).raw}/ must be followed by an identifier.`);
+                    // @后面是个标识符才行，否则回退
+                    if (isSlotIdentifier) {
+                        instance.go(-1);
                     }
-                    break;
+                    if (instance.is(CODE_DOT)) {
+                        // 先跳过第一个 .
+                        instance.go();
+                        // 继续循环
+                    }
+                    else {
+                        // 类似 ./ 或 ../ 这样后面不跟标识符是想干嘛？报错可好？
+                        {
+                            instance.fatal(startIndex, `${last(nodes).raw}/ must be followed by an identifier.`);
+                        }
+                        break;
+                    }
                 }
             }
             // 类似 . 或 ..，可能就是想读取层级对象
@@ -3712,7 +3736,7 @@ class Parser {
                     // 接下来的字符，可能是数字，也可能是标识符，如果不是就报错
                     if (isIdentifierPart(instance.code)) {
                         // 无需识别关键字
-                        push(nodes, instance.scanIdentifier(instance.index, instance.code, TRUE$1));
+                        push(nodes, instance.scanIdentifier(instance.index, FALSE$1, TRUE$1));
                         break;
                     }
                     else {
@@ -3751,7 +3775,7 @@ class Parser {
      * @param isProp 是否是对象的属性
      * @return
      */
-    scanIdentifier(startIndex, startCode, isProp) {
+    scanIdentifier(startIndex, isSlotIdentifier, isProp) {
         const instance = this;
         // 标识符的第一个字符在外面已经判断过，肯定符合要求
         // 因此这里先前进一步
@@ -3760,8 +3784,7 @@ class Parser {
         } while (isIdentifierPart(instance.code));
         const raw = instance.pick(startIndex);
         // 插槽变量，@ 后面必须有其他字符
-        if (raw.length === 1
-            && isSlotIdentifierStart(startCode)) {
+        if (isSlotIdentifier && raw.length === 1) {
             instance.fatal(startIndex, 'A slot identifier must be followed by its name.');
         }
         return !isProp && raw in keywordLiterals
@@ -4282,19 +4305,19 @@ function compile(content) {
             }
         }
         else {
-            attr.value = getAttributeDefaultValue(element, attr.name);
+            attr.value = getAttributeDefaultValue(element, attr.name, attr.defaultValue);
         }
     }, processAttributeSingleText = function (element, attr, child) {
         attr.value = element.isComponent
             ? child.text
-            : formatNativeAttributeValue(attr.name, child.text);
+            : formatNativeAttributeValue(attr.name, child.text, attr.defaultValue);
         attr.children = UNDEFINED$1;
     }, processAttributeSingleExpression = function (element, attr, child) {
         const { expr } = child;
         if (expr.type === LITERAL) {
             let value = expr.value;
             if (!element.isComponent && attr.type === ATTRIBUTE) {
-                value = formatNativeAttributeValue(attr.name, value);
+                value = formatNativeAttributeValue(attr.name, value, attr.defaultValue);
             }
             attr.value = value;
         }
@@ -6340,7 +6363,8 @@ function generateNativeAttributeValue(node) {
         else if (isBooleanNativeAttribute(name)) {
             value = toCall(FORMAT_NATIVE_ATTRIBUTE_BOOLEAN_VALUE, [
                 toPrimitive(name),
-                value
+                value,
+                toPrimitive(node.defaultValue)
             ]);
         }
     }
@@ -9311,7 +9335,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.253";
+Yox.version = "1.0.0-alpha.254";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
