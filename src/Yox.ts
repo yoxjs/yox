@@ -50,6 +50,8 @@ import {
 import {
   HOOK_BEFORE_CREATE,
   HOOK_AFTER_CREATE,
+  HOOK_BEFORE_RENDER,
+  HOOK_AFTER_RENDER,
   HOOK_BEFORE_MOUNT,
   HOOK_AFTER_MOUNT,
   HOOK_BEFORE_UPDATE,
@@ -1237,9 +1239,18 @@ export default class Yox implements YoxInterface {
     if (process.env.NODE_ENV !== 'pure') {
       const instance = this,
 
-      { $observer, $dependencies } = instance,
+      { $options, $observer, $dependencies } = instance,
 
       dependencies: Record<string, any> = { }
+
+      const beforeRenderHook = $options[HOOK_BEFORE_RENDER]
+      if (beforeRenderHook) {
+        beforeRenderHook.call(instance)
+      }
+      lifeCycle.fire(
+        instance,
+        HOOK_BEFORE_RENDER
+      )
 
       if ($dependencies) {
         for (let key in $dependencies) {
@@ -1249,7 +1260,7 @@ export default class Yox implements YoxInterface {
 
       instance.$dependencies = dependencies
 
-      return templateRender.render(
+      const result = templateRender.render(
         instance,
         instance.$template as Function,
         $observer.data,
@@ -1272,6 +1283,17 @@ export default class Yox implements YoxInterface {
           }
         }
       )
+
+      const afterRenderHook = $options[HOOK_AFTER_RENDER]
+      if (afterRenderHook) {
+        afterRenderHook.call(instance)
+      }
+      lifeCycle.fire(
+        instance,
+        HOOK_AFTER_RENDER
+      )
+
+      return result
     }
   }
 
