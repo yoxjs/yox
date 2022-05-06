@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.254
+ * yox.js v1.0.0-alpha.255
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -2716,14 +2716,19 @@ class Parser {
                 operator = instance.scanOperator(instance.index);
                 // 必须是二元运算符，一元不行
                 if (operator && (operatorPrecedence = binary[operator])) {
-                    // 比较前一个运算符
-                    index = output.length - 4;
-                    // 如果前一个运算符的优先级 >= 现在这个，则新建 Binary
-                    // 如 a + b * c / d，当从左到右读取到 / 时，发现和前一个 * 优先级相同，则把 b * c 取出用于创建 Binary
-                    if ((lastOperator = output[index])
-                        && (lastOperatorPrecedence = binary[lastOperator])
-                        && lastOperatorPrecedence >= operatorPrecedence) {
-                        output.splice(index - 2, 5, createBinary(output[index - 2], lastOperator, output[index + 2], instance.pick(output[index - 3], output[index + 3])));
+                    while (TRUE$1) {
+                        // 比较前一个运算符
+                        index = output.length - 4;
+                        // 如果前一个运算符的优先级 >= 现在这个，则新建 Binary
+                        // 如 a + b * c / d，当从左到右读取到 / 时，发现和前一个 * 优先级相同，则把 b * c 取出用于创建 Binary
+                        if ((lastOperator = output[index])
+                            && (lastOperatorPrecedence = binary[lastOperator])
+                            && lastOperatorPrecedence >= operatorPrecedence) {
+                            output.splice(index - 2, 5, createBinary(output[index - 2], lastOperator, output[index + 2], instance.pick(output[index - 3], output[index + 3])));
+                        }
+                        else {
+                            break;
+                        }
                     }
                     push(output, operator);
                     continue;
@@ -6245,10 +6250,10 @@ class Yox {
      */
     static method(name, method) {
         if (string$1(name) && !method) {
-            return Yox.prototype[name];
+            return YoxPrototype[name];
         }
         {
-            setResourceSmartly(Yox.prototype, name, method);
+            setResourceSmartly(YoxPrototype, name, method);
         }
     }
     /**
@@ -6552,7 +6557,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.254";
+Yox.version = "1.0.0-alpha.255";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
@@ -6567,6 +6572,9 @@ Yox.Emitter = Emitter;
  * 外部可配置的对象
  */
 Yox.config = PUBLIC_CONFIG;
+const YoxPrototype = Yox.prototype;
+// 内置方法，外部不可覆盖
+toObject(keys(YoxPrototype));
 function setResourceItem(registry, name, value, options) {
     if (options && options.format) {
         value = options.format(value);

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.254
+ * yox.js v1.0.0-alpha.255
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -47,6 +47,8 @@ const MAGIC_VAR_DATA = '$data';
 const MODEL_PROP_DEFAULT = 'value';
 const HOOK_BEFORE_CREATE = 'beforeCreate';
 const HOOK_AFTER_CREATE = 'afterCreate';
+const HOOK_BEFORE_RENDER = 'beforeRender';
+const HOOK_AFTER_RENDER = 'afterRender';
 const HOOK_BEFORE_MOUNT = 'beforeMount';
 const HOOK_AFTER_MOUNT = 'afterMount';
 const HOOK_BEFORE_UPDATE = 'beforeUpdate';
@@ -3791,14 +3793,19 @@ class Parser {
                 operator = instance.scanOperator(instance.index);
                 // 必须是二元运算符，一元不行
                 if (operator && (operatorPrecedence = binary[operator])) {
-                    // 比较前一个运算符
-                    index = output.length - 4;
-                    // 如果前一个运算符的优先级 >= 现在这个，则新建 Binary
-                    // 如 a + b * c / d，当从左到右读取到 / 时，发现和前一个 * 优先级相同，则把 b * c 取出用于创建 Binary
-                    if ((lastOperator = output[index])
-                        && (lastOperatorPrecedence = binary[lastOperator])
-                        && lastOperatorPrecedence >= operatorPrecedence) {
-                        output.splice(index - 2, 5, createBinary(output[index - 2], lastOperator, output[index + 2], instance.pick(output[index - 3], output[index + 3])));
+                    while (TRUE$1) {
+                        // 比较前一个运算符
+                        index = output.length - 4;
+                        // 如果前一个运算符的优先级 >= 现在这个，则新建 Binary
+                        // 如 a + b * c / d，当从左到右读取到 / 时，发现和前一个 * 优先级相同，则把 b * c 取出用于创建 Binary
+                        if ((lastOperator = output[index])
+                            && (lastOperatorPrecedence = binary[lastOperator])
+                            && lastOperatorPrecedence >= operatorPrecedence) {
+                            output.splice(index - 2, 5, createBinary(output[index - 2], lastOperator, output[index + 2], instance.pick(output[index - 3], output[index + 3])));
+                        }
+                        else {
+                            break;
+                        }
                     }
                     push(output, operator);
                     continue;
@@ -8086,10 +8093,10 @@ class Yox {
      */
     static method(name, method) {
         if (string$1(name) && !method) {
-            return Yox.prototype[name];
+            return YoxPrototype[name];
         }
         {
-            setResourceSmartly(Yox.prototype, name, method);
+            setResourceSmartly(YoxPrototype, name, method);
         }
     }
     /**
@@ -8363,20 +8370,31 @@ class Yox {
      */
     render() {
         {
-            const instance = this, { $observer, $dependencies } = instance, dependencies = {};
+            const instance = this, { $options, $observer, $dependencies } = instance, dependencies = {};
+            const beforeRenderHook = $options[HOOK_BEFORE_RENDER];
+            if (beforeRenderHook) {
+                beforeRenderHook.call(instance);
+            }
+            lifeCycle.fire(instance, HOOK_BEFORE_RENDER);
             if ($dependencies) {
                 for (let key in $dependencies) {
                     $observer.unwatch(key, markDirty);
                 }
             }
             instance.$dependencies = dependencies;
-            return render(instance, instance.$template, $observer.data, $observer.computed, instance.$slots, instance.$filters, globalFilters, instance.$partials, globalPartials, instance.$directives, globalDirectives, instance.$transitions, globalTransitions, function (keypath) {
+            const result = render(instance, instance.$template, $observer.data, $observer.computed, instance.$slots, instance.$filters, globalFilters, instance.$partials, globalPartials, instance.$directives, globalDirectives, instance.$transitions, globalTransitions, function (keypath) {
                 if (!dependencies[keypath]
                     && instance.$dependencies === dependencies) {
                     $observer.watch(keypath, markDirty);
                     dependencies[keypath] = TRUE$1;
                 }
             });
+            const afterRenderHook = $options[HOOK_AFTER_RENDER];
+            if (afterRenderHook) {
+                afterRenderHook.call(instance);
+            }
+            lifeCycle.fire(instance, HOOK_AFTER_RENDER);
+            return result;
         }
     }
     /**
@@ -8570,7 +8588,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.254";
+Yox.version = "1.0.0-alpha.255";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
@@ -8587,6 +8605,9 @@ Yox.lifeCycle = lifeCycle;
  * 外部可配置的对象
  */
 Yox.config = PUBLIC_CONFIG;
+const YoxPrototype = Yox.prototype;
+// 内置方法，外部不可覆盖
+toObject(keys(YoxPrototype));
 function loadComponent(registry, name, callback) {
     if (registry && registry[name]) {
         const component = registry[name];

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.254
+ * yox.js v1.0.0-alpha.255
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -13,6 +13,8 @@ const DIRECTIVE_CUSTOM = 'o';
 const MODEL_PROP_DEFAULT = 'value';
 const HOOK_BEFORE_CREATE = 'beforeCreate';
 const HOOK_AFTER_CREATE = 'afterCreate';
+const HOOK_BEFORE_RENDER = 'beforeRender';
+const HOOK_AFTER_RENDER = 'afterRender';
 const HOOK_BEFORE_MOUNT = 'beforeMount';
 const HOOK_AFTER_MOUNT = 'afterMount';
 const HOOK_BEFORE_UPDATE = 'beforeUpdate';
@@ -4035,10 +4037,10 @@ class Yox {
      */
     static method(name, method) {
         if (string$1(name) && !method) {
-            return Yox.prototype[name];
+            return YoxPrototype[name];
         }
         {
-            setResourceSmartly(Yox.prototype, name, method);
+            setResourceSmartly(YoxPrototype, name, method);
         }
     }
     /**
@@ -4312,20 +4314,31 @@ class Yox {
      */
     render() {
         {
-            const instance = this, { $observer, $dependencies } = instance, dependencies = {};
+            const instance = this, { $options, $observer, $dependencies } = instance, dependencies = {};
+            const beforeRenderHook = $options[HOOK_BEFORE_RENDER];
+            if (beforeRenderHook) {
+                beforeRenderHook.call(instance);
+            }
+            lifeCycle.fire(instance, HOOK_BEFORE_RENDER);
             if ($dependencies) {
                 for (let key in $dependencies) {
                     $observer.unwatch(key, markDirty);
                 }
             }
             instance.$dependencies = dependencies;
-            return render(instance, instance.$template, $observer.data, $observer.computed, instance.$slots, instance.$filters, globalFilters, instance.$partials, globalPartials, instance.$directives, globalDirectives, instance.$transitions, globalTransitions, function (keypath) {
+            const result = render(instance, instance.$template, $observer.data, $observer.computed, instance.$slots, instance.$filters, globalFilters, instance.$partials, globalPartials, instance.$directives, globalDirectives, instance.$transitions, globalTransitions, function (keypath) {
                 if (!dependencies[keypath]
                     && instance.$dependencies === dependencies) {
                     $observer.watch(keypath, markDirty);
                     dependencies[keypath] = TRUE;
                 }
             });
+            const afterRenderHook = $options[HOOK_AFTER_RENDER];
+            if (afterRenderHook) {
+                afterRenderHook.call(instance);
+            }
+            lifeCycle.fire(instance, HOOK_AFTER_RENDER);
+            return result;
         }
     }
     /**
@@ -4519,7 +4532,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.254";
+Yox.version = "1.0.0-alpha.255";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
@@ -4536,6 +4549,9 @@ Yox.lifeCycle = lifeCycle;
  * 外部可配置的对象
  */
 Yox.config = PUBLIC_CONFIG;
+const YoxPrototype = Yox.prototype;
+// 内置方法，外部不可覆盖
+toObject(keys(YoxPrototype));
 function loadComponent(registry, name, callback) {
     if (registry && registry[name]) {
         const component = registry[name];

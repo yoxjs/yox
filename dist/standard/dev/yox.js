@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.254
+ * yox.js v1.0.0-alpha.255
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -53,6 +53,8 @@
   var MODEL_PROP_DEFAULT = 'value';
   var HOOK_BEFORE_CREATE = 'beforeCreate';
   var HOOK_AFTER_CREATE = 'afterCreate';
+  var HOOK_BEFORE_RENDER = 'beforeRender';
+  var HOOK_AFTER_RENDER = 'afterRender';
   var HOOK_BEFORE_MOUNT = 'beforeMount';
   var HOOK_AFTER_MOUNT = 'afterMount';
   var HOOK_BEFORE_UPDATE = 'beforeUpdate';
@@ -3924,14 +3926,19 @@
               operator = instance.scanOperator(instance.index);
               // 必须是二元运算符，一元不行
               if (operator && (operatorPrecedence = binary[operator])) {
-                  // 比较前一个运算符
-                  index = output.length - 4;
-                  // 如果前一个运算符的优先级 >= 现在这个，则新建 Binary
-                  // 如 a + b * c / d，当从左到右读取到 / 时，发现和前一个 * 优先级相同，则把 b * c 取出用于创建 Binary
-                  if ((lastOperator = output[index])
-                      && (lastOperatorPrecedence = binary[lastOperator])
-                      && lastOperatorPrecedence >= operatorPrecedence) {
-                      output.splice(index - 2, 5, createBinary(output[index - 2], lastOperator, output[index + 2], instance.pick(output[index - 3], output[index + 3])));
+                  while (TRUE$1) {
+                      // 比较前一个运算符
+                      index = output.length - 4;
+                      // 如果前一个运算符的优先级 >= 现在这个，则新建 Binary
+                      // 如 a + b * c / d，当从左到右读取到 / 时，发现和前一个 * 优先级相同，则把 b * c 取出用于创建 Binary
+                      if ((lastOperator = output[index])
+                          && (lastOperatorPrecedence = binary[lastOperator])
+                          && lastOperatorPrecedence >= operatorPrecedence) {
+                          output.splice(index - 2, 5, createBinary(output[index - 2], lastOperator, output[index + 2], instance.pick(output[index - 3], output[index + 3])));
+                      }
+                      else {
+                          break;
+                      }
                   }
                   push(output, operator);
                   continue;
@@ -8550,7 +8557,7 @@
       if (methods) {
           each(methods, function (method, name) {
               {
-                  if (instance[name]) {
+                  if (builtinMethods[name]) {
                       fatal(("The method \"" + name + "\" is conflicted with built-in methods."));
                   }
               }
@@ -8796,10 +8803,10 @@
    */
   Yox.method = function (name, method$1) {
       if (string$1(name) && !method$1) {
-          return Yox.prototype[name];
+          return YoxPrototype[name];
       }
       {
-          setResourceSmartly(Yox.prototype, name, method$1, {
+          setResourceSmartly(YoxPrototype, name, method$1, {
               conflict: function(name) {
                   warn(("The global method \"" + name + "\" already exists."));
               }
@@ -9123,22 +9130,34 @@
   Yox.prototype.render = function () {
       {
           var instance = this;
+              var $options = instance.$options;
               var $observer = instance.$observer;
               var $dependencies = instance.$dependencies;
               var dependencies = {};
+          var beforeRenderHook = $options[HOOK_BEFORE_RENDER];
+          if (beforeRenderHook) {
+              beforeRenderHook.call(instance);
+          }
+          lifeCycle.fire(instance, HOOK_BEFORE_RENDER);
           if ($dependencies) {
               for (var key in $dependencies) {
                   $observer.unwatch(key, markDirty);
               }
           }
           instance.$dependencies = dependencies;
-          return render(instance, instance.$template, $observer.data, $observer.computed, instance.$slots, instance.$filters, globalFilters, instance.$partials, globalPartials, instance.$directives, globalDirectives, instance.$transitions, globalTransitions, function (keypath) {
+          var result = render(instance, instance.$template, $observer.data, $observer.computed, instance.$slots, instance.$filters, globalFilters, instance.$partials, globalPartials, instance.$directives, globalDirectives, instance.$transitions, globalTransitions, function (keypath) {
               if (!dependencies[keypath]
                   && instance.$dependencies === dependencies) {
                   $observer.watch(keypath, markDirty);
                   dependencies[keypath] = TRUE$1;
               }
           });
+          var afterRenderHook = $options[HOOK_AFTER_RENDER];
+          if (afterRenderHook) {
+              afterRenderHook.call(instance);
+          }
+          lifeCycle.fire(instance, HOOK_AFTER_RENDER);
+          return result;
       }
   };
   /**
@@ -9349,7 +9368,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.254";
+  Yox.version = "1.0.0-alpha.255";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
@@ -9366,6 +9385,9 @@
    * 外部可配置的对象
    */
   Yox.config = PUBLIC_CONFIG;
+  var YoxPrototype = Yox.prototype;
+  // 内置方法，外部不可覆盖
+  var builtinMethods = toObject(keys(YoxPrototype));
   var toString = Object.prototype.toString;
   function matchType(value, type) {
       return type === 'numeric'

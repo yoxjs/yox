@@ -1,5 +1,7 @@
 declare const HOOK_BEFORE_CREATE = "beforeCreate";
 declare const HOOK_AFTER_CREATE = "afterCreate";
+declare const HOOK_BEFORE_RENDER = "beforeRender";
+declare const HOOK_AFTER_RENDER = "afterRender";
 declare const HOOK_BEFORE_MOUNT = "beforeMount";
 declare const HOOK_AFTER_MOUNT = "afterMount";
 declare const HOOK_BEFORE_UPDATE = "beforeUpdate";
@@ -341,6 +343,8 @@ export interface ComponentOptions<Computed = any, Watchers = any, Events = any, 
 	extensions?: Data;
 	[HOOK_BEFORE_CREATE]?: (options: ComponentOptions) => void;
 	[HOOK_AFTER_CREATE]?: ComponentOptionsHook;
+	[HOOK_BEFORE_RENDER]?: ComponentOptionsHook;
+	[HOOK_AFTER_RENDER]?: ComponentOptionsHook;
 	[HOOK_BEFORE_MOUNT]?: ComponentOptionsHook;
 	[HOOK_AFTER_MOUNT]?: ComponentOptionsHook;
 	[HOOK_BEFORE_UPDATE]?: ComponentOptionsHook;

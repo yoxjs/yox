@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.254
+ * yox.js v1.0.0-alpha.255
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -2142,10 +2142,10 @@ class Yox {
      */
     static method(name, method) {
         if (string$1(name) && !method) {
-            return Yox.prototype[name];
+            return YoxPrototype[name];
         }
         {
-            setResourceSmartly(Yox.prototype, name, method);
+            setResourceSmartly(YoxPrototype, name, method);
         }
     }
     /**
@@ -2449,7 +2449,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.254";
+Yox.version = "1.0.0-alpha.255";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
@@ -2464,6 +2464,9 @@ Yox.Emitter = Emitter;
  * 外部可配置的对象
  */
 Yox.config = PUBLIC_CONFIG;
+const YoxPrototype = Yox.prototype;
+// 内置方法，外部不可覆盖
+toObject(keys(YoxPrototype));
 function setResourceItem(registry, name, value, options) {
     if (options && options.format) {
         value = options.format(value);
