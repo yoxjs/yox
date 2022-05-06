@@ -439,11 +439,11 @@ export default class Yox implements YoxInterface {
     method?: Function
   ): Function | void {
     if (is.string(name) && !method) {
-      return Yox.prototype[name as string]
+      return YoxPrototype[name as string]
     }
     if (process.env.NODE_ENV === 'development') {
       setResourceSmartly(
-        Yox.prototype,
+        YoxPrototype,
         name,
         method,
         {
@@ -455,7 +455,7 @@ export default class Yox implements YoxInterface {
     }
     else {
       setResourceSmartly(
-        Yox.prototype,
+        YoxPrototype,
         name,
         method
       )
@@ -601,7 +601,7 @@ export default class Yox implements YoxInterface {
         methods,
         function (method: Function, name: string) {
           if (process.env.NODE_ENV === 'development') {
-            if (instance[name]) {
+            if (builtinMethods[name]) {
               logger.fatal(`The method "${name}" is conflicted with built-in methods.`)
             }
           }
@@ -1550,6 +1550,10 @@ export default class Yox implements YoxInterface {
   }
 
 }
+
+const YoxPrototype = Yox.prototype
+// 内置方法，外部不可覆盖
+const builtinMethods = array.toObject(object.keys(YoxPrototype))
 
 const toString = Object.prototype.toString
 
