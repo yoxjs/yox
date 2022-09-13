@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.255
+ * yox.js v1.0.0-alpha.256
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -431,7 +431,7 @@ function pop(array) {
  * @param strict 是否全等判断，默认是全等
  * @return 删除的数量
  */
-function remove$6(array, target, strict) {
+function remove$1(array, target, strict) {
     let result = 0;
     each$2(array, function (item, index) {
         if (strict === FALSE$1 ? item == target : item === target) {
@@ -506,7 +506,7 @@ var array = /*#__PURE__*/Object.freeze({
   indexOf: indexOf$1,
   last: last,
   pop: pop,
-  remove: remove$6,
+  remove: remove$1,
   has: has$2,
   toArray: toArray,
   toObject: toObject,
@@ -1452,100 +1452,71 @@ class NextTask {
     }
 }
 
-// vnode.data 内部使用的几个字段
-const VNODE = '$vnode';
-const LOADING = '$loading';
-const LEAVING = '$leaving';
-const MODEL = '$model';
-const EVENT$1 = '$event';
-
-function update$6(api, vnode, oldVNode) {
-    const { node, nativeAttrs } = vnode, oldNativeAttrs = oldVNode && oldVNode.nativeAttrs;
-    if (nativeAttrs !== oldNativeAttrs) {
-        if (nativeAttrs) {
-            const oldValue = oldNativeAttrs || EMPTY_OBJECT;
-            for (let name in nativeAttrs) {
-                if (oldValue[name] === UNDEFINED$1
-                    || nativeAttrs[name] !== oldValue[name]) {
-                    api.setAttr(node, name, nativeAttrs[name]);
-                }
-            }
-        }
-        if (oldNativeAttrs) {
-            const newValue = nativeAttrs || EMPTY_OBJECT;
-            for (let name in oldNativeAttrs) {
-                if (newValue[name] === UNDEFINED$1) {
-                    api.removeAttr(node, name);
-                }
-            }
+function afterCreate$5(api, vnode) {
+    const { directives } = vnode;
+    if (directives) {
+        const node = vnode.component || vnode.node;
+        for (let name in directives) {
+            const directive = directives[name], { bind } = directive.hooks;
+            bind(node, directive, vnode);
         }
     }
 }
-
-function update$5(api, vnode, oldVNode) {
-    const { node, nativeStyles } = vnode, oldNativeStyles = oldVNode && oldVNode.nativeStyles;
-    if (nativeStyles !== oldNativeStyles) {
-        const nodeStyle = node.style;
-        if (nativeStyles) {
-            const oldValue = oldNativeStyles || EMPTY_OBJECT;
-            for (let name in nativeStyles) {
-                if (oldValue[name] === UNDEFINED$1
-                    || nativeStyles[name] !== oldValue[name]) {
-                    api.setStyle(nodeStyle, name, nativeStyles[name]);
+function afterUpdate$4(api, vnode, oldVNode) {
+    const newDirectives = vnode.directives, oldDirectives = oldVNode && oldVNode.directives;
+    if (newDirectives !== oldDirectives) {
+        const node = vnode.component || vnode.node;
+        if (newDirectives) {
+            const oldValue = oldDirectives || EMPTY_OBJECT;
+            for (let name in newDirectives) {
+                const directive = newDirectives[name], oldDirective = oldValue[name], { bind, unbind } = directive.hooks;
+                if (!oldDirective) {
+                    bind(node, directive, vnode);
+                }
+                else if (directive.value !== oldDirective.value) {
+                    if (unbind) {
+                        unbind(node, oldDirective, oldVNode);
+                    }
+                    bind(node, directive, vnode);
+                }
+                else if (oldDirective.runtime && directive.runtime) {
+                    oldDirective.runtime.execute = directive.runtime.execute;
+                    directive.runtime = oldDirective.runtime;
                 }
             }
         }
-        if (oldNativeStyles) {
-            const newValue = nativeStyles || EMPTY_OBJECT;
-            for (let name in oldNativeStyles) {
-                if (newValue[name] === UNDEFINED$1) {
-                    api.removeStyle(nodeStyle, name);
-                }
-            }
-        }
-    }
-}
-
-// 删除 ref 的时候，要确保是相同的节点
-// 因为模板中可能出现同一个 ref 名字，出现在不同的地方，
-// 这样就可能出现一种特殊情况，即前面刚创建了 ref1，后面又把这个这个新创建的 ref1 删除了
-function update$4(api, vnode, oldVNode) {
-    const { context, ref } = vnode, oldRef = oldVNode && oldVNode.ref;
-    if (ref || oldRef) {
-        let refs = context.$refs, value = vnode.component || vnode.node;
-        if (ref) {
-            if (!oldRef) {
-                if (!refs) {
-                    refs = context.$refs = {};
-                }
-                refs[ref] = value;
-            }
-            else if (ref !== oldRef) {
-                if (refs) {
-                    if (refs[ref] === value) {
-                        delete refs[ref];
+        if (oldDirectives) {
+            const newValue = newDirectives || EMPTY_OBJECT;
+            for (let name in oldDirectives) {
+                if (!newValue[name]) {
+                    const { unbind } = oldDirectives[name].hooks;
+                    if (unbind) {
+                        unbind(node, oldDirectives[name], oldVNode);
                     }
                 }
-                else {
-                    refs = context.$refs = {};
-                }
-                refs[ref] = value;
             }
         }
-        else if (refs && oldRef && refs[oldRef] === value) {
-            delete refs[oldRef];
+    }
+}
+function beforeDestroy$3(api, vnode) {
+    const { directives } = vnode;
+    if (directives) {
+        const node = vnode.component || vnode.node;
+        for (let name in directives) {
+            const { unbind } = directives[name].hooks;
+            if (unbind) {
+                unbind(node, directives[name], vnode);
+            }
         }
     }
 }
-function remove$5(api, vnode) {
-    const { ref } = vnode;
-    if (ref) {
-        const refs = vnode.context.$refs, value = vnode.component || vnode.node;
-        if (refs && refs[ref] === value) {
-            delete refs[ref];
-        }
-    }
-}
+
+var directiveHook = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  afterCreate: afterCreate$5,
+  afterUpdate: afterUpdate$4,
+  beforeDestroy: beforeDestroy$3
+});
 
 /**
  * 节流调用
@@ -1573,7 +1544,15 @@ function debounce (fn, delay, immediate) {
     };
 }
 
-function addEvent$1(api, element, component, lazy, event) {
+// vnode.data 内部使用的几个字段
+const VNODE = '$vnode';
+const LOADING = '$loading';
+const LEAVING = '$leaving';
+const MODEL_CONTROL = '$model_control';
+const MODEL_DESTROY = '$model_destroy';
+const EVENT_DESTROY = '$event_destroy';
+
+function addEvent$1(api, element, component, data, key, lazy, event) {
     let { name, listener } = event;
     if (lazy) {
         const value = lazy[name] || lazy[EMPTY_STRING];
@@ -1602,24 +1581,37 @@ function addEvent$1(api, element, component, lazy, event) {
         };
     }
     api.on(element, name, listener);
-    return function () {
-        api.off(element, name, listener);
+    data[EVENT_DESTROY + key] = function () {
+        api.off(element, key, listener);
+        delete data[EVENT_DESTROY + key];
     };
 }
-function update$3(api, vnode, oldVNode) {
-    const data = vnode.data, lazy = vnode.lazy, events = vnode.events, oldEvents = oldVNode && oldVNode.events;
-    if (events !== oldEvents) {
-        const element = vnode.node, component = vnode.component, destroy = data[EVENT$1] || (data[EVENT$1] = {});
-        if (events) {
+function afterCreate$4(api, vnode) {
+    const { events } = vnode;
+    if (events) {
+        const element = vnode.node, component = vnode.component, lazy = vnode.lazy, data = vnode.data;
+        for (let key in events) {
+            addEvent$1(api, element, component, data, key, lazy, events[key]);
+        }
+    }
+}
+function afterUpdate$3(api, vnode, oldVNode) {
+    const newEvents = vnode.events, oldEvents = oldVNode.events;
+    if (newEvents !== oldEvents) {
+        const element = vnode.node, component = vnode.component, lazy = vnode.lazy, data = vnode.data;
+        if (newEvents) {
             const oldValue = oldEvents || EMPTY_OBJECT;
-            for (let key in events) {
-                const event = events[key], oldEvent = oldValue[key];
+            for (let key in newEvents) {
+                const event = newEvents[key], oldEvent = oldValue[key];
                 if (!oldEvent) {
-                    destroy[key] = addEvent$1(api, element, component, lazy, event);
+                    addEvent$1(api, element, component, data, key, lazy, event);
                 }
                 else if (event.value !== oldEvent.value) {
-                    destroy[key]();
-                    destroy[key] = addEvent$1(api, element, component, lazy, event);
+                    const destroy = data[EVENT_DESTROY + key];
+                    if (destroy) {
+                        destroy();
+                    }
+                    addEvent$1(api, element, component, data, key, lazy, event);
                 }
                 else if (oldEvent.runtime && event.runtime) {
                     oldEvent.runtime.execute = event.runtime.execute;
@@ -1628,26 +1620,36 @@ function update$3(api, vnode, oldVNode) {
             }
         }
         if (oldEvents) {
-            const newValue = events || EMPTY_OBJECT;
+            const newValue = newEvents || EMPTY_OBJECT;
             for (let key in oldEvents) {
                 if (!newValue[key]) {
-                    destroy[key]();
-                    delete destroy[key];
+                    const destroy = data[EVENT_DESTROY + key];
+                    if (destroy) {
+                        destroy();
+                    }
                 }
             }
         }
     }
 }
-function remove$4(api, vnode) {
-    const data = vnode.data, events = vnode.events, destroy = data[EVENT$1];
-    if (events && destroy) {
+function beforeDestroy$2(api, vnode) {
+    const events = vnode.events, data = vnode.data;
+    if (events) {
         for (let key in events) {
-            destroy[key]();
-            delete destroy[key];
+            const destroy = data[EVENT_DESTROY + key];
+            if (destroy) {
+                destroy();
+            }
         }
     }
-    data[EVENT$1] = UNDEFINED$1;
 }
+
+var eventHook = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  afterCreate: afterCreate$4,
+  afterUpdate: afterUpdate$3,
+  beforeDestroy: beforeDestroy$2
+});
 
 function debounceIfNeeded(fn, lazy) {
     // 应用 lazy
@@ -1662,7 +1664,6 @@ const inputControl = {
     sync(node, keypath, context) {
         context.set(keypath, node.value);
     },
-    name: 'value'
 }, radioControl = {
     set(node, value) {
         node.checked = node.value === toString$1(value);
@@ -1672,7 +1673,6 @@ const inputControl = {
             context.set(keypath, node.value);
         }
     },
-    name: 'checked'
 }, checkboxControl = {
     set(node, value) {
         node.checked = array$1(value)
@@ -1693,52 +1693,49 @@ const inputControl = {
             context.set(keypath, node.checked);
         }
     },
-    name: 'checked'
 }, selectControl = {
     set(node, value) {
-        each$2(toArray(node.options), node.multiple
-            ? function (option) {
-                option.selected = has$2(value, option.value, FALSE$1);
+        const { multiple, options } = node;
+        for (let i = 0, length = options.length; i < length; i++) {
+            if (multiple) {
+                options[i].selected = has$2(value, options[i].value, FALSE$1);
             }
-            : function (option, index) {
-                if (option.value == value) {
-                    node.selectedIndex = index;
-                    return FALSE$1;
-                }
-            });
+            else if (options[i].value == value) {
+                node.selectedIndex = i;
+                return;
+            }
+        }
+        if (!multiple) {
+            node.selectedIndex = -1;
+        }
     },
     sync(node, keypath, context) {
-        const { options } = node;
-        if (node.multiple) {
+        const { multiple, options } = node;
+        if (multiple) {
             const values = [];
-            each$2(toArray(options), function (option) {
-                if (option.selected) {
-                    push(values, option.value);
+            for (let i = 0, length = options.length; i < length; i++) {
+                if (options[i].selected) {
+                    values.push(options[i].value);
                 }
-            });
+            }
             context.set(keypath, values);
         }
         else {
             context.set(keypath, options[node.selectedIndex].value);
         }
     },
-    name: 'value'
 };
-function addModel(api, element, component, vnode) {
-    let { context, model, lazy, nativeAttrs } = vnode, { keypath, value } = model, lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[EMPTY_STRING]), update, destroy;
+function addModel(api, element, component, data, vnode) {
+    let { context, model, lazy, nativeAttrs } = vnode, { keypath, value } = model, lazyValue = lazy && (lazy[DIRECTIVE_MODEL] || lazy[EMPTY_STRING]);
     if (component) {
         let viewBinding = component.$model, viewSyncing = debounceIfNeeded(function (newValue) {
             context.set(keypath, newValue);
         }, lazyValue);
-        update = function (newValue) {
-            if (update) {
-                component.set(viewBinding, newValue);
-            }
-        };
-        destroy = function () {
-            component.unwatch(viewBinding, viewSyncing);
-        };
         component.watch(viewBinding, viewSyncing);
+        data[MODEL_DESTROY] = function () {
+            component.unwatch(viewBinding, viewSyncing);
+            delete data[MODEL_DESTROY];
+        };
     }
     else {
         let control = vnode.tag === 'select'
@@ -1761,131 +1758,203 @@ function addModel(api, element, component, vnode) {
                 eventName = EVENT_MODEL;
             }
         }
-        update = function (newValue) {
-            if (update) {
-                control.set(element, newValue);
-            }
-        };
         const sync = debounceIfNeeded(function () {
             control.sync(element, keypath, context);
         }, lazyValue);
-        destroy = function () {
-            api.off(element, eventName, sync);
-        };
         api.on(element, eventName, sync);
         control.set(element, value);
+        data[MODEL_CONTROL] = control;
+        data[MODEL_DESTROY] = function () {
+            api.off(element, eventName, sync);
+            delete data[MODEL_DESTROY];
+            delete data[MODEL_CONTROL];
+        };
     }
-    // 监听数据，修改界面
-    context.watch(keypath, update);
-    return function () {
-        context.unwatch(keypath, update);
-        update = UNDEFINED$1;
-        destroy();
-    };
 }
-function update$2(api, vnode, oldVNode) {
-    const data = vnode.data, node = vnode.node, component = vnode.component, model = vnode.model, oldModel = oldVNode && oldVNode.model;
+function afterCreate$3(api, vnode) {
+    const model = vnode.model;
     if (model) {
+        addModel(api, vnode.node, vnode.component, vnode.data, vnode);
+    }
+}
+function afterUpdate$2(api, vnode, oldVNode) {
+    const data = vnode.data, newModel = vnode.model, oldModel = oldVNode.model;
+    if (newModel) {
+        const element = vnode.node, component = vnode.component;
         if (!oldModel) {
-            data[MODEL] = addModel(api, node, component, vnode);
+            addModel(api, element, component, data, vnode);
         }
-        else if (model.keypath !== oldModel.keypath) {
-            data[MODEL]();
-            data[MODEL] = addModel(api, node, component, vnode);
+        else if (newModel.keypath !== oldModel.keypath) {
+            data[MODEL_DESTROY]();
+            addModel(api, element, component, data, vnode);
+        }
+        else {
+            if (component) {
+                component.set(component.$model, newModel.value);
+            }
+            else {
+                const control = data[MODEL_CONTROL];
+                if (control) {
+                    control.set(element, newModel.value);
+                }
+            }
         }
     }
     else if (oldModel) {
-        data[MODEL]();
-        delete data[MODEL];
+        data[MODEL_DESTROY]();
     }
 }
-function remove$3(api, vnode) {
-    const data = vnode.data;
-    if (data[MODEL]) {
-        data[MODEL]();
-        delete data[MODEL];
+function beforeDestroy$1(api, vnode) {
+    const data = vnode.data, destroy = data[MODEL_DESTROY];
+    if (destroy) {
+        destroy();
     }
 }
 
-function update$1(api, vnode, oldVNode) {
-    const { directives } = vnode, oldDirectives = oldVNode && oldVNode.directives;
-    if (directives !== oldDirectives) {
-        const node = vnode.component || vnode.node;
-        if (directives) {
-            const oldValue = oldDirectives || EMPTY_OBJECT;
-            for (let name in directives) {
-                const directive = directives[name], oldDirective = oldValue[name], { bind, unbind } = directive.hooks;
-                if (!oldDirective) {
-                    bind(node, directive, vnode);
-                }
-                else if (directive.value !== oldDirective.value) {
-                    if (unbind) {
-                        unbind(node, oldDirective, oldVNode);
-                    }
-                    bind(node, directive, vnode);
-                }
-                else if (oldDirective.runtime && directive.runtime) {
-                    oldDirective.runtime.execute = directive.runtime.execute;
-                    directive.runtime = oldDirective.runtime;
-                }
-            }
-        }
-        if (oldDirectives) {
-            const newValue = directives || EMPTY_OBJECT;
-            for (let name in oldDirectives) {
-                if (!newValue[name]) {
-                    const { unbind } = oldDirectives[name].hooks;
-                    if (unbind) {
-                        unbind(node, oldDirectives[name], oldVNode);
-                    }
-                }
-            }
+var modelHook = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  afterCreate: afterCreate$3,
+  afterUpdate: afterUpdate$2,
+  beforeDestroy: beforeDestroy$1
+});
+
+function afterCreate$2(api, vnode) {
+    const { nativeAttrs } = vnode;
+    if (nativeAttrs) {
+        const element = vnode.node;
+        for (let name in nativeAttrs) {
+            api.setAttr(element, name, nativeAttrs[name]);
         }
     }
 }
-function remove$2(api, vnode) {
-    const { directives } = vnode;
-    if (directives) {
-        const node = vnode.component || vnode.node;
-        for (let name in directives) {
-            const { unbind } = directives[name].hooks;
-            if (unbind) {
-                unbind(node, directives[name], vnode);
+function afterUpdate$1(api, vnode, oldVNode) {
+    const newNativeAttrs = vnode.nativeAttrs, oldNativeAttrs = oldVNode.nativeAttrs;
+    if (newNativeAttrs !== oldNativeAttrs) {
+        const element = vnode.node;
+        if (newNativeAttrs) {
+            const oldValue = oldNativeAttrs || EMPTY_OBJECT;
+            for (let name in newNativeAttrs) {
+                if (oldValue[name] === UNDEFINED$1
+                    || newNativeAttrs[name] !== oldValue[name]) {
+                    api.setAttr(element, name, newNativeAttrs[name]);
+                }
+            }
+        }
+        if (oldNativeAttrs) {
+            const newValue = newNativeAttrs || EMPTY_OBJECT;
+            for (let name in oldNativeAttrs) {
+                if (newValue[name] === UNDEFINED$1) {
+                    api.removeAttr(element, name);
+                }
             }
         }
     }
 }
 
-function update(api, vnode, oldVNode) {
-    const { component, props, slots } = vnode;
-    // 更新时才要 set
-    // 因为初始化时，所有这些都经过构造函数完成了
-    if (component && oldVNode) {
-        {
-            if (props) {
-                for (let key in props) {
-                    component.checkProp(key, props[key]);
+var nativeAttrHook = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  afterCreate: afterCreate$2,
+  afterUpdate: afterUpdate$1
+});
+
+function afterCreate$1(api, vnode) {
+    const { nativeStyles } = vnode;
+    if (nativeStyles) {
+        const elementStyle = vnode.node.style;
+        for (let name in nativeStyles) {
+            api.setStyle(elementStyle, name, nativeStyles[name]);
+        }
+    }
+}
+function afterUpdate(api, vnode, oldVNode) {
+    const newNativeStyles = vnode.nativeStyles, oldNativeStyles = oldVNode.nativeStyles;
+    if (newNativeStyles !== oldNativeStyles) {
+        const elementStyle = vnode.node.style;
+        if (newNativeStyles) {
+            const oldValue = oldNativeStyles || EMPTY_OBJECT;
+            for (let name in newNativeStyles) {
+                if (oldValue[name] === UNDEFINED$1
+                    || newNativeStyles[name] !== oldValue[name]) {
+                    api.setStyle(elementStyle, name, newNativeStyles[name]);
                 }
             }
         }
-        let nextProps = props;
-        if (slots) {
-            component.renderSlots(nextProps || (nextProps = {}), slots);
-        }
-        if (nextProps) {
-            component.forceUpdate(nextProps);
+        if (oldNativeStyles) {
+            const newValue = newNativeStyles || EMPTY_OBJECT;
+            for (let name in oldNativeStyles) {
+                if (newValue[name] === UNDEFINED$1) {
+                    api.removeStyle(elementStyle, name);
+                }
+            }
         }
     }
 }
-function remove$1(api, vnode) {
-    const { component } = vnode;
-    if (component) {
-        component.destroy();
-        // 移除时，组件可能已经发生过变化，即 shadow 不是创建时那个对象了
-        vnode.shadow = component.$vnode;
-        vnode.component = UNDEFINED$1;
+
+var nativeStyleHook = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  afterCreate: afterCreate$1,
+  afterUpdate: afterUpdate
+});
+
+function afterCreate(api, vnode) {
+    const ref = vnode.ref;
+    if (ref) {
+        const context = vnode.context;
+        let $refs = context.$refs;
+        if (!$refs) {
+            $refs = context.$refs = {};
+        }
+        $refs[ref] = vnode.component || vnode.node;
     }
 }
+// 删除 ref 的时候，要确保是相同的节点
+// 因为模板中可能出现同一个 ref 名字，出现在不同的地方，
+// 这样就可能出现一种特殊情况，即前面刚创建了 ref1，后面又把这个这个新创建的 ref1 删除了
+function beforeUpdate(api, vnode, oldVNode) {
+    const newRef = vnode.ref, oldRef = oldVNode.ref;
+    if (newRef || oldRef) {
+        const context = vnode.context, node = vnode.component || vnode.node;
+        let $refs = context.$refs;
+        if (newRef) {
+            if (!oldRef) {
+                if (!$refs) {
+                    $refs = context.$refs = {};
+                }
+                $refs[newRef] = node;
+            }
+            else if (newRef !== oldRef) {
+                if ($refs) {
+                    if ($refs[newRef] === node) {
+                        delete $refs[newRef];
+                    }
+                }
+                else {
+                    $refs = context.$refs = {};
+                }
+                $refs[newRef] = node;
+            }
+        }
+        else if ($refs && oldRef && $refs[oldRef] === node) {
+            delete $refs[oldRef];
+        }
+    }
+}
+function beforeDestroy(api, vnode) {
+    const { ref } = vnode;
+    if (ref) {
+        const { $refs } = vnode.context, node = vnode.component || vnode.node;
+        if ($refs && $refs[ref] === node) {
+            delete $refs[ref];
+        }
+    }
+}
+
+var refHook = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  afterCreate: afterCreate,
+  beforeUpdate: beforeUpdate,
+  beforeDestroy: beforeDestroy
+});
 
 function getFragmentHostNode(api, vnode) {
     if (vnode.isFragment || vnode.isSlot) {
@@ -1940,27 +2009,31 @@ function vnodeLeaveOperator(vnode, done) {
     done();
 }
 function vnodeCreateChildrenOperator(api, vnode) {
-    each$2(vnode.children, function (child) {
-        createVNode(api, child);
-    });
+    const children = vnode.children;
+    for (let i = 0, length = children.length; i < length; i++) {
+        createVNode(api, children[i]);
+    }
 }
 function vnodeUpdateChildrenOperator(api, parentNode, vnode, oldVNode) {
     updateChildren(api, parentNode, vnode.children, oldVNode.children);
 }
 function vnodeDestroyChildrenOperator(api, vnode) {
-    each$2(vnode.children, function (child) {
-        destroyVNode(api, child);
-    });
+    const children = vnode.children;
+    for (let i = 0, length = children.length; i < length; i++) {
+        destroyVNode(api, children[i]);
+    }
 }
 function vnodeInsertChildrenOperator(api, parentNode, vnode, before) {
-    each$2(vnode.children, function (child) {
-        insertVNode(api, parentNode, child, before);
-    });
+    const children = vnode.children;
+    for (let i = 0, length = children.length; i < length; i++) {
+        insertVNode(api, parentNode, children[i], before);
+    }
 }
 function vnodeRemoveChildrenOperator(api, vnode) {
-    each$2(vnode.children, function (child) {
-        removeVNode(api, child);
-    });
+    const children = vnode.children;
+    for (let i = 0, length = children.length; i < length; i++) {
+        removeVNode(api, children[i]);
+    }
 }
 const textVNodeOperator = {
     create(api, vnode) {
@@ -1984,6 +2057,23 @@ const commentVNodeOperator = {
     enter: EMPTY_FUNCTION,
     leave: vnodeLeaveOperator,
 };
+const vnodeHooksList = [
+    nativeAttrHook,
+    nativeStyleHook,
+    refHook,
+    eventHook,
+    modelHook,
+    directiveHook,
+];
+const vnodeHooksLength = vnodeHooksList.length;
+function callVNodeHooks(name, api, vnode, oldVNode) {
+    for (let i = 0; i < vnodeHooksLength; i++) {
+        const hook = vnodeHooksList[i][name];
+        if (hook) {
+            hook(api, vnode, oldVNode);
+        }
+    }
+}
 const elementVNodeOperator = {
     create(api, vnode) {
         const node = vnode.node = api.createElement(vnode.tag, vnode.isSvg);
@@ -1996,29 +2086,17 @@ const elementVNodeOperator = {
         else if (vnode.html) {
             api.setHtml(node, vnode.html, vnode.isStyle, vnode.isOption);
         }
-        update$6(api, vnode);
-        update$5(api, vnode);
         if (!vnode.isPure) {
             vnode.data = {};
-            update$4(api, vnode);
-            update$3(api, vnode);
-            update$2(api, vnode);
-            update$1(api, vnode);
         }
+        callVNodeHooks('afterCreate', api, vnode);
     },
     update(api, vnode, oldVNode) {
         const node = oldVNode.node;
         vnode.node = node;
         vnode.parentNode = oldVNode.parentNode;
         vnode.data = oldVNode.data;
-        update$6(api, vnode, oldVNode);
-        update$5(api, vnode, oldVNode);
-        if (!vnode.isPure) {
-            update$4(api, vnode, oldVNode);
-            update$3(api, vnode, oldVNode);
-            update$2(api, vnode, oldVNode);
-            update$1(api, vnode, oldVNode);
-        }
+        callVNodeHooks('beforeUpdate', api, vnode, oldVNode);
         const { text, html, children, isStyle, isOption } = vnode, oldText = oldVNode.text, oldHtml = oldVNode.html, oldChildren = oldVNode.children;
         if (string$1(text)) {
             if (oldChildren) {
@@ -2059,19 +2137,18 @@ const elementVNodeOperator = {
         else if (oldText || oldHtml) {
             api.setText(node, EMPTY_STRING, isStyle);
         }
+        callVNodeHooks('afterUpdate', api, vnode, oldVNode);
     },
     destroy(api, vnode) {
         if (vnode.isPure) {
             return;
         }
-        remove$5(api, vnode);
-        remove$4(api, vnode);
-        remove$3(api, vnode);
-        remove$2(api, vnode);
-        if (vnode.children) {
-            each$2(vnode.children, function (child) {
-                destroyVNode(api, child);
-            });
+        callVNodeHooks('beforeDestroy', api, vnode);
+        const { children } = vnode;
+        if (children) {
+            for (let i = 0, length = children.length; i < length; i++) {
+                destroyVNode(api, children[i]);
+            }
         }
     },
     insert: vnodeInsertOperator,
@@ -2126,22 +2203,34 @@ const componentVNodeOperator = {
             data[VNODE] = vnode;
             return;
         }
-        // 先处理 directive 再处理 component
-        // 因为组件只是单纯的更新 props，而 directive 则有可能要销毁
-        // 如果顺序反过来，会导致某些本该销毁的指令先被数据的变化触发执行了
-        update$4(api, vnode, oldVNode);
-        update$3(api, vnode, oldVNode);
-        update$2(api, vnode, oldVNode);
-        update$1(api, vnode, oldVNode);
-        update(api, vnode, oldVNode);
+        callVNodeHooks('beforeUpdate', api, vnode, oldVNode);
+        const { component, props, slots } = vnode;
+        if (component) {
+            {
+                if (props) {
+                    for (let key in props) {
+                        component.checkProp(key, props[key]);
+                    }
+                }
+            }
+            let nextProps = props;
+            if (slots) {
+                component.renderSlots(nextProps || (nextProps = {}), slots);
+            }
+            if (nextProps) {
+                component.forceUpdate(nextProps);
+            }
+        }
+        callVNodeHooks('afterUpdate', api, vnode, oldVNode);
     },
     destroy(api, vnode) {
-        if (vnode.component) {
-            remove$5(api, vnode);
-            remove$4(api, vnode);
-            remove$3(api, vnode);
-            remove$2(api, vnode);
-            remove$1(api, vnode);
+        const { component } = vnode;
+        if (component) {
+            callVNodeHooks('beforeDestroy', api, vnode);
+            component.destroy();
+            // 移除时，组件可能已经发生过变化，即 shadow 不是创建时那个对象了
+            vnode.shadow = component.$vnode;
+            vnode.component = UNDEFINED$1;
         }
         else {
             vnode.data[LOADING] = FALSE$1;
@@ -2230,10 +2319,11 @@ const portalVNodeOperator = {
         // 用注释占用节点在模板里的位置
         // 这样删除或替换节点，才有找到它应该在的位置
         vnode.node = api.createComment(EMPTY_STRING);
-        each$2(vnode.children, function (child) {
-            createVNode(api, child);
-            insertVNode(api, target, child);
-        });
+        const children = vnode.children;
+        for (let i = 0, length = children.length; i < length; i++) {
+            createVNode(api, children[i]);
+            insertVNode(api, target, children[i]);
+        }
     },
     update(api, vnode, oldVNode) {
         const { target } = oldVNode;
@@ -2243,10 +2333,11 @@ const portalVNodeOperator = {
         vnodeUpdateChildrenOperator(api, target, vnode, oldVNode);
     },
     destroy(api, vnode) {
-        each$2(vnode.children, function (child) {
-            destroyVNode(api, child);
-            removeVNode(api, child);
-        });
+        const children = vnode.children;
+        for (let i = 0, length = children.length; i < length; i++) {
+            destroyVNode(api, children[i]);
+            removeVNode(api, children[i]);
+        }
     },
     insert: vnodeInsertOperator,
     remove: vnodeRemoveOperator,
@@ -2258,21 +2349,19 @@ const slotVNodeOperator = {
         vnodeCreateChildrenOperator(api, vnode);
         vnode.data = {};
         vnode.node = getFragmentHostNode(api, vnode);
-        update$4(api, vnode);
-        update$3(api, vnode);
+        callVNodeHooks('afterCreate', api, vnode);
     },
     update(api, vnode, oldVNode) {
         const { parentNode } = oldVNode;
         vnode.node = oldVNode.node;
         vnode.parentNode = parentNode;
         vnode.data = oldVNode.data;
-        update$4(api, vnode, oldVNode);
-        update$3(api, vnode, oldVNode);
+        callVNodeHooks('beforeUpdate', api, vnode, oldVNode);
         vnodeUpdateChildrenOperator(api, parentNode, vnode, oldVNode);
+        callVNodeHooks('afterUpdate', api, vnode, oldVNode);
     },
     destroy(api, vnode) {
-        remove$5(api, vnode);
-        remove$4(api, vnode);
+        callVNodeHooks('beforeDestroy', api, vnode);
         vnodeDestroyChildrenOperator(api, vnode);
     },
     insert: vnodeInsertChildrenOperator,
@@ -2304,11 +2393,7 @@ function createComponent(api, vnode, options) {
     vnode.component = child;
     vnode.shadow = child.$vnode;
     data[LOADING] = FALSE$1;
-    update$4(api, vnode);
-    update$3(api, vnode);
-    update$2(api, vnode);
-    update$1(api, vnode);
-    update(api, vnode);
+    callVNodeHooks('afterCreate', api, vnode);
     return child;
 }
 function createVNode(api, vnode) {
@@ -2329,6 +2414,7 @@ function insertVNode(api, parentNode, vnode, before) {
     const { operator } = vnode;
     operator.insert(api, parentNode, vnode, before);
     vnode.parentNode = parentNode;
+    callVNodeHooks('afterMount', api, vnode);
     operator.enter(vnode);
 }
 function removeVNodes(api, vnodes, startIndex, endIndex) {
@@ -4020,7 +4106,8 @@ breaklinePattern = /^\s*[\n\r]\s*|\s*[\n\r]\s*$/g,
 // 区间遍历
 rangePattern = /\s*(=>|->)\s*/, 
 // 标签
-tagPattern = /<(\/)?([$a-z][-a-z0-9]*)/i, 
+// 动态标签支持路径表达式，比如 $this.name、$../name、$~/name
+tagPattern = /<(\/)?([a-z][-a-z0-9]*|\$[^\s]*)/i, 
 // 注释
 commentPattern = /<!--[\s\S]*?-->/g, 
 // 开始注释
@@ -5694,21 +5781,14 @@ function generate$2(args, code) {
 }
 
 /**
- * 比较操作符优先级
+ * 是否需要给 node 加括号，以提升运算优先级
+ * 这里不去比较运算符的优先级，而是根据节点类型判断
+ * 因为在 compile 环节会根据运算符优先级或括号，创建不同的节点，节点本身已经是优先级的体现了
  *
  * @param node
- * @param operator
  */
-function compareOperatorPrecedence(node, operator) {
-    // 三元表达式优先级最低
-    if (node.type === TERNARY) {
-        return -1;
-    }
-    // 二元运算要比较优先级
-    if (node.type === BINARY) {
-        return binary[node.operator] - binary[operator];
-    }
-    return 0;
+function needOperatorPrecedence(node) {
+    return node.type === TERNARY || node.type === BINARY;
 }
 function generate$1(node, transformIdentifier, generateIdentifier, generateValue, generateCall, holder, parentNode) {
     let value, hasHolder = FALSE$1, generateNode = function (node, parentNode) {
@@ -5730,13 +5810,11 @@ function generate$1(node, transformIdentifier, generateIdentifier, generateValue
             break;
         case BINARY:
             let binaryNode = node, left = generateNode(binaryNode.left), right = generateNode(binaryNode.right);
-            if (compareOperatorPrecedence(binaryNode.left, binaryNode.operator) < 0) {
-                left = toPrecedence(left);
-            }
-            if (compareOperatorPrecedence(binaryNode.right, binaryNode.operator) < 0) {
-                right = toPrecedence(right);
-            }
-            value = toBinary(left, binaryNode.operator, right);
+            value = toBinary(needOperatorPrecedence(binaryNode.left)
+                ? toPrecedence(left)
+                : left, binaryNode.operator, needOperatorPrecedence(binaryNode.right)
+                ? toPrecedence(right)
+                : right);
             break;
         case TERNARY:
             const ternaryNode = node, test = generateNode(ternaryNode.test), yes = generateNode(ternaryNode.yes), no = generateNode(ternaryNode.no);
@@ -6587,7 +6665,7 @@ nodeGenerator[ELEMENT] = function (node) {
         const varName = getTempName();
         // temp = vnode
         push(list, toAssign(varName, result));
-        // temp.children && temp.children.length && childre.push(temp)
+        // temp.children && temp.children.length && children.push(temp)
         push(list, toBinary(toBinary(toMember(varName, [
             toPrimitive(FIELD_CHILDREN)
         ]), '&&', toMember(varName, [
@@ -7378,7 +7456,7 @@ addElementClass = function (node, className) {
             };
             removeElementClass = function (node, className) {
                 const classes = node.className.split(CHAR_WHITESPACE);
-                if (remove$6(classes, className)) {
+                if (remove$1(classes, className)) {
                     node.className = join$1(classes, CHAR_WHITESPACE);
                 }
             };
@@ -7562,7 +7640,7 @@ function on(node, type, listener) {
 function off(node, type, listener) {
     let nativeKey = node[EVENT], nativeListenerMap = nativeListeners[nativeKey], customListenerMap = customListeners[nativeKey], customListenerList = customListenerMap && customListenerMap[type];
     if (customListenerList) {
-        remove$6(customListenerList, listener);
+        remove$1(customListenerList, listener);
         if (!customListenerList.length) {
             customListenerList = UNDEFINED$1;
             delete customListenerMap[type];
@@ -8307,7 +8385,7 @@ class Observer {
         let list = this.get(keypath);
         if (array$1(list)) {
             list = list.slice();
-            if (remove$6(list, item)) {
+            if (remove$1(list, item)) {
                 this.set(keypath, list);
                 return TRUE$1;
             }
@@ -9114,7 +9192,7 @@ class Yox {
             lifeCycle.fire(instance, HOOK_BEFORE_DESTROY);
             const { $vnode } = instance;
             if ($parent && $parent.$children) {
-                remove$6($parent.$children, instance);
+                remove$1($parent.$children, instance);
             }
             if ($vnode) {
                 destroy(domApi, $vnode, !$parent);
@@ -9229,7 +9307,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.255";
+Yox.version = "1.0.0-alpha.256";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

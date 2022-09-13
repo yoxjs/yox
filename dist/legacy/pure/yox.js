@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.255
+ * yox.js v1.0.0-alpha.256
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -2830,7 +2830,8 @@
   // 区间遍历
   rangePattern = /\s*(=>|->)\s*/, 
   // 标签
-  tagPattern = /<(\/)?([$a-z][-a-z0-9]*)/i, 
+  // 动态标签支持路径表达式，比如 $this.name、$../name、$~/name
+  tagPattern = /<(\/)?([a-z][-a-z0-9]*|\$[^\s]*)/i, 
   // 注释
   commentPattern = /<!--[\s\S]*?-->/g, 
   // 开始注释
@@ -4145,21 +4146,14 @@
   }
 
   /**
-   * 比较操作符优先级
+   * 是否需要给 node 加括号，以提升运算优先级
+   * 这里不去比较运算符的优先级，而是根据节点类型判断
+   * 因为在 compile 环节会根据运算符优先级或括号，创建不同的节点，节点本身已经是优先级的体现了
    *
    * @param node
-   * @param operator
    */
-  function compareOperatorPrecedence(node, operator) {
-      // 三元表达式优先级最低
-      if (node.type === TERNARY) {
-          return -1;
-      }
-      // 二元运算要比较优先级
-      if (node.type === BINARY) {
-          return binary[node.operator] - binary[operator];
-      }
-      return 0;
+  function needOperatorPrecedence(node) {
+      return node.type === TERNARY || node.type === BINARY;
   }
   function generate$1(node, transformIdentifier, generateIdentifier, generateValue, generateCall, holder, parentNode) {
       var value, hasHolder = FALSE$1, generateNode = function (node, parentNode) {
@@ -4181,13 +4175,11 @@
               break;
           case BINARY:
               var binaryNode = node, left = generateNode(binaryNode.left), right = generateNode(binaryNode.right);
-              if (compareOperatorPrecedence(binaryNode.left, binaryNode.operator) < 0) {
-                  left = toPrecedence(left);
-              }
-              if (compareOperatorPrecedence(binaryNode.right, binaryNode.operator) < 0) {
-                  right = toPrecedence(right);
-              }
-              value = toBinary(left, binaryNode.operator, right);
+              value = toBinary(needOperatorPrecedence(binaryNode.left)
+                  ? toPrecedence(left)
+                  : left, binaryNode.operator, needOperatorPrecedence(binaryNode.right)
+                  ? toPrecedence(right)
+                  : right);
               break;
           case TERNARY:
               var ternaryNode = node, test = generateNode(ternaryNode.test), yes = generateNode(ternaryNode.yes), no = generateNode(ternaryNode.no);
@@ -5071,7 +5063,7 @@
           var varName = getTempName();
           // temp = vnode
           push(list, toAssign(varName, result));
-          // temp.children && temp.children.length && childre.push(temp)
+          // temp.children && temp.children.length && children.push(temp)
           push(list, toBinary(toBinary(toMember(varName, [
               toPrimitive(FIELD_CHILDREN)
           ]), '&&', toMember(varName, [
@@ -6623,7 +6615,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.255";
+  Yox.version = "1.0.0-alpha.256";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
