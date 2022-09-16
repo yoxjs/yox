@@ -1,7 +1,6 @@
 import {
   Data,
   Filter,
-  Partial,
   ThisTask,
   ThisWatcher,
   ThisListener,
@@ -121,8 +120,6 @@ globalTransitions = { },
 
 globalComponents = { },
 
-globalPartials = { },
-
 globalFilters = { },
 
 selectorPattern = /^[#.][-\w+]+$/,
@@ -180,8 +177,6 @@ export default class Yox implements YoxInterface {
   private $components?: Record<string, ComponentOptions>
 
   private $transitions?: Record<string, TransitionHooks>
-
-  private $partials?: Record<string, Function>
 
   private $filters?: Record<string, Filter>
 
@@ -356,43 +351,6 @@ export default class Yox implements YoxInterface {
           globalComponents,
           name,
           component
-        )
-      }
-    }
-  }
-
-  /**
-   * 注册全局子模板
-   */
-  public static partial(
-    name: string | Record<string, Partial>,
-    partial?: Partial
-  ): Function | void {
-    if (process.env.NODE_ENV !== 'pure') {
-      if (is.string(name) && !partial) {
-        return getResource(globalPartials, name as string)
-      }
-      if (process.env.NODE_ENV === 'development') {
-        setResourceSmartly(
-          globalPartials,
-          name,
-          partial,
-          {
-            format: Yox.compile,
-            conflict(name) {
-              logger.warn(`The global partial "${name}" already exists.`)
-            }
-          }
-        )
-      }
-      else {
-        setResourceSmartly(
-          globalPartials,
-          name,
-          partial,
-          {
-            format: Yox.compile,
-          }
         )
       }
     }
@@ -624,7 +582,6 @@ export default class Yox implements YoxInterface {
         transitions,
         components,
         directives,
-        partials,
         filters,
       } = $options
 
@@ -690,7 +647,6 @@ export default class Yox implements YoxInterface {
       setOptionsSmartly(instance, constant.RAW_TRANSITION, transitions)
       setOptionsSmartly(instance, constant.RAW_COMPONENT, components)
       setOptionsSmartly(instance, constant.RAW_DIRECTIVE, directives)
-      setOptionsSmartly(instance, constant.RAW_PARTIAL, partials)
       setOptionsSmartly(instance, constant.RAW_FILTER, filters)
 
       if (template) {
@@ -1126,44 +1082,6 @@ export default class Yox implements YoxInterface {
   }
 
   /**
-   * 注册当前组件级别的子模板
-   */
-  partial(
-    name: string | Record<string, Partial>,
-    partial?: Partial
-  ): Function | void {
-    if (process.env.NODE_ENV !== 'pure') {
-      const instance = this, { $partials } = instance
-      if (is.string(name) && !partial) {
-        return getResource($partials, name as string, Yox.partial)
-      }
-      if (process.env.NODE_ENV === 'development') {
-        setResourceSmartly(
-          $partials || (instance.$partials = {}),
-          name,
-          partial,
-          {
-            format: Yox.compile,
-            conflict(name) {
-              logger.warn(`The instance partial "${name}" already exists.`)
-            }
-          }
-        )
-      }
-      else {
-        setResourceSmartly(
-          $partials || (instance.$partials = {}),
-          name,
-          partial,
-          {
-            format: Yox.compile
-          }
-        )
-      }
-    }
-  }
-
-  /**
    * 注册当前组件级别的过滤器
    */
   filter(
@@ -1268,8 +1186,6 @@ export default class Yox implements YoxInterface {
         instance.$slots,
         instance.$filters,
         globalFilters,
-        instance.$partials,
-        globalPartials,
         instance.$directives,
         globalDirectives,
         instance.$transitions,
@@ -1774,17 +1690,4 @@ function addEventSmartly(
       }
     )
   }
-}
-
-if (process.env.NODE_ENV !== 'pure') {
-  // 全局注册内置过滤器
-  Yox.filter({
-    hasSlot(name: string): boolean {
-      // hasSlot 正式废弃之后，filter 将不再把 this 传入，回归到纯正的工具函数
-      if (process.env.NODE_ENV === 'development') {
-        logger.warn(`"hasSlot('${name}')" is not recommended for use, it may be removed in the future, please use "@${name}" directly.`)
-      }
-      return (this as YoxInterface).get(SLOT_DATA_PREFIX + name) !== constant.UNDEFINED
-    }
-  })
 }
