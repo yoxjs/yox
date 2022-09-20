@@ -59,7 +59,6 @@ import {
   HOOK_AFTER_DESTROY,
   HOOK_BEFORE_PROPS_UPDATE,
   MODEL_PROP_DEFAULT,
-  SLOT_DATA_PREFIX,
   MODIFER_NATIVE,
 } from 'yox-config/src/config'
 
@@ -142,7 +141,11 @@ markDirty = function () {
   this.$isDirty = constant.TRUE
 }
 
+let guid = 0
+
 export default class Yox implements YoxInterface {
+
+  $id: number
 
   $options: ComponentOptions
 
@@ -423,6 +426,8 @@ export default class Yox implements YoxInterface {
   constructor(options?: ComponentOptions) {
 
     const instance = this, $options: ComponentOptions = options || constant.EMPTY_OBJECT
+
+    instance.$id = guid++
 
     // 为了冒泡 HOOK_BEFORE_CREATE 事件，必须第一时间创建 emitter
     // 监听各种事件
