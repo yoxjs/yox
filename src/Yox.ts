@@ -14,7 +14,6 @@ import {
 } from 'yox-type/src/type'
 
 import {
-  Slots,
   VNode,
 } from 'yox-type/src/vnode'
 
@@ -59,7 +58,6 @@ import {
   HOOK_AFTER_DESTROY,
   HOOK_BEFORE_PROPS_UPDATE,
   MODEL_PROP_DEFAULT,
-  SLOT_DATA_PREFIX,
   MODIFER_NATIVE,
 } from 'yox-config/src/config'
 
@@ -84,7 +82,7 @@ import * as templateRender from 'yox-template-compiler/src/renderer'
 import * as domApi from 'yox-dom/src/dom'
 
 import Observer from 'yox-observer/src/Observer'
-
+import Computed from 'yox-observer/src/Computed'
 
 class LifeCycle {
   private $emitter: Emitter
@@ -153,8 +151,6 @@ export default class Yox implements YoxInterface {
   $el?: HTMLElement
 
   $template?: Function
-
-  $slots?: Slots
 
   $refs?: Record<string, YoxInterface | HTMLElement>
 
@@ -497,12 +493,6 @@ export default class Yox implements YoxInterface {
           }
         )
       }
-
-      const { slots } = $options
-      if (slots) {
-        // 把 slots 放进数据里，方便 get
-        instance.renderSlots(source, slots)
-      }
     }
 
     // 先放 props
@@ -530,6 +520,21 @@ export default class Yox implements YoxInterface {
           observer.addComputed(keypath, options)
         }
       )
+    }
+
+    if (process.env.NODE_ENV !== 'pure') {
+      const { slots } = $options
+      if (slots) {
+        for (let name in slots) {
+          observer.addComputed(
+            name,
+            {
+              get: slots[name],
+              args: [instance],
+            }
+          )
+        }
+      }
     }
 
     // 后放 data
@@ -942,7 +947,7 @@ export default class Yox implements YoxInterface {
 
       if (model) {
         if (!props) {
-          props = {}
+          props = { }
         }
         const key = options.model || MODEL_PROP_DEFAULT
         props[key] = model.value
@@ -960,7 +965,7 @@ export default class Yox implements YoxInterface {
       const child = new Yox(options)
 
       array.push(
-        instance.$children || (instance.$children = []),
+        instance.$children || (instance.$children = [ ]),
         child
       )
 
@@ -1183,7 +1188,6 @@ export default class Yox implements YoxInterface {
         instance.$template as Function,
         $observer.data,
         $observer.computed,
-        instance.$slots,
         instance.$filters,
         globalFilters,
         instance.$directives,
@@ -1191,8 +1195,12 @@ export default class Yox implements YoxInterface {
         instance.$transitions,
         globalTransitions,
         function (keypath) {
-          if (!dependencies[keypath]
-            && instance.$dependencies === dependencies
+          const currentComputed = Computed.current
+          if (currentComputed) {
+            currentComputed.addDep($observer, keypath)
+          }
+          else if (instance.$dependencies === dependencies
+            && !dependencies[keypath]
           ) {
             $observer.watch(keypath, markDirty)
             dependencies[keypath] = constant.TRUE
@@ -1287,21 +1295,6 @@ export default class Yox implements YoxInterface {
         if (rule) {
           checkProp(name, key, value, rule)
         }
-      }
-    }
-  }
-
-  /**
-   * 渲染 slots
-   *
-   * @param props
-   * @param slots
-   */
-  renderSlots(props: Data, slots: Slots): void {
-    if (process.env.NODE_ENV !== 'pure') {
-      this.$slots = slots
-      for (let name in slots) {
-        props[name] = slots[name](this)
       }
     }
   }
