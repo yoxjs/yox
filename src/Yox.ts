@@ -1176,22 +1176,28 @@ export default class Yox implements YoxInterface {
     if (process.env.NODE_ENV !== 'pure') {
       const instance = this,
 
-      { $options, $observer } = instance
+      { $options, $observer } = instance,
 
-      const beforeRenderHook = $options[HOOK_BEFORE_RENDER]
+      rootScope = object.merge($observer.data, $observer.computed) as Data,
+
+      beforeRenderHook = $options[HOOK_BEFORE_RENDER],
+      afterRenderHook = $options[HOOK_AFTER_RENDER]
+
       if (beforeRenderHook) {
-        beforeRenderHook.call(instance)
+        beforeRenderHook.call(instance, rootScope)
       }
       lifeCycle.fire(
         instance,
-        HOOK_BEFORE_RENDER
+        HOOK_BEFORE_RENDER,
+        {
+          props: rootScope,
+        }
       )
 
       const result = templateRender.render(
         instance,
         instance.$template as Function,
-        $observer.data,
-        $observer.computed,
+        rootScope,
         instance.$filters,
         globalFilters,
         instance.$directives,
@@ -1203,7 +1209,6 @@ export default class Yox implements YoxInterface {
         }
       )
 
-      const afterRenderHook = $options[HOOK_AFTER_RENDER]
       if (afterRenderHook) {
         afterRenderHook.call(instance)
       }
