@@ -136,8 +136,13 @@ compileTemplate = cache.createOneKeyCache(
   }
 ),
 
-markDirty = function () {
-  this.$isDirty = constant.TRUE
+templateComputed = '$$template',
+
+templateComputedWatcher = {
+  watcher() {
+    this.$isDirty = constant.TRUE
+  },
+  sync: constant.TRUE,
 }
 
 export default class Yox implements YoxInterface {
@@ -175,8 +180,6 @@ export default class Yox implements YoxInterface {
   private $transitions?: Record<string, TransitionHooks>
 
   private $filters?: Record<string, Filter>
-
-  private $dependencies?: Record<string, boolean>
 
   private $isDirty?: boolean
 
@@ -505,7 +508,7 @@ export default class Yox implements YoxInterface {
           if (instance.$isDirty) {
             instance.$isDirty = constant.UNDEFINED
             instance.update(
-              instance.render() as VNode,
+              instance.get(templateComputed) as VNode,
               instance.$vnode as VNode
             )
           }
@@ -520,21 +523,6 @@ export default class Yox implements YoxInterface {
           observer.addComputed(keypath, options)
         }
       )
-    }
-
-    if (process.env.NODE_ENV !== 'pure') {
-      const { slots } = $options
-      if (slots) {
-        for (let name in slots) {
-          observer.addComputed(
-            name,
-            {
-              get: slots[name],
-              args: [instance],
-            }
-          )
-        }
-      }
     }
 
     // 后放 data
@@ -574,6 +562,32 @@ export default class Yox implements YoxInterface {
     }
 
     if (process.env.NODE_ENV !== 'pure') {
+
+      const { slots } = $options
+      if (slots) {
+        for (let name in slots) {
+          observer.addComputed(
+            name,
+            {
+              get: slots[name],
+              args: [instance],
+            }
+          )
+        }
+      }
+
+      observer.addComputed(
+        templateComputed,
+        {
+          get: instance.render,
+          sync: constant.FALSE,
+        }
+      )
+
+      observer.watch(
+        templateComputed,
+        templateComputedWatcher
+      )
 
       let placeholder: Node | void = constant.UNDEFINED,
 
@@ -696,7 +710,7 @@ export default class Yox implements YoxInterface {
         }
 
         instance.update(
-          instance.render() as VNode,
+          instance.get(templateComputed) as VNode,
           vnode
         )
 
@@ -1147,7 +1161,7 @@ export default class Yox implements YoxInterface {
         // 没有更新模板，强制刷新
         if (!props && $vnode === instance.$vnode) {
           instance.update(
-            instance.render() as VNode,
+            instance.get(templateComputed) as VNode,
             $vnode
           )
         }
@@ -1162,9 +1176,7 @@ export default class Yox implements YoxInterface {
     if (process.env.NODE_ENV !== 'pure') {
       const instance = this,
 
-      { $options, $observer, $dependencies } = instance,
-
-      dependencies: Record<string, any> = { }
+      { $options, $observer } = instance
 
       const beforeRenderHook = $options[HOOK_BEFORE_RENDER]
       if (beforeRenderHook) {
@@ -1174,14 +1186,6 @@ export default class Yox implements YoxInterface {
         instance,
         HOOK_BEFORE_RENDER
       )
-
-      if ($dependencies) {
-        for (let key in $dependencies) {
-          $observer.unwatch(key, markDirty)
-        }
-      }
-
-      instance.$dependencies = dependencies
 
       const result = templateRender.render(
         instance,
@@ -1195,16 +1199,7 @@ export default class Yox implements YoxInterface {
         instance.$transitions,
         globalTransitions,
         function (keypath) {
-          const currentComputed = Computed.current
-          if (currentComputed) {
-            currentComputed.addDep($observer, keypath)
-          }
-          else if (instance.$dependencies === dependencies
-            && !dependencies[keypath]
-          ) {
-            $observer.watch(keypath, markDirty)
-            dependencies[keypath] = constant.TRUE
-          }
+          (Computed.current as Computed).addDep($observer, keypath)
         }
       )
 
