@@ -1178,26 +1178,26 @@ export default class Yox implements YoxInterface {
 
       { $options, $observer } = instance,
 
-      rootScope = object.merge($observer.data, $observer.computed) as Data,
+      { data } = $observer,
 
       beforeRenderHook = $options[HOOK_BEFORE_RENDER],
       afterRenderHook = $options[HOOK_AFTER_RENDER]
 
       if (beforeRenderHook) {
-        beforeRenderHook.call(instance, rootScope)
+        beforeRenderHook.call(instance, data)
       }
       lifeCycle.fire(
         instance,
         HOOK_BEFORE_RENDER,
         {
-          props: rootScope,
+          props: data,
         }
       )
 
       const result = templateRender.render(
         instance,
         instance.$template as Function,
-        rootScope,
+        data,
         instance.$filters,
         globalFilters,
         instance.$directives,
@@ -1205,7 +1205,12 @@ export default class Yox implements YoxInterface {
         instance.$transitions,
         globalTransitions,
         function (keypath) {
-          (Computed.current as Computed).addDep($observer, keypath)
+          // 事件、指令触发时调用方法，Computed.current 为空
+          // 其他情况不为空
+          const { current } = Computed
+          if (current) {
+            current.addDep($observer, keypath)
+          }
         }
       )
 
