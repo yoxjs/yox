@@ -563,32 +563,6 @@ export default class Yox implements YoxInterface {
 
     if (process.env.NODE_ENV !== 'pure') {
 
-      const { slots } = $options
-      if (slots) {
-        for (let name in slots) {
-          observer.addComputed(
-            name,
-            {
-              get: slots[name],
-              args: [instance],
-            }
-          )
-        }
-      }
-
-      observer.addComputed(
-        templateComputed,
-        {
-          get: instance.render,
-          sync: constant.FALSE,
-        }
-      )
-
-      observer.watch(
-        templateComputed,
-        templateComputedWatcher
-      )
-
       let placeholder: Node | void = constant.UNDEFINED,
 
       {
@@ -598,6 +572,7 @@ export default class Yox implements YoxInterface {
         context,
         replace,
         template,
+        slots,
         transitions,
         components,
         directives,
@@ -673,6 +648,34 @@ export default class Yox implements YoxInterface {
         if (watchers) {
           observer.watch(watchers)
         }
+
+        if (slots) {
+          for (let name in slots) {
+            observer.addComputed(
+              name,
+              {
+                get: slots[name],
+                args: [instance],
+                out(vnodes) {
+                  return vnodes.map(snabbdom.clone)
+                },
+              }
+            )
+          }
+        }
+
+        observer.addComputed(
+          templateComputed,
+          {
+            get: instance.render,
+            sync: constant.FALSE,
+          }
+        )
+
+        observer.watch(
+          templateComputed,
+          templateComputedWatcher
+        )
 
         if (process.env.NODE_ENV !== 'pure') {
           const afterCreateHook = $options[HOOK_AFTER_CREATE]
@@ -1325,12 +1328,11 @@ export default class Yox implements YoxInterface {
         HOOK_BEFORE_DESTROY
       )
 
-      const { $vnode } = instance
-
       if ($parent && $parent.$children) {
         array.remove($parent.$children, instance)
       }
 
+      const { $vnode } = instance
       if ($vnode) {
         snabbdom.destroy(domApi, $vnode, !$parent)
       }
