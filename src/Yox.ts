@@ -139,10 +139,19 @@ compileTemplate = cache.createOneKeyCache(
 templateComputed = '$$template',
 
 templateComputedWatcher = {
-  watcher() {
-    this.$isDirty = constant.TRUE
+  watcher(vnode: VNode) {
+    this.update(
+      vnode,
+      this.$vnode as VNode
+    )
   },
   sync: constant.TRUE,
+},
+
+outputSlot = function (vnodes: VNode[] | void) {
+  return vnodes
+    ? vnodes.map(snabbdom.clone)
+    : vnodes
 }
 
 export default class Yox implements YoxInterface {
@@ -180,8 +189,6 @@ export default class Yox implements YoxInterface {
   private $transitions?: Record<string, TransitionHooks>
 
   private $filters?: Record<string, Filter>
-
-  private $isDirty?: boolean
 
   /**
    * core 版本
@@ -503,17 +510,7 @@ export default class Yox implements YoxInterface {
     const observer = instance.$observer = new Observer(
       source,
       instance,
-      instance.$nextTask = new NextTask({
-        afterTask() {
-          if (instance.$isDirty) {
-            instance.$isDirty = constant.UNDEFINED
-            instance.update(
-              instance.get(templateComputed) as VNode,
-              instance.$vnode as VNode
-            )
-          }
-        }
-      })
+      instance.$nextTask = new NextTask()
     )
 
     if (computed) {
@@ -572,11 +569,11 @@ export default class Yox implements YoxInterface {
         context,
         replace,
         template,
-        slots,
         transitions,
         components,
         directives,
         filters,
+        slots,
       } = $options
 
       if (model) {
@@ -655,10 +652,8 @@ export default class Yox implements YoxInterface {
               name,
               {
                 get: slots[name],
-                args: [instance],
-                out(vnodes) {
-                  return vnodes.map(snabbdom.clone)
-                },
+                input: [instance],
+                output: outputSlot,
               }
             )
           }
@@ -1212,7 +1207,7 @@ export default class Yox implements YoxInterface {
           // 其他情况不为空
           const { current } = Computed
           if (current) {
-            current.addDep($observer, keypath)
+            current.addDynamicDep($observer, keypath)
           }
         }
       )
