@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Import</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div id="app"></div>
+    <script id="template" type="plain/text">
+
+        <div>
+          <List>
+            <span>1</span>
+            <span>2</span>
+            <span>3</span>
+          </List>
+        </div>
+
+    </script>
+    <script id="template1" type="plain/text">
+
+      <div class="list">
+        {{#each @children}}
+          <div class="list-item">
+            {{>this}}
+          </div>
+        {{/each}}
+      </div>
+
+  </script>
+    <script src="../dist/standard/dev/yox.js"></script>
+    <script>
+        Yox.component({
+          List: {
+            template: '#template1'
+          }
+        })
+        var instance = new Yox({
+            el: '#app',
+            template: '#template',
+            data: {
+                list: [1,2,3,4]
+            }
+        });
+
+    </script>
+</body>
+</html>

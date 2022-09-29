@@ -1,13 +1,14 @@
 /**
- * yox.js v1.0.0-alpha.256
+ * yox.js v1.0.0-alpha.300
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
 
-const SLOT_DATA_PREFIX = '$slot_';
 const VNODE_TYPE_TEXT = 1;
 const VNODE_TYPE_COMMENT = 2;
 const VNODE_TYPE_ELEMENT = 3;
+const VNODE_TYPE_FRAGMENT = 5;
+const VNODE_TYPE_SLOT = 7;
 const DIRECTIVE_MODEL = 'model';
 const DIRECTIVE_CUSTOM = 'o';
 const MODEL_PROP_DEFAULT = 'value';
@@ -34,7 +35,6 @@ const RAW_TRUE = 'true';
 const RAW_FALSE = 'false';
 const RAW_UNDEFINED = 'undefined';
 const RAW_FILTER = 'filter';
-const RAW_PARTIAL = 'partial';
 const RAW_COMPONENT = 'component';
 const RAW_DIRECTIVE = 'directive';
 const RAW_TRANSITION = 'transition';
@@ -1405,7 +1405,7 @@ function afterCreate$5(api, vnode) {
     }
 }
 function afterUpdate$4(api, vnode, oldVNode) {
-    const newDirectives = vnode.directives, oldDirectives = oldVNode && oldVNode.directives;
+    const newDirectives = vnode.directives, oldDirectives = oldVNode.directives;
     if (newDirectives !== oldDirectives) {
         const node = vnode.component || vnode.node;
         if (newDirectives) {
@@ -1899,7 +1899,8 @@ var refHook = /*#__PURE__*/Object.freeze({
 });
 
 function getFragmentHostNode(api, vnode) {
-    if (vnode.isFragment || vnode.isSlot) {
+    if (vnode.type === VNODE_TYPE_FRAGMENT
+        || vnode.type === VNODE_TYPE_SLOT) {
         const child = vnode.children[0];
         return child
             ? getFragmentHostNode(api, child)
@@ -2008,11 +2009,11 @@ const vnodeHooksList = [
     directiveHook,
 ];
 const vnodeHooksLength = vnodeHooksList.length;
-function callVNodeHooks(name, api, vnode, oldVNode) {
+function callVNodeHooks(name, args) {
     for (let i = 0; i < vnodeHooksLength; i++) {
         const hook = vnodeHooksList[i][name];
         if (hook) {
-            hook(api, vnode, oldVNode);
+            hook.apply(UNDEFINED, args);
         }
     }
 }
@@ -2031,14 +2032,14 @@ const elementVNodeOperator = {
         if (!vnode.isPure) {
             vnode.data = {};
         }
-        callVNodeHooks('afterCreate', api, vnode);
+        callVNodeHooks('afterCreate', [api, vnode]);
     },
     update(api, vnode, oldVNode) {
         const node = oldVNode.node;
         vnode.node = node;
         vnode.parentNode = oldVNode.parentNode;
         vnode.data = oldVNode.data;
-        callVNodeHooks('beforeUpdate', api, vnode, oldVNode);
+        callVNodeHooks('beforeUpdate', [api, vnode, oldVNode]);
         const { text, html, children, isStyle, isOption } = vnode, oldText = oldVNode.text, oldHtml = oldVNode.html, oldChildren = oldVNode.children;
         if (string$1(text)) {
             if (oldChildren) {
@@ -2079,13 +2080,13 @@ const elementVNodeOperator = {
         else if (oldText || oldHtml) {
             api.setText(node, EMPTY_STRING, isStyle);
         }
-        callVNodeHooks('afterUpdate', api, vnode, oldVNode);
+        callVNodeHooks('afterUpdate', [api, vnode, oldVNode]);
     },
     destroy(api, vnode) {
         if (vnode.isPure) {
             return;
         }
-        callVNodeHooks('beforeDestroy', api, vnode);
+        callVNodeHooks('beforeDestroy', [api, vnode]);
         const { children } = vnode;
         if (children) {
             for (let i = 0, length = children.length; i < length; i++) {
@@ -2145,23 +2146,23 @@ const componentVNodeOperator = {
             data[VNODE] = vnode;
             return;
         }
-        callVNodeHooks('beforeUpdate', api, vnode, oldVNode);
-        const { component, props, slots } = vnode;
+        callVNodeHooks('beforeUpdate', [api, vnode, oldVNode]);
+        const { component, slots } = vnode;
         if (component) {
-            let nextProps = props;
+            let nextProps = vnode.props;
             if (slots) {
-                component.renderSlots(nextProps || (nextProps = {}), slots);
+                nextProps = extend(nextProps || {}, slots);
             }
             if (nextProps) {
                 component.forceUpdate(nextProps);
             }
         }
-        callVNodeHooks('afterUpdate', api, vnode, oldVNode);
+        callVNodeHooks('afterUpdate', [api, vnode, oldVNode]);
     },
     destroy(api, vnode) {
         const { component } = vnode;
         if (component) {
-            callVNodeHooks('beforeDestroy', api, vnode);
+            callVNodeHooks('beforeDestroy', [api, vnode]);
             component.destroy();
             // 移除时，组件可能已经发生过变化，即 shadow 不是创建时那个对象了
             vnode.shadow = component.$vnode;
@@ -2279,19 +2280,19 @@ const slotVNodeOperator = {
         vnodeCreateChildrenOperator(api, vnode);
         vnode.data = {};
         vnode.node = getFragmentHostNode(api, vnode);
-        callVNodeHooks('afterCreate', api, vnode);
+        callVNodeHooks('afterCreate', [api, vnode]);
     },
     update(api, vnode, oldVNode) {
         const { parentNode } = oldVNode;
         vnode.node = oldVNode.node;
         vnode.parentNode = parentNode;
         vnode.data = oldVNode.data;
-        callVNodeHooks('beforeUpdate', api, vnode, oldVNode);
+        callVNodeHooks('beforeUpdate', [api, vnode, oldVNode]);
         vnodeUpdateChildrenOperator(api, parentNode, vnode, oldVNode);
-        callVNodeHooks('afterUpdate', api, vnode, oldVNode);
+        callVNodeHooks('afterUpdate', [api, vnode, oldVNode]);
     },
     destroy(api, vnode) {
-        callVNodeHooks('beforeDestroy', api, vnode);
+        callVNodeHooks('beforeDestroy', [api, vnode]);
         vnodeDestroyChildrenOperator(api, vnode);
     },
     insert: vnodeInsertChildrenOperator,
@@ -2323,7 +2324,7 @@ function createComponent(api, vnode, options) {
     vnode.component = child;
     vnode.shadow = child.$vnode;
     data[LOADING] = FALSE;
-    callVNodeHooks('afterCreate', api, vnode);
+    callVNodeHooks('afterCreate', [api, vnode]);
     return child;
 }
 function createVNode(api, vnode) {
@@ -2344,7 +2345,7 @@ function insertVNode(api, parentNode, vnode, before) {
     const { operator } = vnode;
     operator.insert(api, parentNode, vnode, before);
     vnode.parentNode = parentNode;
-    callVNodeHooks('afterMount', api, vnode);
+    callVNodeHooks('afterMount', [api, vnode]);
     operator.enter(vnode);
 }
 function removeVNodes(api, vnodes, startIndex, endIndex) {
@@ -2531,15 +2532,53 @@ function destroy(api, vnode, isRemove) {
         removeVNode(api, vnode);
     }
 }
+function clone(vnode) {
+    return {
+        type: vnode.type,
+        data: vnode.data,
+        node: vnode.node,
+        parentNode: vnode.parentNode,
+        target: vnode.target,
+        shadow: vnode.shadow,
+        parent: vnode.parent,
+        component: vnode.component,
+        context: vnode.context,
+        operator: vnode.operator,
+        tag: vnode.tag,
+        isComponent: vnode.isComponent,
+        isSvg: vnode.isSvg,
+        isStyle: vnode.isStyle,
+        isOption: vnode.isOption,
+        isStatic: vnode.isStatic,
+        isPure: vnode.isPure,
+        slots: vnode.slots,
+        props: vnode.props,
+        nativeAttrs: vnode.nativeAttrs,
+        nativeStyles: vnode.nativeStyles,
+        directives: vnode.directives,
+        events: vnode.events,
+        lazy: vnode.lazy,
+        transition: vnode.transition,
+        model: vnode.model,
+        to: vnode.to,
+        ref: vnode.ref,
+        key: vnode.key,
+        text: vnode.text,
+        html: vnode.html,
+        children: vnode.children
+            ? vnode.children.map(clone)
+            : vnode.children,
+    };
+}
 
-function parseStyleString(value, callback) {
-    const parts = value.split(';');
+function parseStyleString(source, callback) {
+    const parts = source.split(';');
     for (let i = 0, len = parts.length; i < len; i++) {
         const item = parts[i];
         const index = item.indexOf(':');
         if (index > 0) {
-            const key = trim(item.substr(0, index));
-            const value = trim(item.substr(index + 1));
+            const key = trim(item.substring(0, index));
+            const value = trim(item.substring(index + 1));
             if (key && value) {
                 callback(camelize(key), value);
             }
@@ -2558,10 +2597,153 @@ function formatBooleanNativeAttributeValue(name, value, defaultValue) {
         : (isTrue ? RAW_TRUE : RAW_FALSE);
 }
 
-function render(instance, template, data, computed, slots, filters, globalFilters, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, addDependency) {
-    let rootScope = merge(data, computed), rootKeypath = EMPTY_STRING, contextStack = [
+const STATUS_INIT = 1;
+const STATUS_FRESH = 2;
+const STATUS_DIRTY = 3;
+function runGetter(instance) {
+    const { input, getter } = instance;
+    instance.value = input
+        ? getter.apply(UNDEFINED, input)
+        : getter();
+}
+function runOutput(instance) {
+    const { value, output } = instance;
+    return output
+        ? output(value)
+        : value;
+}
+class Deps {
+    constructor() {
+        this.map = {};
+        this.list = [];
+    }
+    add(observer, dep) {
+        const deps = this.map[observer.id] || (this.map[observer.id] = {});
+        if (!deps[dep]) {
+            deps[dep] = observer;
+            this.list.push([
+                observer, dep
+            ]);
+        }
+    }
+    watch(watcher) {
+        const { list } = this;
+        if (list) {
+            for (let i = 0, length = list.length; i < length; i++) {
+                list[i][0].watch(list[i][1], watcher);
+            }
+        }
+    }
+    unwatch(watcher) {
+        const { list } = this;
+        if (list) {
+            for (let i = 0, length = list.length; i < length; i++) {
+                list[i][0].unwatch(list[i][1], watcher);
+            }
+        }
+    }
+}
+/**
+ * 计算属性
+ *
+ * 可配置 cache、deps, get、set 等
+ */
+class Computed {
+    constructor(keypath, cache, sync, input, output, getter, setter, onChange) {
+        const instance = this;
+        instance.status = STATUS_INIT;
+        instance.keypath = keypath;
+        instance.cache = cache;
+        instance.input = input;
+        instance.output = output;
+        instance.setter = setter;
+        instance.getter = getter;
+        instance.onChange = onChange;
+        instance.watcherOptions = {
+            sync,
+            watcher() {
+                instance.refresh();
+            }
+        };
+    }
+    /**
+     * 读取计算属性的值
+     */
+    get() {
+        const instance = this, { status, watcherOptions } = instance;
+        // 禁用缓存
+        if (!instance.cache) {
+            runGetter(instance);
+        }
+        // 减少取值频率，尤其是处理复杂的计算规则
+        else if (status !== STATUS_FRESH) {
+            // 如果写死了依赖，则不需要收集依赖
+            if (instance.staticDeps) {
+                runGetter(instance);
+            }
+            // 自动收集依赖
+            else {
+                let { dynamicDeps } = instance;
+                // 清空上次收集的依赖
+                if (dynamicDeps) {
+                    dynamicDeps.unwatch(watcherOptions.watcher);
+                }
+                instance.dynamicDeps = UNDEFINED;
+                const lastComputed = Computed.current;
+                // 开始收集新的依赖
+                Computed.current = instance;
+                runGetter(instance);
+                // 取值完成，恢复原值
+                Computed.current = lastComputed;
+                dynamicDeps = instance.dynamicDeps;
+                if (dynamicDeps) {
+                    dynamicDeps.watch(watcherOptions);
+                }
+            }
+        }
+        if (status !== STATUS_FRESH) {
+            instance.status = STATUS_FRESH;
+        }
+        return runOutput(instance);
+    }
+    set(value) {
+        const { setter } = this;
+        if (setter) {
+            setter(value);
+        }
+        else if (func(value)) {
+            this.getter = value;
+            this.refresh();
+        }
+    }
+    refresh() {
+        const oldValue = this.value;
+        this.status = STATUS_DIRTY;
+        const newValue = this.get();
+        if (newValue !== oldValue) {
+            this.onChange(this.keypath, newValue, oldValue);
+        }
+    }
+    addStaticDeps(observer, deps) {
+        const staticDeps = this.staticDeps || (this.staticDeps = new Deps());
+        for (let i = 0, length = deps.length; i < length; i++) {
+            staticDeps.add(observer, deps[i]);
+        }
+        staticDeps.watch(this.watcherOptions);
+    }
+    addDynamicDep(observer, dep) {
+        // 动态依赖不能在这直接 watch
+        // 只有当计算属性的依赖全部收集完了，才能监听该计算属性的所有依赖
+        // 这样可保证依赖最少的计算属性最先执行 watch，当依赖变化时，它也会最早触发 refresh
+        const deps = this.dynamicDeps || (this.dynamicDeps = new Deps());
+        deps.add(observer, dep);
+    }
+}
+
+function render(instance, template, rootScope, filters, globalFilters, directives, globalDirectives, transitions, globalTransitions, addDependency) {
+    let rootKeypath = EMPTY_STRING, contextStack = [
         { scope: rootScope, keypath: rootKeypath }
-    ], localPartials = {}, 
+    ], 
     // 模板渲染过程收集的 vnode
     children = [], appendVNodeProperty = function (vnode, key, name, value) {
         if (vnode[key]) {
@@ -2685,14 +2867,6 @@ function render(instance, template, data, computed, slots, filters, globalFilter
                 appendVNodeProperty(vnode, key, name, value[name]);
             }
         }
-    }, 
-    // {{> name}}
-    renderPartial = function (name, scope, keypath, children, renderLocal, render) {
-        if (renderLocal) {
-            renderLocal(scope, keypath, children);
-            return;
-        }
-        renderTemplate(render, scope, keypath, children);
     }, renderEach = function (holder, renderChildren, renderElse) {
         let { keypath, value } = holder, length = 0, needKeypath = !!keypath, oldScopeStack = contextStack, currentKeypath = last(contextStack).keypath;
         if (array$1(value)) {
@@ -2767,39 +2941,19 @@ function render(instance, template, data, computed, slots, filters, globalFilter
         if (renderElse && length === 0) {
             renderElse();
         }
-    }, 
-    /**
-     * 直接渲染 slot，如下
-     * <Button>
-     *  click
-     * </Button>
-     *
-     * 在 Button 组件模板中，如果直接使用了 slot，则属于直接渲染，如下
-     * <div class="button">
-     *  <slot />
-     * </div>
-     */
-    renderSlotDirectly = function (name) {
+    }, renderSlot = function (name, parent) {
         addDependency(name);
-        return rootScope[name];
-    }, 
-    /**
-     * 间接渲染 slot，如下
-     * <Button>
-     *  click
-     * </Button>
-     *
-     * 在 Button 组件模板中，如果未直接使用 slot，而是透传给了其他组件，则属于间接渲染，如下
-     * <div class="button">
-     *  <Text>
-     *    <slot />
-     *  </Text>
-     * </div>
-     */
-    renderSlotIndirectly = function (name, parent) {
-        addDependency(name);
-        const render = slots && slots[name];
-        return render ? render(parent) : UNDEFINED;
+        const target = rootScope[name];
+        if (target) {
+            if (target instanceof Computed) {
+                // 如果 slot 透传好几层组件，最里面的那个组件调用 renderSlot 时，会把自己传入 parent 参数
+                // 那么在它之上的每一层组件，都应该调用原始的渲染函数 getter，而不是调用经过封装的 get
+                return parent
+                    ? target.getter(parent)
+                    : target.get();
+            }
+            return target;
+        }
     }, findKeypath = function (stack, index, name, lookup, isFirstCall) {
         const { scope, keypath } = stack[index], currentKeypath = join(keypath, name), result = get(scope, name);
         if (result) {
@@ -2854,13 +3008,13 @@ function render(instance, template, data, computed, slots, filters, globalFilter
         }
         return holder;
     }, renderTemplate = function (render, scope, keypath, children) {
-        render(renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderPartial, renderEach, renderRange, renderSlotDirectly, renderSlotIndirectly, appendVNodeProperty, formatNumberNativeAttributeValue, formatBooleanNativeAttributeValue, lookupKeypath, lookupProp, getThisByIndex, getProp, getPropByIndex, readKeypath, execute, setValueHolder, toString, textVNodeOperator, commentVNodeOperator, elementVNodeOperator, componentVNodeOperator, fragmentVNodeOperator, portalVNodeOperator, slotVNodeOperator, instance, filters, globalFilters, localPartials, partials, globalPartials, directives, globalDirectives, transitions, globalTransitions, contextStack, scope, keypath, children);
+        render(renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderEach, renderRange, renderSlot, appendVNodeProperty, formatNumberNativeAttributeValue, formatBooleanNativeAttributeValue, lookupKeypath, lookupProp, getThisByIndex, getProp, getPropByIndex, readKeypath, setValueHolder, toString, textVNodeOperator, commentVNodeOperator, elementVNodeOperator, componentVNodeOperator, fragmentVNodeOperator, portalVNodeOperator, slotVNodeOperator, instance, filters, globalFilters, directives, globalDirectives, transitions, globalTransitions, contextStack, scope, keypath, children);
     };
     renderTemplate(template, rootScope, rootKeypath, children);
     return children[0];
 }
 
-let guid = 0, 
+let guid$1 = 0, 
 // 这里先写 IE9 支持的接口
 textContent = 'textContent', innerHTML = 'innerHTML', cssFloat = 'cssFloat', createEvent = function (event, node) {
     return event;
@@ -3039,7 +3193,7 @@ function setHtml(node, html, isStyle, isOption) {
 const addClass = addElementClass;
 const removeClass = removeElementClass;
 function on(node, type, listener) {
-    const nativeKey = node[EVENT] || (node[EVENT] = ++guid), nativeListenerMap = nativeListeners[nativeKey] || (nativeListeners[nativeKey] = {}), customListenerMap = customListeners[nativeKey] || (customListeners[nativeKey] = {}), customListenerList = customListenerMap[type] || (customListenerMap[type] = []);
+    const nativeKey = node[EVENT] || (node[EVENT] = ++guid$1), nativeListenerMap = nativeListeners[nativeKey] || (nativeListeners[nativeKey] = {}), customListenerMap = customListeners[nativeKey] || (customListeners[nativeKey] = {}), customListenerList = customListenerMap[type] || (customListenerMap[type] = []);
     // 一个元素，相同的事件，只注册一个 native listener
     if (!nativeListenerMap[type]) {
         // 特殊事件
@@ -3147,100 +3301,6 @@ function toNumber (target, defaultValue) {
         : defaultValue !== UNDEFINED
             ? defaultValue
             : 0;
-}
-
-/**
- * 计算属性
- *
- * 可配置 cache、deps、get、set 等
- */
-class Computed {
-    constructor(keypath, sync, cache, deps, observer, getter, setter) {
-        const instance = this;
-        instance.keypath = keypath;
-        instance.cache = cache;
-        instance.deps = deps;
-        instance.observer = observer;
-        instance.getter = getter;
-        instance.setter = setter;
-        instance.watcherOptions = {
-            sync,
-            watcher: instance.watcher = function ($0, $1, $2) {
-                // 计算属性的依赖变了会走进这里
-                const oldValue = instance.value, newValue = instance.get(TRUE);
-                if (newValue !== oldValue) {
-                    observer.diff(keypath, newValue, oldValue);
-                }
-            }
-        };
-        // 如果 deps 是空数组，Observer 会传入 undefined
-        // 因此这里直接判断即可
-        if (deps) {
-            instance.fixed = TRUE;
-            for (let i = 0, length = deps.length; i < length; i++) {
-                observer.watch(deps[i], instance.watcherOptions);
-            }
-        }
-    }
-    /**
-     * 读取计算属性的值
-     *
-     * @param force 是否强制刷新缓存
-     */
-    get(force) {
-        const instance = this, { getter, deps, observer, watcher, watcherOptions } = instance;
-        // 禁用缓存
-        if (!instance.cache) {
-            instance.value = getter();
-        }
-        // 减少取值频率，尤其是处理复杂的计算规则
-        else if (force || !has(instance, 'value')) {
-            // 如果写死了依赖，则不需要收集依赖
-            if (instance.fixed) {
-                instance.value = getter();
-            }
-            // 自动收集依赖
-            else {
-                // 清空上次收集的依赖
-                if (deps) {
-                    for (let i = deps.length - 1; i >= 0; i--) {
-                        observer.unwatch(deps[i], watcher);
-                    }
-                }
-                // 惰性初始化
-                instance.unique = createPureObject();
-                // 开始收集新的依赖
-                const lastComputed = Computed.current;
-                Computed.current = instance;
-                instance.value = getter();
-                // 绑定新的依赖
-                const newDeps = instance.unique.keys();
-                for (let i = 0, length = newDeps.length; i < length; i++) {
-                    observer.watch(newDeps[i], watcherOptions);
-                }
-                instance.deps = newDeps;
-                // 取值完成，恢复原值
-                Computed.current = lastComputed;
-            }
-        }
-        return instance.value;
-    }
-    set(value) {
-        const { setter } = this;
-        if (setter) {
-            setter(value);
-        }
-    }
-    /**
-     * 添加依赖
-     *
-     * 这里只是为了保证依赖唯一
-     *
-     * @param dep
-     */
-    add(dep) {
-        this.unique.set(dep, TRUE);
-    }
 }
 
 function readValue (source, keypath) {
@@ -3403,6 +3463,7 @@ function formatWatcherOptions (options, immediate) {
     return options;
 }
 
+let guid = 0;
 /**
  * 观察者有两种观察模式：
  *
@@ -3417,6 +3478,7 @@ function formatWatcherOptions (options, immediate) {
 class Observer {
     constructor(data, context, nextTask) {
         const instance = this;
+        instance.id = guid++;
         instance.data = data || {};
         instance.context = context || instance;
         instance.nextTask = nextTask || new NextTask();
@@ -3424,6 +3486,9 @@ class Observer {
         instance.asyncEmitter = new Emitter();
         instance.asyncOldValues = {};
         instance.asyncKeypaths = {};
+        instance.onComputedChange = function (keypath, newValue, oldValue) {
+            instance.diff(keypath, newValue, oldValue);
+        };
     }
     /**
      * 获取数据
@@ -3434,7 +3499,7 @@ class Observer {
      * @return
      */
     get(keypath, defaultValue, depIgnore) {
-        const instance = this, currentComputed = Computed.current, { data, computed } = instance;
+        const instance = this, { data } = instance, currentComputed = Computed.current;
         // 传入 '' 获取整个 data
         if (keypath === EMPTY_STRING) {
             return data;
@@ -3442,16 +3507,12 @@ class Observer {
         // 调用 get 时，外面想要获取依赖必须设置是谁在收集依赖
         // 如果没设置，则跳过依赖收集
         if (currentComputed && !depIgnore) {
-            currentComputed.add(keypath);
+            currentComputed.addDynamicDep(instance, keypath);
         }
-        let result;
-        if (computed) {
-            result = get(computed, keypath);
-        }
-        if (!result) {
-            result = get(data, keypath);
-        }
-        return result ? result.value : defaultValue;
+        const result = get(data, keypath);
+        return result
+            ? result.value
+            : defaultValue;
     }
     /**
      * 更新数据
@@ -3460,7 +3521,7 @@ class Observer {
      * @param value
      */
     set(keypath, value) {
-        const instance = this, { data, computed } = instance, setValue = function (keypath, newValue) {
+        const instance = this, { data } = instance, setValue = function (keypath, newValue) {
             const oldValue = instance.get(keypath);
             if (newValue === oldValue) {
                 return;
@@ -3468,13 +3529,14 @@ class Observer {
             let next;
             each$1(keypath, function (key, index, lastIndex) {
                 if (index === 0) {
-                    if (computed && computed[key]) {
+                    const item = data[key];
+                    if (item && item instanceof Computed) {
                         if (lastIndex === 0) {
-                            computed[key].set(newValue);
+                            item.set(newValue);
                         }
                         else {
                             // 这里 next 可能为空
-                            next = computed[key].get();
+                            next = item.get();
                         }
                     }
                     else {
@@ -3602,10 +3664,10 @@ class Observer {
      * 添加计算属性
      *
      * @param keypath
-     * @param computed
+     * @param options
      */
     addComputed(keypath, options) {
-        let instance = this, context = instance.context, cache = TRUE, sync = TRUE, deps, getter, setter;
+        let instance = this, context = instance.context, cache = TRUE, sync = TRUE, deps, input, getter, setter, output;
         // 这里用 bind 方法转换一下调用的 this
         // 还有一个好处，它比 call(context) 速度稍快一些
         if (func(options)) {
@@ -3619,9 +3681,15 @@ class Observer {
             if (boolean(computedOptions.sync)) {
                 sync = computedOptions.sync;
             }
-            // 传入空数组等同于没传
-            if (!falsy$2(computedOptions.deps)) {
+            if (array$1(computedOptions.deps)) {
                 deps = computedOptions.deps;
+            }
+            // 参数列表必须是长度大于 0 的数组
+            if (!falsy$2(computedOptions.input)) {
+                input = computedOptions.input;
+            }
+            if (func(computedOptions.output)) {
+                output = computedOptions.output;
             }
             if (func(computedOptions.get)) {
                 getter = computedOptions.get.bind(context);
@@ -3631,12 +3699,11 @@ class Observer {
             }
         }
         if (getter) {
-            const computed = new Computed(keypath, sync, cache, deps, instance, getter, setter);
-            if (!instance.computed) {
-                instance.computed = {};
+            const computed = new Computed(keypath, cache, sync, input, output, getter, setter, instance.onComputedChange);
+            if (cache && deps) {
+                computed.addStaticDeps(instance, deps);
             }
-            instance.computed[keypath] = computed;
-            return computed;
+            return instance.data[keypath] = computed;
         }
     }
     /**
@@ -3645,10 +3712,7 @@ class Observer {
      * @param keypath
      */
     removeComputed(keypath) {
-        const instance = this, { computed } = instance;
-        if (computed && has(computed, keypath)) {
-            delete computed[keypath];
-        }
+        delete this.data[keypath];
     }
     /**
      * 监听数据变化
@@ -3691,12 +3755,8 @@ class Observer {
      * @param watcher
      */
     unwatch(keypath, watcher) {
-        const filter = {
-            ns: EMPTY_STRING,
-            listener: watcher,
-        };
-        this.syncEmitter.off(keypath, filter);
-        this.asyncEmitter.off(keypath, filter);
+        this.syncEmitter.off(keypath, watcher);
+        this.asyncEmitter.off(keypath, watcher);
     }
     /**
      * 取反 keypath 对应的数据
@@ -3860,8 +3920,15 @@ class LifeCycle {
         return this;
     }
 }
-const globalDirectives = {}, globalTransitions = {}, globalComponents = {}, globalPartials = {}, globalFilters = {}, selectorPattern = /^[#.][-\w+]+$/, lifeCycle = new LifeCycle(), markDirty = function () {
-    this.$isDirty = TRUE;
+const globalDirectives = {}, globalTransitions = {}, globalComponents = {}, globalFilters = {}, selectorPattern = /^[#.][-\w+]+$/, lifeCycle = new LifeCycle(), templateComputed = '$$template', templateComputedWatcher = {
+    watcher(vnode) {
+        this.update(vnode, this.$vnode);
+    },
+    sync: TRUE,
+}, outputSlot = function (vnodes) {
+    return vnodes
+        ? vnodes.map(clone)
+        : vnodes;
 };
 class Yox {
     constructor(options) {
@@ -3910,22 +3977,10 @@ class Yox {
                     }
                 });
             }
-            const { slots } = $options;
-            if (slots) {
-                // 把 slots 放进数据里，方便 get
-                instance.renderSlots(source, slots);
-            }
         }
         // 先放 props
         // 当 data 是函数时，可以通过 this.get() 获取到外部数据
-        const observer = instance.$observer = new Observer(source, instance, instance.$nextTask = new NextTask({
-            afterTask() {
-                if (instance.$isDirty) {
-                    instance.$isDirty = UNDEFINED;
-                    instance.update(instance.render(), instance.$vnode);
-                }
-            }
-        }));
+        const observer = instance.$observer = new Observer(source, instance, instance.$nextTask = new NextTask());
         if (computed) {
             each(computed, function (options, keypath) {
                 observer.addComputed(keypath, options);
@@ -3943,7 +3998,7 @@ class Yox {
             });
         }
         {
-            let placeholder = UNDEFINED, { el, root, model, context, replace, template, transitions, components, directives, partials, filters, } = $options;
+            let placeholder = UNDEFINED, { el, root, model, context, replace, template, transitions, components, directives, filters, slots, } = $options;
             if (model) {
                 instance.$model = model;
             }
@@ -3985,12 +4040,25 @@ class Yox {
             setOptionsSmartly(instance, RAW_TRANSITION, transitions);
             setOptionsSmartly(instance, RAW_COMPONENT, components);
             setOptionsSmartly(instance, RAW_DIRECTIVE, directives);
-            setOptionsSmartly(instance, RAW_PARTIAL, partials);
             setOptionsSmartly(instance, RAW_FILTER, filters);
             if (template) {
                 if (watchers) {
                     observer.watch(watchers);
                 }
+                if (slots) {
+                    for (let name in slots) {
+                        observer.addComputed(name, {
+                            get: slots[name],
+                            input: [instance],
+                            output: outputSlot,
+                        });
+                    }
+                }
+                observer.addComputed(templateComputed, {
+                    get: instance.render,
+                    sync: FALSE,
+                });
+                observer.watch(templateComputed, templateComputedWatcher);
                 {
                     const afterCreateHook = $options[HOOK_AFTER_CREATE];
                     if (afterCreateHook) {
@@ -4008,7 +4076,7 @@ class Yox {
                 if (!vnode) {
                     vnode = create(domApi, placeholder, instance);
                 }
-                instance.update(instance.render(), vnode);
+                instance.update(instance.get(templateComputed), vnode);
                 return;
             }
         }
@@ -4087,21 +4155,6 @@ class Yox {
             }
             {
                 setResourceSmartly(globalComponents, name, component);
-            }
-        }
-    }
-    /**
-     * 注册全局子模板
-     */
-    static partial(name, partial) {
-        {
-            if (string$1(name) && !partial) {
-                return getResource(globalPartials, name);
-            }
-            {
-                setResourceSmartly(globalPartials, name, partial, {
-                    format: Yox.compile,
-                });
             }
         }
     }
@@ -4342,22 +4395,6 @@ class Yox {
         }
     }
     /**
-     * 注册当前组件级别的子模板
-     */
-    partial(name, partial) {
-        {
-            const instance = this, { $partials } = instance;
-            if (string$1(name) && !partial) {
-                return getResource($partials, name, Yox.partial);
-            }
-            {
-                setResourceSmartly($partials || (instance.$partials = {}), name, partial, {
-                    format: Yox.compile
-                });
-            }
-        }
-    }
-    /**
      * 注册当前组件级别的过滤器
      */
     filter(name, filter) {
@@ -4390,7 +4427,7 @@ class Yox {
                 $nextTask.run();
                 // 没有更新模板，强制刷新
                 if (!props && $vnode === instance.$vnode) {
-                    instance.update(instance.render(), $vnode);
+                    instance.update(instance.get(templateComputed), $vnode);
                 }
             }
         }
@@ -4400,26 +4437,21 @@ class Yox {
      */
     render() {
         {
-            const instance = this, { $options, $observer, $dependencies } = instance, dependencies = {};
-            const beforeRenderHook = $options[HOOK_BEFORE_RENDER];
+            const instance = this, { $options, $observer } = instance, { data } = $observer, beforeRenderHook = $options[HOOK_BEFORE_RENDER], afterRenderHook = $options[HOOK_AFTER_RENDER];
             if (beforeRenderHook) {
-                beforeRenderHook.call(instance);
+                beforeRenderHook.call(instance, data);
             }
-            lifeCycle.fire(instance, HOOK_BEFORE_RENDER);
-            if ($dependencies) {
-                for (let key in $dependencies) {
-                    $observer.unwatch(key, markDirty);
-                }
-            }
-            instance.$dependencies = dependencies;
-            const result = render(instance, instance.$template, $observer.data, $observer.computed, instance.$slots, instance.$filters, globalFilters, instance.$partials, globalPartials, instance.$directives, globalDirectives, instance.$transitions, globalTransitions, function (keypath) {
-                if (!dependencies[keypath]
-                    && instance.$dependencies === dependencies) {
-                    $observer.watch(keypath, markDirty);
-                    dependencies[keypath] = TRUE;
+            lifeCycle.fire(instance, HOOK_BEFORE_RENDER, {
+                props: data,
+            });
+            const result = render(instance, instance.$template, data, instance.$filters, globalFilters, instance.$directives, globalDirectives, instance.$transitions, globalTransitions, function (keypath) {
+                // 事件、指令触发时调用方法，Computed.current 为空
+                // 其他情况不为空
+                const { current } = Computed;
+                if (current) {
+                    current.addDynamicDep($observer, keypath);
                 }
             });
-            const afterRenderHook = $options[HOOK_AFTER_RENDER];
             if (afterRenderHook) {
                 afterRenderHook.call(instance);
             }
@@ -4477,20 +4509,6 @@ class Yox {
     checkProp(key, value) {
     }
     /**
-     * 渲染 slots
-     *
-     * @param props
-     * @param slots
-     */
-    renderSlots(props, slots) {
-        {
-            this.$slots = slots;
-            for (let name in slots) {
-                props[name] = slots[name](this);
-            }
-        }
-    }
-    /**
      * 销毁组件
      */
     destroy() {
@@ -4501,10 +4519,10 @@ class Yox {
                 beforeDestroyHook.call(instance);
             }
             lifeCycle.fire(instance, HOOK_BEFORE_DESTROY);
-            const { $vnode } = instance;
             if ($parent && $parent.$children) {
                 remove$1($parent.$children, instance);
             }
+            const { $vnode } = instance;
             if ($vnode) {
                 destroy(domApi, $vnode, !$parent);
             }
@@ -4618,7 +4636,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.256";
+Yox.version = "1.0.0-alpha.300";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
@@ -4721,14 +4739,6 @@ function addEventSmartly(instance, type, listener, once) {
             addEvent(instance, $emitter.toFilter(key, value), once);
         });
     }
-}
-{
-    // 全局注册内置过滤器
-    Yox.filter({
-        hasSlot(name) {
-            return this.get(SLOT_DATA_PREFIX + name) !== UNDEFINED;
-        }
-    });
 }
 
 export default Yox;

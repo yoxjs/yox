@@ -197,25 +197,6 @@
         </p>
 
         <h1>
-            子模板
-        </h1>
-
-        {{#partial hello}}
-            hi, {{user.name}}.
-        {{/partial}}
-
-        <p>
-            {{> hello}}
-        </p>
-
-        <p>
-            1{{> bye}}
-        </p>
-        <p>
-            2{{> greet}}
-        </p>
-
-        <h1>
             过滤器
         </h1>
 
@@ -301,10 +282,6 @@
                         return user.age > 10;
                     });
                 }
-            },
-            partials: {
-                bye: '<div>bye, {{user.name}}</div>',
-                greet: Yox.compile('<div>hi, {{user.name}}</div>')
             },
             filters: {
                 formatDate: function (value) {

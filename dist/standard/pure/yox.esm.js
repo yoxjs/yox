@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.256
+ * yox.js v1.0.0-alpha.300
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -1337,106 +1337,155 @@ class NextTask {
     }
 }
 
-function toNumber (target, defaultValue) {
-    return numeric(target)
-        ? +target
-        : defaultValue !== UNDEFINED
-            ? defaultValue
-            : 0;
+const STATUS_INIT = 1;
+const STATUS_FRESH = 2;
+const STATUS_DIRTY = 3;
+function runGetter(instance) {
+    const { input, getter } = instance;
+    instance.value = input
+        ? getter.apply(UNDEFINED, input)
+        : getter();
 }
-
-/**
- * 计算属性
- *
- * 可配置 cache、deps、get、set 等
- */
-class Computed {
-    constructor(keypath, sync, cache, deps, observer, getter, setter) {
-        const instance = this;
-        instance.keypath = keypath;
-        instance.cache = cache;
-        instance.deps = deps;
-        instance.observer = observer;
-        instance.getter = getter;
-        instance.setter = setter;
-        instance.watcherOptions = {
-            sync,
-            watcher: instance.watcher = function ($0, $1, $2) {
-                // 计算属性的依赖变了会走进这里
-                const oldValue = instance.value, newValue = instance.get(TRUE);
-                if (newValue !== oldValue) {
-                    observer.diff(keypath, newValue, oldValue);
-                }
-            }
-        };
-        // 如果 deps 是空数组，Observer 会传入 undefined
-        // 因此这里直接判断即可
-        if (deps) {
-            instance.fixed = TRUE;
-            for (let i = 0, length = deps.length; i < length; i++) {
-                observer.watch(deps[i], instance.watcherOptions);
+function runOutput(instance) {
+    const { value, output } = instance;
+    return output
+        ? output(value)
+        : value;
+}
+class Deps {
+    constructor() {
+        this.map = {};
+        this.list = [];
+    }
+    add(observer, dep) {
+        const deps = this.map[observer.id] || (this.map[observer.id] = {});
+        if (!deps[dep]) {
+            deps[dep] = observer;
+            this.list.push([
+                observer, dep
+            ]);
+        }
+    }
+    watch(watcher) {
+        const { list } = this;
+        if (list) {
+            for (let i = 0, length = list.length; i < length; i++) {
+                list[i][0].watch(list[i][1], watcher);
             }
         }
     }
+    unwatch(watcher) {
+        const { list } = this;
+        if (list) {
+            for (let i = 0, length = list.length; i < length; i++) {
+                list[i][0].unwatch(list[i][1], watcher);
+            }
+        }
+    }
+}
+/**
+ * 计算属性
+ *
+ * 可配置 cache、deps, get、set 等
+ */
+class Computed {
+    constructor(keypath, cache, sync, input, output, getter, setter, onChange) {
+        const instance = this;
+        instance.status = STATUS_INIT;
+        instance.keypath = keypath;
+        instance.cache = cache;
+        instance.input = input;
+        instance.output = output;
+        instance.setter = setter;
+        instance.getter = getter;
+        instance.onChange = onChange;
+        instance.watcherOptions = {
+            sync,
+            watcher() {
+                instance.refresh();
+            }
+        };
+    }
     /**
      * 读取计算属性的值
-     *
-     * @param force 是否强制刷新缓存
      */
-    get(force) {
-        const instance = this, { getter, deps, observer, watcher, watcherOptions } = instance;
+    get() {
+        const instance = this, { status, watcherOptions } = instance;
         // 禁用缓存
         if (!instance.cache) {
-            instance.value = getter();
+            runGetter(instance);
         }
         // 减少取值频率，尤其是处理复杂的计算规则
-        else if (force || !has(instance, 'value')) {
+        else if (status !== STATUS_FRESH) {
             // 如果写死了依赖，则不需要收集依赖
-            if (instance.fixed) {
-                instance.value = getter();
+            if (instance.staticDeps) {
+                runGetter(instance);
             }
             // 自动收集依赖
             else {
+                let { dynamicDeps } = instance;
                 // 清空上次收集的依赖
-                if (deps) {
-                    for (let i = deps.length - 1; i >= 0; i--) {
-                        observer.unwatch(deps[i], watcher);
-                    }
+                if (dynamicDeps) {
+                    dynamicDeps.unwatch(watcherOptions.watcher);
                 }
-                // 惰性初始化
-                instance.unique = createPureObject();
-                // 开始收集新的依赖
+                instance.dynamicDeps = UNDEFINED;
                 const lastComputed = Computed.current;
+                // 开始收集新的依赖
                 Computed.current = instance;
-                instance.value = getter();
-                // 绑定新的依赖
-                const newDeps = instance.unique.keys();
-                for (let i = 0, length = newDeps.length; i < length; i++) {
-                    observer.watch(newDeps[i], watcherOptions);
-                }
-                instance.deps = newDeps;
+                runGetter(instance);
                 // 取值完成，恢复原值
                 Computed.current = lastComputed;
+                dynamicDeps = instance.dynamicDeps;
+                if (dynamicDeps) {
+                    dynamicDeps.watch(watcherOptions);
+                }
             }
         }
-        return instance.value;
+        if (status !== STATUS_FRESH) {
+            instance.status = STATUS_FRESH;
+        }
+        return runOutput(instance);
     }
     set(value) {
         const { setter } = this;
         if (setter) {
             setter(value);
         }
+        else if (func(value)) {
+            this.getter = value;
+            this.refresh();
+        }
     }
-    /**
-     * 添加依赖
-     *
-     * 这里只是为了保证依赖唯一
-     *
-     * @param dep
-     */
-    add(dep) {
-        this.unique.set(dep, TRUE);
+    refresh() {
+        const oldValue = this.value;
+        this.status = STATUS_DIRTY;
+        const newValue = this.get();
+        if (newValue !== oldValue) {
+            this.onChange(this.keypath, newValue, oldValue);
+        }
     }
+    addStaticDeps(observer, deps) {
+        const staticDeps = this.staticDeps || (this.staticDeps = new Deps());
+        for (let i = 0, length = deps.length; i < length; i++) {
+            staticDeps.add(observer, deps[i]);
+        }
+        staticDeps.watch(this.watcherOptions);
+    }
+    addDynamicDep(observer, dep) {
+        // 动态依赖不能在这直接 watch
+        // 只有当计算属性的依赖全部收集完了，才能监听该计算属性的所有依赖
+        // 这样可保证依赖最少的计算属性最先执行 watch，当依赖变化时，它也会最早触发 refresh
+        const deps = this.dynamicDeps || (this.dynamicDeps = new Deps());
+        deps.add(observer, dep);
+    }
+}
+
+function toNumber (target, defaultValue) {
+    return numeric(target)
+        ? +target
+        : defaultValue !== UNDEFINED
+            ? defaultValue
+            : 0;
 }
 
 function readValue (source, keypath) {
@@ -1599,6 +1648,7 @@ function formatWatcherOptions (options, immediate) {
     return options;
 }
 
+let guid = 0;
 /**
  * 观察者有两种观察模式：
  *
@@ -1613,6 +1663,7 @@ function formatWatcherOptions (options, immediate) {
 class Observer {
     constructor(data, context, nextTask) {
         const instance = this;
+        instance.id = guid++;
         instance.data = data || {};
         instance.context = context || instance;
         instance.nextTask = nextTask || new NextTask();
@@ -1620,6 +1671,9 @@ class Observer {
         instance.asyncEmitter = new Emitter();
         instance.asyncOldValues = {};
         instance.asyncKeypaths = {};
+        instance.onComputedChange = function (keypath, newValue, oldValue) {
+            instance.diff(keypath, newValue, oldValue);
+        };
     }
     /**
      * 获取数据
@@ -1630,7 +1684,7 @@ class Observer {
      * @return
      */
     get(keypath, defaultValue, depIgnore) {
-        const instance = this, currentComputed = Computed.current, { data, computed } = instance;
+        const instance = this, { data } = instance, currentComputed = Computed.current;
         // 传入 '' 获取整个 data
         if (keypath === EMPTY_STRING) {
             return data;
@@ -1638,16 +1692,12 @@ class Observer {
         // 调用 get 时，外面想要获取依赖必须设置是谁在收集依赖
         // 如果没设置，则跳过依赖收集
         if (currentComputed && !depIgnore) {
-            currentComputed.add(keypath);
+            currentComputed.addDynamicDep(instance, keypath);
         }
-        let result;
-        if (computed) {
-            result = get(computed, keypath);
-        }
-        if (!result) {
-            result = get(data, keypath);
-        }
-        return result ? result.value : defaultValue;
+        const result = get(data, keypath);
+        return result
+            ? result.value
+            : defaultValue;
     }
     /**
      * 更新数据
@@ -1656,7 +1706,7 @@ class Observer {
      * @param value
      */
     set(keypath, value) {
-        const instance = this, { data, computed } = instance, setValue = function (keypath, newValue) {
+        const instance = this, { data } = instance, setValue = function (keypath, newValue) {
             const oldValue = instance.get(keypath);
             if (newValue === oldValue) {
                 return;
@@ -1664,13 +1714,14 @@ class Observer {
             let next;
             each$1(keypath, function (key, index, lastIndex) {
                 if (index === 0) {
-                    if (computed && computed[key]) {
+                    const item = data[key];
+                    if (item && item instanceof Computed) {
                         if (lastIndex === 0) {
-                            computed[key].set(newValue);
+                            item.set(newValue);
                         }
                         else {
                             // 这里 next 可能为空
-                            next = computed[key].get();
+                            next = item.get();
                         }
                     }
                     else {
@@ -1798,10 +1849,10 @@ class Observer {
      * 添加计算属性
      *
      * @param keypath
-     * @param computed
+     * @param options
      */
     addComputed(keypath, options) {
-        let instance = this, context = instance.context, cache = TRUE, sync = TRUE, deps, getter, setter;
+        let instance = this, context = instance.context, cache = TRUE, sync = TRUE, deps, input, getter, setter, output;
         // 这里用 bind 方法转换一下调用的 this
         // 还有一个好处，它比 call(context) 速度稍快一些
         if (func(options)) {
@@ -1815,9 +1866,15 @@ class Observer {
             if (boolean(computedOptions.sync)) {
                 sync = computedOptions.sync;
             }
-            // 传入空数组等同于没传
-            if (!falsy$2(computedOptions.deps)) {
+            if (array$1(computedOptions.deps)) {
                 deps = computedOptions.deps;
+            }
+            // 参数列表必须是长度大于 0 的数组
+            if (!falsy$2(computedOptions.input)) {
+                input = computedOptions.input;
+            }
+            if (func(computedOptions.output)) {
+                output = computedOptions.output;
             }
             if (func(computedOptions.get)) {
                 getter = computedOptions.get.bind(context);
@@ -1827,12 +1884,11 @@ class Observer {
             }
         }
         if (getter) {
-            const computed = new Computed(keypath, sync, cache, deps, instance, getter, setter);
-            if (!instance.computed) {
-                instance.computed = {};
+            const computed = new Computed(keypath, cache, sync, input, output, getter, setter, instance.onComputedChange);
+            if (cache && deps) {
+                computed.addStaticDeps(instance, deps);
             }
-            instance.computed[keypath] = computed;
-            return computed;
+            return instance.data[keypath] = computed;
         }
     }
     /**
@@ -1841,10 +1897,7 @@ class Observer {
      * @param keypath
      */
     removeComputed(keypath) {
-        const instance = this, { computed } = instance;
-        if (computed && has(computed, keypath)) {
-            delete computed[keypath];
-        }
+        delete this.data[keypath];
     }
     /**
      * 监听数据变化
@@ -1887,12 +1940,8 @@ class Observer {
      * @param watcher
      */
     unwatch(keypath, watcher) {
-        const filter = {
-            ns: EMPTY_STRING,
-            listener: watcher,
-        };
-        this.syncEmitter.off(keypath, filter);
-        this.asyncEmitter.off(keypath, filter);
+        this.syncEmitter.off(keypath, watcher);
+        this.asyncEmitter.off(keypath, watcher);
     }
     /**
      * 取反 keypath 对应的数据
@@ -2056,14 +2105,7 @@ class Yox {
         const source = props ? copy(props) : {};
         // 先放 props
         // 当 data 是函数时，可以通过 this.get() 获取到外部数据
-        const observer = instance.$observer = new Observer(source, instance, instance.$nextTask = new NextTask({
-            afterTask() {
-                if (instance.$isDirty) {
-                    instance.$isDirty = UNDEFINED;
-                    instance.update(instance.render(), instance.$vnode);
-                }
-            }
-        }));
+        const observer = instance.$observer = new Observer(source, instance, instance.$nextTask = new NextTask());
         if (computed) {
             each(computed, function (options, keypath) {
                 observer.addComputed(keypath, options);
@@ -2126,11 +2168,6 @@ class Yox {
      * 注册全局组件
      */
     static component(name, component) {
-    }
-    /**
-     * 注册全局子模板
-     */
-    static partial(name, partial) {
     }
     /**
      * 注册全局过滤器
@@ -2299,11 +2336,6 @@ class Yox {
     component(name, component) {
     }
     /**
-     * 注册当前组件级别的子模板
-     */
-    partial(name, partial) {
-    }
-    /**
      * 注册当前组件级别的过滤器
      */
     filter(name, filter) {
@@ -2333,14 +2365,6 @@ class Yox {
      * @param props
      */
     checkProp(key, value) {
-    }
-    /**
-     * 渲染 slots
-     *
-     * @param props
-     * @param slots
-     */
-    renderSlots(props, slots) {
     }
     /**
      * 销毁组件
@@ -2449,7 +2473,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.256";
+Yox.version = "1.0.0-alpha.300";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

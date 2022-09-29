@@ -57,10 +57,8 @@ export interface YoxInterface {
 	directive(name: string | Record<string, DirectiveHooks>, directive?: DirectiveHooks): DirectiveHooks | void;
 	transition(name: string | Record<string, TransitionHooks>, transition?: TransitionHooks): TransitionHooks | void;
 	component(name: string | Record<string, Component>, component?: Component): Component | void;
-	partial(name: string | Record<string, Partial>, partial?: Partial): Function | void;
 	filter(name: string | Record<string, Filter>, filter?: Filter): Filter | void;
 	checkProp(key: string, value: any): void;
-	renderSlots(props: Data, slots: Slots): void;
 	forceUpdate(props?: Data): void;
 	destroy(): void;
 	nextTick(task: ThisTask<this>): void;
@@ -233,10 +231,6 @@ export interface VNode {
 	readonly operator: VNodeOperator;
 	readonly tag?: string;
 	readonly isComponent?: boolean;
-	readonly isComment?: boolean;
-	readonly isFragment?: boolean;
-	readonly isPortal?: boolean;
-	readonly isSlot?: boolean;
 	readonly isSvg?: boolean;
 	readonly isStyle?: boolean;
 	readonly isOption?: boolean;
@@ -264,6 +258,8 @@ export interface ComputedOptions {
 	cache?: boolean;
 	sync?: boolean;
 	deps?: string[];
+	input?: any[];
+	output?: ComputedOutput;
 }
 export interface WatcherOptions {
 	watcher: Watcher;
@@ -338,12 +334,11 @@ export interface ComponentOptions<Computed = any, Watchers = any, Events = any, 
 	transitions?: Record<string, TransitionHooks>;
 	components?: Record<string, ComponentOptions>;
 	directives?: Record<string, DirectiveHooks>;
-	partials?: Record<string, string>;
 	filters?: Record<string, Filter>;
 	extensions?: Data;
 	[HOOK_BEFORE_CREATE]?: (options: ComponentOptions) => void;
 	[HOOK_AFTER_CREATE]?: ComponentOptionsHook;
-	[HOOK_BEFORE_RENDER]?: ComponentOptionsHook;
+	[HOOK_BEFORE_RENDER]?: (props: Data) => void;
 	[HOOK_AFTER_RENDER]?: ComponentOptionsHook;
 	[HOOK_BEFORE_MOUNT]?: ComponentOptionsHook;
 	[HOOK_AFTER_MOUNT]?: ComponentOptionsHook;
@@ -362,24 +357,18 @@ export declare type ComponentLoader = (callback: ComponentCallback) => Promise<C
 export declare type Component = ComponentOptions | ComponentLoader;
 export declare type FilterFunction = (this: any, ...args: any) => string | number | boolean;
 export declare type Filter = FilterFunction | Record<string, FilterFunction>;
-export declare type Partial = string | Function;
 export declare type ThisTask<This> = (this: This) => void;
 export declare type ThisWatcher<This> = (this: This, newValue: any, oldValue: any, keypath: string) => void;
 export declare type Watcher = (newValue: any, oldValue: any, keypath: string) => void;
 export declare type ThisListener<This> = (this: This, event: CustomEventInterface, data?: Data) => false | void;
 export declare type Listener = (event: CustomEventInterface, data?: Data, isNative?: boolean) => false | void;
 export declare type NativeListener = (event: CustomEventInterface | Event) => false | void;
-export declare type ComputedGetter = () => any;
+export declare type ComputedGetter = (...params: any) => any;
 export declare type ComputedSetter = (value: any) => void;
+export declare type ComputedOutput = (value: any) => any;
 export declare type ValueHolder = {
 	keypath?: string;
 	value: any;
-};
-export declare type PureObject = {
-	get(key: string): any;
-	set(key: string, value: any): void;
-	has(key: string): boolean;
-	keys(): string[];
 };
 export declare type PropRule = {
 	type: string | string[] | PropTypeFunction;
@@ -494,45 +483,51 @@ declare class NextTask {
 	 */
 	run(): void;
 }
+declare class Deps {
+	map: Record<number, Record<string, Observer>>;
+	list: [
+		Observer,
+		string
+	][];
+	constructor();
+	add(observer: Observer, dep: string): void;
+	watch(watcher: WatcherOptions): void;
+	unwatch(watcher: Watcher): void;
+}
 declare class Computed {
 	static current?: Computed;
 	keypath: string;
 	value: any;
-	deps: string[] | void;
+	status: number;
 	cache: boolean;
-	fixed: boolean;
-	observer: Observer;
-	getter: ComputedGetter;
+	input: any[] | void;
+	output: ComputedOutput | void;
 	setter: ComputedSetter | void;
-	watcher: Watcher;
+	getter: ComputedGetter;
+	staticDeps: Deps | void;
+	dynamicDeps: Deps | void;
 	watcherOptions: WatcherOptions;
-	unique: PureObject | void;
-	constructor(keypath: string, sync: boolean, cache: boolean, deps: string[] | void, observer: Observer, getter: ComputedGetter, setter: ComputedSetter | void);
+	onChange: (keypath: string, newValue: any, oldValue: any) => void;
+	constructor(keypath: string, cache: boolean, sync: boolean, input: any[] | void, output: ComputedOutput | void, getter: ComputedGetter, setter: ComputedSetter | void, onChange: (keypath: string, newValue: any, oldValue: any) => void);
 	/**
 	 * 读取计算属性的值
-	 *
-	 * @param force 是否强制刷新缓存
 	 */
-	get(force?: boolean): any;
+	get(): any;
 	set(value: any): void;
-	/**
-	 * 添加依赖
-	 *
-	 * 这里只是为了保证依赖唯一
-	 *
-	 * @param dep
-	 */
-	add(dep: string): void;
+	refresh(): void;
+	addStaticDeps(observer: Observer, deps: string[]): void;
+	addDynamicDep(observer: Observer, dep: string): void;
 }
 declare class Observer {
+	id: number;
 	data: Data;
 	context: any;
 	nextTask: NextTask;
-	computed?: Record<string, Computed>;
 	syncEmitter: Emitter;
 	asyncEmitter: Emitter;
 	asyncOldValues: Record<string, any>;
 	asyncKeypaths: Record<string, Record<string, boolean>>;
+	onComputedChange: (keypath: string, newValue: any, oldValue: any) => void;
 	pending?: boolean;
 	constructor(data?: Data, context?: any, nextTask?: NextTask);
 	/**
@@ -567,7 +562,7 @@ declare class Observer {
 	 * 添加计算属性
 	 *
 	 * @param keypath
-	 * @param computed
+	 * @param options
 	 */
 	addComputed(keypath: string, options: ComputedGetter | ComputedOptions): Computed | void;
 	/**
@@ -681,7 +676,6 @@ export default class Yox implements YoxInterface {
 	$emitter: Emitter;
 	$el?: HTMLElement;
 	$template?: Function;
-	$slots?: Slots;
 	$refs?: Record<string, YoxInterface | HTMLElement>;
 	$model?: string;
 	$root?: YoxInterface;
@@ -693,10 +687,7 @@ export default class Yox implements YoxInterface {
 	private $directives?;
 	private $components?;
 	private $transitions?;
-	private $partials?;
 	private $filters?;
-	private $dependencies?;
-	private $isDirty?;
 	/**
 	 * core 版本
 	 */
@@ -749,10 +740,6 @@ export default class Yox implements YoxInterface {
 	 * 注册全局组件
 	 */
 	static component(name: string | Record<string, Component>, component?: Component): Component | void;
-	/**
-	 * 注册全局子模板
-	 */
-	static partial(name: string | Record<string, Partial>, partial?: Partial): Function | void;
 	/**
 	 * 注册全局过滤器
 	 */
@@ -821,10 +808,6 @@ export default class Yox implements YoxInterface {
 	 */
 	component(name: string | Record<string, Component>, component?: Component): Component | void;
 	/**
-	 * 注册当前组件级别的子模板
-	 */
-	partial(name: string | Record<string, Partial>, partial?: Partial): Function | void;
-	/**
 	 * 注册当前组件级别的过滤器
 	 */
 	filter(name: string | Record<string, Filter>, filter?: Filter): Filter | void;
@@ -850,13 +833,6 @@ export default class Yox implements YoxInterface {
 	 * @param props
 	 */
 	checkProp(key: string, value: any): void;
-	/**
-	 * 渲染 slots
-	 *
-	 * @param props
-	 * @param slots
-	 */
-	renderSlots(props: Data, slots: Slots): void;
 	/**
 	 * 销毁组件
 	 */
