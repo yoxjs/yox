@@ -10,7 +10,7 @@
     <script id="template" type="plain/text">
 
         <div>
-            <button o-click="{name: name }">
+            <button o-click="{ name: name }">
                 33
             </button>
         </div>
@@ -26,10 +26,8 @@
                 disabled: true
             },
             directives: {
-                click: {
-                  bind: function (node, directive, vnode) {
-                    console.log('click', node, directive, vnode);
-                  }
+                click: function (node, directive) {
+                    console.log('click', node, directive);
                 }
             }
         });

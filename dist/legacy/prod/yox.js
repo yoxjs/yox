@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.301
+ * yox.js v1.0.0-alpha.400
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -1462,75 +1462,63 @@
       }
   };
 
+  // vnode.data 内部使用的几个字段
+  var VNODE = '$vnode';
+  var LOADING = '$loading';
+  var LEAVING = '$leaving';
+  var MODEL_CONTROL = '$model_control';
+  var MODEL_DESTROY = '$model_destroy';
+  var EVENT_DESTROY = '$event_destroy';
+  var DIRECTIVE_HOOKS = '$directive_hooks';
+
   function afterCreate$5(api, vnode) {
       var directives = vnode.directives;
+      var component = vnode.component;
+      var node = vnode.node;
       if (directives) {
-          var node = vnode.component || vnode.node;
-          for (var name in directives) {
-              var directive = directives[name];
-              var ref = directive.hooks;
-              var bind = ref.bind;
-              bind(node, directive, vnode);
-          }
-      }
-  }
-  function afterUpdate$4(api, vnode, oldVNode) {
-      var newDirectives = vnode.directives, oldDirectives = oldVNode.directives;
-      if (newDirectives !== oldDirectives) {
-          var node = vnode.component || vnode.node;
-          if (newDirectives) {
-              var oldValue = oldDirectives || EMPTY_OBJECT;
-              for (var name in newDirectives) {
-                  var directive = newDirectives[name], oldDirective = oldValue[name];
-                  var ref = directive.hooks;
-                  var bind = ref.bind;
-                  var unbind = ref.unbind;
-                  if (!oldDirective) {
-                      bind(node, directive, vnode);
-                  }
-                  else if (directive.value !== oldDirective.value) {
-                      if (unbind) {
-                          unbind(node, oldDirective, oldVNode);
-                      }
-                      bind(node, directive, vnode);
-                  }
-                  else if (oldDirective.runtime && directive.runtime) {
-                      oldDirective.runtime.execute = directive.runtime.execute;
-                      directive.runtime = oldDirective.runtime;
-                  }
-              }
-          }
-          if (oldDirectives) {
-              var newValue = newDirectives || EMPTY_OBJECT;
-              for (var name$1 in oldDirectives) {
-                  if (!newValue[name$1]) {
-                      var ref$1 = oldDirectives[name$1].hooks;
-                      var unbind$1 = ref$1.unbind;
-                      if (unbind$1) {
-                          unbind$1(node, oldDirectives[name$1], oldVNode);
-                      }
-                  }
+          var data = vnode.data, element = component ? component.$el : node;
+          if (element) {
+              for (var key in directives) {
+                  var directive = directives[key];
+                  var create = directive.create;
+                  data[DIRECTIVE_HOOKS + directive.name] = create(element, directive);
               }
           }
       }
   }
-  function beforeDestroy$3(api, vnode) {
+  function callDirectiveHooks(vnode, name) {
       var directives = vnode.directives;
       if (directives) {
-          var node = vnode.component || vnode.node;
-          for (var name in directives) {
-              var ref = directives[name].hooks;
-              var unbind = ref.unbind;
-              if (unbind) {
-                  unbind(node, directives[name], vnode);
+          var data = vnode.data;
+          for (var key in directives) {
+              var directive = directives[key], hooks = data[DIRECTIVE_HOOKS + directive.name];
+              if (hooks) {
+                  var hook = hooks[name];
+                  if (hook) {
+                      hook(directive);
+                  }
               }
           }
       }
+  }
+  function afterMount(api, vnode) {
+      callDirectiveHooks(vnode, 'afterMount');
+  }
+  function beforeUpdate$1(api, vnode, oldVNode) {
+      callDirectiveHooks(vnode, 'beforeUpdate');
+  }
+  function afterUpdate$4(api, vnode, oldVNode) {
+      callDirectiveHooks(vnode, 'afterUpdate');
+  }
+  function beforeDestroy$3(api, vnode) {
+      callDirectiveHooks(vnode, 'beforeDestroy');
   }
 
   var directiveHook = /*#__PURE__*/Object.freeze({
     __proto__: null,
     afterCreate: afterCreate$5,
+    afterMount: afterMount,
+    beforeUpdate: beforeUpdate$1,
     afterUpdate: afterUpdate$4,
     beforeDestroy: beforeDestroy$3
   });
@@ -1560,14 +1548,6 @@
           }
       };
   }
-
-  // vnode.data 内部使用的几个字段
-  var VNODE = '$vnode';
-  var LOADING = '$loading';
-  var LEAVING = '$leaving';
-  var MODEL_CONTROL = '$model_control';
-  var MODEL_DESTROY = '$model_destroy';
-  var EVENT_DESTROY = '$event_destroy';
 
   function addEvent$1(api, element, component, data, key, lazy, event) {
       var name = event.name;
@@ -2640,7 +2620,6 @@
           context: vnode.context,
           operator: vnode.operator,
           tag: vnode.tag,
-          isComponent: vnode.isComponent,
           isSvg: vnode.isSvg,
           isStyle: vnode.isStyle,
           isOption: vnode.isOption,
@@ -2788,16 +2767,19 @@
       };
   }
   function createElement$2(tag, dynamicTag, isSvg, isStyle, isComponent) {
+      var isSlot = tag === TAG_SLOT, isVirtual = !isComponent && !isSlot && !!specialTags[tag], isNative = !isComponent && !isSlot && !isVirtual;
       return {
           type: ELEMENT,
           tag: tag,
           dynamicTag: dynamicTag,
           isSvg: isSvg,
           isStyle: isStyle,
-          isComponent: isComponent,
           // 只有 <option> 没有 value 属性时才为 true
           isOption: FALSE$1,
-          isStatic: !isComponent && tag !== TAG_SLOT && tag !== TAG_PORTAL,
+          isStatic: isNative,
+          isNative: isNative,
+          isVirtual: isVirtual,
+          isComponent: isComponent,
       };
   }
   function createElse() {
@@ -2932,16 +2914,6 @@
       return isTrue === defaultValue
           ? UNDEFINED$1
           : (isTrue ? RAW_TRUE : RAW_FALSE);
-  }
-  function isNativeElement(node) {
-      if (node.type !== ELEMENT) {
-          return FALSE$1;
-      }
-      var element = node;
-      if (element.isComponent) {
-          return FALSE$1;
-      }
-      return specialTags[element.tag] === UNDEFINED$1;
   }
   function createElement$1(staticTag, dynamicTag) {
       var isSvg = FALSE$1, isStyle = FALSE$1, isComponent = FALSE$1;
@@ -4327,7 +4299,8 @@
                   processDirectiveEmptyChildren(currentElement, branchNode);
               }
           }
-          if (branchNode.isVirtual && !branchNode.children) {
+          if (branchNode.isVirtual
+              && !branchNode.children) {
               replaceChild(branchNode);
           }
           if (isElement) {
@@ -4350,12 +4323,12 @@
       }, processElementSingleText = function (element, child) {
           // 需要在这特殊处理的是 html 实体
           // 但这只是 WEB 平台的特殊逻辑，所以丢给 platform 处理
-          if (isNativeElement(element)
+          if (element.isNative
               && setElementText(element, child.text)) {
               element.children = UNDEFINED$1;
           }
       }, processElementSingleExpression = function (element, child) {
-          if (isNativeElement(element)) {
+          if (element.isNative) {
               if (child.safe && setElementText(element, child.expr)
                   || !child.safe && setElementHtml(element, child.expr)) {
                   element.children = UNDEFINED$1;
@@ -4379,15 +4352,19 @@
               attr.value = getAttributeDefaultValue(element, attr.name, attr.defaultValue);
           }
       }, processAttributeSingleText = function (element, attr, child) {
-          attr.value = element.isComponent
-              ? child.text
-              : formatNativeAttributeValue(attr.name, child.text, attr.defaultValue);
+          var text = child.text;
+          if (element.isNative) {
+              attr.value = formatNativeAttributeValue(attr.name, text, attr.defaultValue);
+          }
+          else {
+              attr.value = text;
+          }
           attr.children = UNDEFINED$1;
       }, processAttributeSingleExpression = function (element, attr, child) {
           var expr = child.expr;
           if (expr.type === LITERAL) {
               var value = expr.value;
-              if (!element.isComponent && attr.type === ATTRIBUTE) {
+              if (element.isNative && attr.type === ATTRIBUTE) {
                   value = formatNativeAttributeValue(attr.name, value, attr.defaultValue);
               }
               attr.value = value;
@@ -6354,7 +6331,6 @@
           vnode.set(FIELD_OPERATOR, OPERATOR_PORTAL_VNODE);
       }
       else if (isComponent) {
-          vnode.set('isComponent', PRIMITIVE_TRUE);
           vnode.set(FIELD_OPERATOR, OPERATOR_COMPONENT_VNODE);
           if (last(slotStack)) {
               vnode.set('parent', ARG_PARENT);
@@ -6539,47 +6515,11 @@
       // modifier
       push(args, toPrimitive(node.modifier));
       // value
-      push(args, toPrimitive(node.value));
-      // hooks
+      push(args, node.expr
+          ? generateExpression(node.expr)
+          : toPrimitive(node.value));
+      // create
       push(args, generateSelfAndGlobalReader(ARG_DIRECTIVES, ARG_GLOBAL_DIRECTIVES, node.name));
-      // 尽可能把表达式编译成函数，这样对外界最友好
-      //
-      // 众所周知，事件指令会编译成函数，对于自定义指令来说，也要尽可能编译成函数
-      //
-      // 比如 o-tap="method()" 或 o-log="{'id': '11'}"
-      // 前者会编译成 handler（调用方法），后者会编译成 getter（取值）
-      var expr = node.expr;
-      if (expr) {
-          // 如果表达式明确是在调用方法，则序列化成 method + args 的形式
-          if (expr.type === CALL) {
-              var callNode = expr;
-              // 为了实现运行时动态收集参数，这里序列化成函数
-              if (!falsy$2(callNode.args)) {
-                  // runtime
-                  push(args, toMap({
-                      execute: toAnonymousFunction(UNDEFINED$1, UNDEFINED$1, toList(callNode.args.map(function (arg) {
-                          return generateExpression(arg);
-                      })))
-                  }));
-              }
-              else {
-                  // runtime
-                  push(args, PRIMITIVE_UNDEFINED);
-              }
-              // compiler 保证了函数调用的 name 是标识符
-              // method
-              push(args, toPrimitive(callNode.name.name));
-          }
-          else {
-              // 取值函数
-              if (expr.type !== LITERAL) {
-                  // runtime
-                  push(args, toMap({
-                      execute: toAnonymousFunction(UNDEFINED$1, UNDEFINED$1, generateExpression(expr))
-                  }));
-              }
-          }
-      }
       return args;
   }
   nodeGenerator[DIRECTIVE] = function (node) {
@@ -7027,26 +6967,13 @@
               isNative: isNative,
               listener: createEventNameListener(to, toNs, isComponent),
           };
-      }, renderDirective = function (key, name, modifier, value, hooks, runtime, method) {
+      }, renderDirective = function (key, name, modifier, value, create) {
           return {
               ns: DIRECTIVE_CUSTOM,
-              key: key,
               name: name,
               value: value,
               modifier: modifier,
-              getter: runtime && !method
-                  ? function () {
-                      return runtime.execute();
-                  }
-                  : UNDEFINED$1,
-              handler: method
-                  ? function () {
-                      callMethod(method, runtime
-                          ? runtime.execute()
-                          : UNDEFINED$1);
-                  }
-                  : UNDEFINED$1,
-              hooks: hooks,
+              create: create,
           };
       }, callMethod = function (name, args) {
           var method = instance[name];
@@ -8989,7 +8916,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.301";
+  Yox.version = "1.0.0-alpha.400";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

@@ -1,90 +1,3 @@
-declare const HOOK_BEFORE_CREATE = "beforeCreate";
-declare const HOOK_AFTER_CREATE = "afterCreate";
-declare const HOOK_BEFORE_RENDER = "beforeRender";
-declare const HOOK_AFTER_RENDER = "afterRender";
-declare const HOOK_BEFORE_MOUNT = "beforeMount";
-declare const HOOK_AFTER_MOUNT = "afterMount";
-declare const HOOK_BEFORE_UPDATE = "beforeUpdate";
-declare const HOOK_AFTER_UPDATE = "afterUpdate";
-declare const HOOK_BEFORE_DESTROY = "beforeDestroy";
-declare const HOOK_AFTER_DESTROY = "afterDestroy";
-declare const HOOK_BEFORE_PROPS_UPDATE = "beforePropsUpdate";
-/**
- * Yox 事件系统的事件类型
- */
-export interface CustomEventInterface {
-	type: string;
-	phase: number;
-	ns?: string;
-	target?: YoxInterface;
-	originalEvent?: CustomEventInterface | Event;
-	isPrevented?: true;
-	isStoped?: true;
-	/**
-	 * 阻止事件的默认行为
-	 */
-	preventDefault(): this;
-	/**
-	 * 停止事件广播
-	 */
-	stopPropagation(): this;
-	prevent(): this;
-	stop(): this;
-}
-/**
- * Yox 接口类型
- */
-export interface YoxInterface {
-	$options: ComponentOptions;
-	$el?: HTMLElement;
-	$vnode?: VNode;
-	$model?: string;
-	$root?: YoxInterface;
-	$parent?: YoxInterface;
-	$context?: YoxInterface;
-	$children?: YoxInterface[];
-	$refs?: Record<string, YoxInterface | HTMLElement>;
-	get(keypath: string, defaultValue?: any): any;
-	set(keypath: string | Data, value?: any): void;
-	on(type: string | Record<string, ThisListener<this> | ThisListenerOptions> | ThisTypeListenerOptions[], listener?: ThisListener<this> | ThisListenerOptions): this;
-	once(type: string | Record<string, ThisListener<this> | ThisListenerOptions> | ThisTypeListenerOptions[], listener?: ThisListener<this> | ThisListenerOptions): this;
-	off(type?: string, listener?: ThisListener<this> | ThisListenerOptions): this;
-	fire(type: string | EmitterEvent | CustomEventInterface, data?: Data | boolean, downward?: boolean): boolean;
-	watch(keypath: string | Record<string, ThisWatcher<this> | ThisWatcherOptions<this>>, watcher?: ThisWatcher<this> | ThisWatcherOptions<this>, immediate?: boolean): this;
-	unwatch(keypath?: string, watcher?: ThisWatcher<this>): this;
-	loadComponent(name: string, callback: ComponentCallback): void;
-	createComponent(options: ComponentOptions, vnode: VNode): YoxInterface;
-	directive(name: string | Record<string, DirectiveHooks>, directive?: DirectiveHooks): DirectiveHooks | void;
-	transition(name: string | Record<string, TransitionHooks>, transition?: TransitionHooks): TransitionHooks | void;
-	component(name: string | Record<string, Component>, component?: Component): Component | void;
-	filter(name: string | Record<string, Filter>, filter?: Filter): Filter | void;
-	checkProp(key: string, value: any): void;
-	forceUpdate(props?: Data): void;
-	destroy(): void;
-	nextTick(task: ThisTask<this>): void;
-	toggle(keypath: string): boolean;
-	increase(keypath: string, step?: number, max?: number): number | void;
-	decrease(keypath: string, step?: number, min?: number): number | void;
-	insert(keypath: string, item: any, index: number | boolean): true | void;
-	append(keypath: string, item: any): true | void;
-	prepend(keypath: string, item: any): true | void;
-	removeAt(keypath: string, index: number): true | void;
-	remove(keypath: string, item: any): true | void;
-	copy<T>(data: T, deep?: boolean): T;
-}
-export interface DirectiveHooks {
-	once?: true;
-	bind: (node: HTMLElement | YoxInterface, directive: Directive, vnode: VNode) => void;
-	unbind?: (node: HTMLElement | YoxInterface, directive: Directive, vnode: VNode) => void;
-}
-export interface SpecialEventHooks {
-	on: (node: HTMLElement | Window | Document, listener: NativeListener) => void;
-	off: (node: HTMLElement | Window | Document, listener: NativeListener) => void;
-}
-export interface TransitionHooks {
-	enter?: (node: HTMLElement) => void;
-	leave?: (node: HTMLElement, done: () => void) => void;
-}
 export interface DomApi {
 	getBodyElement(): Element;
 	createElement(tag: string, isSvg?: boolean): Element;
@@ -176,82 +89,17 @@ export interface StringApi {
 	has(str: string, part: string): boolean;
 	falsy(str: any): boolean;
 }
-export declare type EventArgs = (event: CustomEventInterface, data?: Data) => any[];
-export declare type DirectiveArgs = () => any;
-export interface EventRuntime {
-	execute: EventArgs;
-}
-export interface DirectiveRuntime {
-	execute: DirectiveArgs;
-}
-export interface Directive {
-	key: string;
-	name: string;
-	ns: string;
-	runtime: DirectiveRuntime | void;
-	readonly modifier: string | void;
-	readonly value?: string | number | boolean;
-	readonly getter?: () => any | void;
-	readonly handler?: () => void | void;
-	readonly hooks: DirectiveHooks;
-}
-export interface EventValue {
-	key: string;
-	name: string;
-	value: string;
-	runtime: EventRuntime | void;
-	readonly ns: string | void;
-	readonly isNative?: boolean;
-	readonly listener: Listener;
-}
-export interface ModelValue {
-	keypath: string;
-	value: any;
-}
-export declare type Slots = Record<string, (parent: YoxInterface) => VNode[] | void>;
-export interface VNodeOperator {
-	create(api: DomApi, vnode: VNode): void;
-	update(api: DomApi, vnode: VNode, oldVNode: VNode): void;
-	destroy(api: DomApi, vnode: VNode): void;
-	insert(api: DomApi, parentNode: Node, vnode: VNode, before?: VNode): void;
-	remove(api: DomApi, vnode: VNode): void;
-	enter(vnode: VNode): void;
-	leave(vnode: VNode, done: Function): void;
-}
-export interface VNode {
-	type: number;
-	data?: Data;
-	node?: Node;
-	parentNode?: Node;
-	target?: Node;
-	shadow?: VNode;
-	parent?: YoxInterface;
-	component?: YoxInterface;
-	readonly context: YoxInterface;
-	readonly operator: VNodeOperator;
-	readonly tag?: string;
-	readonly isComponent?: boolean;
-	readonly isSvg?: boolean;
-	readonly isStyle?: boolean;
-	readonly isOption?: boolean;
-	readonly isStatic?: boolean;
-	readonly isPure?: boolean;
-	readonly slots?: Slots;
-	readonly props?: Data;
-	readonly nativeAttrs?: Record<string, string>;
-	readonly nativeStyles?: Data;
-	readonly directives?: Record<string, Directive>;
-	readonly events?: Record<string, EventValue>;
-	readonly lazy?: Record<string, LazyValue>;
-	readonly transition?: TransitionHooks;
-	readonly model?: ModelValue;
-	readonly to?: string;
-	readonly ref?: string;
-	readonly key?: string;
-	readonly text?: string;
-	readonly html?: string;
-	readonly children?: VNode[];
-}
+declare const HOOK_BEFORE_CREATE = "beforeCreate";
+declare const HOOK_AFTER_CREATE = "afterCreate";
+declare const HOOK_BEFORE_RENDER = "beforeRender";
+declare const HOOK_AFTER_RENDER = "afterRender";
+declare const HOOK_BEFORE_MOUNT = "beforeMount";
+declare const HOOK_AFTER_MOUNT = "afterMount";
+declare const HOOK_BEFORE_UPDATE = "beforeUpdate";
+declare const HOOK_AFTER_UPDATE = "afterUpdate";
+declare const HOOK_BEFORE_DESTROY = "beforeDestroy";
+declare const HOOK_AFTER_DESTROY = "afterDestroy";
+declare const HOOK_BEFORE_PROPS_UPDATE = "beforePropsUpdate";
 export interface ComputedOptions {
 	get: ComputedGetter;
 	set?: ComputedSetter;
@@ -348,6 +196,150 @@ export interface ComponentOptions<Computed = any, Watchers = any, Events = any, 
 	[HOOK_AFTER_DESTROY]?: ComponentOptionsHook;
 	[HOOK_BEFORE_PROPS_UPDATE]?: (props: Data) => void;
 }
+/**
+ * Yox 事件系统的事件类型
+ */
+export interface CustomEventInterface {
+	type: string;
+	phase: number;
+	ns?: string;
+	target?: YoxInterface;
+	originalEvent?: CustomEventInterface | Event;
+	isPrevented?: true;
+	isStoped?: true;
+	/**
+	 * 阻止事件的默认行为
+	 */
+	preventDefault(): this;
+	/**
+	 * 停止事件广播
+	 */
+	stopPropagation(): this;
+	prevent(): this;
+	stop(): this;
+}
+/**
+ * Yox 接口类型
+ */
+export interface YoxInterface {
+	$options: ComponentOptions;
+	$el?: HTMLElement;
+	$vnode?: VNode;
+	$model?: string;
+	$root?: YoxInterface;
+	$parent?: YoxInterface;
+	$context?: YoxInterface;
+	$children?: YoxInterface[];
+	$refs?: Record<string, YoxInterface | HTMLElement>;
+	get(keypath: string, defaultValue?: any): any;
+	set(keypath: string | Data, value?: any): void;
+	on(type: string | Record<string, ThisListener<this> | ThisListenerOptions> | ThisTypeListenerOptions[], listener?: ThisListener<this> | ThisListenerOptions): this;
+	once(type: string | Record<string, ThisListener<this> | ThisListenerOptions> | ThisTypeListenerOptions[], listener?: ThisListener<this> | ThisListenerOptions): this;
+	off(type?: string, listener?: ThisListener<this> | ThisListenerOptions): this;
+	fire(type: string | EmitterEvent | CustomEventInterface, data?: Data | boolean, downward?: boolean): boolean;
+	watch(keypath: string | Record<string, ThisWatcher<this> | ThisWatcherOptions<this>>, watcher?: ThisWatcher<this> | ThisWatcherOptions<this>, immediate?: boolean): this;
+	unwatch(keypath?: string, watcher?: ThisWatcher<this>): this;
+	loadComponent(name: string, callback: ComponentCallback): void;
+	createComponent(options: ComponentOptions, vnode: VNode): YoxInterface;
+	directive(name: string | Record<string, DirectiveHooks>, directive?: DirectiveHooks): DirectiveHooks | void;
+	transition(name: string | Record<string, TransitionHooks>, transition?: TransitionHooks): TransitionHooks | void;
+	component(name: string | Record<string, Component>, component?: Component): Component | void;
+	filter(name: string | Record<string, Filter>, filter?: Filter): Filter | void;
+	checkProp(key: string, value: any): void;
+	forceUpdate(props?: Data): void;
+	destroy(): void;
+	nextTick(task: ThisTask<this>): void;
+	toggle(keypath: string): boolean;
+	increase(keypath: string, step?: number, max?: number): number | void;
+	decrease(keypath: string, step?: number, min?: number): number | void;
+	insert(keypath: string, item: any, index: number | boolean): true | void;
+	append(keypath: string, item: any): true | void;
+	prepend(keypath: string, item: any): true | void;
+	removeAt(keypath: string, index: number): true | void;
+	remove(keypath: string, item: any): true | void;
+	copy<T>(data: T, deep?: boolean): T;
+}
+export declare type EventArgs = (event: CustomEventInterface, data?: Data) => any[];
+export interface EventRuntime {
+	execute: EventArgs;
+}
+export interface Directive {
+	name: string;
+	ns: string;
+	readonly modifier: string | void;
+	readonly value: any;
+	readonly create: DirectiveFunction;
+}
+export interface EventValue {
+	key: string;
+	name: string;
+	value: string;
+	runtime: EventRuntime | void;
+	readonly ns: string | void;
+	readonly isNative?: boolean;
+	readonly listener: Listener;
+}
+export interface ModelValue {
+	keypath: string;
+	value: any;
+}
+export declare type Slots = Record<string, (parent: YoxInterface) => VNode[] | void>;
+export interface VNodeOperator {
+	create(api: DomApi, vnode: VNode): void;
+	update(api: DomApi, vnode: VNode, oldVNode: VNode): void;
+	destroy(api: DomApi, vnode: VNode): void;
+	insert(api: DomApi, parentNode: Node, vnode: VNode, before?: VNode): void;
+	remove(api: DomApi, vnode: VNode): void;
+	enter(vnode: VNode): void;
+	leave(vnode: VNode, done: Function): void;
+}
+export interface VNode {
+	type: number;
+	data?: Data;
+	node?: Node;
+	parentNode?: Node;
+	target?: Node;
+	shadow?: VNode;
+	parent?: YoxInterface;
+	component?: YoxInterface;
+	readonly context: YoxInterface;
+	readonly operator: VNodeOperator;
+	readonly tag?: string;
+	readonly isSvg?: boolean;
+	readonly isStyle?: boolean;
+	readonly isOption?: boolean;
+	readonly isStatic?: boolean;
+	readonly isPure?: boolean;
+	readonly slots?: Slots;
+	readonly props?: Data;
+	readonly nativeAttrs?: Record<string, string>;
+	readonly nativeStyles?: Data;
+	readonly directives?: Record<string, Directive>;
+	readonly events?: Record<string, EventValue>;
+	readonly lazy?: Record<string, LazyValue>;
+	readonly transition?: TransitionHooks;
+	readonly model?: ModelValue;
+	readonly to?: string;
+	readonly ref?: string;
+	readonly key?: string;
+	readonly text?: string;
+	readonly html?: string;
+	readonly children?: VNode[];
+}
+export interface DirectiveHooks {
+	afterMount: (directive: Directive) => void;
+	beforeUpdate: (directive: Directive) => void;
+	afterUpdate: (directive: Directive) => void;
+	beforeDestroy: (directive: Directive) => void;
+}
+export interface SpecialEventHooks {
+	on: (node: HTMLElement | Window | Document, listener: NativeListener) => void;
+	off: (node: HTMLElement | Window | Document, listener: NativeListener) => void;
+}
+export interface TransitionHooks {
+	enter?: (node: HTMLElement) => void;
+	leave?: (node: HTMLElement, done: () => void) => void;
+}
 export declare type Data = Record<string, any>;
 export declare type LazyValue = number | true;
 export declare type PropTypeFunction = (key: string, value: any, componentName: string | void) => void;
@@ -355,6 +347,7 @@ export declare type PropValueFunction = () => any;
 export declare type ComponentCallback = (options: ComponentOptions) => void;
 export declare type ComponentLoader = (callback: ComponentCallback) => Promise<ComponentOptions> | void;
 export declare type Component = ComponentOptions | ComponentLoader;
+export declare type DirectiveFunction = (node: HTMLElement, directive: Directive) => DirectiveHooks | undefined;
 export declare type FilterFunction = (this: any, ...args: any) => string | number | boolean;
 export declare type Filter = FilterFunction | Record<string, FilterFunction>;
 export declare type ThisTask<This> = (this: This) => void;

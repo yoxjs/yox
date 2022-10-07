@@ -231,9 +231,22 @@ var app = new Yox({
   // before focusing on the input field.
   // http://vuejs.org/guide/custom-directive.html
   directives: {
-    todoFocus: {
-      bind: function (node, directive, vnode) {
-        node.focus()
+    todoFocus: function (node, directive) {
+      return {
+        afterMount: function (directive) {
+          if (directive.value) {
+            Yox.nextTick(function () {
+              node.focus()
+            })
+          }
+        },
+        afterUpdate: function (directive) {
+          if (directive.value) {
+            Yox.nextTick(function () {
+              node.focus()
+            })
+          }
+        }
       }
     }
   }

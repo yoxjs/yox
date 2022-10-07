@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.301
+ * yox.js v1.0.0-alpha.400
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -1395,75 +1395,63 @@
       }
   };
 
+  // vnode.data 内部使用的几个字段
+  var VNODE = '$vnode';
+  var LOADING = '$loading';
+  var LEAVING = '$leaving';
+  var MODEL_CONTROL = '$model_control';
+  var MODEL_DESTROY = '$model_destroy';
+  var EVENT_DESTROY = '$event_destroy';
+  var DIRECTIVE_HOOKS = '$directive_hooks';
+
   function afterCreate$5(api, vnode) {
       var directives = vnode.directives;
+      var component = vnode.component;
+      var node = vnode.node;
       if (directives) {
-          var node = vnode.component || vnode.node;
-          for (var name in directives) {
-              var directive = directives[name];
-              var ref = directive.hooks;
-              var bind = ref.bind;
-              bind(node, directive, vnode);
-          }
-      }
-  }
-  function afterUpdate$4(api, vnode, oldVNode) {
-      var newDirectives = vnode.directives, oldDirectives = oldVNode.directives;
-      if (newDirectives !== oldDirectives) {
-          var node = vnode.component || vnode.node;
-          if (newDirectives) {
-              var oldValue = oldDirectives || EMPTY_OBJECT;
-              for (var name in newDirectives) {
-                  var directive = newDirectives[name], oldDirective = oldValue[name];
-                  var ref = directive.hooks;
-                  var bind = ref.bind;
-                  var unbind = ref.unbind;
-                  if (!oldDirective) {
-                      bind(node, directive, vnode);
-                  }
-                  else if (directive.value !== oldDirective.value) {
-                      if (unbind) {
-                          unbind(node, oldDirective, oldVNode);
-                      }
-                      bind(node, directive, vnode);
-                  }
-                  else if (oldDirective.runtime && directive.runtime) {
-                      oldDirective.runtime.execute = directive.runtime.execute;
-                      directive.runtime = oldDirective.runtime;
-                  }
-              }
-          }
-          if (oldDirectives) {
-              var newValue = newDirectives || EMPTY_OBJECT;
-              for (var name$1 in oldDirectives) {
-                  if (!newValue[name$1]) {
-                      var ref$1 = oldDirectives[name$1].hooks;
-                      var unbind$1 = ref$1.unbind;
-                      if (unbind$1) {
-                          unbind$1(node, oldDirectives[name$1], oldVNode);
-                      }
-                  }
+          var data = vnode.data, element = component ? component.$el : node;
+          if (element) {
+              for (var key in directives) {
+                  var directive = directives[key];
+                  var create = directive.create;
+                  data[DIRECTIVE_HOOKS + directive.name] = create(element, directive);
               }
           }
       }
   }
-  function beforeDestroy$3(api, vnode) {
+  function callDirectiveHooks(vnode, name) {
       var directives = vnode.directives;
       if (directives) {
-          var node = vnode.component || vnode.node;
-          for (var name in directives) {
-              var ref = directives[name].hooks;
-              var unbind = ref.unbind;
-              if (unbind) {
-                  unbind(node, directives[name], vnode);
+          var data = vnode.data;
+          for (var key in directives) {
+              var directive = directives[key], hooks = data[DIRECTIVE_HOOKS + directive.name];
+              if (hooks) {
+                  var hook = hooks[name];
+                  if (hook) {
+                      hook(directive);
+                  }
               }
           }
       }
+  }
+  function afterMount(api, vnode) {
+      callDirectiveHooks(vnode, 'afterMount');
+  }
+  function beforeUpdate$1(api, vnode, oldVNode) {
+      callDirectiveHooks(vnode, 'beforeUpdate');
+  }
+  function afterUpdate$4(api, vnode, oldVNode) {
+      callDirectiveHooks(vnode, 'afterUpdate');
+  }
+  function beforeDestroy$3(api, vnode) {
+      callDirectiveHooks(vnode, 'beforeDestroy');
   }
 
   var directiveHook = /*#__PURE__*/Object.freeze({
     __proto__: null,
     afterCreate: afterCreate$5,
+    afterMount: afterMount,
+    beforeUpdate: beforeUpdate$1,
     afterUpdate: afterUpdate$4,
     beforeDestroy: beforeDestroy$3
   });
@@ -1493,14 +1481,6 @@
           }
       };
   }
-
-  // vnode.data 内部使用的几个字段
-  var VNODE = '$vnode';
-  var LOADING = '$loading';
-  var LEAVING = '$leaving';
-  var MODEL_CONTROL = '$model_control';
-  var MODEL_DESTROY = '$model_destroy';
-  var EVENT_DESTROY = '$event_destroy';
 
   function addEvent$1(api, element, component, data, key, lazy, event) {
       var name = event.name;
@@ -2573,7 +2553,6 @@
           context: vnode.context,
           operator: vnode.operator,
           tag: vnode.tag,
-          isComponent: vnode.isComponent,
           isSvg: vnode.isSvg,
           isStyle: vnode.isStyle,
           isOption: vnode.isOption,
@@ -2865,26 +2844,13 @@
               isNative: isNative,
               listener: createEventNameListener(to, toNs, isComponent),
           };
-      }, renderDirective = function (key, name, modifier, value, hooks, runtime, method) {
+      }, renderDirective = function (key, name, modifier, value, create) {
           return {
               ns: DIRECTIVE_CUSTOM,
-              key: key,
               name: name,
               value: value,
               modifier: modifier,
-              getter: runtime && !method
-                  ? function () {
-                      return runtime.execute();
-                  }
-                  : UNDEFINED,
-              handler: method
-                  ? function () {
-                      callMethod(method, runtime
-                          ? runtime.execute()
-                          : UNDEFINED);
-                  }
-                  : UNDEFINED,
-              hooks: hooks,
+              create: create,
           };
       }, callMethod = function (name, args) {
           var method = instance[name];
@@ -4728,7 +4694,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.301";
+  Yox.version = "1.0.0-alpha.400";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

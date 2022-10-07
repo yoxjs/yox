@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.301
+ * yox.js v1.0.0-alpha.400
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -1478,68 +1478,60 @@ class NextTask {
     }
 }
 
+// vnode.data 内部使用的几个字段
+const VNODE = '$vnode';
+const LOADING = '$loading';
+const LEAVING = '$leaving';
+const MODEL_CONTROL = '$model_control';
+const MODEL_DESTROY = '$model_destroy';
+const EVENT_DESTROY = '$event_destroy';
+const DIRECTIVE_HOOKS = '$directive_hooks';
+
 function afterCreate$5(api, vnode) {
-    const { directives } = vnode;
+    const { directives, component, node } = vnode;
     if (directives) {
-        const node = vnode.component || vnode.node;
-        for (let name in directives) {
-            const directive = directives[name], { bind } = directive.hooks;
-            bind(node, directive, vnode);
+        const data = vnode.data, element = component ? component.$el : node;
+        if (element) {
+            for (let key in directives) {
+                const directive = directives[key], { create } = directive;
+                data[DIRECTIVE_HOOKS + directive.name] = create(element, directive);
+            }
         }
     }
+}
+function callDirectiveHooks(vnode, name) {
+    const { directives } = vnode;
+    if (directives) {
+        const data = vnode.data;
+        for (let key in directives) {
+            const directive = directives[key], hooks = data[DIRECTIVE_HOOKS + directive.name];
+            if (hooks) {
+                const hook = hooks[name];
+                if (hook) {
+                    hook(directive);
+                }
+            }
+        }
+    }
+}
+function afterMount(api, vnode) {
+    callDirectiveHooks(vnode, 'afterMount');
+}
+function beforeUpdate$1(api, vnode, oldVNode) {
+    callDirectiveHooks(vnode, 'beforeUpdate');
 }
 function afterUpdate$4(api, vnode, oldVNode) {
-    const newDirectives = vnode.directives, oldDirectives = oldVNode.directives;
-    if (newDirectives !== oldDirectives) {
-        const node = vnode.component || vnode.node;
-        if (newDirectives) {
-            const oldValue = oldDirectives || EMPTY_OBJECT;
-            for (let name in newDirectives) {
-                const directive = newDirectives[name], oldDirective = oldValue[name], { bind, unbind } = directive.hooks;
-                if (!oldDirective) {
-                    bind(node, directive, vnode);
-                }
-                else if (directive.value !== oldDirective.value) {
-                    if (unbind) {
-                        unbind(node, oldDirective, oldVNode);
-                    }
-                    bind(node, directive, vnode);
-                }
-                else if (oldDirective.runtime && directive.runtime) {
-                    oldDirective.runtime.execute = directive.runtime.execute;
-                    directive.runtime = oldDirective.runtime;
-                }
-            }
-        }
-        if (oldDirectives) {
-            const newValue = newDirectives || EMPTY_OBJECT;
-            for (let name in oldDirectives) {
-                if (!newValue[name]) {
-                    const { unbind } = oldDirectives[name].hooks;
-                    if (unbind) {
-                        unbind(node, oldDirectives[name], oldVNode);
-                    }
-                }
-            }
-        }
-    }
+    callDirectiveHooks(vnode, 'afterUpdate');
 }
 function beforeDestroy$3(api, vnode) {
-    const { directives } = vnode;
-    if (directives) {
-        const node = vnode.component || vnode.node;
-        for (let name in directives) {
-            const { unbind } = directives[name].hooks;
-            if (unbind) {
-                unbind(node, directives[name], vnode);
-            }
-        }
-    }
+    callDirectiveHooks(vnode, 'beforeDestroy');
 }
 
 var directiveHook = /*#__PURE__*/Object.freeze({
   __proto__: null,
   afterCreate: afterCreate$5,
+  afterMount: afterMount,
+  beforeUpdate: beforeUpdate$1,
   afterUpdate: afterUpdate$4,
   beforeDestroy: beforeDestroy$3
 });
@@ -1569,14 +1561,6 @@ function debounce (fn, delay, immediate) {
         }
     };
 }
-
-// vnode.data 内部使用的几个字段
-const VNODE = '$vnode';
-const LOADING = '$loading';
-const LEAVING = '$leaving';
-const MODEL_CONTROL = '$model_control';
-const MODEL_DESTROY = '$model_destroy';
-const EVENT_DESTROY = '$event_destroy';
 
 function addEvent$1(api, element, component, data, key, lazy, event) {
     let { name, listener } = event;
@@ -2641,7 +2625,6 @@ function clone(vnode) {
         context: vnode.context,
         operator: vnode.operator,
         tag: vnode.tag,
-        isComponent: vnode.isComponent,
         isSvg: vnode.isSvg,
         isStyle: vnode.isStyle,
         isOption: vnode.isOption,
@@ -2789,16 +2772,19 @@ function createEach(from, to, equal, index) {
     };
 }
 function createElement$2(tag, dynamicTag, isSvg, isStyle, isComponent) {
+    const isSlot = tag === TAG_SLOT, isVirtual = !isComponent && !isSlot && !!specialTags[tag], isNative = !isComponent && !isSlot && !isVirtual;
     return {
         type: ELEMENT,
         tag,
         dynamicTag,
         isSvg,
         isStyle,
-        isComponent,
         // 只有 <option> 没有 value 属性时才为 true
         isOption: FALSE$1,
-        isStatic: !isComponent && tag !== TAG_SLOT && tag !== TAG_PORTAL,
+        isStatic: isNative,
+        isNative,
+        isVirtual,
+        isComponent,
     };
 }
 function createElse() {
@@ -2939,16 +2925,6 @@ function formatBooleanNativeAttributeValue(name, value, defaultValue) {
     return isTrue === defaultValue
         ? UNDEFINED$1
         : (isTrue ? RAW_TRUE : RAW_FALSE);
-}
-function isNativeElement(node) {
-    if (node.type !== ELEMENT) {
-        return FALSE$1;
-    }
-    const element = node;
-    if (element.isComponent) {
-        return FALSE$1;
-    }
-    return specialTags[element.tag] === UNDEFINED$1;
 }
 function createElement$1(staticTag, dynamicTag) {
     let isSvg = FALSE$1, isStyle = FALSE$1, isComponent = FALSE$1;
@@ -4435,7 +4411,8 @@ function compile(content) {
                 processDirectiveEmptyChildren(currentElement, branchNode);
             }
         }
-        if (branchNode.isVirtual && !branchNode.children) {
+        if (branchNode.isVirtual
+            && !branchNode.children) {
             replaceChild(branchNode);
         }
         if (isElement) {
@@ -4458,12 +4435,12 @@ function compile(content) {
     }, processElementSingleText = function (element, child) {
         // 需要在这特殊处理的是 html 实体
         // 但这只是 WEB 平台的特殊逻辑，所以丢给 platform 处理
-        if (isNativeElement(element)
+        if (element.isNative
             && setElementText(element, child.text)) {
             element.children = UNDEFINED$1;
         }
     }, processElementSingleExpression = function (element, child) {
-        if (isNativeElement(element)) {
+        if (element.isNative) {
             if (child.safe && setElementText(element, child.expr)
                 || !child.safe && setElementHtml(element, child.expr)) {
                 element.children = UNDEFINED$1;
@@ -4491,15 +4468,19 @@ function compile(content) {
             attr.value = getAttributeDefaultValue(element, attr.name, attr.defaultValue);
         }
     }, processAttributeSingleText = function (element, attr, child) {
-        attr.value = element.isComponent
-            ? child.text
-            : formatNativeAttributeValue(attr.name, child.text, attr.defaultValue);
+        const { text } = child;
+        if (element.isNative) {
+            attr.value = formatNativeAttributeValue(attr.name, text, attr.defaultValue);
+        }
+        else {
+            attr.value = text;
+        }
         attr.children = UNDEFINED$1;
     }, processAttributeSingleExpression = function (element, attr, child) {
         const { expr } = child;
         if (expr.type === LITERAL) {
             let value = expr.value;
-            if (!element.isComponent && attr.type === ATTRIBUTE) {
+            if (element.isNative && attr.type === ATTRIBUTE) {
                 value = formatNativeAttributeValue(attr.name, value, attr.defaultValue);
             }
             attr.value = value;
@@ -4573,6 +4554,9 @@ function compile(content) {
                 }
                 if (isModel && expr.type !== IDENTIFIER) {
                     fatal$1('The value of the model must be an identifier.');
+                }
+                if (isCustom && expr.type === CALL) {
+                    fatal$1(`The value of the directive [${directive.ns}${directiveSeparator}${directive.name}] can't be a method call.`);
                 }
             }
             directive.expr = expr;
@@ -4648,8 +4632,8 @@ function compile(content) {
         {
             if (isSlot) {
                 // 只能是 <template> 、组件、native 元素
-                const { tag, isComponent } = element;
-                if (tag !== TAG_TEMPLATE && !isComponent && !isNativeElement(element)) {
+                const { tag, isComponent, isNative } = element;
+                if (tag !== TAG_TEMPLATE && !isComponent && !isNative) {
                     fatal$1(`The "slot" attribute can't be used in <${tag}>.`);
                 }
             }
@@ -4847,7 +4831,8 @@ function compile(content) {
                                 fatal$1('The dangerous interpolation must be the only child of a HTML element.');
                             }
                             // 危险插值的父节点必须是 html element
-                            else if (!isNativeElement(currentBranch)) {
+                            else if (currentBranch.type !== ELEMENT
+                                || !currentBranch.isNative) {
                                 fatal$1('The dangerous interpolation must be the only child of a HTML element.');
                             }
                         }
@@ -6743,7 +6728,6 @@ nodeGenerator[ELEMENT] = function (node) {
         vnode.set(FIELD_OPERATOR, OPERATOR_PORTAL_VNODE);
     }
     else if (isComponent) {
-        vnode.set('isComponent', PRIMITIVE_TRUE);
         vnode.set(FIELD_OPERATOR, OPERATOR_COMPONENT_VNODE);
         if (last(slotStack)) {
             vnode.set('parent', ARG_PARENT);
@@ -6930,47 +6914,11 @@ function getDirectiveArgs(node) {
     // modifier
     push(args, toPrimitive(node.modifier));
     // value
-    push(args, toPrimitive(node.value));
-    // hooks
+    push(args, node.expr
+        ? generateExpression(node.expr)
+        : toPrimitive(node.value));
+    // create
     push(args, generateSelfAndGlobalReader(ARG_DIRECTIVES, ARG_GLOBAL_DIRECTIVES, node.name));
-    // 尽可能把表达式编译成函数，这样对外界最友好
-    //
-    // 众所周知，事件指令会编译成函数，对于自定义指令来说，也要尽可能编译成函数
-    //
-    // 比如 o-tap="method()" 或 o-log="{'id': '11'}"
-    // 前者会编译成 handler（调用方法），后者会编译成 getter（取值）
-    const { expr } = node;
-    if (expr) {
-        // 如果表达式明确是在调用方法，则序列化成 method + args 的形式
-        if (expr.type === CALL) {
-            const callNode = expr;
-            // 为了实现运行时动态收集参数，这里序列化成函数
-            if (!falsy$2(callNode.args)) {
-                // runtime
-                push(args, toMap({
-                    execute: toAnonymousFunction(UNDEFINED$1, UNDEFINED$1, toList(callNode.args.map(function (arg) {
-                        return generateExpression(arg);
-                    })))
-                }));
-            }
-            else {
-                // runtime
-                push(args, PRIMITIVE_UNDEFINED);
-            }
-            // compiler 保证了函数调用的 name 是标识符
-            // method
-            push(args, toPrimitive(callNode.name.name));
-        }
-        else {
-            // 取值函数
-            if (expr.type !== LITERAL) {
-                // runtime
-                push(args, toMap({
-                    execute: toAnonymousFunction(UNDEFINED$1, UNDEFINED$1, generateExpression(expr))
-                }));
-            }
-        }
-    }
     return args;
 }
 nodeGenerator[DIRECTIVE] = function (node) {
@@ -7420,31 +7368,18 @@ function render(instance, template, rootScope, filters, globalFilters, directive
             isNative,
             listener: createEventNameListener(to, toNs, isComponent),
         };
-    }, renderDirective = function (key, name, modifier, value, hooks, runtime, method) {
+    }, renderDirective = function (key, name, modifier, value, create) {
         {
-            if (!hooks) {
+            if (!create) {
                 fatal(`The directive "${name}" can't be found.`);
             }
         }
         return {
             ns: DIRECTIVE_CUSTOM,
-            key,
             name,
             value,
             modifier,
-            getter: runtime && !method
-                ? function () {
-                    return runtime.execute();
-                }
-                : UNDEFINED$1,
-            handler: method
-                ? function () {
-                    callMethod(method, runtime
-                        ? runtime.execute()
-                        : UNDEFINED$1);
-                }
-                : UNDEFINED$1,
-            hooks,
+            create,
         };
     }, callMethod = function (name, args) {
         const method = instance[name];
@@ -9468,7 +9403,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.301";
+Yox.version = "1.0.0-alpha.400";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

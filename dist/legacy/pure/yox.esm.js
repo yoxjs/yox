@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.301
+ * yox.js v1.0.0-alpha.400
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -1536,16 +1536,19 @@ function createEach(from, to, equal, index) {
     };
 }
 function createElement$1(tag, dynamicTag, isSvg, isStyle, isComponent) {
+    const isSlot = tag === TAG_SLOT, isVirtual = !isComponent && !isSlot && !!specialTags[tag], isNative = !isComponent && !isSlot && !isVirtual;
     return {
         type: ELEMENT,
         tag,
         dynamicTag,
         isSvg,
         isStyle,
-        isComponent,
         // 只有 <option> 没有 value 属性时才为 true
         isOption: FALSE$1,
-        isStatic: !isComponent && tag !== TAG_SLOT && tag !== TAG_PORTAL,
+        isStatic: isNative,
+        isNative,
+        isVirtual,
+        isComponent,
     };
 }
 function createElse() {
@@ -1673,16 +1676,6 @@ function formatBooleanNativeAttributeValue(name, value, defaultValue) {
     return isTrue === defaultValue
         ? UNDEFINED$1
         : (isTrue ? RAW_TRUE : RAW_FALSE);
-}
-function isNativeElement(node) {
-    if (node.type !== ELEMENT) {
-        return FALSE$1;
-    }
-    const element = node;
-    if (element.isComponent) {
-        return FALSE$1;
-    }
-    return specialTags[element.tag] === UNDEFINED$1;
 }
 function createElement(staticTag, dynamicTag) {
     let isSvg = FALSE$1, isStyle = FALSE$1, isComponent = FALSE$1;
@@ -3059,7 +3052,8 @@ function compile(content) {
                 processDirectiveEmptyChildren(currentElement, branchNode);
             }
         }
-        if (branchNode.isVirtual && !branchNode.children) {
+        if (branchNode.isVirtual
+            && !branchNode.children) {
             replaceChild(branchNode);
         }
         if (isElement) {
@@ -3082,12 +3076,12 @@ function compile(content) {
     }, processElementSingleText = function (element, child) {
         // 需要在这特殊处理的是 html 实体
         // 但这只是 WEB 平台的特殊逻辑，所以丢给 platform 处理
-        if (isNativeElement(element)
+        if (element.isNative
             && setElementText(element, child.text)) {
             element.children = UNDEFINED$1;
         }
     }, processElementSingleExpression = function (element, child) {
-        if (isNativeElement(element)) {
+        if (element.isNative) {
             if (child.safe && setElementText(element, child.expr)
                 || !child.safe && setElementHtml(element, child.expr)) {
                 element.children = UNDEFINED$1;
@@ -3111,15 +3105,19 @@ function compile(content) {
             attr.value = getAttributeDefaultValue(element, attr.name, attr.defaultValue);
         }
     }, processAttributeSingleText = function (element, attr, child) {
-        attr.value = element.isComponent
-            ? child.text
-            : formatNativeAttributeValue(attr.name, child.text, attr.defaultValue);
+        const { text } = child;
+        if (element.isNative) {
+            attr.value = formatNativeAttributeValue(attr.name, text, attr.defaultValue);
+        }
+        else {
+            attr.value = text;
+        }
         attr.children = UNDEFINED$1;
     }, processAttributeSingleExpression = function (element, attr, child) {
         const { expr } = child;
         if (expr.type === LITERAL) {
             let value = expr.value;
-            if (!element.isComponent && attr.type === ATTRIBUTE) {
+            if (element.isNative && attr.type === ATTRIBUTE) {
                 value = formatNativeAttributeValue(attr.name, value, attr.defaultValue);
             }
             attr.value = value;
@@ -5050,7 +5048,6 @@ nodeGenerator[ELEMENT] = function (node) {
         vnode.set(FIELD_OPERATOR, OPERATOR_PORTAL_VNODE);
     }
     else if (isComponent) {
-        vnode.set('isComponent', PRIMITIVE_TRUE);
         vnode.set(FIELD_OPERATOR, OPERATOR_COMPONENT_VNODE);
         if (last(slotStack)) {
             vnode.set('parent', ARG_PARENT);
@@ -5237,47 +5234,11 @@ function getDirectiveArgs(node) {
     // modifier
     push(args, toPrimitive(node.modifier));
     // value
-    push(args, toPrimitive(node.value));
-    // hooks
+    push(args, node.expr
+        ? generateExpression(node.expr)
+        : toPrimitive(node.value));
+    // create
     push(args, generateSelfAndGlobalReader(ARG_DIRECTIVES, ARG_GLOBAL_DIRECTIVES, node.name));
-    // 尽可能把表达式编译成函数，这样对外界最友好
-    //
-    // 众所周知，事件指令会编译成函数，对于自定义指令来说，也要尽可能编译成函数
-    //
-    // 比如 o-tap="method()" 或 o-log="{'id': '11'}"
-    // 前者会编译成 handler（调用方法），后者会编译成 getter（取值）
-    const { expr } = node;
-    if (expr) {
-        // 如果表达式明确是在调用方法，则序列化成 method + args 的形式
-        if (expr.type === CALL) {
-            const callNode = expr;
-            // 为了实现运行时动态收集参数，这里序列化成函数
-            if (!falsy$2(callNode.args)) {
-                // runtime
-                push(args, toMap({
-                    execute: toAnonymousFunction(UNDEFINED$1, UNDEFINED$1, toList(callNode.args.map(function (arg) {
-                        return generateExpression(arg);
-                    })))
-                }));
-            }
-            else {
-                // runtime
-                push(args, PRIMITIVE_UNDEFINED);
-            }
-            // compiler 保证了函数调用的 name 是标识符
-            // method
-            push(args, toPrimitive(callNode.name.name));
-        }
-        else {
-            // 取值函数
-            if (expr.type !== LITERAL) {
-                // runtime
-                push(args, toMap({
-                    execute: toAnonymousFunction(UNDEFINED$1, UNDEFINED$1, generateExpression(expr))
-                }));
-            }
-        }
-    }
     return args;
 }
 nodeGenerator[DIRECTIVE] = function (node) {
@@ -6625,7 +6586,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.301";
+Yox.version = "1.0.0-alpha.400";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
