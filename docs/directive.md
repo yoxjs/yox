@@ -65,27 +65,51 @@ Yox.directive({
 Yox 的指令是一个函数，如下：
 
 ```js
-function (node, directive) {
+function (node, directive, vnode) {
   // vnode 创建时调用
+  // 如果需要用到以下钩子函数，可以按需配置
+  // 如果不需要钩子函数，则无需 return
   return {
-    afterMount: function (directive) {
-      // 可选，vnode 挂载 DOM 树之后触发
+    afterMount: function (directive, vnode) {
+      // 可选，vnode 挂载 DOM 树之后调用
     },
-    beforeUpdate: function (directive) {
-      // 可选，vnode 更新之前触发
+    beforeUpdate: function (directive, vnode) {
+      // 可选，vnode 更新之前调用
     },
-    afterUpdate: function (directive) {
-      // 可选，vnode 更新之后触发
+    afterUpdate: function (directive, vnode) {
+      // 可选，vnode 更新之后调用
     },
-    beforeDestroy: function (directive) {
-      // 可选，vnode 卸载之前触发
-    },
+    beforeDestroy: function (directive, vnode) {
+      // 可选，vnode 卸载之前调用
+    }
   }
 }
+```
 
 #### node
 
-`node` 参数表示指令的宿主元素。
+`node` 参数表示指令的宿主节点，它可以是 `元素节点`，如下：
+
+```html
+<div o-custom="value"></div>
+```
+
+也可以是 `组件节点`，如下：
+
+```html
+<Component o-custom="value" />
+```
+
+判断方式非常简单，如下：
+
+```js
+if (vnode.type == 4) {
+  // node 是一个 Yox 实例
+}
+else {
+
+}
+```
 
 #### directive
 
@@ -114,6 +138,17 @@ function (node, directive) {
 * `o-custom="'1'"`: `value` 是基本类型，自动转型为 `"1"`
 * `o-custom="name"`: `value` 不是基本类型，输出为变量 `name` 的值
 * `o-custom="{ name: 'yox' }"`: `value` 不是基本类型，输出为对象 `{ name: 'yox' }`
+* `o-custom="a/b/c"`: `value` 不是一个合法表达式，输出为字符串 `"a/b/c"`
+
+#### vnode
+
+`vnode` 是 `virtual dom` 节点，它记录着节点的完整信息。
+
+开发自定义指令，我们需要了解的有以下几个属性：
+
+* `type`: 节点类型，1-文本节点 2-注释节点 3-元素节点 4-组件节点 5-Fragment节点 6-Portal 节点 9-Slot 节点
+* `context`: 渲染节点的上下文环境，这是一个 `Yox` 实例
+* `lazy`: 参考 **Lazy** - **自定义指令**
 
 ### 全局注册
 

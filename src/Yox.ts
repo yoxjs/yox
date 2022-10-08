@@ -5,6 +5,7 @@ import {
   ThisWatcher,
   ThisListener,
   Listener,
+  DirectiveFunction,
   Component,
   ComponentCallback,
   ComponentLoader,
@@ -18,7 +19,6 @@ import {
 } from 'yox-type/src/vnode'
 
 import {
-  DirectiveHooks,
   TransitionHooks,
 } from 'yox-type/src/hooks'
 
@@ -182,7 +182,7 @@ export default class Yox implements YoxInterface {
 
   private $nextTask: NextTask
 
-  private $directives?: Record<string, DirectiveHooks>
+  private $directives?: Record<string, DirectiveFunction>
 
   private $components?: Record<string, ComponentOptions>
 
@@ -267,9 +267,9 @@ export default class Yox implements YoxInterface {
    * 注册全局指令
    */
   public static directive(
-    name: string | Record<string, DirectiveHooks>,
-    directive?: DirectiveHooks
-  ): DirectiveHooks | void {
+    name: string | Record<string, DirectiveFunction>,
+    directive?: DirectiveFunction
+  ): DirectiveFunction | void {
     if (process.env.NODE_ENV !== 'pure') {
       if (is.string(name) && !directive) {
         return getResource(globalDirectives, name as string)
@@ -1000,9 +1000,9 @@ export default class Yox implements YoxInterface {
    * 注册当前组件级别的指令
    */
   directive(
-    name: string | Record<string, DirectiveHooks>,
-    directive?: DirectiveHooks
-  ): DirectiveHooks | void {
+    name: string | Record<string, DirectiveFunction>,
+    directive?: DirectiveFunction
+  ): DirectiveFunction | void {
     if (process.env.NODE_ENV !== 'pure') {
       const instance = this, { $directives } = instance
       if (is.string(name) && !directive) {

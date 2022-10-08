@@ -181,7 +181,7 @@ export interface ComponentOptions<Computed = any, Watchers = any, Events = any, 
 	methods?: Methods;
 	transitions?: Record<string, TransitionHooks>;
 	components?: Record<string, ComponentOptions>;
-	directives?: Record<string, DirectiveHooks>;
+	directives?: Record<string, DirectiveFunction>;
 	filters?: Record<string, Filter>;
 	extensions?: Data;
 	[HOOK_BEFORE_CREATE]?: (options: ComponentOptions) => void;
@@ -241,7 +241,7 @@ export interface YoxInterface {
 	unwatch(keypath?: string, watcher?: ThisWatcher<this>): this;
 	loadComponent(name: string, callback: ComponentCallback): void;
 	createComponent(options: ComponentOptions, vnode: VNode): YoxInterface;
-	directive(name: string | Record<string, DirectiveHooks>, directive?: DirectiveHooks): DirectiveHooks | void;
+	directive(name: string | Record<string, DirectiveFunction>, directive?: DirectiveFunction): DirectiveFunction | void;
 	transition(name: string | Record<string, TransitionHooks>, transition?: TransitionHooks): TransitionHooks | void;
 	component(name: string | Record<string, Component>, component?: Component): Component | void;
 	filter(name: string | Record<string, Filter>, filter?: Filter): Filter | void;
@@ -327,10 +327,10 @@ export interface VNode {
 	readonly children?: VNode[];
 }
 export interface DirectiveHooks {
-	afterMount: (directive: Directive) => void;
-	beforeUpdate: (directive: Directive) => void;
-	afterUpdate: (directive: Directive) => void;
-	beforeDestroy: (directive: Directive) => void;
+	afterMount?: (directive: Directive, vnode: VNode) => void;
+	beforeUpdate?: (directive: Directive, vnode: VNode) => void;
+	afterUpdate?: (directive: Directive, vnode: VNode) => void;
+	beforeDestroy?: (directive: Directive, vnode: VNode) => void;
 }
 export interface SpecialEventHooks {
 	on: (node: HTMLElement | Window | Document, listener: NativeListener) => void;
@@ -347,7 +347,7 @@ export declare type PropValueFunction = () => any;
 export declare type ComponentCallback = (options: ComponentOptions) => void;
 export declare type ComponentLoader = (callback: ComponentCallback) => Promise<ComponentOptions> | void;
 export declare type Component = ComponentOptions | ComponentLoader;
-export declare type DirectiveFunction = (node: HTMLElement, directive: Directive) => DirectiveHooks | undefined;
+export declare type DirectiveFunction = (node: HTMLElement | YoxInterface, directive: Directive, vnode: VNode) => DirectiveHooks | undefined;
 export declare type FilterFunction = (this: any, ...args: any) => string | number | boolean;
 export declare type Filter = FilterFunction | Record<string, FilterFunction>;
 export declare type ThisTask<This> = (this: This) => void;
@@ -724,7 +724,7 @@ export default class Yox implements YoxInterface {
 	/**
 	 * 注册全局指令
 	 */
-	static directive(name: string | Record<string, DirectiveHooks>, directive?: DirectiveHooks): DirectiveHooks | void;
+	static directive(name: string | Record<string, DirectiveFunction>, directive?: DirectiveFunction): DirectiveFunction | void;
 	/**
 	 * 注册全局过渡动画
 	 */
@@ -791,7 +791,7 @@ export default class Yox implements YoxInterface {
 	/**
 	 * 注册当前组件级别的指令
 	 */
-	directive(name: string | Record<string, DirectiveHooks>, directive?: DirectiveHooks): DirectiveHooks | void;
+	directive(name: string | Record<string, DirectiveFunction>, directive?: DirectiveFunction): DirectiveFunction | void;
 	/**
 	 * 注册当前组件级别的过渡动画
 	 */

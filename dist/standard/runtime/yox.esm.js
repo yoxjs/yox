@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.400
+ * yox.js v1.0.0-alpha.401
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -1394,64 +1394,6 @@ class NextTask {
     }
 }
 
-// vnode.data 内部使用的几个字段
-const VNODE = '$vnode';
-const LOADING = '$loading';
-const LEAVING = '$leaving';
-const MODEL_CONTROL = '$model_control';
-const MODEL_DESTROY = '$model_destroy';
-const EVENT_DESTROY = '$event_destroy';
-const DIRECTIVE_HOOKS = '$directive_hooks';
-
-function afterCreate$5(api, vnode) {
-    const { directives, component, node } = vnode;
-    if (directives) {
-        const data = vnode.data, element = component ? component.$el : node;
-        if (element) {
-            for (let key in directives) {
-                const directive = directives[key], { create } = directive;
-                data[DIRECTIVE_HOOKS + directive.name] = create(element, directive);
-            }
-        }
-    }
-}
-function callDirectiveHooks(vnode, name) {
-    const { directives } = vnode;
-    if (directives) {
-        const data = vnode.data;
-        for (let key in directives) {
-            const directive = directives[key], hooks = data[DIRECTIVE_HOOKS + directive.name];
-            if (hooks) {
-                const hook = hooks[name];
-                if (hook) {
-                    hook(directive);
-                }
-            }
-        }
-    }
-}
-function afterMount(api, vnode) {
-    callDirectiveHooks(vnode, 'afterMount');
-}
-function beforeUpdate$1(api, vnode, oldVNode) {
-    callDirectiveHooks(vnode, 'beforeUpdate');
-}
-function afterUpdate$4(api, vnode, oldVNode) {
-    callDirectiveHooks(vnode, 'afterUpdate');
-}
-function beforeDestroy$3(api, vnode) {
-    callDirectiveHooks(vnode, 'beforeDestroy');
-}
-
-var directiveHook = /*#__PURE__*/Object.freeze({
-  __proto__: null,
-  afterCreate: afterCreate$5,
-  afterMount: afterMount,
-  beforeUpdate: beforeUpdate$1,
-  afterUpdate: afterUpdate$4,
-  beforeDestroy: beforeDestroy$3
-});
-
 /**
  * 节流调用
  *
@@ -1477,6 +1419,15 @@ function debounce (fn, delay, immediate) {
         }
     };
 }
+
+// vnode.data 内部使用的几个字段
+const VNODE = '$vnode';
+const LOADING = '$loading';
+const LEAVING = '$leaving';
+const MODEL_CONTROL = '$model_control';
+const MODEL_DESTROY = '$model_destroy';
+const EVENT_DESTROY = '$event_destroy';
+const DIRECTIVE_HOOKS = '$directive_hooks';
 
 function addEvent$1(api, element, component, data, key, lazy, event) {
     let { name, listener } = event;
@@ -1882,6 +1833,35 @@ var refHook = /*#__PURE__*/Object.freeze({
   beforeDestroy: beforeDestroy
 });
 
+function createDirective(vnode) {
+    const { directives } = vnode;
+    if (directives) {
+        const node = vnode.component || vnode.node;
+        if (node) {
+            const data = vnode.data;
+            for (let key in directives) {
+                const directive = directives[key], { create } = directive;
+                data[DIRECTIVE_HOOKS + directive.name] = create(node, directive, vnode);
+            }
+        }
+    }
+}
+function callDirectiveHooks(vnode, name) {
+    const { directives } = vnode;
+    if (directives) {
+        const data = vnode.data;
+        for (let key in directives) {
+            const directive = directives[key], hooks = data[DIRECTIVE_HOOKS + directive.name];
+            if (hooks) {
+                const hook = hooks[name];
+                if (hook) {
+                    hook(directive, vnode);
+                }
+            }
+        }
+    }
+}
+
 function getFragmentHostNode(api, vnode) {
     if (vnode.type === VNODE_TYPE_FRAGMENT
         || vnode.type === VNODE_TYPE_SLOT) {
@@ -1990,7 +1970,6 @@ const vnodeHooksList = [
     refHook,
     eventHook,
     modelHook,
-    directiveHook,
 ];
 const vnodeHooksLength = vnodeHooksList.length;
 function callVNodeHooks(name, args) {
@@ -2017,6 +1996,7 @@ const elementVNodeOperator = {
             vnode.data = {};
         }
         callVNodeHooks('afterCreate', [api, vnode]);
+        createDirective(vnode);
     },
     update(api, vnode, oldVNode) {
         const node = oldVNode.node;
@@ -2024,6 +2004,7 @@ const elementVNodeOperator = {
         vnode.parentNode = oldVNode.parentNode;
         vnode.data = oldVNode.data;
         callVNodeHooks('beforeUpdate', [api, vnode, oldVNode]);
+        callDirectiveHooks(vnode, 'beforeUpdate');
         const { text, html, children, isStyle, isOption } = vnode, oldText = oldVNode.text, oldHtml = oldVNode.html, oldChildren = oldVNode.children;
         if (string$1(text)) {
             if (oldChildren) {
@@ -2065,12 +2046,14 @@ const elementVNodeOperator = {
             api.setText(node, EMPTY_STRING, isStyle);
         }
         callVNodeHooks('afterUpdate', [api, vnode, oldVNode]);
+        callDirectiveHooks(vnode, 'afterUpdate');
     },
     destroy(api, vnode) {
         if (vnode.isPure) {
             return;
         }
         callVNodeHooks('beforeDestroy', [api, vnode]);
+        callDirectiveHooks(vnode, 'beforeDestroy');
         const { children } = vnode;
         if (children) {
             for (let i = 0, length = children.length; i < length; i++) {
@@ -2131,6 +2114,7 @@ const componentVNodeOperator = {
             return;
         }
         callVNodeHooks('beforeUpdate', [api, vnode, oldVNode]);
+        callDirectiveHooks(vnode, 'beforeUpdate');
         const { component, slots } = vnode;
         if (component) {
             let nextProps = vnode.props;
@@ -2142,11 +2126,13 @@ const componentVNodeOperator = {
             }
         }
         callVNodeHooks('afterUpdate', [api, vnode, oldVNode]);
+        callDirectiveHooks(vnode, 'afterUpdate');
     },
     destroy(api, vnode) {
         const { component } = vnode;
         if (component) {
             callVNodeHooks('beforeDestroy', [api, vnode]);
+            callDirectiveHooks(vnode, 'beforeDestroy');
             component.destroy();
             // 移除时，组件可能已经发生过变化，即 shadow 不是创建时那个对象了
             vnode.shadow = component.$vnode;
@@ -2265,6 +2251,7 @@ const slotVNodeOperator = {
         vnode.data = {};
         vnode.node = getFragmentHostNode(api, vnode);
         callVNodeHooks('afterCreate', [api, vnode]);
+        createDirective(vnode);
     },
     update(api, vnode, oldVNode) {
         const { parentNode } = oldVNode;
@@ -2272,11 +2259,14 @@ const slotVNodeOperator = {
         vnode.parentNode = parentNode;
         vnode.data = oldVNode.data;
         callVNodeHooks('beforeUpdate', [api, vnode, oldVNode]);
+        callDirectiveHooks(vnode, 'beforeUpdate');
         vnodeUpdateChildrenOperator(api, parentNode, vnode, oldVNode);
         callVNodeHooks('afterUpdate', [api, vnode, oldVNode]);
+        callDirectiveHooks(vnode, 'afterUpdate');
     },
     destroy(api, vnode) {
         callVNodeHooks('beforeDestroy', [api, vnode]);
+        callDirectiveHooks(vnode, 'beforeDestroy');
         vnodeDestroyChildrenOperator(api, vnode);
     },
     insert: vnodeInsertChildrenOperator,
@@ -2309,6 +2299,7 @@ function createComponent(api, vnode, options) {
     vnode.shadow = child.$vnode;
     data[LOADING] = FALSE;
     callVNodeHooks('afterCreate', [api, vnode]);
+    createDirective(vnode);
     return child;
 }
 function createVNode(api, vnode) {
@@ -2330,6 +2321,7 @@ function insertVNode(api, parentNode, vnode, before) {
     operator.insert(api, parentNode, vnode, before);
     vnode.parentNode = parentNode;
     callVNodeHooks('afterMount', [api, vnode]);
+    callDirectiveHooks(vnode, 'afterMount');
     operator.enter(vnode);
 }
 function removeVNodes(api, vnodes, startIndex, endIndex) {
@@ -2517,6 +2509,7 @@ function destroy(api, vnode, isRemove) {
     }
 }
 function clone(vnode) {
+    const { children } = vnode;
     return {
         type: vnode.type,
         data: vnode.data,
@@ -2548,9 +2541,9 @@ function clone(vnode) {
         key: vnode.key,
         text: vnode.text,
         html: vnode.html,
-        children: vnode.children
-            ? vnode.children.map(clone)
-            : vnode.children,
+        children: children
+            ? children.map(clone)
+            : children,
     };
 }
 
@@ -4606,7 +4599,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.400";
+Yox.version = "1.0.0-alpha.401";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

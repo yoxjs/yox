@@ -80,3 +80,33 @@
   <input type="text" model="content" lazy="1000">
 </div>
 ```
+
+## 自定义指令
+
+在自定义指令的函数中读取 `lazy` 配置。
+
+```js
+function (node, directive, vnode) {
+  // vnode.lazy 是个对象，如果没写过 lazy，则 vnode.lazy 为空
+  var lazy = vnode.lazy
+  if (lazy) {
+    // balabala
+  }
+}
+```
+
+我们通过一个例子来看下 `lazy` 的数据格式：
+
+```html
+<div lazy lazy-a="100" lazy-b></div>
+```
+
+```js
+{
+  '': true,
+  a: 100,
+  b: true
+}
+```
+
+至于你想用它做点什么，请随意。
