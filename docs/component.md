@@ -72,28 +72,27 @@ Yox 组件是符合 [ComponentOptions](https://github.com/yoxjs/yox-type/blob/ma
   // 如果已全局注册，可无需再注册
   directives: {},
 
-  // 组件用到的子模板
-  // 如果已全局注册，可无需再注册
-  partials: {},
-
   // 组件模板中使用的过滤器
   // 如果已全局注册，可无需再注册
   filters: {},
 
   // 以下是组件生命周期钩子
-  beforeCreate: function,
-  afterCreate: function,
+  beforeCreate: function (options) {},
+  afterCreate: function () {},
 
-  beforeMount: function,
+  beforeRender: function (props) {},
+  afterRender: function (props) {},
+
+  beforeMount: function () {},
   // 一般在 afterMount 初始化第三方 DOM 库
-  afterMount: function,
+  afterMount: function () {},
 
-  beforeUpdate: function,
-  afterUpdate: function,
+  beforeUpdate: function () {},
+  afterUpdate: function () {},
 
   // 一般在 beforeDestroy 销毁第三方 DOM 库
-  beforeDestroy: function,
-  afterDestroy: function
+  beforeDestroy: function () {},
+  afterDestroy: function () {},
 }
 ```
 
@@ -541,31 +540,7 @@ function oneOf(values) {
 </div>
 ```
 
-### 判断 slot（低于 `1.0.0-alpha.253` 版本）
-
-你可以通过 `hasSlot(name)` 过滤器判断外部是否传入某个节点，如下：
-
-```html
-<div class="button{{#if hasSlot('icon')}} button-icon{{/if}}">
-  <slot name="icon" />
-</div>
-```
-
-> `hasSlot` 是内置的**唯一的**全局过滤器。
-
-渲染 `<slot>` 节点时，内部会自动判断外部是否传入该名称的节点，如果没传入，则不会渲染该 `<slot>`，因此没有必要像下面这样加一个判断：
-
-```html
-<div>
-  {{#if hasSlot('left')}}
-    <slot name="left" />
-  {{/if}}
-</div>
-```
-
-> 应该去掉 `if`，否则会判断两次
-
-### 判断 slot（`1.0.0-alpha.253` 版本+）
+### 判断 slot
 
 你可以通过 `@[name]` 语法判断外部是否传入某个节点，如下：
 

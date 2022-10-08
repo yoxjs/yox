@@ -8,8 +8,8 @@
 
 ## Each
 
-* [数组 - 数组项是对象类型](http://jsrun.net/hxyKp/edit)
-* [数组 - 数组项是基本类型](http://jsrun.net/eByKp/edit)
+* [数组 - 数组项是对象类型](http://jsrun.net/hxyKp/edit)
+* [数组 - 数组项是基本类型](http://jsrun.net/eByKp/edit)
 * [对象](http://jsrun.net/yxyKp/edit)
 * [区间](http://jsrun.net/fxyKp/edit)
 
@@ -24,12 +24,6 @@
 
 * [HTML](http://jsrun.net/2xyKp/edit)
 * [Mustache](http://jsrun.net/yByKp/edit)
-
-## 子模板
-
-* [全局注册](http://jsrun.net/FRyKp/edit)
-* [本地注册](http://jsrun.net/JRyKp/edit)
-* [用时定义](http://jsrun.net/9xyKp/edit)
 
 ## 引用
 
