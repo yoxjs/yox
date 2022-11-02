@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.401
+ * yox.js v1.0.0-alpha.402
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -637,6 +637,19 @@ function has$1(str, part) {
     return indexOf(str, part) >= 0;
 }
 /**
+ * str 转成 value 为 true 的 map
+ *
+ * @param str
+ * @param separator
+ */
+function toMap(str, separator) {
+    const map = Object.create(NULL);
+    each$2(str.split(separator || ','), function (item) {
+        map[item] = TRUE;
+    });
+    return map;
+}
+/**
  * 判断长度大于 0 的字符串
  *
  * @param str
@@ -663,6 +676,7 @@ var string = /*#__PURE__*/Object.freeze({
   upper: upper,
   lower: lower,
   has: has$1,
+  toMap: toMap,
   falsy: falsy$1
 });
 
@@ -1336,6 +1350,10 @@ class NextTask {
         }
     }
 }
+
+// 下面这些值需要根据外部配置才能确定
+// 保留字，避免 IE 出现 { class: 'xx' } 报错
+toMap('abstract,goto,native,static,enum,implements,package,super,byte,export,import,private,protected,public,synchronized,char,extends,int,throws,class,final,interface,transient,yield,let,const,float,double,boolean,long,short,volatile,default');
 
 const STATUS_INIT = 1;
 const STATUS_FRESH = 2;
@@ -2473,7 +2491,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.401";
+Yox.version = "1.0.0-alpha.402";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

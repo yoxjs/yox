@@ -16,10 +16,12 @@ export interface DomApi {
 	next(node: Node): Node | void;
 	find(selector: string): Element | void;
 	tag(node: Node): string | void;
-	getText(node: Node): string | void;
-	setText(node: Node, text: string, isStyle?: boolean, isOption?: boolean): void;
+	getNodeText(node: Node): string | void;
+	setNodeText(node: Node, text: string): void;
+	getElementText(node: Node): string | void;
+	setElementText(node: Node, text: string): void;
 	getHtml(node: Element): string | void;
-	setHtml(node: Element, html: string, isStyle?: boolean, isOption?: boolean): void;
+	setHtml(node: Element, html: string): void;
 	addClass(node: HTMLElement, className: string): void;
 	removeClass(node: HTMLElement, className: string): void;
 	on(node: HTMLElement | Window | Document, type: string, listener: Listener): void;
@@ -306,8 +308,6 @@ export interface VNode {
 	readonly operator: VNodeOperator;
 	readonly tag?: string;
 	readonly isSvg?: boolean;
-	readonly isStyle?: boolean;
-	readonly isOption?: boolean;
 	readonly isStatic?: boolean;
 	readonly isPure?: boolean;
 	readonly slots?: Slots;

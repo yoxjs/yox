@@ -14,7 +14,7 @@
             model: "options",
             template: `
 
-        <div>
+        <div class="card">
 
         {{#if options.C}}
 						{{options.C.code}}a
@@ -34,91 +34,75 @@
 
 
 
-          var app = new Yox({
+          var yox = new Yox({
             el: '#app',
             template: `
+            <div>
+    <p>
+    	<select model="selectedUser" id="select-user">
+      {{#each users}}
+        <option value="{{this.code}}">
+          {{name}}
+        </option>
+      {{/each}}
+      </select>
+    	<p>
+      	{{selectedUser}}
+      </p>
+    </p>
 
-    <div>
+    <p>
+    	<select multiple model="selectedNames">
+      {{#each users}}
+        <option>
+          {{name}}
+        </option>
+      {{/each}}
+      </select>
+    	<p>
+      	{{selectedNames}}
+      </p>
+    </p>
 
-        <h3>card2</h3>
-        <Card model="card2.options" />
-
-    </div>
+        <button type="button"  on-click="test()">填充select </button>
+         <br><br>
+    <button type="button"  on-click="getUser()">读取select的值 </button>
+             <br><br>
+    <button type="button"  on-click="setUser()">重新设置 model值 </button>
+  </div>
   `,
-            data: {
-              version: Yox.version,
-              card1: {
-                options: {
-                  A: { code: "111" },
-                  B: { code: "222" },
-                  C: { code: "333" },
-                  D: { code: "444" }
-                }
-              },
-              card2: {
-              }
+  data: {
+    Component: 'Card',
+    selectedUser: '2',
+    selectedNames: [],
+    users: []
+  },
+  methods: {
+      test:function(){
+        yox.set('users',[
+            {
+                code:'1',
+                name: 'Jake'
             },
-            methods: {
-              setCardCode: function (options) {
-
-                var me = this;
-                var card2 = me.copy(me.get("card2", {}), true);
-                console.log("            ", JSON.stringify(card2))
-                card2 = Yox.object.extend({},card2)
-                card2 = Yox.object.extend(card2, {
-                  options: options
-                })
-
-                console.log("        ", JSON.stringify(options))
-
-                this.nextTick(function () {
-
-                  this.set("card2", card2);
-                  console.log("card2> ", JSON.stringify(card2))
-                });
-
-              }
+            {
+                code:'2',
+                name: 'John'
             },
-            afterMount: function () {
-              console.log(JSON.stringify(app.get("card1")))
-
-
-              setTimeout(function () {
-                app.setCardCode({
-                  A: {
-                    code: "aaaa"
-                  }
-                });
-              }, 0);
-
-              setTimeout(function () {
-
-                app.setCardCode({
-                  B: {
-                    code: "bbbb"
-                  }
-                });
-              }, 10);
-
-              setTimeout(function () {
-
-                app.setCardCode({
-                  C: {
-                    code: "cccc"
-                  }
-                });
-              }, 20);
-
-              setTimeout(function () {
-
-                app.setCardCode({
-                  D: {
-                    code: "dddd"
-                  }
-                });
-              }, 30);
-
+            {
+                code:'3',
+                name: 'Mike'
             }
+        ]);
+
+      },
+      getUser:function() {
+          alert("读取model中的值："+yox.get('selectedUser'));
+          alert("读取DOM中的值："+document.getElementById('select-user').value);
+      },
+      setUser:function(){
+          yox.set('selectedUser','2');
+      }
+  },
 
           })
 

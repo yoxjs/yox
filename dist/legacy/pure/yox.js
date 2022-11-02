@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.401
+ * yox.js v1.0.0-alpha.402
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -713,6 +713,19 @@
       return indexOf(str, part) >= 0;
   }
   /**
+   * str 转成 value 为 true 的 map
+   *
+   * @param str
+   * @param separator
+   */
+  function toMap$1(str, separator) {
+      var map = Object.create(NULL$1);
+      each$2(str.split(separator || ','), function (item) {
+          map[item] = TRUE$1;
+      });
+      return map;
+  }
+  /**
    * 判断长度大于 0 的字符串
    *
    * @param str
@@ -739,6 +752,7 @@
     upper: upper,
     lower: lower,
     has: has$1,
+    toMap: toMap$1,
     falsy: falsy$1
   });
 
@@ -1544,8 +1558,6 @@
           dynamicTag: dynamicTag,
           isSvg: isSvg,
           isStyle: isStyle,
-          // 只有 <option> 没有 value 属性时才为 true
-          isOption: FALSE$1,
           isStatic: isNative,
           isNative: isNative,
           isVirtual: isVirtual,
@@ -1697,9 +1709,8 @@
       return createElement$1(staticTag, dynamicTag, isSvg, isStyle, isComponent);
   }
   function compatElement(element) {
-      var tag = element.tag;
       var attrs = element.attrs;
-      var hasType = FALSE$1, hasValue = FALSE$1;
+      var hasType = FALSE$1;
       if (attrs) {
           each$2(attrs, function (attr) {
               var name = attr.type === ATTRIBUTE
@@ -1707,9 +1718,6 @@
                   : UNDEFINED$1;
               if (name === 'type') {
                   hasType = TRUE$1;
-              }
-              else if (name === 'value') {
-                  hasValue = TRUE$1;
               }
           });
       }
@@ -1720,10 +1728,6 @@
           var attr = createAttribute$1('type');
           attr.value = 'text/css';
           push(element.attrs || (element.attrs = []), attr);
-      }
-      // 低版本 IE 需要给 option 标签强制加 value
-      else if (tag === 'option' && !hasValue) {
-          element.isOption = TRUE$1;
       }
   }
   function setElementText(element, text) {
@@ -3203,7 +3207,7 @@
               replaceChild(element);
           }
           // 处理浏览器兼容问题
-          else if (tag !== TAG_SLOT) {
+          else if (element.isNative) {
               compatElement(element);
           }
       }, checkAttribute = function (element, attr) {
@@ -3862,7 +3866,9 @@
 
   var QUOTE_DOUBLE = '"', QUOTE_SINGLE = "'";
   // 下面这些值需要根据外部配置才能确定
-  var isUglify$1 = UNDEFINED$1, isMinify = UNDEFINED$1, varId = 0, varMap = {}, varCache = {}, VAR_PREFIX = EMPTY_STRING, TEMP = EMPTY_STRING, UNDEFINED = EMPTY_STRING, NULL = EMPTY_STRING, TRUE = EMPTY_STRING, FALSE = EMPTY_STRING, SPACE = EMPTY_STRING, INDENT = EMPTY_STRING, BREAK_LINE = EMPTY_STRING;
+  var isUglify$1 = UNDEFINED$1, isMinify = UNDEFINED$1, 
+  // 保留字，避免 IE 出现 { class: 'xx' } 报错
+  reservedWords = toMap$1('abstract,goto,native,static,enum,implements,package,super,byte,export,import,private,protected,public,synchronized,char,extends,int,throws,class,final,interface,transient,yield,let,const,float,double,boolean,long,short,volatile,default'), varId = 0, varMap = {}, varCache = {}, VAR_PREFIX = EMPTY_STRING, TEMP = EMPTY_STRING, UNDEFINED = EMPTY_STRING, NULL = EMPTY_STRING, TRUE = EMPTY_STRING, FALSE = EMPTY_STRING, SPACE = EMPTY_STRING, INDENT = EMPTY_STRING, BREAK_LINE = EMPTY_STRING;
   var Primitive = function(value) {
       this.value = value;
   };
@@ -4174,7 +4180,7 @@
       return ("" + quote + (value.replace(/\n\s*/g, '\\n')) + quote);
   }
   function toObjectPair(key, value) {
-      if (!/^[\w$]+$/.test(key)) {
+      if (!/^[\w$]+$/.test(key) || reservedWords[key]) {
           key = toStringLiteral(key);
       }
       return (key + ":" + SPACE + value);
@@ -5108,12 +5114,6 @@
           outputChildren = outputChildren
               ? toBinary(renderSlot, '||', outputChildren)
               : renderSlot;
-      }
-      if (node.isOption) {
-          vnode.set('isOption', PRIMITIVE_TRUE);
-      }
-      if (node.isStyle) {
-          vnode.set('isStyle', PRIMITIVE_TRUE);
       }
       if (node.isSvg) {
           vnode.set('isSvg', PRIMITIVE_TRUE);
@@ -6654,7 +6654,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.401";
+  Yox.version = "1.0.0-alpha.402";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

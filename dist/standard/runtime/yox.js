@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.401
+ * yox.js v1.0.0-alpha.402
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -48,6 +48,9 @@
   var RAW_LENGTH = 'length';
   var RAW_WILDCARD = '*';
   var RAW_DOT = '.';
+  var NODE_TYPE_ELEMENT = 1;
+  var NODE_TYPE_TEXT = 3;
+  var NODE_TYPE_COMMENT = 8;
   /**
    * Single instance for window in browser
    */
@@ -693,6 +696,19 @@
       return indexOf(str, part) >= 0;
   }
   /**
+   * str 转成 value 为 true 的 map
+   *
+   * @param str
+   * @param separator
+   */
+  function toMap(str, separator) {
+      var map = Object.create(NULL);
+      each$2(str.split(separator || ','), function (item) {
+          map[item] = TRUE;
+      });
+      return map;
+  }
+  /**
    * 判断长度大于 0 的字符串
    *
    * @param str
@@ -719,6 +735,7 @@
     upper: upper,
     lower: lower,
     has: has$1,
+    toMap: toMap,
     falsy: falsy$1
   });
 
@@ -1898,7 +1915,7 @@
       vnode.node = node;
       vnode.parentNode = oldVNode.parentNode;
       if (vnode.text !== oldVNode.text) {
-          api.setText(node, vnode.text, vnode.isStyle, vnode.isOption);
+          api.setNodeText(node, vnode.text);
       }
   }
   function elementVNodeEnterOperator(vnode) {
@@ -1999,10 +2016,10 @@
               addVNodes(api, node, vnode.children);
           }
           else if (vnode.text) {
-              api.setText(node, vnode.text, vnode.isStyle, vnode.isOption);
+              api.setElementText(node, vnode.text);
           }
           else if (vnode.html) {
-              api.setHtml(node, vnode.html, vnode.isStyle, vnode.isOption);
+              api.setHtml(node, vnode.html);
           }
           if (!vnode.isPure) {
               vnode.data = {};
@@ -2020,15 +2037,13 @@
           var text = vnode.text;
           var html = vnode.html;
           var children = vnode.children;
-          var isStyle = vnode.isStyle;
-          var isOption = vnode.isOption;
           var oldText = oldVNode.text, oldHtml = oldVNode.html, oldChildren = oldVNode.children;
           if (string$1(text)) {
               if (oldChildren) {
                   removeVNodes(api, oldChildren);
               }
               if (text !== oldText) {
-                  api.setText(node, text, isStyle, isOption);
+                  api.setElementText(node, text);
               }
           }
           else if (string$1(html)) {
@@ -2036,7 +2051,7 @@
                   removeVNodes(api, oldChildren);
               }
               if (html !== oldHtml) {
-                  api.setHtml(node, html, isStyle, isOption);
+                  api.setHtml(node, html);
               }
           }
           else if (children) {
@@ -2049,7 +2064,7 @@
               // 有新的没旧的 - 新增节点
               else {
                   if (oldText || oldHtml) {
-                      api.setText(node, EMPTY_STRING, isStyle);
+                      api.setElementText(node, EMPTY_STRING);
                   }
                   addVNodes(api, node, children);
               }
@@ -2060,7 +2075,7 @@
           }
           // 有旧的 text 没有新的 text
           else if (oldText || oldHtml) {
-              api.setText(node, EMPTY_STRING, isStyle);
+              api.setElementText(node, EMPTY_STRING);
           }
           callVNodeHooks('afterUpdate', [api, vnode, oldVNode]);
           callDirectiveHooks(vnode, 'afterUpdate');
@@ -2503,19 +2518,19 @@
           parentNode: api.parent(node),
       };
       switch (node.nodeType) {
-          case 1:
+          case NODE_TYPE_ELEMENT:
               vnode.data = {};
               vnode.tag = api.tag(node);
               vnode.type = VNODE_TYPE_ELEMENT;
               vnode.operator = elementVNodeOperator;
               break;
-          case 3:
+          case NODE_TYPE_TEXT:
               vnode.isPure = TRUE;
               vnode.text = node.nodeValue;
               vnode.type = VNODE_TYPE_TEXT;
               vnode.operator = textVNodeOperator;
               break;
-          case 8:
+          case NODE_TYPE_COMMENT:
               vnode.isPure = TRUE;
               vnode.text = node.nodeValue;
               vnode.type = VNODE_TYPE_COMMENT;
@@ -2545,8 +2560,6 @@
           operator: vnode.operator,
           tag: vnode.tag,
           isSvg: vnode.isSvg,
-          isStyle: vnode.isStyle,
-          isOption: vnode.isOption,
           isStatic: vnode.isStatic,
           isPure: vnode.isPure,
           slots: vnode.slots,
@@ -2594,6 +2607,10 @@
           ? UNDEFINED
           : (isTrue ? RAW_TRUE : RAW_FALSE);
   }
+
+  // 下面这些值需要根据外部配置才能确定
+  // 保留字，避免 IE 出现 { class: 'xx' } 报错
+  toMap('abstract,goto,native,static,enum,implements,package,super,byte,export,import,private,protected,public,synchronized,char,extends,int,throws,class,final,interface,transient,yield,let,const,float,double,boolean,long,short,volatile,default');
 
   var STATUS_INIT = 1;
   var STATUS_FRESH = 2;
@@ -3020,7 +3037,12 @@
 
   var guid$1 = 0, 
   // 这里先写 IE9 支持的接口
-  textContent = 'textContent', innerHTML = 'innerHTML', cssFloat = 'cssFloat', createEvent = function (event, node) {
+  // 文本或注释节点设置内容的属性
+  textContent = 'textContent', 
+  // 元素节点设置 text 的属性
+  innerText = textContent, 
+  // 元素节点设置 html 的属性
+  innerHTML = 'innerHTML', cssFloat = 'cssFloat', createEvent = function (event, node) {
       return event;
   }, findElement = function (selector) {
       var node = DOCUMENT.querySelector(selector);
@@ -3174,25 +3196,27 @@
   }
   var find = findElement;
   function tag(node) {
-      if (node.nodeType === 1) {
+      if (node.nodeType === NODE_TYPE_ELEMENT) {
           return lower(node.tagName);
       }
   }
-  function getText(node) {
+  function getNodeText(node) {
       return node[textContent];
   }
-  function setText(node, text, isStyle, isOption) {
-      {
-          node[textContent] = text;
-      }
+  function setNodeText(node, text) {
+      node[textContent] = text;
+  }
+  function getElementText(node) {
+      return node[innerText];
+  }
+  function setElementText(node, text) {
+      node[innerText] = text;
   }
   function getHtml(node) {
       return node[innerHTML];
   }
-  function setHtml(node, html, isStyle, isOption) {
-      {
-          node[innerHTML] = html;
-      }
+  function setHtml(node, html) {
+      node[innerHTML] = html;
   }
   var addClass = addElementClass;
   var removeClass = removeElementClass;
@@ -3288,8 +3312,10 @@
     next: next,
     find: find,
     tag: tag,
-    getText: getText,
-    setText: setText,
+    getNodeText: getNodeText,
+    setNodeText: setNodeText,
+    getElementText: getElementText,
+    setElementText: setElementText,
     getHtml: getHtml,
     setHtml: setHtml,
     addClass: addClass,
@@ -4685,7 +4711,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.401";
+  Yox.version = "1.0.0-alpha.402";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

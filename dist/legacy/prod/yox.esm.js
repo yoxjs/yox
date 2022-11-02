@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.401
+ * yox.js v1.0.0-alpha.402
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -79,6 +79,9 @@ const RAW_DOLLAR = '$';
 const KEYPATH_ROOT = '~';
 const KEYPATH_PARENT = '..';
 const KEYPATH_CURRENT = RAW_THIS;
+const NODE_TYPE_ELEMENT = 1;
+const NODE_TYPE_TEXT = 3;
+const NODE_TYPE_COMMENT = 8;
 /**
  * Single instance for window in browser
  */
@@ -761,6 +764,19 @@ function has$1(str, part) {
     return indexOf(str, part) >= 0;
 }
 /**
+ * str 转成 value 为 true 的 map
+ *
+ * @param str
+ * @param separator
+ */
+function toMap$1(str, separator) {
+    const map = Object.create(NULL$1);
+    each$2(str.split(separator || ','), function (item) {
+        map[item] = TRUE$1;
+    });
+    return map;
+}
+/**
  * 判断长度大于 0 的字符串
  *
  * @param str
@@ -787,6 +803,7 @@ var string = /*#__PURE__*/Object.freeze({
   upper: upper,
   lower: lower,
   has: has$1,
+  toMap: toMap$1,
   falsy: falsy$1
 });
 
@@ -1952,7 +1969,7 @@ function textVNodeUpdateOperator(api, vnode, oldVNode) {
     vnode.node = node;
     vnode.parentNode = oldVNode.parentNode;
     if (vnode.text !== oldVNode.text) {
-        api.setText(node, vnode.text, vnode.isStyle, vnode.isOption);
+        api.setNodeText(node, vnode.text);
     }
 }
 function elementVNodeEnterOperator(vnode) {
@@ -2054,10 +2071,10 @@ const elementVNodeOperator = {
             addVNodes(api, node, vnode.children);
         }
         else if (vnode.text) {
-            api.setText(node, vnode.text, vnode.isStyle, vnode.isOption);
+            api.setElementText(node, vnode.text);
         }
         else if (vnode.html) {
-            api.setHtml(node, vnode.html, vnode.isStyle, vnode.isOption);
+            api.setHtml(node, vnode.html);
         }
         if (!vnode.isPure) {
             vnode.data = {};
@@ -2072,13 +2089,13 @@ const elementVNodeOperator = {
         vnode.data = oldVNode.data;
         callVNodeHooks('beforeUpdate', [api, vnode, oldVNode]);
         callDirectiveHooks(vnode, 'beforeUpdate');
-        const { text, html, children, isStyle, isOption } = vnode, oldText = oldVNode.text, oldHtml = oldVNode.html, oldChildren = oldVNode.children;
+        const { text, html, children } = vnode, oldText = oldVNode.text, oldHtml = oldVNode.html, oldChildren = oldVNode.children;
         if (string$1(text)) {
             if (oldChildren) {
                 removeVNodes(api, oldChildren);
             }
             if (text !== oldText) {
-                api.setText(node, text, isStyle, isOption);
+                api.setElementText(node, text);
             }
         }
         else if (string$1(html)) {
@@ -2086,7 +2103,7 @@ const elementVNodeOperator = {
                 removeVNodes(api, oldChildren);
             }
             if (html !== oldHtml) {
-                api.setHtml(node, html, isStyle, isOption);
+                api.setHtml(node, html);
             }
         }
         else if (children) {
@@ -2099,7 +2116,7 @@ const elementVNodeOperator = {
             // 有新的没旧的 - 新增节点
             else {
                 if (oldText || oldHtml) {
-                    api.setText(node, EMPTY_STRING, isStyle);
+                    api.setElementText(node, EMPTY_STRING);
                 }
                 addVNodes(api, node, children);
             }
@@ -2110,7 +2127,7 @@ const elementVNodeOperator = {
         }
         // 有旧的 text 没有新的 text
         else if (oldText || oldHtml) {
-            api.setText(node, EMPTY_STRING, isStyle);
+            api.setElementText(node, EMPTY_STRING);
         }
         callVNodeHooks('afterUpdate', [api, vnode, oldVNode]);
         callDirectiveHooks(vnode, 'afterUpdate');
@@ -2548,19 +2565,19 @@ function create(api, node, context) {
         parentNode: api.parent(node),
     };
     switch (node.nodeType) {
-        case 1:
+        case NODE_TYPE_ELEMENT:
             vnode.data = {};
             vnode.tag = api.tag(node);
             vnode.type = VNODE_TYPE_ELEMENT;
             vnode.operator = elementVNodeOperator;
             break;
-        case 3:
+        case NODE_TYPE_TEXT:
             vnode.isPure = TRUE$1;
             vnode.text = node.nodeValue;
             vnode.type = VNODE_TYPE_TEXT;
             vnode.operator = textVNodeOperator;
             break;
-        case 8:
+        case NODE_TYPE_COMMENT:
             vnode.isPure = TRUE$1;
             vnode.text = node.nodeValue;
             vnode.type = VNODE_TYPE_COMMENT;
@@ -2590,8 +2607,6 @@ function clone(vnode) {
         operator: vnode.operator,
         tag: vnode.tag,
         isSvg: vnode.isSvg,
-        isStyle: vnode.isStyle,
-        isOption: vnode.isOption,
         isStatic: vnode.isStatic,
         isPure: vnode.isPure,
         slots: vnode.slots,
@@ -2743,8 +2758,6 @@ function createElement$2(tag, dynamicTag, isSvg, isStyle, isComponent) {
         dynamicTag,
         isSvg,
         isStyle,
-        // 只有 <option> 没有 value 属性时才为 true
-        isOption: FALSE$1,
         isStatic: isNative,
         isNative,
         isVirtual,
@@ -2803,25 +2816,18 @@ function createText$1(text) {
     };
 }
 
-function split2Map(str) {
-    const map = Object.create(NULL$1);
-    each$2(str.split(','), function (item) {
-        map[item] = TRUE$1;
-    });
-    return map;
-}
 const // 首字母大写，或中间包含 -
 componentNamePattern = /^[A-Z]|-/, 
 // HTML 实体（中间最多 6 位，没见过更长的）
 htmlEntityPattern = /&[#\w\d]{2,6};/, 
 // 常见的自闭合标签
-selfClosingTagNames = split2Map('area,base,embed,track,source,param,input,col,img,br,hr') , 
+selfClosingTagNames = toMap$1('area,base,embed,track,source,param,input,col,img,br,hr') , 
 // 常见的 svg 标签
-svgTagNames = split2Map('svg,g,defs,desc,metadata,symbol,use,image,path,rect,circle,line,ellipse,polyline,polygon,text,tspan,tref,textpath,marker,pattern,clippath,mask,filter,cursor,view,animate,font,font-face,glyph,missing-glyph,animateColor,animateMotion,animateTransform,textPath,foreignObject') , 
+svgTagNames = toMap$1('svg,g,defs,desc,metadata,symbol,use,image,path,rect,circle,line,ellipse,polyline,polygon,text,tspan,tref,textpath,marker,pattern,clippath,mask,filter,cursor,view,animate,font,font-face,glyph,missing-glyph,animateColor,animateMotion,animateTransform,textPath,foreignObject') , 
 // 常见的数字类型的属性（width,height,cellpadding,cellspacing 支持百分比，因此不计入数字类型）
-numberAttributeNames = split2Map('min,minlength,max,maxlength,step,size,rows,cols,tabindex,colspan,rowspan,frameborder') , 
+numberAttributeNames = toMap$1('min,minlength,max,maxlength,step,size,rows,cols,tabindex,colspan,rowspan,frameborder') , 
 // 常见的布尔类型的属性
-booleanAttributeNames = split2Map('disabled,checked,required,multiple,readonly,autofocus,autoplay,reversed,selected,controls,default,loop,muted,novalidate,draggable,contenteditable,hidden,spellcheck,allowfullscreen') ;
+booleanAttributeNames = toMap$1('disabled,checked,required,multiple,readonly,autofocus,autoplay,reversed,selected,controls,default,loop,muted,novalidate,draggable,contenteditable,hidden,spellcheck,allowfullscreen') ;
 function isSelfClosing(tagName) {
     return selfClosingTagNames[tagName] !== UNDEFINED$1;
 }
@@ -2903,7 +2909,7 @@ function createElement$1(staticTag, dynamicTag) {
     return createElement$2(staticTag, dynamicTag, isSvg, isStyle, isComponent);
 }
 function compatElement(element) {
-    let { tag, attrs } = element, hasType = FALSE$1, hasValue = FALSE$1;
+    let { attrs } = element, hasType = FALSE$1;
     if (attrs) {
         each$2(attrs, function (attr) {
             const name = attr.type === ATTRIBUTE
@@ -2911,9 +2917,6 @@ function compatElement(element) {
                 : UNDEFINED$1;
             if (name === 'type') {
                 hasType = TRUE$1;
-            }
-            else if (name === 'value') {
-                hasValue = TRUE$1;
             }
         });
     }
@@ -2925,12 +2928,8 @@ function compatElement(element) {
         attr.value = 'text/css';
         push(element.attrs || (element.attrs = []), attr);
     }
-    // 低版本 IE 需要给 option 标签强制加 value
-    else if (tag === 'option' && !hasValue) {
-        element.isOption = TRUE$1;
-    }
 }
-function setElementText(element, text) {
+function setElementText$1(element, text) {
     if (string$1(text)) {
         if (htmlEntityPattern.test(text)) {
             element.html = text;
@@ -4284,12 +4283,12 @@ function compile(content) {
         // 需要在这特殊处理的是 html 实体
         // 但这只是 WEB 平台的特殊逻辑，所以丢给 platform 处理
         if (element.isNative
-            && setElementText(element, child.text)) {
+            && setElementText$1(element, child.text)) {
             element.children = UNDEFINED$1;
         }
     }, processElementSingleExpression = function (element, child) {
         if (element.isNative) {
-            if (child.safe && setElementText(element, child.expr)
+            if (child.safe && setElementText$1(element, child.expr)
                 || !child.safe && setElementHtml(element, child.expr)) {
                 element.children = UNDEFINED$1;
             }
@@ -4397,7 +4396,7 @@ function compile(content) {
             replaceChild(element);
         }
         // 处理浏览器兼容问题
-        else if (tag !== TAG_SLOT) {
+        else if (element.isNative) {
             compatElement(element);
         }
     }, checkAttribute = function (element, attr) {
@@ -5056,7 +5055,9 @@ function compile(content) {
 
 const QUOTE_DOUBLE = '"', QUOTE_SINGLE = "'";
 // 下面这些值需要根据外部配置才能确定
-let isUglify$1 = UNDEFINED$1, isMinify = UNDEFINED$1, varId = 0, varMap = {}, varCache = {}, VAR_PREFIX = EMPTY_STRING, TEMP = EMPTY_STRING, UNDEFINED = EMPTY_STRING, NULL = EMPTY_STRING, TRUE = EMPTY_STRING, FALSE = EMPTY_STRING, SPACE = EMPTY_STRING, INDENT = EMPTY_STRING, BREAK_LINE = EMPTY_STRING;
+let isUglify$1 = UNDEFINED$1, isMinify = UNDEFINED$1, 
+// 保留字，避免 IE 出现 { class: 'xx' } 报错
+reservedWords = toMap$1('abstract,goto,native,static,enum,implements,package,super,byte,export,import,private,protected,public,synchronized,char,extends,int,throws,class,final,interface,transient,yield,let,const,float,double,boolean,long,short,volatile,default'), varId = 0, varMap = {}, varCache = {}, VAR_PREFIX = EMPTY_STRING, TEMP = EMPTY_STRING, UNDEFINED = EMPTY_STRING, NULL = EMPTY_STRING, TRUE = EMPTY_STRING, FALSE = EMPTY_STRING, SPACE = EMPTY_STRING, INDENT = EMPTY_STRING, BREAK_LINE = EMPTY_STRING;
 class Primitive {
     constructor(value) {
         this.value = value;
@@ -5369,7 +5370,7 @@ function toStringLiteral(value) {
     return `${quote}${value.replace(/\n\s*/g, '\\n')}${quote}`;
 }
 function toObjectPair(key, value) {
-    if (!/^[\w$]+$/.test(key)) {
+    if (!/^[\w$]+$/.test(key) || reservedWords[key]) {
         key = toStringLiteral(key);
     }
     return `${key}:${SPACE}${value}`;
@@ -6270,12 +6271,6 @@ nodeGenerator[ELEMENT] = function (node) {
             ? toBinary(renderSlot, '||', outputChildren)
             : renderSlot;
     }
-    if (node.isOption) {
-        vnode.set('isOption', PRIMITIVE_TRUE);
-    }
-    if (node.isStyle) {
-        vnode.set('isStyle', PRIMITIVE_TRUE);
-    }
     if (node.isSvg) {
         vnode.set('isSvg', PRIMITIVE_TRUE);
     }
@@ -7059,7 +7054,12 @@ function render(instance, template, rootScope, filters, globalFilters, directive
 
 let guid$1 = 0, 
 // 这里先写 IE9 支持的接口
-textContent = 'textContent', innerHTML = 'innerHTML', cssFloat = 'cssFloat', createEvent = function (event, node) {
+// 文本或注释节点设置内容的属性
+textContent = 'textContent', 
+// 元素节点设置 text 的属性
+innerText = textContent, 
+// 元素节点设置 html 的属性
+innerHTML = 'innerHTML', cssFloat = 'cssFloat', createEvent = function (event, node) {
     return event;
 }, findElement = function (selector) {
     const node = DOCUMENT.querySelector(selector);
@@ -7120,9 +7120,9 @@ addElementClass = function (node, className) {
                         this.originalEvent.cancelBubble = TRUE$1;
                     }
                 }
-                // textContent 不兼容 IE678
-                // 改用 innerText 属性
-                textContent = 'innerText';
+                // 兼容 IE678
+                textContent = 'nodeValue';
+                innerText = 'innerText';
                 createEvent = function (event, element) {
                     return new IEEvent(event, element);
                 };
@@ -7288,41 +7288,49 @@ function next(node) {
 }
 const find = findElement;
 function tag(node) {
-    if (node.nodeType === 1) {
+    if (node.nodeType === NODE_TYPE_ELEMENT) {
         return lower(node.tagName);
     }
 }
-function getText(node) {
+function getNodeText(node) {
     return node[textContent];
 }
-function setText(node, text, isStyle, isOption) {
+function setNodeText(node, text) {
+    node[textContent] = text;
+}
+function getElementText(node) {
     {
-        if (isStyle && has(node, STYLE_SHEET)) {
-            node[STYLE_SHEET].cssText = text;
-        }
-        else {
-            if (isOption) {
-                node.value = text;
-            }
-            node[textContent] = text;
+        if (tag(node) === 'style' && has(node, STYLE_SHEET)) {
+            return node[STYLE_SHEET].cssText;
         }
     }
+    return node[innerText];
+}
+function setElementText(node, text) {
+    {
+        if (tag(node) === 'style' && has(node, STYLE_SHEET)) {
+            node[STYLE_SHEET].cssText = text;
+            return;
+        }
+    }
+    node[innerText] = text;
 }
 function getHtml(node) {
-    return node[innerHTML];
-}
-function setHtml(node, html, isStyle, isOption) {
     {
-        if (isStyle && has(node, STYLE_SHEET)) {
-            node[STYLE_SHEET].cssText = html;
-        }
-        else {
-            if (isOption) {
-                node.value = html;
-            }
-            node[innerHTML] = html;
+        if (tag(node) === 'style' && has(node, STYLE_SHEET)) {
+            return node[STYLE_SHEET].cssText;
         }
     }
+    return node[innerHTML];
+}
+function setHtml(node, html) {
+    {
+        if (tag(node) === 'style' && has(node, STYLE_SHEET)) {
+            node[STYLE_SHEET].cssText = html;
+            return;
+        }
+    }
+    node[innerHTML] = html;
 }
 const addClass = addElementClass;
 const removeClass = removeElementClass;
@@ -7418,8 +7426,10 @@ var domApi = /*#__PURE__*/Object.freeze({
   next: next,
   find: find,
   tag: tag,
-  getText: getText,
-  setText: setText,
+  getNodeText: getNodeText,
+  setNodeText: setNodeText,
+  getElementText: getElementText,
+  setElementText: setElementText,
   getHtml: getHtml,
   setHtml: setHtml,
   addClass: addClass,
@@ -8780,7 +8790,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.401";
+Yox.version = "1.0.0-alpha.402";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

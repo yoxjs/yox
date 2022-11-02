@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Performance</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div id="app"></div>
+    <script id="template" type="plain/text">
+      <div>
+        {{#if visible}}
+          <div o-log="1">
+            {{name}}
+          </div>
+        {{/if}}
+      </div>
+    </script>
+    <script id="template1" type="plain/text">
+
+          <div class="button">
+            <Text>
+              <slot
+                color="red"
+                size="12"
+              >
+                123
+              </slot>
+            </Text>
+          </div>
+
+    </script>
+    <script id="template2" type="plain/text">
+
+          <div class="text">
+            <slot />
+          </div>
+
+    </script>
+    <script src="../dist/standard/dev/yox.js"></script>
+    <script>
+      Yox.component({
+        Button: {
+          template: '#template1',
+          beforeUpdate() {
+            console.log('button beforeUpdate')
+          },
+          afterUpdate() {
+            console.log('button afterUpdate')
+          }
+        }
+      })
+      Yox.component({
+        Text: {
+          template: '#template2',
+          beforeUpdate() {
+            console.log('text beforeUpdate')
+          },
+          afterUpdate() {
+            console.log('text afterUpdate')
+          }
+        }
+      })
+      Yox.directive({
+        log: function (node, oldDirective, vnode) {
+          console.log(node, oldDirective, vnode, this)
+          return {
+            beforeUpdate(directive, vnode) {
+              console.log('beforeUpdate', directive, vnode, directive.value === oldDirective.value, this)
+            },
+            afterUpdate(directive, vnode) {
+              console.log('afterUpdate', directive, vnode, directive.value === oldDirective.value, this)
+            },
+            beforeDestroy(directive, vnode) {
+              console.log('beforeDestroy', directive, vnode, this)
+            },
+          }
+        }
+      })
+        var instance = new Yox({
+            el: '#app',
+            template: '#template',
+            data: {
+                name: 'yox',
+                color: 'red',
+                time: 1000,
+                visible: true
+            },
+            watchers: {
+              color(a, b, c) {
+                console.log(a, b, c)
+              }
+            },
+            filters: {
+              print(a) {
+                console.log(a, this)
+              }
+            },
+            methods: {
+              onClick() {
+                console.log('onClick')
+              }
+            },
+            beforeUpdate() {
+              console.log('app beforeUpdate')
+            },
+            afterUpdate() {
+              console.log('app afterUpdate')
+            }
+        });
+
+    </script>
+</body>
+</html>
