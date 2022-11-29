@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.402
+ * yox.js v1.0.0-alpha.403
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -2104,6 +2104,9 @@ const elementVNodeOperator = {
         vnode.node = node;
         vnode.parentNode = oldVNode.parentNode;
         vnode.data = oldVNode.data;
+        if (!vnode.isPure && oldVNode.isPure) {
+            vnode.data = {};
+        }
         callVNodeHooks('beforeUpdate', [api, vnode, oldVNode]);
         callDirectiveHooks(vnode, 'beforeUpdate');
         const { text, html, children } = vnode, oldText = oldVNode.text, oldHtml = oldVNode.html, oldChildren = oldVNode.children;
@@ -9406,7 +9409,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.402";
+Yox.version = "1.0.0-alpha.403";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
