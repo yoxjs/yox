@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.403
+ * yox.js v1.0.0-alpha.404
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -1499,6 +1499,7 @@ const MODEL_CONTROL = '$model_control';
 const MODEL_DESTROY = '$model_destroy';
 const EVENT_DESTROY = '$event_destroy';
 const DIRECTIVE_HOOKS = '$directive_hooks';
+const DIRECTIVE_UPDATING = '$directive_updating';
 
 function addEvent$1(api, element, component, data, key, lazy, event) {
     let { name, listener } = event;
@@ -1534,7 +1535,7 @@ function addEvent$1(api, element, component, data, key, lazy, event) {
         delete data[EVENT_DESTROY + key];
     };
 }
-function afterCreate$4(api, vnode) {
+function afterCreate$5(api, vnode) {
     const { events } = vnode;
     if (events) {
         const element = vnode.node, component = vnode.component, lazy = vnode.lazy, data = vnode.data;
@@ -1543,7 +1544,7 @@ function afterCreate$4(api, vnode) {
         }
     }
 }
-function afterUpdate$3(api, vnode, oldVNode) {
+function afterUpdate$4(api, vnode, oldVNode) {
     const newEvents = vnode.events, oldEvents = oldVNode.events;
     if (newEvents !== oldEvents) {
         const element = vnode.node, component = vnode.component, lazy = vnode.lazy, data = vnode.data;
@@ -1580,7 +1581,7 @@ function afterUpdate$3(api, vnode, oldVNode) {
         }
     }
 }
-function beforeDestroy$2(api, vnode) {
+function beforeDestroy$3(api, vnode) {
     const events = vnode.events, data = vnode.data;
     if (events) {
         for (let key in events) {
@@ -1594,9 +1595,9 @@ function beforeDestroy$2(api, vnode) {
 
 var eventHook = /*#__PURE__*/Object.freeze({
   __proto__: null,
-  afterCreate: afterCreate$4,
-  afterUpdate: afterUpdate$3,
-  beforeDestroy: beforeDestroy$2
+  afterCreate: afterCreate$5,
+  afterUpdate: afterUpdate$4,
+  beforeDestroy: beforeDestroy$3
 });
 
 function debounceIfNeeded(fn, lazy) {
@@ -1719,13 +1720,13 @@ function addModel(api, element, component, data, vnode) {
         };
     }
 }
-function afterCreate$3(api, vnode) {
+function afterCreate$4(api, vnode) {
     const model = vnode.model;
     if (model) {
         addModel(api, vnode.node, vnode.component, vnode.data, vnode);
     }
 }
-function afterUpdate$2(api, vnode, oldVNode) {
+function afterUpdate$3(api, vnode, oldVNode) {
     const data = vnode.data, newModel = vnode.model, oldModel = oldVNode.model;
     if (newModel) {
         const element = vnode.node, component = vnode.component;
@@ -1752,7 +1753,7 @@ function afterUpdate$2(api, vnode, oldVNode) {
         data[MODEL_DESTROY]();
     }
 }
-function beforeDestroy$1(api, vnode) {
+function beforeDestroy$2(api, vnode) {
     const data = vnode.data, destroy = data[MODEL_DESTROY];
     if (destroy) {
         destroy();
@@ -1761,12 +1762,12 @@ function beforeDestroy$1(api, vnode) {
 
 var modelHook = /*#__PURE__*/Object.freeze({
   __proto__: null,
-  afterCreate: afterCreate$3,
-  afterUpdate: afterUpdate$2,
-  beforeDestroy: beforeDestroy$1
+  afterCreate: afterCreate$4,
+  afterUpdate: afterUpdate$3,
+  beforeDestroy: beforeDestroy$2
 });
 
-function afterCreate$2(api, vnode) {
+function afterCreate$3(api, vnode) {
     const { nativeAttrs } = vnode;
     if (nativeAttrs) {
         const element = vnode.node;
@@ -1775,7 +1776,7 @@ function afterCreate$2(api, vnode) {
         }
     }
 }
-function afterUpdate$1(api, vnode, oldVNode) {
+function afterUpdate$2(api, vnode, oldVNode) {
     const newNativeAttrs = vnode.nativeAttrs, oldNativeAttrs = oldVNode.nativeAttrs;
     if (newNativeAttrs !== oldNativeAttrs) {
         const element = vnode.node;
@@ -1801,11 +1802,11 @@ function afterUpdate$1(api, vnode, oldVNode) {
 
 var nativeAttrHook = /*#__PURE__*/Object.freeze({
   __proto__: null,
-  afterCreate: afterCreate$2,
-  afterUpdate: afterUpdate$1
+  afterCreate: afterCreate$3,
+  afterUpdate: afterUpdate$2
 });
 
-function afterCreate$1(api, vnode) {
+function afterCreate$2(api, vnode) {
     const { nativeStyles } = vnode;
     if (nativeStyles) {
         const elementStyle = vnode.node.style;
@@ -1814,7 +1815,7 @@ function afterCreate$1(api, vnode) {
         }
     }
 }
-function afterUpdate(api, vnode, oldVNode) {
+function afterUpdate$1(api, vnode, oldVNode) {
     const newNativeStyles = vnode.nativeStyles, oldNativeStyles = oldVNode.nativeStyles;
     if (newNativeStyles !== oldNativeStyles) {
         const elementStyle = vnode.node.style;
@@ -1840,8 +1841,79 @@ function afterUpdate(api, vnode, oldVNode) {
 
 var nativeStyleHook = /*#__PURE__*/Object.freeze({
   __proto__: null,
+  afterCreate: afterCreate$2,
+  afterUpdate: afterUpdate$1
+});
+
+function callDirectiveCreate(data, vnode, directive) {
+    data[DIRECTIVE_HOOKS + directive.name] = directive.create(vnode.component || vnode.node, directive, vnode);
+}
+function callDirectiveHook(data, vnode, directive, hookName) {
+    const hooks = data[DIRECTIVE_HOOKS + directive.name], hook = hooks && hooks[hookName];
+    if (hook) {
+        hook(directive, vnode);
+    }
+}
+function afterCreate$1(api, vnode) {
+    const { directives } = vnode;
+    if (directives) {
+        const data = vnode.data;
+        for (let name in directives) {
+            callDirectiveCreate(data, vnode, directives[name]);
+        }
+    }
+}
+function beforeUpdate$1(api, vnode, oldVNode) {
+    const newDirectives = vnode.directives, oldDirectives = oldVNode.directives, data = vnode.data;
+    // 先触发 beforeDestroy 比较符合直觉
+    if (oldDirectives) {
+        const newValue = newDirectives || EMPTY_OBJECT;
+        for (let name in oldDirectives) {
+            if (newValue[name] === UNDEFINED$1) {
+                callDirectiveHook(data, vnode, oldDirectives[name], 'beforeDestroy');
+            }
+        }
+    }
+    if (newDirectives) {
+        const oldValue = oldDirectives || EMPTY_OBJECT, updatingDirectives = [];
+        for (let name in newDirectives) {
+            const directive = newDirectives[name];
+            if (oldValue[name] === UNDEFINED$1) {
+                callDirectiveCreate(data, vnode, directive);
+            }
+            else if (directive.value !== oldValue[name].value) {
+                callDirectiveHook(data, vnode, directive, 'beforeUpdate');
+                updatingDirectives.push(directive);
+            }
+        }
+        data[DIRECTIVE_UPDATING] = updatingDirectives;
+    }
+}
+function afterUpdate(api, vnode, oldVNode) {
+    const data = vnode.data, directives = data[DIRECTIVE_UPDATING];
+    if (directives) {
+        for (let i = 0, length = directives.length; i < length; i++) {
+            callDirectiveHook(data, vnode, directives[i], 'afterUpdate');
+        }
+        data[DIRECTIVE_UPDATING] = UNDEFINED$1;
+    }
+}
+function beforeDestroy$1(api, vnode) {
+    const { directives } = vnode;
+    if (directives) {
+        const data = vnode.data;
+        for (let name in directives) {
+            callDirectiveHook(data, vnode, directives[name], 'beforeDestroy');
+        }
+    }
+}
+
+var directiveHook = /*#__PURE__*/Object.freeze({
+  __proto__: null,
   afterCreate: afterCreate$1,
-  afterUpdate: afterUpdate
+  beforeUpdate: beforeUpdate$1,
+  afterUpdate: afterUpdate,
+  beforeDestroy: beforeDestroy$1
 });
 
 function afterCreate(api, vnode) {
@@ -1903,35 +1975,6 @@ var refHook = /*#__PURE__*/Object.freeze({
   beforeUpdate: beforeUpdate,
   beforeDestroy: beforeDestroy
 });
-
-function createDirective$1(vnode) {
-    const { directives } = vnode;
-    if (directives) {
-        const node = vnode.component || vnode.node;
-        if (node) {
-            const data = vnode.data;
-            for (let key in directives) {
-                const directive = directives[key], { create } = directive;
-                data[DIRECTIVE_HOOKS + directive.name] = create(node, directive, vnode);
-            }
-        }
-    }
-}
-function callDirectiveHooks(vnode, name) {
-    const { directives } = vnode;
-    if (directives) {
-        const data = vnode.data;
-        for (let key in directives) {
-            const directive = directives[key], hooks = data[DIRECTIVE_HOOKS + directive.name];
-            if (hooks) {
-                const hook = hooks[name];
-                if (hook) {
-                    hook(directive, vnode);
-                }
-            }
-        }
-    }
-}
 
 function getFragmentHostNode(api, vnode) {
     if (vnode.type === VNODE_TYPE_FRAGMENT
@@ -2041,6 +2084,7 @@ const vnodeHooksList = [
     refHook,
     eventHook,
     modelHook,
+    directiveHook,
 ];
 const vnodeHooksLength = vnodeHooksList.length;
 function callVNodeHooks(name, args) {
@@ -2067,7 +2111,6 @@ const elementVNodeOperator = {
             vnode.data = {};
         }
         callVNodeHooks('afterCreate', [api, vnode]);
-        createDirective$1(vnode);
     },
     update(api, vnode, oldVNode) {
         const node = oldVNode.node;
@@ -2078,7 +2121,6 @@ const elementVNodeOperator = {
             vnode.data = {};
         }
         callVNodeHooks('beforeUpdate', [api, vnode, oldVNode]);
-        callDirectiveHooks(vnode, 'beforeUpdate');
         const { text, html, children } = vnode, oldText = oldVNode.text, oldHtml = oldVNode.html, oldChildren = oldVNode.children;
         if (string$1(text)) {
             if (oldChildren) {
@@ -2120,14 +2162,12 @@ const elementVNodeOperator = {
             api.setElementText(node, EMPTY_STRING);
         }
         callVNodeHooks('afterUpdate', [api, vnode, oldVNode]);
-        callDirectiveHooks(vnode, 'afterUpdate');
     },
     destroy(api, vnode) {
         if (vnode.isPure) {
             return;
         }
         callVNodeHooks('beforeDestroy', [api, vnode]);
-        callDirectiveHooks(vnode, 'beforeDestroy');
         const { children } = vnode;
         if (children) {
             for (let i = 0, length = children.length; i < length; i++) {
@@ -2188,7 +2228,6 @@ const componentVNodeOperator = {
             return;
         }
         callVNodeHooks('beforeUpdate', [api, vnode, oldVNode]);
-        callDirectiveHooks(vnode, 'beforeUpdate');
         const { component, slots } = vnode;
         if (component) {
             let nextProps = vnode.props;
@@ -2207,13 +2246,11 @@ const componentVNodeOperator = {
             }
         }
         callVNodeHooks('afterUpdate', [api, vnode, oldVNode]);
-        callDirectiveHooks(vnode, 'afterUpdate');
     },
     destroy(api, vnode) {
         const { component } = vnode;
         if (component) {
             callVNodeHooks('beforeDestroy', [api, vnode]);
-            callDirectiveHooks(vnode, 'beforeDestroy');
             component.destroy();
             // 移除时，组件可能已经发生过变化，即 shadow 不是创建时那个对象了
             vnode.shadow = component.$vnode;
@@ -2337,7 +2374,6 @@ const slotVNodeOperator = {
         vnode.data = {};
         vnode.node = getFragmentHostNode(api, vnode);
         callVNodeHooks('afterCreate', [api, vnode]);
-        createDirective$1(vnode);
     },
     update(api, vnode, oldVNode) {
         const { parentNode } = oldVNode;
@@ -2345,14 +2381,11 @@ const slotVNodeOperator = {
         vnode.parentNode = parentNode;
         vnode.data = oldVNode.data;
         callVNodeHooks('beforeUpdate', [api, vnode, oldVNode]);
-        callDirectiveHooks(vnode, 'beforeUpdate');
         vnodeUpdateChildrenOperator(api, parentNode, vnode, oldVNode);
         callVNodeHooks('afterUpdate', [api, vnode, oldVNode]);
-        callDirectiveHooks(vnode, 'afterUpdate');
     },
     destroy(api, vnode) {
         callVNodeHooks('beforeDestroy', [api, vnode]);
-        callDirectiveHooks(vnode, 'beforeDestroy');
         vnodeDestroyChildrenOperator(api, vnode);
     },
     insert: vnodeInsertChildrenOperator,
@@ -2385,7 +2418,6 @@ function createComponent(api, vnode, options) {
     vnode.shadow = child.$vnode;
     data[LOADING] = FALSE$1;
     callVNodeHooks('afterCreate', [api, vnode]);
-    createDirective$1(vnode);
     return child;
 }
 function createVNode(api, vnode) {
@@ -2407,7 +2439,6 @@ function insertVNode(api, parentNode, vnode, before) {
     operator.insert(api, parentNode, vnode, before);
     vnode.parentNode = parentNode;
     callVNodeHooks('afterMount', [api, vnode]);
-    callDirectiveHooks(vnode, 'afterMount');
     operator.enter(vnode);
 }
 function removeVNodes(api, vnodes, startIndex, endIndex) {
@@ -9279,7 +9310,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.403";
+Yox.version = "1.0.0-alpha.404";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
