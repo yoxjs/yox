@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.404
+ * yox.js v1.0.0-alpha.405
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -1883,12 +1883,15 @@
       }
   }
   function afterUpdate(api, vnode, oldVNode) {
-      var data = vnode.data, directives = data[DIRECTIVE_UPDATING];
-      if (directives) {
-          for (var i = 0, length = directives.length; i < length; i++) {
-              callDirectiveHook(data, vnode, directives[i], 'afterUpdate');
+      var data = vnode.data;
+      if (data) {
+          var directives = data[DIRECTIVE_UPDATING];
+          if (directives) {
+              for (var i = 0, length = directives.length; i < length; i++) {
+                  callDirectiveHook(data, vnode, directives[i], 'afterUpdate');
+              }
+              data[DIRECTIVE_UPDATING] = UNDEFINED$1;
           }
-          data[DIRECTIVE_UPDATING] = UNDEFINED$1;
       }
   }
   function beforeDestroy$1(api, vnode) {
@@ -8822,7 +8825,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.404";
+  Yox.version = "1.0.0-alpha.405";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
