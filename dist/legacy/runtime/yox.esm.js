@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.405
+ * yox.js v1.0.0-alpha.406
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -1867,6 +1867,17 @@ function callDirectiveHook(data, vnode, directive, hookName) {
         hook(directive, vnode);
     }
 }
+function genetateDirectiveHook(hookName) {
+    return function (api, vnode) {
+        const { directives } = vnode;
+        if (directives) {
+            const data = vnode.data;
+            for (let name in directives) {
+                callDirectiveHook(data, vnode, directives[name], hookName);
+            }
+        }
+    };
+}
 function afterCreate$1(api, vnode) {
     const { directives } = vnode;
     if (directives) {
@@ -1914,21 +1925,15 @@ function afterUpdate(api, vnode, oldVNode) {
         }
     }
 }
-function beforeDestroy$1(api, vnode) {
-    const { directives } = vnode;
-    if (directives) {
-        const data = vnode.data;
-        for (let name in directives) {
-            callDirectiveHook(data, vnode, directives[name], 'beforeDestroy');
-        }
-    }
-}
+const afterMount = genetateDirectiveHook('afterMount');
+const beforeDestroy$1 = genetateDirectiveHook('beforeDestroy');
 
 var directiveHook = /*#__PURE__*/Object.freeze({
   __proto__: null,
   afterCreate: afterCreate$1,
   beforeUpdate: beforeUpdate$1,
   afterUpdate: afterUpdate,
+  afterMount: afterMount,
   beforeDestroy: beforeDestroy$1
 });
 
@@ -8820,7 +8825,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.405";
+Yox.version = "1.0.0-alpha.406";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
