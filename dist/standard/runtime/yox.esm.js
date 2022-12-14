@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.406
+ * yox.js v1.0.0-alpha.407
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -1471,15 +1471,18 @@ function addEvent$1(api, element, component, data, key, lazy, event) {
         }
         // event 有 ns 和 listener 两个字段，满足 ThisListenerOptions 的要求
         component.on(name, event);
-        return function () {
+        data[EVENT_DESTROY + key] = function () {
             component.off(name, event);
+            delete data[EVENT_DESTROY + key];
         };
     }
-    api.on(element, name, listener);
-    data[EVENT_DESTROY + key] = function () {
-        api.off(element, key, listener);
-        delete data[EVENT_DESTROY + key];
-    };
+    else {
+        api.on(element, name, listener);
+        data[EVENT_DESTROY + key] = function () {
+            api.off(element, key, listener);
+            delete data[EVENT_DESTROY + key];
+        };
+    }
 }
 function afterCreate$5(api, vnode) {
     const { events } = vnode;
@@ -1494,6 +1497,17 @@ function afterUpdate$4(api, vnode, oldVNode) {
     const newEvents = vnode.events, oldEvents = oldVNode.events;
     if (newEvents !== oldEvents) {
         const element = vnode.node, component = vnode.component, lazy = vnode.lazy, data = vnode.data;
+        if (oldEvents) {
+            const newValue = newEvents || EMPTY_OBJECT;
+            for (let key in oldEvents) {
+                if (!newValue[key]) {
+                    const destroy = data[EVENT_DESTROY + key];
+                    if (destroy) {
+                        destroy();
+                    }
+                }
+            }
+        }
         if (newEvents) {
             const oldValue = oldEvents || EMPTY_OBJECT;
             for (let key in newEvents) {
@@ -1511,17 +1525,6 @@ function afterUpdate$4(api, vnode, oldVNode) {
                 else if (oldEvent.runtime && event.runtime) {
                     oldEvent.runtime.execute = event.runtime.execute;
                     event.runtime = oldEvent.runtime;
-                }
-            }
-        }
-        if (oldEvents) {
-            const newValue = newEvents || EMPTY_OBJECT;
-            for (let key in oldEvents) {
-                if (!newValue[key]) {
-                    const destroy = data[EVENT_DESTROY + key];
-                    if (destroy) {
-                        destroy();
-                    }
                 }
             }
         }
@@ -4669,7 +4672,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.406";
+Yox.version = "1.0.0-alpha.407";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

@@ -1,5 +1,5 @@
 /**
- * yox.js v1.0.0-alpha.406
+ * yox.js v1.0.0-alpha.407
  * (c) 2017-2022 musicode
  * Released under the MIT License.
  */
@@ -1527,15 +1527,18 @@
           }
           // event 有 ns 和 listener 两个字段，满足 ThisListenerOptions 的要求
           component.on(name, event);
-          return function () {
+          data[EVENT_DESTROY + key] = function () {
               component.off(name, event);
+              delete data[EVENT_DESTROY + key];
           };
       }
-      api.on(element, name, listener);
-      data[EVENT_DESTROY + key] = function () {
-          api.off(element, key, listener);
-          delete data[EVENT_DESTROY + key];
-      };
+      else {
+          api.on(element, name, listener);
+          data[EVENT_DESTROY + key] = function () {
+              api.off(element, key, listener);
+              delete data[EVENT_DESTROY + key];
+          };
+      }
   }
   function afterCreate$5(api, vnode) {
       var events = vnode.events;
@@ -1550,34 +1553,34 @@
       var newEvents = vnode.events, oldEvents = oldVNode.events;
       if (newEvents !== oldEvents) {
           var element = vnode.node, component = vnode.component, lazy = vnode.lazy, data = vnode.data;
-          if (newEvents) {
-              var oldValue = oldEvents || EMPTY_OBJECT;
-              for (var key in newEvents) {
-                  var event = newEvents[key], oldEvent = oldValue[key];
-                  if (!oldEvent) {
-                      addEvent$1(api, element, component, data, key, lazy, event);
-                  }
-                  else if (event.value !== oldEvent.value) {
+          if (oldEvents) {
+              var newValue = newEvents || EMPTY_OBJECT;
+              for (var key in oldEvents) {
+                  if (!newValue[key]) {
                       var destroy = data[EVENT_DESTROY + key];
                       if (destroy) {
                           destroy();
                       }
-                      addEvent$1(api, element, component, data, key, lazy, event);
-                  }
-                  else if (oldEvent.runtime && event.runtime) {
-                      oldEvent.runtime.execute = event.runtime.execute;
-                      event.runtime = oldEvent.runtime;
                   }
               }
           }
-          if (oldEvents) {
-              var newValue = newEvents || EMPTY_OBJECT;
-              for (var key$1 in oldEvents) {
-                  if (!newValue[key$1]) {
+          if (newEvents) {
+              var oldValue = oldEvents || EMPTY_OBJECT;
+              for (var key$1 in newEvents) {
+                  var event = newEvents[key$1], oldEvent = oldValue[key$1];
+                  if (!oldEvent) {
+                      addEvent$1(api, element, component, data, key$1, lazy, event);
+                  }
+                  else if (event.value !== oldEvent.value) {
                       var destroy$1 = data[EVENT_DESTROY + key$1];
                       if (destroy$1) {
                           destroy$1();
                       }
+                      addEvent$1(api, element, component, data, key$1, lazy, event);
+                  }
+                  else if (oldEvent.runtime && event.runtime) {
+                      oldEvent.runtime.execute = event.runtime.execute;
+                      event.runtime = oldEvent.runtime;
                   }
               }
           }
@@ -9446,7 +9449,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.406";
+  Yox.version = "1.0.0-alpha.407";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */
