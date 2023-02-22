@@ -1,6 +1,6 @@
 /**
- * yox.js v1.0.0-alpha.407
- * (c) 2017-2022 musicode
+ * yox.js v1.0.0-alpha.408
+ * (c) 2017-2023 musicode
  * Released under the MIT License.
  */
 
@@ -709,7 +709,7 @@ const getKeypathTokens = createOneKeyCache(function (keypath) {
  * @param callback 返回 false 可中断遍历
  */
 function each$1(keypath, callback) {
-    const tokens = getKeypathTokens(keypath);
+    const tokens = string$1(keypath) ? getKeypathTokens(keypath) : keypath;
     for (let i = 0, lastIndex = tokens.length - 1; i <= lastIndex; i++) {
         if (callback(tokens[i], i, lastIndex) === FALSE) {
             break;
@@ -2491,7 +2491,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.407";
+Yox.version = "1.0.0-alpha.408";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */

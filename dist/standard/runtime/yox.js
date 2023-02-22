@@ -1,6 +1,6 @@
 /**
- * yox.js v1.0.0-alpha.407
- * (c) 2017-2022 musicode
+ * yox.js v1.0.0-alpha.408
+ * (c) 2017-2023 musicode
  * Released under the MIT License.
  */
 
@@ -768,7 +768,7 @@
    * @param callback 返回 false 可中断遍历
    */
   function each$1(keypath, callback) {
-      var tokens = getKeypathTokens(keypath);
+      var tokens = string$1(keypath) ? getKeypathTokens(keypath) : keypath;
       for (var i = 0, lastIndex = tokens.length - 1; i <= lastIndex; i++) {
           if (callback(tokens[i], i, lastIndex) === FALSE) {
               break;
@@ -2802,9 +2802,25 @@
       deps.add(observer, dep);
   };
 
+  var Context = function(keypath, scopeValue, scopeKey) {
+      this.keypath = keypath;
+      this.scopeValue = scopeValue;
+      this.scopeKey = scopeKey;
+  };
+  Context.prototype.getScope = function () {
+      var ref = this;
+          var scopeValue = ref.scopeValue;
+          var scopeKey = ref.scopeKey;
+      return scopeKey !== UNDEFINED ? scopeValue[scopeKey] : scopeValue;
+  };
+  Context.prototype.getKeypath = function (name) {
+      var ref = this;
+          var keypath = ref.keypath;
+      return keypath ? keypath + RAW_DOT + name : name;
+  };
   function render(instance, template, rootScope, filters, globalFilters, directives, globalDirectives, transitions, globalTransitions, addDependency) {
       var rootKeypath = EMPTY_STRING, contextStack = [
-          { scope: rootScope, keypath: rootKeypath }
+          new Context(rootKeypath, rootScope)
       ], 
       // 模板渲染过程收集的 vnode
       children = [], appendVNodeProperty = function (vnode, key, name, value) {
@@ -2927,10 +2943,7 @@
                       currentKeypath = keypath + RAW_DOT + i;
                       // slice + push 比直接 concat 快多了
                       contextStack = oldScopeStack.slice();
-                      contextStack.push({
-                          scope: value[i],
-                          keypath: currentKeypath,
-                      });
+                      contextStack.push(new Context(currentKeypath, value, i));
                   }
                   renderChildren(contextStack, value[i], currentKeypath, length, i);
               }
@@ -2947,10 +2960,7 @@
                       currentKeypath = keypath + RAW_DOT + key;
                       // slice + push 比直接 concat 快多了
                       contextStack = oldScopeStack.slice();
-                      contextStack.push({
-                          scope: value[key],
-                          keypath: currentKeypath,
-                      });
+                      contextStack.push(new Context(currentKeypath, value, key));
                   }
                   renderChildren(contextStack, value[key], currentKeypath, length, key);
               }
@@ -3005,60 +3015,29 @@
               }
               return target;
           }
-      }, findKeypath = function (stack, index, name, lookup, isFirstCall) {
-          var ref = stack[index];
-          var scope = ref.scope;
-          var keypath = ref.keypath;
-          var currentKeypath = join(keypath, name), result = get(scope, name);
-          if (result) {
-              return setValueHolder(result.value, currentKeypath);
+      }, lookupKeypath = function (stack, index, keypathStr, keypathList, lookup, filter) {
+          var defaultResult;
+          while (index >= 0) {
+              var item = stack[index], currentKeypath = item.getKeypath(keypathStr), result = get(item.getScope(), keypathList);
+              var valueHolder = setValueHolder(result ? result.value : UNDEFINED, currentKeypath);
+              if (result) {
+                  return valueHolder;
+              }
+              if (!defaultResult) {
+                  defaultResult = valueHolder;
+              }
+              if (lookup && index > 0) {
+                  index--;
+              }
+              else {
+                  break;
+              }
           }
-          if (isFirstCall) {
-              setValueHolder(UNDEFINED, currentKeypath);
-          }
-          if (lookup && index > 0) {
-              return findKeypath(stack, index - 1, name, lookup);
-          }
-      }, lookupKeypath = function (stack, index, keypath, lookup, filter) {
-          return findKeypath(stack, index, keypath, lookup, TRUE) || (filter
+          return filter
               ? setValueHolder(filter)
-              : holder);
-      }, findProp = function (stack, index, name) {
-          var ref = stack[index];
-          var scope = ref.scope;
-          var keypath = ref.keypath;
-          var currentKeypath = keypath ? keypath + RAW_DOT + name : name;
-          if (name in scope) {
-              return setValueHolder(scope[name], currentKeypath);
-          }
-          if (index > 0) {
-              return findProp(stack, index - 1, name);
-          }
-      }, lookupProp = function (stack, name, value, filter) {
-          var index = stack.length - 1;
-          var ref = stack[index];
-          var keypath = ref.keypath;
-          var currentKeypath = keypath ? keypath + RAW_DOT + name : name;
-          if (value !== UNDEFINED) {
-              return setValueHolder(value, currentKeypath);
-          }
-          return index > 0 && findProp(stack, index - 1, name) || (filter
-              ? setValueHolder(filter)
-              : setValueHolder(UNDEFINED, currentKeypath));
-      }, getThisByIndex = function (stack, index) {
-          var ref = stack[index];
-          var scope = ref.scope;
-          var keypath = ref.keypath;
-          return setValueHolder(scope, keypath);
-      }, getProp = function (stack, name, value) {
-          var ref = stack[stack.length - 1];
-          var keypath = ref.keypath;
-          return setValueHolder(value, keypath ? keypath + RAW_DOT + name : name);
-      }, getPropByIndex = function (stack, index, name) {
-          var ref = stack[index];
-          var scope = ref.scope;
-          var keypath = ref.keypath;
-          return setValueHolder(scope[name], keypath ? keypath + RAW_DOT + name : name);
+              : defaultResult;
+      }, lookupProp = function (stack, index, prop, filter) {
+          return lookupKeypath(stack, index, prop, [prop], TRUE, filter);
       }, readKeypath = function (value, keypath) {
           var result = get(value, keypath);
           return setValueHolder(result ? result.value : UNDEFINED);
@@ -3073,7 +3052,7 @@
           }
           return holder;
       }, renderTemplate = function (render, scope, keypath, children) {
-          render(renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderEach, renderRange, renderSlot, appendVNodeProperty, formatNumberNativeAttributeValue, formatBooleanNativeAttributeValue, lookupKeypath, lookupProp, getThisByIndex, getProp, getPropByIndex, readKeypath, setValueHolder, toString, textVNodeOperator, commentVNodeOperator, elementVNodeOperator, componentVNodeOperator, fragmentVNodeOperator, portalVNodeOperator, slotVNodeOperator, instance, filters, globalFilters, directives, globalDirectives, transitions, globalTransitions, contextStack, scope, keypath, children);
+          render(renderStyleString, renderStyleExpr, renderTransition, renderModel, renderEventMethod, renderEventName, renderDirective, renderSpread, renderEach, renderRange, renderSlot, appendVNodeProperty, formatNumberNativeAttributeValue, formatBooleanNativeAttributeValue, lookupKeypath, lookupProp, readKeypath, setValueHolder, toString, textVNodeOperator, commentVNodeOperator, elementVNodeOperator, componentVNodeOperator, fragmentVNodeOperator, portalVNodeOperator, slotVNodeOperator, instance, logger, filters, globalFilters, directives, globalDirectives, transitions, globalTransitions, contextStack, scope, keypath, children);
       };
       renderTemplate(template, rootScope, rootKeypath, children);
       return children[0];
@@ -4755,7 +4734,7 @@
   /**
    * core 版本
    */
-  Yox.version = "1.0.0-alpha.407";
+  Yox.version = "1.0.0-alpha.408";
   /**
    * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
    */

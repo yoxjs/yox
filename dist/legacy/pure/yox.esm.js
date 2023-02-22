@@ -1,6 +1,6 @@
 /**
- * yox.js v1.0.0-alpha.407
- * (c) 2017-2022 musicode
+ * yox.js v1.0.0-alpha.408
+ * (c) 2017-2023 musicode
  * Released under the MIT License.
  */
 
@@ -786,7 +786,7 @@ const getKeypathTokens = createOneKeyCache(function (keypath) {
  * @param callback 返回 false 可中断遍历
  */
 function each$1(keypath, callback) {
-    const tokens = getKeypathTokens(keypath);
+    const tokens = string$1(keypath) ? getKeypathTokens(keypath) : keypath;
     for (let i = 0, lastIndex = tokens.length - 1; i <= lastIndex; i++) {
         if (callback(tokens[i], i, lastIndex) === FALSE$1) {
             break;
@@ -3852,7 +3852,6 @@ function compile(content) {
     return nodeList;
 }
 
-const QUOTE_DOUBLE = '"', QUOTE_SINGLE = "'";
 // 下面这些值需要根据外部配置才能确定
 let isUglify$1 = UNDEFINED$1, isMinify = UNDEFINED$1, 
 // 保留字，避免 IE 出现 { class: 'xx' } 报错
@@ -3908,6 +3907,21 @@ class Tuple {
         return `${left}${join$1(result, breakLine
             ? separator + BREAK_LINE + nextIndentSize
             : separator + SPACE)}${right}`;
+    }
+}
+class Statement {
+    constructor(items) {
+        this.items = items || [];
+    }
+    add(value) {
+        push(this.items, value);
+    }
+    toString(tabSize) {
+        const { items } = this;
+        if (items.length === 1) {
+            return items[0].toString(tabSize);
+        }
+        return new Tuple('(', ')', ',', TRUE$1, 1, items).toString(tabSize);
     }
 }
 class Map {
@@ -4079,17 +4093,24 @@ class Push {
         ]).toString(tabSize);
     }
 }
+class Typeof {
+    constructor(value, type) {
+        this.value = value;
+        this.type = type;
+    }
+    toString(tabSize) {
+        const { value, type } = this;
+        return `typeof ${value.toString(tabSize)}${SPACE}===${SPACE}${toStringLiteral(type)}`;
+    }
+}
 function toPrimitive(value) {
     return new Primitive(value);
 }
 function toTuple(left, right, separator, breakLine, offset, items) {
     return new Tuple(left, right, separator, breakLine, offset, items);
 }
-function toStatement(items, precedence) {
-    if (precedence) {
-        return toTuple('(', ')', ',', TRUE$1, 1, items);
-    }
-    return toTuple(EMPTY_STRING, EMPTY_STRING, ',', TRUE$1, 0, items);
+function toStatement(items) {
+    return new Statement(items);
 }
 function toList(items, join) {
     let result = toTuple('[', ']', ',', TRUE$1, 1, items);
@@ -4135,6 +4156,9 @@ function toAssign(name, value, isDeclaration) {
 function toPush(array, item) {
     return new Push(array, item);
 }
+function toTypeof(value, type) {
+    return new Typeof(value, type);
+}
 function getTempName() {
     return TEMP;
 }
@@ -4161,12 +4185,12 @@ function trimArgs(list) {
     return args;
 }
 function toStringLiteral(value) {
-    // 优先用单引号
-    const quote = has$1(value, QUOTE_SINGLE)
-        ? QUOTE_DOUBLE
-        : QUOTE_SINGLE;
-    // 换行符会导致字符串语法错误
-    return `${quote}${value.replace(/\n\s*/g, '\\n')}${quote}`;
+    value = value
+        .replace(/\\?'/g, "\\'")
+        .replace(/\\?"/g, '\\"')
+        // 换行符会导致字符串语法错误
+        .replace(/\n\s*/g, '\\n');
+    return `"${value}"`;
 }
 function toObjectPair(key, value) {
     if (!/^[\w$]+$/.test(key) || reservedWords[key]) {
@@ -4307,7 +4331,7 @@ function generate$1(node, transformIdentifier, generateIdentifier, generateValue
                 // 只能是 a[b] 的形式，因为 a.b 已经在解析时转换成 Identifier 了
                 const leadNode = memberNode.lead, leadValue = transformIdentifier(leadNode), memberNodes = generateNodes(memberNode.nodes || []);
                 if (leadValue) {
-                    value = generateValue(leadValue, memberNodes, UNDEFINED$1, holder);
+                    value = generateValue(leadValue, memberNodes, holder);
                 }
                 else {
                     if (leadNode.name) {
@@ -4322,18 +4346,18 @@ function generate$1(node, transformIdentifier, generateIdentifier, generateValue
             else if (memberNode.nodes) {
                 // "xx"[length]
                 // format()[a][b]
-                value = generateValue(generateNode(memberNode.lead), generateNodes(memberNode.nodes || []), UNDEFINED$1, holder);
+                value = generateValue(generateNode(memberNode.lead), generateNodes(memberNode.nodes || []), holder);
             }
             else {
                 // "xx".length
                 // format().a.b
-                value = generateValue(generateNode(memberNode.lead), parse(memberNode.keypath), memberNode.keypath, holder);
+                value = generateValue(generateNode(memberNode.lead), parse(memberNode.keypath), holder);
             }
             break;
         default:
             hasHolder = TRUE$1;
             const callNode = node;
-            value = generateCall(generateNode(callNode.name, callNode), callNode.args.length
+            value = generateCall(callNode, generateNode(callNode.name, callNode), callNode.args.length
                 ? generateNodes(callNode.args)
                 : UNDEFINED$1, holder);
             break;
@@ -4361,7 +4385,7 @@ attributeValueStack = [],
 // vnode 类型
 vnodeTypeStack = [], magicVariables = [MAGIC_VAR_KEYPATH, MAGIC_VAR_LENGTH, MAGIC_VAR_EVENT, MAGIC_VAR_DATA], nodeGenerator = {}, FIELD_NATIVE_ATTRIBUTES = 'nativeAttrs', FIELD_NATIVE_STYLES = 'nativeStyles', FIELD_PROPERTIES = 'props', FIELD_DIRECTIVES = 'directives', FIELD_EVENTS = 'events', FIELD_MODEL = 'model', FIELD_LAZY = 'lazy', FIELD_TRANSITION = 'transition', FIELD_CHILDREN = 'children', FIELD_SLOTS = 'slots', FIELD_OPERATOR = 'operator', PRIMITIVE_UNDEFINED = toPrimitive(UNDEFINED$1), PRIMITIVE_TRUE = toPrimitive(TRUE$1);
 // 下面这些值需要根据外部配置才能确定
-let isUglify = UNDEFINED$1, currentTextVNode = UNDEFINED$1, RENDER_STYLE_STRING = EMPTY_STRING, RENDER_STYLE_EXPR = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, APPEND_VNODE_PROPERTY = EMPTY_STRING, FORMAT_NATIVE_ATTRIBUTE_NUMBER_VALUE = EMPTY_STRING, FORMAT_NATIVE_ATTRIBUTE_BOOLEAN_VALUE = EMPTY_STRING, LOOKUP_KEYPATH = EMPTY_STRING, LOOKUP_PROP = EMPTY_STRING, GET_THIS_BY_INDEX = EMPTY_STRING, GET_PROP = EMPTY_STRING, GET_PROP_BY_INDEX = EMPTY_STRING, READ_KEYPATH = EMPTY_STRING, SET_VALUE_HOLDER = EMPTY_STRING, TO_STRING = EMPTY_STRING, OPERATOR_TEXT_VNODE = EMPTY_STRING, OPERATOR_COMMENT_VNODE = EMPTY_STRING, OPERATOR_ELEMENT_VNODE = EMPTY_STRING, OPERATOR_COMPONENT_VNODE = EMPTY_STRING, OPERATOR_FRAGMENT_VNODE = EMPTY_STRING, OPERATOR_PORTAL_VNODE = EMPTY_STRING, OPERATOR_SLOT_VNODE = EMPTY_STRING, ARG_INSTANCE = EMPTY_STRING, ARG_FILTERS = EMPTY_STRING, ARG_GLOBAL_FILTERS = EMPTY_STRING, ARG_DIRECTIVES = EMPTY_STRING, ARG_GLOBAL_DIRECTIVES = EMPTY_STRING, ARG_TRANSITIONS = EMPTY_STRING, ARG_GLOBAL_TRANSITIONS = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_PARENT = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_SCOPE = EMPTY_STRING, ARG_KEYPATH = EMPTY_STRING, ARG_LENGTH = EMPTY_STRING, ARG_EVENT = EMPTY_STRING, ARG_DATA = EMPTY_STRING;
+let isUglify = UNDEFINED$1, currentTextVNode = UNDEFINED$1, RENDER_STYLE_STRING = EMPTY_STRING, RENDER_STYLE_EXPR = EMPTY_STRING, RENDER_TRANSITION = EMPTY_STRING, RENDER_MODEL = EMPTY_STRING, RENDER_EVENT_METHOD = EMPTY_STRING, RENDER_EVENT_NAME = EMPTY_STRING, RENDER_DIRECTIVE = EMPTY_STRING, RENDER_SPREAD = EMPTY_STRING, RENDER_EACH = EMPTY_STRING, RENDER_RANGE = EMPTY_STRING, RENDER_SLOT = EMPTY_STRING, APPEND_VNODE_PROPERTY = EMPTY_STRING, FORMAT_NATIVE_ATTRIBUTE_NUMBER_VALUE = EMPTY_STRING, FORMAT_NATIVE_ATTRIBUTE_BOOLEAN_VALUE = EMPTY_STRING, LOOKUP_KEYPATH = EMPTY_STRING, LOOKUP_PROP = EMPTY_STRING, READ_KEYPATH = EMPTY_STRING, SET_VALUE_HOLDER = EMPTY_STRING, TO_STRING = EMPTY_STRING, OPERATOR_TEXT_VNODE = EMPTY_STRING, OPERATOR_COMMENT_VNODE = EMPTY_STRING, OPERATOR_ELEMENT_VNODE = EMPTY_STRING, OPERATOR_COMPONENT_VNODE = EMPTY_STRING, OPERATOR_FRAGMENT_VNODE = EMPTY_STRING, OPERATOR_PORTAL_VNODE = EMPTY_STRING, OPERATOR_SLOT_VNODE = EMPTY_STRING, ARG_INSTANCE = EMPTY_STRING, ARG_LOGGER = EMPTY_STRING, ARG_FILTERS = EMPTY_STRING, ARG_GLOBAL_FILTERS = EMPTY_STRING, ARG_DIRECTIVES = EMPTY_STRING, ARG_GLOBAL_DIRECTIVES = EMPTY_STRING, ARG_TRANSITIONS = EMPTY_STRING, ARG_GLOBAL_TRANSITIONS = EMPTY_STRING, ARG_STACK = EMPTY_STRING, ARG_PARENT = EMPTY_STRING, ARG_VNODE = EMPTY_STRING, ARG_CHILDREN = EMPTY_STRING, ARG_SCOPE = EMPTY_STRING, ARG_KEYPATH = EMPTY_STRING, ARG_LENGTH = EMPTY_STRING, ARG_EVENT = EMPTY_STRING, ARG_DATA = EMPTY_STRING;
 function init() {
     if (isUglify === PUBLIC_CONFIG.uglifyCompiled) {
         return;
@@ -4383,35 +4407,33 @@ function init() {
         FORMAT_NATIVE_ATTRIBUTE_BOOLEAN_VALUE = '_n';
         LOOKUP_KEYPATH = '_o';
         LOOKUP_PROP = '_p';
-        GET_THIS_BY_INDEX = '_q';
-        GET_PROP = '_r';
-        GET_PROP_BY_INDEX = '_s';
-        READ_KEYPATH = '_t';
-        SET_VALUE_HOLDER = '_u';
-        TO_STRING = '_v';
-        OPERATOR_TEXT_VNODE = '_w';
-        OPERATOR_COMMENT_VNODE = '_x';
-        OPERATOR_ELEMENT_VNODE = '_y';
-        OPERATOR_COMPONENT_VNODE = '_z';
-        OPERATOR_FRAGMENT_VNODE = '_A';
-        OPERATOR_PORTAL_VNODE = '_B';
-        OPERATOR_SLOT_VNODE = '_C';
-        ARG_INSTANCE = '_D';
-        ARG_FILTERS = '_E';
-        ARG_GLOBAL_FILTERS = '_F';
-        ARG_DIRECTIVES = '_G';
-        ARG_GLOBAL_DIRECTIVES = '_H';
-        ARG_TRANSITIONS = '_I';
-        ARG_GLOBAL_TRANSITIONS = '_J';
-        ARG_STACK = '_K';
-        ARG_PARENT = '_L';
-        ARG_VNODE = '_M';
-        ARG_CHILDREN = '_N';
-        ARG_SCOPE = '_O';
-        ARG_KEYPATH = '_P';
-        ARG_LENGTH = '_Q';
-        ARG_EVENT = '_R';
-        ARG_DATA = '_S';
+        READ_KEYPATH = '_q';
+        SET_VALUE_HOLDER = '_r';
+        TO_STRING = '_s';
+        OPERATOR_TEXT_VNODE = '_t';
+        OPERATOR_COMMENT_VNODE = '_u';
+        OPERATOR_ELEMENT_VNODE = '_v';
+        OPERATOR_COMPONENT_VNODE = '_w';
+        OPERATOR_FRAGMENT_VNODE = '_x';
+        OPERATOR_PORTAL_VNODE = '_y';
+        OPERATOR_SLOT_VNODE = '_z';
+        ARG_INSTANCE = '_A';
+        ARG_LOGGER = '_B';
+        ARG_FILTERS = '_C';
+        ARG_GLOBAL_FILTERS = '_D';
+        ARG_DIRECTIVES = '_E';
+        ARG_GLOBAL_DIRECTIVES = '_F';
+        ARG_TRANSITIONS = '_G';
+        ARG_GLOBAL_TRANSITIONS = '_H';
+        ARG_STACK = '_I';
+        ARG_PARENT = '_J';
+        ARG_VNODE = '_K';
+        ARG_CHILDREN = '_L';
+        ARG_SCOPE = '_M';
+        ARG_KEYPATH = '_N';
+        ARG_LENGTH = '_O';
+        ARG_EVENT = '_P';
+        ARG_DATA = '_Q';
     }
     else {
         RENDER_STYLE_STRING = 'renderStyleStyle';
@@ -4430,9 +4452,6 @@ function init() {
         FORMAT_NATIVE_ATTRIBUTE_BOOLEAN_VALUE = 'formatNativeAttributeBooleanValue';
         LOOKUP_KEYPATH = 'lookupKeypath';
         LOOKUP_PROP = 'lookupProp';
-        GET_THIS_BY_INDEX = 'getThisByIndex';
-        GET_PROP = 'getProp';
-        GET_PROP_BY_INDEX = 'getPropByIndex';
         READ_KEYPATH = 'readKeypath';
         SET_VALUE_HOLDER = 'setValueHolder';
         TO_STRING = 'toString';
@@ -4444,6 +4463,7 @@ function init() {
         OPERATOR_PORTAL_VNODE = 'portalVNodeOperator';
         OPERATOR_SLOT_VNODE = 'slotVNodeOperator';
         ARG_INSTANCE = 'instance';
+        ARG_LOGGER = 'logger';
         ARG_FILTERS = 'filters';
         ARG_GLOBAL_FILTERS = 'globalFilters';
         ARG_DIRECTIVES = 'directives';
@@ -4575,9 +4595,8 @@ function generateExpressionIdentifier(node, nodes, keypath, holder, parentNode) 
         index,
         string$1(keypath)
             ? toPrimitive(keypath)
-            : length === 1
-                ? nodes[0]
-                : toList(nodes, RAW_DOT),
+            : toList(nodes, RAW_DOT),
+        toList(nodes),
         lookup
             ? PRIMITIVE_TRUE
             : PRIMITIVE_UNDEFINED,
@@ -4589,40 +4608,77 @@ function generateExpressionIdentifier(node, nodes, keypath, holder, parentNode) 
     if (keypath && length === 1) {
         // this.name
         if (!root && !offset && !lookup) {
-            result = toCall(GET_PROP, [
-                ARG_STACK,
-                toPrimitive(keypath),
-                toMember(ARG_SCOPE, nodes)
+            // setValueHolder(
+            //   value,
+            //   stack[index].getKeypath(name)
+            // )
+            result = toCall(SET_VALUE_HOLDER, [
+                toMember(ARG_SCOPE, nodes),
+                toCall(toMember(toMember(ARG_STACK, [
+                    index
+                ]), [
+                    toPrimitive('getKeypath')
+                ]), [
+                    toPrimitive(keypath),
+                ])
             ]);
         }
         // 未指定路径，如 name
         else if (!root && !offset) {
             result = toCall(LOOKUP_PROP, [
                 ARG_STACK,
+                index,
                 toPrimitive(keypath),
-                toMember(ARG_SCOPE, nodes),
                 filter
             ]);
         }
         // 指定了路径，如 ~/name 或 ../name
         else {
-            result = toCall(GET_PROP_BY_INDEX, [
-                ARG_STACK,
-                index,
-                toPrimitive(keypath)
-            ]);
+            const statement = toStatement(), varName = getTempName();
+            // temp = stack[index]
+            statement.add(toAssign(varName, toMember(ARG_STACK, [
+                index
+            ])));
+            // setValueHolder(
+            //   temp.getScope()[name],
+            //   temp.getKeypath(name)
+            // )
+            statement.add(toCall(SET_VALUE_HOLDER, [
+                toMember(toCall(toMember(varName, [
+                    toPrimitive('getScope')
+                ])), [
+                    toPrimitive(keypath),
+                ]),
+                toCall(toMember(varName, [
+                    toPrimitive('getKeypath')
+                ]), [
+                    toPrimitive(keypath),
+                ]),
+            ]));
+            result = statement;
         }
     }
     // 处理属性为空串，如 this、../this、~/this 之类的
     else if (!keypath && !length) {
-        result = toCall(GET_THIS_BY_INDEX, [
-            ARG_STACK,
+        const statement = toStatement(), varName = getTempName();
+        // temp = stack[index]
+        statement.add(toAssign(varName, toMember(ARG_STACK, [
             index
-        ]);
+        ])));
+        // setValueHolder(temp.getScope(), temp.keypath)
+        statement.add(toCall(SET_VALUE_HOLDER, [
+            toCall(toMember(varName, [
+                toPrimitive('getScope')
+            ])),
+            toMember(varName, [
+                toPrimitive('keypath')
+            ])
+        ]));
+        result = statement;
     }
     return generateHolderIfNeeded(result, holder);
 }
-function generateExpressionValue(value, keys, keypath, holder) {
+function generateExpressionValue(value, keys, holder) {
     let result;
     switch (keys.length) {
         case 0:
@@ -4638,22 +4694,24 @@ function generateExpressionValue(value, keys, keypath, holder) {
         default:
             result = toCall(READ_KEYPATH, [
                 value,
-                keypath
-                    ? toPrimitive(keypath)
-                    : toList(keys, RAW_DOT)
+                toList(keys)
             ]);
             break;
     }
     return generateHolderIfNeeded(result, holder);
 }
-function generateExpressionCall(fn, args, holder) {
-    const list = [], varName = getTempName();
+function generateExpressionCall(node, fn, args, holder) {
+    const statement = toStatement(), varName = getTempName();
     // temp = fn
-    push(list, toAssign(varName, fn));
+    statement.add(toAssign(varName, fn));
     // temp()
-    push(list, toCall(varName, args));
+    statement.add(toTernary(toTypeof(varName, 'function'), toCall(varName, args), toCall(toMember(ARG_LOGGER, [
+        toPrimitive('fatal')
+    ]), [
+        toPrimitive(`[${node.raw}] is not a function.`)
+    ])));
     return generateHolderIfNeeded(toCall(SET_VALUE_HOLDER, [
-        generateStatementIfNeeded(list)
+        statement
     ]), holder);
 }
 function generateExpression(expr, holder) {
@@ -4716,11 +4774,6 @@ function generateNodesToChildren(nodes, args) {
     return toAnonymousFunction(args, tuple, toTernary(toMember(ARG_CHILDREN, [
         toPrimitive(RAW_LENGTH)
     ]), ARG_CHILDREN, toPrimitive(UNDEFINED$1)));
-}
-function generateStatementIfNeeded(nodes) {
-    return nodes.length === 1
-        ? nodes[0]
-        : toStatement(nodes, TRUE$1);
 }
 function appendDynamicChildVNode(vnode) {
     currentTextVNode = vnode instanceof TextVNode
@@ -5083,23 +5136,23 @@ nodeGenerator[ELEMENT] = function (node) {
     if (outputSlots) {
         vnode.set(FIELD_SLOTS, outputSlots);
     }
-    const list = [], result = outputAttrs
+    const result = outputAttrs
         ? toCall(outputAttrs, [
             vnode,
         ])
         : vnode;
     if (isFragment || isPortal || isSlot) {
-        const varName = getTempName();
+        const statement = toStatement(), varName = getTempName();
         // temp = vnode
-        push(list, toAssign(varName, result));
+        statement.add(toAssign(varName, result));
         // temp.children && temp.children.length && children.push(temp)
-        push(list, toBinary(toBinary(toMember(varName, [
+        statement.add(toBinary(toBinary(toMember(varName, [
             toPrimitive(FIELD_CHILDREN)
         ]), '&&', toMember(varName, [
             toPrimitive(FIELD_CHILDREN),
             toPrimitive(RAW_LENGTH)
         ])), '&&', toPush(ARG_CHILDREN, varName)));
-        return generateStatementIfNeeded(list);
+        return statement;
     }
     return generateVNode(result);
 };
@@ -5329,7 +5382,7 @@ function getBranchValue(children) {
         if (last(attributeValueStack)) {
             return createAttributeValue(children);
         }
-        return generateStatementIfNeeded(mapNodes(children));
+        return toStatement(mapNodes(children));
     }
 }
 nodeGenerator[IF] = function (node) {
@@ -5394,11 +5447,11 @@ nodeGenerator[EACH] = function (node) {
     ]);
 };
 nodeGenerator[IMPORT] = function (node) {
-    const list = [], vnode = generateExpression(node.expr), varName = getTempName();
+    const varName = getTempName(), statement = toStatement();
     // temp = vnode
-    push(list, toAssign(varName, vnode));
-    push(list, toTernary(varName, generateVNode(varName), PRIMITIVE_UNDEFINED));
-    return generateStatementIfNeeded(list);
+    statement.add(toAssign(varName, generateExpression(node.expr)));
+    statement.add(toTernary(varName, generateVNode(varName), PRIMITIVE_UNDEFINED));
+    return statement;
 };
 function generate(node) {
     init();
@@ -5420,9 +5473,6 @@ function generate(node) {
         FORMAT_NATIVE_ATTRIBUTE_BOOLEAN_VALUE,
         LOOKUP_KEYPATH,
         LOOKUP_PROP,
-        GET_THIS_BY_INDEX,
-        GET_PROP,
-        GET_PROP_BY_INDEX,
         READ_KEYPATH,
         SET_VALUE_HOLDER,
         TO_STRING,
@@ -5434,6 +5484,7 @@ function generate(node) {
         OPERATOR_PORTAL_VNODE,
         OPERATOR_SLOT_VNODE,
         ARG_INSTANCE,
+        ARG_LOGGER,
         ARG_FILTERS,
         ARG_GLOBAL_FILTERS,
         ARG_DIRECTIVES,
@@ -6587,7 +6638,7 @@ class Yox {
 /**
  * core 版本
  */
-Yox.version = "1.0.0-alpha.407";
+Yox.version = "1.0.0-alpha.408";
 /**
  * 方便外部共用的通用逻辑，特别是写插件，减少重复代码
  */
